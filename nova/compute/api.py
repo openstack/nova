@@ -237,7 +237,8 @@ class API(base.Base):
 
             pid = context.project_id
             LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                  " tried to run %(min_count)s instances. %(msg)s"), locals())
+                       " tried to run %(min_count)s instances. %(msg)s"),
+                     locals())
             requested = dict(instances=min_count, cores=req_cores, ram=req_ram)
             raise exception.TooManyInstances(overs=overs,
                                              req=requested[resource],
@@ -255,9 +256,8 @@ class API(base.Base):
             QUOTAS.limit_check(context, metadata_items=num_metadata)
         except exception.OverQuota as exc:
             pid = context.project_id
-            msg = _("Quota exceeded for %(pid)s, tried to set "
-                    "%(num_metadata)s metadata properties") % locals()
-            LOG.warn(msg)
+            LOG.warn(_("Quota exceeded for %(pid)s, tried to set "
+                       "%(num_metadata)s metadata properties") % locals())
             quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
 
@@ -548,7 +548,7 @@ class API(base.Base):
         updating BlockDeviceMapping
         """
         for bdm in block_device.mappings_prepend_dev(mappings):
-            LOG.debug(_("bdm %s"), bdm)
+            LOG.debug(_("bdm %s"), bdm, instance_uuid=instance_uuid)
 
             virtual_name = bdm['virtual']
             if virtual_name == 'ami' or virtual_name == 'root':
@@ -575,7 +575,8 @@ class API(base.Base):
         """tell vm driver to attach volume at boot time by updating
         BlockDeviceMapping
         """
-        LOG.debug(_("block_device_mapping %s"), block_device_mapping)
+        LOG.debug(_("block_device_mapping %s"), block_device_mapping,
+                  instance_uuid=instance_uuid)
         for bdm in block_device_mapping:
             assert 'device_name' in bdm
 
@@ -732,7 +733,7 @@ class API(base.Base):
         uid = context.user_id
 
         LOG.debug(_("Sending create to scheduler for %(pid)s/%(uid)s's") %
-                locals())
+                  locals())
 
         request_spec = {
             'image': jsonutils.to_primitive(image),
@@ -1392,7 +1393,8 @@ class API(base.Base):
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
-            LOG.debug(_("flavor_id is None. Assuming migration."))
+            LOG.debug(_("flavor_id is None. Assuming migration."),
+                      instance=instance)
             new_instance_type = current_instance_type
         else:
             new_instance_type = instance_types.get_instance_type_by_flavor_id(
@@ -1401,7 +1403,8 @@ class API(base.Base):
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
-                " new instance type %(new_instance_type_name)s") % locals())
+                    " new instance type %(new_instance_type_name)s"),
+                  locals(), instance=instance)
 
         # FIXME(sirp): both of these should raise InstanceTypeNotFound instead
         if not new_instance_type:
