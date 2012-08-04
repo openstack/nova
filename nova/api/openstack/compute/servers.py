@@ -41,11 +41,6 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
-class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return 'security_groups' in datum
-
-
 def make_fault(elem):
     fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
     fault.set('code')
@@ -89,13 +84,6 @@ def make_server(elem, detailed=False):
 
         # Attach addresses node
         elem.append(ips.AddressesTemplate())
-
-        # Attach security groups node
-        secgrps = SecurityGroupsTemplateElement('security_groups')
-        elem.append(secgrps)
-        secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
-                                            selector='security_groups')
-        secgrp.set('name')
 
     xmlutil.make_links(elem, 'links')
 
@@ -630,9 +618,11 @@ class Controller(wsgi.Controller):
             injected_files = self._get_injected_files(personality)
 
         sg_names = []
-        security_groups = server_dict.get('security_groups')
-        if security_groups is not None:
-            sg_names = [sg['name'] for sg in security_groups if sg.get('name')]
+        if self.ext_mgr.is_loaded('os-security-groups'):
+            security_groups = server_dict.get('security_groups')
+            if security_groups is not None:
+                sg_names = [sg['name'] for sg in security_groups
+                            if sg.get('name')]
         if not sg_names:
             sg_names.append('default')
 

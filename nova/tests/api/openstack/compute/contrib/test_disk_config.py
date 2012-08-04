@@ -95,6 +95,10 @@ class DiskConfigTestCase(test.TestCase):
             inst['name'] = 'instance-1'  # this is a property
             inst['task_state'] = ''
             inst['vm_state'] = ''
+            # NOTE(vish): db create translates security groups into model
+            #             objects. Translate here so tests pass
+            inst['security_groups'] = [{'name': group}
+                                       for group in inst['security_groups']]
 
             def fake_instance_get_for_create(context, id_, *args, **kwargs):
                 return (inst, inst)

@@ -116,6 +116,7 @@ class ServersControllerTest(test.TestCase):
                 instance_update)
 
         self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
         self.controller = servers.Controller(self.ext_mgr)
         self.ips_controller = ips.Controller()
 
@@ -1410,7 +1411,9 @@ class ServerStatusTest(test.TestCase):
         super(ServerStatusTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
 
-        self.controller = servers.Controller()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
 
     def _get_with_state(self, vm_state, task_state=None):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
@@ -1479,7 +1482,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        self.controller = servers.Controller()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
 
         def instance_create(context, inst):
             inst_type = instance_types.get_instance_type_by_flavor_id(3)
@@ -1742,6 +1747,45 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance()
+
+    def _test_create_security_group(self, group):
+        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_uuid, flavorRef=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            security_groups=[{'name': group}],
+            personality={}))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        server = self.controller.create(req, body).obj['server']
+
+    def test_create_instance_with_security_group_enabled(self):
+        self.ext_mgr.extensions = {'os-security-groups': 'fake'}
+        group = 'foo'
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['security_group'], [group])
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_security_group(group)
+
+    def test_create_instance_with_security_group_disabled(self):
+        group = 'foo'
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            # NOTE(vish): if the security groups extension is not
+            #             enabled, then security groups passed in
+            #             are ignored.
+            self.assertEqual(kwargs['security_group'], ['default'])
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_security_group(group)
 
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'

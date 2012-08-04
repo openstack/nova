@@ -598,7 +598,8 @@ class Volumes(extensions.ExtensionDescriptor):
         resources.append(res)
 
         controller = BootFromVolumeController(self.ext_mgr)
-        res = extensions.ResourceExtension('os-volumes_boot', controller)
+        res = extensions.ResourceExtension('os-volumes_boot', controller,
+                                           inherits='servers')
         resources.append(res)
 
         res = extensions.ResourceExtension('os-snapshots',
