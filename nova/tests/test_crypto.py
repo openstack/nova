@@ -29,23 +29,6 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-class SymmetricKeyTestCase(test.TestCase):
-    """Test case for Encrypt/Decrypt"""
-    def test_encrypt_decrypt(self):
-        key = 'c286696d887c9aa0611bbb3e2025a45a'
-        plain_text = "The quick brown fox jumped over the lazy dog."
-
-        # No IV supplied (all 0's)
-        encrypt = crypto.encryptor(key)
-        cipher_text = encrypt(plain_text)
-        self.assertNotEquals(plain_text, cipher_text)
-
-        decrypt = crypto.decryptor(key)
-        plain = decrypt(cipher_text)
-
-        self.assertEquals(plain_text, plain)
-
-
 class X509Test(test.TestCase):
     def test_can_generate_x509(self):
         with utils.tempdir() as tmpdir:
