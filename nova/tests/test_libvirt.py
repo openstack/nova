@@ -912,10 +912,10 @@ class LibvirtConnTestCase(test.TestCase):
         # Only one should be listed, since domain with ID 0 must be skiped
         self.assertEquals(len(instances), 1)
 
-    def test_list_instances_when_not_found(self):
+    def test_list_instances_when_instance_deleted(self):
 
         def fake_lookup(instance_name):
-            raise exception.InstanceNotFound()
+            raise libvirt.libvirtError("we deleted an instance!")
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
