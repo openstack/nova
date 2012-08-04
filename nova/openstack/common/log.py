@@ -357,17 +357,6 @@ def _setup_logging_from_conf(product_name):
         for handler in log_root.handlers:
             logger.addHandler(handler)
 
-    # NOTE(jkoelker) Clear the handlers for the root logger that was setup
-    #                by basicConfig in nova/__init__.py and install the
-    #                NullHandler.
-    root = logging.getLogger()
-    for handler in root.handlers:
-        root.removeHandler(handler)
-    handler = NullHandler()
-    handler.setFormatter(logging.Formatter())
-    root.addHandler(handler)
-
-
 _loggers = {}
 
 
