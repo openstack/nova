@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import warnings
+
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -30,6 +32,17 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(deprecate_opts)
 
 
+def _showwarning(message, category, filename, lineno, file=None, line=None):
+    """
+    Redirect warnings into logging.
+    """
+    LOG.warn(str(message))
+
+
+# Install our warnings handler
+warnings.showwarning = _showwarning
+
+
 def warn(msg=""):
     """
     Warn of a deprecated config option that an operator has specified.
@@ -37,6 +50,6 @@ def warn(msg=""):
     we use some operator changeable parameter to indicate that it will
     go away in a future version of OpenStack.
     """
-    LOG.warn(_("Deprecated Config: %s") % msg)
+    warnings.warn(_("Deprecated Config: %s") % msg)
     if FLAGS.fatal_deprecations:
         raise exception.DeprecatedConfig(msg=msg)
