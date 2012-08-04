@@ -273,7 +273,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.39'
+    RPC_API_VERSION = '1.40'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2201,48 +2201,50 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_migration:
             self.driver.pre_block_migration(context, instance, disk)
 
-    def live_migration(self, context, instance_id,
-                       dest, block_migration=False):
+    def live_migration(self, context, dest, block_migration=False,
+                       instance=None, instance_id=None):
         """Executing live migration.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance_id: (deprecated) nova.db.sqlalchemy.models.Instance.Id
+        :param instance: instance dict
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
 
         """
         # Get instance for error handling.
-        instance_ref = self.db.instance_get(context, instance_id)
+        if not instance:
+            instance = self.db.instance_get(context, instance_id)
 
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            if self._get_instance_volume_bdms(context, instance_ref['uuid']):
+            if self._get_instance_volume_bdms(context, instance['uuid']):
                 rpc.call(context,
                           FLAGS.volume_topic,
                           {'method': 'check_for_export',
-                           'args': {'instance_id': instance_id}})
+                           'args': {'instance_id': instance['id']}})
 
             if block_migration:
-                disk = self.driver.get_instance_disk_info(instance_ref.name)
+                disk = self.driver.get_instance_disk_info(instance['name'])
             else:
                 disk = None
 
-            self.compute_rpcapi.pre_live_migration(context, instance_ref,
+            self.compute_rpcapi.pre_live_migration(context, instance,
                     block_migration, disk, dest)
 
         except Exception:
             with excutils.save_and_reraise_exception():
-                instance_uuid = instance_ref['uuid']
+                instance_uuid = instance['uuid']
                 LOG.exception(_('Pre live migration failed at  %(dest)s'),
-                              locals(), instance=instance_ref)
-                self.rollback_live_migration(context, instance_ref, dest,
+                              locals(), instance=instance)
+                self.rollback_live_migration(context, instance, dest,
                                              block_migration)
 
         # Executing live migration
         # live_migration might raises exceptions, but
         # nothing must be recovered in this version.
-        self.driver.live_migration(context, instance_ref, dest,
+        self.driver.live_migration(context, instance, dest,
                                    self._post_live_migration,
                                    self.rollback_live_migration,
                                    block_migration)

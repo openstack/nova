@@ -188,6 +188,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('inject_network_info', 'cast',
                 instance=self.fake_instance, version='1.19')
 
+    def test_live_migration(self):
+        self._test_compute_api('live_migration', 'cast',
+                instance=self.fake_instance, dest='dest',
+                block_migration='blockity_block', host='tsoh', version='1.40')
+
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance, block_migration='block_migration',

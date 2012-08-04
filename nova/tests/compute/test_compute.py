@@ -1663,7 +1663,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.compute.compute_rpcapi.pre_live_migration(c,
-                mox.IsA(instance_ref), True, None, instance['host']).AndRaise(
+                mox.IsA(instance), True, None, instance['host']).AndRaise(
                                         rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
@@ -1687,7 +1687,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
-                          c, inst_id, instance['host'], True)
+                          c, dest=instance['host'], block_migration=True,
+                          instance=rpcinst)
 
         # cleanup
         for bdms in db.block_device_mapping_get_all_by_instance(
@@ -1719,7 +1720,8 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, inst_id, instance['host'])
+        ret = self.compute.live_migration(c, dest=instance['host'],
+                instance=instance)
         self.assertEqual(ret, None)
 
         # cleanup
