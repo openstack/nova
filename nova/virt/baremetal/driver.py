@@ -708,8 +708,7 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.info(_('Compute_service record updated for %s ') % host)
             db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
-    def ensure_filtering_rules_for_instance(self, instance_ref,
-                                            time=None):
+    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         raise NotImplementedError()
 
     def live_migration(self, ctxt, instance_ref, dest,

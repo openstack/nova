@@ -1565,7 +1565,7 @@ class LibvirtConnTestCase(test.TestCase):
                            fake_none)
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      network_info,
-                                                     time=fake_timer)
+                                                     time_module=fake_timer)
         except exception.NovaException, e:
             c1 = (0 <= str(e).find('Timeout migrating for'))
         self.assertTrue(c1)
