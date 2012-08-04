@@ -1748,13 +1748,11 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance()
 
-    def _test_create_security_group(self, group):
+    def _test_create_extra(self, params):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        body = dict(server=dict(
-            name='server_test', imageRef=image_uuid, flavorRef=2,
-            metadata={'hello': 'world', 'open': 'stack'},
-            security_groups=[{'name': group}],
-            personality={}))
+        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
+        server.update(params)
+        body = dict(server=server)
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -1764,6 +1762,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_security_group_enabled(self):
         self.ext_mgr.extensions = {'os-security-groups': 'fake'}
         group = 'foo'
+        params = {'security_groups': [{'name': group}]}
         old_create = nova.compute.api.API.create
 
         def create(*args, **kwargs):
@@ -1771,10 +1770,11 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(nova.compute.api.API, 'create', create)
-        self._test_create_security_group(group)
+        self._test_create_extra(params)
 
     def test_create_instance_with_security_group_disabled(self):
         group = 'foo'
+        params = {'security_groups': [{'name': group}]}
         old_create = nova.compute.api.API.create
 
         def create(*args, **kwargs):
@@ -1785,7 +1785,32 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(nova.compute.api.API, 'create', create)
-        self._test_create_security_group(group)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_volumes_enabled(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'device_name': 'foo'}]
+        params = {'block_device_mapping': bdm}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_volumes_disabled(self):
+        bdm = [{'device_name': 'foo'}]
+        params = {'block_device_mapping': bdm}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
 
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'
