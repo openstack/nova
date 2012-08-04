@@ -63,7 +63,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
 
     old_vm_state = old_instance["vm_state"]
     new_vm_state = new_instance["vm_state"]
-    old_task_state = old_instance["task_state"],
+    old_task_state = old_instance["task_state"]
     new_task_state = new_instance["task_state"]
 
     # we should check if we need to send a state change or a regular
@@ -90,7 +90,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
                     service=service, host=host)
         except Exception:
             LOG.exception(_("Failed to send state update notification"),
-                    instance=instance)
+                    instance=new_instance)
 
 
 def send_update_with_states(context, instance, old_vm_state, new_vm_state,
