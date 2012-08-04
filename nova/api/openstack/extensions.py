@@ -289,9 +289,9 @@ class ControllerExtension(object):
 class ResourceExtension(object):
     """Add top level resources to the OpenStack API in nova."""
 
-    def __init__(self, collection, controller, parent=None,
+    def __init__(self, collection, controller=None, parent=None,
                  collection_actions=None, member_actions=None,
-                 custom_routes_fn=None):
+                 custom_routes_fn=None, inherits=None):
         if not collection_actions:
             collection_actions = {}
         if not member_actions:
@@ -302,6 +302,7 @@ class ResourceExtension(object):
         self.collection_actions = collection_actions
         self.member_actions = member_actions
         self.custom_routes_fn = custom_routes_fn
+        self.inherits = inherits
 
 
 def wrap_errors(fn):
