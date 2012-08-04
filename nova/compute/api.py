@@ -974,7 +974,6 @@ class API(base.Base):
                           task_state=[None])
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
-        instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
         self.update(context,
@@ -1716,7 +1715,6 @@ class API(base.Base):
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host):
         """Migrate a server lively to a new host."""
-        instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to live migrate instance"),
                   instance=instance)
         self.scheduler_rpcapi.live_migration(context,
@@ -2126,7 +2124,6 @@ class SecurityGroupAPI(base.Base):
         self.db.instance_add_security_group(context.elevated(),
                                             instance_uuid,
                                             security_group['id'])
-        params = {"security_group_id": security_group['id']}
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
         self.security_group_rpcapi.refresh_security_group_rules(context,
@@ -2157,7 +2154,6 @@ class SecurityGroupAPI(base.Base):
         self.db.instance_remove_security_group(context.elevated(),
                                                instance_uuid,
                                                security_group['id'])
-        params = {"security_group_id": security_group['id']}
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
         self.security_group_rpcapi.refresh_security_group_rules(context,
