@@ -19,7 +19,6 @@ glance>=2011.3.1
 suds==0.4
 paramiko
 feedparser
-pycrypto
 Babel>=0.9.6
 iso8601>=0.1.4
 httplib2
