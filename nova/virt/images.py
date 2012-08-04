@@ -74,7 +74,7 @@ def fetch(context, image_href, path, _user_id, _project_id):
 
 def fetch_to_raw(context, image_href, path, user_id, project_id):
     path_tmp = "%s.part" % path
-    metadata = fetch(context, image_href, path_tmp, user_id, project_id)
+    fetch(context, image_href, path_tmp, user_id, project_id)
 
     with utils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
@@ -94,8 +94,8 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
             with utils.remove_path_on_error(staged):
-                out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
-                                         path_tmp, staged)
+                utils.execute('qemu-img', 'convert', '-O', 'raw', path_tmp,
+                              staged)
 
                 data = qemu_img_info(staged)
                 if data.get('file format') != "raw":
@@ -107,5 +107,3 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
 
         else:
             os.rename(path_tmp, path)
-
-    return metadata
