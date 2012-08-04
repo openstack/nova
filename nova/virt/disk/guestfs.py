@@ -25,6 +25,7 @@ from nova.virt.disk import mount
 class Mount(mount.Mount):
     """libguestfs support for arbitrary images."""
     mode = 'guestfs'
+    device_id_string = 'guest'
 
     def map_dev(self):
         self.mapped = True
