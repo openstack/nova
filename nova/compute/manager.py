@@ -833,6 +833,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                      filter_properties={}, requested_networks=None,
                      injected_files=[], admin_password=None,
                      is_first_time=False, instance=None, instance_uuid=None):
+
+        if not instance_uuid:
+            instance_uuid = instance['uuid']
+
         @utils.synchronized(instance_uuid)
         def do_run_instance():
             self._run_instance(context, request_spec,
@@ -916,12 +920,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def terminate_instance(self, context, instance=None, instance_uuid=None):
         """Terminate an instance on this host."""
-        @utils.synchronized(instance_uuid)
-        def do_terminate_instance(instance, instance_uuid):
-            elevated = context.elevated()
-            if not instance:
-                instance = self.db.instance_get_by_uuid(elevated,
-                                                        instance_uuid)
+
+        elevated = context.elevated()
+        if not instance:
+            instance = self.db.instance_get_by_uuid(elevated,
+                                                    instance_uuid)
+
+        @utils.synchronized(instance['uuid'])
+        def do_terminate_instance(instance):
             try:
                 self._delete_instance(context, instance)
             except exception.InstanceTerminationFailure as error:
@@ -930,7 +936,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._set_instance_error_state(context, instance['uuid'])
             except exception.InstanceNotFound as e:
                 LOG.warn(e, instance=instance)
-        do_terminate_instance(instance, instance_uuid)
+
+        do_terminate_instance(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -965,7 +972,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.power_off(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=final_state,
                               task_state=None)
@@ -982,7 +989,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.power_on(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -1258,8 +1265,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 _msg = _('Failed to set admin password. Instance %s is not'
                          ' running') % instance["uuid"]
                 raise exception.InstancePasswordSetFailed(
-                                                       instance=instance_uuid,
-                                                       reason=_msg)
+                        instance=instance['uuid'], reason=_msg)
             else:
                 try:
                     self.driver.set_admin_password(instance, new_pass)
@@ -1278,8 +1284,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                           instance['uuid'],
                                           task_state=None)
                     raise exception.InstancePasswordSetFailed(
-                                                       instance=instance_uuid,
-                                                       reason=_msg)
+                            instance=instance['uuid'], reason=_msg)
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(_('set_admin_password failed: %s') % e,
@@ -1292,8 +1297,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # API caller.  The real exception is logged above
                         _msg = _('error setting admin password')
                         raise exception.InstancePasswordSetFailed(
-                                                       instance=instance_uuid,
-                                                       reason=_msg)
+                                instance=instance['uuid'], reason=_msg)
                     time.sleep(1)
                     continue
 
