@@ -231,7 +231,7 @@ def wrap_instance_fault(function):
             raise
         except Exception, e:
             with excutils.save_and_reraise_exception():
-                self.add_instance_fault_from_exc(context,
+                self._add_instance_fault_from_exc(context,
                         kwargs['instance_uuid'], e, sys.exc_info())
 
     @functools.wraps(function)
@@ -1011,7 +1011,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance:
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             LOG.audit(_("Rebuilding instance"), context=context,
                       instance=instance)
 
@@ -1107,7 +1107,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)
-            self.add_instance_fault_from_exc(context, instance['uuid'], exc,
+            self._add_instance_fault_from_exc(context, instance['uuid'], exc,
                                              sys.exc_info())
             # Fall through and reset task_state to None
 
@@ -1340,7 +1340,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.rescue(context, instance,
                                self._legacy_nw_info(network_info), image_meta)
 
@@ -1364,7 +1364,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.unrescue(instance,
                                  self._legacy_nw_info(network_info))
 
@@ -1429,7 +1429,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             # NOTE(tr3buchet): tear down networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
@@ -1455,7 +1455,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             network_info = self._get_instance_nw_info(context, instance)
 
             self._notify_about_instance_usage(
@@ -1505,7 +1505,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance_type:
             instance_type = instance_types.get_instance_type(instance_type_id)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             compute_utils.notify_usage_exists(
                     context, instance, current_period=True)
             self._notify_about_instance_usage(
@@ -1555,7 +1555,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             instance_type_ref = self.db.instance_type_get(context,
                     migration_ref.new_instance_type_id)
 
@@ -1793,7 +1793,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         LOG.audit(_('Suspending'), context=context, instance=instance)
-        with self.error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.suspend(instance)
 
         current_power_state = self._get_power_state(context, instance)
@@ -2806,7 +2806,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.update_available_resource(context, self.host)
 
-    def add_instance_fault_from_exc(self, context, instance_uuid, fault,
+    def _add_instance_fault_from_exc(self, context, instance_uuid, fault,
                                     exc_info=None):
         """Adds the specified fault to the database."""
 
@@ -2898,7 +2898,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return [i for i in instances if deleted_instance(i)]
 
     @contextlib.contextmanager
-    def error_out_instance_on_exception(self, context, instance_uuid):
+    def _error_out_instance_on_exception(self, context, instance_uuid):
         try:
             yield
         except Exception, error:

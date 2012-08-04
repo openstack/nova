@@ -226,7 +226,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -246,7 +246,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -1828,9 +1828,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                 NotImplementedError('test'),
-                                                 exc_info)
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+                                                  NotImplementedError('test'),
+                                                  exc_info)
 
     def test_add_instance_fault_user_error(self):
         exc_info = None
@@ -1856,7 +1856,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
             user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
@@ -1874,8 +1874,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                 NotImplementedError('test'))
+        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+                                                  NotImplementedError('test'))
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
