@@ -1719,12 +1719,8 @@ class API(base.Base):
         """Migrate a server lively to a new host."""
         LOG.debug(_("Going to try to live migrate instance"),
                   instance=instance)
-        self.scheduler_rpcapi.live_migration(context,
-                block_migration,
-                disk_over_commit,
-                instance["id"],
-                host,
-                topic=FLAGS.compute_topic)
+        self.scheduler_rpcapi.live_migration(context, block_migration,
+                disk_over_commit, instance, host)
 
 
 class HostAPI(base.Base):

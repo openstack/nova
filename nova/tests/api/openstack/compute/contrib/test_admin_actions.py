@@ -62,9 +62,10 @@ def fake_compute_api_get(self, context, instance_id):
             'task_state': None}
 
 
-def fake_scheduler_api_live_migration(self, context, block_migration,
-                                      disk_over_commit, instance_id,
-                                      dest, topic):
+def fake_scheduler_api_live_migration(self, context, dest,
+                                      block_migration=False,
+                                      disk_over_commit=False, instance=None,
+                                      instance_id=None):
     return None
 
 
