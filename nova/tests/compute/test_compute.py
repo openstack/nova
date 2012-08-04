@@ -42,6 +42,7 @@ from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
@@ -114,7 +115,7 @@ class BaseTestCase(test.TestCase):
         super(BaseTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
-           notification_driver='nova.openstack.common.notifier.test_notifier',
+         notification_driver=['nova.openstack.common.notifier.test_notifier'],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
 
@@ -142,6 +143,7 @@ class BaseTestCase(test.TestCase):
     def tearDown(self):
         fake_image.FakeImageService_reset()
         instances = db.instance_get_all(self.context.elevated())
+        notifier_api._reset_drivers()
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['uuid'])
         super(BaseTestCase, self).tearDown()
