@@ -268,3 +268,22 @@ class NotificationsTestCase(test.TestCase):
         display_name = self.instance["display_name"]
 
         self.assertEquals(payload["display_name"], display_name)
+
+    def test_send_no_state_change(self):
+        called = [False]
+
+        def sending_no_state_change(context, instance, **kwargs):
+            called[0] = True
+        self.stubs.Set(notifications, '_send_instance_update_notification',
+                       sending_no_state_change)
+        notifications.send_update(self.context, self.instance, self.instance)
+        self.assertTrue(called[0])
+
+    def test_fail_sending_update(self):
+        def fail_sending(context, instance, **kwargs):
+            raise Exception('failed to notify')
+        self.stubs.Set(notifications, '_send_instance_update_notification',
+                       fail_sending)
+
+        notifications.send_update(self.context, self.instance, self.instance)
+        self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
