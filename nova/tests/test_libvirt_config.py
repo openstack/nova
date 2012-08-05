@@ -431,11 +431,11 @@ class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <serial type="file">
-              <source file="/tmp/vm.log"/>
+              <source path="/tmp/vm.log"/>
             </serial>""")
 
 
-class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
+class LibvirtConfigGuestConsoleTest(LibvirtConfigBaseTest):
     def test_config_pty(self):
         obj = config.LibvirtConfigGuestConsole()
         obj.type = "pty"
