@@ -1138,7 +1138,8 @@ def read_cached_file(filename, cache_info, reload_func=None):
 def hash_file(file_like_object):
     """Generate a hash for the contents of a file."""
     checksum = hashlib.sha1()
-    any(map(checksum.update, iter(lambda: file_like_object.read(32768), '')))
+    for chunk in iter(lambda: file_like_object.read(32768), b''):
+        checksum.update(chunk)
     return checksum.hexdigest()
 
 
