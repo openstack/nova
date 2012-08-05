@@ -392,6 +392,29 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
+    def test_terminate_no_network(self):
+        # This is as reported in LP bug 1008875
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance['uuid'])
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        # Make it look like this is no instance
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.compute._get_instance_nw_info(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exception.NetworkNotFound())
+        self.mox.ReplayAll()
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After terminating instances: %s"), instances)
+        self.assertEqual(len(instances), 0)
+
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
         instance = jsonutils.to_primitive(self._create_fake_instance())

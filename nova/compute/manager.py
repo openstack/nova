@@ -840,7 +840,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "shutdown.start")
 
         # get network info before tearing down
-        network_info = self._get_instance_nw_info(context, instance)
+        try:
+            network_info = self._get_instance_nw_info(context, instance)
+        except exception.NetworkNotFound:
+            network_info = network_model.NetworkInfo()
+
         # tear down allocated network structure
         self._deallocate_network(context, instance)
 
