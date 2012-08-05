@@ -29,8 +29,6 @@ import hashlib
 import os
 import string
 
-import Crypto.Cipher.AES
-
 from nova import context
 from nova import db
 from nova import exception
@@ -307,44 +305,6 @@ def _sign_csr(csr_text, ca_folder):
 
         with open(outbound, 'r') as crtfile:
             return (serial, crtfile.read())
-
-
-def _build_cipher(key, iv):
-    """Make a 128bit AES CBC encode/decode Cipher object.
-       Padding is handled internally."""
-    return Crypto.Cipher.AES.new(key, IV=iv)
-
-
-def encryptor(key):
-    """Simple symmetric key encryption."""
-    key = base64.b64decode(key)
-    iv = '\0' * 16
-
-    def encrypt(data):
-        cipher = _build_cipher(key, iv)
-        # Must pad string to multiple of 16 chars
-        padding = (16 - len(data) % 16) * " "
-        v = cipher.encrypt(data + padding)
-        del cipher
-        v = base64.b64encode(v)
-        return v
-
-    return encrypt
-
-
-def decryptor(key):
-    """Simple symmetric key decryption."""
-    key = base64.b64decode(key)
-    iv = '\0' * 16
-
-    def decrypt(data):
-        data = base64.b64decode(data)
-        cipher = _build_cipher(key, iv)
-        v = cipher.decrypt(data).rstrip()
-        del cipher
-        return v
-
-    return decrypt
 
 
 # Copyright (c) 2006-2009 Mitch Garnaat http://garnaat.org/
