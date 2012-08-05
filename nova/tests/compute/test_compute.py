@@ -1123,8 +1123,7 @@ class ComputeTestCase(BaseTestCase):
 
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], 1, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         self.compute.finish_resize(context,
@@ -1145,8 +1144,7 @@ class ComputeTestCase(BaseTestCase):
 
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], 1, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
@@ -1234,8 +1232,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], new_type_id, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], new_type_id, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                                                 instance['uuid'],
                                                 'pre-migrating')
@@ -1284,8 +1281,7 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], 1, {})
         db.migration_get_by_instance_and_status(context,
                                                 instance['uuid'],
                                                 'pre-migrating')
@@ -1345,8 +1341,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance['uuid'])
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], 1, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
@@ -1367,8 +1362,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
         db.instance_update(self.context, instance['uuid'],
                            {'host': 'foo'})
-        self.compute.prep_resize(context, instance['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, instance['uuid'], 1, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         self.compute.resize_instance(context, migration_ref['id'], {},
@@ -1400,8 +1394,7 @@ class ComputeTestCase(BaseTestCase):
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
         self.compute.prep_resize(context, inst_ref['uuid'],
-                                 new_instance_type_ref['id'], {},
-                                 filter_properties={})
+                                 new_instance_type_ref['id'], {})
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
@@ -1466,8 +1459,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, inst_ref['uuid'])
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, inst_ref['uuid'], 1, {},
-                                 filter_properties={})
+        self.compute.prep_resize(context, inst_ref['uuid'], 1, {})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(test.TestingException, self.compute.resize_instance,
