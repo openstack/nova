@@ -88,6 +88,9 @@ class _FakeDriverBackendTestCase(test.TestCase):
         def fake_migrateToURI(*a):
             pass
 
+        def fake_make_drive(_self, _path):
+            pass
+
         self.stubs.Set(nova.virt.libvirt.driver.disk,
                        'extend', fake_extend)
 
@@ -95,6 +98,11 @@ class _FakeDriverBackendTestCase(test.TestCase):
         # but don't fail for these tests.
         self.stubs.Set(nova.virt.libvirt.driver.libvirt.Domain,
                        'migrateToURI', fake_migrateToURI)
+
+        # We can't actually make a config drive v2 because ensure_tree has
+        # been faked out
+        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
+                       'make_drive', fake_make_drive)
 
     def _teardown_fakelibvirt(self):
         # Restore libvirt

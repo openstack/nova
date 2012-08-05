@@ -19,6 +19,7 @@
 """Instance Metadata information."""
 
 import base64
+import json
 import os
 
 from nova.api.ec2 import ec2utils
@@ -27,9 +28,21 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import network
+from nova.openstack.common import cfg
+
+
+metadata_opts = [
+    cfg.StrOpt('config_drive_skip_versions',
+               default=('1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 '
+                        '2007-12-15 2008-02-01 2008-09-01'),
+               help=('List of metadata versions to skip placing into the '
+                     'config drive')),
+    ]
 
 FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')
+FLAGS.register_opts(metadata_opts)
+
 
 _DEFAULT_MAPPINGS = {'ami': 'sda1',
                      'ephemeral0': 'sda2',
@@ -204,6 +217,39 @@ class InstanceMetadata():
                 data = data[items[i]]
 
         return data
+
+    def metadata_for_config_drive(self, injected_files):
+        """Yields (path, value) tuples for metadata elements."""
+        # EC2 style metadata
+        for version in VERSIONS:
+            if version in FLAGS.config_drive_skip_versions.split(' '):
+                continue
+
+            data = self.get_ec2_metadata(version)
+            if 'user-data' in data:
+                filepath = os.path.join('ec2', version, 'userdata.raw')
+                yield (filepath, data['user-data'])
+                del data['user-data']
+
+            try:
+                del data['public-keys']['0']['_name']
+            except KeyError:
+                pass
+
+            filepath = os.path.join('ec2', version, 'metadata.json')
+            yield (filepath, json.dumps(data['meta-data']))
+
+        filepath = os.path.join('ec2', 'latest', 'metadata.json')
+        yield (filepath, json.dumps(data['meta-data']))
+
+        # Openstack style metadata
+        # TODO(mikal): refactor this later
+        files = []
+        for path in injected_files:
+            files.append({'path': path,
+                          'content': injected_files[path]})
+        yield ('openstack/2012-08-10/files.json', json.dumps(files))
+        yield ('openstack/latest/files.json', json.dumps(files))
 
 
 def get_metadata_by_address(address):

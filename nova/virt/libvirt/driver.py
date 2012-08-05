@@ -71,6 +71,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt.libvirt import config
@@ -1207,6 +1208,13 @@ class LibvirtDriver(driver.ComputeDriver):
         if not suffix:
             suffix = ''
 
+        # Are we using a config drive?
+        using_config_drive = False
+        if (instance.get('config_drive') or
+            FLAGS.force_config_drive):
+            LOG.info(_('Using config drive'), instance=instance)
+            using_config_drive = True
+
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
@@ -1325,29 +1333,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                      size=size,
                                      swap_mb=swap_mb)
 
+        # target partition for file injection
         target_partition = None
         if not instance['kernel_id']:
             target_partition = FLAGS.libvirt_inject_partition
             if target_partition == 0:
                 target_partition = None
-
-        config_drive, config_drive_id = self._get_config_drive_info(instance)
-
-        if any((FLAGS.libvirt_type == 'lxc', config_drive, config_drive_id)):
+        if FLAGS.libvirt_type == 'lxc':
             target_partition = None
-
-        if config_drive_id:
-            fname = config_drive_id
-            raw('disk.config').cache(fn=libvirt_utils.fetch_image,
-                                     fname=fname,
-                                     image_id=config_drive_id,
-                                     user_id=instance['user_id'],
-                                     project_id=instance['project_id'])
-        elif config_drive:
-            label = 'config'
-            with utils.remove_path_on_error(basepath('disk.config')):
-                self._create_local(basepath('disk.config'), 64, unit='M',
-                                   fs_format='msdos', label=label)  # 64MB
 
         if FLAGS.libvirt_inject_key and instance['key_data']:
             key = str(instance['key_data'])
@@ -1391,6 +1384,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                searchList=[{'interfaces': nets,
                                             'use_ipv6': FLAGS.use_ipv6}]))
 
+        # Config drive
+        cdb = None
+        if using_config_drive:
+            cdb = configdrive.ConfigDriveBuilder(instance=instance)
+
+        # File injection
         metadata = instance.get('metadata')
 
         if FLAGS.libvirt_inject_password:
@@ -1401,28 +1400,45 @@ class LibvirtDriver(driver.ComputeDriver):
         files = instance.get('injected_files')
 
         if any((key, net, metadata, admin_pass, files)):
-            if config_drive:  # Should be True or None by now.
-                injection_path = raw('disk.config').path
-                img_id = 'config-drive'
-            else:
+            if not using_config_drive:
+                # If we're not using config_drive, inject into root fs
                 injection_path = image('disk').path
                 img_id = instance['image_ref']
 
-            for injection in ('metadata', 'key', 'net', 'admin_pass', 'files'):
-                if locals()[injection]:
-                    LOG.info(_('Injecting %(injection)s into image'
-                               ' %(img_id)s'), locals(), instance=instance)
-            try:
-                disk.inject_data(injection_path,
-                                 key, net, metadata, admin_pass, files,
-                                 partition=target_partition,
-                                 use_cow=FLAGS.use_cow_images)
+                for injection in ('metadata', 'key', 'net', 'admin_pass',
+                                  'files'):
+                    if locals()[injection]:
+                        LOG.info(_('Injecting %(injection)s into image'
+                                   ' %(img_id)s'), locals(), instance=instance)
+                try:
+                    disk.inject_data(injection_path,
+                                     key, net, metadata, admin_pass, files,
+                                     partition=target_partition,
+                                     use_cow=FLAGS.use_cow_images)
 
-            except Exception as e:
-                # This could be a windows image, or a vmdk format disk
-                LOG.warn(_('Ignoring error injecting data into image '
-                           '%(img_id)s (%(e)s)') % locals(),
-                         instance=instance)
+                except Exception as e:
+                    # This could be a windows image, or a vmdk format disk
+                    LOG.warn(_('Ignoring error injecting data into image '
+                               '%(img_id)s (%(e)s)') % locals(),
+                             instance=instance)
+
+            else:
+                # We're using config_drive, so put the files there instead
+                cdb.inject_data(key, net, metadata, admin_pass, files)
+
+        if using_config_drive:
+            # NOTE(mikal): Render the config drive. We can't add instance
+            # metadata here until after file injection, as the file injection
+            # creates state the openstack metadata relies on.
+            cdb.add_instance_metadata()
+
+            try:
+                configdrive_path = basepath(fname='disk.config')
+                LOG.info(_('Creating config drive at %(path)s'),
+                         {'path': configdrive_path}, instance=instance)
+                cdb.make_drive(configdrive_path)
+            finally:
+                cdb.cleanup()
 
         if FLAGS.libvirt_type == 'lxc':
             disk.setup_container(basepath('disk'),
@@ -1449,18 +1465,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.debug(_("block_device_list %s"), block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
-
-    def _get_config_drive_info(self, instance):
-        config_drive = instance.get('config_drive')
-        config_drive_id = instance.get('config_drive_id')
-        if FLAGS.force_config_drive:
-            if not config_drive_id:
-                config_drive = True
-        return config_drive, config_drive_id
-
-    def _has_config_drive(self, instance):
-        config_drive, config_drive_id = self._get_config_drive_info(instance)
-        return any((config_drive, config_drive_id))
 
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
@@ -1657,7 +1661,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     mount_device)
                     devices.append(cfg)
 
-            if self._has_config_drive(instance):
+            if (instance.get('config_drive') or
+                instance.get('config_drive_id') or
+                FLAGS.force_config_drive):
                 diskconfig = config.LibvirtConfigGuestDisk()
                 diskconfig.source_type = "file"
                 diskconfig.driver_format = "raw"
