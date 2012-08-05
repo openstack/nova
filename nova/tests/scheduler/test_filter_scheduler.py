@@ -111,7 +111,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(self.driver, '_provision_resource')
 
         self.driver._schedule(context_fake, 'compute',
-                              request_spec, {}, **fake_kwargs
+                              request_spec, {}
                               ).AndReturn(['host1', 'host2'])
         # instance 1
         self.driver._provision_resource(

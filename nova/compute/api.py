@@ -1444,9 +1444,8 @@ class API(base.Base):
             filter_properties['ignore_hosts'].append(instance['host'])
 
         args = {
-            "topic": FLAGS.compute_topic,
-            "instance_uuid": instance['uuid'],
-            "instance_type_id": new_instance_type['id'],
+            "instance": instance,
+            "instance_type": new_instance_type,
             "image": image,
             "update_db": False,
             "request_spec": jsonutils.to_primitive(request_spec),
