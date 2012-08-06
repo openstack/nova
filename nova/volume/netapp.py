@@ -106,7 +106,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             name = request.Name
             reason = response.Reason
             msg = _('API %(name)s failed: %(reason)s')
-            raise exception.NovaException(msg % locals())
+            raise exception.VolumeBackendAPIException(data=msg % locals())
 
     def _create_client(self, **kwargs):
         """Instantiate a web services client.
@@ -151,11 +151,12 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'netapp_server_hostname', 'netapp_server_port']
         for flag in required_flags:
             if not getattr(FLAGS, flag, None):
-                raise exception.NovaException(_('%s is not set') % flag)
+                raise exception.InvalidInput(reason=_('%s is not set') % flag)
         if not (FLAGS.netapp_storage_service or
                 FLAGS.netapp_storage_service_prefix):
-            raise exception.NovaException(_('Either netapp_storage_service or '
-                'netapp_storage_service_prefix must be set'))
+            raise exception.InvalidInput(reason=_('Either '
+                'netapp_storage_service or netapp_storage_service_prefix must '
+                'be set'))
 
     def do_setup(self, context):
         """Setup the NetApp Volume driver.
@@ -293,8 +294,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             events = self._get_job_progress(job_id)
             for event in events:
                 if event.EventStatus == 'error':
-                    raise exception.NovaException(_('Job failed: %s') %
-                        (event.ErrorMessage))
+                    msg = _('Job failed: %s') % (event.ErrorMessage)
+                    raise exception.VolumeBackendAPIException(data=msg)
                 if event.EventType == 'job-end':
                     return events
             time.sleep(5)
@@ -324,11 +325,11 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         if ss_type and not self.storage_service_prefix:
             msg = _('Attempt to use volume_type without specifying '
                 'netapp_storage_service_prefix flag.')
-            raise exception.NovaException(msg)
+            raise exception.VolumeBackendAPIException(data=msg)
         if not (ss_type or self.storage_service):
             msg = _('You must set the netapp_storage_service flag in order to '
                 'create volumes with no volume_type.')
-            raise exception.NovaException(msg)
+            raise exception.VolumeBackendAPIException(data=msg)
         storage_service = self.storage_service
         if ss_type:
             storage_service = self.storage_service_prefix + ss_type
@@ -396,7 +397,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         except (suds.WebFault, Exception):
             server.DatasetEditRollback(EditLockId=lock_id)
             msg = _('Failed to provision dataset member')
-            raise exception.NovaException(msg)
+            raise exception.VolumeBackendAPIException(data=msg)
 
         lun_id = None
         lunpath = None
@@ -411,7 +412,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
 
         if not lun_id:
             msg = _('No LUN was created by the provision job')
-            raise exception.NovaException(msg)
+            raise exception.VolumeBackendAPIException(data=msg)
 
         lun = DfmLun(dataset, lunpath, lun_id)
         self.discovered_luns.append(lun)
@@ -449,7 +450,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         except (suds.WebFault, Exception):
             server.DatasetEditRollback(EditLockId=lock_id)
             msg = _('Failed to remove and delete dataset member')
-            raise exception.NovaException(msg)
+            raise exception.VolumeBackendAPIException(data=msg)
 
     def create_volume(self, volume):
         """Driver entry point for creating a new volume."""
@@ -489,8 +490,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             if lun.lunpath.endswith(lunpath_suffix):
                 self.lun_table[name] = lun
                 return lun
-        msg = _("No entry in LUN table for volume %s")
-        raise exception.NovaException(msg % (name))
+        msg = _("No entry in LUN table for volume %s") % (name)
+        raise exception.VolumeBackendAPIException(data=msg)
 
     def delete_volume(self, volume):
         """Driver entry point for destroying existing volumes."""
@@ -510,7 +511,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         finally:
             server.LunListInfoIterEnd(Tag=tag)
         msg = _('Failed to get LUN details for LUN ID %s')
-        raise exception.NovaException(msg % lun_id)
+        raise exception.VolumeBackendAPIException(data=msg % lun_id)
 
     def _get_host_details(self, host_id):
         """Given the ID of a host, get the details about it.
@@ -527,7 +528,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         finally:
             server.HostListInfoIterEnd(Tag=tag)
         msg = _('Failed to get host details for host ID %s')
-        raise exception.NovaException(msg % host_id)
+        raise exception.VolumeBackendAPIException(data=msg % host_id)
 
     def _get_iqn_for_host(self, host_id):
         """Get the iSCSI Target Name for a storage system."""
@@ -763,8 +764,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         initiator_name = connector['initiator']
         lun_id = volume['provider_location']
         if not lun_id:
-            msg = _("No LUN ID for volume %s")
-            raise exception.NovaException(msg % volume['name'])
+            msg = _("No LUN ID for volume %s") % volume['name']
+            raise exception.VolumeBackendAPIException(data=msg)
         lun = self._get_lun_details(lun_id)
         lun_num = self._ensure_initiator_mapped(lun.HostId, lun.LunPath,
                                                 initiator_name)
@@ -773,12 +774,12 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                                                   host.HostAddress)
         if not portal:
             msg = _('Failed to get target portal for filer: %s')
-            raise exception.NovaException(msg % host.HostName)
+            raise exception.VolumeBackendAPIException(data=msg % host.HostName)
 
         iqn = self._get_iqn_for_host(host.HostId)
         if not iqn:
             msg = _('Failed to get target IQN for filer: %s')
-            raise exception.NovaException(msg % host.HostName)
+            raise exception.VolumeBackendAPIException(data=msg % host.HostName)
 
         properties = {}
         properties['target_discovered'] = False
@@ -810,8 +811,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         initiator_name = connector['initiator']
         lun_id = volume['provider_location']
         if not lun_id:
-            msg = _('No LUN ID for volume %s')
-            raise exception.NovaException(msg % (volume['name']))
+            msg = _('No LUN ID for volume %s') % volume['name']
+            raise exception.VolumeBackendAPIException(data=msg)
         lun = self._get_lun_details(lun_id)
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
@@ -966,7 +967,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         if vol_size != snap_size:
             msg = _('Cannot create volume of size %(vol_size)s from '
                 'snapshot of size %(snap_size)s')
-            raise exception.NovaException(msg % locals())
+            raise exception.VolumeBackendAPIException(data=msg % locals())
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
@@ -978,7 +979,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         if new_type != old_type:
             msg = _('Cannot create volume of type %(new_type)s from '
                 'snapshot of type %(old_type)s')
-            raise exception.NovaException(msg % locals())
+            raise exception.VolumeBackendAPIException(data=msg % locals())
         lun = self._get_lun_details(lun_id)
         extra_gb = vol_size
         new_size = '+%dg' % extra_gb

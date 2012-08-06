@@ -151,9 +151,9 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                    'err': str(err)})
         search_text = '!%s!' % getattr(FLAGS, 'storwize_svc_volpool_name')
         if search_text not in out:
-            raise exception.InvalidParameterValue(
-                    err=_('pool %s doesn\'t exist')
-                        % getattr(FLAGS, 'storwize_svc_volpool_name'))
+            raise exception.InvalidInput(
+                    reason=(_('pool %s doesn\'t exist')
+                        % getattr(FLAGS, 'storwize_svc_volpool_name')))
 
         storage_nodes = {}
         # Get the iSCSI names of the Storwize/SVC nodes
@@ -322,63 +322,64 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                           'storwize_svc_volpool_name']
         for flag in required_flags:
             if not getattr(FLAGS, flag, None):
-                raise exception.InvalidParameterValue(
-                        err=_('%s is not set') % flag)
+                raise exception.InvalidInput(
+                        reason=_('%s is not set') % flag)
 
         # Ensure that either password or keyfile were set
         if not (getattr(FLAGS, 'san_password', None)
                 or getattr(FLAGS, 'san_private_key', None)):
-            raise exception.InvalidParameterValue(
-                err=_('Password or SSH private key is required for '
-                      'authentication: set either san_password or '
-                      'san_private_key option'))
+            raise exception.InvalidInput(
+                reason=_('Password or SSH private key is required for '
+                         'authentication: set either san_password or '
+                         'san_private_key option'))
 
         # vtype should either be 'striped' or 'seq'
         vtype = getattr(FLAGS, 'storwize_svc_vol_vtype')
         if vtype not in ['striped', 'seq']:
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value specified for storwize_svc_vol_vtype: '
-                  'set to either \'striped\' or \'seq\''))
+            raise exception.InvalidInput(
+                reason=_('Illegal value specified for storwize_svc_vol_vtype: '
+                         'set to either \'striped\' or \'seq\''))
 
         # Check that rsize is a number or percentage
         rsize = getattr(FLAGS, 'storwize_svc_vol_rsize')
         if not self._check_num_perc(rsize) and (rsize not in ['auto', '-1']):
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value specified for storwize_svc_vol_rsize: '
-                  'set to either a number or a percentage'))
+            raise exception.InvalidInput(
+                reason=_('Illegal value specified for storwize_svc_vol_rsize: '
+                         'set to either a number or a percentage'))
 
         # Check that warning is a number or percentage
         warning = getattr(FLAGS, 'storwize_svc_vol_warning')
         if not self._check_num_perc(warning):
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value specified for storwize_svc_vol_warning: '
-                  'set to either a number or a percentage'))
+            raise exception.InvalidInput(
+                reason=_('Illegal value specified for '
+                         'storwize_svc_vol_warning: '
+                         'set to either a number or a percentage'))
 
         # Check that autoexpand is a boolean
         autoexpand = getattr(FLAGS, 'storwize_svc_vol_autoexpand')
         if type(autoexpand) != type(True):
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value specified for '
-                  'storwize_svc_vol_autoexpand: set to either '
-                  'True or False'))
+            raise exception.InvalidInput(
+                reason=_('Illegal value specified for '
+                         'storwize_svc_vol_autoexpand: set to either '
+                         'True or False'))
 
         # Check that grainsize is 32/64/128/256
         grainsize = getattr(FLAGS, 'storwize_svc_vol_grainsize')
         if grainsize not in ['32', '64', '128', '256']:
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value specified for '
-                  'storwize_svc_vol_grainsize: set to either '
-                  '\'32\', \'64\', \'128\', or \'256\''))
+            raise exception.InvalidInput(
+                reason=_('Illegal value specified for '
+                         'storwize_svc_vol_grainsize: set to either '
+                         '\'32\', \'64\', \'128\', or \'256\''))
 
         # Check that flashcopy_timeout is numeric and 32/64/128/256
         flashcopy_timeout = getattr(FLAGS, 'storwize_svc_flashcopy_timeout')
         if not (flashcopy_timeout.isdigit() and int(flashcopy_timeout) > 0 and
             int(flashcopy_timeout) <= 600):
-            raise exception.InvalidParameterValue(
-                err=_('Illegal value %s specified for '
-                      'storwize_svc_flashcopy_timeout: '
-                      'valid values are between 0 and 600')
-                      % flashcopy_timeout)
+            raise exception.InvalidInput(
+                reason=_('Illegal value %s specified for '
+                         'storwize_svc_flashcopy_timeout: '
+                         'valid values are between 0 and 600')
+                                         % flashcopy_timeout)
 
         # Check that compression is a boolean
         volume_compression = getattr(FLAGS, 'storwize_svc_vol_compression')
