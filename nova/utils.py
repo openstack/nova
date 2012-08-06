@@ -22,6 +22,7 @@
 import contextlib
 import datetime
 import errno
+import fcntl
 import functools
 import hashlib
 import inspect
@@ -45,7 +46,6 @@ from eventlet import event
 from eventlet.green import subprocess
 from eventlet import greenthread
 from eventlet import semaphore
-import lockfile
 import netaddr
 
 from nova.common import deprecated
@@ -581,31 +581,52 @@ def utf8(value):
     return value
 
 
-class GreenLockFile(lockfile.FileLock):
-    """Implementation of lockfile that allows for a lock per greenthread.
+class InterProcessLock(object):
+    """Lock implementation which allows multiple locks, working around
+    issues like bugs.debian.org/cgi-bin/bugreport.cgi?bug=632857 and does
+    not require any cleanup. Since lockf is always held on a file
+    descriptor rather than outside of the process, the lock gets dropped
+    automatically if the process crashes, even if __exit__ is not executed.
 
-    Simply implements lockfile:LockBase init with an addiontall suffix
-    on the unique name of the greenthread identifier
+    There are no guarantees regarding usage by multiple green threads in a
+    single process here. This lock works only between processes. Exclusive
+    access between local threads should be achieved using the semaphores
+    in the @synchronized decorator.
+
+    This lock relies on fcntl's F_SETLK behaviour, which means that it is not
+    safe to close the file descriptor while another green thread holds the
+    lock. Just opening and closing the lock file can break synchronisation,
+    so lock files must be accessed only using this abstraction.
     """
-    def __init__(self, path, threaded=True):
-        self.path = path
-        self.lock_file = os.path.abspath(path) + ".lock"
-        self.hostname = socket.gethostname()
-        self.pid = os.getpid()
-        if threaded:
-            t = threading.current_thread()
-            # Thread objects in Python 2.4 and earlier do not have ident
-            # attrs.  Worm around that.
-            ident = getattr(t, "ident", hash(t)) or hash(t)
-            gident = corolocal.get_ident()
-            self.tname = "-%x-%x" % (ident & 0xffffffff, gident & 0xffffffff)
-        else:
-            self.tname = ""
-        dirname = os.path.dirname(self.lock_file)
-        self.unique_name = os.path.join(dirname,
-                                        "%s%s.%s" % (self.hostname,
-                                                     self.tname,
-                                                     self.pid))
+
+    def __init__(self, name):
+        self.lockfile = None
+        self.fname = name
+
+    def __enter__(self):
+        self.lockfile = open(self.fname, 'w')
+
+        while True:
+            try:
+                # using non-blocking version since green threads are not
+                # patched to deal with blocking fcntl calls
+                fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return self
+            except IOError, e:
+                if e.errno in (errno.EACCES, errno.EAGAIN):
+                    # external locks synchronise things like iptables
+                    # updates - give it some time to prevent busy spinning
+                    time.sleep(0.01)
+                else:
+                    raise
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
+            self.lockfile.close()
+        except IOError:
+            LOG.exception(_("Could not release the aquired lock `%s`")
+                             % self.fname)
 
 
 _semaphores = {}
@@ -638,20 +659,6 @@ def synchronized(name, external=False):
     multiple processes. This means that if two different workers both run a
     a method decorated with @synchronized('mylock', external=True), only one
     of them will execute at a time.
-
-    Important limitation: you can only have one external lock running per
-    thread at a time. For example the following will fail:
-
-        @utils.synchronized('testlock1', external=True)
-        def outer_lock():
-
-            @utils.synchronized('testlock2', external=True)
-            def inner_lock():
-                pass
-            inner_lock()
-
-        outer_lock()
-
     """
 
     def wrap(f):
@@ -676,7 +683,7 @@ def synchronized(name, external=False):
                               {'lock': name, 'method': f.__name__})
                     lock_file_path = os.path.join(FLAGS.lock_path,
                                                   'nova-%s' % name)
-                    lock = GreenLockFile(lock_file_path)
+                    lock = InterProcessLock(lock_file_path)
                     with lock:
                         LOG.debug(_('Got file lock "%(lock)s" for '
                                     'method "%(method)s"...'),
@@ -693,78 +700,6 @@ def synchronized(name, external=False):
             return retval
         return inner
     return wrap
-
-
-def cleanup_file_locks():
-    """clean up stale locks left behind by process failures
-
-    The lockfile module, used by @synchronized, can leave stale lockfiles
-    behind after process failure. These locks can cause process hangs
-    at startup, when a process deadlocks on a lock which will never
-    be unlocked.
-
-    Intended to be called at service startup.
-
-    """
-
-    # NOTE(mikeyp) this routine incorporates some internal knowledge
-    #              from the lockfile module, and this logic really
-    #              should be part of that module.
-    #
-    # cleanup logic:
-    # 1) look for the lockfile modules's 'sentinel' files, of the form
-    #    hostname.[thread-.*]-pid, extract the pid.
-    #    if pid doesn't match a running process, delete the file since
-    #    it's from a dead process.
-    # 2) check for the actual lockfiles. if lockfile exists with linkcount
-    #    of 1, it's bogus, so delete it. A link count >= 2 indicates that
-    #    there are probably sentinels still linked to it from active
-    #    processes.  This check isn't perfect, but there is no way to
-    #    reliably tell which sentinels refer to which lock in the
-    #    lockfile implementation.
-
-    if FLAGS.disable_process_locking:
-        return
-
-    hostname = socket.gethostname()
-    sentinel_re = hostname + r'-.*\.(\d+$)'
-    lockfile_re = r'nova-.*\.lock'
-    files = os.listdir(FLAGS.lock_path)
-
-    # cleanup sentinels
-    for filename in files:
-        match = re.match(sentinel_re, filename)
-        if match is None:
-            continue
-        pid = match.group(1)
-        LOG.debug(_('Found sentinel %(filename)s for pid %(pid)s'),
-                  {'filename': filename, 'pid': pid})
-        try:
-            os.kill(int(pid), 0)
-        except OSError, e:
-            # PID wasn't found
-            delete_if_exists(os.path.join(FLAGS.lock_path, filename))
-            LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s'),
-                      {'filename': filename, 'pid': pid})
-
-    # cleanup lock files
-    for filename in files:
-        match = re.match(lockfile_re, filename)
-        if match is None:
-            continue
-        try:
-            stat_info = os.stat(os.path.join(FLAGS.lock_path, filename))
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                continue
-            else:
-                raise
-        LOG.debug(_('Found lockfile %(file)s with link count %(count)d'),
-                  {'file': filename, 'count': stat_info.st_nlink})
-        if stat_info.st_nlink == 1:
-            delete_if_exists(os.path.join(FLAGS.lock_path, filename))
-            LOG.debug(_('Cleaned lockfile %(file)s with link count %(count)d'),
-                      {'file': filename, 'count': stat_info.st_nlink})
 
 
 def delete_if_exists(pathname):

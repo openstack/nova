@@ -21,7 +21,6 @@ import select
 
 from eventlet import greenpool
 from eventlet import greenthread
-import lockfile
 
 from nova import exception
 from nova import test
@@ -107,20 +106,19 @@ class LockTestCase(test.TestCase):
         self.assertEqual(saved_sem_num, len(utils._semaphores),
                          "Semaphore leak detected")
 
-    def test_nested_external_fails(self):
-        """We can not nest external syncs"""
+    def test_nested_external_works(self):
+        """We can nest external syncs"""
+        sentinel = object()
 
         @utils.synchronized('testlock1', external=True)
         def outer_lock():
 
             @utils.synchronized('testlock2', external=True)
             def inner_lock():
-                pass
-            inner_lock()
-        try:
-            self.assertRaises(lockfile.NotMyLock, outer_lock)
-        finally:
-            utils.cleanup_file_locks()
+                return sentinel
+            return inner_lock()
+
+        self.assertEqual(sentinel, outer_lock())
 
     def test_synchronized_externally(self):
         """We can lock across multiple processes"""

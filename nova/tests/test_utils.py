@@ -533,29 +533,22 @@ class MonkeyPatchTestCase(test.TestCase):
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
 
 
-class TestGreenLocks(test.TestCase):
+class TestFileLocks(test.TestCase):
     def test_concurrent_green_lock_succeeds(self):
-        """Verify spawn_n greenthreads with two locks run concurrently.
-
-        This succeeds with spawn but fails with spawn_n because lockfile
-        gets the same thread id for both spawn_n threads. Our workaround
-        of using the GreenLockFile will work even if the issue is fixed.
-        """
+        """Verify spawn_n greenthreads with two locks run concurrently."""
         self.completed = False
         with utils.tempdir() as tmpdir:
 
             def locka(wait):
-                a = utils.GreenLockFile(os.path.join(tmpdir, 'a'))
-                a.acquire()
-                wait.wait()
-                a.release()
+                a = utils.InterProcessLock(os.path.join(tmpdir, 'a'))
+                with a:
+                    wait.wait()
                 self.completed = True
 
             def lockb(wait):
-                b = utils.GreenLockFile(os.path.join(tmpdir, 'b'))
-                b.acquire()
-                wait.wait()
-                b.release()
+                b = utils.InterProcessLock(os.path.join(tmpdir, 'b'))
+                with b:
+                    wait.wait()
 
             wait1 = eventlet.event.Event()
             wait2 = eventlet.event.Event()
@@ -567,159 +560,6 @@ class TestGreenLocks(test.TestCase):
             wait1.send()
             pool.waitall()
         self.assertTrue(self.completed)
-
-
-class TestLockCleanup(test.TestCase):
-    """unit tests for utils.cleanup_file_locks()"""
-
-    def setUp(self):
-        super(TestLockCleanup, self).setUp()
-
-        self.pid = os.getpid()
-        self.dead_pid = self._get_dead_pid()
-        self.tempdir = tempfile.mkdtemp()
-        self.flags(lock_path=self.tempdir)
-        self.lock_name = 'nova-testlock'
-        self.lock_file = os.path.join(FLAGS.lock_path,
-                                      self.lock_name + '.lock')
-        self.hostname = socket.gethostname()
-        print self.pid, self.dead_pid
-        try:
-            os.unlink(self.lock_file)
-        except OSError as (errno, strerror):
-            if errno == 2:
-                pass
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        super(TestLockCleanup, self).tearDown()
-
-    def _get_dead_pid(self):
-        """get a pid for a process that does not exist"""
-
-        candidate_pid = self.pid - 1
-        while os.path.exists(os.path.join('/proc', str(candidate_pid))):
-            candidate_pid -= 1
-            if candidate_pid == 1:
-                return 0
-        return candidate_pid
-
-    def _get_sentinel_name(self, hostname, pid, thread='MainThread'):
-        return os.path.join(FLAGS.lock_path,
-                            '%s-%s.%d' % (hostname, thread, pid))
-
-    def _create_sentinel(self, hostname, pid, thread='MainThread'):
-        name = self._get_sentinel_name(hostname, pid, thread)
-        open(name, 'wb').close()
-        return name
-
-    def test_clean_stale_locks(self):
-        """verify locks for dead processes are cleaned up"""
-
-        # create sentinels for two processes, us and a 'dead' one
-        # no active lock
-        sentinel1 = self._create_sentinel(self.hostname, self.pid)
-        sentinel2 = self._create_sentinel(self.hostname, self.dead_pid)
-
-        utils.cleanup_file_locks()
-
-        self.assertTrue(os.path.exists(sentinel1))
-        self.assertFalse(os.path.exists(self.lock_file))
-        self.assertFalse(os.path.exists(sentinel2))
-
-        os.unlink(sentinel1)
-
-    def test_clean_stale_locks_active(self):
-        """verify locks for dead processes are cleaned with an active lock """
-
-        # create sentinels for two processes, us and a 'dead' one
-        # create an active lock for us
-        sentinel1 = self._create_sentinel(self.hostname, self.pid)
-        sentinel2 = self._create_sentinel(self.hostname, self.dead_pid)
-        os.link(sentinel1, self.lock_file)
-
-        utils.cleanup_file_locks()
-
-        self.assertTrue(os.path.exists(sentinel1))
-        self.assertTrue(os.path.exists(self.lock_file))
-        self.assertFalse(os.path.exists(sentinel2))
-
-        os.unlink(sentinel1)
-        os.unlink(self.lock_file)
-
-    def test_clean_stale_with_threads(self):
-        """verify locks for multiple threads are cleaned up """
-
-        # create sentinels for four threads in our process, and a 'dead'
-        # process.  no lock.
-        sentinel1 = self._create_sentinel(self.hostname, self.pid, 'Default-1')
-        sentinel2 = self._create_sentinel(self.hostname, self.pid, 'Default-2')
-        sentinel3 = self._create_sentinel(self.hostname, self.pid, 'Default-3')
-        sentinel4 = self._create_sentinel(self.hostname, self.pid, 'Default-4')
-        sentinel5 = self._create_sentinel(self.hostname, self.dead_pid,
-                                          'Default-1')
-
-        utils.cleanup_file_locks()
-
-        self.assertTrue(os.path.exists(sentinel1))
-        self.assertTrue(os.path.exists(sentinel2))
-        self.assertTrue(os.path.exists(sentinel3))
-        self.assertTrue(os.path.exists(sentinel4))
-        self.assertFalse(os.path.exists(self.lock_file))
-        self.assertFalse(os.path.exists(sentinel5))
-
-        os.unlink(sentinel1)
-        os.unlink(sentinel2)
-        os.unlink(sentinel3)
-        os.unlink(sentinel4)
-
-    def test_clean_stale_with_threads_active(self):
-        """verify locks for multiple threads are cleaned up """
-
-        # create sentinels for four threads in our process, and a 'dead'
-        # process
-        sentinel1 = self._create_sentinel(self.hostname, self.pid, 'Default-1')
-        sentinel2 = self._create_sentinel(self.hostname, self.pid, 'Default-2')
-        sentinel3 = self._create_sentinel(self.hostname, self.pid, 'Default-3')
-        sentinel4 = self._create_sentinel(self.hostname, self.pid, 'Default-4')
-        sentinel5 = self._create_sentinel(self.hostname, self.dead_pid,
-                                          'Default-1')
-
-        os.link(sentinel1, self.lock_file)
-
-        utils.cleanup_file_locks()
-
-        self.assertTrue(os.path.exists(sentinel1))
-        self.assertTrue(os.path.exists(sentinel2))
-        self.assertTrue(os.path.exists(sentinel3))
-        self.assertTrue(os.path.exists(sentinel4))
-        self.assertTrue(os.path.exists(self.lock_file))
-        self.assertFalse(os.path.exists(sentinel5))
-
-        os.unlink(sentinel1)
-        os.unlink(sentinel2)
-        os.unlink(sentinel3)
-        os.unlink(sentinel4)
-        os.unlink(self.lock_file)
-
-    def test_clean_bogus_lockfiles(self):
-        """verify lockfiles are cleaned """
-
-        lock1 = os.path.join(FLAGS.lock_path, 'nova-testlock1.lock')
-        lock2 = os.path.join(FLAGS.lock_path, 'nova-testlock2.lock')
-        lock3 = os.path.join(FLAGS.lock_path, 'testlock3.lock')
-
-        open(lock1, 'wb').close()
-        open(lock2, 'wb').close()
-        open(lock3, 'wb').close()
-
-        utils.cleanup_file_locks()
-
-        self.assertFalse(os.path.exists(lock1))
-        self.assertFalse(os.path.exists(lock2))
-        self.assertTrue(os.path.exists(lock3))
-
-        os.unlink(lock3)
 
 
 class AuditPeriodTest(test.TestCase):

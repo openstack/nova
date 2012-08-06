@@ -5,7 +5,6 @@ anyjson==0.2.4
 boto==2.1.1
 eventlet>=0.9.17
 kombu==1.0.4
-lockfile==0.8
 lxml==2.3
 python-daemon==1.5.5
 routes==1.12.3
