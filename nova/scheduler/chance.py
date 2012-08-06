@@ -60,11 +60,12 @@ class ChanceScheduler(driver.Scheduler):
         host = self._schedule(context, topic, None, filter_properties)
         driver.cast_to_host(context, topic, host, method, **kwargs)
 
-    def schedule_run_instance(self, context, request_spec, reservations,
-                              *_args, **kwargs):
+    def schedule_run_instance(self, context, topic, request_spec,
+                              admin_password, injected_files,
+                              requested_networks, is_first_time,
+                              filter_properties, reservations):
         """Create and run an instance or instances"""
         num_instances = request_spec.get('num_instances', 1)
-        filter_properties = kwargs.get('filter_properties', {})
         instances = []
         for num in xrange(num_instances):
             host = self._schedule(context, 'compute', request_spec,
@@ -73,7 +74,12 @@ class ChanceScheduler(driver.Scheduler):
             instance = self.create_instance_db_entry(context, request_spec,
                                                      reservations)
             driver.cast_to_compute_host(context, host,
-                    'run_instance', instance_uuid=instance['uuid'], **kwargs)
+                    'run_instance', instance_uuid=instance['uuid'],
+                    requested_networks=requested_networks,
+                    injected_files=injected_files,
+                    admin_password=admin_password, is_first_time=is_first_time,
+                    request_spec=request_spec,
+                    filter_properties=filter_properties)
             instances.append(driver.encode_instance(instance))
             # So if we loop around, create_instance_db_entry will actually
             # create a new entry, instead of assume it's been created

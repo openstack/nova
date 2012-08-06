@@ -115,17 +115,17 @@ class SchedulerManager(manager.Manager):
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, request_spec)
 
-    def run_instance(self, context, topic, *args, **kwargs):
+    def run_instance(self, context, topic, request_spec, admin_password,
+            injected_files, requested_networks, is_first_time,
+            filter_properties, reservations):
         """Tries to call schedule_run_instance on the driver.
         Sets instance vm_state to ERROR on exceptions
         """
-        args = (context,) + args
-        reservations = kwargs.get('reservations', None)
-        # NOTE(russellb): We know request_spec will be specified as it is a
-        # required argument in scheduler/rpcapi.py.
-        request_spec = kwargs['request_spec']
         try:
-            result = self.driver.schedule_run_instance(*args, **kwargs)
+            result = self.driver.schedule_run_instance(context, topic,
+                    request_spec, admin_password, injected_files,
+                    requested_networks, is_first_time, filter_properties,
+                    reservations)
             return result
         except exception.NoValidHost as ex:
             # don't reraise
