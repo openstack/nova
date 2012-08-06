@@ -97,7 +97,8 @@ def db_version():
         else:
             # Some pre-Essex DB's may not be version controlled.
             # Require them to upgrade using Essex first.
-            raise exception.Error(_("Upgrade DB using Essex release first."))
+            raise exception.NovaException(
+                _("Upgrade DB using Essex release first."))
 
 
 def db_version_control(version=None):
