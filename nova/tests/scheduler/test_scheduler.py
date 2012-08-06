@@ -199,7 +199,7 @@ class SchedulerManagerTestCase(test.TestCase):
         # stuff a bit cleaner.
         self.manager._set_vm_state_and_notify('something',
                 {'vm_state': vm_states.ERROR}, self.context,
-                ex, *((self.context,) + self.fake_args), **self.fake_kwargs)
+                ex, request_spec)
 
         self.mox.ReplayAll()
 
