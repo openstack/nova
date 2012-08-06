@@ -36,6 +36,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - remove instance_uuid, add instance
                 - remove instance_type_id, add instance_type
                 - remove topic, it was unused
+        1.2 - Remove topic from run_instance, it was unused
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -44,17 +45,17 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(SchedulerAPI, self).__init__(topic=FLAGS.scheduler_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
-    def run_instance(self, ctxt, topic, request_spec, admin_password,
+    def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
             filter_properties, reservations, call=True):
         rpc_method = self.call if call else self.cast
-        return rpc_method(ctxt, self.make_msg('run_instance', topic=topic,
+        return rpc_method(ctxt, self.make_msg('run_instance',
                 request_spec=request_spec, admin_password=admin_password,
                 injected_files=injected_files,
                 requested_networks=requested_networks,
                 is_first_time=is_first_time,
                 filter_properties=filter_properties,
-                reservations=reservations))
+                reservations=reservations), version='1.2')
 
     def prep_resize(self, ctxt, instance, instance_type, image,
             update_db, request_spec, filter_properties):

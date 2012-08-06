@@ -221,14 +221,14 @@ class SchedulerManagerTestCase(test.TestCase):
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
 
-        self.manager.driver.schedule_run_instance(self.context, self.topic,
+        self.manager.driver.schedule_run_instance(self.context,
                 request_spec, None, None, None, None, {}, None).AndRaise(
                         exception.NoValidHost(reason=""))
         db.instance_update_and_get_original(self.context, fake_instance_uuid,
                 {"vm_state": vm_states.ERROR}).AndReturn((inst, inst))
 
         self.mox.ReplayAll()
-        self.manager.run_instance(self.context, self.topic, request_spec,
+        self.manager.run_instance(self.context, request_spec,
                 None, None, None, None, {}, None)
 
     def test_prep_resize_no_valid_host_back_in_active_state(self):
@@ -771,7 +771,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_run_instance,
-                         self.context, '', fake_request_spec, None, None, None,
+                         self.context, fake_request_spec, None, None, None,
                          None, None, None)
 
     def test_unimplemented_schedule_prep_resize(self):

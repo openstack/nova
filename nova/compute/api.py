@@ -745,7 +745,7 @@ class API(base.Base):
         }
 
         return self.scheduler_rpcapi.run_instance(context,
-                topic=FLAGS.compute_topic, request_spec=request_spec,
+                request_spec=request_spec,
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks, is_first_time=True,
                 filter_properties=filter_properties,
