@@ -19,6 +19,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
 import hashlib
 import os
 import random
@@ -255,7 +256,14 @@ def ensure_tree(path):
 
     :param path: Directory to create
     """
-    execute('mkdir', '-p', path)
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            if not os.path.isdir(path):
+                raise
+        else:
+            raise
 
 
 def write_to_file(path, contents, umask=None):
