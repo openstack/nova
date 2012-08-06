@@ -116,8 +116,8 @@ class TgtAdm(TargetAdmin):
                 f.close()
 
             self._execute('tgt-admin', '--execute',
-                          '--conf %s' % volume_path,
-                          '--update %s' % vol_id, run_as_root=True)
+                          '--conf', volume_path,
+                          '--update', vol_id, run_as_root=True)
 
         except Exception as ex:
             LOG.exception(ex)
