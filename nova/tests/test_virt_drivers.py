@@ -204,17 +204,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.list_instances()
 
     @catch_notimplementederror
-    def test_list_instances_detail(self):
-        self.connection.list_instances_detail()
-
-    @catch_notimplementederror
     def test_spawn(self):
         instance_ref, network_info = self._get_running_instance()
         domains = self.connection.list_instances()
         self.assertIn(instance_ref['name'], domains)
 
-        domains_details = self.connection.list_instances_detail()
-        self.assertIn(instance_ref['name'], [i.name for i in domains_details])
+        num_instances = self.connection.get_num_instances()
+        self.assertEqual(1, num_instances)
 
     @catch_notimplementederror
     def test_snapshot_not_running(self):

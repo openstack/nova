@@ -112,13 +112,6 @@ class BareMetalDriver(driver.ComputeDriver):
         name = domain_name
         return driver.InstanceInfo(name, state)
 
-    def list_instances_detail(self):
-        infos = []
-        for domain_name in self._conn.list_domains():
-            info = self._map_to_instance_info(domain_name)
-            infos.append(info)
-        return infos
-
     def destroy(self, instance, network_info, block_device_info=None,
                 cleanup=True):
         while True:

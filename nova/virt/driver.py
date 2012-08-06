@@ -156,11 +156,6 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def list_instances_detail(self):
-        """Return a list of InstanceInfo for all registered VMs"""
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         """

@@ -168,21 +168,6 @@ class VMOps(object):
 
         return name_labels
 
-    def list_instances_detail(self):
-        """List VM instances, returning InstanceInfo objects."""
-        details = []
-        for vm_ref, vm_rec in vm_utils.list_vms(self._session):
-            name = vm_rec["name_label"]
-
-            # TODO(justinsb): This a roundabout way to map the state
-            openstack_format = vm_utils.compile_info(vm_rec)
-            state = openstack_format['state']
-
-            instance_info = driver.InstanceInfo(name, state)
-            details.append(instance_info)
-
-        return details
-
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)
         vm_ref = vm_utils.lookup(self._session, name_label)
