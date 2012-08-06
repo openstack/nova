@@ -112,11 +112,12 @@ class RpcProxy(object):
         self._set_version(msg, version)
         rpc.cast(context, self._get_topic(topic), msg)
 
-    def fanout_cast(self, context, msg, version=None):
+    def fanout_cast(self, context, msg, topic=None, version=None):
         """rpc.fanout_cast() a remote method.
 
         :param context: The request context
         :param msg: The message to send, including the method and args.
+        :param topic: Override the topic for this message.
         :param version: (Optional) Override the requested API version in this
                message.
 
@@ -124,7 +125,7 @@ class RpcProxy(object):
                   from the remote method.
         """
         self._set_version(msg, version)
-        rpc.fanout_cast(context, self.topic, msg)
+        rpc.fanout_cast(context, self._get_topic(topic), msg)
 
     def cast_to_server(self, context, server_params, msg, topic=None,
                        version=None):
@@ -144,13 +145,15 @@ class RpcProxy(object):
         self._set_version(msg, version)
         rpc.cast_to_server(context, server_params, self._get_topic(topic), msg)
 
-    def fanout_cast_to_server(self, context, server_params, msg, version=None):
+    def fanout_cast_to_server(self, context, server_params, msg, topic=None,
+                              version=None):
         """rpc.fanout_cast_to_server() a remote method.
 
         :param context: The request context
         :param server_params: Server parameters.  See rpc.cast_to_server() for
                details.
         :param msg: The message to send, including the method and args.
+        :param topic: Override the topic for this message.
         :param version: (Optional) Override the requested API version in this
                message.
 
@@ -158,4 +161,5 @@ class RpcProxy(object):
                   return values.
         """
         self._set_version(msg, version)
-        rpc.fanout_cast_to_server(context, server_params, self.topic, msg)
+        rpc.fanout_cast_to_server(context, server_params,
+                                  self._get_topic(topic), msg)

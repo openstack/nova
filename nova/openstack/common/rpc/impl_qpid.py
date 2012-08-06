@@ -329,7 +329,7 @@ class Connection(object):
         if self.conf.qpid_reconnect_interval:
             self.connection.reconnect_interval = (
                 self.conf.qpid_reconnect_interval)
-        self.connection.hearbeat = self.conf.qpid_heartbeat
+        self.connection.heartbeat = self.conf.qpid_heartbeat
         self.connection.protocol = self.conf.qpid_protocol
         self.connection.tcp_nodelay = self.conf.qpid_tcp_nodelay
 
