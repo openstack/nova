@@ -17,10 +17,13 @@
 
 """Tests For miscellaneous util methods used with compute."""
 
+import string
+
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -35,6 +38,97 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
+
+
+class ComputeValidateDeviceTestCase(test.TestCase):
+    def setUp(self):
+        super(ComputeValidateDeviceTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake')
+        self.instance = {
+                'uuid': 'fake',
+                'root_device_name': '/dev/vda',
+                'default_ephemeral_device': '/dev/vdb'
+        }
+
+    def _validate_device(self, device=None):
+        return compute_utils.get_device_name_for_instance(self.context,
+                                                          self.instance,
+                                                          device)
+
+    @staticmethod
+    def _fake_bdm(device):
+        return {
+            'device_name': device,
+            'no_device': None,
+            'volume_id': 'fake',
+            'snapshot_id': None
+        }
+
+    def test_wrap(self):
+        data = []
+        for letter in string.ascii_lowercase[2:]:
+            data.append(self._fake_bdm('/dev/vd' + letter))
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdaa')
+
+    def test_wrap_plus_one(self):
+        data = []
+        for letter in string.ascii_lowercase[2:]:
+            data.append(self._fake_bdm('/dev/vd' + letter))
+        data.append(self._fake_bdm('/dev/vdaa'))
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdab')
+
+    def test_later(self):
+        data = [
+            self._fake_bdm('/dev/vdc'),
+            self._fake_bdm('/dev/vdd'),
+            self._fake_bdm('/dev/vde'),
+        ]
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdf')
+
+    def test_gap(self):
+        data = [
+            self._fake_bdm('/dev/vdc'),
+            self._fake_bdm('/dev/vde'),
+        ]
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdd')
+
+    def test_no_bdms(self):
+        data = []
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdc')
+
+    def test_invalid_bdms(self):
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: [])
+        self.instance['root_device_name'] = "baddata"
+        self.assertRaises(exception.InvalidDevicePath,
+                          self._validate_device)
+
+    def test_invalid_device_prefix(self):
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: [])
+        self.assertRaises(exception.InvalidDevicePath,
+                          self._validate_device, '/baddata/vdc')
+
+    def test_device_in_use(self):
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: [])
+        self.assertRaises(exception.DevicePathInUse,
+                          self._validate_device, '/dev/vdb')
 
 
 class UsageInfoTestCase(test.TestCase):

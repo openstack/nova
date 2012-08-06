@@ -3463,8 +3463,7 @@ def snapshot_update(context, snapshot_id, values):
 
 
 def _block_device_mapping_get_query(context, session=None):
-    return model_query(context, models.BlockDeviceMapping, session=session,
-                       read_deleted="no")
+    return model_query(context, models.BlockDeviceMapping, session=session)
 
 
 @require_context
@@ -3542,6 +3541,19 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
         _block_device_mapping_get_query(context, session=session).\
             filter_by(instance_uuid=instance_uuid).\
             filter_by(volume_id=volume_id).\
+            update({'deleted': True,
+                    'deleted_at': timeutils.utcnow(),
+                    'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
+                                                        device_name):
+    session = get_session()
+    with session.begin():
+        _block_device_mapping_get_query(context, session=session).\
+            filter_by(instance_uuid=instance_uuid).\
+            filter_by(device_name=device_name).\
             update({'deleted': True,
                     'deleted_at': timeutils.utcnow(),
                     'updated_at': literal_column('updated_at')})

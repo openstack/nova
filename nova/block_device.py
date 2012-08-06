@@ -19,6 +19,10 @@ import re
 
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
+_DEFAULT_MAPPINGS = {'ami': 'sda1',
+                     'ephemeral0': 'sda2',
+                     'root': DEFAULT_ROOT_DEV_NAME,
+                     'swap': 'sda3'}
 
 
 def properties_root_device_name(properties):
@@ -81,3 +85,49 @@ def strip_prefix(device_name):
     """ remove both leading /dev/ and xvd or sd or vd """
     device_name = strip_dev(device_name)
     return _pref.sub('', device_name)
+
+
+def instance_block_mapping(instance, bdms):
+    root_device_name = instance['root_device_name']
+    if root_device_name is None:
+        return _DEFAULT_MAPPINGS
+
+    mappings = {}
+    mappings['ami'] = strip_dev(root_device_name)
+    mappings['root'] = root_device_name
+    default_ephemeral_device = instance.get('default_ephemeral_device')
+    if default_ephemeral_device:
+        mappings['ephemeral0'] = default_ephemeral_device
+    default_swap_device = instance.get('default_swap_device')
+    if default_swap_device:
+        mappings['swap'] = default_swap_device
+    ebs_devices = []
+
+    # 'ephemeralN', 'swap' and ebs
+    for bdm in bdms:
+        if bdm['no_device']:
+            continue
+
+        # ebs volume case
+        if (bdm['volume_id'] or bdm['snapshot_id']):
+            ebs_devices.append(bdm['device_name'])
+            continue
+
+        virtual_name = bdm['virtual_name']
+        if not virtual_name:
+            continue
+
+        if is_swap_or_ephemeral(virtual_name):
+            mappings[virtual_name] = bdm['device_name']
+
+    # NOTE(yamahata): I'm not sure how ebs device should be numbered.
+    #                 Right now sort by device name for deterministic
+    #                 result.
+    if ebs_devices:
+        nebs = 0
+        ebs_devices.sort()
+        for ebs in ebs_devices:
+            mappings['ebs%d' % nebs] = ebs
+            nebs += 1
+
+    return mappings

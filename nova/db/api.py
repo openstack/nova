@@ -1298,9 +1298,16 @@ def block_device_mapping_destroy(context, bdm_id):
     return IMPL.block_device_mapping_destroy(context, bdm_id)
 
 
+def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
+                                                        device_name):
+    """Destroy the block device mapping."""
+    return IMPL.block_device_mapping_destroy_by_instance_and_device(
+        context, instance_uuid, device_name)
+
+
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
-    """Destroy the block device mapping or raise if it does not exist."""
+    """Destroy the block device mapping."""
     return IMPL.block_device_mapping_destroy_by_instance_and_volume(
         context, instance_uuid, volume_id)
 

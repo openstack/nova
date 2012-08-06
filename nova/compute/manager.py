@@ -247,7 +247,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.43'
+    RPC_API_VERSION = '1.44'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2025,11 +2025,39 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_fault
+    def reserve_block_device_name(self, context, instance, device):
+
+        @utils.synchronized(instance['uuid'])
+        def do_reserve():
+            result = compute_utils.get_device_name_for_instance(context,
+                                                                instance,
+                                                                device)
+            # NOTE(vish): create bdm here to avoid race condition
+            values = {'instance_uuid': instance['uuid'],
+                      'device_name': result}
+            self.db.block_device_mapping_create(context, values)
+            return result
+        return do_reserve()
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def attach_volume(self, context, volume_id, mountpoint, instance_uuid=None,
                       instance=None):
         """Attach a volume to an instance."""
+        try:
+            return self._attach_volume(context, volume_id, mountpoint,
+                                       instance_uuid, instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                instance_uuid = instance_uuid or instance.get('uuid')
+                self.db.block_device_mapping_destroy_by_instance_and_device(
+                        context, instance_uuid, mountpoint)
+
+    def _attach_volume(self, context, volume_id, mountpoint, instance_uuid,
+                       instance):
         volume = self.volume_api.get(context, volume_id)
         context = context.elevated()
         if not instance:
@@ -2076,7 +2104,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             'volume_id': volume_id,
             'volume_size': None,
             'no_device': None}
-        self.db.block_device_mapping_create(context, values)
+        self.db.block_device_mapping_update_or_create(context, values)
 
     def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""

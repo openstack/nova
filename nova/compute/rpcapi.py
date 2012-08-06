@@ -124,6 +124,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                finish_resize(), confirm_resize(), revert_resize() and
                finish_revert_resize()
         1.43 - Add migrate_data to live_migration()
+        1.44 - Adds reserve_block_device_name()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -478,6 +479,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         topic = _compute_topic(self.topic, ctxt, host, None)
         return self.call(ctxt, self.make_msg('get_host_uptime'), topic,
                 version='1.1')
+
+    def reserve_block_device_name(self, ctxt, instance, device):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('reserve_block_device_name',
+                instance=instance_p, device=device),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.44')
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):
