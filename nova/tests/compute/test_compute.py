@@ -4459,7 +4459,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         return functools.partial(self.compute._reschedule, self.context, uuid,
                 requested_networks, admin_password, injected_files,
-                is_first_time)
+                is_first_time, request_spec=None, filter_properties={})
 
     def test_reschedule_no_filter_properties(self):
         """no filter_properties will disable re-scheduling"""
@@ -4507,7 +4507,8 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         """Spawn fails and re-scheduling is disabled."""
         # this won't be re-scheduled:
         self.assertRaises(ThatsNoOrdinaryRabbitException,
-                self.compute._run_instance, self.context, self.instance_uuid)
+                self.compute._run_instance, self.context, self.instance_uuid,
+                None, {}, None, None, None, None)
 
     def test_exception_with_rescheduling_enabled(self):
         """Spawn fails and re-scheduling is enabled.  Original exception
@@ -4535,4 +4536,5 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
 
         # the original exception should now be raised:
         self.assertRaises(ThatsNoOrdinaryRabbitException,
-                self.compute._run_instance, self.context, self.instance_uuid)
+                self.compute._run_instance, self.context, self.instance_uuid,
+                None, {}, None, None, None, None)

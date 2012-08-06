@@ -496,12 +496,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             'block_device_mapping': block_device_mapping
         }
 
-    def _run_instance(self, context, instance_uuid,
-                      requested_networks=None,
-                      injected_files=[],
-                      admin_password=None,
-                      is_first_time=False,
-                      **kwargs):
+    def _run_instance(self, context, instance_uuid, request_spec,
+                      filter_properties, requested_networks, injected_files,
+                      admin_password, is_first_time):
         """Launch a new instance with specified options."""
         context = context.elevated()
         try:
@@ -526,7 +523,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # try to re-schedule instance:
                 self._reschedule_or_reraise(context, instance,
                         requested_networks, admin_password, injected_files,
-                        is_first_time, **kwargs)
+                        is_first_time, request_spec, filter_properties)
             else:
                 # Spawn success:
                 if (is_first_time and not instance['access_ip_v4']
@@ -542,7 +539,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance_uuid)
 
-    def _reschedule_or_reraise(self, context, instance, *args, **kwargs):
+    def _reschedule_or_reraise(self, context, instance, requested_networks,
+                               admin_password, injected_files, is_first_time,
+                               request_spec, filter_properties):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
@@ -563,8 +562,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise
 
         try:
-            rescheduled = self._reschedule(context, instance_uuid, *args,
-                  **kwargs)
+            rescheduled = self._reschedule(context, instance_uuid,
+                    requested_networks, admin_password, injected_files,
+                    is_first_time, request_spec, filter_properties)
         except Exception:
             rescheduled = False
             LOG.exception(_("Error trying to reschedule"),
@@ -578,9 +578,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise type_, value, tb
 
     def _reschedule(self, context, instance_uuid, requested_networks,
-            admin_password, injected_files, is_first_time, **kwargs):
+            admin_password, injected_files, is_first_time, request_spec,
+            filter_properties):
 
-        filter_properties = kwargs.get('filter_properties', {})
         retry = filter_properties.get('retry', None)
         if not retry:
             # no retry information, do not reschedule.
@@ -588,7 +588,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance_uuid=instance_uuid)
             return
 
-        request_spec = kwargs.get('request_spec', None)
         if not request_spec:
             LOG.debug(_("No request spec, will not reschedule"),
                       instance_uuid=instance_uuid)
@@ -825,10 +824,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def run_instance(self, context, instance_uuid, **kwargs):
+    def run_instance(self, context, instance_uuid, request_spec=None,
+                     filter_properties={}, requested_networks=None,
+                     injected_files=[], admin_password=None,
+                     is_first_time=False):
         @utils.synchronized(instance_uuid)
         def do_run_instance():
-            self._run_instance(context, instance_uuid, **kwargs)
+            self._run_instance(context, instance_uuid, request_spec,
+                    filter_properties, requested_networks, injected_files,
+                    admin_password, is_first_time)
         do_run_instance()
 
     def _shutdown_instance(self, context, instance):
