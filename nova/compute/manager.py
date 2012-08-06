@@ -2625,9 +2625,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
-        The hypervisor is authoritative for the power_state data, but we don't
-        want to do an expensive call to the virt driver's list_instances_detail
-        method. Instead, we do a less-expensive call to get the number of
+        To sync power state data we make a DB call to get the number of
         virtual machines known by the hypervisor and if the number matches the
         number of virtual machines known by the database, we proceed in a lazy
         loop, one database record at a time, checking if the hypervisor has the

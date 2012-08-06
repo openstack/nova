@@ -439,14 +439,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return driver.InstanceInfo(name, state)
 
-    def list_instances_detail(self):
-        infos = []
-        for domain_id in self.list_instance_ids():
-            domain = self._conn.lookupByID(domain_id)
-            info = self._map_to_instance_info(domain)
-            infos.append(info)
-        return infos
-
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for (network, mapping) in network_info:
