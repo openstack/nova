@@ -53,6 +53,7 @@ from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova import servicegroup
 from nova import utils
 from nova import volume
 
@@ -168,6 +169,8 @@ class API(base.Base):
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.servicegroup_api = servicegroup.API()
+
         super(API, self).__init__(**kwargs)
 
     def _instance_update(self, context, instance_uuid, **kwargs):
@@ -930,7 +933,7 @@ class API(base.Base):
             except exception.ComputeHostNotFound:
                 services = []
             for service in services:
-                if utils.service_is_up(service):
+                if self.servicegroup_api.service_is_up(service):
                     is_up = True
                     cb(context, instance, bdms)
                     break
