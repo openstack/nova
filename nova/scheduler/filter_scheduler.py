@@ -118,9 +118,10 @@ class FilterScheduler(driver.Scheduler):
         host = hosts.pop(0)
 
         # Forward off to the host
-        driver.cast_to_compute_host(context, host.host_state.host,
-                'prep_resize', instance_uuid=instance['uuid'],
-                instance_type_id=instance_type['id'], image=image)
+        updated_instance = driver.instance_update_db(context, instance['uuid'],
+                                                     host.host_state.host)
+        self.compute_rpcapi.prep_resize(context, image, updated_instance,
+                instance_type, host.host_state.host)
 
     def _provision_resource(self, context, weighted_host, request_spec,
             reservations, filter_properties, kwargs):

@@ -273,7 +273,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.37'
+    RPC_API_VERSION = '1.38'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1481,7 +1481,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def prep_resize(self, context, instance_uuid, instance_type_id, image):
+    def prep_resize(self, context, image, instance=None, instance_uuid=None,
+                    instance_type=None, instance_type_id=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -1489,44 +1490,49 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         context = context.elevated()
 
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        with self.error_out_instance_on_exception(context, instance_uuid):
-            compute_utils.notify_usage_exists(
-                    context, instance_ref, current_period=True)
-            self._notify_about_instance_usage(
-                    context, instance_ref, "resize.prep.start")
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-            same_host = instance_ref['host'] == FLAGS.host
+        if not instance_type:
+            instance_type = instance_types.get_instance_type(instance_type_id)
+
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            compute_utils.notify_usage_exists(
+                    context, instance, current_period=True)
+            self._notify_about_instance_usage(
+                    context, instance, "resize.prep.start")
+
+            same_host = instance['host'] == FLAGS.host
             if same_host and not FLAGS.allow_resize_to_same_host:
-                self._set_instance_error_state(context, instance_uuid)
+                self._set_instance_error_state(context, instance['uuid'])
                 msg = _('destination same as source!')
                 raise exception.MigrationError(msg)
 
-            old_instance_type_id = instance_ref['instance_type_id']
+            # TODO(russellb): no-db-compute: Send the old instance type info
+            # that is needed via rpc so db access isn't required here.
+            old_instance_type_id = instance['instance_type_id']
             old_instance_type = instance_types.get_instance_type(
                     old_instance_type_id)
-            new_instance_type = instance_types.get_instance_type(
-                    instance_type_id)
 
             migration_ref = self.db.migration_create(context,
-                    {'instance_uuid': instance_ref['uuid'],
-                     'source_compute': instance_ref['host'],
+                    {'instance_uuid': instance['uuid'],
+                     'source_compute': instance['host'],
                      'dest_compute': FLAGS.host,
                      'dest_host': self.driver.get_host_ip_addr(),
                      'old_instance_type_id': old_instance_type['id'],
-                     'new_instance_type_id': instance_type_id,
+                     'new_instance_type_id': instance_type['id'],
                      'status': 'pre-migrating'})
 
-            LOG.audit(_('Migrating'), context=context, instance=instance_ref)
-            self.compute_rpcapi.resize_instance(context, instance_ref,
+            LOG.audit(_('Migrating'), context=context, instance=instance)
+            self.compute_rpcapi.resize_instance(context, instance,
                     migration_ref['id'], image)
 
             extra_usage_info = dict(
-                    new_instance_type=new_instance_type['name'],
-                    new_instance_type_id=new_instance_type['id'])
+                    new_instance_type=instance_type['name'],
+                    new_instance_type_id=instance_type['id'])
 
             self._notify_about_instance_usage(
-                context, instance_ref, "resize.prep.end",
+                context, instance, "resize.prep.end",
                 extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

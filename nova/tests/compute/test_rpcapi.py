@@ -210,6 +210,11 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance, block_migration='block_migration',
                 disk='disk', host='host', version='1.23')
 
+    def test_prep_resize(self):
+        self._test_compute_api('prep_resize', 'cast',
+                instance=self.fake_instance, instance_type='fake_type',
+                image='fake_image', host='host', version='1.38')
+
     def test_reboot_instance(self):
         self._test_compute_api('reboot_instance', 'cast',
                 instance=self.fake_instance, reboot_type='type', version='1.4')
