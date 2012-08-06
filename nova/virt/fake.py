@@ -71,11 +71,6 @@ class FakeDriver(driver.ComputeDriver):
     def list_instances(self):
         return self.instances.keys()
 
-    def _map_to_instance_info(self, instance):
-        instance = utils.check_isinstance(instance, FakeInstance)
-        info = driver.InstanceInfo(instance.name, instance.state)
-        return info
-
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         pass

@@ -421,24 +421,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 pass
         return names
 
-    @staticmethod
-    def _map_to_instance_info(domain):
-        """Gets info from a virsh domain object into an InstanceInfo"""
-
-        # domain.info() returns a list of:
-        #    state:       one of the state values (virDomainState)
-        #    maxMemory:   the maximum memory used by the domain
-        #    memory:      the current amount of memory used by the domain
-        #    nbVirtCPU:   the number of virtual CPU
-        #    puTime:      the time used by the domain in nanoseconds
-
-        (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
-        state = LIBVIRT_POWER_STATE[state]
-
-        name = domain.name()
-
-        return driver.InstanceInfo(name, state)
-
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for (network, mapping) in network_info:
