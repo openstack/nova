@@ -987,18 +987,18 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                                      {'uuid': vdi_uuid, 'ref': vdi_ref})
         self.assertEqual(called['resize'], True)
 
-        def test_resize_xcp(self):
-            instance = db.instance_create(self.context, self.instance_values)
-            called = {'resize': False}
+    def test_resize_xcp(self):
+        instance = db.instance_create(self.context, self.instance_values)
+        called = {'resize': False}
 
-            def fake_vdi_resize(*args, **kwargs):
-                called['resize'] = True
+        def fake_vdi_resize(*args, **kwargs):
+            called['resize'] = True
 
-                self.stubs.Set(stubs.FakeSessionForVMTests,
-                               "VDI_resize", fake_vdi_resize)
-                stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
-                                      product_version=(1, 4, 99),
-                                      product_brand='XCP')
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       "VDI_resize", fake_vdi_resize)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
+                              product_version=(1, 4, 99),
+                              product_brand='XCP')
         conn = xenapi_conn.XenAPIDriver(False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
