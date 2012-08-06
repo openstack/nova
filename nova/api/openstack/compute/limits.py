@@ -23,6 +23,7 @@ import httplib
 import math
 import re
 import time
+import urlparse
 
 import webob.dec
 import webob.exc
@@ -85,8 +86,18 @@ class LimitsController(object):
         Return all global and rate limit information.
         """
         context = req.environ['nova.context']
-        quotas = QUOTAS.get_project_quotas(context, context.project_id,
-                                           usages=False)
+        qs = req.environ.get('QUERY_STRING', '')
+        params = urlparse.parse_qs(qs)
+        if 'user_id' in params:
+            user_id = params["user_id"][0]
+            quotas = QUOTAS.get_user_quotas(context, user_id,
+                                            context.project_id,
+                                            usages=False)
+        else:
+            quotas = QUOTAS.get_project_quotas(context,
+                                               context.project_id,
+                                               usages=False)
+
         abs_limits = dict((k, v['limit']) for k, v in quotas.items())
         rate_limits = req.environ.get("nova.limits", [])
 
