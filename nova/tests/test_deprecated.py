@@ -38,3 +38,9 @@ class DeprecatedConfigTestCase(test.TestCase):
         self.assertRaises(exception.DeprecatedConfig,
                           deprecated.warn, "test2")
         self.assertEqual(self.logbuffer, 'Deprecated Config: test2')
+
+    def test_deprecated_logs_only_once(self):
+        deprecated.warn('only once!')
+        deprecated.warn('only once!')
+        deprecated.warn('only once!')
+        self.assertEqual(self.logbuffer, 'Deprecated Config: only once!')
