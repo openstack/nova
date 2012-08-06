@@ -31,13 +31,6 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
-class InstanceInfo(object):
-    def __init__(self, name, state):
-        self.name = name
-        assert state in power_state.valid_states(), "Bad state: %s" % state
-        self.state = state
-
-
 def block_device_info_get_root(block_device_info):
     block_device_info = block_device_info or {}
     return block_device_info.get('root_device_name')

@@ -105,13 +105,6 @@ class BareMetalDriver(driver.ComputeDriver):
     def list_instances(self):
         return self._conn.list_domains()
 
-    def _map_to_instance_info(self, domain_name):
-        """Gets info from a virsh domain object into an InstanceInfo"""
-        _domain_info = self._conn.get_domain_info(domain_name)
-        state, _max_mem, _mem, _num_cpu, _cpu_time = _domain_info
-        name = domain_name
-        return driver.InstanceInfo(name, state)
-
     def destroy(self, instance, network_info, block_device_info=None,
                 cleanup=True):
         while True:
