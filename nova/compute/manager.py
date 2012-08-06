@@ -157,17 +157,18 @@ def publisher_id(host=None):
 def checks_instance_lock(function):
     """Decorator to prevent action against locked instances for non-admins."""
 
-    # NOTE(russellb): There are two versions of the checks_instance_lock
-    # decorator.  This function is the core code for it.  This just serves
-    # as a transition from when every function expected a context
-    # and instance_uuid as positional arguments to where everything is a kwarg,
-    # and the function may get either an instance_uuid or an instance.
-    def _checks_instance_lock_core(self, cb, context, *args, **kwargs):
-        instance_uuid = kwargs['instance_uuid']
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+        if instance:
+            instance_uuid = instance['uuid']
+        else:
+            instance_uuid = kwargs['instance_uuid']
+
         if context.instance_lock_checked:
             locked = False  # Implied, since we wouldn't be here otherwise
         else:
-            locked = self._get_lock(context, instance_uuid)
+            locked = self._get_lock(context, instance_uuid, instance)
         admin = context.is_admin
 
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
@@ -177,39 +178,12 @@ def checks_instance_lock(function):
 
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
-            cb(self, context, *args, **kwargs)
+            function(self, context, *args, **kwargs)
         else:
             LOG.error(_("check_instance_lock: not executing |%s|"),
                       function, context=context, instance_uuid=instance_uuid)
 
-    @functools.wraps(function)
-    def decorated_function(self, context, instance_uuid, *args, **kwargs):
-
-        def _cb(self, context, *args, **kwargs):
-            instance_uuid = kwargs.pop('instance_uuid')
-            function(self, context, instance_uuid, *args, **kwargs)
-
-        kwargs['instance_uuid'] = instance_uuid
-
-        return _checks_instance_lock_core(self, _cb, context, *args, **kwargs)
-
-    @functools.wraps(function)
-    def decorated_function_new(self, context, *args, **kwargs):
-        if 'instance_uuid' not in kwargs:
-            kwargs['instance_uuid'] = kwargs['instance']['uuid']
-
-        def _cb(self, context, *args, **kwargs):
-            function(self, context, *args, **kwargs)
-
-        return _checks_instance_lock_core(self, _cb, context, *args, **kwargs)
-
-    expected_args = ['context', 'instance_uuid']
-    argspec = inspect.getargspec(function)
-
-    if expected_args == argspec.args[1:len(expected_args) + 1]:
-        return decorated_function
-    else:
-        return decorated_function_new
+    return decorated_function
 
 
 def wrap_instance_fault(function):
@@ -1834,14 +1808,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def _get_lock(self, context, instance_uuid):
+    def _get_lock(self, context, instance_uuid=None, instance=None):
         """Return the boolean state of the given instance's lock."""
-        context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            context = context.elevated()
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         LOG.debug(_('Getting locked state'), context=context,
-                  instance=instance_ref)
-        return instance_ref['locked']
+                  instance=instance)
+        return instance['locked']
 
     @checks_instance_lock
     @wrap_instance_fault

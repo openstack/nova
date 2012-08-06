@@ -1103,17 +1103,19 @@ class ComputeTestCase(BaseTestCase):
             instance = db.instance_get_by_uuid(self.context, instance_uuid)
             self.assertEqual(instance['task_state'], task_state)
 
-        db.instance_update(self.context, instance_uuid,
-                           {'task_state': task_states.REBOOTING})
+        instance = db.instance_update(self.context, instance_uuid,
+                                      {'task_state': task_states.REBOOTING})
 
         # should fail with locked nonadmin context, task_state won't be cleared
         self.compute_api.lock(self.context, instance)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         check_task_state(task_states.REBOOTING)
 
         # should succeed with unlocked nonadmin context, task_state cleared
         self.compute_api.unlock(self.context, instance)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         check_task_state(None)
