@@ -1765,7 +1765,7 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        self.compute.post_live_migration(c, inst_ref, dest)
+        self.compute._post_live_migration(c, inst_ref, dest)
 
         # make sure floating ips are rewritten to destinatioin hostname.
         flo_refs = db.floating_ip_get_all_by_host(c, dest)

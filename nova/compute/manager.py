@@ -2243,11 +2243,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # live_migration might raises exceptions, but
         # nothing must be recovered in this version.
         self.driver.live_migration(context, instance_ref, dest,
-                                   self.post_live_migration,
+                                   self._post_live_migration,
                                    self.rollback_live_migration,
                                    block_migration)
 
-    def post_live_migration(self, ctxt, instance_ref,
+    def _post_live_migration(self, ctxt, instance_ref,
                             dest, block_migration=False):
         """Post operations for live migration.
 
@@ -2260,7 +2260,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param block_migration: if true, prepare for block migration
 
         """
-        LOG.info(_('post_live_migration() is started..'),
+        LOG.info(_('_post_live_migration() is started..'),
                  instance=instance_ref)
 
         # Detaching volumes.
