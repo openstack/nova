@@ -795,14 +795,14 @@ class CloudController(object):
         volume = self.volume_api.get(context, volume_id)
 
         try:
-            instance = self.compute_api.detach_volume(context,
-                                                      volume_id=volume_id)
+            self.compute_api.detach_volume(context, volume_id=volume_id)
         except exception.InvalidVolume:
             raise exception.EC2APIError(_('Detach Volume Failed.'))
 
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': ec2utils.id_to_ec2_inst_id(instance['uuid']),
+                'instanceId': ec2utils.id_to_ec2_inst_id(
+                                    volume['instance_uuid']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
