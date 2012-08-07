@@ -179,7 +179,7 @@ class DBError(NovaException):
 
 
 class DeprecatedConfig(NovaException):
-    message = _("Fatal call to deprecated config %(msg)")
+    message = _("Fatal call to deprecated config %(msg)s")
 
 
 class DecryptionFailure(NovaException):
@@ -1129,11 +1129,11 @@ class CouldNotFetchImage(NovaException):
 
 
 class TaskAlreadyRunning(NovaException):
-    message = _("Task %(task_name) is already running on host %(host)")
+    message = _("Task %(task_name)s is already running on host %(host)s")
 
 
 class TaskNotRunning(NovaException):
-    message = _("Task %(task_name) is not running on host %(host)")
+    message = _("Task %(task_name)s is not running on host %(host)s")
 
 
 class InstanceIsLocked(InstanceInvalidState):
