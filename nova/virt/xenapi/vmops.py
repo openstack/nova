@@ -852,8 +852,8 @@ class VMOps(object):
         """Inject instance metadata into xenstore."""
         def store_meta(topdir, data_list):
             for item in data_list:
-                key = self._sanitize_xenstore_key(item.key)
-                value = item.value or ''
+                key = self._sanitize_xenstore_key(item['key'])
+                value = item['value'] or ''
                 self._add_to_param_xenstore(vm_ref, '%s/%s' % (topdir, key),
                                             jsonutils.dumps(value))
 

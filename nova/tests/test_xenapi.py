@@ -2261,22 +2261,19 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                        fake_delete_from_xenstore)
 
     def test_inject_instance_metadata(self):
-        class FakeMetaItem(object):
-            def __init__(self, key, value):
-                self.key = key
-                self.value = value
 
         # Add some system_metadata to ensure it doesn't get added
         # to xenstore
-        instance = dict(metadata=[FakeMetaItem("a", 1),
-                                  FakeMetaItem("b", 2),
-                                  FakeMetaItem("c", 3),
+        instance = dict(metadata=[{'key': 'a', 'value': 1},
+                                  {'key': 'b', 'value': 2},
+                                  {'key': 'c', 'value': 3},
                                   # Check xenstore key sanitizing
-                                  FakeMetaItem("hi.there", 4),
-                                  FakeMetaItem("hi!t.e/e", 5)],
-                        system_metadata=[FakeMetaItem("sys_a", 1),
-                                         FakeMetaItem("sys_b", 2),
-                                         FakeMetaItem("sys_c", 3)])
+                                  {'key': 'hi.there', 'value': 4},
+                                  {'key': 'hi!t.e/e', 'value': 5}],
+                                  # Check xenstore key sanitizing
+                        system_metadata=[{'key': 'sys_a', 'value': 1},
+                                         {'key': 'sys_b', 'value': 2},
+                                         {'key': 'sys_c', 'value': 3}])
         self.conn._vmops.inject_instance_metadata(instance, 'vm_ref')
 
         self.assertEqual(self.xenstore, {
