@@ -642,7 +642,9 @@ class Controller(wsgi.Controller):
 
         # optional openstack extensions:
         key_name = server_dict.get('key_name')
-        user_data = server_dict.get('user_data')
+        user_data = None
+        if self.ext_mgr.is_loaded('os-user-data'):
+            user_data = server_dict.get('user_data')
         self._validate_user_data(user_data)
 
         availability_zone = server_dict.get('availability_zone')

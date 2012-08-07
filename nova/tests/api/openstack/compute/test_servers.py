@@ -1812,6 +1812,31 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_user_data_enabled(self):
+        self.ext_mgr.extensions = {'os-user-data': 'fake'}
+        user_data = 'fake'
+        params = {'user_data': user_data}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['user_data'], user_data)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_user_data_disabled(self):
+        user_data = 'fake'
+        params = {'user_data': user_data}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['user_data'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
