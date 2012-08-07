@@ -409,7 +409,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.driver.compute_rpcapi,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
         self.mox.StubOutWithMock(notifications, 'send_update')
 
         dest = 'fake_host2'
@@ -431,9 +431,8 @@ class SchedulerTestCase(test.TestCase):
         notifications.send_update(self.context, instance, instance,
                                   service="scheduler")
 
-        driver.cast_to_compute_host(self.context, instance['host'],
-                'live_migration', update_db=False,
-                instance_id=instance['id'], dest=dest,
+        compute_rpcapi.ComputeAPI.live_migration(self.context,
+                host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration)
 
         self.mox.ReplayAll()
@@ -451,7 +450,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
 
         dest = 'fake_host2'
         block_migration = True
@@ -498,9 +497,8 @@ class SchedulerTestCase(test.TestCase):
                 {"task_state": task_states.MIGRATING}).AndReturn(
                         (instance, instance))
 
-        driver.cast_to_compute_host(self.context, instance['host'],
-                'live_migration', update_db=False,
-                instance_id=instance_id, dest=dest,
+        compute_rpcapi.ComputeAPI.live_migration(self.context,
+                host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration)
 
         self.mox.ReplayAll()

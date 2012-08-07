@@ -238,11 +238,9 @@ class Scheduler(object):
 
         # Perform migration
         src = instance['host']
-        cast_to_compute_host(context, src, 'live_migration',
-                             update_db=False,
-                             instance_id=instance['id'],
-                             dest=dest,
-                             block_migration=block_migration)
+        self.compute_rpcapi.live_migration(context, host=src,
+                instance=new_instance_ref, dest=dest,
+                block_migration=block_migration)
 
     def _live_migration_src_check(self, context, instance_ref):
         """Live migration check routine (for src host).
