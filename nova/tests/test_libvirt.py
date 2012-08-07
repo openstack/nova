@@ -1928,9 +1928,9 @@ class LibvirtConnTestCase(test.TestCase):
             conn.spawn(self.context, instance, None, network_info)
         except Exception, e:
             # assert that no exception is raised due to sha1 receiving an int
-            self.assertEqual(-1, str(e.message).find('must be string or buffer'
-                                                     ', not int'))
-            count = (0 <= str(e.message).find('Unexpected method call'))
+            self.assertEqual(-1, unicode(e).find('must be string or buffer'
+                                                 ', not int'))
+            count = (0 <= unicode(e).find('Unexpected method call'))
 
         path = os.path.join(FLAGS.instances_path, instance.name)
         if os.path.isdir(path):
