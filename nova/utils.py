@@ -65,12 +65,6 @@ FLAGS.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
 
-if FLAGS.rootwrap_config is None or FLAGS.root_helper != 'sudo':
-    deprecated.warn(_('The root_helper option (which lets you specify a '
-                      'root wrapper different from nova-rootwrap, and '
-                      'defaults to using sudo) is now deprecated. You '
-                      'should use the rootwrap_config option instead.'))
-
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
@@ -146,7 +140,6 @@ def execute(*cmd, **kwargs):
     :returns: a tuple, (stdout, stderr) from the spawned process, or None if
              the command fails.
     """
-
     process_input = kwargs.pop('process_input', None)
     check_exit_code = kwargs.pop('check_exit_code', [0])
     ignore_exit_code = False
@@ -165,6 +158,14 @@ def execute(*cmd, **kwargs):
                                         'to utils.execute: %r') % kwargs)
 
     if run_as_root:
+
+        if FLAGS.rootwrap_config is None or FLAGS.root_helper != 'sudo':
+            deprecated.warn(_('The root_helper option (which lets you specify '
+                              'a root wrapper different from nova-rootwrap, '
+                              'and defaults to using sudo) is now deprecated. '
+                              'You should use the rootwrap_config option '
+                              'instead.'))
+
         if (FLAGS.rootwrap_config is not None):
             cmd = ['sudo', 'nova-rootwrap', FLAGS.rootwrap_config] + list(cmd)
         else:
