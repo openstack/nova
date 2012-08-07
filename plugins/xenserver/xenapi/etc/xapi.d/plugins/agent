@@ -43,12 +43,6 @@ import xenstore
 AGENT_TIMEOUT = 30
 
 
-def jsonify(fnc):
-    def wrapper(*args, **kwargs):
-        return json.dumps(fnc(*args, **kwargs))
-    return wrapper
-
-
 class TimeoutError(StandardError):
     pass
 
@@ -105,7 +99,6 @@ def password(self, arg_dict):
     return resp
 
 
-@jsonify
 def resetnetwork(self, arg_dict):
     """Writes a resquest to xenstore that tells the agent
     to reset networking.
@@ -114,6 +107,11 @@ def resetnetwork(self, arg_dict):
     request_id = arg_dict['id']
     arg_dict['path'] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
+    try:
+        resp = _wait_for_agent(self, request_id, arg_dict)
+    except TimeoutError, e:
+        raise PluginError(e)
+    return resp
 
 
 def inject_file(self, arg_dict):
