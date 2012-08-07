@@ -223,7 +223,6 @@ class LibvirtConnection(driver.ComputeDriver):
         self._host_state = None
         self._initiator = None
         self._wrapped_conn = None
-        self.container = None
         self.read_only = read_only
         if FLAGS.firewall_driver not in firewall.drivers:
             FLAGS.set_default('firewall_driver', firewall.drivers[0])
@@ -491,7 +490,10 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('Deleting instance files %(target)s') % locals(),
                  instance=instance)
         if FLAGS.libvirt_type == 'lxc':
-            disk.destroy_container(self.container)
+            container_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'rootfs')
+            disk.destroy_container(container_dir=container_dir)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -1209,7 +1211,9 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
         if FLAGS.libvirt_type == 'lxc':
-            container_dir = '%s/rootfs' % basepath(suffix='')
+            container_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         'rootfs')
             libvirt_utils.ensure_tree(container_dir)
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
@@ -1405,9 +1409,9 @@ class LibvirtConnection(driver.ComputeDriver):
                          instance=instance)
 
         if FLAGS.libvirt_type == 'lxc':
-            self.container = disk.setup_container(basepath('disk'),
-                                                  container_dir=container_dir,
-                                                  use_cow=FLAGS.use_cow_images)
+            disk.setup_container(basepath('disk'),
+                                 container_dir=container_dir,
+                                 use_cow=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')
