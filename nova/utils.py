@@ -39,6 +39,7 @@ import tempfile
 import threading
 import time
 import uuid
+import weakref
 from xml.sax import saxutils
 
 from eventlet import corolocal
@@ -630,7 +631,7 @@ class InterProcessLock(object):
                              % self.fname)
 
 
-_semaphores = {}
+_semaphores = weakref.WeakValueDictionary()
 
 
 def synchronized(name, external=False):
@@ -668,9 +669,13 @@ def synchronized(name, external=False):
             # NOTE(soren): If we ever go natively threaded, this will be racy.
             #              See http://stackoverflow.com/questions/5390569/dyn
             #              amically-allocating-and-destroying-mutexes
+            sem = _semaphores.get(name, semaphore.Semaphore())
             if name not in _semaphores:
-                _semaphores[name] = semaphore.Semaphore()
-            sem = _semaphores[name]
+                # this check is not racy - we're already holding ref locally
+                # so GC won't remove the item and there was no IO switch
+                # (only valid in greenthreads)
+                _semaphores[name] = sem
+
             LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
                         '"%(method)s"...'), {'lock': name,
                                              'method': f.__name__})
@@ -692,11 +697,6 @@ def synchronized(name, external=False):
                         retval = f(*args, **kwargs)
                 else:
                     retval = f(*args, **kwargs)
-
-            # If no-one else is waiting for it, delete it.
-            # See note about possible raciness above.
-            if not sem.balance < 1:
-                del _semaphores[name]
 
             return retval
         return inner
