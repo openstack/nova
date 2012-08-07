@@ -448,7 +448,7 @@ class BareMetalDriver(driver.ComputeDriver):
             inst_name = inst['name']
 
             injection_path = basepath('root')
-            img_id = inst.image_ref
+            img_id = inst['image_ref']
 
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
