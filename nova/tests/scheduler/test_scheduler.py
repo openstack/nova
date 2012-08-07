@@ -403,7 +403,6 @@ class SchedulerTestCase(test.TestCase):
 
     def test_live_migration_basic(self):
         """Test basic schedule_live_migration functionality"""
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
@@ -416,11 +415,9 @@ class SchedulerTestCase(test.TestCase):
         dest = 'fake_host2'
         block_migration = False
         disk_over_commit = False
-        instance = self._live_migration_instance()
+        instance = jsonutils.to_primitive(self._live_migration_instance())
         instance_id = instance['id']
         instance_uuid = instance['uuid']
-        db.instance_get(self.context,
-                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
         self.driver._live_migration_dest_check(self.context, instance, dest)
@@ -441,14 +438,13 @@ class SchedulerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         self.driver.schedule_live_migration(self.context,
-                instance_id=instance['id'], dest=dest,
+                instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_all_checks_pass(self):
         """Test live migration when all checks pass."""
 
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(utils, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
@@ -463,8 +459,6 @@ class SchedulerTestCase(test.TestCase):
         instance = jsonutils.to_primitive(self._live_migration_instance())
         instance_id = instance['id']
         instance_uuid = instance['uuid']
-        db.instance_get(self.context,
-                        instance_id).AndReturn(instance)
 
         # Source checks
         db.service_get_all_compute_by_host(self.context,
@@ -511,7 +505,7 @@ class SchedulerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = self.driver.schedule_live_migration(self.context,
-                instance_id=instance_id, dest=dest,
+                instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
         self.assertEqual(result, None)

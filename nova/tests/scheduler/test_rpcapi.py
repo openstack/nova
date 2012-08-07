@@ -95,7 +95,8 @@ class SchedulerRpcAPITestCase(test.TestCase):
         self._test_scheduler_api('live_migration', rpc_method='call',
                 block_migration='fake_block_migration',
                 disk_over_commit='fake_disk_over_commit',
-                instance_id='fake_id', dest='fake_dest', topic='fake_topic')
+                instance='fake_instance', dest='fake_dest', topic='fake_topic',
+                version='1.3')
 
     def test_update_service_capabilities(self):
         self._test_scheduler_api('update_service_capabilities',

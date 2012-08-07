@@ -200,13 +200,14 @@ class Scheduler(object):
         msg = _("Driver must implement schedule_run_instance")
         raise NotImplementedError(msg)
 
-    def schedule_live_migration(self, context, instance_id, dest,
-                                block_migration=False,
-                                disk_over_commit=False):
+    def schedule_live_migration(self, context, dest,
+                                block_migration=False, disk_over_commit=False,
+                                instance=None, instance_id=None):
         """Live migration scheduling method.
 
         :param context:
-        :param instance_id:
+        :param instance_id: (deprecated)
+        :param instance: instance dict
         :param dest: destination host
         :param block_migration: if true, block_migration.
         :param disk_over_commit: if True, consider real(not virtual)
@@ -217,27 +218,29 @@ class Scheduler(object):
             Then scheduler send request that host.
         """
         # Check we can do live migration
-        instance_ref = db.instance_get(context, instance_id)
-        self._live_migration_src_check(context, instance_ref)
-        self._live_migration_dest_check(context, instance_ref, dest)
-        self._live_migration_common_check(context, instance_ref, dest)
+        if not instance:
+            instance = db.instance_get(context, instance_id)
+
+        self._live_migration_src_check(context, instance)
+        self._live_migration_dest_check(context, instance, dest)
+        self._live_migration_common_check(context, instance, dest)
         self.compute_rpcapi.check_can_live_migrate_destination(context,
-                instance_ref, dest, block_migration, disk_over_commit)
+                instance, dest, block_migration, disk_over_commit)
 
         # Change instance_state
         values = {"task_state": task_states.MIGRATING}
 
         # update instance state and notify
         (old_ref, new_instance_ref) = db.instance_update_and_get_original(
-                context, instance_ref['uuid'], values)
+                context, instance['uuid'], values)
         notifications.send_update(context, old_ref, new_instance_ref,
                 service="scheduler")
 
         # Perform migration
-        src = instance_ref['host']
+        src = instance['host']
         cast_to_compute_host(context, src, 'live_migration',
                              update_db=False,
-                             instance_id=instance_id,
+                             instance_id=instance['id'],
                              dest=dest,
                              block_migration=block_migration)
 

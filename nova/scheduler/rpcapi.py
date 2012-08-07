@@ -37,6 +37,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - remove instance_type_id, add instance_type
                 - remove topic, it was unused
         1.2 - Remove topic from run_instance, it was unused
+        1.3 - Remove instance_id, add instance to live_migration
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -70,13 +71,14 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))
 
     def live_migration(self, ctxt, block_migration, disk_over_commit,
-            instance_id, dest, topic):
+            instance, dest, topic):
         # NOTE(comstud): Call vs cast so we can get exceptions back, otherwise
         # this call in the scheduler driver doesn't return anything.
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('live_migration',
                 block_migration=block_migration,
-                disk_over_commit=disk_over_commit, instance_id=instance_id,
-                dest=dest, topic=topic))
+                disk_over_commit=disk_over_commit, instance=instance_p,
+                dest=dest, topic=topic), version='1.3')
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):
