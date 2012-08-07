@@ -42,6 +42,9 @@ class FakeInstance(object):
         self.name = name
         self.state = state
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
 
 class FakeDriver(driver.ComputeDriver):
     """Fake hypervisor driver"""
@@ -81,7 +84,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
-        name = instance.name
+        name = instance['name']
         state = power_state.RUNNING
         fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance

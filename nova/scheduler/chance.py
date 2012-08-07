@@ -73,14 +73,16 @@ class ChanceScheduler(driver.Scheduler):
             request_spec['instance_properties']['launch_index'] = num
             instance = self.create_instance_db_entry(context, request_spec,
                                                      reservations)
-            driver.cast_to_compute_host(context, host,
-                    'run_instance', instance_uuid=instance['uuid'],
+            updated_instance = driver.instance_update_db(context,
+                    instance['uuid'], host)
+            self.compute_rpcapi.run_instance(context,
+                    instance=updated_instance, host=host,
                     requested_networks=requested_networks,
                     injected_files=injected_files,
                     admin_password=admin_password, is_first_time=is_first_time,
                     request_spec=request_spec,
                     filter_properties=filter_properties)
-            instances.append(driver.encode_instance(instance))
+            instances.append(driver.encode_instance(updated_instance))
             # So if we loop around, create_instance_db_entry will actually
             # create a new entry, instead of assume it's been created
             # already

@@ -280,6 +280,13 @@ class ComputeRpcAPITestCase(test.TestCase):
                 'cast', instance=self.fake_instance, host='host',
                 version='1.32')
 
+    def test_run_instance(self):
+        self._test_compute_api('run_instance', 'cast',
+                instance=self.fake_instance, host='fake_host',
+                request_spec='fake_spec', filter_properties={},
+                requested_networks='networks', injected_files='files',
+                admin_password='pw', is_first_time=True, version='1.39')
+
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
                 instance=self.fake_instance, new_pass='pw', version='1.33')
