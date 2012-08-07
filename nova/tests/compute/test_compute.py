@@ -1349,7 +1349,8 @@ class ComputeTestCase(BaseTestCase):
                        fake_cleanup_volumes)
 
         self.compute._delete_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
+                instance=jsonutils.to_primitive(instance),
+                bdms={})
 
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure
@@ -1357,7 +1358,7 @@ class ComputeTestCase(BaseTestCase):
         """
         instance = self._create_fake_instance()
 
-        def fake_delete_instance(context, instance):
+        def fake_delete_instance(context, instance, bdms):
             raise exception.InstanceTerminationFailure(reason='')
 
         self.stubs.Set(self.compute, '_delete_instance',
@@ -2357,13 +2358,17 @@ class ComputeTestCase(BaseTestCase):
                                                  self.compute.host
                                                 ).AndReturn([instance])
 
+        bdms = []
+
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
         self.compute._shutdown_instance(admin_context,
-                                        instance).AndReturn(None)
+                                        instance,
+                                        bdms).AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
         self.compute._cleanup_volumes(admin_context,
-                                      instance['uuid']).AndReturn(None)
+                                      instance['uuid'],
+                                      bdms).AndReturn(None)
 
         self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(admin_context)
@@ -4490,6 +4495,34 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
 
+    def test_terminate_with_volumes(self):
+        """Make sure that volumes get detached during instance termination"""
+        admin = context.get_admin_context()
+        instance = self._create_fake_instance()
+
+        # Create a volume and attach it to our instance
+        volume_id = db.volume_create(admin, {'size': 1})['id']
+        values = {'instance_uuid': instance['uuid'],
+                  'device_name': '/dev/vdc',
+                  'delete_on_termination': False,
+                  'volume_id': volume_id,
+                  }
+        db.block_device_mapping_create(admin, values)
+        db.volume_attached(admin, volume_id, instance["uuid"],
+                           "/dev/vdc")
+
+        # Stub out and record whether it gets detached
+        result = {"detached": False}
+
+        def fake_detach(self, context, volume):
+            result["detached"] = volume["id"] == volume_id
+        self.stubs.Set(nova.volume.api.API, "detach", fake_detach)
+
+        # Kill the instance and check that it was detached
+        self.compute.terminate_instance(admin, instance=instance)
+        self.assertTrue(result["detached"])
+
+    def test_inject_network_info(self):
         instance = self._create_fake_instance()
         self.compute_api.attach_volume(self.context, instance, 1, device=None)
         self.assertTrue(called.get('fake_check_attach'))

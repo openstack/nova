@@ -325,7 +325,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, bdms=[],
+                version='2.4')
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',
