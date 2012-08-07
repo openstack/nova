@@ -380,8 +380,8 @@ class ExtensionManagerTest(ExtensionTestCase):
         app = compute.APIRouter()
         ext_mgr = compute_extensions.ExtensionManager()
         ext_mgr.register(InvalidExtension())
-        self.assertTrue('FOXNSOX' in ext_mgr.extensions)
-        self.assertTrue('THIRD' not in ext_mgr.extensions)
+        self.assertTrue(ext_mgr.is_loaded('FOXNSOX'))
+        self.assertFalse(ext_mgr.is_loaded('THIRD'))
 
 
 class ActionExtensionTest(ExtensionTestCase):

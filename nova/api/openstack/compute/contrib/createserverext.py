@@ -55,7 +55,7 @@ class Createserverext(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = []
-        controller = Controller()
+        controller = Controller(self.ext_mgr)
 
         res = extensions.ResourceExtension('os-create-server-ext',
                                            controller=controller)

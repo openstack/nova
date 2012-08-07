@@ -53,7 +53,7 @@ class APIRouter(nova.api.openstack.APIRouter):
     """
     ExtensionManager = extensions.ExtensionManager
 
-    def _setup_routes(self, mapper):
+    def _setup_routes(self, mapper, ext_mgr):
         self.resources['versions'] = versions.create_resource()
         mapper.connect("versions", "/",
                     controller=self.resources['versions'],
@@ -67,7 +67,7 @@ class APIRouter(nova.api.openstack.APIRouter):
                     parent_resource=dict(member_name='server',
                     collection_name='servers'))
 
-        self.resources['servers'] = servers.create_resource()
+        self.resources['servers'] = servers.create_resource(ext_mgr)
         mapper.resource("server", "servers",
                         controller=self.resources['servers'],
                         collection={'detail': 'GET'},

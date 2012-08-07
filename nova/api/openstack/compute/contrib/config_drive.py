@@ -82,6 +82,6 @@ class Config_drive(extensions.ExtensionDescriptor):
     updated = "2012-07-16T00:00:00+00:00"
 
     def get_controller_extensions(self):
-        controller = Controller()
+        controller = Controller(self.ext_mgr)
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
