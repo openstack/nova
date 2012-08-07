@@ -1930,7 +1930,7 @@ class LibvirtConnTestCase(test.TestCase):
             # assert that no exception is raised due to sha1 receiving an int
             self.assertEqual(-1, unicode(e).find('must be string or buffer'
                                                  ', not int'))
-            count = (0 <= unicode(e).find('Unexpected method call'))
+            self.assertNotIn('Unexpected method call', unicode(e))
 
         path = os.path.join(FLAGS.instances_path, instance.name)
         if os.path.isdir(path):
