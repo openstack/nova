@@ -317,7 +317,7 @@ class Connection(object):
                     FLAGS.qpid_reconnect_interval_min)
         if FLAGS.qpid_reconnect_interval:
             self.connection.reconnect_interval = FLAGS.qpid_reconnect_interval
-        self.connection.hearbeat = FLAGS.qpid_heartbeat
+        self.connection.heartbeat = FLAGS.qpid_heartbeat
         self.connection.protocol = FLAGS.qpid_protocol
         self.connection.tcp_nodelay = FLAGS.qpid_tcp_nodelay
 
