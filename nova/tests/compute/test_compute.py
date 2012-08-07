@@ -234,7 +234,7 @@ class ComputeTestCase(BaseTestCase):
             raise NotImplementedError()
 
         self.assertRaises(NotImplementedError, failer,
-                          self.compute, self.context, inst_uuid)
+                          self.compute, self.context, instance_uuid=inst_uuid)
 
         self.assertTrue(called['fault_added'])
 

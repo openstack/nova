@@ -219,49 +219,23 @@ def wrap_instance_fault(function):
     an instance that may get thrown. It then logs an instance fault in the db.
     """
 
-    # NOTE(russellb): There are two versions of the wrap_instance_fault
-    # decorator.  This function is the core code for it.  This just serves
-    # as a transition from when every function expected a context
-    # and instance_uuid as positional arguments to where everything is a kwarg,
-    # and the function may get either an instance_uuid or an instance.
-    def _wrap_instance_fault_core(self, cb, context, *args, **kwargs):
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
         try:
-            return cb(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
         except exception.InstanceNotFound:
             raise
         except Exception, e:
             with excutils.save_and_reraise_exception():
+                instance = kwargs.get('instance', None)
+                if instance:
+                    instance_uuid = instance['uuid']
+                else:
+                    instance_uuid = kwargs['instance_uuid']
                 self._add_instance_fault_from_exc(context,
-                        kwargs['instance_uuid'], e, sys.exc_info())
+                        instance_uuid, e, sys.exc_info())
 
-    @functools.wraps(function)
-    def decorated_function(self, context, instance_uuid, *args, **kwargs):
-
-        def _cb(self, context, *args, **kwargs):
-            instance_uuid = kwargs.pop('instance_uuid')
-            return function(self, context, instance_uuid, *args, **kwargs)
-
-        kwargs['instance_uuid'] = instance_uuid
-
-        return _wrap_instance_fault_core(self, _cb, context, *args, **kwargs)
-
-    @functools.wraps(function)
-    def decorated_function_new(self, context, *args, **kwargs):
-        if 'instance_uuid' not in kwargs:
-            kwargs['instance_uuid'] = kwargs['instance']['uuid']
-
-        def _cb(self, context, *args, **kwargs):
-            return function(self, context, *args, **kwargs)
-
-        return _wrap_instance_fault_core(self, _cb, context, *args, **kwargs)
-
-    expected_args = ['context', 'instance_uuid']
-    argspec = inspect.getargspec(function)
-
-    if expected_args == argspec.args[1:len(expected_args) + 1]:
-        return decorated_function
-    else:
-        return decorated_function_new
+    return decorated_function
 
 
 def _get_image_meta(context, image_ref):
