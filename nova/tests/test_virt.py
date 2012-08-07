@@ -24,6 +24,8 @@ from nova import utils
 from nova.virt.disk import api as disk_api
 from nova.virt import driver
 
+from nova.openstack.common import jsonutils
+
 FLAGS = flags.FLAGS
 
 
@@ -178,3 +180,12 @@ class TestVirtDiskPaths(test.TestCase):
                           disk_api._inject_file_into_fs,
                           '/tmp', '/etc/../../../../etc/passwd',
                           'hax')
+
+    def test_inject_metadata(self):
+        with utils.tempdir() as tmpdir:
+            meta_objs = [{"key": "foo", "value": "bar"}]
+            metadata = {"foo": "bar"}
+            disk_api._inject_metadata_into_fs(meta_objs, tmpdir)
+            json_file = os.path.join(tmpdir, 'meta.js')
+            json_data = jsonutils.loads(open(json_file).read())
+            self.assertEqual(metadata, json_data)

@@ -388,7 +388,7 @@ def _inject_file_into_fs(fs, path, contents, append=False):
 
 
 def _inject_metadata_into_fs(metadata, fs):
-    metadata = dict([(m.key, m.value) for m in metadata])
+    metadata = dict([(m['key'], m['value']) for m in metadata])
     _inject_file_into_fs(fs, 'meta.js', jsonutils.dumps(metadata))
 
 
