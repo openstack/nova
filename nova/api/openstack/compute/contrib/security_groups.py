@@ -456,9 +456,8 @@ class SecurityGroupActionController(wsgi.Controller):
 
 class Security_groups(extensions.ExtensionDescriptor):
     """Security group support"""
-
     name = "SecurityGroups"
-    alias = "security_groups"
+    alias = "os-security-groups"
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"
     updated = "2011-07-21T00:00:00+00:00"
 
