@@ -22,7 +22,6 @@
 import contextlib
 import datetime
 import errno
-import fcntl
 import functools
 import hashlib
 import inspect
@@ -581,10 +580,10 @@ def utf8(value):
     return value
 
 
-class InterProcessLock(object):
+class _InterProcessLock(object):
     """Lock implementation which allows multiple locks, working around
     issues like bugs.debian.org/cgi-bin/bugreport.cgi?bug=632857 and does
-    not require any cleanup. Since lockf is always held on a file
+    not require any cleanup. Since the lock is always held on a file
     descriptor rather than outside of the process, the lock gets dropped
     automatically if the process crashes, even if __exit__ is not executed.
 
@@ -593,7 +592,7 @@ class InterProcessLock(object):
     access between local threads should be achieved using the semaphores
     in the @synchronized decorator.
 
-    This lock relies on fcntl's F_SETLK behaviour, which means that it is not
+    Note these locks are released when the descriptor is closed, so it's not
     safe to close the file descriptor while another green thread holds the
     lock. Just opening and closing the lock file can break synchronisation,
     so lock files must be accessed only using this abstraction.
@@ -608,9 +607,11 @@ class InterProcessLock(object):
 
         while True:
             try:
-                # using non-blocking version since green threads are not
-                # patched to deal with blocking fcntl calls
-                fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                # Using non-blocking locks since green threads are not
+                # patched to deal with blocking locking calls.
+                # Also upon reading the MSDN docs for locking(), it seems
+                # to have a laughable 10 attempts "blocking" mechanism.
+                self.trylock()
                 return self
             except IOError, e:
                 if e.errno in (errno.EACCES, errno.EAGAIN):
@@ -622,12 +623,41 @@ class InterProcessLock(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
+            self.unlock()
             self.lockfile.close()
         except IOError:
             LOG.exception(_("Could not release the aquired lock `%s`")
                              % self.fname)
 
+    def trylock(self):
+        raise NotImplementedError()
+
+    def unlock(self):
+        raise NotImplementedError()
+
+
+class _WindowsLock(_InterProcessLock):
+    def trylock(self):
+        msvcrt.locking(self.lockfile, msvcrt.LK_NBLCK, 1)
+
+    def unlock(self):
+        msvcrt.locking(self.lockfile, msvcrt.LK_UNLCK, 1)
+
+
+class _PosixLock(_InterProcessLock):
+    def trylock(self):
+        fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def unlock(self):
+        fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
+
+
+if os.name == 'nt':
+    import msvcrt
+    InterProcessLock = _WindowsLock
+else:
+    import fcntl
+    InterProcessLock = _PosixLock
 
 _semaphores = {}
 
