@@ -31,6 +31,10 @@ def fake_get_vnc_console_invalid_type(self, _context,
     raise exception.ConsoleTypeInvalid(console_type=_console_type)
 
 
+def fake_get_vnc_console_not_ready(self, _context, instance, _console_type):
+    raise exception.InstanceNotReady(instance_id=instance["uuid"])
+
+
 def fake_get_vnc_console_not_found(self, _context, instance, _console_type):
     raise exception.InstanceNotFound(instance_id=instance["uuid"])
 
@@ -63,6 +67,19 @@ class ConsolesExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(output,
             {u'console': {u'url': u'http://fake', u'type': u'novnc'}})
+
+    def test_get_vnc_console_not_ready(self):
+        self.stubs.Set(compute.API, 'get_vnc_console',
+                       fake_get_vnc_console_not_ready)
+        body = {'os-getVNCConsole': {'type': 'novnc'}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        output = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 409)
 
     def test_get_vnc_console_no_type(self):
         self.stubs.Set(compute.API, 'get', fake_get)

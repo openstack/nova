@@ -30,6 +30,7 @@ import netaddr
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import vm_mode
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -1230,7 +1231,21 @@ class VMOps(object):
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
-        vm_ref = self._get_vm_opaque_ref(instance)
+        # NOTE(johannes): This can fail if the VM object hasn't been created
+        # yet on the dom0. Since that step happens fairly late in the build
+        # process, there's a potential for a race condition here. Until the
+        # VM object is created, return back a 409 error instead of a 404
+        # error.
+        try:
+            vm_ref = self._get_vm_opaque_ref(instance)
+        except exception.NotFound:
+            if instance['vm_state'] != vm_states.BUILDING:
+                raise
+
+            LOG.info(_('Fetching VM ref while BUILDING failed'),
+                     instance=instance)
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+
         session_id = self._session.get_session_id()
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)
 
