@@ -193,8 +193,13 @@ def inject_file(session, instance, vm_ref, path, contents):
 
 
 def resetnetwork(session, instance, vm_ref):
-    """Calls resetnetwork method in agent."""
-    _call_agent(session, instance, vm_ref, 'resetnetwork')
+    resp = _call_agent(session, instance, vm_ref, 'resetnetwork')
+    if resp['returncode'] != '0':
+        LOG.error(_('Failed to reset network: %(resp)r'), locals(),
+                  instance=instance)
+        return None
+
+    return resp['message']
 
 
 class SimpleDH(object):
