@@ -282,6 +282,11 @@ def floating_ip_allocate_address(context, project_id, pool):
     return IMPL.floating_ip_allocate_address(context, project_id, pool)
 
 
+def floating_ip_bulk_create(context, ips):
+    """Create a lot of floating ips from the values dictionary."""
+    return IMPL.floating_ip_bulk_create(context, ips)
+
+
 def floating_ip_create(context, values):
     """Create a floating ip from the values dictionary."""
     return IMPL.floating_ip_create(context, values)

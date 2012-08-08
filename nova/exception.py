@@ -639,6 +639,15 @@ class NoFixedIpsDefined(NotFound):
     message = _("Zero fixed ips could be found.")
 
 
+#TODO(bcwaldon): EOL this exception!
+class Duplicate(NovaException):
+    pass
+
+
+class FloatingIpExists(Duplicate):
+    message = _("Floating ip %(address)s already exists.")
+
+
 class FloatingIpNotFound(NotFound):
     message = _("Floating ip not found for id %(id)s.")
 
@@ -905,11 +914,6 @@ class ImageRotationNotAllowed(NovaException):
 
 class RotationRequiredForBackup(NovaException):
     message = _("Rotation param is required for backup image_type")
-
-
-#TODO(bcwaldon): EOL this exception!
-class Duplicate(NovaException):
-    pass
 
 
 class KeyPairExists(Duplicate):
