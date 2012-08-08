@@ -2435,6 +2435,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.NovaException(msg % instance_ref["name"])
             time.sleep(1)
 
+    def filter_defer_apply_on(self):
+        self.firewall_driver.filter_defer_apply_on()
+
+    def filter_defer_apply_off(self):
+        self.firewall_driver.filter_defer_apply_off()
+
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
         """Spawning live_migration operation for distributing high-load.

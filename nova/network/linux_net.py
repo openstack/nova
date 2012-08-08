@@ -263,6 +263,8 @@ class IptablesManager(object):
                      'nat': IptablesTable()}
         self.ipv6 = {'filter': IptablesTable()}
 
+        self.iptables_apply_deferred = False
+
         # Add a nova-filter-top chain. It's intended to be shared
         # among the various nova components. It sits at the very top
         # of FORWARD and OUTPUT.
@@ -312,8 +314,21 @@ class IptablesManager(object):
         self.ipv4['nat'].add_chain('float-snat')
         self.ipv4['nat'].add_rule('snat', '-j $float-snat')
 
-    @utils.synchronized('iptables', external=True)
+    def defer_apply_on(self):
+        self.iptables_apply_deferred = True
+
+    def defer_apply_off(self):
+        self.iptables_apply_deferred = False
+        self._apply()
+
     def apply(self):
+        if self.iptables_apply_deferred:
+            return
+
+        self._apply()
+
+    @utils.synchronized('iptables', external=True)
+    def _apply(self):
         """Apply the current in-memory set of iptables rules.
 
         This will blow away any rules left over from previous runs of the
