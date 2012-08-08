@@ -152,6 +152,8 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
 
         conf = config.LibvirtConfigGuestInterface()
 
+        if FLAGS.libvirt_use_virtio_for_bridges:
+            conf.model = "virtio"
         conf.net_type = "ethernet"
         conf.target_dev = dev
         conf.script = ""
@@ -213,6 +215,8 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
 
         conf = config.LibvirtConfigGuestInterface()
 
+        if FLAGS.libvirt_use_virtio_for_bridges:
+            conf.model = 'virtio'
         conf.net_type = "ethernet"
         conf.target_dev = dev
         conf.script = ""
