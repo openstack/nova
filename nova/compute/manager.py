@@ -1334,7 +1334,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  instance_uuid=None):
         """Update the metadata published to the instance."""
         if not instance:
-            instance = self.db.instance_get_by_uuid(context, instance)
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.debug(_("Changing instance metadata according to %(diff)r") %
                   locals(), instance=instance)
         self.driver.change_instance_metadata(context, instance, diff)
