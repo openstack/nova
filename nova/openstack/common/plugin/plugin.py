@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import list_notifier
 
 
 LOG = logging.getLogger(__name__)

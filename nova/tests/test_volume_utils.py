@@ -22,6 +22,7 @@ from nova import db
 from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
 from nova.volume import utils as volume_utils
@@ -39,7 +40,7 @@ class UsageInfoTestCase(test.TestCase):
                    stub_network=True,
                    host='fake')
         self.stubs.Set(flags.FLAGS, 'notification_driver',
-                'nova.openstack.common.notifier.test_notifier')
+                ['nova.openstack.common.notifier.test_notifier'])
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -47,6 +48,10 @@ class UsageInfoTestCase(test.TestCase):
         self.volume_size = 0
         self.context = context.RequestContext(self.user_id, self.project_id)
         test_notifier.NOTIFICATIONS = []
+
+    def tearDown(self):
+        notifier_api._reset_drivers()
+        super(UsageInfoTestCase, self).tearDown()
 
     def _create_volume(self, params={}):
         """Create a test volume"""
