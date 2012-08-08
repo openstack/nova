@@ -2223,8 +2223,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(vish): We don't want to actually mark the volume
             #             detached, or delete the bdm, just remove the
             #             connection from this host.
-            self.remove_volume_connection(ctxt, instance_ref['id'],
-                                          bdm['volume_id'])
+            self.remove_volume_connection(ctxt, bdm['volume_id'],
+                                          instance_ref)
 
         # Releasing vlan.
         # (not necessary in current implementation?)
