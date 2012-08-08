@@ -101,6 +101,7 @@ dd: CommandFilter, /bin/dd, root
 
 # nova/virt/xenapi/volume_utils.py: 'iscsiadm', '-m', ...
 iscsiadm: CommandFilter, /sbin/iscsiadm, root
+iscsiadm_usr: CommandFilter, /usr/bin/iscsiadm, root
 
 # nova/virt/xenapi/vm_utils.py: parted, --script, ...
 # nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
