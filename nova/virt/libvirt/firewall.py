@@ -417,20 +417,21 @@ class NWFilterFirewall(FirewallDriver):
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
                 version = netutils.get_ip_version(rule.cidr)
+                protocol = rule.protocol.lower()
                 if(FLAGS.use_ipv6 and version == 6):
                     net, prefixlen = netutils.get_net_and_prefixlen(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (v6protocol[rule.protocol], net, prefixlen)
+                                (v6protocol[protocol], net, prefixlen)
                 else:
                     net, mask = netutils.get_net_and_mask(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (rule.protocol, net, mask)
-                if rule.protocol in ['tcp', 'udp']:
+                                (protocol, net, mask)
+                if protocol in ['tcp', 'udp']:
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)
-                elif rule.protocol == 'icmp':
+                elif protocol == 'icmp':
                     LOG.info('rule.protocol: %r, rule.from_port: %r, '
-                             'rule.to_port: %r', rule.protocol,
+                             'rule.to_port: %r', protocol,
                              rule.from_port, rule.to_port)
                     if rule.from_port != -1:
                         rule_xml += "type='%s' " % rule.from_port
@@ -659,8 +660,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 else:
                     fw_rules = ipv6_rules
 
-                protocol = rule.protocol
-                if version == 6 and rule.protocol == 'icmp':
+                protocol = rule.protocol.lower() if rule.protocol else None
+                if version == 6 and protocol == 'icmp':
                     protocol = 'icmpv6'
 
                 args = ['-j ACCEPT']

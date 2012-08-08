@@ -331,7 +331,7 @@ class SecurityGroupRulesController(SecurityGroupController):
                       to_port=to_port, msg="For ICMP, the"
                                            " type:code must be valid")
 
-            values['protocol'] = ip_protocol
+            values['protocol'] = ip_protocol.lower()
             values['from_port'] = from_port
             values['to_port'] = to_port
         else:
