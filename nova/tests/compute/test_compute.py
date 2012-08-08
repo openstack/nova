@@ -3075,6 +3075,11 @@ class ComputeAPITestCase(BaseTestCase):
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
+            # Ensure the instance passed to us has been updated with
+            # progress set to 0 and task_state set to RESIZE_PREP.
+            self.assertEqual(instance_properties['task_state'],
+                    task_states.RESIZE_PREP)
+            self.assertEqual(instance_properties['progress'], 0)
             self.assertIn('host2', filter_properties['ignore_hosts'])
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
@@ -3084,6 +3089,16 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
+        # We need to set the host to something 'known'.  Unfortunately,
+        # the compute manager is using a cached copy of FLAGS.host,
+        # so we can't just self.flags(host='host2') before calling
+        # run_instance above.  Also, set progress to 10 so we ensure
+        # it is reset to 0 in compute_api.resize().  (verified in
+        # _fake_cast above).
+        instance = db.instance_update(self.context, instance['uuid'],
+                dict(host='host2', progress=10))
+        # different host
+        self.flags(host='host3')
         try:
             self.compute_api.resize(context, instance, None)
         finally:
@@ -3095,6 +3110,11 @@ class ComputeAPITestCase(BaseTestCase):
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
+            # Ensure the instance passed to us has been updated with
+            # progress set to 0 and task_state set to RESIZE_PREP.
+            self.assertEqual(instance_properties['task_state'],
+                    task_states.RESIZE_PREP)
+            self.assertEqual(instance_properties['progress'], 0)
             self.assertNotIn('host2', filter_properties['ignore_hosts'])
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
@@ -3105,6 +3125,15 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
+        # We need to set the host to something 'known'.  Unfortunately,
+        # the compute manager is using a cached copy of FLAGS.host,
+        # so we can't just self.flags(host='host2') before calling
+        # run_instance above.  Also, set progress to 10 so we ensure
+        # it is reset to 0 in compute_api.resize().  (verified in
+        # _fake_cast above).
+        instance = db.instance_update(self.context, instance['uuid'],
+                dict(host='host2', progress=10))
+        # different host
         try:
             self.compute_api.resize(context, instance, None)
         finally:

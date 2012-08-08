@@ -1427,11 +1427,8 @@ class API(base.Base):
         if (current_memory_mb == new_memory_mb) and flavor_id:
             raise exception.CannotResizeToSameSize()
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESIZE_PREP,
-                    progress=0,
-                    **kwargs)
+        instance = self.update(context, instance,
+                task_state=task_states.RESIZE_PREP, progress=0, **kwargs)
 
         request_spec = {
                 'instance_type': new_instance_type,
