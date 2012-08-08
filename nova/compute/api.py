@@ -868,10 +868,9 @@ class API(base.Base):
         # that are in soft delete. If there is no host assigned, there is
         # no daemon to reclaim, so delete it immediately.
         if instance['host']:
-            self.update(context,
-                        instance,
-                        task_state=task_states.POWERING_OFF,
-                        deleted_at=timeutils.utcnow())
+            instance = self.update(context, instance,
+                                   task_state=task_states.POWERING_OFF,
+                                   deleted_at=timeutils.utcnow())
 
             self.compute_rpcapi.power_off_instance(context, instance)
         else:
@@ -903,10 +902,8 @@ class API(base.Base):
                     # Refresh to get new host information
                     instance = self.get(context, instance['uuid'])
 
-            self.update(context,
-                        instance,
-                        task_state=task_states.DELETING,
-                        progress=0)
+            instance = self.update(context, instance,
+                                   task_state=task_states.DELETING, progress=0)
 
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
@@ -949,10 +946,8 @@ class API(base.Base):
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         if instance['host']:
-            self.update(context,
-                        instance,
-                        task_state=task_states.POWERING_ON,
-                        deleted_at=None)
+            instance = self.update(context, instance,
+                        task_state=task_states.POWERING_ON, deleted_at=None)
             self.compute_rpcapi.power_on_instance(context, instance)
         else:
             self.update(context,
@@ -977,10 +972,8 @@ class API(base.Base):
         """Stop an instance."""
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.STOPPING,
-                    progress=0)
+        instance = self.update(context, instance,
+                    task_state=task_states.STOPPING, progress=0)
 
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
 
@@ -991,9 +984,8 @@ class API(base.Base):
         """Start an instance."""
         LOG.debug(_("Going to try to start instance"), instance=instance)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.STARTING)
+        instance = self.update(context, instance,
+                               task_state=task_states.STARTING)
 
         # TODO(yamahata): injected_files isn't supported right now.
         #                 It is used only for osapi. not for ec2 api.
@@ -1252,10 +1244,8 @@ class API(base.Base):
         """Reboot the given instance."""
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
-        self.update(context,
-                    instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=state)
+        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
+                               task_state=state)
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                 reboot_type=reboot_type)
 
@@ -1313,14 +1303,11 @@ class API(base.Base):
             self.db.instance_system_metadata_update(context,
                     instance['uuid'], sys_metadata, True)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.REBUILDING,
-                    # Unfortunately we need to set image_ref early,
-                    # so API users can see it.
-                    image_ref=image_href,
-                    progress=0,
-                    **kwargs)
+        instance = self.update(context, instance,
+                               task_state=task_states.REBUILDING,
+                               # Unfortunately we need to set image_ref early,
+                               # so API users can see it.
+                               image_ref=image_href, progress=0, **kwargs)
 
         # On a rebuild, since we're potentially changing images, we need to
         # wipe out the old image properties that we're storing as instance
@@ -1343,9 +1330,8 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESIZE_REVERTING)
+        instance = self.update(context, instance,
+                               task_state=task_states.RESIZE_REVERTING)
 
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration_id=migration_ref['id'],
@@ -1366,10 +1352,8 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
-        self.update(context,
-                    instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=None)
+        instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
+                               task_state=None)
 
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration_id=migration_ref['id'],

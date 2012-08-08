@@ -41,7 +41,7 @@ def return_server_not_found(context, uuid):
 
 
 def instance_update(context, instance_uuid, kwargs):
-    inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid])
+    inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
     return (inst, inst)
 
 
@@ -463,7 +463,8 @@ class ServerActionsControllerTest(test.TestCase):
         update(context, mox.IgnoreArg(),
                 image_ref=self._image_href,
                 task_state=task_states.REBUILDING,
-                progress=0, **attributes).AndReturn(None)
+                progress=0, **attributes).AndReturn(
+                        fakes.stub_instance(1, host='fake_host'))
         self.mox.ReplayAll()
 
         self.controller._action_rebuild(req, FAKE_UUID, body)
