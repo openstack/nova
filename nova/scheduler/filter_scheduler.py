@@ -107,7 +107,7 @@ class FilterScheduler(driver.Scheduler):
 
         return instances
 
-    def schedule_prep_resize(self, context, image, update_db, request_spec,
+    def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type):
         """Select a target for resize.
 
@@ -122,9 +122,7 @@ class FilterScheduler(driver.Scheduler):
         host = hosts.pop(0)
 
         # Forward off to the host
-        updated_instance = driver.instance_update_db(context, instance['uuid'],
-                                                     host.host_state.host)
-        self.compute_rpcapi.prep_resize(context, image, updated_instance,
+        self.compute_rpcapi.prep_resize(context, image, instance,
                 instance_type, host.host_state.host)
 
     def _provision_resource(self, context, weighted_host, request_spec,

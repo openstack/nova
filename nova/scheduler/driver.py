@@ -55,15 +55,14 @@ flags.DECLARE('instances_path', 'nova.compute.manager')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
 
 
-def cast_to_volume_host(context, host, method, update_db=True, **kwargs):
+def cast_to_volume_host(context, host, method, **kwargs):
     """Cast request to a volume host queue"""
 
-    if update_db:
-        volume_id = kwargs.get('volume_id', None)
-        if volume_id is not None:
-            now = timeutils.utcnow()
-            db.volume_update(context, volume_id,
-                    {'host': host, 'scheduled_at': now})
+    volume_id = kwargs.get('volume_id', None)
+    if volume_id is not None:
+        now = timeutils.utcnow()
+        db.volume_update(context, volume_id,
+                {'host': host, 'scheduled_at': now})
     rpc.cast(context,
              rpc.queue_get_for(context, 'volume', host),
              {"method": method, "args": kwargs})
@@ -80,13 +79,12 @@ def instance_update_db(context, instance_uuid, host):
     return db.instance_update(context, instance_uuid, values)
 
 
-def cast_to_compute_host(context, host, method, update_db=True, **kwargs):
+def cast_to_compute_host(context, host, method, **kwargs):
     """Cast request to a compute host queue"""
 
-    if update_db:
-        instance_uuid = kwargs.get('instance_uuid', None)
-        if instance_uuid:
-            instance_update_db(context, instance_uuid, host)
+    instance_uuid = kwargs.get('instance_uuid', None)
+    if instance_uuid:
+        instance_update_db(context, instance_uuid, host)
 
     rpc.cast(context,
              rpc.queue_get_for(context, 'compute', host),
@@ -94,7 +92,7 @@ def cast_to_compute_host(context, host, method, update_db=True, **kwargs):
     LOG.debug(_("Casted '%(method)s' to compute '%(host)s'") % locals())
 
 
-def cast_to_network_host(context, host, method, update_db=False, **kwargs):
+def cast_to_network_host(context, host, method, **kwargs):
     """Cast request to a network host queue"""
 
     rpc.cast(context,
@@ -103,7 +101,7 @@ def cast_to_network_host(context, host, method, update_db=False, **kwargs):
     LOG.debug(_("Casted '%(method)s' to network '%(host)s'") % locals())
 
 
-def cast_to_host(context, topic, host, method, update_db=True, **kwargs):
+def cast_to_host(context, topic, host, method, **kwargs):
     """Generic cast to host"""
 
     topic_mapping = {
@@ -113,7 +111,7 @@ def cast_to_host(context, topic, host, method, update_db=True, **kwargs):
 
     func = topic_mapping.get(topic)
     if func:
-        func(context, host, method, update_db=update_db, **kwargs)
+        func(context, host, method, **kwargs)
     else:
         rpc.cast(context,
                  rpc.queue_get_for(context, topic, host),
@@ -186,7 +184,7 @@ class Scheduler(object):
         """Must override schedule method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
-    def schedule_prep_resize(self, context, image, update_db, request_spec,
+    def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type):
         """Must override schedule_prep_resize method for scheduler to work."""
         msg = _("Driver must implement schedule_prep_resize")

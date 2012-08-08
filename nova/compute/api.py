@@ -1447,7 +1447,6 @@ class API(base.Base):
             "instance": instance,
             "instance_type": new_instance_type,
             "image": image,
-            "update_db": False,
             "request_spec": jsonutils.to_primitive(request_spec),
             "filter_properties": filter_properties,
         }

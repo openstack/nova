@@ -247,7 +247,6 @@ class SchedulerManagerTestCase(test.TestCase):
         kwargs = {
                 'context': self.context,
                 'image': 'fake_image',
-                'update_db': True,
                 'request_spec': request_spec,
                 'filter_properties': 'fake_props',
                 'instance': 'fake_instance',
@@ -260,7 +259,8 @@ class SchedulerManagerTestCase(test.TestCase):
                         (inst, inst))
 
         self.mox.ReplayAll()
-        self.manager.prep_resize(**kwargs)
+        # FIXME(comstud): Remove 'update_db' on future RPC version bump.
+        self.manager.prep_resize(update_db=False, **kwargs)
 
     def test_prep_resize_exception_host_in_error_state_and_raise(self):
         """Test that a NoValidHost exception for prep_resize puts
@@ -277,7 +277,6 @@ class SchedulerManagerTestCase(test.TestCase):
         kwargs = {
                 'context': self.context,
                 'image': 'fake_image',
-                'update_db': True,
                 'request_spec': request_spec,
                 'filter_properties': 'fake_props',
                 'instance': 'fake_instance',
@@ -296,7 +295,9 @@ class SchedulerManagerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
+        # FIXME(comstud): Remove 'update_db' on future RPC version bump.
         self.assertRaises(self.AnException, self.manager.prep_resize,
+                          update_db=False,
                           **kwargs)
 
 
@@ -774,7 +775,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_prep_resize,
-                         self.context, {}, False,
+                         self.context, {},
                          fake_request_spec, {}, {}, {})
 
 
@@ -807,7 +808,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_volume_host(self.context, host, method,
-                update_db=True, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_volume_host_update_db_without_volume_id(self):
         host = 'fake_host1'
@@ -825,25 +826,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_volume_host(self.context, host, method,
-                update_db=True, **fake_kwargs)
-
-    def test_cast_to_volume_host_no_update_db(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-        queue = 'fake_queue'
-
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        rpc.queue_get_for(self.context, 'volume', host).AndReturn(queue)
-        rpc.cast(self.context, queue,
-                {'method': method,
-                 'args': fake_kwargs})
-
-        self.mox.ReplayAll()
-        driver.cast_to_volume_host(self.context, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_compute_host_update_db_with_instance_uuid(self):
         host = 'fake_host1'
@@ -867,7 +850,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_compute_host(self.context, host, method,
-                update_db=True, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_compute_host_update_db_without_instance_uuid(self):
         host = 'fake_host1'
@@ -885,25 +868,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_compute_host(self.context, host, method,
-                update_db=True, **fake_kwargs)
-
-    def test_cast_to_compute_host_no_update_db(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-        queue = 'fake_queue'
-
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        rpc.queue_get_for(self.context, 'compute', host).AndReturn(queue)
-        rpc.cast(self.context, queue,
-                {'method': method,
-                 'args': fake_kwargs})
-
-        self.mox.ReplayAll()
-        driver.cast_to_compute_host(self.context, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_network_host(self):
         host = 'fake_host1'
@@ -921,7 +886,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_network_host(self.context, host, method,
-                update_db=True, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_host_compute_topic(self):
         host = 'fake_host1'
@@ -930,11 +895,11 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
         driver.cast_to_compute_host(self.context, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, 'compute', host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_host_volume_topic(self):
         host = 'fake_host1'
@@ -943,11 +908,11 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(driver, 'cast_to_volume_host')
         driver.cast_to_volume_host(self.context, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, 'volume', host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_host_network_topic(self):
         host = 'fake_host1'
@@ -956,11 +921,11 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(driver, 'cast_to_network_host')
         driver.cast_to_network_host(self.context, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, 'network', host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_cast_to_host_unknown_topic(self):
         host = 'fake_host1'
@@ -979,7 +944,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, topic, host, method,
-                update_db=False, **fake_kwargs)
+                **fake_kwargs)
 
     def test_encode_instance(self):
         instance = {'id': 31337,

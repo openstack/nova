@@ -53,7 +53,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '1.3'
+    RPC_API_VERSION = '1.4'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -142,6 +142,8 @@ class SchedulerManager(manager.Manager):
                 if reservations:
                     QUOTAS.rollback(context, reservations)
 
+    # FIXME(comstud): Remove 'update_db' in a future version.  It's only
+    # here for rpcapi backwards compatibility.
     def prep_resize(self, context, image, update_db, request_spec,
                     filter_properties, instance=None, instance_uuid=None,
                     instance_type=None, instance_type_id=None, topic=None):
@@ -159,7 +161,6 @@ class SchedulerManager(manager.Manager):
             kwargs = {
                 'context': context,
                 'image': image,
-                'update_db': update_db,
                 'request_spec': request_spec,
                 'filter_properties': filter_properties,
                 'instance': instance,

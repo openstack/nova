@@ -20,6 +20,7 @@ import mox
 
 from nova import context
 from nova import exception
+from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import least_cost
@@ -166,6 +167,32 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEquals(len(weighted_hosts), 10)
         for weighted_host in weighted_hosts:
             self.assertTrue(weighted_host.host_state is not None)
+
+    def test_schedule_prep_resize_doesnt_update_host(self):
+        fake_context = context.RequestContext('user', 'project',
+                is_admin=True)
+
+        sched = fakes.FakeFilterScheduler()
+
+        def _return_hosts(*args, **kwargs):
+            host_state = host_manager.HostState('host2', 'compute')
+            return [least_cost.WeightedHost(1.0, host_state=host_state)]
+
+        self.stubs.Set(sched, '_schedule', _return_hosts)
+
+        info = {'called': 0}
+
+        def _fake_instance_update_db(*args, **kwargs):
+            # This should not be called
+            info['called'] = 1
+
+        self.stubs.Set(driver, 'instance_update_db',
+                _fake_instance_update_db)
+
+        instance = {'uuid': 'fake-uuid', 'host': 'host1'}
+
+        sched.schedule_prep_resize(fake_context, {}, {}, {}, instance, {})
+        self.assertEqual(info['called'], 0)
 
     def test_get_cost_functions(self):
         self.flags(reserved_host_memory_mb=128)

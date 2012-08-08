@@ -38,6 +38,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - remove topic, it was unused
         1.2 - Remove topic from run_instance, it was unused
         1.3 - Remove instance_id, add instance to live_migration
+        1.4 - Remove update_db from prep_resize
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -59,13 +60,13 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 reservations=reservations), version='1.2')
 
     def prep_resize(self, ctxt, instance, instance_type, image,
-            update_db, request_spec, filter_properties):
+            request_spec, filter_properties):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
-                image=image, update_db=update_db, request_spec=request_spec,
-                filter_properties=filter_properties), version='1.1')
+                image=image, request_spec=request_spec,
+                filter_properties=filter_properties), version='1.4')
 
     def show_host_resources(self, ctxt, host):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))
