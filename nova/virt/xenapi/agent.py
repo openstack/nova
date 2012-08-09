@@ -100,6 +100,8 @@ def _get_agent_version(session, instance, vm_ref):
 def get_agent_version(session, instance, vm_ref):
     """Get the version of the agent running on the VM instance."""
 
+    LOG.debug(_('Querying agent version'), instance=instance)
+
     # The agent can be slow to start for a variety of reasons. On Windows,
     # it will generally perform a setup process on first boot that can
     # take a couple of minutes and then reboot. On Linux, the system can
@@ -118,11 +120,14 @@ def get_agent_version(session, instance, vm_ref):
     return None
 
 
-def agent_update(session, instance, vm_ref, url, md5sum):
+def agent_update(session, instance, vm_ref, agent_build):
     """Update agent on the VM instance."""
 
+    LOG.info(_('Updating agent to %s'), agent_build['version'],
+             instance=instance)
+
     # Send the encrypted password
-    args = {'url': url, 'md5sum': md5sum}
+    args = {'url': agent_build['url'], 'md5sum': agent_build['md5hash']}
     resp = _call_agent(session, instance, vm_ref, 'agentupdate', args)
     if resp['returncode'] != '0':
         LOG.error(_('Failed to update agent: %(resp)r'), locals(),
@@ -140,6 +145,8 @@ def set_admin_password(session, instance, vm_ref, new_pass):
     We're using a simple Diffie-Hellman class instead of a more advanced
     library (such as M2Crypto) for compatibility with the agent code.
     """
+    LOG.debug(_('Setting admin password'), instance=instance)
+
     dh = SimpleDH()
 
     # Exchange keys
@@ -175,6 +182,8 @@ def set_admin_password(session, instance, vm_ref, new_pass):
 
 
 def inject_file(session, instance, vm_ref, path, contents):
+    LOG.debug(_('Injecting file path: %r'), path, instance=instance)
+
     # Files/paths must be base64-encoded for transmission to agent
     b64_path = base64.b64encode(path)
     b64_contents = base64.b64encode(contents)
@@ -193,6 +202,8 @@ def inject_file(session, instance, vm_ref, path, contents):
 
 
 def resetnetwork(session, instance, vm_ref):
+    LOG.debug(_('Resetting network'), instance=instance)
+
     resp = _call_agent(session, instance, vm_ref, 'resetnetwork')
     if resp['returncode'] != '0':
         LOG.error(_('Failed to reset network: %(resp)r'), locals(),
