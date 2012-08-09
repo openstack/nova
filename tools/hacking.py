@@ -431,6 +431,7 @@ def once_git_check_commit_title():
     nova HACKING recommends not referencing a bug or blueprint in first line,
     it should provide an accurate description of the change
     N801
+    N802 Title limited to 50 chars
     """
     #Get title of most recent commit
 
@@ -453,6 +454,9 @@ def once_git_check_commit_title():
         print ("N801: git commit title ('%s') should provide an accurate "
                "description of the change, not just a reference to a bug "
                "or blueprint" % title.strip())
+    if len(title.decode('utf-8')) > 72:
+        print ("N802: git commit title ('%s') should be under 50 chars"
+                % title.strip())
 
 if __name__ == "__main__":
     #include nova path
