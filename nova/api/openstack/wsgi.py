@@ -660,11 +660,16 @@ class Resource(wsgi.Application):
 
     """
 
-    def __init__(self, controller, action_peek=None, **deserializers):
+    def __init__(self, controller, action_peek=None, inherits=None,
+                 **deserializers):
         """
         :param controller: object that implement methods created by routes lib
         :param action_peek: dictionary of routines for peeking into an action
                             request body to determine the desired action
+        :param inherits: another resource object that this resource should
+                         inherit extensions from. Any action extensions that
+                         are applied to the parent resource will also apply
+                         to this resource.
         """
 
         self.controller = controller
@@ -689,6 +694,7 @@ class Resource(wsgi.Application):
         # Save a mapping of extensions
         self.wsgi_extensions = {}
         self.wsgi_action_extensions = {}
+        self.inherits = inherits
 
     def register_actions(self, controller):
         """Registers controller actions with this resource."""
@@ -944,6 +950,19 @@ class Resource(wsgi.Application):
         return response
 
     def get_method(self, request, action, content_type, body):
+        meth, extensions = self._get_method(request,
+                                            action,
+                                            content_type,
+                                            body)
+        if self.inherits:
+            _meth, parent_ext = self.inherits.get_method(request,
+                                                         action,
+                                                         content_type,
+                                                         body)
+            extensions.extend(parent_ext)
+        return meth, extensions
+
+    def _get_method(self, request, action, content_type, body):
         """Look up the action-specific method and its extensions."""
 
         # Look up the method
