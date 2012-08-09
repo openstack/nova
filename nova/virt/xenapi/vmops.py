@@ -511,7 +511,7 @@ class VMOps(object):
         no_agent = version is None
 
         # Inject files, if necessary
-        injected_files = instance['injected_files']
+        injected_files = instance.get("injected_files")
         if injected_files:
             # Check if this is a JSON-encoded string and convert if needed.
             if isinstance(injected_files, basestring):
