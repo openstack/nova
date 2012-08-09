@@ -1098,7 +1098,10 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        public_ip = self.network_api.allocate_floating_ip(context)
+        try:
+            public_ip = self.network_api.allocate_floating_ip(context)
+        except exception.FloatingIpLimitExceeded:
+            raise exception.EC2APIError(_('No more floating IPs available'))
         return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
