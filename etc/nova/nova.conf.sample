@@ -1807,4 +1807,28 @@
 #### (StrOpt) The ZFS path under which to create zvols for volumes.
 
 
-# Total option count: 482
+######## defined in nova.volume.storwize_svc ########
+
+# storwize_svc_volpool_name=volpool
+#### (StrOpt) Storage system storage pool for volumes
+
+# storwize_svc_vol_vtype=striped
+#### (StrOpt) Storage system volume type for volumes
+
+# storwize_svc_vol_rsize=2%
+#### (StrOpt) Storage system space-efficiency parameter for volumes
+
+# storwize_svc_vol_warning=0
+#### (StrOpt) Storage system threshold for volume capacity warnings
+
+# storwize_svc_vol_autoexpand=True
+#### (BoolOpt) Storage system autoexpand parameter for volumes (True/False)
+
+# storwize_svc_vol_grainsize=256
+#### (StrOpt) Storage system grain size parameter for volumes (32/64/128/256)
+
+# storwize_svc_flashcopy_timeout=120
+#### (StrOpt) Maximum number of seconds to wait for FlashCopy to be prepared. Maximum value is 600 seconds (10 minutes).
+
+
+# Total option count: 489
