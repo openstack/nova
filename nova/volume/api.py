@@ -25,13 +25,19 @@ import functools
 from nova.db import base
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
 
+volume_host_opt = cfg.BoolOpt('snapshot_same_host',
+        default=True,
+        help='Create volume from snapshot at the host where snapshot resides')
+
 FLAGS = flags.FLAGS
+FLAGS.register_opt(volume_host_opt)
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 LOG = logging.getLogger(__name__)
@@ -131,14 +137,38 @@ class API(base.Base):
             }
 
         volume = self.db.volume_create(context, options)
-        rpc.cast(context,
-                 FLAGS.scheduler_topic,
-                 {"method": "create_volume",
-                  "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume['id'],
-                           "snapshot_id": snapshot_id,
-                           "reservations": reservations}})
+        self._cast_create_volume(context, volume['id'],
+                                 snapshot_id, reservations)
         return volume
+
+    def _cast_create_volume(self, context, volume_id,
+                            snapshot_id, reservations):
+
+        # NOTE(Rongze Zhu): It is a simple solution for bug 1008866
+        # If snapshot_id is set, make the call create volume directly to
+        # the volume host where the snapshot resides instead of passing it
+        # through the scheduer. So snapshot can be copy to new volume.
+
+        if snapshot_id and FLAGS.snapshot_same_host:
+            snapshot_ref = self.db.snapshot_get(context, snapshot_id)
+            src_volume_ref = self.db.volume_get(context,
+                                                snapshot_ref['volume_id'])
+            topic = rpc.queue_get_for(context,
+                                      FLAGS.volume_topic,
+                                      src_volume_ref['host'])
+            rpc.cast(context,
+                     topic,
+                     {"method": "create_volume",
+                      "args": {"volume_id": volume_id,
+                               "snapshot_id": snapshot_id}})
+        else:
+            rpc.cast(context,
+                     FLAGS.scheduler_topic,
+                     {"method": "create_volume",
+                      "args": {"topic": FLAGS.volume_topic,
+                               "volume_id": volume_id,
+                               "snapshot_id": snapshot_id,
+                               "reservations": reservations}})
 
     @wrap_check_policy
     def delete(self, context, volume):

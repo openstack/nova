@@ -1662,6 +1662,12 @@
 #### (StrOpt) Address that the XCP VNC proxy should bind to
 
 
+######## defined in nova.volume.api ########
+
+# snapshot_same_host=true
+#### (BoolOpt) Create volume form snapshot at the host where snapshot resides.
+
+
 ######## defined in nova.volume.driver ########
 
 # volume_group=nova-volumes
