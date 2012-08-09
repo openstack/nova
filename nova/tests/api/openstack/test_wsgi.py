@@ -752,6 +752,18 @@ class ResourceTest(test.TestCase):
         self.assertEqual(called, [2])
         self.assertEqual(response, 'foo')
 
+    def test_resource_exception_handler_type_error(self):
+        """A TypeError should be translated to a Fault/HTTP 400"""
+        def foo(a,):
+            return a
+
+        try:
+            with wsgi.ResourceExceptionHandler():
+                foo()  # generate a TypeError
+            self.fail("Should have raised a Fault (HTTP 400)")
+        except wsgi.Fault as fault:
+            self.assertEqual(400, fault.status_int)
+
 
 class ResponseObjectTest(test.TestCase):
     def test_default_code(self):
