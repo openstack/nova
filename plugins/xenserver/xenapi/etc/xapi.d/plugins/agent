@@ -204,22 +204,22 @@ def _wait_for_agent(self, request_id, arg_dict):
     arg_dict["path"] = "data/guest/%s" % request_id
     arg_dict["ignore_missing_path"] = True
     start = time.time()
-    while True:
-        if time.time() - start > AGENT_TIMEOUT:
-            # No response within the timeout period; bail out
-            # First, delete the request record
-            arg_dict["path"] = "data/host/%s" % request_id
-            xenstore.delete_record(self, arg_dict)
-            raise TimeoutError(_("TIMEOUT: No response from agent within"
-                    " %s seconds.") % AGENT_TIMEOUT)
+    while time.time() - start < AGENT_TIMEOUT:
         ret = xenstore.read_record(self, arg_dict)
         # Note: the response for None with be a string that includes
         # double quotes.
         if ret != '"None"':
             # The agent responded
             return ret
-        else:
-            time.sleep(3)
+
+        time.sleep(.5)
+
+    # No response within the timeout period; bail out
+    # First, delete the request record
+    arg_dict["path"] = "data/host/%s" % request_id
+    xenstore.delete_record(self, arg_dict)
+    raise TimeoutError(_("TIMEOUT: No response from agent within"
+                         " %s seconds.") % AGENT_TIMEOUT)
 
 
 if __name__ == "__main__":
