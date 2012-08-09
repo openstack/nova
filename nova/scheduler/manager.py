@@ -144,8 +144,8 @@ class SchedulerManager(manager.Manager):
 
     # FIXME(comstud): Remove 'update_db' in a future version.  It's only
     # here for rpcapi backwards compatibility.
-    def prep_resize(self, context, image, update_db, request_spec,
-                    filter_properties, instance=None, instance_uuid=None,
+    def prep_resize(self, context, image, request_spec, filter_properties,
+                    update_db=None, instance=None, instance_uuid=None,
                     instance_type=None, instance_type_id=None, topic=None):
         """Tries to call schedule_prep_resize on the driver.
         Sets instance vm_state to ACTIVE on NoHostFound
