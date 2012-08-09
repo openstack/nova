@@ -921,10 +921,10 @@ class CloudController(object):
             try:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
                 instance = self.compute_api.get(context, internal_id)
-                i['shutdownState'] = _state_description(instance['vm_state'],
+                i['currentState'] = _state_description(instance['vm_state'],
                                             instance['shutdown_terminate'])
             except exception.NotFound:
-                i['shutdownState'] = _state_description(vm_states.DELETED,
+                i['currentState'] = _state_description(vm_states.DELETED,
                                                         True)
             instances_set.append(i)
         return {'instancesSet': instances_set}

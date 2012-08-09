@@ -1809,7 +1809,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 80,
                                            'name': 'stopped'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1830,7 +1830,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1849,7 +1849,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 80,
                                            'name': 'stopped'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1870,7 +1870,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1902,7 +1902,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'shutdownState': {'code': 16,
+                         'currentState': {'code': 16,
                                            'name': 'running'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1914,7 +1914,7 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
@@ -1934,12 +1934,12 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 80,
                                            'name': 'stopped'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}},
                         {'instanceId': 'i-00000002',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'shutdownState': {'code': 48,
+                         'currentState': {'code': 48,
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [inst1, inst2])
         self.assertEqual(result, expected)
@@ -2460,7 +2460,7 @@ class CloudTestCase(test.TestCase):
                             {'instanceId': instance_id,
                              'previousState': {'code': 16,
                                                'name': 'running'},
-                             'shutdownState': {'code': 48,
+                             'currentState': {'code': 48,
                                                'name': 'terminated'}}]}
             result = self.cloud.terminate_instances(self.context,
                                                     [instance_id])
