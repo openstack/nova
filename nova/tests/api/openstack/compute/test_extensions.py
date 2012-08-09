@@ -176,6 +176,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Hosts",
             "Keypairs",
             "Multinic",
+            "MultipleCreate",
             "Networks",
             "QuotaClasses",
             "Quotas",
