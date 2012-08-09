@@ -156,6 +156,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.ext_list = [
             "AdminActions",
             "Aggregates",
+            "AvailabilityZone",
             "Certificates",
             "Cloudpipe",
             "Console_output",

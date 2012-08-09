@@ -1837,6 +1837,31 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_availability_zone_enabled(self):
+        self.ext_mgr.extensions = {'os-availability-zone': 'fake'}
+        availability_zone = 'fake'
+        params = {'availability_zone': availability_zone}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['availability_zone'], availability_zone)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_availability_zone_disabled(self):
+        availability_zone = 'fake'
+        params = {'availability_zone': availability_zone}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['availability_zone'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'

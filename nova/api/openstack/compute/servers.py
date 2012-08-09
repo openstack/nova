@@ -647,7 +647,9 @@ class Controller(wsgi.Controller):
             user_data = server_dict.get('user_data')
         self._validate_user_data(user_data)
 
-        availability_zone = server_dict.get('availability_zone')
+        availability_zone = None
+        if self.ext_mgr.is_loaded('os-availability-zone'):
+            availability_zone = server_dict.get('availability_zone')
 
         block_device_mapping = None
         if self.ext_mgr.is_loaded('os-volumes'):
