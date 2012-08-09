@@ -1286,8 +1286,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         admin_pass = (rescue_password if rescue_password else
                       utils.generate_password(FLAGS.password_length))
-        self.db.instance_update(context, instance['uuid'],
-                                dict(admin_pass=admin_pass))
+        instance['admin_pass'] = admin_pass
 
         network_info = self._get_instance_nw_info(context, instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
