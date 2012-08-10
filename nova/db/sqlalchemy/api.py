@@ -19,7 +19,7 @@
 
 """Implementation of SQLAlchemy backend."""
 
-from collections import defaultdict
+import collections
 import copy
 import datetime
 import functools
@@ -4946,7 +4946,7 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     if key:
         query = query.filter(models.AggregateMetadata.key == key)
     rows = query.all()
-    metadata = defaultdict(set)
+    metadata = collections.defaultdict(set)
     for agg in rows:
         for kv in agg._metadata:
             metadata[kv['key']].add(kv['value'])
