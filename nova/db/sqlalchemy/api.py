@@ -3224,7 +3224,7 @@ def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
                     first()
 
     if not result:
-        raise exception.VolumeNotFound(uuid=volume_id)
+        raise exception.VolumeNotFound(volume_id=volume_id)
 
     return result['id']
 
@@ -3236,7 +3236,7 @@ def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
                     first()
 
     if not result:
-        raise exception.VolumeNotFound(ec2_id=ec2_id)
+        raise exception.VolumeNotFound(volume_id=ec2_id)
 
     return result['uuid']
 
@@ -3261,7 +3261,7 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
                     first()
 
     if not result:
-        raise exception.SnapshotNotFound(uuid=snapshot_id)
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
 
     return result['id']
 
@@ -3273,7 +3273,7 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
                     first()
 
     if not result:
-        raise exception.SnapshotNotFound(ec2_id=ec2_id)
+        raise exception.SnapshotNotFound(snapshot_id=ec2_id)
 
     return result['uuid']
 
@@ -5178,20 +5178,20 @@ def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
                     first()
 
     if not result:
-        raise exception.InstanceNotFound(uuid=instance_id)
+        raise exception.InstanceNotFound(instance_id=instance_id)
 
     return result['id']
 
 
 @require_context
-def get_instance_uuid_by_ec2_id(context, instance_id, session=None):
+def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
     result = _ec2_instance_get_query(context,
                                      session=session).\
-                    filter_by(id=instance_id).\
+                    filter_by(id=ec2_id).\
                     first()
 
     if not result:
-        raise exception.InstanceNotFound(id=instance_id)
+        raise exception.InstanceNotFound(instance_id=ec2_id)
 
     return result['uuid']
 

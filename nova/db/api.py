@@ -1909,9 +1909,9 @@ def get_ec2_instance_id_by_uuid(context, instance_id):
     return IMPL.get_ec2_instance_id_by_uuid(context, instance_id)
 
 
-def get_instance_uuid_by_ec2_id(context, instance_id):
+def get_instance_uuid_by_ec2_id(context, ec2_id):
     """Get uuid through ec2 id from instance_id_mappings table"""
-    return IMPL.get_instance_uuid_by_ec2_id(context, instance_id)
+    return IMPL.get_instance_uuid_by_ec2_id(context, ec2_id)
 
 
 def ec2_instance_create(context, instance_ec2_id):
