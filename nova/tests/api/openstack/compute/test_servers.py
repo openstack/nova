@@ -1623,6 +1623,7 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances but not asking for
         reservation_id
         """
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
@@ -1650,6 +1651,7 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances but not asking for
         reservation_id
         """
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
         self.flags(enable_instance_password=False)
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
@@ -1678,6 +1680,7 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances with asking for
         reservation_id
         """
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
@@ -1857,6 +1860,102 @@ class ServersControllerCreateTest(test.TestCase):
 
         def create(*args, **kwargs):
             self.assertEqual(kwargs['user_data'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_keypairs_enabled(self):
+        self.ext_mgr.extensions = {'os-keypairs': 'fake'}
+        key_name = 'green'
+
+        params = {'key_name': key_name}
+        old_create = nova.compute.api.API.create
+
+        # NOTE(sdague): key pair goes back to the database,
+        # so we need to stub it out for tests
+        def key_pair_get(context, user_id, name):
+            return {'public_key': 'FAKE_KEY',
+                    'fingerprint': 'FAKE_FINGERPRINT',
+                    'name': name}
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['key_name'], key_name)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.db, 'key_pair_get', key_pair_get)
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_keypairs_disabled(self):
+        key_name = 'green'
+
+        params = {'key_name': key_name}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['key_name'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_availability_zone_enabled(self):
+        self.ext_mgr.extensions = {'os-availability-zone': 'fake'}
+        availability_zone = 'fake'
+        params = {'availability_zone': availability_zone}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['availability_zone'], availability_zone)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_availability_zone_disabled(self):
+        availability_zone = 'fake'
+        params = {'availability_zone': availability_zone}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['availability_zone'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_multiple_create_enabled(self):
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        min_count = 2
+        max_count = 3
+        params = {
+            'min_count': min_count,
+            'max_count': max_count,
+        }
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['max_count'], 3)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_multiple_create_disabled(self):
+        ret_res_id = True
+        min_count = 2
+        max_count = 3
+        params = {
+            'min_count': min_count,
+            'max_count': max_count,
+        }
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 1)
+            self.assertEqual(kwargs['max_count'], 1)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(nova.compute.api.API, 'create', create)

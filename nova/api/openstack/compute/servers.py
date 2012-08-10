@@ -641,22 +641,30 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         # optional openstack extensions:
-        key_name = server_dict.get('key_name')
+        key_name = None
+        if self.ext_mgr.is_loaded('os-keypairs'):
+            key_name = server_dict.get('key_name')
+
         user_data = None
         if self.ext_mgr.is_loaded('os-user-data'):
             user_data = server_dict.get('user_data')
         self._validate_user_data(user_data)
 
-        availability_zone = server_dict.get('availability_zone')
+        availability_zone = None
+        if self.ext_mgr.is_loaded('os-availability-zone'):
+            availability_zone = server_dict.get('availability_zone')
 
         block_device_mapping = None
         if self.ext_mgr.is_loaded('os-volumes'):
             block_device_mapping = server_dict.get('block_device_mapping')
 
-        ret_resv_id = server_dict.get('return_reservation_id', False)
-
-        min_count = server_dict.get('min_count')
-        max_count = server_dict.get('max_count')
+        ret_resv_id = False
+        min_count = None
+        max_count = None
+        if self.ext_mgr.is_loaded('os-multiple-create'):
+            ret_resv_id = server_dict.get('return_reservation_id', False)
+            min_count = server_dict.get('min_count')
+            max_count = server_dict.get('max_count')
         # min_count and max_count are optional.  If they exist, they come
         # in as strings.  We want to default 'min_count' to 1, and default
         # 'max_count' to be 'min_count'.
