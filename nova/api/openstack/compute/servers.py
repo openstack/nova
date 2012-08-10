@@ -604,7 +604,9 @@ class Controller(wsgi.Controller):
         image_href = self._image_uuid_from_href(image_href)
 
         personality = server_dict.get('personality')
-        config_drive = server_dict.get('config_drive')
+        config_drive = None
+        if self.ext_mgr.is_loaded('os-config-drive'):
+            config_drive = server_dict.get('config_drive')
 
         injected_files = []
         if personality:
