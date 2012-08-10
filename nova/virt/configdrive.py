@@ -49,11 +49,8 @@ FLAGS.register_opts(configdrive_opts)
 
 
 class ConfigDriveBuilder(object):
-    def __init__(self, instance=None):
-        self.instance = instance
+    def __init__(self, instance_md=None):
         self.imagefile = None
-        self.injected = {}
-        self.next_inject_id = 1
 
         # TODO(mikal): I don't think I can use utils.tempdir here, because
         # I need to have the directory last longer than the scope of this
@@ -61,43 +58,21 @@ class ConfigDriveBuilder(object):
         self.tempdir = tempfile.mkdtemp(dir=FLAGS.config_drive_tempdir,
                                         prefix='cd_gen_')
 
-    def _add_file(self, path, data, inject=False):
-        if inject:
-            path_id = '%03d' % self.next_inject_id
-            path = 'openstack/files/%s' % path_id
-            self.injected[path] = path_id
-            self.next_inject_id += 1
+        if instance_md is not None:
+            self.add_instance_metadata(instance_md)
 
+    def _add_file(self, path, data):
         filepath = os.path.join(self.tempdir, path)
         dirname = os.path.dirname(filepath)
         virtutils.ensure_tree(dirname)
         with open(filepath, 'w') as f:
             f.write(data)
 
-    def add_instance_metadata(self):
-        inst_md = instance_metadata.InstanceMetadata(self.instance)
-        for (path, value) in inst_md.metadata_for_config_drive(self.injected):
+    def add_instance_metadata(self, instance_md):
+        for (path, value) in instance_md.metadata_for_config_drive():
             self._add_file(path, value)
             LOG.debug(_('Added %(filepath)s to config drive'),
-                      {'filepath': path}, instance=self.instance)
-
-    def inject_data(self, key, net, metadata, admin_pass, files):
-        if key:
-            self._add_file('key', key, inject=True)
-        if net:
-            self._add_file('net', net, inject=True)
-        if metadata:
-            self._add_file('metadata', metadata, inject=True)
-        if admin_pass:
-            self._add_file('adminpass', admin_pass, inject=True)
-        if files:
-            files_struct = []
-            for (path, contents) in files:
-                files.append[{'path': path,
-                              'encoding': 'base64',
-                              'data': base64.b64encode(contents),
-                              }]
-            self._add_file('files', json.dumps(files_struct), inject=True)
+                      {'filepath': path})
 
     def _make_iso9660(self, path):
         utils.execute('genisoimage',

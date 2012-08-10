@@ -29,6 +29,7 @@ from nova import db
 from nova import flags
 from nova import network
 from nova.openstack.common import cfg
+from nova.virt import netutils
 
 
 metadata_opts = [
@@ -61,8 +62,14 @@ VERSIONS = [
     '2009-04-04',
 ]
 
+OPENSTACK_VERSIONS = ["2012-08-10"]
 
-class InvalidMetadataEc2Version(Exception):
+CONTENT_DIR = "content"
+MD_JSON_NAME = "meta_data.json"
+UD_NAME = "user_data"
+
+
+class InvalidMetadataVersion(Exception):
     pass
 
 
@@ -73,8 +80,17 @@ class InvalidMetadataPath(Exception):
 class InstanceMetadata():
     """Instance metadata."""
 
-    def __init__(self, instance, address=None):
+    def __init__(self, instance, address=None, content=[], extra_md=None):
+        """Creation of this object should basically cover all time consuming
+        collection.  Methods after that should not cause time delays due to
+        network operations or lengthy cpu operations.
+
+        The user should then get a single instance and make multiple method
+        calls on it.
+        """
+
         self.instance = instance
+        self.extra_md = extra_md
 
         ctxt = context.get_admin_context()
 
@@ -91,9 +107,9 @@ class InstanceMetadata():
         self.mappings = _format_instance_mapping(ctxt, instance)
 
         if instance.get('user_data', None) is not None:
-            self.userdata_b64 = base64.b64decode(instance['user_data'])
+            self.userdata_raw = base64.b64decode(instance['user_data'])
         else:
-            self.userdata_b64 = None
+            self.userdata_raw = None
 
         self.ec2_ids = {}
 
@@ -112,12 +128,45 @@ class InstanceMetadata():
 
         self.address = address
 
+        # expose instance metadata.
+        self.launch_metadata = {}
+        for item in instance.get('metadata', []):
+            self.launch_metadata[item['key']] = item['value']
+
+        self.uuid = instance.get('uuid')
+
+        self.content = {}
+        self.files = []
+
+        # get network info, and the rendered network template
+        ctxt = context.get_admin_context()
+        network_info = network.API().get_instance_nw_info(ctxt, instance)
+
+        self.network_config = None
+        cfg = netutils.get_injected_network_template(network_info)
+
+        if cfg:
+            key = "%04i" % len(self.content)
+            self.content[key] = cfg
+            self.network_config = {"name": "network_config",
+                'content_path': "/%s/%s" % (CONTENT_DIR, key)}
+
+        # 'content' is passed in from the configdrive code in
+        # nova/virt/libvirt/driver.py.  Thats how we get the injected files
+        # (personalities) in. AFAIK they're not stored in the db at all,
+        # so are not available later (web service metadata time).
+        for (path, contents) in content:
+            key = "%04i" % len(self.content)
+            self.files.append({'path': path,
+                'content_path': "/%s/%s" % (CONTENT_DIR, key)})
+            self.content[key] = contents
+
     def get_ec2_metadata(self, version):
         if version == "latest":
             version = VERSIONS[-1]
 
         if version not in VERSIONS:
-            raise InvalidMetadataEc2Version(version)
+            raise InvalidMetadataVersion(version)
 
         hostname = "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain)
         floating_ips = self.ip_info['floating_ips']
@@ -180,10 +229,82 @@ class InstanceMetadata():
             meta_data['instance-action'] = 'none'
 
         data = {'meta-data': meta_data}
-        if self.userdata_b64 is not None:
-            data['user-data'] = self.userdata_b64
+        if self.userdata_raw is not None:
+            data['user-data'] = self.userdata_raw
 
         return data
+
+    def get_ec2_item(self, path_tokens):
+        # get_ec2_metadata returns dict without top level version
+        data = self.get_ec2_metadata(path_tokens[0])
+        return find_path_in_tree(data, path_tokens[1:])
+
+    def get_openstack_item(self, path_tokens):
+        if path_tokens[0] == CONTENT_DIR:
+            if len(path_tokens) == 1:
+                raise KeyError("no listing for %s" % "/".join(path_tokens))
+            if len(path_tokens) != 2:
+                raise KeyError("Too many tokens for /%s" % CONTENT_DIR)
+            return self.content[path_tokens[1]]
+
+        version = path_tokens[0]
+        if version == "latest":
+            version = OPENSTACK_VERSIONS[-1]
+
+        if version not in OPENSTACK_VERSIONS:
+            raise InvalidMetadataVersion(version)
+
+        path = '/'.join(path_tokens[1:])
+
+        if len(path_tokens) == 1:
+            # request for /version, give a list of what is available
+            ret = [MD_JSON_NAME]
+            if self.userdata_raw is not None:
+                ret.append(UD_NAME)
+            return ret
+
+        if path == UD_NAME:
+            if self.userdata_raw is None:
+                raise KeyError(path)
+            return self.userdata_raw
+
+        if path != MD_JSON_NAME:
+            raise KeyError(path)
+
+        # right now, the only valid path is metadata.json
+        metadata = {}
+        metadata['uuid'] = self.uuid
+
+        if self.launch_metadata:
+            metadata['meta'] = self.launch_metadata
+
+        if self.files:
+            metadata['files'] = self.files
+
+        if self.extra_md:
+            metadata.update(self.extra_md)
+
+        if self.launch_metadata:
+            metadata['meta'] = self.launch_metadata
+
+        if self.network_config:
+            metadata['network_config'] = self.network_config
+
+        if self.instance['key_name']:
+            metadata['public_keys'] = {
+                self.instance['key_name']: self.instance['key_data']
+            }
+
+        metadata['hostname'] = "%s.%s" % (self.instance['hostname'],
+                                          FLAGS.dhcp_domain)
+
+        metadata['name'] = self.instance['display_name']
+
+        data = {
+            MD_JSON_NAME: json.dumps(metadata),
+        }
+
+        return data[path]
 
     def _check_version(self, required, requested):
         return VERSIONS.index(requested) >= VERSIONS.index(required)
@@ -194,40 +315,46 @@ class InstanceMetadata():
         else:
             path = os.path.normpath(path)
 
-        if path == "/":
-            return VERSIONS + ["latest"]
+        # fix up requests, prepending /ec2 to anything that does not match
+        path_tokens = path.split('/')[1:]
+        if path_tokens[0] not in ("ec2", "openstack"):
+            if path_tokens[0] == "":
+                # request for /
+                path_tokens = ["ec2"]
+            else:
+                path_tokens = ["ec2"] + path_tokens
+            path = "/" + "/".join(path_tokens)
 
-        items = path.split('/')[1:]
+        # all values of 'path' input starts with '/' and have no trailing /
+
+        # specifically handle the top level request
+        if len(path_tokens) == 1:
+            if path_tokens[0] == "openstack":
+                versions = OPENSTACK_VERSIONS + ["latest"]
+            else:
+                versions = VERSIONS + ["latest"]
+            return versions
 
         try:
-            md = self.get_ec2_metadata(items[0])
-        except InvalidMetadataEc2Version:
-            raise InvalidMetadataPath(path)
-
-        data = md
-        for i in range(1, len(items)):
-            if isinstance(data, dict) or isinstance(data, list):
-                if items[i] in data:
-                    data = data[items[i]]
-                else:
-                    raise InvalidMetadataPath(path)
+            if path_tokens[0] == "openstack":
+                data = self.get_openstack_item(path_tokens[1:])
             else:
-                if i != len(items) - 1:
-                    raise InvalidMetadataPath(path)
-                data = data[items[i]]
+                data = self.get_ec2_item(path_tokens[1:])
+        except (InvalidMetadataVersion, KeyError):
+            raise InvalidMetadataPath(path)
 
         return data
 
-    def metadata_for_config_drive(self, injected_files):
+    def metadata_for_config_drive(self):
         """Yields (path, value) tuples for metadata elements."""
         # EC2 style metadata
-        for version in VERSIONS:
+        for version in VERSIONS + ["latest"]:
             if version in FLAGS.config_drive_skip_versions.split(' '):
                 continue
 
             data = self.get_ec2_metadata(version)
             if 'user-data' in data:
-                filepath = os.path.join('ec2', version, 'userdata.raw')
+                filepath = os.path.join('ec2', version, 'user-data')
                 yield (filepath, data['user-data'])
                 del data['user-data']
 
@@ -236,20 +363,19 @@ class InstanceMetadata():
             except KeyError:
                 pass
 
-            filepath = os.path.join('ec2', version, 'metadata.json')
+            filepath = os.path.join('ec2', version, 'meta-data.json')
             yield (filepath, json.dumps(data['meta-data']))
 
-        filepath = os.path.join('ec2', 'latest', 'metadata.json')
-        yield (filepath, json.dumps(data['meta-data']))
+        for version in OPENSTACK_VERSIONS + ["latest"]:
+            path = 'openstack/%s/%s' % (version, MD_JSON_NAME)
+            yield (path, self.lookup(path))
 
-        # Openstack style metadata
-        # TODO(mikal): refactor this later
-        files = []
-        for path in injected_files:
-            files.append({'path': path,
-                          'content': injected_files[path]})
-        yield ('openstack/2012-08-10/files.json', json.dumps(files))
-        yield ('openstack/latest/files.json', json.dumps(files))
+            path = 'openstack/%s/%s' % (version, UD_NAME)
+            if self.userdata_raw is not None:
+                yield (path, self.lookup(path))
+
+        for (cid, content) in self.content.iteritems():
+            yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 
 def get_metadata_by_address(address):
@@ -327,3 +453,18 @@ def ec2_md_print(data):
         return '\n'.join(data)
     else:
         return str(data)
+
+
+def find_path_in_tree(data, path_tokens):
+    # given a dict/list tree, and a path in that tree, return data found there.
+    for i in range(0, len(path_tokens)):
+        if isinstance(data, dict) or isinstance(data, list):
+            if path_tokens[i] in data:
+                data = data[path_tokens[i]]
+            else:
+                raise KeyError("/".join(path_tokens[0:i]))
+        else:
+            if i != len(path_tokens) - 1:
+                raise KeyError("/".join(path_tokens[0:i]))
+            data = data[path_tokens[i]]
+    return data
