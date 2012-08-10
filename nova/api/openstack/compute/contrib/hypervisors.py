@@ -197,7 +197,8 @@ class HypervisorsController(object):
 
         # Get the uptime
         try:
-            uptime = self.api.get_host_uptime(context, hyp)
+            host = hyp['service']['host']
+            uptime = self.api.get_host_uptime(context, host)
         except NotImplementedError:
             msg = _("Virt driver does not implement uptime function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
