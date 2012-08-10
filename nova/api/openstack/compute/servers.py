@@ -666,7 +666,10 @@ class Controller(wsgi.Controller):
             min_count = max_count
 
         auto_disk_config = server_dict.get('auto_disk_config')
-        scheduler_hints = server_dict.get('scheduler_hints', {})
+
+        scheduler_hints = {}
+        if self.ext_mgr.is_loaded('os-scheduler-hints'):
+            scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
             _get_inst_type = instance_types.get_instance_type_by_flavor_id

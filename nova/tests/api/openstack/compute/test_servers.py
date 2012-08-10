@@ -1787,6 +1787,31 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_scheduler_hints_enabled(self):
+        self.ext_mgr.extensions = {'os-scheduler-hints': 'fake'}
+        hints = {'a': 'b'}
+        params = {'scheduler_hints': hints}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['scheduler_hints'], hints)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_scheduler_hints_disabled(self):
+        hints = {'a': 'b'}
+        params = {'scheduler_hints': hints}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['scheduler_hints'], {})
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_volumes_enabled(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         bdm = [{'device_name': 'foo'}]
