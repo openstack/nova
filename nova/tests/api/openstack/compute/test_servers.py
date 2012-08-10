@@ -1840,6 +1840,41 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_keypairs_enabled(self):
+        self.ext_mgr.extensions = {'os-keypairs': 'fake'}
+        key_name = 'green'
+
+        params = {'key_name': key_name}
+        old_create = nova.compute.api.API.create
+
+        # NOTE(sdague): key pair goes back to the database,
+        # so we need to stub it out for tests
+        def key_pair_get(context, user_id, name):
+            return {'public_key': 'FAKE_KEY',
+                    'fingerprint': 'FAKE_FINGERPRINT',
+                    'name': name}
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['key_name'], key_name)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.db, 'key_pair_get', key_pair_get)
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_keypairs_disabled(self):
+        key_name = 'green'
+
+        params = {'key_name': key_name}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['key_name'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_availability_zone_enabled(self):
         self.ext_mgr.extensions = {'os-availability-zone': 'fake'}
         availability_zone = 'fake'

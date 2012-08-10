@@ -641,7 +641,10 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         # optional openstack extensions:
-        key_name = server_dict.get('key_name')
+        key_name = None
+        if self.ext_mgr.is_loaded('os-keypairs'):
+            key_name = server_dict.get('key_name')
+
         user_data = None
         if self.ext_mgr.is_loaded('os-user-data'):
             user_data = server_dict.get('user_data')
