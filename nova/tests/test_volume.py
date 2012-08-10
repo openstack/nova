@@ -23,6 +23,8 @@ Tests for Volume Code.
 import cStringIO
 
 import mox
+import shutil
+import tempfile
 
 from nova import context
 from nova import db
@@ -49,7 +51,9 @@ class VolumeTestCase(test.TestCase):
     def setUp(self):
         super(VolumeTestCase, self).setUp()
         self.compute = importutils.import_object(FLAGS.compute_manager)
-        self.flags(compute_driver='nova.virt.fake.FakeDriver')
+        vol_tmpdir = tempfile.mkdtemp()
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
+                   volumes_dir=vol_tmpdir)
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 ['nova.openstack.common.notifier.test_notifier'])
         self.volume = importutils.import_object(FLAGS.volume_manager)
@@ -60,6 +64,10 @@ class VolumeTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
 
     def tearDown(self):
+        try:
+            shutil.rmtree(FLAGS.volumes_dir)
+        except OSError, e:
+            pass
         db.instance_destroy(self.context, self.instance_uuid)
         notifier_api._reset_drivers()
         super(VolumeTestCase, self).tearDown()
@@ -454,7 +462,9 @@ class DriverTestCase(test.TestCase):
 
     def setUp(self):
         super(DriverTestCase, self).setUp()
+        vol_tmpdir = tempfile.mkdtemp()
         self.flags(volume_driver=self.driver_name,
+                   volumes_dir=vol_tmpdir,
                    logging_default_format_string="%(message)s")
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
@@ -473,6 +483,13 @@ class DriverTestCase(test.TestCase):
         instance = db.instance_create(self.context, {})
         self.instance_id = instance['id']
         self.instance_uuid = instance['uuid']
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(FLAGS.volumes_dir)
+        except OSError, e:
+            pass
+        super(DriverTestCase, self).tearDown()
 
     def _attach_volume(self):
         """Attach volumes to an instance. This function also sets
