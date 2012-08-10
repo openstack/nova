@@ -375,13 +375,6 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound()
         return servers
 
-    def _get_block_device_mapping(self, data):
-        """Get block_device_mapping from 'server' dictionary.
-
-        Overridden by volumes controller.
-        """
-        return None
-
     def _add_instance_faults(self, ctxt, instances):
         faults = self.compute_api.get_instance_faults(ctxt, instances)
         if faults is not None:
@@ -649,12 +642,16 @@ class Controller(wsgi.Controller):
 
         # optional openstack extensions:
         key_name = server_dict.get('key_name')
-        user_data = server_dict.get('user_data')
+        user_data = None
+        if self.ext_mgr.is_loaded('os-user-data'):
+            user_data = server_dict.get('user_data')
         self._validate_user_data(user_data)
 
         availability_zone = server_dict.get('availability_zone')
 
-        block_device_mapping = self._get_block_device_mapping(server_dict)
+        block_device_mapping = None
+        if self.ext_mgr.is_loaded('os-volumes'):
+            block_device_mapping = server_dict.get('block_device_mapping')
 
         ret_resv_id = server_dict.get('return_reservation_id', False)
 
