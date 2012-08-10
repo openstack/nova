@@ -52,6 +52,8 @@ class FaultWrapper(base_wsgi.Middleware):
         safe = getattr(inner, 'safe', False)
         headers = getattr(inner, 'headers', None)
         status = getattr(inner, 'code', 500)
+        if status is None:
+            status = 500
 
         msg_dict = dict(url=req.url, status=status)
         LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)

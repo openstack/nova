@@ -176,6 +176,20 @@ class APITest(test.TestCase):
         self._do_test_exception_mapping(ExceptionWithCode,
                                         'Expectation failed')
 
+    def test_exception_with_none_code_throws_500(self):
+        class ExceptionWithNoneCode(Exception):
+            code = None
+
+        msg = 'Internal Server Error'
+
+        @webob.dec.wsgify
+        def fail(req):
+            raise ExceptionWithNoneCode()
+
+        api = self._wsgi_app(fail)
+        resp = webob.Request.blank('/').get_response(api)
+        self.assertEqual(500, resp.status_int)
+
     def test_request_id_in_response(self):
         req = webob.Request.blank('/')
         req.method = 'GET'
