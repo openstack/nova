@@ -789,7 +789,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has
         #                 already imported ipam, import nova ipam here
         if not hasattr(self, 'ipam'):
-            self._import_ipam_lib('nova.network.quantum.nova_ipam_lib')
+            self._import_ipam_lib('nova.network.nova_ipam_lib')
         l3_lib = kwargs.get("l3_lib", FLAGS.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
 

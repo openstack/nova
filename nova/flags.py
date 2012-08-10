@@ -410,7 +410,7 @@ global_opts = [
                 default='nova.volume.api.API',
                 help='The full class name of the volume API class to use'),
     cfg.StrOpt('security_group_handler',
-               default='nova.network.quantum.sg.NullSecurityGroupHandler',
+               default='nova.network.sg.NullSecurityGroupHandler',
                help='The full class name of the security group handler class'),
     cfg.StrOpt('default_access_ip_network_name',
                default=None,
