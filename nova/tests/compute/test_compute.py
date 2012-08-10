@@ -3576,6 +3576,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_instance_metadata(self):
         meta_changes = [None]
+        self.flags(notify_on_any_change=True)
 
         def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
                                           instance_uuid=None):
@@ -3585,6 +3586,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         _context = context.get_admin_context()
         instance = self._create_fake_instance({'metadata': {'key1': 'value1'}})
+        instance = dict(instance)
 
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key1': 'value1'})
@@ -3594,6 +3596,12 @@ class ComputeAPITestCase(BaseTestCase):
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
         self.assertEqual(meta_changes, [{'key2': ['+', 'value2']}])
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        msg = test_notifier.NOTIFICATIONS[0]
+        payload = msg['payload']
+        self.assertTrue('metadata' in payload)
+        self.assertEquals(payload['metadata'], metadata)
 
         new_metadata = {'key2': 'bah', 'key3': 'value3'}
         self.compute_api.update_instance_metadata(_context, instance,
@@ -3606,10 +3614,22 @@ class ComputeAPITestCase(BaseTestCase):
                     'key3': ['+', 'value3'],
                     }])
 
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[1]
+        payload = msg['payload']
+        self.assertTrue('metadata' in payload)
+        self.assertEquals(payload['metadata'], metadata)
+
         self.compute_api.delete_instance_metadata(_context, instance, 'key2')
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key3': 'value3'})
         self.assertEqual(meta_changes, [{'key2': ['-']}])
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
+        msg = test_notifier.NOTIFICATIONS[2]
+        payload = msg['payload']
+        self.assertTrue('metadata' in payload)
+        self.assertEquals(payload['metadata'], {})
 
         db.instance_destroy(_context, instance['uuid'])
 

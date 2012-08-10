@@ -1742,6 +1742,8 @@ class API(base.Base):
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
         self.db.instance_metadata_delete(context, instance['uuid'], key)
+        instance['metadata'] = {}
+        notifications.send_update(context, instance, instance)
         self.compute_rpcapi.change_instance_metadata(context,
                                                      instance=instance,
                                                      diff={key: ['-']})
@@ -1764,8 +1766,10 @@ class API(base.Base):
             _metadata.update(metadata)
 
         self._check_metadata_properties_quota(context, _metadata)
-        self.db.instance_metadata_update(context, instance['uuid'],
+        metadata = self.db.instance_metadata_update(context, instance['uuid'],
                                          _metadata, True)
+        instance['metadata'] = metadata
+        notifications.send_update(context, instance, instance)
         diff = utils.diff_dict(orig, _metadata)
         self.compute_rpcapi.change_instance_metadata(context,
                                                      instance=instance,

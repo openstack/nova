@@ -1478,7 +1478,8 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     """Update metadata if it exists, otherwise create it."""
-    IMPL.instance_metadata_update(context, instance_uuid, metadata, delete)
+    return IMPL.instance_metadata_update(context, instance_uuid,
+                                             metadata, delete)
 
 
 ####################
