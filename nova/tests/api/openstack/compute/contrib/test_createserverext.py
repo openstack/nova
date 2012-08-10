@@ -77,6 +77,10 @@ class CreateserverextTest(test.TestCase):
                 self.db = db
 
             def create(self, *args, **kwargs):
+                if 'security_group' in kwargs:
+                    self.security_group = kwargs['security_group']
+                else:
+                    self.security_group = None
                 if 'injected_files' in kwargs:
                     self.injected_files = kwargs['injected_files']
                 else:
@@ -367,6 +371,7 @@ class CreateserverextTest(test.TestCase):
         _run_create_inst = self._run_create_instance_with_mock_compute_api
         compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 202)
+        self.assertEquals(compute_api.security_group, security_groups)
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(nova.db, 'instance_get', fakes.fake_instance_get())
@@ -376,7 +381,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         expected_security_group = [{"name": "test"}]
-        self.assertEquals(res_dict['server']['security_groups'],
+        self.assertEquals(res_dict['server'].get('security_groups'),
                           expected_security_group)
 
     def test_get_server_by_id_verify_security_groups_xml(self):

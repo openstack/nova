@@ -14,34 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-from nova.api.openstack.compute import servers
-from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
-
-
-authorize = extensions.soft_extension_authorizer('compute', 'createserverext')
-
-
-class ViewBuilder(views.servers.ViewBuilder):
-    """Adds security group output when viewing server details."""
-
-    def show(self, request, instance):
-        """Detailed view of a single instance."""
-        server = super(ViewBuilder, self).show(request, instance)
-        context = request.environ['nova.context']
-        if authorize(context):
-            server["server"]["security_groups"] = self._get_groups(instance)
-        return server
-
-    def _get_groups(self, instance):
-        """Get a list of security groups for this instance."""
-        groups = instance.get('security_groups')
-        if groups is not None:
-            return [{"name": group["name"]} for group in groups]
-
-
-class Controller(servers.Controller):
-    _view_builder_class = ViewBuilder
 
 
 class Createserverext(extensions.ExtensionDescriptor):
@@ -54,11 +27,6 @@ class Createserverext(extensions.ExtensionDescriptor):
     updated = "2011-07-19T00:00:00+00:00"
 
     def get_resources(self):
-        resources = []
-        controller = Controller(self.ext_mgr)
-
         res = extensions.ResourceExtension('os-create-server-ext',
-                                           controller=controller)
-        resources.append(res)
-
-        return resources
+                                           inherits='servers')
+        return [res]

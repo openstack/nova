@@ -35,6 +35,7 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 authorize = extensions.extension_authorizer('compute', 'security_groups')
+softauth = extensions.soft_extension_authorizer('compute', 'security_groups')
 
 
 def make_rule(elem):
@@ -454,6 +455,70 @@ class SecurityGroupActionController(wsgi.Controller):
                             context, id, group_name)
 
 
+class SecurityGroupsOutputController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(SecurityGroupsOutputController, self).__init__(*args, **kwargs)
+        self.compute_api = compute.API()
+
+    def _extend_servers(self, req, servers):
+        key = "security_groups"
+        for server in servers:
+            instance = req.get_db_instance(server['id'])
+            groups = instance.get(key)
+            if groups:
+                server[key] = [{"name": group["name"]} for group in groups]
+
+    def _show(self, req, resp_obj):
+        if not softauth(req.environ['nova.context']):
+            return
+        if 'server' in resp_obj.obj:
+            resp_obj.attach(xml=SecurityGroupServerTemplate())
+            self._extend_servers(req, [resp_obj.obj['server']])
+
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        return self._show(req, resp_obj)
+
+    @wsgi.extends
+    def create(self, req, resp_obj, body):
+        return self._show(req, resp_obj)
+
+    @wsgi.extends
+    def detail(self, req, resp_obj):
+        if not softauth(req.environ['nova.context']):
+            return
+        resp_obj.attach(xml=SecurityGroupServersTemplate())
+        self._extend_servers(req, list(resp_obj.obj['servers']))
+
+
+class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
+    def will_render(self, datum):
+        return "security_groups" in datum
+
+
+def make_server(elem):
+    secgrps = SecurityGroupsTemplateElement('security_groups')
+    elem.append(secgrps)
+    secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
+                                        selector="security_groups")
+    secgrp.set('name')
+
+
+class SecurityGroupServerTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        make_server(root)
+        return xmlutil.SlaveTemplate(root, 1)
+
+
+class SecurityGroupServersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        make_server(elem)
+        return xmlutil.SlaveTemplate(root, 1)
+
+
 class Security_groups(extensions.ExtensionDescriptor):
     """Security group support"""
     name = "SecurityGroups"
@@ -463,8 +528,10 @@ class Security_groups(extensions.ExtensionDescriptor):
 
     def get_controller_extensions(self):
         controller = SecurityGroupActionController()
-        extension = extensions.ControllerExtension(self, 'servers', controller)
-        return [extension]
+        actions = extensions.ControllerExtension(self, 'servers', controller)
+        controller = SecurityGroupsOutputController()
+        output = extensions.ControllerExtension(self, 'servers', controller)
+        return [actions, output]
 
     def get_resources(self):
         resources = []

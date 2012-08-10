@@ -106,7 +106,7 @@ class ServerDiskConfigController(wsgi.Controller):
             db_server = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
             # the core API adding it in its 'show'/'detail' methods.
-            value = db_server[INTERNAL_DISK_CONFIG]
+            value = db_server.get(INTERNAL_DISK_CONFIG)
             server[API_DISK_CONFIG] = disk_config_to_api(value)
 
     def _show(self, req, resp_obj):
