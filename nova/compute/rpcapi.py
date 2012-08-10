@@ -119,6 +119,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - remove topic, it was unused
         1.39 - Remove instance_uuid, add instance argument to run_instance()
         1.40 - Remove instance_id, add instance argument to live_migration()
+        1.41 - Adds refresh_instance_security_rules()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -521,6 +522,7 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.41 - Adds refresh_instance_security_rules()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -540,3 +542,11 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('refresh_security_group_members',
                 security_group_id=security_group_id),
                 topic=_compute_topic(self.topic, ctxt, host, None))
+
+    def refresh_instance_security_rules(self, ctxt, host, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('refresh_instance_security_rules',
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, instance['host'],
+                instance),
+                version='1.41')
