@@ -664,19 +664,35 @@ class Controller(wsgi.Controller):
             block_device_mapping = server_dict.get('block_device_mapping')
 
         ret_resv_id = False
-        min_count = None
-        max_count = None
+        # min_count and max_count are optional.  If they exist, they may come
+        # in as strings.  Verify that they are valid integers and > 0.
+        # Also, we want to default 'min_count' to 1, and default
+        # 'max_count' to be 'min_count'.
+        min_count = 1
+        max_count = 1
         if self.ext_mgr.is_loaded('os-multiple-create'):
             ret_resv_id = server_dict.get('return_reservation_id', False)
-            min_count = server_dict.get('min_count')
-            max_count = server_dict.get('max_count')
-        # min_count and max_count are optional.  If they exist, they come
-        # in as strings.  We want to default 'min_count' to 1, and default
-        # 'max_count' to be 'min_count'.
-        min_count = int(min_count) if min_count else 1
-        max_count = int(max_count) if max_count else min_count
+            min_count = server_dict.get('min_count', 1)
+            max_count = server_dict.get('max_count', min_count)
+
+        try:
+            min_count = int(min_count)
+        except ValueError:
+            raise webob.exc.HTTPBadRequest(_('min_count must be an '
+                                             'integer value'))
+        if min_count < 1:
+            raise webob.exc.HTTPBadRequest(_('min_count must be > 0'))
+
+        try:
+            max_count = int(max_count)
+        except ValueError:
+            raise webob.exc.HTTPBadRequest(_('max_count must be an '
+                                             'integer value'))
+        if max_count < 1:
+            raise webob.exc.HTTPBadRequest(_('max_count must be > 0'))
+
         if min_count > max_count:
-            min_count = max_count
+            raise webob.exc.HTTPBadRequest(_('min_count must be <= max_count'))
 
         auto_disk_config = False
         if self.ext_mgr.is_loaded('OS-DCF'):
