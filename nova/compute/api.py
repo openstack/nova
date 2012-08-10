@@ -887,21 +887,20 @@ class API(base.Base):
 
     def _delete(self, context, instance):
         host = instance['host']
+        reservations = None
         try:
             old, updated = self._update(context,
                                         instance,
                                         task_state=task_states.DELETING,
                                         progress=0)
 
+            # Avoid double-counting the quota usage reduction
+            # where delete is already in progress
             if old['task_state'] != task_states.DELETING:
                 reservations = QUOTAS.reserve(context,
                                               instances=-1,
                                               cores=-instance['vcpus'],
                                               ram=-instance['memory_mb'])
-            else:
-                # Avoid double-counting the quota usage reduction
-                # where delete is already in progress
-                reservations = None
 
             if not instance['host']:
                 # Just update database, nothing else we can do
