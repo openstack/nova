@@ -843,7 +843,10 @@ class API(base.Base):
 
         :returns: None
         """
+        _, updated = self._update(context, instance, **kwargs)
+        return updated
 
+    def _update(self, context, instance, **kwargs):
         # Update the instance record and send a state update notification
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
@@ -851,7 +854,7 @@ class API(base.Base):
         notifications.send_update(context, old_ref, instance_ref,
                 service="api")
 
-        return dict(instance_ref.iteritems())
+        return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
 
     @wrap_check_policy
     @check_instance_lock
@@ -884,11 +887,22 @@ class API(base.Base):
 
     def _delete(self, context, instance):
         host = instance['host']
-        reservations = QUOTAS.reserve(context,
-                                      instances=-1,
-                                      cores=-instance['vcpus'],
-                                      ram=-instance['memory_mb'])
         try:
+            old, updated = self._update(context,
+                                        instance,
+                                        task_state=task_states.DELETING,
+                                        progress=0)
+
+            if old['task_state'] != task_states.DELETING:
+                reservations = QUOTAS.reserve(context,
+                                              instances=-1,
+                                              cores=-instance['vcpus'],
+                                              ram=-instance['memory_mb'])
+            else:
+                # Avoid double-counting the quota usage reduction
+                # where delete is already in progress
+                reservations = None
+
             if not instance['host']:
                 # Just update database, nothing else we can do
                 constraint = self.db.constraint(host=self.db.equal_any(host))
@@ -896,14 +910,12 @@ class API(base.Base):
                     result = self.db.instance_destroy(context,
                                                       instance['uuid'],
                                                       constraint)
-                    QUOTAS.commit(context, reservations)
+                    if reservations:
+                        QUOTAS.commit(context, reservations)
                     return result
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
                     instance = self.get(context, instance['uuid'])
-
-            instance = self.update(context, instance,
-                                   task_state=task_states.DELETING, progress=0)
 
             if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
@@ -919,13 +931,16 @@ class API(base.Base):
 
             self.compute_rpcapi.terminate_instance(context, instance)
 
-            QUOTAS.commit(context, reservations)
+            if reservations:
+                QUOTAS.commit(context, reservations)
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
-            QUOTAS.rollback(context, reservations)
+            if reservations:
+                QUOTAS.rollback(context, reservations)
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                if reservations:
+                    QUOTAS.rollback(context, reservations)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy

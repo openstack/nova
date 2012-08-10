@@ -2497,6 +2497,32 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_repeated_delete_quota(self):
+        in_use = {'instances': 1}
+
+        def fake_reserve(context, **deltas):
+            return dict(deltas.iteritems())
+
+        self.stubs.Set(QUOTAS, 'reserve', fake_reserve)
+
+        def fake_commit(context, deltas):
+            for k, v in deltas.iteritems():
+                in_use[k] = in_use.get(k, 0) + v
+
+        self.stubs.Set(QUOTAS, 'commit', fake_commit)
+
+        instance, instance_uuid = self._run_instance()
+
+        self.compute_api.delete(self.context, instance)
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        self.assertEquals(in_use['instances'], 0)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_delete_fast_if_host_not_set(self):
         instance = self._create_fake_instance({'host': None})
         self.compute_api.delete(self.context, instance)
