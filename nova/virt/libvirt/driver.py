@@ -48,7 +48,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import uuid
 
 from eventlet import greenthread
@@ -2392,7 +2391,7 @@ class LibvirtDriver(driver.ComputeDriver):
         os.remove(tmp_file)
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
-                                            time=None):
+                                            time_module=None):
         """Setting up filtering rules and waiting for its completion.
 
         To migrate an instance, filtering rules to hypervisors
@@ -2416,8 +2415,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        if not time:
-            time = greenthread
+        if not time_module:
+            time_module = greenthread
 
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
@@ -2436,7 +2435,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if len(timeout_count) == 0:
                 msg = _('Timeout migrating for %s. nwfilter not found.')
                 raise exception.NovaException(msg % instance_ref["name"])
-            time.sleep(1)
+            time_module.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
