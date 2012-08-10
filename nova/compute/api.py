@@ -462,7 +462,7 @@ class API(base.Base):
             'ephemeral_gb': instance_type['ephemeral_gb'],
             'display_name': display_name,
             'display_description': display_description or '',
-            'user_data': user_data or '',
+            'user_data': user_data,
             'key_name': key_name,
             'key_data': key_data,
             'locked': False,
