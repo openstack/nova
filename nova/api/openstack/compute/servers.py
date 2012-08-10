@@ -623,10 +623,13 @@ class Controller(wsgi.Controller):
 
         sg_names = list(set(sg_names))
 
-        requested_networks = server_dict.get('networks')
+        requested_networks = None
+        if self.ext_mgr.is_loaded('os-networks'):
+            requested_networks = server_dict.get('networks')
+
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                                                    requested_networks)
+                requested_networks)
 
         (access_ip_v4, ) = server_dict.get('accessIPv4'),
         if access_ip_v4 is not None:
