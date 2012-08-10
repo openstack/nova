@@ -413,7 +413,7 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
         else:
             size = default_size
 
-        if getattr(FLAGS, 'storwize_svc_vol_autoexpand') == True:
+        if getattr(FLAGS, 'storwize_svc_vol_autoexpand'):
             autoexpand = '-autoexpand'
         else:
             autoexpand = ''

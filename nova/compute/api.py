@@ -792,7 +792,7 @@ class API(base.Base):
         # only going to create 1 instance.
         # This speeds up API responses for builds
         # as we don't need to wait for the scheduler.
-        create_instance_here = max_count == 1 or max_count == None
+        create_instance_here = max_count == 1 or max_count is None
 
         (instances, reservation_id) = self._create_instance(
                                context, instance_type,
