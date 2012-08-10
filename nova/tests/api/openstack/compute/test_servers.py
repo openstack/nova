@@ -2230,6 +2230,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_with_config_drive(self):
+        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -2256,6 +2257,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_with_config_drive_as_id(self):
+        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -2282,6 +2284,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_with_bad_config_drive(self):
+        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -2307,6 +2310,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_without_config_drive(self):
+        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -2331,6 +2335,18 @@ class ServersControllerCreateTest(test.TestCase):
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_with_config_drive_disabled(self):
+        config_drive = [{'config_drive': 'foo'}]
+        params = {'config_drive': config_drive}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['config_drive'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
 
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
