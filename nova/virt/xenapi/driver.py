@@ -54,10 +54,10 @@ from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
+from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
 from nova.virt.xenapi import volumeops
-
 
 LOG = logging.getLogger(__name__)
 
@@ -628,13 +628,12 @@ class XenAPISession(object):
 
     def _get_host_uuid(self):
         if self.is_slave:
-            try:
-                aggr = db.aggregate_get_by_host(context.get_admin_context(),
-                                                FLAGS.host)
-            except exception.AggregateHostNotFound:
-                LOG.exception(_('Host is member of a pool, but DB '
+            aggr = db.aggregate_get_by_host(context.get_admin_context(),
+                    FLAGS.host, key=pool_states.POOL_FLAG)[0]
+            if not aggr:
+                LOG.error(_('Host is member of a pool, but DB '
                                 'says otherwise'))
-                raise
+                raise exception.AggregateHostNotFound()
             return aggr.metadetails[FLAGS.host]
         else:
             with self._get_session() as session:

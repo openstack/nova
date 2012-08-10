@@ -1828,9 +1828,18 @@ def aggregate_get(context, aggregate_id):
     return IMPL.aggregate_get(context, aggregate_id)
 
 
-def aggregate_get_by_host(context, host):
-    """Get a specific aggregate by host"""
-    return IMPL.aggregate_get_by_host(context, host)
+def aggregate_get_by_host(context, host, key=None):
+    """Get a list of aggregates that host belongs to"""
+    return IMPL.aggregate_get_by_host(context, host, key)
+
+
+def aggregate_metadata_get_by_host(context, host, key=None):
+    """Get metadata for all aggregates that host belongs to.
+
+    Returns a dictionary where each value is a set, this is to cover the case
+    where there two aggregates have different values for the same key.
+    Optional key filter"""
+    return IMPL.aggregate_metadata_get_by_host(context, host, key)
 
 
 def aggregate_update(context, aggregate_id, values):

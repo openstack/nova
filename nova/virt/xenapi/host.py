@@ -28,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import notifications
 from nova.openstack.common import jsonutils
+from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
@@ -210,7 +211,10 @@ def _host_find(context, session, src, dst):
     # NOTE: this would be a lot simpler if nova-compute stored
     # FLAGS.host in the XenServer host's other-config map.
     # TODO(armando-migliaccio): improve according the note above
-    aggregate = db.aggregate_get_by_host(context, src)
+    aggregate = db.aggregate_get_by_host(context, src,
+            key=pool_states.POOL_FLAG)[0]
+    if not aggregate:
+        raise exception.AggregateHostNotFound(host=src)
     uuid = session.call_xenapi('host.get_record', dst)['uuid']
     for compute_host, host_uuid in aggregate.metadetails.iteritems():
         if host_uuid == uuid:

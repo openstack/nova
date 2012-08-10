@@ -37,3 +37,19 @@ class TypeAffinityFilter(filters.BaseHostFilter):
         instances_other_type = db.instance_get_all_by_host_and_not_type(
                      context, host_state.host, instance_type['id'])
         return len(instances_other_type) == 0
+
+
+class AggregateTypeAffinityFilter(filters.BaseHostFilter):
+    """AggregateTypeAffinityFilter limits instance_type by aggregate
+
+    return True if no instance_type key is set or if the aggregate metadata
+    key 'instance_type' has the instance_type name as a value
+    """
+
+    def host_passes(self, host_state, filter_properties):
+        instance_type = filter_properties.get('instance_type')
+        context = filter_properties['context'].elevated()
+        metadata = db.aggregate_metadata_get_by_host(
+                     context, host_state.host, key='instance_type')
+        return (len(metadata) == 0 or
+                instance_type['name'] in metadata['instance_type'])

@@ -19,6 +19,7 @@ import httplib
 import stubout
 
 from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
@@ -292,6 +293,28 @@ class HostFiltersTestCase(test.TestCase):
                            params={'host': 'fake_host', 'instance_type_id': 2})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_aggregate_type_filter(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateTypeAffinityFilter']()
+
+        filter_properties = {'context': self.context,
+                             'instance_type': {'name': 'fake1'}}
+        filter2_properties = {'context': self.context,
+                             'instance_type': {'name': 'fake2'}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('fake_host', 'compute',
+                {'capabilities': capabilities,
+                 'service': service})
+        #True since no aggregates
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        #True since type matches aggregate, metadata
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['fake_host'], metadata={'instance_type': 'fake1'})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        #False since type matches aggregate, metadata
+        self.assertFalse(filt_cls.host_passes(host, filter2_properties))
+
     def test_ram_filter_fails_on_memory(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
@@ -396,6 +419,63 @@ class HostFiltersTestCase(test.TestCase):
                 {'free_ram_mb': 1024, 'capabilities': capabilities,
                  'service': service})
 
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_filter_passes_no_extra_specs(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
+        capabilities = {'enabled': True, 'opt1': 1, 'opt2': 2}
+
+        filter_properties = {'context': self.context, 'instance_type':
+                {'memory_mb': 1024}}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'capabilities': capabilities})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def _create_aggregate_with_host(self, name='fake_aggregate',
+                          metadata=None,
+                          hosts=['host1']):
+        values = {'name': name,
+                    'availability_zone': 'fake_avail_zone', }
+        result = db.aggregate_create(self.context.elevated(), values, metadata)
+        for host in hosts:
+            db.aggregate_host_add(self.context.elevated(), result.id, host)
+        return result
+
+    def test_aggregate_filter_passes_extra_specs(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
+        extra_specs = {'opt1': '1', 'opt2': '2'}
+        self._create_aggregate_with_host(metadata={'opt1': '1'})
+        self._create_aggregate_with_host(name='fake2', metadata={'opt2': '2'})
+
+        filter_properties = {'context': self.context, 'instance_type':
+                {'memory_mb': 1024, 'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_filter_fails_extra_specs(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
+        extra_specs = {'opt1': 1, 'opt2': 3}
+        self._create_aggregate_with_host(metadata={'opt1': '1'})
+        self._create_aggregate_with_host(name='fake2', metadata={'opt2': '2'})
+        filter_properties = {'context': self.context, 'instance_type':
+                {'memory_mb': 1024, 'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_filter_fails_extra_specs_deleted_host(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
+        extra_specs = {'opt1': '1', 'opt2': '2'}
+        self._create_aggregate_with_host(metadata={'opt1': '1'})
+        agg2 = self._create_aggregate_with_host(name='fake2',
+                metadata={'opt2': '2'})
+        filter_properties = {'context': self.context, 'instance_type':
+                {'memory_mb': 1024, 'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
+        db.aggregate_host_delete(self.context.elevated(), agg2.id, 'host1')
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_isolated_hosts_fails_isolated_on_non_isolated(self):

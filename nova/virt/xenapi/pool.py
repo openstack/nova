@@ -67,14 +67,9 @@ class ResourcePool(object):
             LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
                             'during operation on %(host)s') % locals())
 
-    def _is_hv_pool(self, context, aggregate_id):
-        """Checks if aggregate is a hypervisor_pool"""
-        metadata = db.aggregate_metadata_get(context, aggregate_id)
-        return pool_states.POOL_FLAG in metadata.keys()
-
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate."""
-        if not self._is_hv_pool(context, aggregate.id):
+        if not pool_states.is_hv_pool(context, aggregate.id):
             return
 
         invalid = {pool_states.CHANGING: 'setup in progress',
@@ -126,7 +121,7 @@ class ResourcePool(object):
 
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
         """Remove a compute host from an aggregate."""
-        if not self._is_hv_pool(context, aggregate.id):
+        if not pool_states.is_hv_pool(context, aggregate.id):
             return
 
         invalid = {pool_states.CREATED: 'no hosts to remove',
