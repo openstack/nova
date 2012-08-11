@@ -13,10 +13,12 @@ tune2fs: CommandFilter, /sbin/tune2fs, root
 
 # nova/virt/disk/mount.py: 'mount', mapped_device, mount_dir
 # nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
+# nova/virt/configdrive.py: 'mount', device, mountdir
 mount: CommandFilter, /bin/mount, root
 
 # nova/virt/disk/mount.py: 'umount', mapped_device
 # nova/virt/xenapi/vm_utils.py: 'umount', dev_path
+# nova/virt/configdrive.py: 'umount', mountdir
 umount: CommandFilter, /bin/umount, root
 
 # nova/virt/disk/nbd.py: 'qemu-nbd', '-c', device, image

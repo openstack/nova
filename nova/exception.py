@@ -1145,6 +1145,16 @@ class InstanceIsLocked(InstanceInvalidState):
     message = _("Instance %(instance_uuid)s is locked")
 
 
+class ConfigDriveMountFailed(NovaException):
+    message = _("Could not mount vfat config drive. %(operation)s failed. "
+                "Error: %(error)s")
+
+
+class ConfigDriveUnknownFormat(NovaException):
+    message = _("Unknown config drive format %(format)s. Select one of "
+                "iso9660 or vfat.")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 
