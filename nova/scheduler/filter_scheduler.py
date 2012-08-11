@@ -42,7 +42,7 @@ class FilterScheduler(driver.Scheduler):
         self.cost_function_cache = {}
         self.options = scheduler_options.SchedulerOptions()
 
-    def schedule_create_volume(self, context, volume_id, snapshot_id,
+    def schedule_create_volume(self, context, volume_id, snapshot_id, image_id,
                                reservations):
         # NOTE: We're only focused on compute instances right now,
         # so this method will always raise NoValidHost().

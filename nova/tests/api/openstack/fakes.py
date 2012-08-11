@@ -542,6 +542,18 @@ def stub_volume_create(self, context, size, name, description, snapshot,
     return vol
 
 
+def stub_volume_create_from_image(self, context, size, name, description,
+                                  snapshot, volume_type, metadata,
+                                  availability_zone):
+    vol = stub_volume('1')
+    vol['status'] = 'creating'
+    vol['size'] = size
+    vol['display_name'] = name
+    vol['display_description'] = description
+    vol['availability_zone'] = 'nova'
+    return vol
+
+
 def stub_volume_update(self, context, *args, **param):
     pass
 

@@ -69,10 +69,11 @@ class SchedulerManager(manager.Manager):
         self.driver.update_service_capabilities(service_name, host,
                 capabilities)
 
-    def create_volume(self, context, volume_id, snapshot_id, reservations):
+    def create_volume(self, context, volume_id, snapshot_id, image_id,
+                      reservations):
         try:
             self.driver.schedule_create_volume(
-                context, volume_id, snapshot_id, reservations)
+                context, volume_id, snapshot_id, image_id, reservations)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('create_volume',

@@ -25,6 +25,7 @@ import functools
 from nova.db import base
 from nova import exception
 from nova import flags
+from nova.image import glance
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -42,6 +43,7 @@ FLAGS.register_opt(volume_host_opt)
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 LOG = logging.getLogger(__name__)
+GB = 1048576 * 1024
 
 QUOTAS = quota.QUOTAS
 
@@ -73,12 +75,15 @@ def check_policy(context, action, target_obj=None):
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, image_service=None, **kwargs):
+        self.image_service = (image_service or
+                              glance.get_default_image_service())
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         super(API, self).__init__(**kwargs)
 
     def create(self, context, size, name, description, snapshot=None,
-                     volume_type=None, metadata=None, availability_zone=None):
+                image_id=None, volume_type=None, metadata=None,
+                availability_zone=None):
         check_policy(context, 'create')
         if snapshot is not None:
             if snapshot['status'] != "available":
@@ -129,6 +134,15 @@ class API(base.Base):
                            % locals())
                 raise exception.VolumeLimitExceeded(allowed=quotas['volumes'])
 
+        if image_id:
+            # check image existence
+            image_meta = self.image_service.show(context, image_id)
+            image_size_in_gb = (int(image_meta['size']) + GB - 1) / GB
+            #check image size is not larger than volume size.
+            if image_size_in_gb > size:
+                msg = _('Size of specified image is larger than volume size.')
+                raise exception.InvalidInput(reason=msg)
+
         if availability_zone is None:
             availability_zone = FLAGS.storage_availability_zone
 
@@ -150,14 +164,13 @@ class API(base.Base):
             'volume_type_id': volume_type_id,
             'metadata': metadata,
             }
-
         volume = self.db.volume_create(context, options)
         self._cast_create_volume(context, volume['id'],
-                                 snapshot_id, reservations)
+                                 snapshot_id, image_id, reservations)
         return volume
 
     def _cast_create_volume(self, context, volume_id,
-                            snapshot_id, reservations):
+                            snapshot_id, image_id, reservations):
 
         # NOTE(Rongze Zhu): It is a simple solution for bug 1008866
         # If snapshot_id is set, make the call create volume directly to
@@ -176,10 +189,12 @@ class API(base.Base):
                      {"method": "create_volume",
                       "args": {"volume_id": volume_id,
                                "snapshot_id": snapshot_id,
-                               "reservations": reservations}})
+                               "reservations": reservations,
+                               "image_id": image_id}})
+
         else:
             self.scheduler_rpcapi.create_volume(
-                context, volume_id, snapshot_id, reservations)
+                context, volume_id, snapshot_id, image_id, reservations)
 
     @wrap_check_policy
     def delete(self, context, volume, force=False):
@@ -205,6 +220,10 @@ class API(base.Base):
                  rpc.queue_get_for(context, FLAGS.volume_topic, host),
                  {"method": "delete_volume",
                   "args": {"volume_id": volume_id}})
+
+    @wrap_check_policy
+    def update(self, context, volume, fields):
+        self.db.volume_update(context, volume['id'], fields)
 
     def get(self, context, volume_id):
         rv = self.db.volume_get(context, volume_id)
@@ -437,3 +456,40 @@ class API(base.Base):
                 if i['key'] == key:
                     return i['value']
         return None
+
+    def _check_volume_availability(self, context, volume, force):
+        """Check if the volume can be used."""
+        if volume['status'] not in ['available', 'in-use']:
+            msg = _('Volume status must be available/in-use.')
+            raise exception.InvalidVolume(reason=msg)
+        if not force and 'in-use' == volume['status']:
+            msg = _('Volume status is in-use.')
+            raise exception.InvalidVolume(reason=msg)
+
+    @wrap_check_policy
+    def copy_volume_to_image(self, context, volume, metadata, force):
+        """Create a new image from the specified volume."""
+        self._check_volume_availability(context, volume, force)
+
+        recv_metadata = self.image_service.create(context, metadata)
+        self.update(context, volume, {'status': 'uploading'})
+        rpc.cast(context,
+                 rpc.queue_get_for(context,
+                                   FLAGS.volume_topic,
+                                   volume['host']),
+                 {"method": "copy_volume_to_image",
+                  "args": {"volume_id": volume['id'],
+                           "image_id": recv_metadata['id']}})
+
+        response = {"id": volume['id'],
+               "updated_at": volume['updated_at'],
+               "status": 'uploading',
+               "display_description": volume['display_description'],
+               "size": volume['size'],
+               "volume_type": volume['volume_type'],
+               "image_id": recv_metadata['id'],
+               "container_format": recv_metadata['container_format'],
+               "disk_format": recv_metadata['disk_format'],
+               "image_name": recv_metadata.get('name', None)
+        }
+        return response

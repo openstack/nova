@@ -261,6 +261,14 @@ class VolumeDriver(object):
         """Any initialization the volume driver does while starting"""
         pass
 
+    def copy_image_to_volume(self, context, volume, image_service, image_id):
+        """Fetch the image from image_service and write it to the volume."""
+        raise NotImplementedError()
+
+    def copy_volume_to_image(self, context, volume, image_service, image_id):
+        """Copy the volume to the specified image."""
+        raise NotImplementedError()
+
 
 class ISCSIDriver(VolumeDriver):
     """Executes commands relating to ISCSI volumes.
@@ -540,6 +548,20 @@ class ISCSIDriver(VolumeDriver):
             LOG.error(_("Cannot confirm exported volume "
                         "id:%(volume_id)s.") % locals())
             raise
+
+    def copy_image_to_volume(self, context, volume, image_service, image_id):
+        """Fetch the image from image_service and write it to the volume."""
+        volume_path = self.local_path(volume)
+        with utils.temporary_chown(volume_path):
+            with utils.file_open(volume_path, "wb") as image_file:
+                image_service.download(context, image_id, image_file)
+
+    def copy_volume_to_image(self, context, volume, image_service, image_id):
+        """Copy the volume to the specified image."""
+        volume_path = self.local_path(volume)
+        with utils.temporary_chown(volume_path):
+            with utils.file_open(volume_path) as volume_file:
+                image_service.update(context, image_id, {}, volume_file)
 
 
 class FakeISCSIDriver(ISCSIDriver):
