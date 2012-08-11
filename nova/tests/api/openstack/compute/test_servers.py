@@ -1961,6 +1961,35 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_networks_enabled(self):
+        self.ext_mgr.extensions = {'os-networks': 'fake'}
+        net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        requested_networks = [{'uuid': net_uuid}]
+        params = {'networks': requested_networks}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            result = [('76fa36fc-c930-4bf3-8c8a-ea2a2420deb6', None)]
+            self.assertEqual(kwargs['requested_networks'], result)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_networks_disabled(self):
+        self.ext_mgr.extensions = {}
+        net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        requested_networks = [{'uuid': net_uuid}]
+        params = {'networks': requested_networks}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['requested_networks'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
