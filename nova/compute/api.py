@@ -21,6 +21,7 @@
 """Handles all requests relating to compute resources (e.g. guest VMs,
 networking and storage of VMs, and compute hosts on which they run)."""
 
+import base64
 import functools
 import re
 import string
@@ -58,6 +59,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 
+MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
 
 
@@ -472,6 +474,19 @@ class API(base.Base):
             'root_device_name': root_device_name,
             'architecture': architecture,
             'progress': 0}
+
+        if user_data:
+            l = len(user_data)
+            if l > MAX_USERDATA_SIZE:
+                # NOTE(mikal): user_data is stored in a text column, and the
+                # database might silently truncate if its over length.
+                raise exception.InstanceUserDataTooLarge(
+                    length=l, maxsize=MAX_USERDATA_SIZE)
+
+            try:
+                base64.decodestring(user_data)
+            except base64.binascii.Error:
+                raise exception.InstanceUserDataMalformed()
 
         options_from_image = self._inherit_properties_from_image(
                 image, auto_disk_config)
