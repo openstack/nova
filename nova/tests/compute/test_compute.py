@@ -456,7 +456,8 @@ class ComputeTestCase(BaseTestCase):
         called = {'rescued': False,
                   'unrescued': False}
 
-        def fake_rescue(self, context, instance_ref, network_info, image_meta):
+        def fake_rescue(self, context, instance_ref, network_info, image_meta,
+                        rescue_password):
             called['rescued'] = True
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)

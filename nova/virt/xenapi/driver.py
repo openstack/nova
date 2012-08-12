@@ -171,11 +171,11 @@ class XenAPIDriver(driver.ComputeDriver):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, context, instance, image_meta,
-              network_info=None, block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
         """Create VM instance"""
-        self._vmops.spawn(context, instance, image_meta, network_info,
-                          block_device_info)
+        self._vmops.spawn(context, instance, image_meta, injected_files,
+                          admin_password, network_info, block_device_info)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM"""
@@ -243,9 +243,11 @@ class XenAPIDriver(driver.ComputeDriver):
         """resume the specified instance"""
         self._vmops.resume(instance)
 
-    def rescue(self, context, instance, network_info, image_meta):
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
         """Rescue the specified instance"""
-        self._vmops.rescue(context, instance, network_info, image_meta)
+        self._vmops.rescue(context, instance, network_info, image_meta,
+                           rescue_password)
 
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance"""
