@@ -678,7 +678,9 @@ class Controller(wsgi.Controller):
         if min_count > max_count:
             min_count = max_count
 
-        auto_disk_config = server_dict.get('auto_disk_config')
+        auto_disk_config = False
+        if self.ext_mgr.is_loaded('OS-DCF'):
+            auto_disk_config = server_dict.get('auto_disk_config')
 
         scheduler_hints = {}
         if self.ext_mgr.is_loaded('os-scheduler-hints'):

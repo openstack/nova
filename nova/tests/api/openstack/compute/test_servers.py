@@ -1790,6 +1790,32 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_disk_config_enabled(self):
+        self.ext_mgr.extensions = {'OS-DCF': 'fake'}
+        # NOTE(vish): the extension converts OS-DCF:disk_config into
+        #             auto_disk_config, so we are testing with
+        #             the_internal_value
+        params = {'auto_disk_config': True}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['auto_disk_config'], True)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
+    def test_create_instance_with_disk_config_disabled(self):
+        params = {'auto_disk_config': True}
+        old_create = nova.compute.api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['auto_disk_config'], False)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_scheduler_hints_enabled(self):
         self.ext_mgr.extensions = {'os-scheduler-hints': 'fake'}
         hints = {'a': 'b'}
