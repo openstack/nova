@@ -130,7 +130,11 @@ class SnapshotsController(object):
         """Returns a list of snapshots, transformed through entity_maker."""
         context = req.environ['nova.context']
 
-        snapshots = self.volume_api.get_all_snapshots(context)
+        search_opts = {}
+        search_opts.update(req.GET)
+
+        snapshots = self.volume_api.get_all_snapshots(context,
+                                                      search_opts=search_opts)
         limited_list = common.limited(snapshots, req)
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}

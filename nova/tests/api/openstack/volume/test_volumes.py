@@ -19,6 +19,7 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.volume import volumes
+from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
@@ -35,7 +36,9 @@ class VolumeApiTest(test.TestCase):
         super(VolumeApiTest, self).setUp()
         self.controller = volumes.VolumeController()
 
-        self.stubs.Set(volume_api.API, 'get_all', fakes.stub_volume_get_all)
+        self.stubs.Set(db, 'volume_get_all', fakes.stub_volume_get_all)
+        self.stubs.Set(db, 'volume_get_all_by_project',
+                       fakes.stub_volume_get_all_by_project)
         self.stubs.Set(volume_api.API, 'get', fakes.stub_volume_get)
         self.stubs.Set(volume_api.API, 'delete', fakes.stub_volume_delete)
 
@@ -89,6 +92,9 @@ class VolumeApiTest(test.TestCase):
                           body)
 
     def test_volume_list(self):
+        self.stubs.Set(volume_api.API, 'get_all',
+                     fakes.stub_volume_get_all_by_project)
+
         req = fakes.HTTPRequest.blank('/v1/volumes')
         res_dict = self.controller.index(req)
         expected = {'volumes': [{'status': 'fakestatus',
@@ -110,6 +116,9 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_volume_list_detail(self):
+        self.stubs.Set(volume_api.API, 'get_all',
+                   fakes.stub_volume_get_all_by_project)
+
         req = fakes.HTTPRequest.blank('/v1/volumes/detail')
         res_dict = self.controller.index(req)
         expected = {'volumes': [{'status': 'fakestatus',
@@ -193,6 +202,33 @@ class VolumeApiTest(test.TestCase):
                           self.controller.delete,
                           req,
                           1)
+
+    def test_admin_list_volumes_limited_to_project(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/volumes',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertTrue('volumes' in res)
+        self.assertEqual(1, len(res['volumes']))
+
+    def test_admin_list_volumes_all_tenants(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+        self.assertTrue('volumes' in res)
+        self.assertEqual(3, len(res['volumes']))
+
+    def test_all_tenants_non_admin_gets_all_tenants(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1')
+        res = self.controller.index(req)
+        self.assertTrue('volumes' in res)
+        self.assertEqual(1, len(res['volumes']))
+
+    def test_non_admin_get_by_project(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/volumes')
+        res = self.controller.index(req)
+        self.assertTrue('volumes' in res)
+        self.assertEqual(1, len(res['volumes']))
 
 
 class VolumeSerializerTest(test.TestCase):

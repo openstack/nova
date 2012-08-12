@@ -196,9 +196,15 @@ class VolumeController(object):
 
     def _items(self, req, entity_maker):
         """Returns a list of volumes, transformed through entity_maker."""
-        context = req.environ['nova.context']
 
-        volumes = self.volume_api.get_all(context)
+        search_opts = {}
+        search_opts.update(req.GET)
+
+        context = req.environ['nova.context']
+        remove_invalid_options(context,
+                               search_opts, self._get_volume_search_options())
+
+        volumes = self.volume_api.get_all(context, search_opts=search_opts)
         limited_list = common.limited(volumes, req)
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
@@ -253,6 +259,25 @@ class VolumeController(object):
 
         return wsgi.ResponseObject(result, headers=dict(location=location))
 
+    def _get_volume_search_options(self):
+        """Return volume search options allowed by non-admin."""
+        return ('name', 'status')
+
 
 def create_resource():
     return wsgi.Resource(VolumeController())
+
+
+def remove_invalid_options(context, search_options, allowed_search_options):
+    """Remove search options that are not valid for non-admin API/context."""
+    if context.is_admin:
+        # Allow all options
+        return
+    # Otherwise, strip out all unknown options
+    unknown_options = [opt for opt in search_options
+            if opt not in allowed_search_options]
+    bad_options = ", ".join(unknown_options)
+    log_msg = _("Removing options '%(bad_options)s' from query") % locals()
+    LOG.debug(log_msg)
+    for opt in unknown_options:
+        search_options.pop(opt, None)
