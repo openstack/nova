@@ -244,6 +244,10 @@ class API(base.Base):
         it is associated with."""
         raise NotImplementedError()
 
+    def add_network_to_project(self, context, project_id):
+        """Force add a network to the project."""
+        raise NotImplementedError()
+
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }

@@ -1996,12 +1996,20 @@ def key_pair_count_by_user(context, user_id):
 
 
 @require_admin_context
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
     """Associate a project with a network.
 
     called by project_get_networks under certain conditions
+    and network manager add_network_to_project()
 
     only associate if the project doesn't already have a network
+    or if force is True
+
+    force solves race condition where a fresh project has multiple instance
+    builds simultaneously picked up by multiple network hosts which attempt
+    to associate the project with multiple networks
+    force should only be used as a direct consequence of user request
+    all automated requests should not use force
     """
     session = get_session()
     with session.begin():
@@ -2013,10 +2021,13 @@ def network_associate(context, project_id):
                            with_lockmode('update').\
                            first()
 
-        # find out if project has a network
-        network_ref = network_query(project_id)
-        if not network_ref:
-            # project doesn't have a network so associate with a new network
+        if not force:
+            # find out if project has a network
+            network_ref = network_query(project_id)
+
+        if force or not network_ref:
+            # in force mode or project doesn't have a network so associate
+            # with a new network
 
             # get new network
             network_ref = network_query(None)
