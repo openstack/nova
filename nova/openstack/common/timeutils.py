@@ -21,7 +21,6 @@ Time related utilities and helper functions.
 
 import calendar
 import datetime
-import time
 
 import iso8601
 
