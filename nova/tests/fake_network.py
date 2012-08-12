@@ -20,7 +20,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.network import manager as network_manager
-from nova.network.quantum import nova_ipam_lib
+from nova.network import nova_ipam_lib
 from nova import utils
 
 

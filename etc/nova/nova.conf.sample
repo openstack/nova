@@ -348,7 +348,7 @@
 # volume_api_class=nova.volume.api.API
 #### (StrOpt) The full class name of the volume API class to use
 
-# security_group_handler=nova.network.quantum.sg.NullSecurityGroupHandler
+# security_group_handler=nova.network.quantumv2.sg.NullSecurityGroupHandler
 #### (StrOpt) The full class name of the security group handler class
 
 # default_access_ip_network_name=<None>
@@ -1010,52 +1010,6 @@
 
 # l3_lib=nova.network.l3.LinuxNetL3
 #### (StrOpt) Indicates underlying L3 management library
-
-
-######## defined in nova.network.quantum.manager ########
-
-# quantum_ipam_lib=nova.network.quantum.nova_ipam_lib
-#### (StrOpt) Indicates underlying IP address management library
-
-# use_melange_mac_generation=false
-#### (BoolOpt) Use Melange for assignment of MAC addresses
-
-# quantum_use_dhcp=false
-#### (BoolOpt) Whether or not to enable DHCP for networks
-
-# quantum_use_port_security=false
-#### (BoolOpt) Whether or not to enable port security
-
-# quantum_port_security_include_link_local=false
-#### (BoolOpt) Add the link local address to the port security list
-
-
-######## defined in nova.network.quantum.melange_connection ########
-
-# melange_host=127.0.0.1
-#### (StrOpt) HOST for connecting to melange
-
-# melange_port=9898
-#### (IntOpt) PORT for connecting to melange
-
-# melange_num_retries=0
-#### (IntOpt) Number retries when contacting melange
-
-
-######## defined in nova.network.quantum.quantum_connection ########
-
-# quantum_connection_host=127.0.0.1
-#### (StrOpt) HOST for connecting to quantum
-
-# quantum_connection_port=9696
-#### (IntOpt) PORT for connecting to quantum
-
-# quantum_default_tenant_id=default
-#### (StrOpt) Default tenant id when creating quantum networks
-
-# quantum_request_timeout=20
-#### (IntOpt) Maximum amount of time to wait for quantum request
-
 
 ######## defined in nova.notifier.api ########
 
