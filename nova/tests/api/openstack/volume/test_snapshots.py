@@ -170,20 +170,20 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(1, len(res['snapshots']))
 
     def test_admin_list_snapshots_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/snapshots?all_tenants=1',
+        req = fakes.HTTPRequest.blank('/v1/fake/snapshots?all_tenants=1',
                                       use_admin_context=True)
         res = self.controller.index(req)
         self.assertTrue('snapshots' in res)
         self.assertEqual(3, len(res['snapshots']))
 
     def test_all_tenants_non_admin_gets_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/snapshots?all_tenants=1')
+        req = fakes.HTTPRequest.blank('/v1/fake/snapshots?all_tenants=1')
         res = self.controller.index(req)
         self.assertTrue('snapshots' in res)
         self.assertEqual(1, len(res['snapshots']))
 
     def test_non_admin_get_by_project(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/snapshots')
+        req = fakes.HTTPRequest.blank('/v1/fake/snapshots')
         res = self.controller.index(req)
         self.assertTrue('snapshots' in res)
         self.assertEqual(1, len(res['snapshots']))

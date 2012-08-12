@@ -117,7 +117,7 @@ class VolumeTypesApiTest(test.TestCase):
                                deleted_at=None,
                                id=42)
 
-        request = fakes.HTTPRequest.blank("/v2")
+        request = fakes.HTTPRequest.blank("/v1")
         output = view_builder.show(request, raw_volume_type)
 
         self.assertTrue('volume_type' in output)
@@ -140,7 +140,7 @@ class VolumeTypesApiTest(test.TestCase):
                                          deleted_at=None,
                                          id=42 + i))
 
-        request = fakes.HTTPRequest.blank("/v2")
+        request = fakes.HTTPRequest.blank("/v1")
         output = view_builder.index(request, raw_volume_types)
 
         self.assertTrue('volume_types' in output)
