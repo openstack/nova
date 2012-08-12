@@ -508,3 +508,28 @@ class LinuxNetworkTestCase(test.TestCase):
              '2001:db8::/64', 'dev', 'eth0'),
         ]
         self._test_initialize_gateway(existing, expected)
+
+    def test_apply_ran(self):
+        manager = linux_net.IptablesManager()
+        manager.iptables_apply_deferred = False
+        self.mox.StubOutWithMock(manager, '_apply')
+        manager._apply()
+        self.mox.ReplayAll()
+        empty_ret = manager.apply()
+        self.assertEqual(empty_ret, None)
+
+    def test_apply_not_run(self):
+        manager = linux_net.IptablesManager()
+        manager.iptables_apply_deferred = True
+        self.mox.StubOutWithMock(manager, '_apply')
+        self.mox.ReplayAll()
+        manager.apply()
+
+    def test_deferred_unset_apply_ran(self):
+        manager = linux_net.IptablesManager()
+        manager.iptables_apply_deferred = True
+        self.mox.StubOutWithMock(manager, '_apply')
+        manager._apply()
+        self.mox.ReplayAll()
+        manager.defer_apply_off()
+        self.assertFalse(manager.iptables_apply_deferred)

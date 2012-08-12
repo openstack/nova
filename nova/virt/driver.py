@@ -488,6 +488,14 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def filter_defer_apply_on(self):
+        """Defer application of IPTables rules"""
+        pass
+
+    def filter_defer_apply_off(self):
+        """Turn off deferral of IPTables rules and apply the rules now"""
+        pass
+
     def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         # TODO(Vek): Need to pass context in for access to auth_token

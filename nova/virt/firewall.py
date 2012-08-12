@@ -47,6 +47,14 @@ class FirewallDriver(object):
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
+    def filter_defer_apply_on(self):
+        """Defer application of IPTables rules"""
+        pass
+
+    def filter_defer_apply_off(self):
+        """Turn off deferral of IPTables rules and apply the rules now"""
+        pass
+
     def unfilter_instance(self, instance, network_info):
         """Stop filtering instance"""
         raise NotImplementedError()
@@ -135,6 +143,12 @@ class IptablesFirewallDriver(FirewallDriver):
     def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter."""
         pass
+
+    def filter_defer_apply_on(self):
+        self.iptables.defer_apply_on()
+
+    def filter_defer_apply_off(self):
+        self.iptables.defer_apply_off()
 
     def unfilter_instance(self, instance, network_info):
         # make sure this is legacy nw_info

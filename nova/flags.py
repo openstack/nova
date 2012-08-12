@@ -428,6 +428,11 @@ global_opts = [
                          'min_disk'],
                 help='These are image properties which a snapshot should not'
                      ' inherit from an instance'),
+    cfg.BoolOpt('defer_iptables_apply',
+                default=False,
+                help='Whether to batch up the application of IPTables rules'
+                     ' during a host restart and apply all at the end of the'
+                     ' init phase'),
 ]
 
 FLAGS.register_opts(global_opts)
