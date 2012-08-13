@@ -209,7 +209,8 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type,
+               block_device_info=None):
         """Reboot the specified instance.
 
         :param instance: Instance object as returned by DB layer.
@@ -335,7 +336,8 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def resume_state_on_host_boot(self, context, instance, network_info):
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
         """resume guest state when a host is booted"""
         raise NotImplementedError()
 

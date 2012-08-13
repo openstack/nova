@@ -112,7 +112,8 @@ class FakeConnection(driver.ComputeDriver):
         if not instance['name'] in self.instances:
             raise exception.InstanceNotRunning()
 
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type,
+               block_device_info=None):
         pass
 
     @staticmethod
@@ -131,7 +132,8 @@ class FakeConnection(driver.ComputeDriver):
     def agent_update(self, instance, url, md5hash):
         pass
 
-    def resume_state_on_host_boot(self, context, instance, network_info):
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
         pass
 
     def rescue(self, context, instance, network_info, image_meta):

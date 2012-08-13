@@ -258,9 +258,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                 FLAGS.start_guests_on_host_boot):
                 LOG.info(_('Rebooting instance after nova-compute restart.'),
                          locals(), instance=instance)
+
+                block_device_info = \
+                    self._get_instance_volume_block_device_info(context,
+                                                                instance['id'])
+
                 try:
                     self.driver.resume_state_on_host_boot(context, instance,
-                                self._legacy_nw_info(net_info))
+                                self._legacy_nw_info(net_info),
+                                                 block_device_info)
                 except NotImplementedError:
                     LOG.warning(_('Hypervisor driver does not support '
                                   'resume guests'), instance=instance)
@@ -913,8 +919,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context)
 
         network_info = self._get_instance_nw_info(context, instance)
+
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance['id'])
+
         self.driver.reboot(instance, self._legacy_nw_info(network_info),
-                           reboot_type)
+                           reboot_type, block_device_info)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

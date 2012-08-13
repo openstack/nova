@@ -714,7 +714,8 @@ class LibvirtConnection(driver.ComputeDriver):
                                      image_file)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info, reboot_type='SOFT'):
+    def reboot(self, instance, network_info, reboot_type='SOFT',
+               block_device_info=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.
@@ -725,7 +726,8 @@ class LibvirtConnection(driver.ComputeDriver):
             else:
                 LOG.info(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance, network_info)
+        return self._hard_reboot(instance, network_info,
+                                 block_device_info=block_device_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -760,7 +762,8 @@ class LibvirtConnection(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, network_info, xml=None):
+    def _hard_reboot(self, instance, network_info, xml=None,
+                     block_device_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
@@ -769,6 +772,17 @@ class LibvirtConnection(driver.ComputeDriver):
         If xml is set, it uses the passed in xml in place of the xml from the
         existing domain.
         """
+
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self.volume_driver_method('connect_volume',
+                                      connection_info,
+                                      mount_device)
+
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
         # instead of using to_xml(instance, network_info). This is almost
@@ -825,11 +839,13 @@ class LibvirtConnection(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
-    def resume_state_on_host_boot(self, context, instance, network_info):
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
         """resume guest state when a host is booted"""
         # NOTE(dprince): use hard reboot to ensure network and firewall
         # rules are configured
-        self._hard_reboot(instance, network_info)
+        self._hard_reboot(instance, network_info,
+                          block_device_info=block_device_info)
 
     @exception.wrap_exception()
     def rescue(self, context, instance, network_info, image_meta):
