@@ -494,7 +494,6 @@ class VMOps(object):
 
         # Update agent, if necessary
         # This also waits until the agent starts
-        LOG.debug(_("Querying agent version"), instance=instance)
         version = agent.get_agent_version(self._session, instance, vm_ref)
         if version:
             LOG.info(_('Instance agent version: %s'), version,
@@ -502,10 +501,7 @@ class VMOps(object):
 
         if (version and agent_build and
             cmp_version(version, agent_build['version']) < 0):
-            LOG.info(_('Updating Agent to %s'), agent_build['version'],
-                     instance=instance)
-            agent.agent_update(self._session, instance, vm_ref,
-                               agent_build['url'], agent_build['md5hash'])
+            agent.agent_update(self._session, instance, vm_ref, agent_build)
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
@@ -524,20 +520,16 @@ class VMOps(object):
                     injected_files = []
             # Inject any files, if specified
             for path, contents in instance['injected_files']:
-                LOG.debug(_("Injecting file path: '%s'") % path,
-                          instance=instance)
                 agent.inject_file(self._session, instance, vm_ref,
                                   path, contents)
 
         admin_password = instance['admin_pass']
         # Set admin password, if necessary
         if admin_password and not no_agent:
-            LOG.debug(_("Setting admin password"), instance=instance)
             agent.set_admin_password(self._session, instance, vm_ref,
                                      admin_password)
 
         # Reset network config
-        LOG.debug(_("Resetting network"), instance=instance)
         agent.resetnetwork(self._session, instance, vm_ref)
 
         # Set VCPU weight
