@@ -459,6 +459,65 @@ class DbApiTestCase(test.TestCase):
         ec2_id = db.get_ec2_snapshot_id_by_uuid(self.context, 'fake-uuid')
         self.assertEqual(ref['id'], ec2_id)
 
+    def test_bw_usage_calls(self):
+        ctxt = context.get_admin_context()
+        now = timeutils.utcnow()
+        timeutils.set_time_override(now)
+        start_period = now - datetime.timedelta(seconds=10)
+        uuid3_refreshed = now - datetime.timedelta(seconds=5)
+
+        expected_bw_usages = [{'uuid': 'fake_uuid1',
+                               'mac': 'fake_mac1',
+                               'start_period': start_period,
+                               'bw_in': 100,
+                               'bw_out': 200,
+                               'last_refreshed': now},
+                              {'uuid': 'fake_uuid2',
+                               'mac': 'fake_mac2',
+                               'start_period': start_period,
+                               'bw_in': 200,
+                               'bw_out': 300,
+                               'last_refreshed': now},
+                              {'uuid': 'fake_uuid3',
+                               'mac': 'fake_mac3',
+                               'start_period': start_period,
+                               'bw_in': 400,
+                               'bw_out': 500,
+                               'last_refreshed': uuid3_refreshed}]
+
+        def _compare(bw_usage, expected):
+            for key, value in expected.items():
+                self.assertEqual(bw_usage[key], value)
+
+        bw_usages = db.bw_usage_get_by_uuids(ctxt,
+                ['fake_uuid1', 'fake_uuid2'], start_period)
+        # No matches
+        self.assertEqual(len(bw_usages), 0)
+
+        # Add 3 entries
+        db.bw_usage_update(ctxt, 'fake_uuid1',
+                'fake_mac1', start_period,
+                100, 200)
+        db.bw_usage_update(ctxt, 'fake_uuid2',
+                'fake_mac2', start_period,
+                100, 200)
+        # Test explicit refreshed time
+        db.bw_usage_update(ctxt, 'fake_uuid3',
+                'fake_mac3', start_period,
+                400, 500, last_refreshed=uuid3_refreshed)
+        # Update 2nd entry
+        db.bw_usage_update(ctxt, 'fake_uuid2',
+                'fake_mac2', start_period,
+                200, 300)
+
+        bw_usages = db.bw_usage_get_by_uuids(ctxt,
+                ['fake_uuid1', 'fake_uuid2', 'fake_uuid3'], start_period)
+        self.assertEqual(len(bw_usages), 3)
+        _compare(bw_usages[0], expected_bw_usages[0])
+        _compare(bw_usages[1], expected_bw_usages[1])
+        _compare(bw_usages[2], expected_bw_usages[2])
+        timeutils.clear_time_override()
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate',

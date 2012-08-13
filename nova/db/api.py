@@ -1594,18 +1594,13 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
     return IMPL.bw_usage_get_by_uuids(context, uuids, start_period)
 
 
-def bw_usage_update(context,
-                    uuid,
-                    mac,
-                    start_period,
-                    bw_in, bw_out):
-    """Update cached bw usage for an instance and network
-       Creates new record if needed."""
-    return IMPL.bw_usage_update(context,
-                                uuid,
-                                mac,
-                                start_period,
-                                bw_in, bw_out)
+def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
+                    last_refreshed=None):
+    """Update cached bandwidth usage for an instance's network based on mac
+    address.  Creates new record if needed.
+    """
+    return IMPL.bw_usage_update(context, uuid, mac, start_period, bw_in,
+            bw_out, last_refreshed=last_refreshed)
 
 
 ####################

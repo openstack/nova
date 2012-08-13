@@ -36,7 +36,6 @@ terminating it.
 
 import contextlib
 import functools
-import inspect
 import socket
 import sys
 import time
@@ -2593,12 +2592,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # they just don't get the info in the usage events.
                 return
 
+            refreshed = timeutils.utcnow()
             for usage in bw_usage:
+                # Allow switching of greenthreads between queries.
+                greenthread.sleep(0)
                 self.db.bw_usage_update(context,
                                         usage['uuid'],
                                         usage['mac_address'],
                                         start_time,
-                                        usage['bw_in'], usage['bw_out'])
+                                        usage['bw_in'], usage['bw_out'],
+                                        last_refreshed=refreshed)
 
     @manager.periodic_task
     def _report_driver_status(self, context):

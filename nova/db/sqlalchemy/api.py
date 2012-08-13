@@ -4366,30 +4366,35 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 
 
 @require_context
-def bw_usage_update(context,
-                    uuid,
-                    mac,
-                    start_period,
-                    bw_in, bw_out,
-                    session=None):
+def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
+                    last_refreshed=None, session=None):
     if not session:
         session = get_session()
 
+    if last_refreshed is None:
+        last_refreshed = timeutils.utcnow()
+
+    # NOTE(comstud): More often than not, we'll be updating records vs
+    # creating records.  Optimize accordingly, trying to update existing
+    # records.  Fall back to creation when no rows are updated.
     with session.begin():
-        bwusage = model_query(context, models.BandwidthUsage,
+        values = {'last_refreshed': last_refreshed,
+                  'bw_in': bw_in,
+                  'bw_out': bw_out}
+        rows = model_query(context, models.BandwidthUsage,
                               session=session, read_deleted="yes").\
                       filter_by(start_period=start_period).\
                       filter_by(uuid=uuid).\
                       filter_by(mac=mac).\
-                      first()
+                      update(values, synchronize_session=False)
+        if rows:
+            return
 
-        if not bwusage:
-            bwusage = models.BandwidthUsage()
-            bwusage.start_period = start_period
-            bwusage.uuid = uuid
-            bwusage.mac = mac
-
-        bwusage.last_refreshed = timeutils.utcnow()
+        bwusage = models.BandwidthUsage()
+        bwusage.start_period = start_period
+        bwusage.uuid = uuid
+        bwusage.mac = mac
+        bwusage.last_refreshed = last_refreshed
         bwusage.bw_in = bw_in
         bwusage.bw_out = bw_out
         bwusage.save(session=session)
