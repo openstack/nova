@@ -280,7 +280,7 @@ class HostEntry(DNSEntry):
                                          [utils.utf8(address)])])
         else:
             self.remove_name(name)
-            parent.add_entry(name, address)
+            self.parent.add_entry(name, address)
 
     def _names(self):
         names = []
