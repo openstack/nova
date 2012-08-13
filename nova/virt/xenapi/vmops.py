@@ -512,14 +512,6 @@ class VMOps(object):
 
         # Inject files, if necessary
         if injected_files:
-            # Check if this is a JSON-encoded string and convert if needed.
-            if isinstance(injected_files, basestring):
-                try:
-                    injected_files = jsonutils.loads(injected_files)
-                except ValueError:
-                    LOG.exception(_("Invalid value for injected_files: %r"),
-                                  injected_files, instance=instance)
-                    injected_files = []
             # Inject any files, if specified
             for path, contents in injected_files:
                 agent.inject_file(self._session, instance, vm_ref,

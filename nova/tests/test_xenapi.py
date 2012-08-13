@@ -17,6 +17,7 @@
 """Test suite for XenAPI."""
 
 import ast
+import base64
 import contextlib
 import cPickle as pickle
 import functools
@@ -522,8 +523,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
                     hostname="test", architecture="x86-64", instance_id=1,
-                    check_injection=False,
+                    injected_files=None, check_injection=False,
                     create_record=True, empty_dns=False):
+        if injected_files is None:
+            injected_files = []
+
         # Fake out inject_instance_metadata
         def fake_inject_instance_metadata(self, instance, vm):
             pass
@@ -554,8 +558,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
-        self.conn.spawn(self.context, instance, image_meta, [], 'herp',
-                        network_info)
+        self.conn.spawn(self.context, instance, image_meta, injected_files,
+                        'herp', network_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
@@ -773,6 +777,25 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
             self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
                               str(3 * 10 * 1024))
+
+    def test_spawn_injected_files(self):
+        """Test spawning with injected_files"""
+        actual_injected_files = []
+
+        def fake_inject_file(self, method, args):
+            path = base64.b64decode(args['b64_path'])
+            contents = base64.b64decode(args['b64_contents'])
+            actual_injected_files.append((path, contents))
+            return jsonutils.dumps({'returncode': '0', 'message': 'success'})
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file', fake_inject_file)
+
+        injected_files = [('/tmp/foo', 'foobar')]
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64",
+                         injected_files=injected_files)
+        self.check_vm_params_for_linux()
+        self.assertEquals(actual_injected_files, injected_files)
 
     def test_rescue(self):
         instance = self._create_instance()

@@ -530,44 +530,58 @@ class SessionBase(object):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
 
-    def host_call_plugin(self, _1, _2, plugin, method, _5):
-        if (plugin, method) == ('agent', 'version'):
-            return as_json(returncode='0', message='1.0')
-        elif (plugin, method) == ('agent', 'key_init'):
-            return as_json(returncode='D0', message='1')
-        elif (plugin, method) == ('agent', 'password'):
-            return as_json(returncode='0', message='success')
-        elif (plugin, method) == ('agent', 'resetnetwork'):
-            return as_json(returncode='0', message='success')
-        elif (plugin, method) == ('glance', 'upload_vhd'):
-            return ''
-        elif (plugin, method) == ('kernel', 'copy_vdi'):
-            return ''
-        elif (plugin, method) == ('kernel', 'create_kernel_ramdisk'):
-            return ''
-        elif (plugin, method) == ('kernel', 'remove_kernel_ramdisk'):
-            return ''
-        elif (plugin, method) == ('migration', 'move_vhds_into_sr'):
-            return ''
-        elif (plugin, method) == ('migration', 'transfer_vhd'):
-            return ''
-        elif (plugin, method) == ('xenhost', 'host_data'):
+    def _plugin_agent_version(self, method, args):
+        return as_json(returncode='0', message='1.0')
+
+    def _plugin_agent_key_init(self, method, args):
+        return as_json(returncode='D0', message='1')
+
+    def _plugin_agent_password(self, method, args):
+        return as_json(returncode='0', message='success')
+
+    def _plugin_agent_inject_file(self, method, args):
+        return as_json(returncode='0', message='success')
+
+    def _plugin_agent_resetnetwork(self, method, args):
+        return as_json(returncode='0', message='success')
+
+    def _plugin_noop(self, method, args):
+        return ''
+
+    _plugin_glance_upload_vhd = _plugin_noop
+    _plugin_kernel_copy_vdi = _plugin_noop
+    _plugin_kernel_create_kernel_ramdisk = _plugin_noop
+    _plugin_kernel_remove_kernel_ramdisk = _plugin_noop
+    _plugin_migration_move_vhds_into_sr = _plugin_noop
+    _plugin_migration_transfer_vhd = _plugin_noop
+
+    def _plugin_xenhost_host_data(self, method, args):
             return jsonutils.dumps({'host_memory': {'total': 10,
                                                     'overhead': 20,
                                                     'free': 30,
-                                                    'free-computed': 40}, })
-        elif (plugin == 'xenhost' and method in ['host_reboot',
-                                                 'host_startup',
-                                                 'host_shutdown']):
-            return jsonutils.dumps({"power_action": method[5:]})
-        elif (plugin, method) == ('xenhost', 'set_host_enabled'):
-            enabled = 'enabled' if _5.get('enabled') == 'true' else 'disabled'
-            return jsonutils.dumps({"status": enabled})
-        elif (plugin, method) == ('xenhost', 'host_uptime'):
-            return jsonutils.dumps({"uptime": "fake uptime"})
-        else:
+                                                    'free-computed': 40}})
+
+    def _plugin_poweraction(self, method, args):
+        return jsonutils.dumps({"power_action": method[5:]})
+
+    _plugin_xenhost_host_reboot = _plugin_poweraction
+    _plugin_xenhost_host_startup = _plugin_poweraction
+    _plugin_xenhost_host_shutdown = _plugin_poweraction
+
+    def _plugin_xenhost_set_host_enabled(self, method, args):
+        enabled = 'enabled' if args.get('enabled') == 'true' else 'disabled'
+        return jsonutils.dumps({"status": enabled})
+
+    def _plugin_xenhost_host_uptime(self, method, args):
+        return jsonutils.dumps({"uptime": "fake uptime"})
+
+    def host_call_plugin(self, _1, _2, plugin, method, args):
+        func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)
+        if not func:
             raise Exception('No simulation in host_call_plugin for %s,%s' %
                             (plugin, method))
+
+        return func(method, args)
 
     def VDI_get_virtual_size(self, *args):
         return 1 * 1024 * 1024 * 1024
