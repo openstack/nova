@@ -800,9 +800,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def run_instance(self, context, request_spec=None,
-                     filter_properties={}, requested_networks=None,
-                     injected_files=[], admin_password=None,
+                     filter_properties=None, requested_networks=None,
+                     injected_files=None, admin_password=None,
                      is_first_time=False, instance=None, instance_uuid=None):
+
+        if filter_properties is None:
+            filter_properties = {}
+        if injected_files is None:
+            injected_files = []
 
         if not instance_uuid:
             instance_uuid = instance['uuid']
