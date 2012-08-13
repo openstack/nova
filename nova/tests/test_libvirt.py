@@ -1925,7 +1925,8 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_none)
 
         try:
-            conn.spawn(self.context, instance, None, network_info)
+            conn.spawn(self.context, instance, None, [], 'herp',
+                       network_info=network_info)
         except Exception, e:
             # assert that no exception is raised due to sha1 receiving an int
             self.assertEqual(-1, unicode(e).find('must be string or buffer'

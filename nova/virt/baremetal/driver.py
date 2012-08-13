@@ -163,7 +163,7 @@ class BareMetalDriver(driver.ComputeDriver):
         return timer.start(interval=0.5).wait()
 
     @exception.wrap_exception
-    def rescue(self, context, instance, network_info):
+    def rescue(self, context, instance, network_info, rescue_password):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -205,8 +205,8 @@ class BareMetalDriver(driver.ComputeDriver):
         """
         self.reboot(instance)
 
-    def spawn(self, context, instance, image_meta, network_info,
-              block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info, block_device_info=None):
         LOG.debug(_("<============= spawn of baremetal =============>"))
 
         def basepath(fname='', suffix=''):

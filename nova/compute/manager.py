@@ -725,16 +725,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise
 
     def _spawn(self, context, instance, image_meta, network_info,
-               block_device_info, injected_files, admin_pass):
+               block_device_info, injected_files, admin_password):
         """Spawn an instance with error logging and update its power state"""
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.SPAWNING)
-        instance['injected_files'] = injected_files
-        instance['admin_pass'] = admin_pass
         try:
             self.driver.spawn(context, instance, image_meta,
-                         self._legacy_nw_info(network_info), block_device_info)
+                              injected_files, admin_password,
+                              self._legacy_nw_info(network_info),
+                              block_device_info)
         except Exception:
             LOG.exception(_('Instance failed to spawn'), instance=instance)
             raise
@@ -1036,11 +1036,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              REBUILD_SPAWNING)
             # pull in new password here since the original password isn't in
             # the db
-            instance.admin_pass = kwargs.get('new_pass',
+            admin_password = kwargs.get('new_pass',
                     utils.generate_password(FLAGS.password_length))
 
             self.driver.spawn(context, instance, image_meta,
-                              self._legacy_nw_info(network_info), device_info)
+                              [], admin_password,
+                              self._legacy_nw_info(network_info),
+                              device_info)
 
             current_power_state = self._get_power_state(context, instance)
             instance = self._instance_update(context,
@@ -1310,16 +1312,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         LOG.audit(_('Rescuing'), context=context, instance=instance)
 
-        admin_pass = (rescue_password if rescue_password else
+        admin_password = (rescue_password if rescue_password else
                       utils.generate_password(FLAGS.password_length))
-        instance['admin_pass'] = admin_pass
 
         network_info = self._get_instance_nw_info(context, instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
 
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.rescue(context, instance,
-                               self._legacy_nw_info(network_info), image_meta)
+                               self._legacy_nw_info(network_info), image_meta,
+                               admin_password)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

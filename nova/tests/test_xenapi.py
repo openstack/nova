@@ -552,12 +552,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             # NOTE(tr3buchet): this is a terrible way to do this...
             network_info[0]['network']['subnets'][0]['dns'] = []
 
-        # admin_pass isn't part of the DB model, but it does get set as
-        # an attribute for spawn to use
-        instance.admin_pass = 'herp'
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
-        self.conn.spawn(self.context, instance, image_meta, network_info)
+        self.conn.spawn(self.context, instance, image_meta, [], 'herp',
+                        network_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
@@ -790,7 +788,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(False)
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
-        conn.rescue(self.context, instance, [], image_meta)
+        conn.rescue(self.context, instance, [], image_meta, '')
 
         vm = xenapi_fake.get_record('VM', vm_ref)
         rescue_name = "%s-rescue" % vm["name_label"]
@@ -881,8 +879,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
         if spawn:
-            instance.admin_pass = 'herp'
-            self.conn.spawn(self.context, instance, image_meta, network_info)
+            self.conn.spawn(self.context, instance, image_meta, [], 'herp',
+                            network_info)
         return instance
 
 
