@@ -21,5 +21,5 @@ Babel>=0.9.6
 iso8601>=0.1.4
 httplib2
 setuptools_git>=0.4
-python-quantumclient>=0.1,<0.2
+python-quantumclient>=2.0
 python-glanceclient<2
