@@ -142,7 +142,7 @@ class ImageCacheManager(object):
                              task_states.RESIZE_MIGRATED,
                              task_states.RESIZE_FINISH]
             if instance['task_state'] in resize_states or \
-                instance['vm_state'] in vm_states.RESIZED:
+                instance['vm_state'] == vm_states.RESIZED:
                 self.instance_names.add(instance['name'] + '_resize')
 
             image_ref_str = str(instance['image_ref'])
