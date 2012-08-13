@@ -2554,7 +2554,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.warn(_("plug_vifs() failed %(cnt)d."
                                "Retry up to %(max_retry)d for %(hostname)s.")
                                % locals())
-                    time.sleep(1)
+                    greenthread.sleep(1)
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Preparation block migration.
