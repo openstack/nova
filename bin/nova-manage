@@ -1038,9 +1038,10 @@ class InstanceTypeCommands(object):
 
             ctxt = context.get_admin_context()
             ext_spec = {key: value}
-            db.instance_type_extra_specs_update_or_create(ctxt,
-                                                          inst_type["id"],
-                                                          ext_spec)
+            db.instance_type_extra_specs_update_or_create(
+                            ctxt,
+                            inst_type["flavorid"],
+                            ext_spec)
             print _("Key %(key)s set to %(value)s on instance"
                             " type %(name)s") % locals()
         except exception.DBError, e:
@@ -1060,7 +1061,10 @@ class InstanceTypeCommands(object):
                 sys.exit(2)
 
             ctxt = context.get_admin_context()
-            db.instance_type_extra_specs_delete(ctxt, inst_type["id"], key)
+            db.instance_type_extra_specs_delete(
+                        ctxt,
+                        inst_type["flavorid"],
+                        key)
 
             print _("Key %(key)s on instance type %(name)s unset") % locals()
         except exception.DBError, e:

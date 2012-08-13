@@ -284,6 +284,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
                                       values)
         self.instance_type_name = ref["name"]
         self.instance_type_id = ref["id"]
+        self.instance_type_flavorid = ref["flavorid"]
         self.set_key = nova_manage.InstanceTypeCommands().set_key
         self.unset_key = nova_manage.InstanceTypeCommands().unset_key
 
@@ -307,7 +308,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self.set_key(self.instance_type_name, "k1", "v1")
         actual_specs = db.instance_type_extra_specs_get(
                               context.get_admin_context(),
-                              self.instance_type_id)
+                              self.instance_type_flavorid)
         self.assertEquals(expected_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
@@ -322,13 +323,13 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self.set_key(self.instance_type_name, "k1", "v1")
         actual_specs = db.instance_type_extra_specs_get(
                               context.get_admin_context(),
-                              self.instance_type_id)
+                              self.instance_type_flavorid)
         self.assertEquals(expected_specs, actual_specs)
 
         self.set_key(self.instance_type_name, "k1", "v2")
         actual_specs = db.instance_type_extra_specs_get(
                               context.get_admin_context(),
-                              self.instance_type_id)
+                              self.instance_type_flavorid)
         self.assertEquals(updated_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
@@ -343,7 +344,7 @@ class InstanceTypeCommandsTestCase(test.TestCase):
         self.set_key(self.instance_type_name, "k3", "v3")
         actual_specs = db.instance_type_extra_specs_get(
                               context.get_admin_context(),
-                              self.instance_type_id)
+                              self.instance_type_flavorid)
         self.assertEquals(two_items_extra_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
