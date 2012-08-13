@@ -244,19 +244,19 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
             else:
                 output = ''
                 process_input = args.get('process_input', None)
-                if cmd == ['ip6tables-save', '-t', 'filter']:
+                if cmd == ['ip6tables-save', '-c', '-t', 'filter']:
                     output = '\n'.join(self._in6_filter_rules)
-                if cmd == ['iptables-save', '-t', 'filter']:
+                if cmd == ['iptables-save', '-c', '-t', 'filter']:
                     output = '\n'.join(self._in_filter_rules)
-                if cmd == ['iptables-save', '-t', 'nat']:
+                if cmd == ['iptables-save', '-c', '-t', 'nat']:
                     output = '\n'.join(self._in_nat_rules)
-                if cmd == ['iptables-restore', ]:
+                if cmd == ['iptables-restore', '-c', ]:
                     lines = process_input.split('\n')
                     if '*filter' in lines:
                         if self._test_case is not None:
                             self._test_case._out_rules = lines
                         output = '\n'.join(lines)
-                if cmd == ['ip6tables-restore', ]:
+                if cmd == ['ip6tables-restore', '-c', ]:
                     lines = process_input.split('\n')
                     if '*filter' in lines:
                         output = '\n'.join(lines)

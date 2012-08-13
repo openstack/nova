@@ -2787,13 +2787,15 @@ class IptablesFirewallTestCase(test.TestCase):
       ':FORWARD ACCEPT [0:0]',
       ':OUTPUT ACCEPT [915599:63811649]',
       ':nova-block-ipv4 - [0:0]',
-      '-A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT ',
-      '-A FORWARD -d 192.168.122.0/24 -o virbr0 -m state --state RELATED'
+      '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT ',
+      '[0:0] -A FORWARD -d 192.168.122.0/24 -o virbr0 -m state --state RELATED'
       ',ESTABLISHED -j ACCEPT ',
-      '-A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT ',
-      '-A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
-      '-A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable ',
-      '-A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable ',
+      '[0:0] -A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT ',
+      '[0:0] -A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
+      '[0:0] -A FORWARD -o virbr0 -j REJECT '
+      '--reject-with icmp-port-unreachable ',
+      '[0:0] -A FORWARD -i virbr0 -j REJECT '
+      '--reject-with icmp-port-unreachable ',
       'COMMIT',
       '# Completed on Mon Dec  6 11:54:13 2010',
     ]
@@ -2873,18 +2875,18 @@ class IptablesFirewallTestCase(test.TestCase):
 #        self.fw.add_instance(instance_ref)
         def fake_iptables_execute(*cmd, **kwargs):
             process_input = kwargs.get('process_input', None)
-            if cmd == ('ip6tables-save', '-t', 'filter'):
+            if cmd == ('ip6tables-save', '-c', '-t', 'filter'):
                 return '\n'.join(self.in6_filter_rules), None
-            if cmd == ('iptables-save', '-t', 'filter'):
+            if cmd == ('iptables-save', '-c', '-t', 'filter'):
                 return '\n'.join(self.in_filter_rules), None
-            if cmd == ('iptables-save', '-t', 'nat'):
+            if cmd == ('iptables-save', '-c', '-t', 'nat'):
                 return '\n'.join(self.in_nat_rules), None
-            if cmd == ('iptables-restore',):
+            if cmd == ('iptables-restore', '-c',):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out_rules = lines
                 return '', ''
-            if cmd == ('ip6tables-restore',):
+            if cmd == ('ip6tables-restore', '-c',):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out6_rules = lines
@@ -2927,27 +2929,29 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertTrue(security_group_chain,
                         "The security group chain wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p icmp -s 192.168.11.0/24')
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp '
+                           '-s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p icmp -m icmp --icmp-type 8'
-                           ' -s 192.168.11.0/24')
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp '
+                           '--icmp-type 8 -s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "ICMP Echo Request acceptance rule wasn't added")
 
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
-            regex = re.compile('-A .* -j ACCEPT -p tcp -m multiport '
+            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp -m multiport '
                                '--dports 80:81 -s %s' % ip['address'])
             self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                             "TCP port 80/81 acceptance rule wasn't added")
-            regex = re.compile('-A .* -j ACCEPT -s %s' % ip['address'])
+            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -s '
+                               '%s' % ip['address'])
             self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                             "Protocol/port-less acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p tcp '
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "TCP port 80/81 acceptance rule wasn't added")

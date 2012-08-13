@@ -35,21 +35,26 @@ class IptablesManagerTestCase(test.TestCase):
                      ':nova-compute-local - [0:0]',
                      ':nova-compute-OUTPUT - [0:0]',
                      ':nova-filter-top - [0:0]',
-                     '-A FORWARD -j nova-filter-top ',
-                     '-A OUTPUT -j nova-filter-top ',
-                     '-A nova-filter-top -j nova-compute-local ',
-                     '-A INPUT -j nova-compute-INPUT ',
-                     '-A OUTPUT -j nova-compute-OUTPUT ',
-                     '-A FORWARD -j nova-compute-FORWARD ',
-                     '-A INPUT -i virbr0 -p udp -m udp --dport 53 -j ACCEPT ',
-                     '-A INPUT -i virbr0 -p tcp -m tcp --dport 53 -j ACCEPT ',
-                     '-A INPUT -i virbr0 -p udp -m udp --dport 67 -j ACCEPT ',
-                     '-A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT ',
-                     '-A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT ',
-                     '-A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
-                     '-A FORWARD -o virbr0 -j REJECT --reject-with '
+                     '[0:0] -A FORWARD -j nova-filter-top ',
+                     '[0:0] -A OUTPUT -j nova-filter-top ',
+                     '[0:0] -A nova-filter-top -j nova-compute-local ',
+                     '[0:0] -A INPUT -j nova-compute-INPUT ',
+                     '[0:0] -A OUTPUT -j nova-compute-OUTPUT ',
+                     '[0:0] -A FORWARD -j nova-compute-FORWARD ',
+                     '[0:0] -A INPUT -i virbr0 -p udp -m udp --dport 53 '
+                     '-j ACCEPT ',
+                     '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 53 '
+                     '-j ACCEPT ',
+                     '[0:0] -A INPUT -i virbr0 -p udp -m udp --dport 67 '
+                     '-j ACCEPT ',
+                     '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 67 '
+                     '-j ACCEPT ',
+                     '[0:0] -A FORWARD -s 192.168.122.0/24 -i virbr0 '
+                     '-j ACCEPT ',
+                     '[0:0] -A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
+                     '[0:0] -A FORWARD -o virbr0 -j REJECT --reject-with '
                      'icmp-port-unreachable ',
-                     '-A FORWARD -i virbr0 -j REJECT --reject-with '
+                     '[0:0] -A FORWARD -i virbr0 -j REJECT --reject-with '
                      'icmp-port-unreachable ',
                      'COMMIT',
                      '# Completed on Fri Feb 18 15:17:05 2011']
@@ -66,12 +71,13 @@ class IptablesManagerTestCase(test.TestCase):
                   ':nova-compute-PREROUTING - [0:0]',
                   ':nova-compute-POSTROUTING - [0:0]',
                   ':nova-postrouting-bottom - [0:0]',
-                  '-A PREROUTING -j nova-compute-PREROUTING ',
-                  '-A OUTPUT -j nova-compute-OUTPUT ',
-                  '-A POSTROUTING -j nova-compute-POSTROUTING ',
-                  '-A POSTROUTING -j nova-postrouting-bottom ',
-                  '-A nova-postrouting-bottom -j nova-compute-SNATTING ',
-                  '-A nova-compute-SNATTING -j nova-compute-floating-ip-snat ',
+                  '[0:0] -A PREROUTING -j nova-compute-PREROUTING ',
+                  '[0:0] -A OUTPUT -j nova-compute-OUTPUT ',
+                  '[0:0] -A POSTROUTING -j nova-compute-POSTROUTING ',
+                  '[0:0] -A POSTROUTING -j nova-postrouting-bottom ',
+                  '[0:0] -A nova-postrouting-bottom -j nova-compute-SNATTING ',
+                  '[0:0] -A nova-compute-SNATTING '
+                  '-j nova-compute-floating-ip-snat ',
                   'COMMIT',
                   '# Completed on Fri Feb 18 15:17:05 2011']
 
@@ -85,12 +91,12 @@ class IptablesManagerTestCase(test.TestCase):
         table = self.manager.ipv4['filter']
         table.add_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
-        self.assertTrue('-A %s-FORWARD '
+        self.assertTrue('[0:0] -A %s-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' % self.binary_name in new_lines)
 
         table.remove_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
-        self.assertTrue('-A %s-FORWARD '
+        self.assertTrue('[0:0] -A %s-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' % self.binary_name \
                         not in new_lines)
 
@@ -117,7 +123,7 @@ class IptablesManagerTestCase(test.TestCase):
         last_postrouting_line = ''
 
         for line in new_lines:
-            if line.startswith('-A POSTROUTING'):
+            if line.startswith('[0:0] -A POSTROUTING'):
                 last_postrouting_line = line
 
         self.assertTrue('-j nova-postrouting-bottom' in last_postrouting_line,
@@ -125,7 +131,7 @@ class IptablesManagerTestCase(test.TestCase):
                         "nova-postouting-bottom: %s" % last_postrouting_line)
 
         for chain in ['POSTROUTING', 'PREROUTING', 'OUTPUT']:
-            self.assertTrue('-A %s -j %s-%s' %
+            self.assertTrue('[0:0] -A %s -j %s-%s' %
                             (chain, self.binary_name, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))
 
@@ -150,17 +156,17 @@ class IptablesManagerTestCase(test.TestCase):
 
         for chain in ['FORWARD', 'OUTPUT']:
             for line in new_lines:
-                if line.startswith('-A %s' % chain):
+                if line.startswith('[0:0] -A %s' % chain):
                     self.assertTrue('-j nova-filter-top' in line,
                                     "First %s rule does not "
                                     "jump to nova-filter-top" % chain)
                     break
 
-        self.assertTrue('-A nova-filter-top '
+        self.assertTrue('[0:0] -A nova-filter-top '
                         '-j %s-local' % self.binary_name in new_lines,
                         "nova-filter-top does not jump to wrapped local chain")
 
         for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
-            self.assertTrue('-A %s -j %s-%s' %
+            self.assertTrue('[0:0] -A %s -j %s-%s' %
                             (chain, self.binary_name, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))

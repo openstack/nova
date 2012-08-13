@@ -1499,13 +1499,15 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
       ':FORWARD ACCEPT [0:0]',
       ':OUTPUT ACCEPT [915599:63811649]',
       ':nova-block-ipv4 - [0:0]',
-      '-A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT ',
-      '-A FORWARD -d 192.168.122.0/24 -o virbr0 -m state --state RELATED'
+      '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT ',
+      '[0:0] -A FORWARD -d 192.168.122.0/24 -o virbr0 -m state --state RELATED'
       ',ESTABLISHED -j ACCEPT ',
-      '-A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT ',
-      '-A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
-      '-A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable ',
-      '-A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable ',
+      '[0:0] -A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT ',
+      '[0:0] -A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
+      '[0:0] -A FORWARD -o virbr0 -j REJECT '
+      '--reject-with icmp-port-unreachable ',
+      '[0:0] -A FORWARD -i virbr0 -j REJECT '
+      '--reject-with icmp-port-unreachable ',
       'COMMIT',
       '# Completed on Mon Dec  6 11:54:13 2010',
     ]
@@ -1598,16 +1600,17 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.assertTrue(security_group_chain,
                         "The security group chain wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p icmp -s 192.168.11.0/24')
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp'
+                           ' -s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                         "ICMP acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p icmp -m icmp --icmp-type 8'
-                           ' -s 192.168.11.0/24')
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp'
+                           ' --icmp-type 8 -s 192.168.11.0/24')
         self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                         "ICMP Echo Request acceptance rule wasn't added")
 
-        regex = re.compile('-A .* -j ACCEPT -p tcp --dport 80:81'
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp --dport 80:81'
                            ' -s 192.168.10.0/24')
         self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                         "TCP port 80/81 acceptance rule wasn't added")
@@ -1652,7 +1655,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
-            regex = re.compile('-A .* -j ACCEPT -p tcp'
+            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp'
                                ' --dport 80:81 -s %s' % ip['address'])
             self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                             "TCP port 80/81 acceptance rule wasn't added")
@@ -1717,7 +1720,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                                        'cidr': '192.168.99.0/24'})
         #validate the extra rule
         self.fw.refresh_security_group_rules(secgroup)
-        regex = re.compile('-A .* -j ACCEPT -p udp --dport 200:299'
+        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
                            ' -s 192.168.99.0/24')
         self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                         "Rules were not updated properly."
