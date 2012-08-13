@@ -3206,14 +3206,14 @@ class ComputeAPITestCase(BaseTestCase):
                 'display_name': 'not-woot'})
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': 'woo.*'})
+                search_opts={'name': '^woo.*'})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertTrue(instance1['uuid'] in instance_uuids)
         self.assertTrue(instance2['uuid'] in instance_uuids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': 'woot.*'})
+                search_opts={'name': '^woot.*'})
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertEqual(len(instances), 1)
         self.assertTrue(instance1['uuid'] in instance_uuids)
@@ -3226,7 +3226,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(instance3['uuid'] in instance_uuids)
 
         instances = self.compute_api.get_all(c,
-                search_opts={'name': 'n.*'})
+                search_opts={'name': '^n.*'})
         self.assertEqual(len(instances), 1)
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertTrue(instance3['uuid'] in instance_uuids)
@@ -3234,35 +3234,6 @@ class ComputeAPITestCase(BaseTestCase):
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'noth.*'})
         self.assertEqual(len(instances), 0)
-
-        db.instance_destroy(c, instance1['uuid'])
-        db.instance_destroy(c, instance2['uuid'])
-        db.instance_destroy(c, instance3['uuid'])
-
-    def test_get_all_by_instance_name_regexp(self):
-        """Test searching instances by name"""
-        self.flags(instance_name_template='instance-%d')
-
-        c = context.get_admin_context()
-        instance1 = self._create_fake_instance()
-        instance2 = self._create_fake_instance({'id': 2})
-        instance3 = self._create_fake_instance({'id': 10})
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'instance_name': 'instance.*'})
-        self.assertEqual(len(instances), 3)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'instance_name': '.*\-\d$'})
-        self.assertEqual(len(instances), 2)
-        instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance1['uuid'] in instance_uuids)
-        self.assertTrue(instance2['uuid'] in instance_uuids)
-
-        instances = self.compute_api.get_all(c,
-                search_opts={'instance_name': 'i.*2'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0]['uuid'], instance2['uuid'])
 
         db.instance_destroy(c, instance1['uuid'])
         db.instance_destroy(c, instance2['uuid'])

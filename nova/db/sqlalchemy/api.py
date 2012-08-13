@@ -23,7 +23,6 @@ import collections
 import copy
 import datetime
 import functools
-import re
 import warnings
 
 from nova import block_device
@@ -44,7 +43,6 @@ from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
-from sqlalchemy.sql.expression import or_
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
@@ -247,7 +245,19 @@ def exact_filter(query, model, filters, legal_keys):
         # OK, filtering on this key; what value do we search for?
         value = filters.pop(key)
 
-        if isinstance(value, (list, tuple, set, frozenset)):
+        if key == 'metadata':
+            column_attr = getattr(model, key)
+            if isinstance(value, list):
+                for item in value:
+                    for k, v in item.iteritems():
+                        query = query.filter(column_attr.any(key=k))
+                        query = query.filter(column_attr.any(value=v))
+
+            else:
+                for k, v in value.iteritems():
+                    query = query.filter(column_attr.any(key=k))
+                    query = query.filter(column_attr.any(value=v))
+        elif isinstance(value, (list, tuple, set, frozenset)):
             # Looking for values in a list; apply to query directly
             column_attr = getattr(model, key)
             query = query.filter(column_attr.in_(value))
@@ -1517,28 +1527,6 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
     will be returned by default, unless there's a filter that says
     otherwise"""
 
-    def _regexp_filter_by_metadata(instance, meta):
-        inst_metadata = [{node['key']: node['value']}
-                         for node in instance['metadata']]
-        if isinstance(meta, list):
-            for node in meta:
-                if node not in inst_metadata:
-                    return False
-        elif isinstance(meta, dict):
-            for k, v in meta.iteritems():
-                if {k: v} not in inst_metadata:
-                    return False
-        return True
-
-    def _regexp_filter_by_column(instance, filter_name, filter_re):
-        try:
-            v = getattr(instance, filter_name)
-        except AttributeError:
-            return True
-        if v and filter_re.match(unicode(v)):
-            return True
-        return False
-
     sort_fn = {'desc': desc, 'asc': asc}
 
     session = get_session()
@@ -1580,37 +1568,46 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-                                'vm_state', 'instance_type_id', 'uuid']
+                                'vm_state', 'instance_type_id', 'uuid',
+                                'metadata']
 
     # Filter the query
     query_prefix = exact_filter(query_prefix, models.Instance,
                                 filters, exact_match_filter_names)
 
+    query_prefix = regex_filter(query_prefix, models.Instance, filters)
     instances = query_prefix.all()
-    if not instances:
-        return []
-
-    # Now filter on everything else for regexp matching..
-    # For filters not in the list, we'll attempt to use the filter_name
-    # as a column name in Instance..
-    regexp_filter_funcs = {}
-
-    for filter_name in filters.iterkeys():
-        filter_func = regexp_filter_funcs.get(filter_name, None)
-        filter_re = re.compile(str(filters[filter_name]))
-        if filter_func:
-            filter_l = lambda instance: filter_func(instance, filter_re)
-        elif filter_name == 'metadata':
-            filter_l = lambda instance: _regexp_filter_by_metadata(instance,
-                    filters[filter_name])
-        else:
-            filter_l = lambda instance: _regexp_filter_by_column(instance,
-                    filter_name, filter_re)
-        instances = filter(filter_l, instances)
-        if not instances:
-            break
-
     return instances
+
+
+def regex_filter(query, model, filters):
+    """Applies regular expression filtering to a query.
+
+    Returns the updated query.
+
+    :param query: query to apply filters to
+    :param model: model object the query applies to
+    :param filters: dictionary of filters with regex values
+    """
+
+    regexp_op_map = {
+        'postgresql': '~',
+        'mysql': 'REGEXP',
+        'oracle': 'REGEXP_LIKE',
+        'sqlite': 'REGEXP'
+    }
+    db_string = FLAGS.sql_connection.split(':')[0].split('+')[0]
+    db_regexp_op = regexp_op_map.get(db_string, 'LIKE')
+    for filter_name in filters.iterkeys():
+        try:
+            column_attr = getattr(model, filter_name)
+        except AttributeError:
+            continue
+        if 'property' == type(column_attr).__name__:
+            continue
+        query = query.filter(column_attr.op(db_regexp_op)(
+                                    str(filters[filter_name])))
+    return query
 
 
 @require_context

@@ -66,6 +66,34 @@ class DbApiTestCase(test.TestCase):
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
 
+    def test_instance_get_all_by_filters_regex(self):
+        self.create_instances_with_args(display_name='test1')
+        self.create_instances_with_args(display_name='teeeest2')
+        self.create_instances_with_args(display_name='diff')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': 't.*st.'})
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_regex_unsupported_db(self):
+        """Ensure that the 'LIKE' operator is used for unsupported dbs."""
+        self.flags(sql_connection="notdb://")
+        self.create_instances_with_args(display_name='test1')
+        self.create_instances_with_args(display_name='test.*')
+        self.create_instances_with_args(display_name='diff')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': 'test.*'})
+        self.assertEqual(1, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'})
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_metadata(self):
+        self.create_instances_with_args(metadata={'foo': 'bar'})
+        self.create_instances_with_args()
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'metadata': {'foo': 'bar'}})
+        self.assertEqual(1, len(result))
+
     def test_instance_get_all_by_filters_unicode_value(self):
         self.create_instances_with_args(display_name=u'test♥')
         result = db.instance_get_all_by_filters(self.context,

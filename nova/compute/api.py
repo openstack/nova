@@ -1082,7 +1082,6 @@ class API(base.Base):
         filter_mapping = {
                 'image': 'image_ref',
                 'name': 'display_name',
-                'instance_name': 'name',
                 'tenant_id': 'project_id',
                 'flavor': _remap_flavor_filter,
                 'fixed_ip': _remap_fixed_ip_filter}
