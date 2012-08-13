@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<server xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" xmlns:OS-EXT-SRV-ATTR="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:OS-EXT-STS="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2012-08-20T21:11:08Z" hostId="96727264c2742d842c80c182cd505afa6108eb16305773070f893e23" name="new-server-test" created="2012-08-20T21:11:08Z" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="2c7a2ff8-63ce-4dcb-a3fa-1c311fe9fb04" config_drive="" key_name="None" OS-EXT-SRV-ATTR:instance_name="instance-00000001" OS-EXT-SRV-ATTR:host="6d7bdd9082cd4294aae7804dc0e5f214" OS-DCF:diskConfig="AUTO" OS-EXT-SRV-ATTR:vm_state="active" OS-EXT-SRV-ATTR:task_state="None" OS-EXT-SRV-ATTR:power_state="1">
+  <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+    <atom:link href="http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+  </image>
+  <flavor id="1">
+    <atom:link href="http://openstack.example.com/openstack/flavors/1" rel="bookmark"/>
+  </flavor>
+  <metadata>
+    <meta key="My Server Name">Apache1</meta>
+  </metadata>
+  <addresses>
+    <network id="private">
+      <ip version="4" addr="192.168.0.3"/>
+    </network>
+  </addresses>
+  <atom:link href="http://openstack.example.com/v2/openstack/servers/2c7a2ff8-63ce-4dcb-a3fa-1c311fe9fb04" rel="self"/>
+  <atom:link href="http://openstack.example.com/openstack/servers/2c7a2ff8-63ce-4dcb-a3fa-1c311fe9fb04" rel="bookmark"/>
+  <security_groups>
+    <security_group name="default"/>
+  </security_groups>
+</server>

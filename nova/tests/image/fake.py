@@ -230,6 +230,10 @@ def FakeImageService_reset():
     _fakeImageService = _FakeImageService()
 
 
+def get_valid_image_id():
+    return _fakeImageService.images.keys()[0]
+
+
 def stub_out_image_service(stubs):
     def fake_get_remote_image_service(context, image_href):
         return (FakeImageService(), image_href)
