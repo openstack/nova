@@ -91,12 +91,36 @@ class Controller(wsgi.Controller):
 
         return self._view_builder.show(req, flavor)
 
+    def _get_is_public(self, req):
+        """Parse is_public into something usable."""
+        is_public = req.params.get('is_public', None)
+
+        if is_public is None:
+            # preserve default value of showing only public flavors
+            return True
+        elif is_public is True or \
+            is_public.lower() in ['t', 'true', 'yes', '1']:
+            return True
+        elif is_public is False or \
+            is_public.lower() in ['f', 'false', 'no', '0']:
+            return False
+        elif is_public.lower() == 'none':
+            # value to match all flavors, ignore is_public
+            return None
+        else:
+            msg = _('Invalid is_public filter [%s]') % req.params['is_public']
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
     def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
         filters = {}
 
         context = req.environ['nova.context']
-        if not context.is_admin:
+        if context.is_admin:
+            # Only admin has query access to all flavor types
+            filters['is_public'] = self._get_is_public(req)
+        else:
+            filters['is_public'] = True
             filters['disabled'] = False
 
         if 'minRam' in req.params:
@@ -113,7 +137,7 @@ class Controller(wsgi.Controller):
                 msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        flavors = instance_types.get_all_types(filters=filters)
+        flavors = instance_types.get_all_types(context, filters=filters)
         flavors_list = flavors.values()
         sorted_flavors = sorted(flavors_list,
                                 key=lambda item: item['flavorid'])

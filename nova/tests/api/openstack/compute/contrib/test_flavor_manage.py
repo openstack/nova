@@ -46,7 +46,8 @@ def fake_get_instance_type_by_flavor_id(flavorid):
         'extra_specs': {},
         'deleted_at': None,
         'vcpu_weight': None,
-        'id': 7
+        'id': 7,
+        'is_public': True
     }
 
 
@@ -55,7 +56,7 @@ def fake_destroy(flavorname):
 
 
 def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
-                flavorid, swap, rxtx_factor):
+                flavorid, swap, rxtx_factor, is_public):
     newflavor = fake_get_instance_type_by_flavor_id(flavorid)
 
     newflavor["name"] = name
@@ -65,6 +66,7 @@ def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
     newflavor["ephemeral_gb"] = int(ephemeral_gb)
     newflavor["swap"] = swap
     newflavor["rxtx_factor"] = float(rxtx_factor)
+    newflavor["is_public"] = bool(is_public)
 
     return newflavor
 
@@ -100,6 +102,7 @@ class FlavorManageTest(test.TestCase):
                 "id": 1234,
                 "swap": 512,
                 "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
             }
         }
 
@@ -124,11 +127,12 @@ class FlavorManageTest(test.TestCase):
                 "id": 1235,
                 "swap": 512,
                 "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
             }
         }
 
         def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
-                        flavorid, swap, rxtx_factor):
+                        flavorid, swap, rxtx_factor, is_public):
             raise exception.InstanceTypeExists()
 
         self.stubs.Set(instance_types, "create", fake_create)

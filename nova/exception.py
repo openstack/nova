@@ -776,6 +776,11 @@ class FlavorNotFound(NotFound):
     message = _("Flavor %(flavor_id)s could not be found.")
 
 
+class FlavorAccessNotFound(NotFound):
+    message = _("Flavor access not found for %(flavor_id) / "
+                "%(project_id) combination.")
+
+
 class SchedulerHostFilterNotFound(NotFound):
     message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
@@ -847,6 +852,11 @@ class InstanceExists(Duplicate):
 
 class InstanceTypeExists(Duplicate):
     message = _("Instance Type %(name)s already exists.")
+
+
+class FlavorAccessExists(Duplicate):
+    message = _("Flavor access alreay exists for flavor %(flavor_id)s "
+                "and project %(project_id)s combination.")
 
 
 class VolumeTypeExists(Duplicate):

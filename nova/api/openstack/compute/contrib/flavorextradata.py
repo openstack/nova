@@ -35,10 +35,10 @@ authorize = extensions.soft_extension_authorizer('compute', 'flavorextradata')
 
 
 class FlavorextradataController(wsgi.Controller):
-    def _get_flavor_refs(self):
+    def _get_flavor_refs(self, context):
         """Return a dictionary mapping flavorid to flavor_ref."""
 
-        flavor_refs = instance_types.get_all_types()
+        flavor_refs = instance_types.get_all_types(context)
         rval = {}
         for name, obj in flavor_refs.iteritems():
             rval[obj['flavorid']] = obj
@@ -71,7 +71,7 @@ class FlavorextradataController(wsgi.Controller):
             resp_obj.attach(xml=FlavorextradataTemplate())
 
             flavors = list(resp_obj.obj['flavors'])
-            flavor_refs = self._get_flavor_refs()
+            flavor_refs = self._get_flavor_refs(context)
 
             for flavor_rval in flavors:
                 flavor_ref = flavor_refs[flavor_rval['id']]

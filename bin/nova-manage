@@ -828,11 +828,12 @@ class InstanceTypeCommands(object):
 
     def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
+        is_public = ('private', 'public')[val["is_public"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
-            "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, ExtraSpecs %s") % (
+            "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
             name, val["memory_mb"], val["vcpus"], val["root_gb"],
             val["ephemeral_gb"], val["flavorid"], val["swap"],
-            val["rxtx_factor"], val["extra_specs"])
+            val["rxtx_factor"], is_public, val["extra_specs"])
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
@@ -848,12 +849,15 @@ class InstanceTypeCommands(object):
     @args('--swap', dest='swap', metavar='<swap>', help='Swap')
     @args('--rxtx_factor', dest='rxtx_factor', metavar='<rxtx_factor>',
             help='rxtx_factor')
+    @args('--is_public', dest="is_public", metavar='<is_public>',
+            help='Make flavor accessible to the public')
     def create(self, name, memory, vcpus, root_gb, ephemeral_gb, flavorid,
-               swap=0, rxtx_factor=1):
+               swap=0, rxtx_factor=1, is_public=True):
         """Creates instance types / flavors"""
         try:
             instance_types.create(name, memory, vcpus, root_gb,
-                                  ephemeral_gb, flavorid, swap, rxtx_factor)
+                                  ephemeral_gb, flavorid, swap, rxtx_factor,
+                                  is_public)
         except exception.InvalidInput, e:
             print "Must supply valid parameters to create instance_type"
             print e

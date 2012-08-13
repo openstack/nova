@@ -336,6 +336,7 @@ class InstanceTypes(BASE, NovaBase):
     rxtx_factor = Column(Float, nullable=False, default=1)
     vcpu_weight = Column(Integer, nullable=True)
     disabled = Column(Boolean, default=False)
+    is_public = Column(Boolean, default=True)
 
     instances = relationship(Instance,
                            backref=backref('instance_type', uselist=False),
@@ -819,6 +820,21 @@ class InstanceSystemMetadata(BASE, NovaBase):
     instance = relationship(Instance, backref="system_metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin=primary_join)
+
+
+class InstanceTypeProjects(BASE, NovaBase):
+    """Represent projects associated instance_types"""
+    __tablename__ = "instance_type_projects"
+    id = Column(Integer, primary_key=True)
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
+    project_id = Column(String(255))
+
+    instance_type = relationship(InstanceTypes, backref="projects",
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeProjects.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeProjects.deleted == False)')
 
 
 class InstanceTypeExtraSpecs(BASE, NovaBase):

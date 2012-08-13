@@ -27,6 +27,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
+from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
 
 
 def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
-           rxtx_factor=None):
+           rxtx_factor=None, is_public=True):
     """Creates instance types."""
 
     if swap is None:
@@ -80,6 +81,9 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
     #             in through json as an integer, so we convert it here.
     kwargs['flavorid'] = unicode(flavorid)
 
+    # ensure is_public attribute is boolean
+    kwargs['is_public'] = utils.bool_from_str(is_public)
+
     try:
         return db.instance_type_create(context.get_admin_context(), kwargs)
     except exception.DBError, e:
@@ -97,12 +101,14 @@ def destroy(name):
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
 
-def get_all_types(inactive=False, filters=None):
+def get_all_types(ctxt=None, inactive=False, filters=None):
     """Get all non-deleted instance_types.
 
     Pass true as argument if you want deleted instance types returned also.
     """
-    ctxt = context.get_admin_context()
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
     inst_types = db.instance_type_get_all(
             ctxt, inactive=inactive, filters=filters)
 
@@ -120,30 +126,60 @@ def get_default_instance_type():
     return get_instance_type_by_name(name)
 
 
-def get_instance_type(instance_type_id):
+def get_instance_type(instance_type_id, ctxt=None):
     """Retrieves single instance type by id."""
     if instance_type_id is None:
         return get_default_instance_type()
 
-    ctxt = context.get_admin_context()
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
     return db.instance_type_get(ctxt, instance_type_id)
 
 
-def get_instance_type_by_name(name):
+def get_instance_type_by_name(name, ctxt=None):
     """Retrieves single instance type by name."""
     if name is None:
         return get_default_instance_type()
 
-    ctxt = context.get_admin_context()
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
     return db.instance_type_get_by_name(ctxt, name)
 
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
-def get_instance_type_by_flavor_id(flavorid, read_deleted="yes"):
+def get_instance_type_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
     """Retrieve instance type by flavorid.
 
     :raises: FlavorNotFound
     """
-    ctxt = context.get_admin_context(read_deleted=read_deleted)
+    if ctxt is None:
+        ctxt = context.get_admin_context(read_deleted=read_deleted)
+
     return db.instance_type_get_by_flavor_id(ctxt, flavorid)
+
+
+def get_instance_type_access_by_flavor_id(flavorid, ctxt=None):
+    """Retrieve instance type access list by flavor id"""
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
+    return db.instance_type_access_get_by_flavor_id(ctxt, flavorid)
+
+
+def add_instance_type_access(flavorid, projectid, ctxt=None):
+    """Add instance type access for project"""
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
+    return db.instance_type_access_add(ctxt, flavorid, projectid)
+
+
+def remove_instance_type_access(flavorid, projectid, ctxt=None):
+    """Remove instance type access for project"""
+    if ctxt is None:
+        ctxt = context.get_admin_context()
+
+    return db.instance_type_access_remove(ctxt, flavorid, projectid)

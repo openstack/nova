@@ -1445,6 +1445,21 @@ def instance_type_destroy(context, name):
     return IMPL.instance_type_destroy(context, name)
 
 
+def instance_type_access_get_by_flavor_id(context, flavor_id):
+    """Get flavor access by flavor id."""
+    return IMPL.instance_type_access_get_by_flavor_id(context, flavor_id)
+
+
+def instance_type_access_add(context, flavor_id, project_id):
+    """Add flavor access for project."""
+    return IMPL.instance_type_access_add(context, flavor_id, project_id)
+
+
+def instance_type_access_remove(context, flavor_id, project_id):
+    """Remove flavor access for project."""
+    return IMPL.instance_type_access_remove(context, flavor_id, project_id)
+
+
 ####################
 
 

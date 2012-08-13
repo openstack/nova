@@ -90,7 +90,8 @@ class APIRouter(nova.api.openstack.APIRouter):
         self.resources['flavors'] = flavors.create_resource()
         mapper.resource("flavor", "flavors",
                         controller=self.resources['flavors'],
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET'},
+                        member={'action': 'POST'})
 
         self.resources['image_metadata'] = image_metadata.create_resource()
         image_metadata_controller = self.resources['image_metadata']

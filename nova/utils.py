@@ -918,7 +918,9 @@ def bool_from_str(val):
     try:
         return True if int(val) else False
     except ValueError:
-        return val.lower() == 'true'
+        return val.lower() == 'true' or \
+               val.lower() == 'yes' or \
+               val.lower() == 'y'
 
 
 def is_valid_ipv4(address):

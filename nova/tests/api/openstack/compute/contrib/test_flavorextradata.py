@@ -39,7 +39,8 @@ def fake_get_instance_type_by_flavor_id(flavorid):
         'rxtx_factor': 1.0,
         'extra_specs': {},
         'deleted_at': None,
-        'vcpu_weight': None
+        'vcpu_weight': None,
+        'is_public': True
     }
 
 
@@ -72,6 +73,7 @@ class FlavorextradataTest(test.TestCase):
                 'OS-FLV-EXT-DATA:ephemeral': 1,
                 'swap': 512,
                 'rxtx_factor': 1,
+                'os-flavor-access:is_public': True,
             }
         }
 
@@ -93,6 +95,7 @@ class FlavorextradataTest(test.TestCase):
                 'OS-FLV-EXT-DATA:ephemeral': 1,
                 'swap': 512,
                 'rxtx_factor': 1,
+                'os-flavor-access:is_public': True,
             },
             {
                 'id': '2',
@@ -103,6 +106,7 @@ class FlavorextradataTest(test.TestCase):
                 'OS-FLV-EXT-DATA:ephemeral': 1,
                 'swap': 512,
                 'rxtx_factor': 1,
+                'os-flavor-access:is_public': True,
             },
         ]
 
