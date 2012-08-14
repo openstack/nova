@@ -18,6 +18,7 @@
 #    under the License.
 """Tests for compute service"""
 
+import base64
 import copy
 import datetime
 import functools
@@ -2450,6 +2451,54 @@ class ComputeAPITestCase(BaseTestCase):
                           security_group=['this_is_a_fake_sec_group'])
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(context.get_admin_context())))
+
+    def test_create_with_large_user_data(self):
+        """Test an instance type with too much user data."""
+
+        inst_type = instance_types.get_default_instance_type()
+
+        def fake_show(*args):
+            img = copy.copy(self.fake_image)
+            img['min_ram'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        self.assertRaises(exception.InstanceUserDataTooLarge,
+            self.compute_api.create, self.context, inst_type, None,
+                          user_data=('1' * 65536))
+
+    def test_create_with_malformed_user_data(self):
+        """Test an instance type with malformed user data."""
+
+        inst_type = instance_types.get_default_instance_type()
+
+        def fake_show(*args):
+            img = copy.copy(self.fake_image)
+            img['min_ram'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        self.assertRaises(exception.InstanceUserDataMalformed,
+            self.compute_api.create, self.context, inst_type, None,
+                          user_data='banana')
+
+    def test_create_with_base64_user_data(self):
+        """Test an instance type with ok much user data."""
+
+        inst_type = instance_types.get_default_instance_type()
+
+        def fake_show(*args):
+            img = copy.copy(self.fake_image)
+            img['min_ram'] = 2
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        # NOTE(mikal): a string of length 48510 encodes to 65532 characters of
+        # base64
+        (refs, resv_id) = self.compute_api.create(
+            self.context, inst_type, None,
+            user_data=base64.encodestring('1' * 48510))
+        db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_default_hostname_generator(self):
         fake_uuids = [str(utils.gen_uuid()) for x in xrange(4)]

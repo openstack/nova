@@ -1155,6 +1155,16 @@ class ConfigDriveUnknownFormat(NovaException):
                 "iso9660 or vfat.")
 
 
+class InstanceUserDataTooLarge(NovaException):
+    message = _("User data too large. User data must be no larger than "
+                "%(maxsize)s bytes once base64 encoded. Your data is "
+                "%(length)d bytes")
+
+
+class InstanceUserDataMalformed(NovaException):
+    message = _("User data needs to be valid base 64.")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 
