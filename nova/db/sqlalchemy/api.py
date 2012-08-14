@@ -4469,7 +4469,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "instance_type_id": instance_type["id"],
-                         "deleted": 0})
+                         "deleted": False})
         spec_ref.save(session=session)
     return specs
 
@@ -4650,7 +4650,7 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
             spec_ref = models.VolumeTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "volume_type_id": volume_type_id,
-                         "deleted": 0})
+                         "deleted": False})
         spec_ref.save(session=session)
     return specs
 
