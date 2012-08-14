@@ -755,17 +755,14 @@ class CloudController(object):
            defined in the given security group.
         """
         for rule in security_group.rules:
-            if 'group_id' in values:
-                if rule['group_id'] == values['group_id']:
-                    return rule['id']
-            else:
-                is_duplicate = True
-                for key in ('cidr', 'from_port', 'to_port', 'protocol'):
-                    if rule[key] != values[key]:
-                        is_duplicate = False
-                        break
-                if is_duplicate:
-                    return rule['id']
+            is_duplicate = True
+            keys = ('group_id', 'cidr', 'from_port', 'to_port', 'protocol')
+            for key in keys:
+                if rule.get(key) != values.get(key):
+                    is_duplicate = False
+                    break
+            if is_duplicate:
+                return rule['id']
         return False
 
     def revoke_security_group_ingress(self, context, group_name=None,
