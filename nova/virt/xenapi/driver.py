@@ -652,13 +652,22 @@ class XenAPISession(object):
     def _get_product_version_and_brand(self):
         """Return a tuple of (major, minor, rev) for the host version and
         a string of the product brand"""
-        host = self.get_xenapi_host()
-        software_version = self.call_xenapi('host.get_software_version',
-                                            host)
+        software_version = self._get_software_version()
+
+        product_version_str = software_version.get('product_version')
+        product_brand = software_version.get('product_brand')
+
+        if None in (product_version_str, product_brand):
+            return (None, None)
+
         product_version = tuple(int(part) for part in
-                                software_version['product_version'].split('.'))
-        product_brand = software_version['product_brand']
+                                product_version_str.split('.'))
+
         return product_version, product_brand
+
+    def _get_software_version(self):
+        host = self.get_xenapi_host()
+        return self.call_xenapi('host.get_software_version', host)
 
     def get_session_id(self):
         """Return a string session_id.  Used for vnc consoles."""
