@@ -35,16 +35,13 @@ class API(base.Base):
         super(API, self).__init__(**kwargs)
 
     def get_consoles(self, context, instance_uuid):
-        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
         return self.db.console_get_all_by_instance(context, instance_uuid)
 
-    def get_console(self, context, instance_id, console_uuid):
-        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
-        return self.db.console_get(context, console_id, instance_uuid)
+    def get_console(self, context, instance_uuid, console_uuid):
+        return self.db.console_get(context, console_uuid, instance_uuid)
 
-    def delete_console(self, context, instance_id, console_uuid):
-        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
-        console = self.db.console_get(context, console_id, instance_uuid)
+    def delete_console(self, context, instance_uuid, console_uuid):
+        console = self.db.console_get(context, console_uuid, instance_uuid)
         topic = rpc.queue_get_for(context, FLAGS.console_topic,
                                   pool['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
