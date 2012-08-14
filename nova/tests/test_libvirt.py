@@ -412,7 +412,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
-        libvirt_driver._late_load_cheetah()
         self.flags(fake_call=True)
         self.user_id = 'fake'
         self.project_id = 'fake'

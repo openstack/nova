@@ -55,6 +55,7 @@ from eventlet import tpool
 from lxml import etree
 from xml.dom import minidom
 
+from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -78,9 +79,9 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import netutils
 
 libvirt = None
-Template = None
 
 LOG = logging.getLogger(__name__)
 
@@ -246,14 +247,6 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 
 
-def _late_load_cheetah():
-    global Template
-    if Template is None:
-        t = __import__('Cheetah.Template', globals(), locals(),
-                       ['Template'], -1)
-        Template = t.Template
-
-
 def _get_eph_disk(ephemeral):
     return 'disk.eph' + str(ephemeral['num'])
 
@@ -266,8 +259,6 @@ class LibvirtDriver(driver.ComputeDriver):
         global libvirt
         if libvirt is None:
             libvirt = __import__('libvirt')
-
-        _late_load_cheetah()
 
         self._host_state = None
         self._initiator = None
@@ -1349,48 +1340,6 @@ class LibvirtDriver(driver.ComputeDriver):
             key = str(instance['key_data'])
         else:
             key = None
-        net = None
-
-        nets = []
-        ifc_template = open(FLAGS.injected_network_template).read()
-        ifc_num = -1
-        have_injected_networks = False
-        for (network_ref, mapping) in network_info:
-            ifc_num += 1
-
-            if not network_ref['injected']:
-                continue
-
-            have_injected_networks = True
-            address = mapping['ips'][0]['ip']
-            netmask = mapping['ips'][0]['netmask']
-            address_v6 = None
-            gateway_v6 = None
-            netmask_v6 = None
-            if FLAGS.use_ipv6:
-                address_v6 = mapping['ip6s'][0]['ip']
-                netmask_v6 = mapping['ip6s'][0]['netmask']
-                gateway_v6 = mapping['gateway_v6']
-            net_info = {'name': 'eth%d' % ifc_num,
-                   'address': address,
-                   'netmask': netmask,
-                   'gateway': mapping['gateway'],
-                   'broadcast': mapping['broadcast'],
-                   'dns': ' '.join(mapping['dns']),
-                   'address_v6': address_v6,
-                   'gateway_v6': gateway_v6,
-                   'netmask_v6': netmask_v6}
-            nets.append(net_info)
-
-        if have_injected_networks:
-            net = str(Template(ifc_template,
-                               searchList=[{'interfaces': nets,
-                                            'use_ipv6': FLAGS.use_ipv6}]))
-
-        # Config drive
-        cdb = None
-        if using_config_drive:
-            cdb = configdrive.ConfigDriveBuilder(instance=instance)
 
         # File injection
         metadata = instance.get('metadata')
@@ -1398,39 +1347,17 @@ class LibvirtDriver(driver.ComputeDriver):
         if not FLAGS.libvirt_inject_password:
             admin_pass = None
 
-        if any((key, net, metadata, admin_pass, files)):
-            if not using_config_drive:
-                # If we're not using config_drive, inject into root fs
-                injection_path = image('disk').path
-                img_id = instance['image_ref']
+        net = netutils.get_injected_network_template(network_info)
 
-                for injection in ('metadata', 'key', 'net', 'admin_pass',
-                                  'files'):
-                    if locals()[injection]:
-                        LOG.info(_('Injecting %(injection)s into image'
-                                   ' %(img_id)s'), locals(), instance=instance)
-                try:
-                    disk.inject_data(injection_path,
-                                     key, net, metadata, admin_pass, files,
-                                     partition=target_partition,
-                                     use_cow=FLAGS.use_cow_images)
-
-                except Exception as e:
-                    # This could be a windows image, or a vmdk format disk
-                    LOG.warn(_('Ignoring error injecting data into image '
-                               '%(img_id)s (%(e)s)') % locals(),
-                             instance=instance)
-
-            else:
-                # We're using config_drive, so put the files there instead
-                cdb.inject_data(key, net, metadata, admin_pass, files)
-
+        # Config drive
         if using_config_drive:
-            # NOTE(mikal): Render the config drive. We can't add instance
-            # metadata here until after file injection, as the file injection
-            # creates state the openstack metadata relies on.
-            cdb.add_instance_metadata()
+            extra_md = {}
+            if admin_pass:
+                extra_md['admin_pass'] = admin_pass
 
+            inst_md = instance_metadata.InstanceMetadata(instance,
+                content=files, extra_md=extra_md)
+            cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
             try:
                 configdrive_path = basepath(fname='disk.config')
                 LOG.info(_('Creating config drive at %(path)s'),
@@ -1438,6 +1365,28 @@ class LibvirtDriver(driver.ComputeDriver):
                 cdb.make_drive(configdrive_path)
             finally:
                 cdb.cleanup()
+
+        elif any((key, net, metadata, admin_pass, files)):
+            # If we're not using config_drive, inject into root fs
+            injection_path = image('disk').path
+            img_id = instance['image_ref']
+
+            for injection in ('metadata', 'key', 'net', 'admin_pass',
+                              'files'):
+                if locals()[injection]:
+                    LOG.info(_('Injecting %(injection)s into image'
+                               ' %(img_id)s'), locals(), instance=instance)
+            try:
+                disk.inject_data(injection_path,
+                                 key, net, metadata, admin_pass, files,
+                                 partition=target_partition,
+                                 use_cow=FLAGS.use_cow_images)
+
+            except Exception as e:
+                # This could be a windows image, or a vmdk format disk
+                LOG.warn(_('Ignoring error injecting data into image '
+                           '%(img_id)s (%(e)s)') % locals(),
+                         instance=instance)
 
         if FLAGS.libvirt_type == 'lxc':
             disk.setup_container(basepath('disk'),
