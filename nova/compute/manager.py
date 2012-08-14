@@ -180,7 +180,7 @@ def checks_instance_lock(function):
 
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
-            function(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
         else:
             LOG.error(_("check_instance_lock: not executing |%s|"),
                       function, context=context, instance_uuid=instance_uuid)
@@ -200,7 +200,7 @@ def reverts_task_state(function):
             instance_uuid = kwargs['instance_uuid']
 
         try:
-            function(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
