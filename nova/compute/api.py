@@ -1713,7 +1713,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to live migrate instance"),
                   instance=instance)
         self.scheduler_rpcapi.live_migration(context, block_migration,
-                disk_over_commit, instance, host)
+                disk_over_commit, instance, host, topic=FLAGS.compute_topic)
 
 
 class HostAPI(base.Base):
