@@ -46,8 +46,13 @@ class SchedulerHintsController(wsgi.Controller):
     @wsgi.extends
     def create(self, req, body):
         hints = self._extract_scheduler_hints(body)
-        body['server']['scheduler_hints'] = hints
-        yield
+
+        if 'server' in body:
+            body['server']['scheduler_hints'] = hints
+            yield
+        else:
+            msg = _("Missing server attribute")
+            raise webob.exc.HTTPBadRequest(reason=msg)
 
 
 class Scheduler_hints(extensions.ExtensionDescriptor):

@@ -94,3 +94,20 @@ class SchedulerHintsTestCase(test.TestCase):
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
+
+    def test_create_missing_server(self):
+        """Test create with malformed body"""
+
+        def fake_create(*args, **kwargs):
+            raise Exception("Request should not reach the compute API.")
+
+        self.stubs.Set(nova.compute.api.API, 'create', fake_create)
+
+        req = fakes.HTTPRequest.blank('/fake/servers')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {'os:scheduler_hints': {'a': 'b'}}
+
+        req.body = jsonutils.dumps(body)
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
