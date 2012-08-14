@@ -188,7 +188,7 @@ class _FakeImageService(object):
         return self.images[image_id]
 
     def update(self, context, image_id, metadata, data=None,
-               headers=None):
+               purge_props=False):
         """Replace the contents of the given image with the new data.
 
         :raises: ImageNotFound if the image does not exist.
@@ -196,11 +196,7 @@ class _FakeImageService(object):
         """
         if not self.images.get(image_id):
             raise exception.ImageNotFound(image_id=image_id)
-        try:
-            purge = headers['x-glance-registry-purge-props']
-        except Exception:
-            purge = True
-        if purge:
+        if purge_props:
             self.images[image_id] = copy.deepcopy(metadata)
         else:
             image = self.images[image_id]

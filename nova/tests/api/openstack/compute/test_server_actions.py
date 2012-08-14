@@ -74,7 +74,7 @@ class ServerActionsControllerTest(test.TestCase):
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = importutils.import_object(service_class)
         self.sent_to_glance = {}
-        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
+        fakes.stub_out_glanceclient_create(self.stubs, self.sent_to_glance)
         self.flags(allow_instance_snapshots=True,
                    enable_instance_password=True)
         self.uuid = FAKE_UUID

@@ -17,7 +17,7 @@
 
 import datetime
 
-from glance import client as glance_client
+import glanceclient.v1.images
 import routes
 import webob
 import webob.dec
@@ -245,19 +245,19 @@ def _make_image_fixtures():
     return fixtures
 
 
-def stub_out_glance_add_image(stubs, sent_to_glance):
+def stub_out_glanceclient_create(stubs, sent_to_glance):
     """
     We return the metadata sent to glance by modifying the sent_to_glance dict
     in place.
     """
-    orig_add_image = glance_client.Client.add_image
+    orig_add_image = glanceclient.v1.images.ImageManager.create
 
-    def fake_add_image(context, metadata, data=None):
+    def fake_create(context, metadata, data=None):
         sent_to_glance['metadata'] = metadata
         sent_to_glance['data'] = data
         return orig_add_image(metadata, data)
 
-    stubs.Set(glance_client.Client, 'add_image', fake_add_image)
+    stubs.Set(glanceclient.v1.images.ImageManager, 'create', fake_create)
 
 
 def stub_out_glance(stubs):

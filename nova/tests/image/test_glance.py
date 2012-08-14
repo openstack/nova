@@ -20,7 +20,7 @@ import datetime
 import random
 import time
 
-import glance.common.exception as glance_exception
+import glanceclient.exc
 
 from nova import context
 from nova import exception
@@ -331,7 +331,9 @@ class TestGlanceImageService(test.TestCase):
 
     def test_update(self):
         fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
+        image = self.service.create(self.context, fixture)
+        print image
+        image_id = image['id']
         fixture['name'] = 'new image name'
         self.service.update(self.context, image_id, fixture)
 
@@ -395,17 +397,6 @@ class TestGlanceImageService(test.TestCase):
                           self.context,
                           image_id)
 
-    def test_show_raises_on_missing_credential(self):
-        def raise_missing_credentials(*args, **kwargs):
-            raise glance_exception.MissingCredentialError()
-
-        self.stubs.Set(glance_stubs.StubGlanceClient, 'get_image_meta',
-                       raise_missing_credentials)
-        self.assertRaises(exception.ImageNotAuthorized,
-                          self.service.show,
-                          self.context,
-                          'test-image-id')
-
     def test_detail_passes_through_to_client(self):
         fixture = self._make_fixture(name='image10', is_public=True)
         image_id = self.service.create(self.context, fixture)['id']
@@ -451,12 +442,12 @@ class TestGlanceImageService(test.TestCase):
 
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
             """A client that fails the first time, then succeeds."""
-            def get_image(self, image_id):
+            def get(self, image_id):
                 if tries[0] == 0:
                     tries[0] = 1
-                    raise glance_exception.ClientConnectionError()
+                    raise glanceclient.exc.ServiceUnavailable('')
                 else:
-                    return {}, []
+                    return {}
 
         client = MyGlanceStubClient()
         service = self._create_image_service(client)
@@ -476,8 +467,8 @@ class TestGlanceImageService(test.TestCase):
     def test_client_raises_forbidden(self):
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
             """A client that fails the first time, then succeeds."""
-            def get_image(self, image_id):
-                raise glance_exception.Forbidden()
+            def get(self, image_id):
+                raise glanceclient.exc.Forbidden(image_id)
 
         client = MyGlanceStubClient()
         service = self._create_image_service(client)
@@ -507,11 +498,11 @@ class TestGlanceImageService(test.TestCase):
 def _create_failing_glance_client(info):
     class MyGlanceStubClient(glance_stubs.StubGlanceClient):
         """A client that fails the first time, then succeeds."""
-        def get_image(self, image_id):
+        def get(self, image_id):
             info['num_calls'] += 1
             if info['num_calls'] == 1:
-                raise glance_exception.ClientConnectionError()
-            return {}, []
+                raise glanceclient.exc.ServiceUnavailable('')
+            return {}
 
     return MyGlanceStubClient()
 
@@ -548,7 +539,7 @@ class TestGlanceClientWrapper(test.TestCase):
         client = glance.GlanceClientWrapper(context=ctxt,
                 host=fake_host, port=fake_port)
         self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 'get_image', 'meow')
+                client.call, ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
     def test_default_client_without_retries(self):
@@ -576,7 +567,7 @@ class TestGlanceClientWrapper(test.TestCase):
         client = glance.GlanceClientWrapper()
         client2 = glance.GlanceClientWrapper()
         self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 'get_image', 'meow')
+                client.call, ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
         info = {'num_calls': 0,
@@ -590,7 +581,7 @@ class TestGlanceClientWrapper(test.TestCase):
         self.stubs.Set(random, 'shuffle', _fake_shuffle2)
 
         self.assertRaises(exception.GlanceConnectionFailed,
-                client2.call, ctxt, 'get_image', 'meow')
+                client2.call, ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
     def test_static_client_with_retries(self):
@@ -612,7 +603,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         client = glance.GlanceClientWrapper(context=ctxt,
                 host=fake_host, port=fake_port)
-        client.call(ctxt, 'get_image', 'meow')
+        client.call(ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
 
     def test_default_client_with_retries(self):
@@ -642,7 +633,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         client = glance.GlanceClientWrapper()
         client2 = glance.GlanceClientWrapper()
-        client.call(ctxt, 'get_image', 'meow')
+        client.call(ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
 
         def _fake_shuffle2(servers):
@@ -657,5 +648,5 @@ class TestGlanceClientWrapper(test.TestCase):
                 'host1': 'host3',
                 'port1': 9294}
 
-        client2.call(ctxt, 'get_image', 'meow')
+        client2.call(ctxt, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)

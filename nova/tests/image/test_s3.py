@@ -191,8 +191,7 @@ class TestS3ImageService(test.TestCase):
         uuid = translated['id']
         image_service = fake.FakeImageService()
         updated_image = image_service.update(self.context, uuid,
-                        {'is_public': True}, None,
-                        {'x-glance-registry-purge-props': False})
+                        {'is_public': True}, purge_props=False)
         self.assertTrue(updated_image['is_public'])
         self.assertEqual(updated_image['status'], 'active')
         self.assertEqual(updated_image['properties']['image_state'],
