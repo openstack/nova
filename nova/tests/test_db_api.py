@@ -113,6 +113,32 @@ class DbApiTestCase(test.TestCase):
         else:
             self.assertTrue(result[1].deleted)
 
+    def test_instance_get_all_by_filters_paginate(self):
+        self.flags(sql_connection="notdb://")
+        test1 = self.create_instances_with_args(display_name='test1')
+        test2 = self.create_instances_with_args(display_name='test2')
+        test3 = self.create_instances_with_args(display_name='test3')
+
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                marker=None)
+        self.assertEqual(3, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test1)
+        self.assertEqual(2, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test2)
+        self.assertEqual(1, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test3)
+        self.assertEqual(0, len(result))
+
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
 

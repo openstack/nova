@@ -185,12 +185,19 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     return items[offset:range_end]
 
 
+def get_limit_and_marker(request, max_limit=FLAGS.osapi_max_limit):
+    """get limited parameter from request"""
+    params = get_pagination_params(request)
+    limit = params.get('limit', max_limit)
+    limit = min(max_limit, limit)
+    marker = params.get('marker')
+
+    return limit, marker
+
+
 def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
-    params = get_pagination_params(request)
-
-    limit = params.get('limit', max_limit)
-    marker = params.get('marker')
+    limit, marker = get_limit_and_marker(request, max_limit)
 
     limit = min(max_limit, limit)
     start_index = 0

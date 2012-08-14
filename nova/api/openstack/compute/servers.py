@@ -446,16 +446,17 @@ class Controller(wsgi.Controller):
             else:
                 search_opts['user_id'] = context.user_id
 
+        limit, marker = common.get_limit_and_marker(req)
         instance_list = self.compute_api.get_all(context,
-                                                 search_opts=search_opts)
+                                                 search_opts=search_opts,
+                                                 limit=limit, marker=marker)
 
-        limited_list = self._limit_items(instance_list, req)
         if is_detail:
-            self._add_instance_faults(context, limited_list)
-            response = self._view_builder.detail(req, limited_list)
+            self._add_instance_faults(context, instance_list)
+            response = self._view_builder.detail(req, instance_list)
         else:
-            response = self._view_builder.index(req, limited_list)
-        req.cache_db_instances(limited_list)
+            response = self._view_builder.index(req, instance_list)
+        req.cache_db_instances(instance_list)
         return response
 
     def _get_server(self, context, req, instance_uuid):
@@ -1020,9 +1021,6 @@ class Controller(wsgi.Controller):
         server = self._get_server(context, req, id)
         self.compute_api.set_admin_password(context, server, password)
         return webob.Response(status_int=202)
-
-    def _limit_items(self, items, req):
-        return common.limited_by_marker(items, req)
 
     def _validate_metadata(self, metadata):
         """Ensure that we can work with the metadata given."""

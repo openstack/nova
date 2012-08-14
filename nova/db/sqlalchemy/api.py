@@ -26,6 +26,7 @@ import functools
 import warnings
 
 from nova import block_device
+from nova.common.sqlalchemyutils import paginate_query
 from nova.compute import vm_states
 from nova import db
 from nova.db.sqlalchemy import models
@@ -1503,7 +1504,8 @@ def instance_get_all(context, columns_to_join=None):
 
 
 @require_context
-def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
+def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
+                                limit=None, marker=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
@@ -1557,6 +1559,13 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
                                 filters, exact_match_filter_names)
 
     query_prefix = regex_filter(query_prefix, models.Instance, filters)
+
+    # paginate query
+    query_prefix = paginate_query(query_prefix, models.Instance, limit,
+                           [sort_key, 'created_at', 'id'],
+                           marker=marker,
+                           sort_dir=sort_dir)
+
     instances = query_prefix.all()
     return instances
 

@@ -384,10 +384,26 @@ def fake_instance_get(**kwargs):
 def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
     def _return_servers(context, *args, **kwargs):
         servers_list = []
+        marker = None
+        limit = None
+        found_marker = False
+        if "marker" in kwargs:
+            marker = kwargs["marker"]
+        if "limit" in kwargs:
+            limit = kwargs["limit"]
+
         for i in xrange(num_servers):
-            server = stub_instance(id=i + 1, uuid=get_fake_uuid(i),
+            uuid = get_fake_uuid(i)
+            server = stub_instance(id=i + 1, uuid=uuid,
                     **kwargs)
             servers_list.append(server)
+            if not marker is None and uuid == marker:
+                found_marker = True
+                servers_list = []
+        if not marker is None and not found_marker:
+            raise webob.exc.HTTPBadRequest
+        if not limit is None:
+            servers_list = servers_list[:limit]
         return servers_list
     return _return_servers
 
@@ -400,7 +416,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   auto_disk_config=False, display_name=None,
                   include_fake_metadata=True, config_drive=None,
                   power_state=None, nw_cache=None, metadata=None,
-                  security_groups=None):
+                  security_groups=None, limit=None, marker=None):
 
     if user_id is None:
         user_id = 'fake_user'
