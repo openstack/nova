@@ -92,6 +92,7 @@ CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
+CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
@@ -1643,6 +1644,11 @@ class API(base.Base):
 
         self.db.migration_update(elevated, migration_ref['id'],
                                  {'status': 'reverting'})
+        # With cells, the best we can do right now is commit the reservations
+        # immediately...
+        if CONF.cells.enable and reservations:
+            QUOTAS.commit(context, reservations)
+            reservations = []
 
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration=migration_ref,
@@ -1667,6 +1673,11 @@ class API(base.Base):
 
         self.db.migration_update(elevated, migration_ref['id'],
                 {'status': 'confirming'})
+        # With cells, the best we can do right now is commit the reservations
+        # immediately...
+        if CONF.cells.enable and reservations:
+            QUOTAS.commit(context, reservations)
+            reservations = []
 
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration=migration_ref,
@@ -1828,6 +1839,12 @@ class API(base.Base):
 
         if not CONF.allow_resize_to_same_host:
             filter_properties['ignore_hosts'].append(instance['host'])
+
+        # With cells, the best we can do right now is commit the reservations
+        # immediately...
+        if CONF.cells.enable and reservations:
+            QUOTAS.commit(context, reservations)
+            reservations = []
 
         args = {
             "instance": instance,
