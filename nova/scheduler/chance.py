@@ -65,6 +65,32 @@ class ChanceScheduler(driver.Scheduler):
                               requested_networks, is_first_time,
                               filter_properties, reservations):
         """Create and run an instance or instances"""
+        if 'instance_uuids' not in request_spec:
+            return self._legacy_schedule_run_instance(context, request_spec,
+                    admin_password, injected_files, requested_networks,
+                    is_first_time, filter_properties, reservations)
+        instances = []
+        instance_uuids = request_spec.get('instance_uuids')
+        for num, instance_uuid in enumerate(instance_uuids):
+            host = self._schedule(context, 'compute', request_spec,
+                                  filter_properties)
+            request_spec['instance_properties']['launch_index'] = num
+            updated_instance = driver.instance_update_db(context,
+                    instance_uuid, host)
+            self.compute_rpcapi.run_instance(context,
+                    instance=updated_instance, host=host,
+                    requested_networks=requested_networks,
+                    injected_files=injected_files,
+                    admin_password=admin_password, is_first_time=is_first_time,
+                    request_spec=request_spec,
+                    filter_properties=filter_properties)
+            instances.append(driver.encode_instance(updated_instance))
+        return instances
+
+    def _legacy_schedule_run_instance(self, context, request_spec,
+                                      admin_password, injected_files,
+                                      requested_networks, is_first_time,
+                                      filter_properties, reservations):
         num_instances = request_spec.get('num_instances', 1)
         instances = []
         for num in xrange(num_instances):

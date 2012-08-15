@@ -373,8 +373,7 @@ class API(base.Base):
                access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config,
-               reservation_id=None, create_instance_here=False,
-               scheduler_hints=None):
+               reservation_id=None, scheduler_hints=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation."""
@@ -495,45 +494,48 @@ class API(base.Base):
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 
-        if create_instance_here:
-            instance = self.create_db_entry_for_new_instance(
-                    context, instance_type, image, base_options,
-                    security_group, block_device_mapping,
-                    quota_reservations)
-
-            # Reservations committed; don't double-commit
-            quota_reservations = None
-
-            # Tells scheduler we created the instance already.
-            base_options['uuid'] = instance['uuid']
-            use_call = False
-        else:
-            # We need to wait for the scheduler to create the instance
-            # DB entries, because the instance *could* be # created in
-            # a child zone.
-            use_call = True
-
         filter_properties = dict(scheduler_hints=scheduler_hints)
         if context.is_admin and forced_host:
             filter_properties['force_hosts'] = [forced_host]
 
-        # TODO(comstud): We should use rpc.multicall when we can
-        # retrieve the full instance dictionary from the scheduler.
-        # Otherwise, we could exceed the AMQP max message size limit.
-        # This would require the schedulers' schedule_run_instances
-        # methods to return an iterator vs a list.
-        instances = self._schedule_run_instance(
-                use_call,
-                context, base_options,
-                instance_type,
-                availability_zone, injected_files,
-                admin_password, image,
-                num_instances, requested_networks,
-                block_device_mapping, security_group,
-                filter_properties, quota_reservations)
+        instances = []
+        instance_uuids = []
+        try:
+            for i in xrange(num_instances):
+                options = base_options.copy()
+                instance = self.create_db_entry_for_new_instance(
+                        context, instance_type, image, options,
+                        security_group, block_device_mapping)
+                instances.append(instance)
+                instance_uuids.append(instance['uuid'])
+        except Exception:
+            # Clean up as best we can.
+            with excutils.save_and_reraise_exception():
+                try:
+                    for instance_uuid in instance_uuids:
+                        self.db.instance_destroy(context,
+                                instance_uuid)
+                finally:
+                    QUOTAS.rollback(context, quota_reservations)
 
-        if create_instance_here:
-            return ([instance], reservation_id)
+        # Commit the reservations
+        QUOTAS.commit(context, quota_reservations)
+
+        request_spec = {
+            'image': jsonutils.to_primitive(image),
+            'instance_properties': base_options,
+            'instance_type': instance_type,
+            'instance_uuids': instance_uuids,
+            'block_device_mapping': block_device_mapping,
+            'security_group': security_group,
+        }
+
+        self.scheduler_rpcapi.run_instance(context,
+                request_spec=request_spec,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks, is_first_time=True,
+                filter_properties=filter_properties)
+
         return (instances, reservation_id)
 
     @staticmethod
@@ -698,7 +700,7 @@ class API(base.Base):
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
-            base_options, security_group, block_device_mapping, reservations):
+            base_options, security_group, block_device_mapping):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -724,47 +726,7 @@ class API(base.Base):
         notifications.send_update_with_states(context, instance, None,
                 vm_states.BUILDING, None, None, service="api")
 
-        # Commit the reservations
-        if reservations:
-            QUOTAS.commit(context, reservations)
-
         return instance
-
-    def _schedule_run_instance(self,
-            use_call,
-            context, base_options,
-            instance_type,
-            availability_zone, injected_files,
-            admin_password, image,
-            num_instances,
-            requested_networks,
-            block_device_mapping,
-            security_group,
-            filter_properties,
-            quota_reservations):
-        """Send a run_instance request to the schedulers for processing."""
-
-        pid = context.project_id
-        uid = context.user_id
-
-        LOG.debug(_("Sending create to scheduler for %(pid)s/%(uid)s's") %
-                  locals())
-
-        request_spec = {
-            'image': jsonutils.to_primitive(image),
-            'instance_properties': base_options,
-            'instance_type': instance_type,
-            'num_instances': num_instances,
-            'block_device_mapping': block_device_mapping,
-            'security_group': security_group,
-        }
-
-        return self.scheduler_rpcapi.run_instance(context,
-                request_spec=request_spec,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties,
-                reservations=quota_reservations, call=use_call)
 
     def _check_create_policies(self, context, availability_zone,
             requested_networks, block_device_mapping):
@@ -795,21 +757,13 @@ class API(base.Base):
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
 
-        Returns a tuple of (instances, reservation_id) where instances
-        could be 'None' or a list of instance dicts depending on if
-        we waited for information from the scheduler or not.
+        Returns a tuple of (instances, reservation_id)
         """
 
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)
 
-        # We can create the DB entry for the instance here if we're
-        # only going to create 1 instance.
-        # This speeds up API responses for builds
-        # as we don't need to wait for the scheduler.
-        create_instance_here = max_count == 1 or max_count is None
-
-        (instances, reservation_id) = self._create_instance(
+        return self._create_instance(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -820,23 +774,7 @@ class API(base.Base):
                                access_ip_v4, access_ip_v6,
                                requested_networks, config_drive,
                                block_device_mapping, auto_disk_config,
-                               create_instance_here=create_instance_here,
                                scheduler_hints=scheduler_hints)
-
-        if create_instance_here or instances is None:
-            return (instances, reservation_id)
-
-        inst_ret_list = []
-        for instance in instances:
-            if instance.get('_is_precooked', False):
-                inst_ret_list.append(instance)
-            else:
-                # Scheduler only gives us the 'id'.  We need to pull
-                # in the created instances from the DB
-                instance = self.db.instance_get(context, instance['id'])
-                inst_ret_list.append(dict(instance.iteritems()))
-
-        return (inst_ret_list, reservation_id)
 
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall"""
@@ -1561,7 +1499,7 @@ class API(base.Base):
 
         request_spec = {
                 'instance_type': new_instance_type,
-                'num_instances': 1,
+                'instance_uuids': instance['uuid'],
                 'instance_properties': instance}
 
         filter_properties = {'ignore_hosts': []}

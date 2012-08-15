@@ -119,13 +119,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # instance 1
         self.driver._provision_resource(
             ctxt, 'host1',
-            mox.Func(_has_launch_index(0)), None,
-            {}, None, None, None, None).AndReturn(instance1)
+            mox.Func(_has_launch_index(0)), {},
+            None, None, None, None, reservations=None).AndReturn(instance1)
         # instance 2
         self.driver._provision_resource(
             ctxt, 'host2',
-            mox.Func(_has_launch_index(1)), None,
-            {}, None, None, None, None).AndReturn(instance2)
+            mox.Func(_has_launch_index(1)), {},
+            None, None, None, None, reservations=None).AndReturn(instance2)
         self.mox.ReplayAll()
 
         self.driver.schedule_run_instance(context_fake, request_spec,

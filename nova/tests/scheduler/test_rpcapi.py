@@ -43,8 +43,6 @@ class SchedulerRpcAPITestCase(test.TestCase):
         expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
         expected_msg = rpcapi.make_msg(method, **kwargs)
         expected_msg['version'] = expected_version
-        if rpc_method == 'cast' and method == 'run_instance':
-            kwargs['call'] = False
 
         self.fake_args = None
         self.fake_kwargs = None
@@ -64,21 +62,13 @@ class SchedulerRpcAPITestCase(test.TestCase):
         for arg, expected_arg in zip(self.fake_args, expected_args):
             self.assertEqual(arg, expected_arg)
 
-    def test_run_instance_call(self):
-        self._test_scheduler_api('run_instance', rpc_method='call',
-                request_spec='fake_request_spec',
-                admin_password='pw', injected_files='fake_injected_files',
-                requested_networks='fake_requested_networks',
-                is_first_time=True, filter_properties='fake_filter_properties',
-                reservations=None, version='1.2')
-
-    def test_run_instance_cast(self):
+    def test_run_instance(self):
         self._test_scheduler_api('run_instance', rpc_method='cast',
                 request_spec='fake_request_spec',
                 admin_password='pw', injected_files='fake_injected_files',
                 requested_networks='fake_requested_networks',
                 is_first_time=True, filter_properties='fake_filter_properties',
-                reservations=None, version='1.2')
+                version='1.6')
 
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',
