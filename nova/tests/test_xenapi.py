@@ -2116,14 +2116,17 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                                    'Dom0IptablesFirewallDriver',
                    host='host')
         db_fakes.stub_out_db_instance_api(self.stubs)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
-        self.conn = xenapi_conn.XenAPIDriver(False)
+        xenapi_fake.create_local_pifs()
 
     def test_live_migration_calls_vmops(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
         def fake_live_migrate(context, instance_ref, dest, post_method,
-                              recover_method, block_migration):
+                              recover_method, block_migration, migrate_data):
             fake_live_migrate.called = True
+
         self.stubs.Set(self.conn._vmops, "live_migrate", fake_live_migrate)
 
         self.conn.live_migration(None, None, None, None, None)
@@ -2131,18 +2134,78 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
 
     def test_pre_live_migration(self):
         # ensure method is present
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
         self.conn.pre_live_migration(None, None, None, None)
 
     def test_post_live_migration_at_destination(self):
         # ensure method is present
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
         self.conn.post_live_migration_at_destination(None, None, None, None)
 
-    def test_check_can_live_migrate_raises_on_block_migrate(self):
-        self.assertRaises(NotImplementedError,
+    def test_check_can_live_migrate_destination_with_block_migration(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+        expected = {'block_migration': True,
+                    'migrate_data': {'xenops': '',
+                                     'host': '',
+                                     'master': '',
+                                     'session_id': '',
+                                     'SM': ''}
+                    }
+        fake_data = self.conn.check_can_live_migrate_destination(self.context,
+                              {'host': 'host'}, True, False)
+        self.assertEqual(expected.keys(), fake_data.keys())
+        self.assertEqual(expected['migrate_data'].keys(),
+                         fake_data['migrate_data'].keys())
+
+    def test_check_can_live_migrate_destination_block_migration_fails(self):
+        stubs.stubout_session(self.stubs,
+                              stubs.FakeSessionForFailedMigrateTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+        self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_destination,
-                          None, None, True, None)
+                          self.context, {'host': 'host'}, True, False)
+
+    def test_check_can_live_migrate_source_with_block_migrate(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+        dest_check_data = {'block_migration': True,
+                           'migrate_data': {}}
+        self.assertNotRaises(None,
+                             self.conn.check_can_live_migrate_source,
+                             self.context,
+                             {'host': 'host'},
+                             dest_check_data)
+
+    def test_check_can_live_migrate_source_with_block_migrate_fails(self):
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        stubs.stubout_session(self.stubs,
+                              stubs.FakeSessionForFailedMigrateTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        dest_check_data = {'block_migration': True,
+                           'migrate_data': {}}
+        self.assertRaises(exception.MigrationError,
+                          self.conn.check_can_live_migrate_source,
+                          self.context,
+                          {'host': 'host'},
+                          dest_check_data)
 
     def test_check_can_live_migrate_works(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
         class fake_aggregate:
             def __init__(self):
                 self.metadetails = {"host": "test_host_uuid"}
@@ -2157,6 +2220,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                 {'host': 'host'}, False, False)
 
     def test_check_can_live_migrate_fails(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
         class fake_aggregate:
             def __init__(self):
                 self.metadetails = {"dest_other": "test_host_uuid"}
@@ -2172,6 +2238,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                           self.context, {'host': 'host'}, None, None)
 
     def test_live_migration(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
         def fake_get_vm_opaque_ref(instance):
             return "fake_vm"
         self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
@@ -2191,6 +2260,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         self.assertTrue(post_method.called, "post_method.called")
 
     def test_live_migration_on_failure(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
         def fake_get_vm_opaque_ref(instance):
             return "fake_vm"
         self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
@@ -2212,6 +2284,63 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
 
         self.assertRaises(NotImplementedError, self.conn.live_migration,
                           self.conn, None, None, None, recover_method)
+        self.assertTrue(recover_method.called, "recover_method.called")
+
+    def test_live_migration_with_block_migration(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        def post_method(context, instance, destination_hostname,
+                        block_migration):
+            post_method.called = True
+
+        # pass block_migration = True and migrate data
+        migrate_data = {"test": "data"}
+        self.conn.live_migration(self.conn, None, None, post_method, None,
+                                 True, migrate_data)
+        self.assertTrue(post_method.called, "post_method.called")
+
+    def test_live_migration_with_block_migration_raises_invalid_param(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        def recover_method(context, instance, destination_hostname,
+                           block_migration):
+            recover_method.called = True
+        # pass block_migration = True and no migrate data
+        self.assertRaises(exception.InvalidParameterValue,
+                          self.conn.live_migration, self.conn,
+                          None, None, None, recover_method, True, None)
+        self.assertTrue(recover_method.called, "recover_method.called")
+
+    def test_live_migration_with_block_migration_fails_migrate_send(self):
+        stubs.stubout_session(self.stubs,
+                              stubs.FakeSessionForFailedMigrateTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        def recover_method(context, instance, destination_hostname,
+                           block_migration):
+            recover_method.called = True
+        # pass block_migration = True and migrate data
+        migrate_data = {"test": "data"}
+        self.assertRaises(exception.MigrationError,
+                          self.conn.live_migration, self.conn,
+                          None, None, None, recover_method, True, migrate_data)
         self.assertTrue(recover_method.called, "recover_method.called")
 
 

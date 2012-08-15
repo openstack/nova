@@ -223,8 +223,8 @@ class Scheduler(object):
         self._live_migration_src_check(context, instance)
         self._live_migration_dest_check(context, instance, dest)
         self._live_migration_common_check(context, instance, dest)
-        self.compute_rpcapi.check_can_live_migrate_destination(context,
-                instance, dest, block_migration, disk_over_commit)
+        migrate_data = self.compute_rpcapi.check_can_live_migrate_destination(
+                context, instance, dest, block_migration, disk_over_commit)
 
         # Change instance_state
         values = {"task_state": task_states.MIGRATING}
@@ -239,7 +239,8 @@ class Scheduler(object):
         src = instance['host']
         self.compute_rpcapi.live_migration(context, host=src,
                 instance=new_instance_ref, dest=dest,
-                block_migration=block_migration)
+                block_migration=block_migration,
+                migrate_data=migrate_data)
 
     def _live_migration_src_check(self, context, instance_ref):
         """Live migration check routine (for src host).

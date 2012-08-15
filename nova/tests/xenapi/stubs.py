@@ -356,6 +356,22 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
 
 
+class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
+    def __init__(self, uri):
+        super(FakeSessionForFailedMigrateTests, self).__init__(uri)
+
+    def VM_assert_can_migrate(self, session, vmref, migrate_data,
+                              live, vdi_map, vif_map, options):
+        raise fake.Failure("XenAPI VM.assert_can_migrate failed")
+
+    def host_migrate_receive(self, session, hostref, networkref, options):
+        raise fake.Failure("XenAPI host.migrate_receive failed")
+
+    def VM_migrate_send(self, session, vmref, migrate_data, islive, vdi_map,
+                        vif_map, options):
+        raise fake.Failure("XenAPI VM.migrate_send failed")
+
+
 class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()

@@ -430,8 +430,10 @@ class XenAPIDriver(driver.ComputeDriver):
         :param disk_over_commit: if true, allow disk over commit
 
         """
-        self._vmops.check_can_live_migrate_destination(ctxt, instance_ref,
-                block_migration, disk_over_commit)
+        return self._vmops.check_can_live_migrate_destination(ctxt,
+                                                              instance_ref,
+                                                              block_migration,
+                                                              disk_over_commit)
 
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):
@@ -452,11 +454,25 @@ class XenAPIDriver(driver.ComputeDriver):
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
+                                includes the block_migration flag
         """
+        self._vmops.check_can_live_migrate_source(ctxt, instance_ref,
+                                                  dest_check_data)
+
+    def get_instance_disk_info(self, instance_name):
+        """Used by libvirt for live migration. We rely on xenapi
+        checks to do this for us."""
+        pass
+
+    def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
+        """Used by libvirt for live migration. We rely on xenapi
+        checks to do this for us. May be used in the future to
+        populate the vdi/vif maps"""
         pass
 
     def live_migration(self, ctxt, instance_ref, dest,
-                       post_method, recover_method, block_migration=False):
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
         """Performs the live migration of the specified instance.
 
         :params ctxt: security context
@@ -471,9 +487,10 @@ class XenAPIDriver(driver.ComputeDriver):
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
         :params block_migration: if true, migrate VM disk.
+        :params migrate_data: implementation specific params
         """
         self._vmops.live_migrate(ctxt, instance_ref, dest, post_method,
-                                 recover_method, block_migration)
+                                 recover_method, block_migration, migrate_data)
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
                            network_info):
