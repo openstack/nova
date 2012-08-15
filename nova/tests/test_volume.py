@@ -31,7 +31,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import rpc
@@ -42,7 +41,6 @@ import nova.volume.api
 
 QUOTAS = quota.QUOTAS
 FLAGS = flags.FLAGS
-LOG = logging.getLogger(__name__)
 
 
 class VolumeTestCase(test.TestCase):
@@ -297,7 +295,6 @@ class VolumeTestCase(test.TestCase):
                                                           volume_id)
             self.assert_(iscsi_target not in targets)
             targets.append(iscsi_target)
-            LOG.debug(_("Target %s allocated"), iscsi_target)
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume = self._create_volume()
@@ -464,8 +461,7 @@ class DriverTestCase(test.TestCase):
         super(DriverTestCase, self).setUp()
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(volume_driver=self.driver_name,
-                   volumes_dir=vol_tmpdir,
-                   logging_default_format_string="%(message)s")
+                   volumes_dir=vol_tmpdir)
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
         self.output = ""
@@ -475,11 +471,6 @@ class DriverTestCase(test.TestCase):
             return self.output, None
         self.volume.driver.set_execute(_fake_execute)
 
-        log = logging.getLogger('nova')
-        self.stream = cStringIO.StringIO()
-        log.logger.addHandler(logging.logging.StreamHandler(self.stream))
-
-        inst = {}
         instance = db.instance_create(self.context, {})
         self.instance_id = instance['id']
         self.instance_uuid = instance['uuid']
@@ -492,8 +483,7 @@ class DriverTestCase(test.TestCase):
         super(DriverTestCase, self).tearDown()
 
     def _attach_volume(self):
-        """Attach volumes to an instance. This function also sets
-           a fake log message."""
+        """Attach volumes to an instance."""
         return []
 
     def _detach_volume(self, volume_id_list):
@@ -530,8 +520,7 @@ class ISCSITestCase(DriverTestCase):
     driver_name = "nova.volume.driver.ISCSIDriver"
 
     def _attach_volume(self):
-        """Attach volumes to an instance. This function also sets
-           a fake log message."""
+        """Attach volumes to an instance. """
         volume_id_list = []
         for index in xrange(3):
             vol = {}
@@ -549,13 +538,9 @@ class ISCSITestCase(DriverTestCase):
         return volume_id_list
 
     def test_check_for_export_with_no_volume(self):
-        """No log message when no volume is attached to an instance."""
-        self.stream.truncate(0)
         self.volume.check_for_export(self.context, self.instance_id)
-        self.assertEqual(self.stream.getvalue(), '')
 
     def test_check_for_export_with_all_volume_exported(self):
-        """No log message when all the processes are running."""
         volume_id_list = self._attach_volume()
 
         self.mox.StubOutWithMock(self.volume.driver.tgtadm, 'show_target')
@@ -563,10 +548,8 @@ class ISCSITestCase(DriverTestCase):
             tid = db.volume_get_iscsi_target_num(self.context, i)
             self.volume.driver.tgtadm.show_target(tid)
 
-        self.stream.truncate(0)
         self.mox.ReplayAll()
         self.volume.check_for_export(self.context, self.instance_id)
-        self.assertEqual(self.stream.getvalue(), '')
         self.mox.UnsetStubs()
 
         self._detach_volume(volume_id_list)
@@ -586,8 +569,6 @@ class ISCSITestCase(DriverTestCase):
                           self.volume.check_for_export,
                           self.context,
                           self.instance_id)
-        msg = _("Cannot confirm exported volume id:%s.") % volume_id_list[0]
-        self.assertTrue(0 <= self.stream.getvalue().find(msg))
         self.mox.UnsetStubs()
 
         self._detach_volume(volume_id_list)
