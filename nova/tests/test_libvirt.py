@@ -2244,11 +2244,13 @@ class LibvirtConnTestCase(test.TestCase):
             guest = config.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
             guest.arch = "x86_64"
+            guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
             guest = config.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
             guest.arch = "i686"
+            guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
             return caps
@@ -2655,6 +2657,36 @@ class LibvirtConnTestCase(test.TestCase):
                   }
         self.assertEqual(actual, expect)
 
+    def test_get_instance_capabilities(self):
+        conn = libvirt_driver.LibvirtDriver(True)
+
+        def get_host_capabilities_stub(self):
+            caps = config.LibvirtConfigCaps()
+
+            guest = config.LibvirtConfigGuest()
+            guest.ostype = 'hvm'
+            guest.arch = 'x86_64'
+            guest.domtype = ['kvm', 'qemu']
+            caps.guests.append(guest)
+
+            guest = config.LibvirtConfigGuest()
+            guest.ostype = 'hvm'
+            guest.arch = 'i686'
+            guest.domtype = ['kvm']
+            caps.guests.append(guest)
+
+            return caps
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       'get_host_capabilities',
+                       get_host_capabilities_stub)
+
+        want = [('x86_64', 'kvm', 'hvm'),
+                ('x86_64', 'qemu', 'hvm'),
+                ('i686', 'kvm', 'hvm')]
+        got = conn.get_instance_capabilities()
+        self.assertEqual(want, got)
+
 
 class HostStateTestCase(test.TestCase):
 
@@ -2663,6 +2695,7 @@ class HostStateTestCase(test.TestCase):
                  '"fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge", '
                  '"mtrr", "sep", "apic"], '
                  '"topology": {"cores": "1", "threads": "1", "sockets": "1"}}')
+    instance_caps = [("x86_64", "kvm", "hvm"), ("i686", "kvm", "hvm")]
 
     class FakeConnection(object):
         """Fake connection object"""
@@ -2703,6 +2736,9 @@ class HostStateTestCase(test.TestCase):
 
         def get_disk_available_least(self):
             return 13091
+
+        def get_instance_capabilities(self):
+            return HostStateTestCase.instance_caps
 
     def test_update_status(self):
         self.mox.StubOutWithMock(libvirt_driver, 'LibvirtDriver')
