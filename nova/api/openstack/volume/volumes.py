@@ -219,15 +219,7 @@ class VolumeController(object):
 
         volume = body['volume']
 
-        def as_int(s):
-            try:
-                return int(s)
-            except ValueError:
-                return s
-
-        # NOTE(eglynn): we're tolerant of non-int sizes here, as type
-        # integrity is enforced later in the creation codepath
-        size = as_int(volume['size'])
+        size = volume['size']
 
         LOG.audit(_("Create volume of %s GB"), size, context=context)
 
