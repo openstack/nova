@@ -108,6 +108,15 @@ class KeypairController(object):
             raise webob.exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    @wsgi.serializers(xml=KeypairTemplate)
+    def show(self, req, id):
+        """Return data for the given key name."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        keypair = self.api.get_key_pair(context, context.user_id, id)
+        return {'keypair': keypair}
+
     @wsgi.serializers(xml=KeypairsTemplate)
     def index(self, req):
         """
