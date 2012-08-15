@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#    Copyright (c) 2012 NTT DOCOMO, INC.
-#    Copyright 2011 OpenStack Foundation
-#    Copyright 2011 Ilya Alekseyev
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,16 +17,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.cmd import baremetal_manage as bm_man
-from nova.tests.baremetal.db import base as bm_db_base
+"""Daemon for nova objectstore. Supports S3 API."""
+
+import sys
+
+from nova import config
+from nova.objectstore import s3server
+from nova.openstack.common import log as logging
+from nova import service
+from nova import utils
 
 
-class BareMetalDbCommandsTestCase(bm_db_base.BMDBTestCase):
-    def setUp(self):
-        super(BareMetalDbCommandsTestCase, self).setUp()
-        self.commands = bm_man.BareMetalDbCommands()
-
-    def test_sync_and_version(self):
-        self.commands.sync()
-        v = self.commands.version()
-        self.assertTrue(v > 0)
+def main():
+    config.parse_args(sys.argv)
+    logging.setup("nova")
+    utils.monkey_patch()
+    server = s3server.get_wsgi_server()
+    service.serve(server)
+    service.wait()

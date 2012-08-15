@@ -16,28 +16,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import imp
 import os
-import sys
 import tempfile
 import time
 
 import mox
 
+from nova.cmd import baremetal_deploy_helper as bmdh
 from nova import test
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.virt.baremetal import db as bm_db
-
-TOPDIR = os.path.normpath(os.path.join(
-                            os.path.dirname(os.path.abspath(__file__)),
-                            os.pardir,
-                            os.pardir,
-                            os.pardir))
-BMDH_PATH = os.path.join(TOPDIR, 'bin', 'nova-baremetal-deploy-helper')
-
-sys.dont_write_bytecode = True
-bmdh = imp.load_source('bmdh', BMDH_PATH)
-sys.dont_write_bytecode = False
 
 _PXECONF_DEPLOY = """
 default deploy

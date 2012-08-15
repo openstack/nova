@@ -1,8 +1,8 @@
+#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#    Copyright (c) 2012 NTT DOCOMO, INC.
-#    Copyright 2011 OpenStack Foundation
-#    Copyright 2011 Ilya Alekseyev
+# Copyright (c) 2010 OpenStack Foundation
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,16 +16,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.cmd import baremetal_manage as bm_man
-from nova.tests.baremetal.db import base as bm_db_base
+"""Starter script for Nova Console Proxy."""
+
+import sys
+
+from oslo.config import cfg
+
+from nova import config
+from nova.openstack.common import log as logging
+from nova import service
+
+CONF = cfg.CONF
+CONF.import_opt('console_topic', 'nova.console.rpcapi')
 
 
-class BareMetalDbCommandsTestCase(bm_db_base.BMDBTestCase):
-    def setUp(self):
-        super(BareMetalDbCommandsTestCase, self).setUp()
-        self.commands = bm_man.BareMetalDbCommands()
-
-    def test_sync_and_version(self):
-        self.commands.sync()
-        v = self.commands.version()
-        self.assertTrue(v > 0)
+def main():
+    config.parse_args(sys.argv)
+    logging.setup("nova")
+    server = service.Service.create(binary='nova-console',
+                                    topic=CONF.console_topic)
+    service.serve(server)
+    service.wait()

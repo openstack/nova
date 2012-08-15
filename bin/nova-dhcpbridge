@@ -1,153 +1,22 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-"""
-Handle lease database updates from DHCP servers.
-"""
+# Temporary shim to do a devstack transition
+from nova.cmd import dhcpbridge
 
-import gettext
-import os
-import sys
-
-from oslo.config import cfg
-
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
-
-gettext.install('nova', unicode=1)
-
-from nova import config
-from nova import context
-from nova import db
-from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
-
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('network_manager', 'nova.service')
-LOG = logging.getLogger('nova.dhcpbridge')
-
-
-def add_lease(mac, ip_address):
-    """Set the IP that was assigned by the DHCP server."""
-    if CONF.fake_rabbit:
-        LOG.debug(_("leasing ip"))
-        network_manager = importutils.import_object(CONF.network_manager)
-        network_manager.lease_fixed_ip(context.get_admin_context(),
-                                       ip_address)
-    else:
-        api = network_rpcapi.NetworkAPI()
-        api.lease_fixed_ip(context.get_admin_context(), ip_address, CONF.host)
-
-
-def old_lease(mac, ip_address):
-    """Called when an old lease is recognized."""
-    # NOTE(vish): We assume we heard about this lease the first time.
-    #             If not, we will get it the next time the lease is
-    #             renewed.
-    pass
-
-
-def del_lease(mac, ip_address):
-    """Called when a lease expires."""
-    if CONF.fake_rabbit:
-        LOG.debug(_("releasing ip"))
-        network_manager = importutils.import_object(CONF.network_manager)
-        network_manager.release_fixed_ip(context.get_admin_context(),
-                                         ip_address)
-    else:
-        api = network_rpcapi.NetworkAPI()
-        api.release_fixed_ip(context.get_admin_context(), ip_address,
-                             CONF.host)
-
-
-def init_leases(network_id):
-    """Get the list of hosts for a network."""
-    ctxt = context.get_admin_context()
-    network_ref = db.network_get(ctxt, network_id)
-    network_manager = importutils.import_object(CONF.network_manager)
-    return network_manager.get_dhcp_leases(ctxt, network_ref)
-
-
-def add_action_parsers(subparsers):
-    parser = subparsers.add_parser('init')
-
-    # NOTE(cfb): dnsmasq always passes mac, and ip. hostname
-    #            is passed if known. We don't care about
-    #            hostname, but argparse will complain if we
-    #            do not accept it.
-    for action in ['add', 'del', 'old']:
-        parser = subparsers.add_parser(action)
-        parser.add_argument('mac')
-        parser.add_argument('ip')
-        parser.add_argument('hostname', nargs='?', default='')
-        parser.set_defaults(func=globals()[action + '_lease'])
-
-
-CONF.register_cli_opt(
-    cfg.SubCommandOpt('action',
-                      title='Action options',
-                      help='Available dhcpbridge options',
-                      handler=add_action_parsers))
-
-
-def main():
-    """Parse environment and arguments and call the appropriate action."""
-    try:
-        config_file = os.environ['CONFIG_FILE']
-    except KeyError:
-        config_file = os.environ['FLAGFILE']
-
-    config.parse_args(sys.argv,
-        default_config_files=jsonutils.loads(config_file))
-
-    logging.setup("nova")
-
-    if int(os.environ.get('TESTING', '0')):
-        from nova.tests import conf_fixture
-
-    if CONF.action.name in ['add', 'del', 'old']:
-        msg = (_("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") %
-               {"action": CONF.action.name,
-                "mac": CONF.action.mac,
-                "ip": CONF.action.ip})
-        LOG.debug(msg)
-        CONF.action.func(CONF.action.mac, CONF.action.ip)
-    else:
-        try:
-            network_id = int(os.environ.get('NETWORK_ID'))
-        except TypeError:
-            LOG.error(_("Environment variable 'NETWORK_ID' must be set."))
-            sys.exit(1)
-
-        print init_leases(network_id)
-
-    rpc.cleanup()
-
-
-if __name__ == "__main__":
-    main()
+dhcpbridge.main()

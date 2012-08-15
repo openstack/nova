@@ -12,8 +12,6 @@ EXCLUDE+=',*egg,build,./plugins/xenserver/networking/etc/xensource/scripts'
 EXCLUDE+=',./plugins/xenserver/xenapi/etc/xapi.d/plugins'
 ${PEP8} ${EXCLUDE} .
 
-${PEP8} --filename=nova* bin
-
 SCRIPT_ROOT=$(echo $(cd "$(dirname $0)"; pwd) | sed s/\\/tools//)
 
 SCRIPTS_PATH=${SCRIPT_ROOT}/plugins/xenserver/networking/etc/xensource/scripts

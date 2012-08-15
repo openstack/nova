@@ -23,12 +23,14 @@ inline callbacks.
 
 """
 
+import eventlet
+eventlet.monkey_patch(os=False)
+
 import os
 import shutil
 import sys
 import uuid
 
-import eventlet
 import fixtures
 import mox
 from oslo.config import cfg
@@ -63,8 +65,6 @@ CONF.set_override('use_stderr', False)
 
 logging.setup('nova')
 LOG = logging.getLogger(__name__)
-
-eventlet.monkey_patch(os=False)
 
 _DB_CACHE = None
 
