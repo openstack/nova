@@ -729,7 +729,6 @@ def floating_ip_get(context, id):
 
 @require_context
 def floating_ip_get_pools(context):
-    session = get_session()
     pools = []
     for result in model_query(context, models.FloatingIp.pool).distinct():
         pools.append({'name': result[0]})
@@ -4496,8 +4495,6 @@ def volume_type_create(context, values):
         except exception.VolumeTypeNotFoundByName:
             pass
         try:
-            specs = values.get('extra_specs')
-
             values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
                                                    models.VolumeTypeExtraSpecs)
             volume_type_ref = models.VolumeTypes()
@@ -4766,7 +4763,6 @@ def sm_backend_conf_get(context, sm_backend_id):
 
 @require_admin_context
 def sm_backend_conf_get_by_sr(context, sr_uuid):
-    session = get_session()
     result = model_query(context, models.SMBackendConf, read_deleted="yes").\
                          filter_by(sr_uuid=sr_uuid).\
                          first()
