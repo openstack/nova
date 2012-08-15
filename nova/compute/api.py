@@ -2062,6 +2062,13 @@ class KeypairAPI(base.Base):
             })
         return rval
 
+    def get_key_pair(self, context, user_id, key_name):
+        """Get a keypair by name."""
+        key_pair = self.db.key_pair_get(context, user_id, key_name)
+        return {'name': key_pair['name'],
+                'public_key': key_pair['public_key'],
+                'fingerprint': key_pair['fingerprint']}
+
 
 class SecurityGroupAPI(base.Base):
     """
