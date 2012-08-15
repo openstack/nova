@@ -278,11 +278,12 @@ class API(base.Base):
                  {'method': 'remove_fixed_ip_from_instance',
                   'args': args})
 
-    def add_network_to_project(self, context, project_id):
+    def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
         rpc.call(context, FLAGS.network_topic,
                  {'method': 'add_network_to_project',
-                  'args': {'project_id': project_id}})
+                  'args': {'project_id': project_id,
+                           'network_uuid': network_uuid}})
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance):

@@ -17,6 +17,7 @@
 #    under the License.
 
 
+import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -113,6 +114,31 @@ class NetworkController(object):
     def create(self, req, id, body=None):
         raise exc.HTTPNotImplemented()
 
+    def add(self, req, body):
+        context = req.environ['nova.context']
+        authorize(context)
+        if not body:
+            raise exc.HTTPUnprocessableEntity()
+
+        network_id = body.get('id', None)
+        project_id = context.project_id
+        LOG.debug(_("Associating network %(network)s"
+                    " with project %(project)s") %
+                  {"network": network_id or "",
+                   "project": project_id})
+        try:
+            self.network_api.add_network_to_project(
+                context, project_id, network_id)
+        except Exception as ex:
+            msg = (_("Cannot associate network %(network)s"
+                     " with project %(project)s: %(message)s") %
+                   {"network": network_id or "",
+                    "project": project_id,
+                    "message": getattr(ex, "value", str(ex))})
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return webob.Response(status_int=202)
+
 
 class Networks(extensions.ExtensionDescriptor):
     """Admin-only Network Management Extension"""
@@ -124,7 +150,10 @@ class Networks(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         member_actions = {'action': 'POST'}
-        res = extensions.ResourceExtension('os-networks',
-                                           NetworkController(),
-                                           member_actions=member_actions)
+        collection_actions = {'add': 'POST'}
+        res = extensions.ResourceExtension(
+            'os-networks',
+            NetworkController(),
+            member_actions=member_actions,
+            collection_actions=collection_actions)
         return [res]

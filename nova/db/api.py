@@ -779,9 +779,9 @@ def key_pair_count_by_user(context, user_id):
 ####################
 
 
-def network_associate(context, project_id, force=False):
+def network_associate(context, project_id, network_id=None, force=False):
     """Associate a free network to a project."""
-    return IMPL.network_associate(context, project_id, force)
+    return IMPL.network_associate(context, project_id, network_id, force)
 
 
 def network_count(context):

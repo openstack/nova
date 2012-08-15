@@ -244,7 +244,7 @@ class API(base.Base):
         it is associated with."""
         raise NotImplementedError()
 
-    def add_network_to_project(self, context, project_id):
+    def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
         raise NotImplementedError()
 
