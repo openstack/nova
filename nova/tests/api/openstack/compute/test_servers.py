@@ -4750,3 +4750,30 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+
+
+class ServersAllExtensionsTestCase(test.TestCase):
+    """
+    Servers tests using default API router with all extensions enabled.
+    """
+
+    def setUp(self):
+        super(ServersAllExtensionsTestCase, self).setUp()
+        self.app = nova.api.openstack.compute.APIRouter()
+
+    def test_create_missing_server(self):
+        """Test create with malformed body"""
+
+        def fake_create(*args, **kwargs):
+            raise Exception("Request should not reach the compute API.")
+
+        self.stubs.Set(nova.compute.api.API, 'create', fake_create)
+
+        req = fakes.HTTPRequest.blank('/fake/servers')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {'foo': {'a': 'b'}}
+
+        req.body = jsonutils.dumps(body)
+        res = req.get_response(self.app)
+        self.assertEqual(422, res.status_int)
