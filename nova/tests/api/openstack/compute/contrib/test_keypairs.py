@@ -249,16 +249,45 @@ class KeypairsTest(test.TestCase):
     def test_keypair_delete_not_found(self):
 
         def db_key_pair_get_not_found(context, user_id, name):
-            raise exception.KeyPairNotFound()
+            raise exception.KeypairNotFound(user_id=user_id, name=name)
 
         self.stubs.Set(db, "key_pair_get",
                        db_key_pair_get_not_found)
         req = webob.Request.blank('/v2/fake/os-keypairs/WHAT')
         res = req.get_response(fakes.wsgi_app())
-        print res
         self.assertEqual(res.status_int, 404)
 
-    def test_show(self):
+    def test_keypair_show(self):
+
+        def _db_key_pair_get(context, user_id, name):
+            return {'name': 'foo', 'public_key': 'XXX', 'fingerprint': 'YYY'}
+
+        self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
+
+        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
+        req.method = 'GET'
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual('foo', res_dict['keypair']['name'])
+        self.assertEqual('XXX', res_dict['keypair']['public_key'])
+        self.assertEqual('YYY', res_dict['keypair']['fingerprint'])
+
+    def test_keypair_show_not_found(self):
+
+        def _db_key_pair_get(context, user_id, name):
+            raise exception.KeypairNotFound(user_id=user_id, name=name)
+
+        self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
+
+        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
+        req.method = 'GET'
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_show_server(self):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/servers/1')
@@ -296,7 +325,6 @@ class KeypairsXMLSerializerTest(test.TestCase):
         serializer = keypairs.KeypairTemplate()
         text = serializer.serialize(exemplar)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('keypair', tree.tag)
@@ -317,7 +345,6 @@ class KeypairsXMLSerializerTest(test.TestCase):
         serializer = keypairs.KeypairsTemplate()
         text = serializer.serialize(exemplar)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('keypairs', tree.tag)
