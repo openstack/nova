@@ -1178,11 +1178,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        try:
-            self.driver.snapshot(context, instance, image_id)
-        finally:
-            self._instance_update(context, instance['uuid'],
-                                  task_state=None)
+        self.driver.snapshot(context, instance, image_id)
+        self._instance_update(context, instance['uuid'], task_state=None)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()
