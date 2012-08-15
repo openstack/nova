@@ -757,10 +757,34 @@ def floating_ip_allocate_address(context, project_id, pool):
 
 
 @require_context
-def floating_ip_create(context, values):
+def floating_ip_bulk_create(context, ips):
+    session = get_session()
+    with session.begin():
+        for ip in ips:
+            floating_ip_create(context, ip, session)
+
+
+@require_context
+def floating_ip_create(context, values, session=None):
+    if not session:
+        session = get_session()
+
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref.update(values)
-    floating_ip_ref.save()
+
+    # check uniqueness for not deleted addresses
+    if not floating_ip_ref.deleted:
+        try:
+            floating_ip = floating_ip_get_by_address(context,
+                                                     floating_ip_ref.address,
+                                                     session)
+        except exception.FloatingIpNotFoundForAddress:
+            pass
+        else:
+            if floating_ip.id != floating_ip_ref.id:
+                raise exception.FloatingIpExists(**dict(floating_ip_ref))
+
+    floating_ip_ref.save(session=session)
     return floating_ip_ref['address']
 
 

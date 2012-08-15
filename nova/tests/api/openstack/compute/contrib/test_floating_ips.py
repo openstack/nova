@@ -105,14 +105,23 @@ def get_instance_by_floating_ip_addr(self, context, address):
 
 class FloatingIpTest(test.TestCase):
     floating_ip = "10.10.10.10"
+    floating_ip_2 = "10.10.10.11"
 
-    def _create_floating_ip(self):
+    def _create_floating_ips(self, floating_ips=None):
         """Create a floating ip object."""
-        host = "fake_host"
-        return db.floating_ip_create(self.context,
-                                     {'address': self.floating_ip,
-                                      'pool': 'nova',
-                                      'host': host})
+        if floating_ips is None:
+            floating_ips = [self.floating_ip]
+        elif not isinstance(floating_ips, (list, tuple)):
+            floating_ips = [floating_ips]
+
+        def make_ip_dict(ip):
+            """Shortcut for creating floating ip dict."""
+            return
+
+        dict_ = {'pool': 'nova', 'host': 'fake_host'}
+        return db.floating_ip_bulk_create(
+            self.context, [dict(address=ip, **dict_) for ip in floating_ips],
+        )
 
     def _delete_floating_ip(self):
         db.floating_ip_destroy(self.context, self.floating_ip)
@@ -144,7 +153,7 @@ class FloatingIpTest(test.TestCase):
                        fake_instance_get)
 
         self.context = context.get_admin_context()
-        self._create_floating_ip()
+        self._create_floating_ips()
 
         self.controller = floating_ips.FloatingIPController()
         self.manager = floating_ips.FloatingIPActionController()
@@ -154,7 +163,7 @@ class FloatingIpTest(test.TestCase):
         super(FloatingIpTest, self).tearDown()
 
     def test_translate_floating_ip_view(self):
-        floating_ip_address = self._create_floating_ip()
+        floating_ip_address = self.floating_ip
         floating_ip = db.floating_ip_get_by_address(self.context,
                                                     floating_ip_address)
         floating_ip['fixed_ip'] = None
@@ -225,6 +234,28 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['id'], 1)
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
         self.assertEqual(res_dict['floating_ip']['instance_id'], FAKE_UUID)
+
+    def test_recreation_of_floating_ip(self):
+        self._delete_floating_ip()
+        self._create_floating_ips()
+
+    def test_floating_ip_in_bulk_creation(self):
+        self._delete_floating_ip()
+
+        self._create_floating_ips([self.floating_ip, self.floating_ip_2])
+        all_ips = db.floating_ip_get_all(self.context)
+        ip_list = [ip['address'] for ip in all_ips]
+        self.assertIn(self.floating_ip, ip_list)
+        self.assertIn(self.floating_ip_2, ip_list)
+
+    def test_fail_floating_ip_in_bulk_creation(self):
+        self.assertRaises(exception.FloatingIpExists,
+                          self._create_floating_ips,
+                          [self.floating_ip, self.floating_ip_2])
+        all_ips = db.floating_ip_get_all(self.context)
+        ip_list = [ip['address'] for ip in all_ips]
+        self.assertIn(self.floating_ip, ip_list)
+        self.assertNotIn(self.floating_ip_2, ip_list)
 
 # test floating ip allocate/release(deallocate)
     def test_floating_ip_allocate_no_free_ips(self):
