@@ -43,7 +43,7 @@ class API(base.Base):
     def delete_console(self, context, instance_uuid, console_uuid):
         console = self.db.console_get(context, console_uuid, instance_uuid)
         topic = rpc.queue_get_for(context, FLAGS.console_topic,
-                                  pool['host'])
+                                  console['pool']['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.remove_console(context, console['id'])
 
