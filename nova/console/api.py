@@ -62,12 +62,6 @@ class API(base.Base):
         rpcapi = compute_rpcapi.ComputeAPI()
         return rpcapi.get_console_topic(context, instance_host)
 
-    def _translate_id_if_necessary(self, context, instance_uuid):
-        if not utils.is_uuid_like(instance_uuid):
-            instance = self.db.instance_get(context, instance_uuid)
-            instance_uuid = instance['uuid']
-        return instance_uuid
-
     def _get_instance(self, context, instance_uuid):
         if utils.is_uuid_like(instance_uuid):
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
