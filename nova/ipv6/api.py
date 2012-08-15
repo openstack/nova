@@ -25,13 +25,14 @@ ipv6_backend_opt = cfg.StrOpt('ipv6_backend',
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(ipv6_backend_opt)
+IMPL = None
 
 
 def reset_backend():
     global IMPL
     IMPL = utils.LazyPluggable('ipv6_backend',
-                rfc2462='nova.ipv6.rfc2462',
-                account_identifier='nova.ipv6.account_identifier')
+               rfc2462='nova.ipv6.rfc2462',
+               account_identifier='nova.ipv6.account_identifier')
 
 
 def to_global(prefix, mac, project_id):
@@ -40,5 +41,6 @@ def to_global(prefix, mac, project_id):
 
 def to_mac(ipv6_address):
     return IMPL.to_mac(ipv6_address)
+
 
 reset_backend()
