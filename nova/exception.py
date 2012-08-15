@@ -588,8 +588,20 @@ class NetworkBusy(NovaException):
     message = _("Network %(network)s has active ports, cannot delete.")
 
 
+class NetworkIsDuplicated(NovaException):
+    message = _("Network %(network)s is duplicated.")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
+
+
+class PortInUse(NovaException):
+    message = _("Port %(port_id)s is still in use.")
+
+
+class PortNotFound(NotFound):
+    message = _("Port %(port_id)s could not be found.")
 
 
 class FixedIpNotFound(NotFound):
