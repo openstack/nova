@@ -18,6 +18,7 @@
 import copy
 import errno
 import eventlet
+import json
 import mox
 import os
 import re
@@ -1850,16 +1851,30 @@ class LibvirtConnTestCase(test.TestCase):
 
             # Test data
             instance_ref = db.instance_create(self.context, self.test_instance)
-            dummyjson = ('[{"path": "%s/disk", "disk_size": "10737418240",'
-                         ' "type": "raw", "backing_file": ""}]')
+            dummy_info = [{'path': '%s/disk' % tmpdir,
+                           'disk_size': 10737418240,
+                           'type': 'raw',
+                           'backing_file': ''},
+                          {'backing_file': 'otherdisk_1234567',
+                           'path': '%s/otherdisk' % tmpdir,
+                           'virt_disk_size': 10737418240}]
+            dummyjson = json.dumps(dummy_info)
 
-            # Preparing mocks
             # qemu-img should be mockd since test environment might not have
             # large disk space.
+            self.mox.StubOutWithMock(imagebackend.Image, 'cache')
+            imagebackend.Image.cache(context=mox.IgnoreArg(),
+                                     fn=mox.IgnoreArg(),
+                                     fname='otherdisk',
+                                     image_id=123456,
+                                     project_id='fake',
+                                     size=10737418240L,
+                                     user_id=None).AndReturn(None)
             self.mox.ReplayAll()
+
             conn = libvirt_driver.LibvirtDriver(False)
             conn.pre_block_migration(self.context, instance_ref,
-                                     dummyjson % tmpdir)
+                                     dummyjson)
 
             self.assertTrue(os.path.exists('%s/%s/' %
                                            (tmpdir, instance_ref.name)))
