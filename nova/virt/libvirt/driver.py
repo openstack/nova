@@ -2507,11 +2507,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                % locals())
                     greenthread.sleep(1)
 
-    def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
+    def pre_block_migration(self, ctxt, instance, disk_info_json):
         """Preparation block migration.
 
         :params ctxt: security context
-        :params instance_ref:
+        :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :params disk_info_json:
@@ -2521,7 +2521,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = jsonutils.loads(disk_info_json)
 
         # make instance directory
-        instance_dir = os.path.join(FLAGS.instances_path, instance_ref['name'])
+        instance_dir = os.path.join(FLAGS.instances_path, instance['name'])
         if os.path.exists(instance_dir):
             raise exception.DestinationDiskExists(path=instance_dir)
         os.mkdir(instance_dir)
@@ -2540,30 +2540,31 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Remove any size tags which the cache manages
                 cache_name = cache_name.split('_')[0]
 
-                self._cache_image(fn=libvirt_utils.fetch_image,
-                    context=ctxt,
-                    target=instance_disk,
-                    fname=cache_name,
-                    cow=FLAGS.use_cow_images,
-                    image_id=instance_ref['image_ref'],
-                    user_id=instance_ref['user_id'],
-                    project_id=instance_ref['project_id'],
-                    size=info['virt_disk_size'])
+                image = self.image_backend.image(instance['name'], cache_name,
+                                                 FLAGS.libvirt_images_type)
+                image.cache(fn=libvirt_utils.fetch_image,
+                            context=ctxt,
+                            fname=cache_name,
+                            image_id=instance['image_ref'],
+                            user_id=instance['user_id'],
+                            project_id=instance['project_id'],
+                            size=info['virt_disk_size'])
 
         # if image has kernel and ramdisk, just download
         # following normal way.
-        if instance_ref['kernel_id']:
+        if instance['kernel_id']:
             libvirt_utils.fetch_image(ctxt,
-                              os.path.join(instance_dir, 'kernel'),
-                              instance_ref['kernel_id'],
-                              instance_ref['user_id'],
-                              instance_ref['project_id'])
-            if instance_ref['ramdisk_id']:
+                                      os.path.join(instance_dir, 'kernel'),
+                                      instance['kernel_id'],
+                                      instance['user_id'],
+                                      instance['project_id'])
+            if instance['ramdisk_id']:
                 libvirt_utils.fetch_image(ctxt,
-                                  os.path.join(instance_dir, 'ramdisk'),
-                                  instance_ref['ramdisk_id'],
-                                  instance_ref['user_id'],
-                                  instance_ref['project_id'])
+                                          os.path.join(instance_dir,
+                                                       'ramdisk'),
+                                          instance['ramdisk_id'],
+                                          instance['user_id'],
+                                          instance['project_id'])
 
     def post_live_migration_at_destination(self, ctxt,
                                            instance_ref,
