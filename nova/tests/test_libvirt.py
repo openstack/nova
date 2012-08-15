@@ -2682,6 +2682,10 @@ class HostStateTestCase(test.TestCase):
         def get_hypervisor_hostname(self):
             return 'compute1'
 
+        def get_host_uptime(self):
+            return ('10:01:16 up  1:36,  6 users,  '
+                    'load average: 0.21, 0.16, 0.19')
+
         def get_disk_available_least(self):
             return 13091
 

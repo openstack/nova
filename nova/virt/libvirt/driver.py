@@ -2720,6 +2720,13 @@ class LibvirtDriver(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         pass
 
+    def get_host_uptime(self, host):
+        """Returns the result of calling "uptime"."""
+        #NOTE(dprince): host seems to be ignored for this call and in
+        # other compute drivers as well. Perhaps we should remove it?
+        out, err = utils.execute('env', 'LANG=C', 'uptime')
+        return out
+
     def manage_image_cache(self, context):
         """Manage the local cache of images."""
         self.image_cache_manager.verify_base_images(context)
