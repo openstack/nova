@@ -196,11 +196,8 @@ def install_dependencies(venv=VENV):
     pip_install('-r', PIP_REQUIRES)
     pip_install('-r', TEST_REQUIRES)
 
-    # Tell the virtual env how to "import nova"
-    pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages",
-                        "nova.pth")
-    f = open(pthfile, 'w')
-    f.write("%s\n" % ROOT)
+    # Install nova into the virtual_env. No more path munging!
+    run_command([os.path.join(venv, 'bin/python'), 'setup.py', 'develop'])
 
 
 def post_process():
