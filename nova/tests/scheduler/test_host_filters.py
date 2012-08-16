@@ -394,6 +394,106 @@ class HostFiltersTestCase(test.TestCase):
                  'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
+    def test_compute_filter_passes_same_inst_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        inst_meta = {'system_metadata': {'image_architecture': 'x86_64',
+                                         'image_hypervisor_type': 'kvm',
+                                         'image_vm_mode': 'hvm'}}
+        req_spec = {'instance_properties': inst_meta}
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': req_spec}
+        capabilities = {'enabled': True,
+                            'supported_instances': [
+                                ('x86_64', 'kvm', 'hvm')]}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_different_inst_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        inst_meta = {'system_metadata': {'image_architecture': 'arm',
+                                         'image_hypervisor_type': 'qemu',
+                                         'image_vm_mode': 'hvm'}}
+        req_spec = {'instance_properties': inst_meta}
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': req_spec}
+        capabilities = {'enabled': True,
+                            'supported_instances': [
+                                ('x86_64', 'kvm', 'hvm')]}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_passes_partial_inst_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        inst_meta = {'system_metadata': {'image_architecture': 'x86_64',
+                                         'image_vm_mode': 'hvm'}}
+        req_spec = {'instance_properties': inst_meta}
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': req_spec}
+        capabilities = {'enabled': True,
+                            'supported_instances': [
+                                ('x86_64', 'kvm', 'hvm')]}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_partial_inst_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        inst_meta = {'system_metadata': {'image_architecture': 'x86_64',
+                                         'image_vm_mode': 'hvm'}}
+        req_spec = {'instance_properties': inst_meta}
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': req_spec}
+        capabilities = {'enabled': True,
+                            'supported_instances': [
+                                ('x86_64', 'xen', 'xen')]}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_passes_without_inst_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': {}}
+        capabilities = {'enabled': True,
+                            'supported_instances': [
+                                ('x86_64', 'kvm', 'hvm')]}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_without_host_props(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ComputeFilter']()
+        inst_meta = {'system_metadata': {'image_architecture': 'x86_64',
+                                         'image_hypervisor_type': 'kvm',
+                                         'image_vm_mode': 'hvm'}}
+        req_spec = {'instance_properties': inst_meta}
+        filter_properties = {'instance_type': {'memory_mb': 1024},
+                             'request_spec': req_spec}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
     def test_compute_filter_passes_extra_specs_noop(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['ComputeCapabilitiesFilter']()
