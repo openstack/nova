@@ -4500,6 +4500,7 @@ class KeypairAPITestCase(BaseTestCase):
         self.keypair_api = compute_api.KeypairAPI()
         self.ctxt = context.RequestContext('fake', 'fake')
         self._keypair_db_call_stubs()
+        self.existing_key_name = 'fake existing key name'
         self.pub_key = ('ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLnVkqJu9WVf'
                         '/5StU3JCrBR2r1s1j8K1tux+5XeSvdqaM8lMFNorzbY5iyoBbR'
                         'S56gy1jmm43QsMPJsrpfUZKcJpRENSe3OxIIwWXRoiapZe78u/'
@@ -4521,12 +4522,22 @@ class KeypairAPITestCase(BaseTestCase):
         def db_key_pair_destroy(context, user_id, name):
             pass
 
+        def db_key_pair_get(context, user_id, name):
+            if name == self.existing_key_name:
+                return {'name': self.existing_key_name,
+                        'public_key': self.pub_key,
+                        'fingerprint': self.fingerprint}
+            else:
+                raise exception.KeypairNotFound(user_id=user_id, name=name)
+
         self.stubs.Set(db, "key_pair_get_all_by_user",
                        db_key_pair_get_all_by_user)
         self.stubs.Set(db, "key_pair_create",
                        db_key_pair_create)
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_destroy)
+        self.stubs.Set(db, "key_pair_get",
+                       db_key_pair_get)
 
     def test_create_keypair(self):
         keypair = self.keypair_api.create_key_pair(self.ctxt,
@@ -4544,13 +4555,10 @@ class KeypairAPITestCase(BaseTestCase):
                           self.ctxt, self.ctxt.user_id, '* BAD CHARACTERS! *')
 
     def test_create_keypair_already_exists(self):
-        def db_key_pair_get(context, user_id, name):
-            pass
-        self.stubs.Set(db, "key_pair_get",
-                       db_key_pair_get)
         self.assertRaises(exception.KeyPairExists,
                           self.keypair_api.create_key_pair,
-                          self.ctxt, self.ctxt.user_id, 'foo')
+                          self.ctxt, self.ctxt.user_id,
+                          self.existing_key_name)
 
     def test_create_keypair_quota_limit(self):
         def fake_quotas_count(self, context, resource, *args, **kwargs):
@@ -4593,6 +4601,12 @@ class KeypairAPITestCase(BaseTestCase):
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.import_key_pair,
                           self.ctxt, self.ctxt.user_id, 'foo', self.pub_key)
+
+    def test_get_keypair(self):
+        keypair = self.keypair_api.get_key_pair(self.ctxt,
+                                                self.ctxt.user_id,
+                                                self.existing_key_name)
+        self.assertEqual(self.existing_key_name, keypair['name'])
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):
