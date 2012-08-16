@@ -49,26 +49,34 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                       's>=': operator.ge}
 
         for key, req in instance_type['extra_specs'].iteritems():
+            cap = capabilities.get(key, None)
             words = req.split()
+
+            op = method = None
             if words:
                 op = words[0]
                 method = op_methods.get(op)
 
-                if (op == '<or>' or method):
-                    cap = capabilities.get(key, None)
-                    if cap is None:
-                        return False
-                    if op == '<or>':  # Ex: <or> v1 <or> v2 <or> v3
-                        for idx in range(1, len(words), 2):
-                            if words[idx] == cap:
-                                break
-                        else:
-                            return False
-                    else:  # method
-                        if len(words) == 1:
-                            return False
-                        if not method(cap, words[1]):
-                            return False
+            if op != '<or>' and not method:
+                if cap != req:
+                    return False
+                continue
+
+            if cap is None:
+                return False
+
+            if op == '<or>':  # Ex: <or> v1 <or> v2 <or> v3
+                for idx in range(1, len(words), 2):
+                    if words[idx] == cap:
+                        break
+                else:
+                    return False
+            else:  # method
+                if len(words) == 1:
+                    return False
+                if not method(cap, words[1]):
+                    return False
+
         return True
 
     def host_passes(self, host_state, filter_properties):
