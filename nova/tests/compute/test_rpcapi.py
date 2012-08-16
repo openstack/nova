@@ -232,6 +232,10 @@ class ComputeRpcAPITestCase(test.TestCase):
                 injected_files='files', image_ref='ref',
                 orig_image_ref='orig_ref', version='1.24')
 
+    def test_reserve_block_device_name(self):
+        self._test_compute_api('reserve_block_device_name', 'call',
+                instance=self.fake_instance, device='device', version='1.44')
+
     def refresh_provider_fw_rules(self):
         self._test_compute_api('refresh_provider_fw_rules', 'cast',
                 host='host')

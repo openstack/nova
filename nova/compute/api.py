@@ -1739,15 +1739,33 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    def attach_volume(self, context, instance, volume_id, device):
+    def attach_volume(self, context, instance, volume_id, device=None):
         """Attach an existing volume to an existing instance."""
-        if not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
+        # NOTE(vish): Fail fast if the device is not going to pass. This
+        #             will need to be removed along with the test if we
+        #             change the logic in the manager for what constitutes
+        #             a valid device.
+        if device and not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
             raise exception.InvalidDevicePath(path=device)
-        volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_attach(context, volume)
-        self.volume_api.reserve_volume(context, volume)
-        self.compute_rpcapi.attach_volume(context, instance=instance,
-                volume_id=volume_id, mountpoint=device)
+        # NOTE(vish): This is done on the compute host because we want
+        #             to avoid a race where two devices are requested at
+        #             the same time. When db access is removed from
+        #             compute, the bdm will be created here and we will
+        #             have to make sure that they are assigned atomically.
+        device = self.compute_rpcapi.reserve_block_device_name(
+            context, device=device, instance=instance)
+        try:
+            volume = self.volume_api.get(context, volume_id)
+            self.volume_api.check_attach(context, volume)
+            self.volume_api.reserve_volume(context, volume)
+            self.compute_rpcapi.attach_volume(context, instance=instance,
+                    volume_id=volume_id, mountpoint=device)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.db.block_device_mapping_destroy_by_instance_and_device(
+                        context, instance['uuid'], device)
+
+        return device
 
     @check_instance_lock
     def _detach_volume(self, context, instance, volume_id):

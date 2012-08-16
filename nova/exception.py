@@ -386,6 +386,10 @@ class InvalidDevicePath(Invalid):
     message = _("The supplied device path (%(path)s) is invalid.")
 
 
+class DevicePathInUse(Invalid):
+    message = _("The supplied device path (%(path)s) is in use.")
+
+
 class DeviceIsBusy(Invalid):
     message = _("The supplied device (%(device)s) is busy.")
 

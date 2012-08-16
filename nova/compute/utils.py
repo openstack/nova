@@ -16,6 +16,10 @@
 
 """Compute-related Utilities and helpers."""
 
+import re
+import string
+
+from nova import block_device
 from nova import db
 from nova import exception
 from nova import flags
@@ -27,6 +31,54 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = log.getLogger(__name__)
+
+
+def get_device_name_for_instance(context, instance, device):
+    # NOTE(vish): this will generate a unique device name that is not
+    #             in use already. It is a reasonable guess at where
+    #             it will show up in a linux guest, but it may not
+    #             always be correct
+    req_prefix = None
+    req_letters = None
+    if device:
+        try:
+            match = re.match("(^/dev/x{0,1}[a-z]d)([a-z]+)$", device)
+            req_prefix, req_letters = match.groups()
+        except (TypeError, AttributeError, ValueError):
+            raise exception.InvalidDevicePath(path=device)
+    bdms = db.block_device_mapping_get_all_by_instance(context,
+                instance['uuid'])
+    mappings = block_device.instance_block_mapping(instance, bdms)
+    try:
+        match = re.match("(^/dev/x{0,1}[a-z]d)[a-z]+[0-9]*$", mappings['root'])
+        prefix = match.groups()[0]
+    except (TypeError, AttributeError, ValueError):
+        raise exception.InvalidDevicePath(path=mappings['root'])
+    if not req_prefix:
+        req_prefix = prefix
+    letters_list = []
+    for _name, device in mappings.iteritems():
+        letter = block_device.strip_prefix(device)
+        # NOTE(vish): delete numbers in case we have something like
+        #             /dev/sda1
+        letter = re.sub("\d+", "", letter)
+        letters_list.append(letter)
+    used_letters = set(letters_list)
+    if not req_letters:
+        req_letters = _get_unused_letters(used_letters)
+    if req_letters in used_letters:
+        raise exception.DevicePathInUse(path=device)
+    return req_prefix + req_letters
+
+
+def _get_unused_letters(used_letters):
+    doubles = [first + second for second in string.ascii_lowercase
+               for first in string.ascii_lowercase]
+    all_letters = set(list(string.ascii_lowercase) + doubles)
+    letters = list(all_letters - used_letters)
+    # NOTE(vish): prepend ` so all shorter sequences sort first
+    letters.sort(key=lambda x: x.rjust(2, '`'))
+    return letters[0]
 
 
 def notify_usage_exists(context, instance_ref, current_period=False,
