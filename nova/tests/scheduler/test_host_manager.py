@@ -16,7 +16,6 @@
 Tests For HostManager
 """
 
-import datetime
 
 from nova import db
 from nova import exception

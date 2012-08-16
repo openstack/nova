@@ -14,13 +14,10 @@
 #    under the License.
 
 import datetime
-from webob import exc
 
 from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
-from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
-from nova import exception
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes

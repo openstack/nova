@@ -18,7 +18,6 @@
 """Tests for network API"""
 
 from nova import context
-from nova import db
 from nova import network
 from nova.openstack.common import rpc
 from nova import test

@@ -19,14 +19,11 @@ import datetime
 import hashlib
 import os
 import os.path
-import shutil
-import socket
 import StringIO
 import tempfile
 
 import eventlet
 from eventlet import greenpool
-import iso8601
 import mox
 
 import nova

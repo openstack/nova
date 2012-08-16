@@ -31,7 +31,6 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import test
-from nova import utils
 from nova.volume import storwize_svc
 
 LOG = logging.getLogger(__name__)

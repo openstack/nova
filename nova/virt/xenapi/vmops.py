@@ -42,7 +42,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
-from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import firewall
 from nova.virt.xenapi import pool_states

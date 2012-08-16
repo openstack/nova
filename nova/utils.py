@@ -35,13 +35,11 @@ import socket
 import struct
 import sys
 import tempfile
-import threading
 import time
 import uuid
 import weakref
 from xml.sax import saxutils
 
-from eventlet import corolocal
 from eventlet import event
 from eventlet.green import subprocess
 from eventlet import greenthread

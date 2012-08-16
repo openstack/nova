@@ -22,7 +22,6 @@
 import errno
 import hashlib
 import os
-import random
 import re
 
 from nova import exception

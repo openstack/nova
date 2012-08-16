@@ -24,7 +24,6 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 
 from __future__ import absolute_import
 
-import base64
 import hashlib
 import os
 import string

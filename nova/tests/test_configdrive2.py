@@ -18,7 +18,6 @@
 
 import mox
 import os
-import subprocess
 import tempfile
 
 from nova import test
