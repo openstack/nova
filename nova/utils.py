@@ -715,14 +715,21 @@ def synchronized(name, external=False):
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
                                 'method "%(method)s"...'),
                               {'lock': name, 'method': f.__name__})
-                    lock_file_path = os.path.join(FLAGS.lock_path,
-                                                  'nova-%s' % name)
+                    lock_path = FLAGS.lock_path or tempfile.mkdtemp()
+                    lock_file_path = os.path.join(lock_path, 'nova-%s' % name)
                     lock = InterProcessLock(lock_file_path)
-                    with lock:
-                        LOG.debug(_('Got file lock "%(lock)s" for '
-                                    'method "%(method)s"...'),
-                                  {'lock': name, 'method': f.__name__})
-                        retval = f(*args, **kwargs)
+                    try:
+                        with lock:
+                            LOG.debug(_('Got file lock "%(lock)s" for '
+                                        'method "%(method)s"...'),
+                                      {'lock': name, 'method': f.__name__})
+                            retval = f(*args, **kwargs)
+                    finally:
+                        # NOTE(vish): This removes the tempdir if we needed
+                        #             to create one. This is used to cleanup
+                        #             the locks left behind by unit tests.
+                        if not FLAGS.lock_path:
+                            shutil.rmtree(lock_path)
                 else:
                     retval = f(*args, **kwargs)
 
