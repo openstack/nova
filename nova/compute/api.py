@@ -102,7 +102,7 @@ def check_instance_lock(function):
         if instance['locked'] and not context.is_admin:
             raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
         # NOTE(danms): at this point, we have verified that either
-        # theinstance is not locked, or the user is suffiently endowed
+        # the instance is not locked, or the user is sufficiently endowed
         # that it doesn't matter. While the following statement may be
         # interpreted as the "the instance is not locked", it actually
         # refers to the whole condition.

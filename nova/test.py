@@ -221,7 +221,7 @@ class TestCase(unittest.TestCase):
                 error = abs(float(d1value) - float(d2value))
                 within_tolerance = error <= tolerance
             except (ValueError, TypeError):
-                # If both values aren't convertable to float, just ignore
+                # If both values aren't convertible to float, just ignore
                 # ValueError if arg is a str, TypeError if it's something else
                 # (like None)
                 within_tolerance = False

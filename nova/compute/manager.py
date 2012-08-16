@@ -2162,7 +2162,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             pass
 
     def get_instance_disk_info(self, context, instance_name):
-        """Getting infomation of instance's current disk.
+        """Getting information of instance's current disk.
 
         DEPRECATED: This method is no longer used by any current code, but it
         is left here to provide backwards compatibility in the rpcapi.
@@ -2436,7 +2436,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         if not instance:
             instance = self.db.instance_get(context, instance_id)
-        LOG.info(_('Post operation of migraton started'),
+        LOG.info(_('Post operation of migration started'),
                  instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -2830,7 +2830,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # to allow all the hooks and checks to be performed.
                         self.compute_api.stop(context, db_instance)
                     except Exception:
-                        # Note(maoy): there is no need to propergate the error
+                        # Note(maoy): there is no need to propagate the error
                         # because the same power_state will be retrieved next
                         # time and retried.
                         # For example, there might be another task scheduled.

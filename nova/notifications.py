@@ -110,7 +110,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
     if verify_states:
         # check whether we need to send notification related to state changes
         fire_update = False
-        # do not send notification if the confitions for vm and(or) task state
+        # do not send notification if the conditions for vm and(or) task state
         # are not satisfied
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
@@ -122,7 +122,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
                 fire_update = True
 
     if fire_update:
-        # send either a state change or a regular notificaion
+        # send either a state change or a regular notification
         try:
             _send_instance_update_notification(context, instance,
                     old_vm_state=old_vm_state, old_task_state=old_task_state,

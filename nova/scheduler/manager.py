@@ -128,7 +128,7 @@ class SchedulerManager(manager.Manager):
                     reservations)
             return result
         except exception.NoValidHost as ex:
-            # don't reraise
+            # don't re-raise
             self._set_vm_state_and_notify('run_instance',
                                          {'vm_state': vm_states.ERROR},
                                           context, ex, request_spec)

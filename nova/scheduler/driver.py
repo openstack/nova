@@ -296,7 +296,7 @@ class Scheduler(object):
     def _live_migration_common_check(self, context, instance_ref, dest):
         """Live migration common check routine.
 
-        Below checkings are followed by
+        The following checks are based on
         http://wiki.libvirt.org/page/TodoPreMigrationChecks
 
         :param context: security context
@@ -313,7 +313,7 @@ class Scheduler(object):
         if orig_hypervisor != dest_hypervisor:
             raise exception.InvalidHypervisorType()
 
-        # Checkng hypervisor version.
+        # Checking hypervisor version.
         orig_hypervisor = oservice_ref['hypervisor_version']
         dest_hypervisor = dservice_ref['hypervisor_version']
         if orig_hypervisor > dest_hypervisor:
@@ -334,7 +334,7 @@ class Scheduler(object):
 
         # Getting total used memory and disk of host
         # It should be sum of memories that are assigned as max value,
-        # because overcommiting is risky.
+        # because overcommitting is risky.
         instance_refs = db.instance_get_all_by_host(context, dest)
         used = sum([i['memory_mb'] for i in instance_refs])
 
