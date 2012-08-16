@@ -303,6 +303,18 @@ class VMOps(object):
             undo_mgr.undo_with(undo_create_vm)
             return vm_ref
 
+        if rescue:
+            # NOTE(johannes): Attach root disk to rescue VM now, before
+            # booting the VM, since we can't hotplug block devices
+            # on non-PV guests
+            @step
+            def attach_root_disk_step(undo_mgr, vm_ref):
+                orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
+                vdi_ref = self._find_root_vdi_ref(orig_vm_ref)
+
+                vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                    DEVICE_RESCUE, bootable=False)
+
         @step
         def prepare_security_group_filters_step(undo_mgr):
             try:
@@ -344,6 +356,9 @@ class VMOps(object):
 
             vm_ref = create_vm_step(undo_mgr, vdis, kernel_file, ramdisk_file)
             prepare_security_group_filters_step(undo_mgr)
+
+            if rescue:
+                attach_root_disk_step(undo_mgr, vm_ref)
 
             boot_instance_step(undo_mgr, vm_ref)
 
@@ -1054,13 +1069,6 @@ class VMOps(object):
         self._acquire_bootlock(vm_ref)
         self.spawn(context, instance, image_meta, [], rescue_password,
                    network_info, name_label=rescue_name_label, rescue=True)
-        rescue_vm_ref = vm_utils.lookup(self._session, rescue_name_label)
-        vdi_ref = self._find_root_vdi_ref(vm_ref)
-
-        rescue_vbd_ref = vm_utils.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, DEVICE_RESCUE,
-                                             bootable=False)
-        self._session.call_xenapi('VBD.plug', rescue_vbd_ref)
 
     def unrescue(self, instance):
         """Unrescue the specified instance.
