@@ -1163,7 +1163,7 @@ class CloudController(object):
         return {'return': "true"}
 
     def run_instances(self, context, **kwargs):
-        max_count = int(kwargs.get('max_count', 1))
+        min_count = int(kwargs.get('min_count', 1))
         if kwargs.get('kernel_id'):
             kernel = self._get_image(context, kwargs['kernel_id'])
             kwargs['kernel_id'] = ec2utils.id_to_glance_id(context,
@@ -1190,8 +1190,8 @@ class CloudController(object):
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_href=image_uuid,
-            min_count=int(kwargs.get('min_count', max_count)),
-            max_count=max_count,
+            max_count=int(kwargs.get('max_count', min_count)),
+            min_count=min_count,
             kernel_id=kwargs.get('kernel_id'),
             ramdisk_id=kwargs.get('ramdisk_id'),
             key_name=kwargs.get('key_name'),
