@@ -29,7 +29,6 @@ LOG = logging.getLogger(__name__)
 def upgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
-    dialect = migrate_engine.url.get_dialect().name
     block_device_mapping = Table('block_device_mapping', meta, autoload=True)
     instances = Table('instances', meta, autoload=True)
     uuid_column = Column('instance_uuid', String(36))

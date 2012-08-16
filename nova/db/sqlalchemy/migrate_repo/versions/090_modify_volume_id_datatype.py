@@ -29,7 +29,6 @@ def upgrade(migrate_engine):
     """Convert volume and snapshot id columns from int to varchar."""
     meta = MetaData()
     meta.bind = migrate_engine
-    dialect = migrate_engine.url.get_dialect().name
 
     volumes = Table('volumes', meta, autoload=True)
     snapshots = Table('snapshots', meta, autoload=True)

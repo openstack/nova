@@ -66,7 +66,6 @@ def _populate_instance_types(instance_types_table):
 def upgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
-    dialect = migrate_engine.url.get_dialect().name
 
     agent_builds = Table('agent_builds', meta,
         Column('created_at', DateTime),
