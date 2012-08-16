@@ -507,12 +507,19 @@ def ensure_path(path):
 
 def metadata_forward():
     """Create forwarding rule for metadata."""
-    iptables_manager.ipv4['nat'].add_rule('PREROUTING',
+    if FLAGS.metadata_host != '127.0.0.1':
+        iptables_manager.ipv4['nat'].add_rule('PREROUTING',
                                           '-s 0.0.0.0/0 -d 169.254.169.254/32 '
                                           '-p tcp -m tcp --dport 80 -j DNAT '
                                           '--to-destination %s:%s' %
                                           (FLAGS.metadata_host,
                                            FLAGS.metadata_port))
+    else:
+        iptables_manager.ipv4['nat'].add_rule('PREROUTING',
+                                          '-s 0.0.0.0/0 -d 169.254.169.254/32 '
+                                          '-p tcp -m tcp --dport 80 '
+                                          '-j REDIRECT --to-ports %s' %
+                                           FLAGS.metadata_port)
     iptables_manager.apply()
 
 
