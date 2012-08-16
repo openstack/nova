@@ -594,7 +594,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance_uuid=instance_uuid)
             return
 
-        request_spec['num_instances'] = 1
+        request_spec['instance_uuids'] = [instance_uuid]
 
         LOG.debug(_("Re-scheduling instance: attempt %d"),
                   retry['num_attempts'], instance_uuid=instance_uuid)

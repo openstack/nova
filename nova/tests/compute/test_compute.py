@@ -68,38 +68,6 @@ flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
-orig_rpc_call = rpc.call
-orig_rpc_cast = rpc.cast
-
-
-def rpc_call_wrapper(context, topic, msg, do_cast=True):
-    """Stub out the scheduler creating the instance entry"""
-    if (topic == FLAGS.scheduler_topic and
-        msg['method'] == 'run_instance'):
-        request_spec = msg['args']['request_spec']
-        reservations = msg['args'].get('reservations')
-        scheduler = scheduler_driver.Scheduler
-        num_instances = request_spec.get('num_instances', 1)
-        instances = []
-        for num in xrange(num_instances):
-            request_spec['instance_properties']['launch_index'] = num
-            instance = scheduler().create_instance_db_entry(
-                    context, request_spec, reservations)
-            encoded = scheduler_driver.encode_instance(instance)
-            instances.append(encoded)
-        return instances
-    else:
-        if do_cast:
-            orig_rpc_cast(context, topic, msg)
-        else:
-            return orig_rpc_call(context, topic, msg)
-
-
-def rpc_cast_wrapper(context, topic, msg):
-    """Stub out the scheduler creating the instance entry in
-    the reservation_id case.
-    """
-    rpc_call_wrapper(context, topic, msg, do_cast=True)
 
 
 def nop_report_driver_status(self):
@@ -136,8 +104,6 @@ class BaseTestCase(test.TestCase):
 
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
-        self.stubs.Set(rpc, 'call', rpc_call_wrapper)
-        self.stubs.Set(rpc, 'cast', rpc_cast_wrapper)
 
         fake_rpcapi = FakeSchedulerAPI()
         self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
@@ -4774,10 +4740,10 @@ class ComputeReschedulingTestCase(BaseTestCase):
     def test_reschedule_success(self):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
-        request_spec = {'num_instances': 42}
+        request_spec = {'instance_uuids': ['foo', 'bar']}
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
             request_spec=request_spec))
-        self.assertEqual(1, request_spec['num_instances'])
+        self.assertEqual(1, len(request_spec['instance_uuids']))
 
 
 class ThatsNoOrdinaryRabbitException(Exception):
