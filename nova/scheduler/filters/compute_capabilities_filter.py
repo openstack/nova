@@ -12,10 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import operator
 
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import extra_specs_ops
 
 
 LOG = logging.getLogger(__name__)
@@ -30,53 +30,10 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if 'extra_specs' not in instance_type:
             return True
 
-        # 1. The following operations are supported:
-        #   =, s==, s!=, s>=, s>, s<=, s<, <in>, <or>, ==, !=, >=, <=
-        # 2. Note that <or> is handled in a different way below.
-        # 3. If the first word in the capability is not one of the operators,
-        #   it is ignored.
-        op_methods = {'=': lambda x, y: float(x) >= float(y),
-                      '<in>': lambda x, y: y in x,
-                      '==': lambda x, y: float(x) == float(y),
-                      '!=': lambda x, y: float(x) != float(y),
-                      '>=': lambda x, y: float(x) >= float(y),
-                      '<=': lambda x, y: float(x) <= float(y),
-                      's==': operator.eq,
-                      's!=': operator.ne,
-                      's<': operator.lt,
-                      's<=': operator.le,
-                      's>': operator.gt,
-                      's>=': operator.ge}
-
         for key, req in instance_type['extra_specs'].iteritems():
             cap = capabilities.get(key, None)
-            words = req.split()
-
-            op = method = None
-            if words:
-                op = words[0]
-                method = op_methods.get(op)
-
-            if op != '<or>' and not method:
-                if cap != req:
-                    return False
-                continue
-
-            if cap is None:
+            if not extra_specs_ops.match(cap, req):
                 return False
-
-            if op == '<or>':  # Ex: <or> v1 <or> v2 <or> v3
-                for idx in range(1, len(words), 2):
-                    if words[idx] == cap:
-                        break
-                else:
-                    return False
-            else:  # method
-                if len(words) == 1:
-                    return False
-                if not method(cap, words[1]):
-                    return False
-
         return True
 
     def host_passes(self, host_state, filter_properties):
