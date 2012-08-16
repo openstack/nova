@@ -133,6 +133,7 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
 
         self.arch = None
         self.ostype = None
+        self.domtype = list()
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCapsGuest, self).parse_dom(xmldoc)
@@ -142,6 +143,9 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
                 self.ostype = c.text
             elif c.tag == "arch":
                 self.arch = c.get("name")
+                for sc in c.getchildren():
+                    if sc.tag == "domain":
+                        self.domtype.append(sc.get("type"))
 
     def format_dom(self):
         caps = super(LibvirtConfigCapsGuest, self).format_dom()
@@ -150,6 +154,10 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
             caps.append(self._text_node("os_type", self.ostype))
         if self.arch:
             arch = etree.Element("arch", name=self.arch)
+            for dt in self.domtype:
+                dte = etree.Element("domain")
+                dte.set("type", dt)
+                arch.append(dte)
             caps.append(arch)
 
         return caps

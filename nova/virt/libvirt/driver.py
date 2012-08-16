@@ -2055,6 +2055,24 @@ class LibvirtDriver(driver.ComputeDriver):
         """Returns the hostname of the hypervisor."""
         return self._conn.getHostname()
 
+    def get_instance_capabilities(self):
+        """Get hypervisor instance capabilities
+
+        Returns a list of tuples that describe instances the
+        hypervisor is capable of hosting.  Each tuple consists
+        of the triplet (arch, hypervisor_type, vm_mode).
+
+        :returns: List of tuples describing instance capabilities
+        """
+        caps = self.get_host_capabilities()
+        instance_caps = list()
+        for g in caps.guests:
+            for dt in g.domtype:
+                instance_cap = (g.arch, dt, g.ostype)
+                instance_caps.append(instance_cap)
+
+        return instance_caps
+
     def get_cpu_info(self):
         """Get cpuinfo information.
 
@@ -2991,6 +3009,8 @@ class HostState(object):
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
         data["hypervisor_hostname"] = self.connection.get_hypervisor_hostname()
+        data["supported_instances"] = \
+            self.connection.get_instance_capabilities()
 
         self._stats = data
 
