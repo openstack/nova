@@ -139,7 +139,8 @@ class ServerDiskConfigController(wsgi.Controller):
     def create(self, req, body):
         context = req.environ['nova.context']
         if authorize(context):
-            self._set_disk_config(body['server'])
+            if 'server' in body:
+                self._set_disk_config(body['server'])
             resp_obj = (yield)
             self._show(req, resp_obj)
 
