@@ -508,29 +508,53 @@ class HostFiltersTestCase(test.TestCase):
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(filt_cls.host_passes(host, filter_properties))
 
-    def test_compute_filter_passes_extra_specs_noop(self):
+    def test_compute_filter_passes_extra_specs_simple1(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1'},
+            passes=True)
+
+    def test_compute_filter_passes_extra_specs_simple2(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '2'},
+            passes=True)
+
+    def test_compute_filter_fails_extra_specs_simple1(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1111'},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_simple2(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': ''},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_simple3(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt3': '3'},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_simple4(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '222'},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_simple5(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '1', 'opt2': '2'},
             especs={'opt1': '1111', 'opt2': '222'},
-            passes=True)
+            passes=False)
 
-    def test_compute_filter_passes_extra_specs_noop2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt3': '1', 'opt4': '2'},
-            especs={'opt1': '1111', 'opt2': '222'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_noop3(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '', 'opt2': ''},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_noop4(self):
+    def test_compute_filter_fails_extra_specs_with_bogus_ops(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '2', 'opt2': '5'},
             especs={'opt1': '> 4', 'opt2': '< 3'},
-            passes=True)
+            passes=False)
 
     def test_compute_filter_passes_extra_specs_with_op_eq(self):
         self._do_test_compute_filter_extra_specs(
