@@ -367,6 +367,11 @@ class ConfigFileValueError(Error):
     pass
 
 
+def _fixpath(p):
+    """Apply tilde expansion and absolutization to a path."""
+    return os.path.abspath(os.path.expanduser(p))
+
+
 def _get_config_dirs(project=None):
     """Return a list of directors where config files may be located.
 
@@ -384,11 +389,9 @@ def _get_config_dirs(project=None):
       ~/
       /etc/
     """
-    fix_path = lambda p: os.path.abspath(os.path.expanduser(p))
-
     cfg_dirs = [
-        fix_path(os.path.join('~', '.' + project)) if project else None,
-        fix_path('~'),
+        _fixpath(os.path.join('~', '.' + project)) if project else None,
+        _fixpath('~'),
         os.path.join('/etc', project) if project else None,
         '/etc'
     ]
@@ -809,7 +812,7 @@ class OptGroup(object):
         if _is_opt_registered(self._opts, opt):
             return False
 
-        self._opts[opt.dest] = {'opt': opt, 'override': None, 'default': None}
+        self._opts[opt.dest] = {'opt': opt}
 
         return True
 
@@ -1087,7 +1090,7 @@ class ConfigOpts(collections.Mapping):
         if _is_opt_registered(self._opts, opt):
             return False
 
-        self._opts[opt.dest] = {'opt': opt, 'override': None, 'default': None}
+        self._opts[opt.dest] = {'opt': opt}
 
         return True
 
@@ -1156,6 +1159,25 @@ class ConfigOpts(collections.Mapping):
         for opt in opts:
             self.unregister_opt(opt, group, clear_cache=False)
 
+    def import_opt(self, name, module_str, group=None):
+        """Import an option definition from a module.
+
+        Import a module and check that a given option is registered.
+
+        This is intended for use with global configuration objects
+        like cfg.CONF where modules commonly register options with
+        CONF at module load time. If one module requires an option
+        defined by another module it can use this method to explicitly
+        declare the dependency.
+
+        :param name: the name/dest of the opt
+        :param module_str: the name of a module to import
+        :param group: an option OptGroup object or group name
+        :raises: NoSuchOptError, NoSuchGroupError
+        """
+        __import__(module_str)
+        self._get_opt_info(name, group)
+
     @__clear_cache
     def set_override(self, name, override, group=None):
         """Override an opt value.
@@ -1186,6 +1208,33 @@ class ConfigOpts(collections.Mapping):
         opt_info = self._get_opt_info(name, group)
         opt_info['default'] = default
 
+    @__clear_cache
+    def clear_override(self, name, group=None):
+        """Clear an override an opt value.
+
+        Clear a previously set override of the command line, config file
+        and default values of a given option.
+
+        :param name: the name/dest of the opt
+        :param group: an option OptGroup object or group name
+        :raises: NoSuchOptError, NoSuchGroupError
+        """
+        opt_info = self._get_opt_info(name, group)
+        opt_info.pop('override', None)
+
+    @__clear_cache
+    def clear_default(self, name, group=None):
+        """Clear an override an opt's default value.
+
+        Clear a previously set override of the default value of given option.
+
+        :param name: the name/dest of the opt
+        :param group: an option OptGroup object or group name
+        :raises: NoSuchOptError, NoSuchGroupError
+        """
+        opt_info = self._get_opt_info(name, group)
+        opt_info.pop('default', None)
+
     def _all_opt_infos(self):
         """A generator function for iteration opt infos."""
         for info in self._opts.values():
@@ -1202,8 +1251,8 @@ class ConfigOpts(collections.Mapping):
     def _unset_defaults_and_overrides(self):
         """Unset any default or override on all options."""
         for info, group in self._all_opt_infos():
-            info['default'] = None
-            info['override'] = None
+            info.pop('default', None)
+            info.pop('override', None)
 
     def disable_interspersed_args(self):
         """Set parsing to stop on the first non-option.
@@ -1249,10 +1298,10 @@ class ConfigOpts(collections.Mapping):
         """
         dirs = []
         if self.config_dir:
-            dirs.append(self.config_dir)
+            dirs.append(_fixpath(self.config_dir))
 
         for cf in reversed(self.config_file):
-            dirs.append(os.path.dirname(cf))
+            dirs.append(os.path.dirname(_fixpath(cf)))
 
         dirs.extend(_get_config_dirs(self.project))
 
@@ -1326,10 +1375,10 @@ class ConfigOpts(collections.Mapping):
             return self.GroupAttr(self, self._get_group(name))
 
         info = self._get_opt_info(name, group)
-        default, opt, override = [info[k] for k in sorted(info.keys())]
+        opt = info['opt']
 
-        if override is not None:
-            return override
+        if 'override' in info:
+            return info['override']
 
         values = []
         if self._cparser is not None:
@@ -1357,8 +1406,8 @@ class ConfigOpts(collections.Mapping):
         if values:
             return values
 
-        if default is not None:
-            return default
+        if 'default' in info:
+            return info['default']
 
         return opt.default
 
@@ -1433,6 +1482,8 @@ class ConfigOpts(collections.Mapping):
             config_dir_glob = os.path.join(self.config_dir, '*.conf')
             config_files += sorted(glob.glob(config_dir_glob))
 
+        config_files = [_fixpath(p) for p in config_files]
+
         self._cparser = MultiConfigParser()
 
         try:
@@ -1450,10 +1501,10 @@ class ConfigOpts(collections.Mapping):
         :raises: RequiredOptError
         """
         for info, group in self._all_opt_infos():
-            default, opt, override = [info[k] for k in sorted(info.keys())]
+            opt = info['opt']
 
             if opt.required:
-                if (default is not None or override is not None):
+                if ('default' in info or 'override' in info):
                     continue
 
                 if self._get(opt.name, group) is None:

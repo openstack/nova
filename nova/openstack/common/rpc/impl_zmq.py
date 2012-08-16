@@ -639,26 +639,22 @@ def create_connection(conf, new=True):
 
 def multicall(conf, *args, **kwargs):
     """Multiple calls."""
-    register_opts(conf)
     return _multi_send(_call, *args, **kwargs)
 
 
 def call(conf, *args, **kwargs):
     """Send a message, expect a response."""
-    register_opts(conf)
     data = _multi_send(_call, *args, **kwargs)
     return data[-1]
 
 
 def cast(conf, *args, **kwargs):
     """Send a message expecting no reply."""
-    register_opts(conf)
     _multi_send(_cast, *args, **kwargs)
 
 
 def fanout_cast(conf, context, topic, msg, **kwargs):
     """Send a message to all listening and expect no reply."""
-    register_opts(conf)
     # NOTE(ewindisch): fanout~ is used because it avoid splitting on .
     # and acts as a non-subtle hint to the matchmaker and ZmqProxy.
     _multi_send(_cast, context, 'fanout~' + str(topic), msg, **kwargs)
@@ -670,7 +666,6 @@ def notify(conf, context, topic, msg, **kwargs):
     Notifications are sent to topic-priority.
     This differs from the AMQP drivers which send to topic.priority.
     """
-    register_opts(conf)
     # NOTE(ewindisch): dot-priority in rpc notifier does not
     # work with our assumptions.
     topic.replace('.', '-')

@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import inspect
 import uuid
 
 from nova.openstack.common import cfg
