@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 Openstack, LLC.
+# Copyright (c) 2012 OpenStack, LLC.
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 #

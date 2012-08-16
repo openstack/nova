@@ -214,6 +214,15 @@ The copy of the code should never be directly modified here. Please
 always update openstack-common first and then run the script to copy
 the changes across.
 
+OpenStack Trademark
+-------------------
+
+OpenStack is a registered trademark of OpenStack, LLC, and uses the
+following capitalization:
+
+   OpenStack
+
+
 Commit Messages
 ---------------
 Using a common format for commit messages will help keep our git history
