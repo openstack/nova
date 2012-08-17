@@ -876,12 +876,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if not xml:
             xml = virt_dom.XMLDesc(0)
 
-        # NOTE(dprince): reset was added in Libvirt 0.9.7
-        if hasattr(virt_dom, 'reset'):
-            virt_dom.reset(0)
-        else:
-            self._destroy(instance)
-            self._create_domain(xml, virt_dom)
+        self._destroy(instance)
+        self._create_domain(xml, virt_dom)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
