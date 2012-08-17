@@ -239,6 +239,14 @@ class VolumeDriver(object):
         """Disallow connection from connector"""
         raise NotImplementedError()
 
+    def attach_volume(self, context, volume_id, instance_uuid, mountpoint):
+        """ Callback for volume attached to instance."""
+        pass
+
+    def detach_volume(self, context, volume_id):
+        """ Callback for volume detached."""
+        pass
+
     def get_volume_stats(self, refresh=False):
         """Return the current state of the volume service. If 'refresh' is
            True, run the update first."""
