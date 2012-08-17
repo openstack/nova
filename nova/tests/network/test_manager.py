@@ -1042,12 +1042,14 @@ class VlanNetworkTestCase(test.TestCase):
         fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
         network = db.network_get(elevated, fixed['network_id'])
 
-        db.instance_destroy(self.context.elevated(), instance['uuid'])
-        self.assertRaises(exception.InstanceNotFound,
-                                  self.network.deallocate_fixed_ip,
-                                  context1,
-                                  fix_addr,
-                                  'fake')
+        def fake_refresh(instance_uuid):
+            raise test.TestingException()
+        self.stubs.Set(self.network,
+                '_do_trigger_security_group_members_refresh_for_instance',
+                fake_refresh)
+        self.assertRaises(test.TestingException,
+                          self.network.deallocate_fixed_ip,
+                          context1, fix_addr, 'fake')
         fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
         self.assertTrue(fixed['allocated'])
 
@@ -1541,10 +1543,45 @@ class FloatingIPTestCase(test.TestCase):
                 instance_id=instance_ref['id'])
 
     def test_deallocation_deleted_instance(self):
-        instance_ref = db.api.instance_create(self.context,
-                {"project_id": self.project_id, "deleted": True})
+        self.stubs.Set(self.network, '_teardown_network_on_host',
+                       lambda *args, **kwargs: None)
+        instance = db.api.instance_create(self.context, {
+                'project_id': self.project_id, 'deleted': True})
+        network = db.api.network_create_safe(self.context.elevated(), {
+                'project_id': self.project_id})
+        addr = db.fixed_ip_create(self.context, {'allocated': True,
+                'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
+                'network_id': network['id']})
+        fixed = db.fixed_ip_get_by_address(
+                self.context.elevated(read_deleted='yes'), addr)
+        db.api.floating_ip_create(self.context, {
+                'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
+                'fixed_ip_id': fixed['id'],
+                'project_id': self.project_id})
         self.network.deallocate_for_instance(self.context,
-                instance_id=instance_ref['id'])
+                instance_id=instance['id'])
+
+    def test_deallocation_duplicate_floating_ip(self):
+        self.stubs.Set(self.network, '_teardown_network_on_host',
+                       lambda *args, **kwargs: None)
+        instance = db.api.instance_create(self.context, {
+                'project_id': self.project_id})
+        network = db.api.network_create_safe(self.context.elevated(), {
+                'project_id': self.project_id})
+        addr = db.fixed_ip_create(self.context, {'allocated': True,
+                'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
+                'network_id': network['id']})
+        fixed = db.fixed_ip_get_by_address(
+                self.context.elevated(read_deleted='yes'), addr)
+        db.api.floating_ip_create(self.context, {
+                'address': '10.10.10.10',
+                'deleted': True})
+        db.api.floating_ip_create(self.context, {
+                'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
+                'fixed_ip_id': fixed['id'],
+                'project_id': self.project_id})
+        self.network.deallocate_for_instance(self.context,
+                instance_id=instance['id'])
 
     def test_floating_dns_create_conflict(self):
         zone = "example.org"
