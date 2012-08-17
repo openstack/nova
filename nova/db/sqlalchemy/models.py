@@ -428,19 +428,6 @@ class Quota(BASE, NovaBase):
     hard_limit = Column(Integer, nullable=True)
 
 
-class UserQuota(BASE, NovaBase):
-    """Represents a single quota override for a user."""
-
-    __tablename__ = 'user_quotas'
-    id = Column(Integer, primary_key=True)
-
-    user_id = Column(String(255), index=True)
-    project_id = Column(String(255), index=True)
-
-    resource = Column(String(255))
-    hard_limit = Column(Integer, nullable=True)
-
-
 class QuotaClass(BASE, NovaBase):
     """Represents a single quota override for a quota class.
 
@@ -464,7 +451,6 @@ class QuotaUsage(BASE, NovaBase):
     __tablename__ = 'quota_usages'
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(String(255), index=True)
     project_id = Column(String(255), index=True)
     resource = Column(String(255))
 
@@ -487,7 +473,6 @@ class Reservation(BASE, NovaBase):
 
     usage_id = Column(Integer, ForeignKey('quota_usages.id'), nullable=False)
 
-    user_id = Column(String(255), index=True)
     project_id = Column(String(255), index=True)
     resource = Column(String(255))
 

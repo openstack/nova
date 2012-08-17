@@ -568,12 +568,6 @@ def instance_create(context, values):
     return IMPL.instance_create(context, values)
 
 
-def instance_data_get_for_user(context, user_id, project_id, session=None):
-    """Get (instance_count, total_cores, total_ram) for user."""
-    return IMPL.instance_data_get_for_user(context, user_id, project_id,
-                                           session=session)
-
-
 def instance_data_get_for_project(context, project_id, session=None):
     """Get (instance_count, total_cores, total_ram) for project."""
     return IMPL.instance_data_get_for_project(context, project_id,
@@ -955,42 +949,6 @@ def quota_destroy(context, project_id, resource):
 ###################
 
 
-def quota_create_for_user(context, user_id, project_id, resource, limit):
-    """Create a quota for the given user and project."""
-    return IMPL.quota_create_for_user(context, user_id,
-                                      project_id, resource, limit)
-
-
-def quota_get_for_user(context, user_id, project_id, resource):
-    """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get_for_user(context, user_id,
-                                   project_id, resource)
-
-
-def quota_get_all_by_user(context, user_id, project_id):
-    """Retrieve all quotas associated with a given user and project."""
-    return IMPL.quota_get_all_by_user(context, user_id, project_id)
-
-
-def quota_get_remaining(context, project_id):
-    """Retrieve the remaining quotas associated with a given project."""
-    return IMPL.quota_get_remaining(context, project_id)
-
-
-def quota_update_for_user(context, user_id, project_id, resource, limit):
-    """Update a quota or raise if it does not exist."""
-    return IMPL.quota_update_for_user(context, user_id,
-                                      project_id, resource, limit)
-
-
-def quota_destroy_for_user(context, user_id, project_id, resource):
-    """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy_for_user(context, user_id, project_id, resource)
-
-
-###################
-
-
 def quota_class_create(context, class_name, resource, limit):
     """Create a quota class for the given name and resource."""
     return IMPL.quota_class_create(context, class_name, resource, limit)
@@ -1024,21 +982,16 @@ def quota_class_destroy_all_by_name(context, class_name):
 ###################
 
 
-def quota_usage_create(context, user_id, project_id, resource, in_use,
-                       reserved, until_refresh):
-    """Create a quota usage for the given user and resource."""
-    return IMPL.quota_usage_create(context, user_id, project_id, resource,
+def quota_usage_create(context, project_id, resource, in_use, reserved,
+                       until_refresh):
+    """Create a quota usage for the given project and resource."""
+    return IMPL.quota_usage_create(context, project_id, resource,
                                    in_use, reserved, until_refresh)
 
 
-def quota_usage_get(context, user_id, project_id, resource):
+def quota_usage_get(context, project_id, resource):
     """Retrieve a quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_get(context, user_id, project_id, resource)
-
-
-def quota_usage_get_all_by_user(context, user_id, project_id):
-    """Retrieve all usage associated with a given user."""
-    return IMPL.quota_usage_get_all_by_user(context, user_id, project_id)
+    return IMPL.quota_usage_get(context, project_id, resource)
 
 
 def quota_usage_get_all_by_project(context, project_id):
@@ -1046,25 +999,25 @@ def quota_usage_get_all_by_project(context, project_id):
     return IMPL.quota_usage_get_all_by_project(context, project_id)
 
 
-def quota_usage_update(context, user_id, project_id, resource, in_use,
-                       reserved, until_refresh):
+def quota_usage_update(context, class_name, resource, in_use, reserved,
+                       until_refresh):
     """Update a quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_update(context, user_id, project_id, resource,
+    return IMPL.quota_usage_update(context, project_id, resource,
                                    in_use, reserved, until_refresh)
 
 
-def quota_usage_destroy(context, user_id, project_id, resource):
+def quota_usage_destroy(context, project_id, resource):
     """Destroy the quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_destroy(context, user_id, project_id, resource)
+    return IMPL.quota_usage_destroy(context, project_id, resource)
 
 
 ###################
 
 
-def reservation_create(context, uuid, usage, user_id, project_id, resource,
-                       delta, expire):
-    """Create a reservation for the given user and resource."""
-    return IMPL.reservation_create(context, uuid, usage, user_id, project_id,
+def reservation_create(context, uuid, usage, project_id, resource, delta,
+                       expire):
+    """Create a reservation for the given project and resource."""
+    return IMPL.reservation_create(context, uuid, usage, project_id,
                                    resource, delta, expire)
 
 
@@ -1073,9 +1026,9 @@ def reservation_get(context, uuid):
     return IMPL.reservation_get(context, uuid)
 
 
-def reservation_get_all_by_user(context, user_id, project_id):
-    """Retrieve all reservations associated with a given user."""
-    return IMPL.reservation_get_all_by_user(context, user_id, project_id)
+def reservation_get_all_by_project(context, project_id):
+    """Retrieve all reservations associated with a given project."""
+    return IMPL.reservation_get_all_by_project(context, project_id)
 
 
 def reservation_destroy(context, uuid):
@@ -1101,11 +1054,6 @@ def reservation_commit(context, reservations):
 def reservation_rollback(context, reservations):
     """Roll back quota reservations."""
     return IMPL.reservation_rollback(context, reservations)
-
-
-def quota_destroy_all_by_user(context, user_id, project_id):
-    """Destroy all quotas associated with a given user."""
-    return IMPL.quota_destroy_all_by_user(context, user_id, project_id)
 
 
 def quota_destroy_all_by_project(context, project_id):
@@ -1134,12 +1082,6 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return IMPL.volume_create(context, values)
-
-
-def volume_data_get_for_user(context, user_id, project_id, session=None):
-    """Get (volume_count, gigabytes) for user."""
-    return IMPL.volume_data_get_for_user(context, user_id, project_id,
-                                         session=session)
 
 
 def volume_data_get_for_project(context, project_id, session=None):
@@ -1330,11 +1272,6 @@ def security_group_get_by_name(context, project_id, group_name):
     return IMPL.security_group_get_by_name(context, project_id, group_name)
 
 
-def security_group_get_by_user(context, user_id, project_id):
-    """Get all security groups belonging to a user."""
-    return IMPL.security_group_get_by_user(context, user_id, project_id)
-
-
 def security_group_get_by_project(context, project_id):
     """Get all security groups belonging to a project."""
     return IMPL.security_group_get_by_project(context, project_id)
@@ -1368,12 +1305,6 @@ def security_group_ensure_default(context):
 def security_group_destroy(context, security_group_id):
     """Deletes a security group."""
     return IMPL.security_group_destroy(context, security_group_id)
-
-
-def security_group_count_by_user(context, user_id, project_id, session=None):
-    """Count number of security groups for a user in specific project."""
-    return IMPL.security_group_count_by_user(context, user_id, project_id,
-                                             session=session)
 
 
 def security_group_count_by_project(context, project_id, session=None):
