@@ -48,3 +48,4 @@ def set_defaults(conf):
     conf.set_default('api_paste_config', '$state_path/etc/nova/api-paste.ini')
     conf.set_default('rpc_response_timeout', 5)
     conf.set_default('rpc_cast_timeout', 5)
+    conf.set_default('lock_path', None)

@@ -95,8 +95,6 @@ function run_tests {
         cat run_tests.log
     fi
   fi
-  # cleanup locks - not really needed, but stops pollution of the source tree
-  rm -f nova-ensure_bridge nova-ensure_vlan nova-iptables nova-testlock1 nova-testlock2
   return $RESULT
 }
 

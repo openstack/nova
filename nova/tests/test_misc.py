@@ -108,47 +108,51 @@ class LockTestCase(test.TestCase):
 
     def test_nested_external_works(self):
         """We can nest external syncs"""
-        sentinel = object()
+        with utils.tempdir() as tempdir:
+            self.flags(lock_path=tempdir)
+            sentinel = object()
 
-        @utils.synchronized('testlock1', external=True)
-        def outer_lock():
+            @utils.synchronized('testlock1', external=True)
+            def outer_lock():
 
-            @utils.synchronized('testlock2', external=True)
-            def inner_lock():
-                return sentinel
-            return inner_lock()
+                @utils.synchronized('testlock2', external=True)
+                def inner_lock():
+                    return sentinel
+                return inner_lock()
 
-        self.assertEqual(sentinel, outer_lock())
+            self.assertEqual(sentinel, outer_lock())
 
     def test_synchronized_externally(self):
         """We can lock across multiple processes"""
-        rpipe1, wpipe1 = os.pipe()
-        rpipe2, wpipe2 = os.pipe()
+        with utils.tempdir() as tempdir:
+            self.flags(lock_path=tempdir)
+            rpipe1, wpipe1 = os.pipe()
+            rpipe2, wpipe2 = os.pipe()
 
-        @utils.synchronized('testlock1', external=True)
-        def f(rpipe, wpipe):
-            try:
-                os.write(wpipe, "foo")
-            except OSError, e:
-                self.assertEquals(e.errno, errno.EPIPE)
-                return
+            @utils.synchronized('testlock1', external=True)
+            def f(rpipe, wpipe):
+                try:
+                    os.write(wpipe, "foo")
+                except OSError, e:
+                    self.assertEquals(e.errno, errno.EPIPE)
+                    return
 
-            rfds, _wfds, _efds = select.select([rpipe], [], [], 1)
-            self.assertEquals(len(rfds), 0, "The other process, which was"
-                                            " supposed to be locked, "
-                                            "wrote on its end of the "
-                                            "pipe")
-            os.close(rpipe)
+                rfds, _wfds, _efds = select.select([rpipe], [], [], 1)
+                self.assertEquals(len(rfds), 0, "The other process, which was"
+                                                " supposed to be locked, "
+                                                "wrote on its end of the "
+                                                "pipe")
+                os.close(rpipe)
 
-        pid = os.fork()
-        if pid > 0:
-            os.close(wpipe1)
-            os.close(rpipe2)
+            pid = os.fork()
+            if pid > 0:
+                os.close(wpipe1)
+                os.close(rpipe2)
 
-            f(rpipe1, wpipe2)
-        else:
-            os.close(rpipe1)
-            os.close(wpipe2)
+                f(rpipe1, wpipe2)
+            else:
+                os.close(rpipe1)
+                os.close(wpipe2)
 
-            f(rpipe2, wpipe1)
-            os._exit(0)
+                f(rpipe2, wpipe1)
+                os._exit(0)
