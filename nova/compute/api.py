@@ -1627,6 +1627,9 @@ class API(base.Base):
     @wrap_check_policy
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
+        if not instance['host']:
+            raise exception.InstanceNotReady(instance=instance)
+
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)
 
