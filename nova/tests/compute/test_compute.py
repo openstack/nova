@@ -3896,6 +3896,15 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_instance, fake_console_type)
         self.assertEqual(console, {'url': 'fake_console_url'})
 
+    def test_get_vnc_console_no_host(self):
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_vnc_console,
+                          self.context, instance, 'novnc')
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_console_output(self):
         fake_instance = {'uuid': 'fake_uuid',
                          'host': 'fake_compute_host'}
