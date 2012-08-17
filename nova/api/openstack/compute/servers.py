@@ -813,6 +813,9 @@ class Controller(wsgi.Controller):
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
+        if not 'server' in body:
+            raise exc.HTTPUnprocessableEntity()
+
         ctxt = req.environ['nova.context']
         update_dict = {}
 

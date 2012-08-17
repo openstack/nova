@@ -4765,12 +4765,29 @@ class ServersAllExtensionsTestCase(test.TestCase):
         """Test create with malformed body"""
 
         def fake_create(*args, **kwargs):
-            raise Exception("Request should not reach the compute API.")
+            raise test.TestingException("Should not reach the compute API.")
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
 
         req = fakes.HTTPRequest.blank('/fake/servers')
         req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {'foo': {'a': 'b'}}
+
+        req.body = jsonutils.dumps(body)
+        res = req.get_response(self.app)
+        self.assertEqual(422, res.status_int)
+
+    def test_update_missing_server(self):
+        """Test create with malformed body"""
+
+        def fake_update(*args, **kwargs):
+            raise test.TestingException("Should not reach the compute API.")
+
+        self.stubs.Set(nova.compute.api.API, 'create', fake_update)
+
+        req = fakes.HTTPRequest.blank('/fake/servers/1')
+        req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
 
