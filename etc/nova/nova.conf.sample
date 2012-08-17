@@ -1211,7 +1211,7 @@
 ####               "nova.scheduler.filters.standard_filters" maps to all
 ####               filters included with nova.
 
-# scheduler_default_filters=AvailabilityZoneFilter,RamFilter,ComputeFilter
+# scheduler_default_filters=AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter
 #### (ListOpt) Which filter class names to use for filtering hosts when not
 ####           specified in the request.
 
