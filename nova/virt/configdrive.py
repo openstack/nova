@@ -17,13 +17,10 @@
 
 """Config Drive v2 helper."""
 
-import base64
-import json
 import os
 import shutil
 import tempfile
 
-from nova.api.metadata import base as instance_metadata
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg

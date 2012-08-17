@@ -16,7 +16,6 @@
 #    under the License.
 
 from nova import db
-from nova import exception
 from nova import ipv6
 from nova.openstack.common import log as logging
 

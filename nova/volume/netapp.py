@@ -23,7 +23,6 @@ ONTAP 7-mode storage systems with installed iSCSI licenses.
 
 """
 
-import string
 import time
 
 import suds

@@ -29,7 +29,6 @@ from nova.compute import power_state
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
-from nova import utils
 from nova.virt import driver
 
 

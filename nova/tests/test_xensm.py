@@ -16,18 +16,14 @@
 
 """Test suite for Xen Storage Manager Volume Driver."""
 
-import os
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
-from nova import test
 from nova.tests.xenapi import stubs
-from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
-from nova.virt.xenapi import volume_utils
 from nova.volume import xensm
 
 LOG = logging.getLogger(__name__)

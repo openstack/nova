@@ -22,7 +22,6 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
-from eventlet import greenthread
 
 from nova import context
 from nova import db

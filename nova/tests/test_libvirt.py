@@ -31,8 +31,6 @@ from xml.dom import minidom
 from nova.api.ec2 import cloud
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context

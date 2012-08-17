@@ -22,7 +22,6 @@ Driver base-classes:
     types that support that contract
 """
 
-from nova.compute import power_state
 from nova import flags
 from nova.openstack.common import log as logging
 

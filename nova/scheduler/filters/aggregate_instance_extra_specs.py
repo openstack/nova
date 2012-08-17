@@ -15,10 +15,8 @@
 #    under the License.
 
 from nova import db
-from nova import exception
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)

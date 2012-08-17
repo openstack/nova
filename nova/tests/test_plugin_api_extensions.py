@@ -15,11 +15,9 @@
 
 import pkg_resources
 
-import nova
 from nova.api.openstack.compute import extensions as computeextensions
 from nova.api.openstack import extensions
 from nova.openstack.common.plugin import plugin
-from nova.openstack.common.plugin import pluginmanager
 from nova import test
 
 

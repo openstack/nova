@@ -15,7 +15,7 @@
 #    under the License.
 
 from sqlalchemy import Boolean, Column, DateTime, Integer
-from sqlalchemy import Index, MetaData, String, Table
+from sqlalchemy import MetaData, String, Table
 
 
 def upgrade(migrate_engine):
