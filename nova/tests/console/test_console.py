@@ -18,11 +18,14 @@
 
 """Tests For Console proxy."""
 
+from nova.console import api as console_api
+from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
+from nova.openstack.common import rpc
 from nova import test
 
 FLAGS = flags.FLAGS
@@ -30,7 +33,7 @@ flags.DECLARE('console_driver', 'nova.console.manager')
 
 
 class ConsoleTestCase(test.TestCase):
-    """Test case for console proxy"""
+    """Test case for console proxy manager"""
     def setUp(self):
         super(ConsoleTestCase, self).setUp()
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
@@ -116,3 +119,68 @@ class ConsoleTestCase(test.TestCase):
                           self.context,
                           console_id)
         db.instance_destroy(self.context, instance['uuid'])
+
+
+class ConsoleAPITestCase(test.TestCase):
+    """Test case for console API"""
+    def setUp(self):
+        super(ConsoleAPITestCase, self).setUp()
+
+        self.context = context.RequestContext('fake', 'fake')
+        self.console_api = console_api.API()
+        self.fake_uuid = '00000000-aaaa-bbbb-cccc-000000000000'
+        self.fake_instance = {
+            'id': 1,
+            'uuid': self.fake_uuid,
+            'host': 'fake_host'
+        }
+        self.fake_console = {
+            'pool': {'host': 'fake_host'},
+            'id': 'fake_id'
+        }
+
+        def _fake_cast(_ctxt, _topic, _msg):
+            pass
+        self.stubs.Set(rpc, 'cast', _fake_cast)
+
+        def _fake_db_console_get(_ctxt, _console_uuid, _instance_uuid):
+            return self.fake_console
+        self.stubs.Set(db, 'console_get', _fake_db_console_get)
+
+        def _fake_db_console_get_all_by_instance(_ctxt, _instance_uuid):
+            return [self.fake_console]
+        self.stubs.Set(db, 'console_get_all_by_instance',
+                       _fake_db_console_get_all_by_instance)
+
+        def _fake_instance_get_by_uuid(_ctxt, _instance_uuid):
+            return self.fake_instance
+        self.stubs.Set(db, 'instance_get_by_uuid', _fake_instance_get_by_uuid)
+
+    def test_get_consoles(self):
+        console = self.console_api.get_consoles(self.context, self.fake_uuid)
+        self.assertEqual(console, [self.fake_console])
+
+    def test_get_console(self):
+        console = self.console_api.get_console(self.context, self.fake_uuid,
+                                               'fake_id')
+        self.assertEqual(console, self.fake_console)
+
+    def test_delete_console(self):
+        self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI, 'remove_console')
+
+        console_rpcapi.ConsoleAPI.remove_console(self.context, 'fake_id')
+
+        self.mox.ReplayAll()
+
+        self.console_api.delete_console(self.context, self.fake_uuid,
+                                        'fake_id')
+
+    def test_create_console(self):
+        self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI, 'add_console')
+
+        console_rpcapi.ConsoleAPI.add_console(self.context,
+                                              self.fake_instance['id'])
+
+        self.mox.ReplayAll()
+
+        self.console_api.create_console(self.context, self.fake_uuid)
