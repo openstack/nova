@@ -75,7 +75,10 @@ def nop_report_driver_status(self):
 
 
 class FakeSchedulerAPI(object):
-    def run_instance(self, *args, **kwargs):
+
+    def run_instance(self, ctxt, request_spec, admin_password,
+            injected_files, requested_networks, is_first_time,
+            filter_properties):
         pass
 
 
