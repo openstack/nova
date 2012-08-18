@@ -92,3 +92,23 @@ def enforce(context, action, target):
 
     policy.enforce(match_list, target, credentials,
                    exception.PolicyNotAuthorized, action=action)
+
+
+def check_admin_role(roles):
+    """Whether or not roles contains 'admin' role according to policy setting.
+
+    """
+    init()
+
+    action = 'admin'
+    match_list = ('rule:%s' % action,)
+    target = {}
+    credentials = {'roles': roles}
+
+    try:
+        policy.enforce(match_list, target, credentials,
+                       exception.PolicyNotAuthorized, action=action)
+    except exception.PolicyNotAuthorized:
+        return False
+
+    return True

@@ -49,6 +49,11 @@ class PolicyFileTestCase(test.TestCase):
             tmpfilename = os.path.join(tmpdir, 'policy')
             self.flags(policy_file=tmpfilename)
 
+            # NOTE(uni): context construction invokes policy check to determin
+            # is_admin or not. As a side-effect, policy reset is needed here
+            # to flush existing policy cache.
+            policy.reset()
+
             action = "example:test"
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write("""{"example:test": []}""")

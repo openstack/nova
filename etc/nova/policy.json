@@ -1,4 +1,5 @@
 {
+    "admin":  [["role:admin"]],
     "admin_or_owner":  [["role:admin"], ["project_id:%(project_id)s"]],
     "default": [["rule:admin_or_owner"]],
 

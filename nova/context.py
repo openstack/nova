@@ -24,6 +24,7 @@ import copy
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import policy
 from nova import utils
 
 
@@ -66,9 +67,7 @@ class RequestContext(object):
         self.roles = roles or []
         self.is_admin = is_admin
         if self.is_admin is None:
-            self.is_admin = 'admin' in [x.lower() for x in self.roles]
-        elif self.is_admin and 'admin' not in self.roles:
-            self.roles.append('admin')
+            self.is_admin = policy.check_admin_role(self.roles)
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:

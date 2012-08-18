@@ -26,6 +26,12 @@ class ContextTestCase(test.TestCase):
                                       roles=['admin', 'weasel'])
         self.assertEquals(ctxt.is_admin, True)
 
+    def test_request_context_sets_is_admin_by_role(self):
+        ctxt = context.RequestContext('111',
+                                      '222',
+                                      roles=['administrator'])
+        self.assertEquals(ctxt.is_admin, True)
+
     def test_request_context_sets_is_admin_upcase(self):
         ctxt = context.RequestContext('111',
                                       '222',
