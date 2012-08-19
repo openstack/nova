@@ -37,7 +37,6 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class ComputeValidateDeviceTestCase(test.TestCase):
@@ -144,7 +143,6 @@ class UsageInfoTestCase(test.TestCase):
                        fake_get_nw_info)
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   stub_network=True,
           notification_driver=['nova.openstack.common.notifier.test_notifier'],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
@@ -158,6 +156,7 @@ class UsageInfoTestCase(test.TestCase):
 
         self.stubs.Set(nova.tests.image.fake._FakeImageService,
                        'show', fake_show)
+        fake_network.set_stub_network_methods(self.stubs)
 
     def tearDown(self):
         notifier_api._reset_drivers()

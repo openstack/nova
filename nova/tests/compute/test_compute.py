@@ -51,7 +51,6 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
-from nova.scheduler import driver as scheduler_driver
 from nova import test
 from nova.tests.db.fakes import FakeModel
 from nova.tests import fake_network
@@ -63,7 +62,6 @@ import nova.volume
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 
 
@@ -87,7 +85,6 @@ class BaseTestCase(test.TestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   stub_network=True,
          notification_driver=['nova.openstack.common.notifier.test_notifier'],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
@@ -110,6 +107,7 @@ class BaseTestCase(test.TestCase):
 
         fake_rpcapi = FakeSchedulerAPI()
         self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
+        fake_network.set_stub_network_methods(self.stubs)
 
     def tearDown(self):
         fake_image.FakeImageService_reset()
@@ -262,7 +260,8 @@ class ComputeTestCase(BaseTestCase):
             db.instance_destroy(self.context, instance['uuid'])
 
     def test_default_access_ip(self):
-        self.flags(default_access_ip_network_name='test1', stub_network=False)
+        self.flags(default_access_ip_network_name='test1')
+        fake_network.unset_stub_network_methods(self.stubs)
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
         try:
@@ -1006,7 +1005,7 @@ class ComputeTestCase(BaseTestCase):
                 requested_networks=None,
                 vpn=False).AndRaise(rpc_common.RemoteError())
 
-        self.flags(stub_network=False)
+        fake_network.unset_stub_network_methods(self.stubs)
 
         self.mox.ReplayAll()
 

@@ -416,11 +416,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.refresh_provider_fw_rules(**kwargs)
 
     def _get_instance_nw_info(self, context, instance):
-        """Get a list of dictionaries of network data of an instance.
-        Returns an empty list if stub_network flag is set."""
-        if FLAGS.stub_network:
-            return network_model.NetworkInfo()
-
+        """Get a list of dictionaries of network data of an instance."""
         # get the network info from network
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
@@ -722,10 +718,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _allocate_network(self, context, instance, requested_networks):
         """Allocate networks for an instance and return the network info"""
-        if FLAGS.stub_network:
-            LOG.debug(_('Skipping network allocation for instance'),
-                      instance=instance)
-            return network_model.NetworkInfo()
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.NETWORKING)
@@ -792,10 +784,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 extra_usage_info=extra_usage_info, host=self.host)
 
     def _deallocate_network(self, context, instance):
-        if not FLAGS.stub_network:
-            LOG.debug(_('Deallocating network for instance'),
-                      instance=instance)
-            self.network_api.deallocate_for_instance(context, instance)
+        LOG.debug(_('Deallocating network for instance'), instance=instance)
+        self.network_api.deallocate_for_instance(context, instance)
 
     def _get_instance_volume_bdms(self, context, instance_uuid):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,

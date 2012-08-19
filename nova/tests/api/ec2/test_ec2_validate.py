@@ -25,6 +25,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests import fake_network
 from nova.tests.image import fake
 
 LOG = logging.getLogger(__name__)
@@ -34,13 +35,14 @@ FLAGS = flags.FLAGS
 class EC2ValidateTestCase(test.TestCase):
     def setUp(self):
         super(EC2ValidateTestCase, self).setUp()
-        self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   stub_network=True)
+        self.flags(compute_driver='nova.virt.fake.FakeDriver')
 
         def dumb(*args, **kwargs):
             pass
 
         self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
+        fake_network.set_stub_network_methods(self.stubs)
+
         # set up our cloud
         self.cloud = cloud.CloudController()
 
