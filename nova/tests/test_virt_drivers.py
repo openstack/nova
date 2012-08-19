@@ -71,6 +71,7 @@ class _FakeDriverBackendTestCase(test.TestCase):
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
 
+        self.saved_libvirt_imagebackend = nova.virt.libvirt.driver.imagebackend
         nova.virt.libvirt.driver.imagebackend = fake_imagebackend
         nova.virt.libvirt.driver.libvirt = fakelibvirt
         nova.virt.libvirt.driver.libvirt_utils = fake_libvirt_utils
@@ -108,6 +109,7 @@ class _FakeDriverBackendTestCase(test.TestCase):
         # Restore libvirt
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
+        nova.virt.libvirt.driver.imagebackend = self.saved_libvirt_imagebackend
         if self.saved_libvirt:
             sys.modules['libvirt'] = self.saved_libvirt
             nova.virt.libvirt.driver.libvirt = self.saved_libvirt
