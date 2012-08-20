@@ -60,7 +60,7 @@ class VolumeTypeTestCase(test.TestCase):
 
         for k, v in self.vol_type1_specs.iteritems():
             self.assertEqual(v, new['extra_specs'][k],
-                             'one of fields doesnt match')
+                             'one of fields does not match')
 
         new_all_vtypes = volume_types.get_all_types(self.ctxt)
         self.assertEqual(len(prev_all_vtypes) + 1,
@@ -80,7 +80,7 @@ class VolumeTypeTestCase(test.TestCase):
         vol_types = volume_types.get_all_types(self.ctxt)
         self.assertEqual(total_volume_types, len(vol_types))
 
-    def test_non_existant_vol_type_shouldnt_delete(self):
+    def test_non_existent_vol_type_shouldnt_delete(self):
         """Ensures that volume type creation fails with invalid args"""
         self.assertRaises(exception.VolumeTypeNotFoundByName,
                           volume_types.destroy, self.ctxt, "sfsfsdfdfs")
