@@ -452,6 +452,59 @@ class VolumeTestCase(test.TestCase):
         self.assertTrue('created_at' in payload)
         self.volume.delete_volume(self.context, volume_id)
 
+    def _do_test_create_volume_with_size(self, size):
+        def fake_reserve(context, expire=None, **deltas):
+            return ["RESERVATION"]
+
+        def fake_commit(context, reservations):
+            pass
+
+        def fake_rollback(context, reservations):
+            pass
+
+        self.stubs.Set(QUOTAS, "reserve", fake_reserve)
+        self.stubs.Set(QUOTAS, "commit", fake_commit)
+        self.stubs.Set(QUOTAS, "rollback", fake_rollback)
+
+        volume_api = nova.volume.api.API()
+
+        volume = volume_api.create(self.context,
+                                   size,
+                                   'name',
+                                   'description')
+        self.assertEquals(volume['size'], int(size))
+
+    def test_create_volume_int_size(self):
+        """Test volume creation with int size."""
+        self._do_test_create_volume_with_size(2)
+
+    def test_create_volume_string_size(self):
+        """Test volume creation with string size."""
+        self._do_test_create_volume_with_size('2')
+
+    def test_create_volume_with_bad_size(self):
+        def fake_reserve(context, expire=None, **deltas):
+            return ["RESERVATION"]
+
+        def fake_commit(context, reservations):
+            pass
+
+        def fake_rollback(context, reservations):
+            pass
+
+        self.stubs.Set(QUOTAS, "reserve", fake_reserve)
+        self.stubs.Set(QUOTAS, "commit", fake_commit)
+        self.stubs.Set(QUOTAS, "rollback", fake_rollback)
+
+        volume_api = nova.volume.api.API()
+
+        self.assertRaises(exception.InvalidInput,
+                          volume_api.create,
+                          self.context,
+                          '2Gb',
+                          'name',
+                          'description')
+
 
 class DriverTestCase(test.TestCase):
     """Base Test class for Drivers."""

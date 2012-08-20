@@ -86,8 +86,18 @@ class API(base.Base):
         else:
             snapshot_id = None
 
+        def as_int(s):
+            try:
+                return int(s)
+            except ValueError:
+                return s
+
+        # tolerate size as stringified int
+        size = as_int(size)
+
         if not isinstance(size, int) or size <= 0:
-            msg = _('Volume size must be an integer and greater than 0')
+            msg = (_("Volume size '%s' must be an integer and greater than 0")
+                   % size)
             raise exception.InvalidInput(reason=msg)
         try:
             reservations = QUOTAS.reserve(context, volumes=1, gigabytes=size)
