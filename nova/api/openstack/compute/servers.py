@@ -158,7 +158,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         server_node = self.find_first_child_named(node, 'server')
 
         attributes = ["name", "imageRef", "flavorRef", "adminPass",
-                      "accessIPv4", "accessIPv6"]
+                      "accessIPv4", "accessIPv6", "key_name"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
