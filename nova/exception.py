@@ -186,10 +186,6 @@ class DecryptionFailure(NovaException):
     message = _("Failed to decrypt text")
 
 
-class ImagePaginationFailed(NovaException):
-    message = _("Failed to paginate through images from image service")
-
-
 class VirtualInterfaceCreateException(NovaException):
     message = _("Virtual Interface creation failed")
 
@@ -202,10 +198,6 @@ class VirtualInterfaceMacAddressException(NovaException):
 class GlanceConnectionFailed(NovaException):
     message = _("Connection to glance host %(host)s:%(port)s failed: "
         "%(reason)s")
-
-
-class MelangeConnectionFailed(NovaException):
-    message = _("Connection to melange failed") + ": %(reason)s"
 
 
 class NotAuthorized(NovaException):
@@ -250,16 +242,8 @@ class InvalidRequest(Invalid):
     message = _("The request is invalid.")
 
 
-class InvalidSignature(Invalid):
-    message = _("Invalid signature %(signature)s for user %(user)s.")
-
-
 class InvalidInput(Invalid):
     message = _("Invalid input received") + ": %(reason)s"
-
-
-class InvalidInstanceType(Invalid):
-    message = _("Invalid instance type %(instance_type)s.")
 
 
 class InvalidVolumeType(Invalid):
@@ -319,10 +303,6 @@ class InstanceNotRunning(Invalid):
     message = _("Instance %(instance_id)s is not running.")
 
 
-class InstanceNotSuspended(Invalid):
-    message = _("Instance %(instance_id)s is not suspended.")
-
-
 class InstanceNotInRescueMode(Invalid):
     message = _("Instance %(instance_id)s is not in rescue mode")
 
@@ -362,14 +342,6 @@ class ComputeServiceUnavailable(ServiceUnavailable):
 class UnableToMigrateToSelf(Invalid):
     message = _("Unable to migrate instance (%(instance_id)s) "
                 "to current host (%(host)s).")
-
-
-class DestinationHostUnavailable(Invalid):
-    message = _("Destination compute host is unavailable at this time.")
-
-
-class SourceHostUnavailable(Invalid):
-    message = _("Original compute host is unavailable at this time.")
 
 
 class InvalidHypervisorType(Invalid):
@@ -462,17 +434,9 @@ class SfAccountNotFound(NotFound):
                 "Solidfire device")
 
 
-class VolumeNotFoundForInstance(VolumeNotFound):
-    message = _("Volume not found for instance %(instance_id)s.")
-
-
 class VolumeMetadataNotFound(NotFound):
     message = _("Volume %(volume_id)s has no metadata with "
                 "key %(metadata_key)s.")
-
-
-class NoVolumeTypesFound(NotFound):
-    message = _("Zero volume types found.")
 
 
 class VolumeTypeNotFound(NotFound):
@@ -518,33 +482,12 @@ class InvalidImageRef(Invalid):
     message = _("Invalid image href %(image_href)s.")
 
 
-class ListingImageRefsNotSupported(Invalid):
-    message = _("Some images have been stored via hrefs."
-          " This version of the api does not support displaying image hrefs.")
-
-
 class ImageNotFound(NotFound):
     message = _("Image %(image_id)s could not be found.")
 
 
-class KernelNotFoundForImage(ImageNotFound):
-    message = _("Kernel not found for image %(image_id)s.")
-
-
-class UserNotFound(NotFound):
-    message = _("User %(user_id)s could not be found.")
-
-
 class ProjectNotFound(NotFound):
     message = _("Project %(project_id)s could not be found.")
-
-
-class ProjectMembershipNotFound(NotFound):
-    message = _("User %(user_id)s is not a member of project %(project_id)s.")
-
-
-class UserRoleNotFound(NotFound):
-    message = _("Role %(role_id)s could not be found.")
 
 
 class StorageRepositoryNotFound(NotFound):
@@ -592,14 +535,6 @@ class NetworkHostNotSet(NovaException):
     message = _("Host is not set to the network (%(network_id)s).")
 
 
-class NetworkBusy(NovaException):
-    message = _("Network %(network)s has active ports, cannot delete.")
-
-
-class NetworkIsDuplicated(NovaException):
-    message = _("Network %(network)s is duplicated.")
-
-
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -631,10 +566,6 @@ class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
     message = _("Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'.")
-
-
-class FixedIpNotFoundForHost(FixedIpNotFound):
-    message = _("Host %(host)s has zero fixed ips.")
 
 
 class FixedIpNotFoundForNetwork(FixedIpNotFound):
@@ -727,14 +658,6 @@ class ComputeHostNotFound(HostNotFound):
 
 class HostBinaryNotFound(NotFound):
     message = _("Could not find binary %(binary)s on host %(host)s.")
-
-
-class AuthTokenNotFound(NotFound):
-    message = _("Auth token %(token)s could not be found.")
-
-
-class AccessKeyNotFound(NotFound):
-    message = _("Access Key %(access_key)s could not be found.")
 
 
 class InvalidReservationExpiration(Invalid):
@@ -833,10 +756,6 @@ class ConsoleTypeInvalid(Invalid):
     message = _("Invalid console type %(console_type)s ")
 
 
-class NoInstanceTypesFound(NotFound):
-    message = _("Zero instance types found.")
-
-
 class InstanceTypeNotFound(NotFound):
     message = _("Instance type %(instance_type_id)s could not be found.")
 
@@ -878,22 +797,6 @@ class InstanceTypeExtraSpecsNotFound(NotFound):
                 "key %(extra_specs_key)s.")
 
 
-class LDAPObjectNotFound(NotFound):
-    message = _("LDAP object could not be found")
-
-
-class LDAPUserNotFound(LDAPObjectNotFound):
-    message = _("LDAP user %(user_id)s could not be found.")
-
-
-class LDAPGroupNotFound(LDAPObjectNotFound):
-    message = _("LDAP group %(group_id)s could not be found.")
-
-
-class LDAPGroupMembershipNotFound(NotFound):
-    message = _("LDAP user %(user_id)s is not a member of group %(group_id)s.")
-
-
 class FileNotFound(NotFound):
     message = _("File %(file_path)s could not be found.")
 
@@ -919,10 +822,6 @@ class NotAllowed(NovaException):
     message = _("Action not allowed.")
 
 
-class GlobalRoleNotAllowed(NotAllowed):
-    message = _("Unable to use global role %(role_id)s")
-
-
 class ImageRotationNotAllowed(NovaException):
     message = _("Rotation is not allowed for snapshots")
 
@@ -933,27 +832,6 @@ class RotationRequiredForBackup(NovaException):
 
 class KeyPairExists(Duplicate):
     message = _("Key pair %(key_name)s already exists.")
-
-
-class UserExists(Duplicate):
-    message = _("User %(user)s already exists.")
-
-
-class LDAPUserExists(UserExists):
-    message = _("LDAP user %(user)s already exists.")
-
-
-class LDAPGroupExists(Duplicate):
-    message = _("LDAP group %(group)s already exists.")
-
-
-class LDAPMembershipExists(Duplicate):
-    message = _("User %(uid)s is already a member of "
-                "the group %(group_dn)s")
-
-
-class ProjectExists(Duplicate):
-    message = _("Project %(project)s already exists.")
 
 
 class InstanceExists(Duplicate):
@@ -996,10 +874,6 @@ class CannotResizeToSameSize(NovaException):
 
 class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
-
-
-class ZoneRequestError(NovaException):
-    message = _("1 or more Zones could not complete the request")
 
 
 class InstanceTypeMemoryTooSmall(NovaException):
@@ -1126,10 +1000,6 @@ class InstancePasswordSetFailed(NovaException):
 
 class SolidFireAPIException(NovaException):
     message = _("Bad response from SolidFire API")
-
-
-class SolidFireAPIStatusException(SolidFireAPIException):
-    message = _("Error in SolidFire API response: status=%(status)s")
 
 
 class SolidFireAPIDataException(SolidFireAPIException):
