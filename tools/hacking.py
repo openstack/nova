@@ -47,7 +47,7 @@ logging.disable('LOG')
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
 DOCSTRING_TRIPLE = ['"""', "'''"]
-VERBOSE_MISSING_IMPORT = False
+VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
 
 
 # Monkey patch broken excluded filter in pep8
@@ -218,9 +218,10 @@ def nova_import_module_only(logical_line):
             else:
                 name = logical_line.split()[1]
                 if name not in _missingImport:
-                    if VERBOSE_MISSING_IMPORT:
-                        print >> sys.stderr, ("ERROR: import '%s' failed: %s" %
-                            (name, exc))
+                    if VERBOSE_MISSING_IMPORT != 'False':
+                        print >> sys.stderr, ("ERROR: import '%s' in %s "
+                                              "failed: %s" %
+                            (name, pep8.current_file, exc))
                     _missingImport.add(name)
                 added = False
                 sys.path.pop()
