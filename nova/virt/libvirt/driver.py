@@ -810,7 +810,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                      image_file)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info, reboot_type='SOFT'):
+    def reboot(self, instance, network_info, reboot_type='SOFT',
+               block_device_info=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.
@@ -821,7 +822,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance)
+        return self._hard_reboot(instance, block_device_info=block_device_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -858,7 +859,7 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, xml=None):
+    def _hard_reboot(self, instance, xml=None, block_device_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         Performs a Libvirt reset (if supported) on the domain.
@@ -870,6 +871,16 @@ class LibvirtDriver(driver.ComputeDriver):
         If xml is set, it uses the passed in xml in place of the xml from the
         existing domain.
         """
+
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self.volume_driver_method('connect_volume',
+                                      connection_info,
+                                      mount_device)
 
         virt_dom = self._lookup_by_name(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance.
@@ -934,11 +945,13 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain(domain=dom)
 
     @exception.wrap_exception()
-    def resume_state_on_host_boot(self, context, instance, network_info):
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
         """resume guest state when a host is booted"""
         virt_dom = self._lookup_by_name(instance['name'])
         xml = virt_dom.XMLDesc(0)
-        self._create_domain_and_network(xml, instance, network_info)
+        self._create_domain_and_network(xml, instance, network_info,
+                                        block_device_info)
 
     @exception.wrap_exception()
     def rescue(self, context, instance, network_info, image_meta,
@@ -1017,7 +1030,8 @@ class LibvirtDriver(driver.ComputeDriver):
                            block_device_info=block_device_info,
                            files=injected_files,
                            admin_pass=admin_password)
-        self._create_domain_and_network(xml, instance, network_info)
+        self._create_domain_and_network(xml, instance, network_info,
+                                        block_device_info)
         LOG.debug(_("Instance is running"), instance=instance)
 
         def _wait_for_boot():
@@ -1830,8 +1844,20 @@ class LibvirtDriver(driver.ComputeDriver):
         domain.createWithFlags(launch_flags)
         return domain
 
-    def _create_domain_and_network(self, xml, instance, network_info):
+    def _create_domain_and_network(self, xml, instance, network_info,
+                                   block_device_info=None):
+
         """Do required network setup and create domain."""
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self.volume_driver_method('connect_volume',
+                                      connection_info,
+                                      mount_device)
+
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)

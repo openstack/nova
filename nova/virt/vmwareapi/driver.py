@@ -135,7 +135,8 @@ class VMWareESXDriver(driver.ComputeDriver):
         """Create snapshot from a running VM instance."""
         self._vmops.snapshot(context, instance, name)
 
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type,
+               block_device_info=None):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info)
 

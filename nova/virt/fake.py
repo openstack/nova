@@ -92,7 +92,8 @@ class FakeDriver(driver.ComputeDriver):
         if not instance['name'] in self.instances:
             raise exception.InstanceNotRunning()
 
-    def reboot(self, instance, network_info, reboot_type):
+    def reboot(self, instance, network_info, reboot_type,
+               block_device_info=None):
         pass
 
     @staticmethod
@@ -105,7 +106,8 @@ class FakeDriver(driver.ComputeDriver):
     def inject_file(self, instance, b64_path, b64_contents):
         pass
 
-    def resume_state_on_host_boot(self, context, instance, network_info):
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
         pass
 
     def rescue(self, context, instance, network_info, image_meta,
