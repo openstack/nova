@@ -90,17 +90,22 @@ def enforce(context, action, target):
     match_list = ('rule:%s' % action,)
     credentials = context.to_dict()
 
+    # NOTE(vish): This is to work around the following launchpad bug:
+    #             https://bugs.launchpad.net/openstack-common/+bug/1039132
+    #             It can be removed when that bug is fixed.
+    credentials['is_admin'] = unicode(credentials['is_admin'])
+
     policy.enforce(match_list, target, credentials,
                    exception.PolicyNotAuthorized, action=action)
 
 
-def check_admin_role(roles):
+def check_is_admin(roles):
     """Whether or not roles contains 'admin' role according to policy setting.
 
     """
     init()
 
-    action = 'admin'
+    action = 'context_is_admin'
     match_list = ('rule:%s' % action,)
     target = {}
     credentials = {'roles': roles}

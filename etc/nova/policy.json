@@ -1,6 +1,6 @@
 {
-    "admin":  [["role:admin"]],
-    "admin_or_owner":  [["role:admin"], ["project_id:%(project_id)s"]],
+    "context_is_admin":  [["role:admin"]],
+    "admin_or_owner":  [["is_admin:True"], ["project_id:%(project_id)s"]],
     "default": [["rule:admin_or_owner"]],
 
 
@@ -10,7 +10,7 @@
     "compute:get_all": [],
 
 
-    "admin_api": [["role:admin"]],
+    "admin_api": [["is_admin:True"]],
     "compute_extension:accounts": [["rule:admin_api"]],
     "compute_extension:admin_actions": [["rule:admin_api"]],
     "compute_extension:admin_actions:pause": [["rule:admin_or_owner"]],

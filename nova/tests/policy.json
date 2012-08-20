@@ -1,5 +1,5 @@
 {
-    "admin": [["role:admin"], ["role:administrator"]],
+    "context_is_admin": [["role:admin"], ["role:administrator"]],
     "compute:create": [],
     "compute:create:attach_network": [],
     "compute:create:attach_volume": [],
