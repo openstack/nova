@@ -174,7 +174,7 @@ class HostState(object):
 class HostManager(object):
     """Base HostManager class."""
 
-    # Can be overriden in a subclass
+    # Can be overridden in a subclass
     host_state_cls = HostState
 
     def __init__(self):

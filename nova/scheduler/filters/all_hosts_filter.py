@@ -18,7 +18,7 @@ from nova.scheduler import filters
 
 
 class AllHostsFilter(filters.BaseHostFilter):
-    """NOP host filter. Returns all hosts."""
+    """NOOP host filter. Returns all hosts."""
 
     def host_passes(self, host_state, filter_properties):
         return True

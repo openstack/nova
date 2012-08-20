@@ -626,7 +626,7 @@ class _InterProcessLock(object):
             self.unlock()
             self.lockfile.close()
         except IOError:
-            LOG.exception(_("Could not release the aquired lock `%s`")
+            LOG.exception(_("Could not release the acquired lock `%s`")
                              % self.fname)
 
     def trylock(self):

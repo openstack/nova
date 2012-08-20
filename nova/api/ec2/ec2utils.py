@@ -138,7 +138,7 @@ def id_to_ec2_inst_id(instance_id):
 
 
 def ec2_inst_id_to_uuid(context, ec2_id):
-    """"Convert an instance id to  uuid."""
+    """"Convert an instance id to uuid."""
     int_id = ec2_id_to_id(ec2_id)
     return get_instance_uuid_from_int_id(context, int_id)
 
@@ -168,7 +168,7 @@ def id_to_ec2_vol_id(volume_id):
 
 
 def ec2_vol_id_to_uuid(ec2_id):
-    """Get the cooresponding UUID for the given ec2-id."""
+    """Get the corresponding UUID for the given ec2-id."""
     ctxt = context.get_admin_context()
 
     # NOTE(jgriffith) first strip prefix to get just the numeric
@@ -199,7 +199,7 @@ def get_volume_uuid_from_int_id(context, int_id):
 
 
 def ec2_snap_id_to_uuid(ec2_id):
-    """Get the cooresponding UUID for the given ec2-id."""
+    """Get the corresponding UUID for the given ec2-id."""
     ctxt = context.get_admin_context()
 
     # NOTE(jgriffith) first strip prefix to get just the numeric

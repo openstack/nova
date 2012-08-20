@@ -217,7 +217,7 @@ class FilterScheduler(driver.Scheduler):
             return inst
 
     def _add_retry_host(self, filter_properties, host):
-        """Add a retry entry for the selected computep host.  In the event that
+        """Add a retry entry for the selected compute host.  In the event that
         the request gets re-scheduled, this entry will signal that the given
         host has already been tried.
         """
