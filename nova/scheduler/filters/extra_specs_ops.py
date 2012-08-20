@@ -18,7 +18,7 @@ import operator
 # 1. The following operations are supported:
 #   =, s==, s!=, s>=, s>, s<=, s<, <in>, <or>, ==, !=, >=, <=
 # 2. Note that <or> is handled in a different way below.
-# 3. If the first word in the capability is not one of the operators,
+# 3. If the first word in the extra_specs is not one of the operators,
 #   it is ignored.
 _op_methods = {'=': lambda x, y: float(x) >= float(y),
                '<in>': lambda x, y: y in x,
@@ -54,7 +54,9 @@ def match(value, req):
                 return True
             if not words:
                 break
-            op = words.pop(0)
+            op = words.pop(0)  # remove a keyword <or>
+            if not words:
+                break
         return False
 
     if words and method(value, words[0]):
