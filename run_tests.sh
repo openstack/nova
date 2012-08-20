@@ -67,6 +67,10 @@ export NOSE_OPENSTACK_YELLOW=0.025
 export NOSE_OPENSTACK_SHOW_ELAPSED=1
 export NOSE_OPENSTACK_STDOUT=1
 
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
+export LC_ALL=C
+
 for arg in "$@"; do
   process_option $arg
 done
