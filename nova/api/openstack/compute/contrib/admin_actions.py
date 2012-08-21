@@ -307,9 +307,7 @@ class AdminActionsController(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, id)
-            self.compute_api.update(context, instance,
-                                    vm_state=state,
-                                    task_state=None)
+            self.compute_api.update_state(context, instance, state)
         except exception.InstanceNotFound:
             raise exc.HTTPNotFound(_("Server not found"))
         except Exception:
