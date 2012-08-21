@@ -35,7 +35,6 @@ from nova.tests import fake_network
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class NotificationsTestCase(test.TestCase):
@@ -52,9 +51,9 @@ class NotificationsTestCase(test.TestCase):
 
         self.stubs.Set(nova.network.API, 'get_instance_nw_info',
                 fake_get_nw_info)
+        fake_network.set_stub_network_methods(self.stubs)
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   stub_network=True,
           notification_driver=['nova.openstack.common.notifier.test_notifier'],
                    network_manager='nova.network.manager.FlatManager',
                    notify_on_state_change="vm_and_task_state",

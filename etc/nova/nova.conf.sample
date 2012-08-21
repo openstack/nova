@@ -312,9 +312,6 @@
 #### (BoolOpt) Allow destination machine to match source for resize. Useful
 ####           when testing in single-host environments.
 
-# stub_network=false
-#### (BoolOpt) Stub network related code
-
 # reclaim_instance_interval=0
 #### (IntOpt) Interval in seconds for reclaiming deleted instances
 

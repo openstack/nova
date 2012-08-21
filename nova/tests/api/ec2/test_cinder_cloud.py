@@ -32,6 +32,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import volume
 
@@ -85,8 +86,7 @@ class CinderCloudTestCase(test.TestCase):
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API',
-                   volumes_dir=vol_tmpdir,
-                   stub_network=True)
+                   volumes_dir=vol_tmpdir)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -111,6 +111,8 @@ class CinderCloudTestCase(test.TestCase):
             pass
 
         self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
+        fake_network.set_stub_network_methods(self.stubs)
+
         # set up our cloud
         self.cloud = cloud.CloudController()
         self.flags(compute_scheduler_driver='nova.scheduler.'

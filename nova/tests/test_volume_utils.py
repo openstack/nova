@@ -25,6 +25,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
+from nova.tests import fake_network
 from nova.volume import utils as volume_utils
 
 
@@ -37,10 +38,11 @@ class UsageInfoTestCase(test.TestCase):
     def setUp(self):
         super(UsageInfoTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   stub_network=True,
                    host='fake')
         self.stubs.Set(flags.FLAGS, 'notification_driver',
                 ['nova.openstack.common.notifier.test_notifier'])
+        fake_network.set_stub_network_methods(self.stubs)
+
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'

@@ -15,11 +15,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova.compute import manager as compute_manager
 import nova.context
 from nova import db
 from nova import exception
 from nova import flags
 from nova.network import manager as network_manager
+from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova import utils
 
@@ -373,3 +375,31 @@ def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
     if func is None:
         func = get_instance_nw_info
     stubs.Set(nova.network.API, 'get_instance_nw_info', func)
+
+
+_real_functions = {}
+
+
+def set_stub_network_methods(stubs):
+    global _real_functions
+    cm = compute_manager.ComputeManager
+    if not _real_functions:
+        _real_functions = {
+                '_get_instance_nw_info': cm._get_instance_nw_info,
+                '_allocate_network': cm._allocate_network,
+                '_deallocate_network': cm._deallocate_network}
+
+    def fake_networkinfo(*args, **kwargs):
+        return network_model.NetworkInfo()
+
+    stubs.Set(cm, '_get_instance_nw_info', fake_networkinfo)
+    stubs.Set(cm, '_allocate_network', fake_networkinfo)
+    stubs.Set(cm, '_deallocate_network', lambda *args, **kwargs: None)
+
+
+def unset_stub_network_methods(stubs):
+    global _real_functions
+    if _real_functions:
+        cm = compute_manager.ComputeManager
+        for name in _real_functions:
+            stubs.Set(cm, name, _real_functions[name])

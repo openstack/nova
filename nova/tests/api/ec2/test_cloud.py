@@ -42,6 +42,7 @@ from nova.network import api as network_api
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import utils
 from nova.virt import fake as fake_virt
@@ -95,8 +96,7 @@ class CloudTestCase(test.TestCase):
         super(CloudTestCase, self).setUp()
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   volumes_dir=vol_tmpdir,
-                   stub_network=True)
+                   volumes_dir=vol_tmpdir)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -121,6 +121,8 @@ class CloudTestCase(test.TestCase):
             pass
 
         self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
+        fake_network.set_stub_network_methods(self.stubs)
+
         # set up our cloud
         self.cloud = cloud.CloudController()
         self.flags(compute_scheduler_driver='nova.scheduler.'

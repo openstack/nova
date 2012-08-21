@@ -370,9 +370,6 @@ global_opts = [
                 default=False,
                 help='Allow destination machine to match source for resize. '
                      'Useful when testing in single-host environments.'),
-    cfg.BoolOpt('stub_network',
-                default=False,
-                help='Stub network related code'),
     cfg.IntOpt('reclaim_instance_interval',
                default=0,
                help='Interval in seconds for reclaiming deleted instances'),
