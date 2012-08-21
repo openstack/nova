@@ -346,35 +346,35 @@ def _remove_read_only(image_meta):
 def _reraise_translated_image_exception(image_id):
     """Transform the exception for the image but keep its traceback intact."""
     exc_type, exc_value, exc_trace = sys.exc_info()
-    new_exc = _translate_image_exception(image_id, exc_type, exc_value)
+    new_exc = _translate_image_exception(image_id, exc_value)
     raise new_exc, None, exc_trace
 
 
 def _reraise_translated_exception():
     """Transform the exception but keep its traceback intact."""
     exc_type, exc_value, exc_trace = sys.exc_info()
-    new_exc = _translate_plain_exception(exc_type, exc_value)
+    new_exc = _translate_plain_exception(exc_value)
     raise new_exc, None, exc_trace
 
 
-def _translate_image_exception(image_id, exc_type, exc_value):
-    if exc_type in (glanceclient.exc.Forbidden,
-                    glanceclient.exc.Unauthorized):
+def _translate_image_exception(image_id, exc_value):
+    if isinstance(exc_value, (glanceclient.exc.Forbidden,
+                    glanceclient.exc.Unauthorized)):
         return exception.ImageNotAuthorized(image_id=image_id)
-    if exc_type is glanceclient.exc.NotFound:
+    if isinstance(exc_value, glanceclient.exc.NotFound):
         return exception.ImageNotFound(image_id=image_id)
-    if exc_type is glanceclient.exc.BadRequest:
+    if isinstance(exc_value, glanceclient.exc.BadRequest):
         return exception.Invalid(exc_value)
     return exc_value
 
 
-def _translate_plain_exception(exc_type, exc_value):
-    if exc_type in (glanceclient.exc.Forbidden,
-                    glanceclient.exc.Unauthorized):
+def _translate_plain_exception(exc_value):
+    if isinstance(exc_value, (glanceclient.exc.Forbidden,
+                    glanceclient.exc.Unauthorized)):
         return exception.NotAuthorized(exc_value)
-    if exc_type is glanceclient.exc.NotFound:
+    if isinstance(exc_value, glanceclient.exc.NotFound):
         return exception.NotFound(exc_value)
-    if exc_type is glanceclient.exc.BadRequest:
+    if isinstance(exc_value, glanceclient.exc.BadRequest):
         return exception.Invalid(exc_value)
     return exc_value
 

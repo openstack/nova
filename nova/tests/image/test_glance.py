@@ -464,9 +464,9 @@ class TestGlanceImageService(test.TestCase):
         self.flags(glance_num_retries=1)
         service.download(self.context, image_id, writer)
 
-    def test_client_raises_forbidden(self):
+    def test_client_forbidden_converts_to_imagenotauthed(self):
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that fails the first time, then succeeds."""
+            """A client that raises a Forbidden exception."""
             def get(self, image_id):
                 raise glanceclient.exc.Forbidden(image_id)
 
@@ -475,6 +475,45 @@ class TestGlanceImageService(test.TestCase):
         image_id = 1  # doesn't matter
         writer = NullWriter()
         self.assertRaises(exception.ImageNotAuthorized, service.download,
+                          self.context, image_id, writer)
+
+    def test_client_httpforbidden_converts_to_imagenotauthed(self):
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that raises a HTTPForbidden exception."""
+            def get(self, image_id):
+                raise glanceclient.exc.HTTPForbidden(image_id)
+
+        client = MyGlanceStubClient()
+        service = self._create_image_service(client)
+        image_id = 1  # doesn't matter
+        writer = NullWriter()
+        self.assertRaises(exception.ImageNotAuthorized, service.download,
+                          self.context, image_id, writer)
+
+    def test_client_notfound_converts_to_imagenotfound(self):
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that raises a NotFound exception."""
+            def get(self, image_id):
+                raise glanceclient.exc.NotFound(image_id)
+
+        client = MyGlanceStubClient()
+        service = self._create_image_service(client)
+        image_id = 1  # doesn't matter
+        writer = NullWriter()
+        self.assertRaises(exception.ImageNotFound, service.download,
+                          self.context, image_id, writer)
+
+    def test_client_httpnotfound_converts_to_imagenotfound(self):
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that raises a HTTPNotFound exception."""
+            def get(self, image_id):
+                raise glanceclient.exc.HTTPNotFound(image_id)
+
+        client = MyGlanceStubClient()
+        service = self._create_image_service(client)
+        image_id = 1  # doesn't matter
+        writer = NullWriter()
+        self.assertRaises(exception.ImageNotFound, service.download,
                           self.context, image_id, writer)
 
     def test_glance_client_image_id(self):
