@@ -27,6 +27,7 @@ from nova.compute import utils as compute_utils
 from nova import exception
 from nova import network
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -282,7 +283,11 @@ class FloatingIPActionController(wsgi.Controller):
         instance = get_instance_by_floating_ip_addr(self, context, address)
 
         # disassociate if associated
-        if instance and floating_ip.get('fixed_ip_id'):
+        if (instance and
+            floating_ip.get('fixed_ip_id') and
+            (utils.is_uuid_like(id) and
+             [instance['uuid'] == id] or
+             [instance['id'] == id])[0]):
             disassociate_floating_ip(self, context, instance, address)
             return webob.Response(status_int=202)
         else:
