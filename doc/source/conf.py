@@ -86,7 +86,7 @@ unused_docs = [
     'api_ext/rst_extension_template',
     'vmwareapi_readme',
     'installer',
-    ]
+]
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
@@ -121,7 +121,7 @@ modindex_common_prefix = ['nova.']
 man_pages = [
     ('man/nova-manage', 'nova-manage', u'Cloud controller fabric',
      [u'OpenStack'], 1)
- ]
+]
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -211,8 +211,10 @@ htmlhelp_basename = 'novadoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
-latex_documents = [('index', 'Nova.tex', u'Nova Documentation',
-                    u'Anso Labs, LLC', 'manual'), ]
+latex_documents = [
+    ('index', 'Nova.tex', u'Nova Documentation',
+     u'Anso Labs, LLC', 'manual'),
+]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
