@@ -688,10 +688,22 @@ class HostFiltersTestCase(test.TestCase):
             especs={'opt1': '<in> 12311321'},
             passes=True)
 
+    def test_compute_filter_passes_extra_specs_with_op_in3(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '12311321'},
+            especs={'opt1': '<in> 12311321 <in>'},
+            passes=True)
+
     def test_compute_filter_fails_extra_specs_with_op_in(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '12310321'},
             especs={'opt1': '<in> 11'},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_with_op_in2(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '12310321'},
+            especs={'opt1': '<in> 11 <in>'},
             passes=False)
 
     def test_compute_filter_passes_extra_specs_with_op_or(self):
@@ -700,10 +712,22 @@ class HostFiltersTestCase(test.TestCase):
             especs={'opt1': '<or> 11 <or> 12'},
             passes=True)
 
+    def test_compute_filter_passes_extra_specs_with_op_or2(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '12'},
+            especs={'opt1': '<or> 11 <or> 12 <or>'},
+            passes=True)
+
     def test_compute_filter_fails_extra_specs_with_op_or(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '13'},
             especs={'opt1': '<or> 11 <or> 12'},
+            passes=False)
+
+    def test_compute_filter_fails_extra_specs_with_op_or2(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '13'},
+            especs={'opt1': '<or> 11 <or> 12 <or>'},
             passes=False)
 
     def test_compute_filter_passes_extra_specs_with_op_le(self):
