@@ -1170,7 +1170,8 @@ def fixed_ip_get(context, id, session=None):
     # FIXME(sirp): shouldn't we just use project_only here to restrict the
     # results?
     if is_user_context(context) and result['instance_uuid'] is not None:
-        instance = instance_get_by_uuid(context, result['instance_uuid'],
+        instance = instance_get_by_uuid(context.elevated(read_deleted='yes'),
+                                        result['instance_uuid'],
                                         session)
         authorize_project_context(context, instance.project_id)
 
@@ -1199,7 +1200,8 @@ def fixed_ip_get_by_address(context, address, session=None):
     # NOTE(sirp): shouldn't we just use project_only here to restrict the
     # results?
     if is_user_context(context) and result['instance_uuid'] is not None:
-        instance = instance_get_by_uuid(context, result['instance_uuid'],
+        instance = instance_get_by_uuid(context.elevated(read_deleted='yes'),
+                                        result['instance_uuid'],
                                         session)
         authorize_project_context(context, instance.project_id)
 

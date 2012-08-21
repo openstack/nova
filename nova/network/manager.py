@@ -353,14 +353,11 @@ class FloatingIP(object):
         # NOTE(francois.charlier): in some cases the instance might be
         # deleted before the IPs are released, so we need to get deleted
         # instances too
-        read_deleted_context = context.elevated(read_deleted='yes')
-        instance = self.db.instance_get(read_deleted_context, instance_id)
-
-        LOG.debug(_("floating IP deallocation for instance |%s|"),
-                  instance=instance, context=read_deleted_context)
+        instance = self.db.instance_get(
+                context.elevated(read_deleted='yes'), instance_id)
 
         try:
-            fixed_ips = self.db.fixed_ip_get_by_instance(read_deleted_context,
+            fixed_ips = self.db.fixed_ip_get_by_instance(context,
                                                          instance['uuid'])
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
@@ -374,14 +371,14 @@ class FloatingIP(object):
             for floating_ip in floating_ips:
                 address = floating_ip['address']
                 try:
-                    self.disassociate_floating_ip(read_deleted_context,
+                    self.disassociate_floating_ip(context,
                                                   address,
                                                   affect_auto_assigned=True)
                 except exception.FloatingIpNotAssociated:
                     LOG.exception(_("Floating IP is not associated. Ignore."))
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
-                    self.deallocate_floating_ip(read_deleted_context, address,
+                    self.deallocate_floating_ip(context, address,
                                                 affect_auto_assigned=True)
 
         # call the next inherited class's deallocate_for_instance()
@@ -1276,8 +1273,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Returns a fixed ip to the pool."""
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         vif_id = fixed_ip_ref['virtual_interface_id']
-        instance = self.db.instance_get_by_uuid(context,
-                                                fixed_ip_ref['instance_uuid'])
+        instance = self.db.instance_get_by_uuid(
+                context.elevated(read_deleted='yes'),
+                fixed_ip_ref['instance_uuid'])
 
         self._do_trigger_security_group_members_refresh_for_instance(
             instance['uuid'])
