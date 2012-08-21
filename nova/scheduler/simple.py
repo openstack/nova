@@ -23,6 +23,7 @@ Simple Scheduler - for Volumes
 Note: Deprecated in Folsom.  Will be removed along with nova-volumes
 """
 
+from nova.common import deprecated
 from nova import db
 from nova import exception
 from nova import flags
@@ -45,8 +46,19 @@ FLAGS.register_opts(simple_scheduler_opts)
 class SimpleScheduler(chance.ChanceScheduler):
     """Implements Naive Scheduler that tries to find least loaded host."""
 
+    def schedule_run_instance(self, context, request_spec, reservations,
+                              *_args, **_kwargs):
+        deprecated.warn(_('SimpleScheduler now only covers volume scheduling '
+                'and is deprecated in Folsom. Non-volume functionality in '
+                'SimpleScheduler has been replaced by FilterScheduler'))
+        super(SimpleScheduler, self).schedule_run_instance(self, context,
+                request_spec, reservations, *_args, **_kwargs)
+
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
+        deprecated.warn(_('nova-volume functionality is deprecated in Folsom '
+                'and will be removed in Grizzly.  Volumes are now handled '
+                'by Cinder'))
         elevated = context.elevated()
 
         volume_ref = db.volume_get(context, volume_id)
