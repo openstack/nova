@@ -155,7 +155,10 @@ class TestQuantumv2(test.TestCase):
         self.nets3 = self.nets2 + [{'id': 'my_netid3',
                                     'name': 'my_netname3',
                                     'tenant_id': 'my_tenantid'}]
-        self.nets = [self.nets1, self.nets2, self.nets3]
+        self.nets4 = [{'id': 'his_netid4',
+                      'name': 'his_netname4',
+                      'tenant_id': 'his_tenantid'}]
+        self.nets = [self.nets1, self.nets2, self.nets3, self.nets4]
 
         self.port_data1 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id1',
@@ -214,8 +217,10 @@ class TestQuantumv2(test.TestCase):
                 {'ports': port_data})
         nets = number == 1 and self.nets1 or self.nets2
         self.moxed_client.list_networks(
-            tenant_id=self.instance['project_id']).AndReturn(
-                {'networks': nets})
+            tenant_id=self.instance['project_id'],
+            shared=False).AndReturn({'networks': nets})
+        self.moxed_client.list_networks(
+            shared=True).AndReturn({'networks': []})
         for i in xrange(1, number + 1):
             subnet_data = i == 1 and self.subnet_data1 or self.subnet_data2
             self.moxed_client.list_subnets(
@@ -263,11 +268,10 @@ class TestQuantumv2(test.TestCase):
                                  self.instance,
                                  networks=nets).AndReturn(None)
 
-        mox_list_network_params = dict(tenant_id=self.instance['project_id'])
         ports = {}
         fixed_ips = {}
+        req_net_ids = []
         if 'requested_networks' in kwargs:
-            req_net_ids = []
             for id, fixed_ip, port_id in kwargs['requested_networks']:
                 if port_id:
                     self.moxed_client.show_port(port_id).AndReturn(
@@ -279,11 +283,20 @@ class TestQuantumv2(test.TestCase):
                 else:
                     fixed_ips[id] = fixed_ip
                 req_net_ids.append(id)
+        search_ids = [net['id'] for net in nets if net['id'] in req_net_ids]
 
-            mox_list_network_params['id'] = [net['id'] for net in nets
-                                             if net['id'] in req_net_ids]
+        mox_list_network_params = dict(tenant_id=self.instance['project_id'],
+                                       shared=False)
+        if search_ids:
+            mox_list_network_params['id'] = search_ids
         self.moxed_client.list_networks(
             **mox_list_network_params).AndReturn({'networks': nets})
+
+        mox_list_network_params = dict(shared=True)
+        if search_ids:
+            mox_list_network_params['id'] = search_ids
+        self.moxed_client.list_networks(
+            **mox_list_network_params).AndReturn({'networks': []})
 
         for network in nets:
             port_req_body = {
@@ -349,8 +362,11 @@ class TestQuantumv2(test.TestCase):
         """
         api = quantumapi.API()
         self.moxed_client.list_networks(
-            tenant_id=self.instance['project_id']).AndReturn(
+            tenant_id=self.instance['project_id'],
+            shared=False).AndReturn(
                 {'networks': self.nets2})
+        self.moxed_client.list_networks(shared=True).AndReturn(
+                {'networks': []})
         index = 0
         for network in self.nets2:
             port_req_body = {
@@ -385,8 +401,11 @@ class TestQuantumv2(test.TestCase):
         """
         api = quantumapi.API()
         self.moxed_client.list_networks(
-            tenant_id=self.instance['project_id']).AndReturn(
+            tenant_id=self.instance['project_id'],
+            shared=False).AndReturn(
                 {'networks': self.nets2})
+        self.moxed_client.list_networks(shared=True).AndReturn(
+                {'networks': []})
         port_req_body = {
             'port': {
                 'network_id': self.nets2[0]['id'],
@@ -426,8 +445,13 @@ class TestQuantumv2(test.TestCase):
                               ('my_netid2', 'test2', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            tenant_id=self.context.project_id).AndReturn(
+            tenant_id=self.context.project_id,
+            shared=False).AndReturn(
                 {'networks': self.nets2})
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
+            shared=True).AndReturn(
+                {'networks': []})
         self.mox.ReplayAll()
         api = quantumapi.API()
         api.validate_networks(self.context, requested_networks)
@@ -437,8 +461,13 @@ class TestQuantumv2(test.TestCase):
                               ('my_netid2', 'test2', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            tenant_id=self.context.project_id).AndReturn(
+            tenant_id=self.context.project_id,
+            shared=False).AndReturn(
                 {'networks': self.nets1})
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
+            shared=True).AndReturn(
+                {'networks': []})
         self.mox.ReplayAll()
         api = quantumapi.API()
         try:
@@ -452,8 +481,13 @@ class TestQuantumv2(test.TestCase):
                               ('my_netid3', 'test3', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2', 'my_netid3']),
-            tenant_id=self.context.project_id).AndReturn(
+            tenant_id=self.context.project_id,
+            shared=False).AndReturn(
                 {'networks': self.nets1})
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(['my_netid1', 'my_netid2', 'my_netid3']),
+            shared=True).AndReturn(
+                {'networks': []})
         self.mox.ReplayAll()
         api = quantumapi.API()
         try:
@@ -471,3 +505,40 @@ class TestQuantumv2(test.TestCase):
         result = api.get_instance_uuids_by_ip_filter(self.context, filters)
         self.assertEquals('device_id1', result[0]['instance_uuid'])
         self.assertEquals('device_id2', result[1]['instance_uuid'])
+
+    def _get_available_networks(self, prv_nets, pub_nets, req_ids=None):
+        api = quantumapi.API()
+        nets = prv_nets + pub_nets
+        mox_list_network_params = dict(tenant_id=self.instance['project_id'],
+                                       shared=False)
+        if req_ids:
+            mox_list_network_params['id'] = req_ids
+        self.moxed_client.list_networks(
+            **mox_list_network_params).AndReturn({'networks': prv_nets})
+        mox_list_network_params = dict(shared=True)
+        if req_ids:
+            mox_list_network_params['id'] = req_ids
+        self.moxed_client.list_networks(
+            **mox_list_network_params).AndReturn({'networks': pub_nets})
+
+        self.mox.ReplayAll()
+        rets = api._get_available_networks(self.context,
+                                           self.instance['project_id'],
+                                           req_ids)
+        self.assertEqual(rets, nets)
+
+    def test_get_available_networks_all_private(self):
+        self._get_available_networks(prv_nets=self.nets2, pub_nets=[])
+
+    def test_get_available_networks_all_public(self):
+        self._get_available_networks(prv_nets=[], pub_nets=self.nets2)
+
+    def test_get_available_networks_private_and_public(self):
+        self._get_available_networks(prv_nets=self.nets1, pub_nets=self.nets4)
+
+    def test_get_available_networks_with_network_ids(self):
+        prv_nets = [self.nets3[0]]
+        pub_nets = [self.nets3[-1]]
+        # specify only first and last network
+        req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
+        self._get_available_networks(prv_nets, pub_nets, req_ids)
