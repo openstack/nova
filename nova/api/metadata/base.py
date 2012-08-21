@@ -294,6 +294,7 @@ class InstanceMetadata():
                                           FLAGS.dhcp_domain)
 
         metadata['name'] = self.instance['display_name']
+        metadata['availability_zone'] = self.availability_zone
 
         data = {
             MD_JSON_NAME: json.dumps(metadata),
