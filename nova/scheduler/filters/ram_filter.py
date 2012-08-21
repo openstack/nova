@@ -38,12 +38,18 @@ class RamFilter(filters.BaseHostFilter):
         requested_ram = instance_type['memory_mb']
         free_ram_mb = host_state.free_ram_mb
         total_usable_ram_mb = host_state.total_usable_ram_mb
+
+        oversubscribed_ram_limit_mb = (total_usable_ram_mb *
+                FLAGS.ram_allocation_ratio)
         used_ram_mb = total_usable_ram_mb - free_ram_mb
-        usable_ram = (total_usable_ram_mb * FLAGS.ram_allocation_ratio -
-                used_ram_mb)
+        usable_ram = oversubscribed_ram_limit_mb - used_ram_mb
         if not usable_ram >= requested_ram:
             LOG.debug(_("%(host_state)s does not have %(requested_ram)s MB "
                     "usable ram, it only has %(usable_ram)s MB usable ram."),
                     locals())
             return False
+
+        # save oversubscribe ram limit so the compute host can verify
+        # memory availability on builds:
+        filter_properties['memory_limit_mb'] = oversubscribed_ram_limit_mb
         return True

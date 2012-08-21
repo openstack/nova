@@ -485,6 +485,7 @@ def service_update(context, service_id, values):
 def compute_node_get(context, compute_id, session=None):
     result = model_query(context, models.ComputeNode, session=session).\
                      filter_by(id=compute_id).\
+                     options(joinedload('stats')).\
                      first()
 
     if not result:
@@ -497,6 +498,7 @@ def compute_node_get(context, compute_id, session=None):
 def compute_node_get_all(context, session=None):
     return model_query(context, models.ComputeNode, session=session).\
                     options(joinedload('service')).\
+                    options(joinedload('stats')).\
                     all()
 
 
@@ -509,42 +511,27 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
                     all()
 
 
-def _get_host_utilization(context, host, ram_mb, disk_gb):
-    """Compute the current utilization of a given host."""
-    instances = instance_get_all_by_host(context, host)
-    vms = len(instances)
-    free_ram_mb = ram_mb - FLAGS.reserved_host_memory_mb
-    free_disk_gb = disk_gb - (FLAGS.reserved_host_disk_mb * 1024)
-
-    work = 0
-    for instance in instances:
-        free_ram_mb -= instance.memory_mb
-        free_disk_gb -= instance.root_gb
-        free_disk_gb -= instance.ephemeral_gb
-        if instance.task_state is not None:
-            work += 1
-    return dict(free_ram_mb=free_ram_mb,
-                free_disk_gb=free_disk_gb,
-                current_workload=work,
-                running_vms=vms)
-
-
-def _adjust_compute_node_values_for_utilization(context, values, session):
-    service_ref = service_get(context, values['service_id'], session=session)
-    host = service_ref['host']
-    ram_mb = values['memory_mb']
-    disk_gb = values['local_gb']
-    values.update(_get_host_utilization(context, host, ram_mb, disk_gb))
+def _prep_stats_dict(values):
+    """Make list of ComputeNodeStats"""
+    stats = []
+    d = values.get('stats', {})
+    for k, v in d.iteritems():
+        stat = models.ComputeNodeStat()
+        stat['key'] = k
+        stat['value'] = v
+        stats.append(stat)
+    values['stats'] = stats
 
 
 @require_admin_context
 def compute_node_create(context, values, session=None):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data."""
+    _prep_stats_dict(values)
+
     if not session:
         session = get_session()
 
-    _adjust_compute_node_values_for_utilization(context, values, session)
     with session.begin(subtransactions=True):
         compute_node_ref = models.ComputeNode()
         session.add(compute_node_ref)
@@ -552,17 +539,52 @@ def compute_node_create(context, values, session=None):
     return compute_node_ref
 
 
+def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
+
+    existing = model_query(context, models.ComputeNodeStat, session=session,
+            read_deleted="no").filter_by(compute_node_id=compute_id).all()
+    statmap = {}
+    for stat in existing:
+        key = stat['key']
+        statmap[key] = stat
+
+    stats = []
+    for k, v in new_stats.iteritems():
+        old_stat = statmap.pop(k, None)
+        if old_stat:
+            # update existing value:
+            old_stat.update({'value': v})
+            stats.append(old_stat)
+        else:
+            # add new stat:
+            stat = models.ComputeNodeStat()
+            stat['compute_node_id'] = compute_id
+            stat['key'] = k
+            stat['value'] = v
+            stats.append(stat)
+
+    if prune_stats:
+        # prune un-touched old stats:
+        for stat in statmap.values():
+            session.add(stat)
+            stat.update({'deleted': True})
+
+    # add new and updated stats
+    for stat in stats:
+        session.add(stat)
+
+
 @require_admin_context
-def compute_node_update(context, compute_id, values, auto_adjust):
-    """Creates a new ComputeNode and populates the capacity fields
-    with the most recent data."""
+def compute_node_update(context, compute_id, values, prune_stats=False):
+    """Updates the ComputeNode record with the most recent data"""
+    stats = values.pop('stats', {})
+
     session = get_session()
-    if auto_adjust:
-        _adjust_compute_node_values_for_utilization(context, values, session)
     with session.begin(subtransactions=True):
+        _update_stats(context, stats, compute_id, session, prune_stats)
         compute_ref = compute_node_get(context, compute_id, session=session)
         compute_ref.update(values)
-        compute_ref.save(session=session)
+    return compute_ref
 
 
 def compute_node_get_by_host(context, host):
@@ -574,71 +596,6 @@ def compute_node_get_by_host(context, host):
                              filter(models.Service.host == host).\
                              filter_by(deleted=False)
         return node.first()
-
-
-def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
-                          free_disk_gb_delta=0, work_delta=0, vm_delta=0):
-    """Update a specific ComputeNode entry by a series of deltas.
-    Do this as a single atomic action and lock the row for the
-    duration of the operation. Requires that ComputeNode record exist."""
-    session = get_session()
-    compute_node = None
-    with session.begin(subtransactions=True):
-        compute_node = session.query(models.ComputeNode).\
-                              options(joinedload('service')).\
-                              filter(models.Service.host == host).\
-                              filter_by(deleted=False).\
-                              with_lockmode('update').\
-                              first()
-        if compute_node is None:
-            raise exception.NotFound(_("No ComputeNode for %(host)s") %
-                                     locals())
-
-        # This table thingy is how we get atomic UPDATE x = x + 1
-        # semantics.
-        table = models.ComputeNode.__table__
-        if free_ram_mb_delta != 0:
-            compute_node.free_ram_mb = table.c.free_ram_mb + free_ram_mb_delta
-        if free_disk_gb_delta != 0:
-            compute_node.free_disk_gb = (table.c.free_disk_gb +
-                                         free_disk_gb_delta)
-        if work_delta != 0:
-            compute_node.current_workload = (table.c.current_workload +
-                                             work_delta)
-        if vm_delta != 0:
-            compute_node.running_vms = table.c.running_vms + vm_delta
-    return compute_node
-
-
-def compute_node_utilization_set(context, host, free_ram_mb=None,
-                                 free_disk_gb=None, work=None, vms=None):
-    """Like compute_node_utilization_update() modify a specific host
-    entry. But this function will set the metrics absolutely
-    (vs. a delta update).
-    """
-    session = get_session()
-    compute_node = None
-    with session.begin(subtransactions=True):
-        compute_node = session.query(models.ComputeNode).\
-                              options(joinedload('service')).\
-                              filter(models.Service.host == host).\
-                              filter_by(deleted=False).\
-                              with_lockmode('update').\
-                              first()
-        if compute_node is None:
-            raise exception.NotFound(_("No ComputeNode for %(host)s") %
-                                     locals())
-
-        if free_ram_mb is not None:
-            compute_node.free_ram_mb = free_ram_mb
-        if free_disk_gb is not None:
-            compute_node.free_disk_gb = free_disk_gb
-        if work is not None:
-            compute_node.current_workload = work
-        if vms is not None:
-            compute_node.running_vms = vms
-
-    return compute_node
 
 
 def compute_node_statistics(context):

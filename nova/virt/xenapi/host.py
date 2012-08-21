@@ -155,8 +155,9 @@ class HostState(object):
                 # No SR configured
                 LOG.error(_("Unable to get SR for this host: %s") % e)
                 return
+            self._session.call_xenapi("SR.scan", sr_ref)
             sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
-            total = int(sr_rec["virtual_allocation"])
+            total = int(sr_rec["physical_size"])
             used = int(sr_rec["physical_utilisation"])
             data["disk_total"] = total
             data["disk_used"] = used

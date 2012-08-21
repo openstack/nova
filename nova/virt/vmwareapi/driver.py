@@ -196,7 +196,7 @@ class VMWareESXDriver(driver.ComputeDriver):
                 'username': FLAGS.vmwareapi_host_username,
                 'password': FLAGS.vmwareapi_host_password}
 
-    def update_available_resource(self, ctxt, host):
+    def get_available_resource(self):
         """This method is supported only by libvirt."""
         return
 

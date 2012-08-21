@@ -2173,23 +2173,14 @@ class LibvirtDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         self.firewall_driver.refresh_provider_fw_rules()
 
-    def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeNode table.
+    def get_available_resource(self):
+        """Retrieve resource info.
 
         This method is called as a periodic task and is used only
         in live migration currently.
 
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
-
+        :returns: dictionary containing resource info
         """
-
-        try:
-            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
-
-        # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
                'memory_mb': self.get_memory_mb_total(),
                'local_gb': self.get_local_gb_total(),
@@ -2200,16 +2191,8 @@ class LibvirtDriver(driver.ComputeDriver):
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': self.get_hypervisor_hostname(),
                'cpu_info': self.get_cpu_info(),
-               'service_id': service_ref['id'],
                'disk_available_least': self.get_disk_available_least()}
-
-        compute_node_ref = service_ref['compute_node']
-        if not compute_node_ref:
-            LOG.info(_('Compute_service record created for %s ') % host)
-            db.compute_node_create(ctxt, dic)
-        else:
-            LOG.info(_('Compute_service record updated for %s ') % host)
-            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+        return dic
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            block_migration=False,

@@ -144,8 +144,6 @@ class ComputeNode(BASE, NovaBase):
     # Free Ram, amount of activity (resize, migration, boot, etc) and
     # the number of running VM's are a good starting point for what's
     # important when making scheduling decisions.
-    #
-    # NOTE(sandy): We'll need to make this extensible for other schedulers.
     free_ram_mb = Column(Integer)
     free_disk_gb = Column(Integer)
     current_workload = Column(Integer)
@@ -163,6 +161,24 @@ class ComputeNode(BASE, NovaBase):
     # (See libvirt.virtConnection).
     cpu_info = Column(Text, nullable=True)
     disk_available_least = Column(Integer)
+
+
+class ComputeNodeStat(BASE, NovaBase):
+    """Stats related to the current workload of a compute host that are
+    intended to aid in making scheduler decisions."""
+    __tablename__ = 'compute_node_stats'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(511))
+    value = Column(String(255))
+    compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'))
+
+    primary_join = ('and_(ComputeNodeStat.compute_node_id == '
+                    'ComputeNode.id, ComputeNodeStat.deleted == False)')
+    stats = relationship("ComputeNode", backref="stats",
+            primaryjoin=primary_join)
+
+    def __str__(self):
+        return "{%d: %s = %s}" % (self.compute_node_id, self.key, self.value)
 
 
 class Certificate(BASE, NovaBase):

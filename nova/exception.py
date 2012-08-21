@@ -351,6 +351,10 @@ class ServiceUnavailable(Invalid):
     message = _("Service is unavailable at this time.")
 
 
+class ComputeResourcesUnavailable(ServiceUnavailable):
+    message = _("Insufficient compute resources.")
+
+
 class ComputeServiceUnavailable(ServiceUnavailable):
     message = _("Compute service is unavailable at this time.")
 

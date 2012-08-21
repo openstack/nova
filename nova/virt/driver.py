@@ -325,15 +325,13 @@ class ComputeDriver(object):
         """Power on the specified instance"""
         raise NotImplementedError()
 
-    def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeNode table.
+    def get_available_resource(self):
+        """Retrieve resource information.
 
         This method is called when nova-compute launches, and
-        whenever admin executes "nova-manage service update_resource".
+        as part of a periodic task
 
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
-
+        :returns: Dictionary describing resources
         """
         raise NotImplementedError()
 

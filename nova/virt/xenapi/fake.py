@@ -254,6 +254,7 @@ def create_local_srs():
                   other_config={'i18n-original-value-name_label':
                                 'Local storage',
                                 'i18n-key': 'local-storage'},
+                  physical_size=40000,
                   physical_utilisation=20000,
                   virtual_allocation=10000,
                   host_ref=host_ref)
@@ -262,6 +263,7 @@ def create_local_srs():
                   other_config={'i18n-original-value-name_label':
                                 'Local storage ISO',
                                 'i18n-key': 'local-storage-iso'},
+                  physical_size=80000,
                   physical_utilisation=40000,
                   virtual_allocation=80000,
                   host_ref=host_ref)

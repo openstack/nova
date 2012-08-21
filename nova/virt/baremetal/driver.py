@@ -659,21 +659,12 @@ class BareMetalDriver(driver.ComputeDriver):
         # Bare metal doesn't currently support security groups
         pass
 
-    def update_available_resource(self, ctxt, host):
+    def get_available_resource(self):
         """Updates compute manager resource info on ComputeNode table.
 
         This method is called when nova-coompute launches, and
         whenever admin executes "nova-manage service update_resource".
-
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
-
         """
-
-        try:
-            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -685,18 +676,10 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
                'cpu_info': self.get_cpu_info(),
-               'cpu_arch': FLAGS.cpu_arch,
-               'service_id': service_ref['id']}
+               'cpu_arch': FLAGS.cpu_arch}
 
-        compute_node_ref = service_ref['compute_node']
         LOG.info(_('#### RLK: cpu_arch = %s ') % FLAGS.cpu_arch)
-        if not compute_node_ref:
-            LOG.info(_('Compute_service record created for %s ') % host)
-            dic['service_id'] = service_ref['id']
-            db.compute_node_create(ctxt, dic)
-        else:
-            LOG.info(_('Compute_service record updated for %s ') % host)
-            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+        return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         raise NotImplementedError()

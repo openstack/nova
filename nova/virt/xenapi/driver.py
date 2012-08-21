@@ -372,26 +372,22 @@ class XenAPIDriver(driver.ComputeDriver):
                 'username': FLAGS.xenapi_connection_username,
                 'password': FLAGS.xenapi_connection_password}
 
-    def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeNode table.
+    def get_available_resource(self):
+        """Retrieve resource info.
 
         This method is called when nova-compute launches, and
-        whenever admin executes "nova-manage service update_resource".
+        as part of a periodic task.
 
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
+        :returns: dictionary describing resources
 
         """
-        try:
-            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
-
         host_stats = self.get_host_stats(refresh=True)
 
         # Updating host information
         total_ram_mb = host_stats['host_memory_total'] / (1024 * 1024)
-        free_ram_mb = host_stats['host_memory_free'] / (1024 * 1024)
+        # NOTE(belliott) memory-free-computed is a value provided by XenServer
+        # for gauging free memory more conservatively than memory-free.
+        free_ram_mb = host_stats['host_memory_free_computed'] / (1024 * 1024)
         total_disk_gb = host_stats['disk_total'] / (1024 * 1024 * 1024)
         used_disk_gb = host_stats['disk_used'] / (1024 * 1024 * 1024)
 
@@ -404,16 +400,9 @@ class XenAPIDriver(driver.ComputeDriver):
                'hypervisor_type': 'xen',
                'hypervisor_version': 0,
                'hypervisor_hostname': host_stats['host_hostname'],
-               'service_id': service_ref['id'],
                'cpu_info': host_stats['host_cpu_info']['cpu_count']}
 
-        compute_node_ref = service_ref['compute_node']
-        if not compute_node_ref:
-            LOG.info(_('Compute_service record created for %s ') % host)
-            db.compute_node_create(ctxt, dic)
-        else:
-            LOG.info(_('Compute_service record updated for %s ') % host)
-            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+        return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         # NOTE(salvatore-orlando): it enforces security groups on
