@@ -7,3 +7,4 @@ nose
 openstack.nose_plugin>=0.7
 pep8==1.1
 sphinx>=1.1.2
+feedparser

@@ -6,7 +6,6 @@ boto==2.1.1
 eventlet>=0.9.17
 kombu==1.0.4
 lxml==2.3
-python-daemon==1.5.5
 routes==1.12.3
 WebOb==1.0.8
 greenlet>=0.3.1
@@ -16,7 +15,6 @@ sqlalchemy-migrate>=0.7.2
 netaddr
 suds==0.4
 paramiko
-feedparser
 Babel>=0.9.6
 iso8601>=0.1.4
 httplib2
