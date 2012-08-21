@@ -484,9 +484,10 @@ def service_update(context, service_id, values):
 
 def compute_node_get(context, compute_id, session=None):
     result = model_query(context, models.ComputeNode, session=session).\
-                     filter_by(id=compute_id).\
-                     options(joinedload('stats')).\
-                     first()
+            filter_by(id=compute_id).\
+            options(joinedload('service')).\
+            options(joinedload('stats')).\
+            first()
 
     if not result:
         raise exception.ComputeHostNotFound(host=compute_id)
@@ -497,18 +498,18 @@ def compute_node_get(context, compute_id, session=None):
 @require_admin_context
 def compute_node_get_all(context, session=None):
     return model_query(context, models.ComputeNode, session=session).\
-                    options(joinedload('service')).\
-                    options(joinedload('stats')).\
-                    all()
+            options(joinedload('service')).\
+            options(joinedload('stats')).\
+            all()
 
 
 @require_admin_context
 def compute_node_search_by_hypervisor(context, hypervisor_match):
     field = models.ComputeNode.hypervisor_hostname
     return model_query(context, models.ComputeNode).\
-                    options(joinedload('service')).\
-                    filter(field.like('%%%s%%' % hypervisor_match)).\
-                    all()
+            options(joinedload('service')).\
+            filter(field.like('%%%s%%' % hypervisor_match)).\
+            all()
 
 
 def _prep_stats_dict(values):
