@@ -95,6 +95,7 @@
     "network:disassociate_floating_ip": [],
 
     "network:get_fixed_ip": [],
+    "network:get_fixed_ip_by_address": [],
     "network:add_fixed_ip_to_instance": [],
     "network:remove_fixed_ip_from_instance": [],
     "network:add_network_to_project": [],
