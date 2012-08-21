@@ -794,7 +794,7 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
         self.assertEqual(flavor['name'], self.disabled_type['name'])
 
         # FIXME(sirp): the disabled field is currently namespaced so that we
-        # don't impact the Openstack API. Eventually this should probably be
+        # don't impact the OpenStack API. Eventually this should probably be
         # made a first-class attribute in the next OSAPI version.
         self.assert_('OS-FLV-DISABLED:disabled' in flavor)
 

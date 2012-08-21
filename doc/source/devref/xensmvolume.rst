@@ -85,4 +85,4 @@ nova-manage sm backend_remove 1
 API Changes
 ===========
 
-No API changes have been introduced so far. The existing euca-create-volume and euca-delete-volume commands (or equivalent Openstack API commands) should be used.
+No API changes have been introduced so far. The existing euca-create-volume and euca-delete-volume commands (or equivalent OpenStack API commands) should be used.

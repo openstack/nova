@@ -100,7 +100,7 @@ class PowerVMOperator(object):
         """
         lpar_instances = self._operator.list_lpar_instances()
         # We filter out instances that haven't been created
-        # via Openstack. Notice that this is fragile and it can
+        # via OpenStack. Notice that this is fragile and it can
         # be improved later.
         instances = [instance for instance in lpar_instances
                      if re.search(r'^instance-[0-9]{8}$', instance)]
