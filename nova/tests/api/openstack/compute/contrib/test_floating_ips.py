@@ -304,13 +304,22 @@ class FloatingIpTest(test.TestCase):
         body = dict(addFloatingIp=dict(address=self.floating_ip))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        self.manager._add_floating_ip(req, 'test_inst', body)
+        rsp = self.manager._add_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 202)
 
     def test_floating_ip_disassociate(self):
+        def get_instance_by_floating_ip_addr(self, context, address):
+            if address == '10.10.10.10':
+                return 'test_inst'
+
+        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
+                       get_instance_by_floating_ip_addr)
+
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        self.manager._remove_floating_ip(req, 'test_inst', body)
+        rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 202)
 
     def test_floating_ip_disassociate_missing(self):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
@@ -326,7 +335,7 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._add_floating_ip, req, 'test_inst',
+                          self.manager._remove_floating_ip, req, 'test_inst',
                           body)
 
     def test_missing_dict_param_in_remove_floating_ip(self):
