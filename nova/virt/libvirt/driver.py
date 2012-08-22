@@ -2370,40 +2370,25 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
                                             time_module=None):
-        """Setting up filtering rules and waiting for its completion.
+        """Ensure that an instance's filtering rules are enabled.
 
-        To migrate an instance, filtering rules to hypervisors
-        and firewalls are inevitable on destination host.
-        ( Waiting only for filterling rules to hypervisor,
-        since filtering rules to firewall rules can be set faster).
+        When migrating an instance, we need the filtering rules to
+        be configured on the destination host before starting the
+        migration.
 
-        Concretely, the below method must be called.
-        - setup_basic_filtering (for nova-basic, etc.)
-        - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
-
-        to_xml may have to be called since it defines PROJNET, PROJMASK.
-        but libvirt migrates those value through migrateToURI(),
-        so , no need to be called.
-
-        Don't use thread for this method since migration should
-        not be started when setting-up filtering rules operations
-        are not completed.
-
-        :params instance_ref: nova.db.sqlalchemy.models.Instance object
-
+        Also, when restarting the compute service, we need to ensure
+        that filtering rules exist for all running services.
         """
 
         if not time_module:
             time_module = greenthread
 
-        # If any instances never launch at destination host,
-        # basic-filtering must be set here.
         self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
-        # setting up nova-instance-instance-xx mainly.
         self.firewall_driver.prepare_instance_filter(instance_ref,
                 network_info)
 
-        # wait for completion
+        # nwfilters may be defined in a separate thread in the case
+        # of libvirt non-blocking mode, so we wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
             if self.firewall_driver.instance_filter_exists(instance_ref,
@@ -2411,7 +2396,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 break
             timeout_count.pop()
             if len(timeout_count) == 0:
-                msg = _('Timeout migrating for %s. nwfilter not found.')
+                msg = _('The firewall filter for %s does not exist')
                 raise exception.NovaException(msg % instance_ref["name"])
             time_module.sleep(1)
 
