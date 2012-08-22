@@ -27,8 +27,9 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 
 * |AllHostsFilter| - frankly speaking, this filter does no operation. It
   passes all the available hosts.
-* |ArchFilter| - filters hosts based on architecture.  It passes hosts
-  that can support the architecture specified in the instance properties.
+* |ImagePropertiesFilter| - filters hosts based on properties defined
+  on the instance's image.  It passes hosts that can support the specified
+  image properties contained in the instance.
 * |AvailabilityZoneFilter| - filters hosts by availability zone. It passes
   hosts matching the availability zone specfied in the instance properties.
 * |ComputeCapabilityFilter| - checks that the capabilities provided by the
@@ -86,10 +87,17 @@ scheduler with availability zones support and can configure availability zones
 on each compute host. This classes method `host_passes` returns `True` if
 availability zone mentioned in request is the same on the current compute host.
 
-The |ArchFilter| filters hosts based on the architecture specified in the
-instance properties.  E.g., an instance might require a host that supports
-the arm architecture.  The |ArchFilter| will only pass hosts that can
-support the architecture requested by the instance.
+The |ImagePropertiesFilter| filters hosts based on the architecture,
+hypervisor type, and virtual machine mode specified in the
+instance.  E.g., an instance might require a host that supports the arm
+architecture on a qemu compute host.  The |ImagePropertiesFilter| will only
+pass hosts that can statisfy this request.  These instance
+properties are populated from properties define on the instance's image.
+E.g. an image can be decorated with these properties using
+`glance image-update img-uuid --property architecture=arm --property
+hypervisor_type=qemu`
+Only hosts that statify these requirements will pass the
+|ImagePropertiesFilter|.
 
 |ComputeCapabilitesFilter| checks if the host satisfies any 'extra specs'
 specfied on the instance type.  The 'extra specs' can contain key/value pairs,
@@ -160,11 +168,12 @@ The default values for these settings in nova.conf are:
 ::
 
     --scheduler_available_filters=nova.scheduler.filters.standard_filters
-    --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilityFilter
+    --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilityFilter,ImagePropertiesFilter
 
 With this configuration, all filters in `nova.scheduler.filters`
 would be available, and by default the |RamFilter|, |ComputeFilter|,
-|AvailabilityZoneFilter|, and |ComputeCapabilityFilter| would be used.
+|AvailabilityZoneFilter|, |ComputeCapabilityFilter|, and
+|ImagePropertiesFilter| would be used.
 
 If you want to create **your own filter** you just need to inherit from
 |BaseHostFilter| and implement one method:
@@ -278,7 +287,7 @@ P.S.: you can find more examples of using Filter Scheduler and standard filters
 in :mod:`nova.tests.scheduler`.
 
 .. |AllHostsFilter| replace:: :class:`AllHostsFilter <nova.scheduler.filters.all_hosts_filter.AllHostsFilter>`
-.. |ArchFilter| replace:: :class:`ArchFilter <nova.scheduler.filters.arch_filter.ArchFilter>`
+.. |ImagePropertiesFilter| replace:: :class:`ImagePropertiesFilter <nova.scheduler.filters.image_props_filter.ImagePropertiesFilter>`
 .. |AvailabilityZoneFilter| replace:: :class:`AvailabilityZoneFilter <nova.scheduler.filters.availability_zone_filter.AvailabilityZoneFilter>`
 .. |BaseHostFilter| replace:: :class:`BaseHostFilter <nova.scheduler.filters.BaseHostFilter>`
 .. |ComputeCapabilitiesFilter| replace:: :class:`ComputeCapabilitiesFilter <nova.scheduler.filters.compute_capabilities_filter.ComputeCapabilitiesFilter>`
