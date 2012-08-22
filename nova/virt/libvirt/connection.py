@@ -537,15 +537,17 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 virt_dom.attachDevice(xml)
             except Exception, ex:
-                self.volume_driver_method('disconnect_volume',
-                                           connection_info,
-                                           mount_device)
-
                 if isinstance(ex, libvirt.libvirtError):
                     errcode = ex.get_error_code()
                     if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                        self.volume_driver_method('disconnect_volume',
+                                                   connection_info,
+                                                   mount_device)
                         raise exception.DeviceIsBusy(device=mount_device)
-                raise
+                with utils.save_and_reraise_exception():
+                    self.volume_driver_method('disconnect_volume',
+                                               connection_info,
+                                               mount_device)
 
     @staticmethod
     def _get_disk_xml(xml, device):
