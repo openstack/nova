@@ -900,28 +900,37 @@ class VMOps(object):
 
         raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
 
+    def _detach_vm_vols(self, instance, vm_ref, block_device_info=None):
+        """Detach any external nova/cinder volumes and purge the SRs.
+           This differs from a normal detach in that the VM has been
+           shutdown, so there is no need for unplugging VBDs. They do
+           need to be destroyed, so that the SR can be forgotten.
+        """
+        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
+        for vbd_ref in vbd_refs:
+            other_config = self._session.call_xenapi("VBD.get_other_config",
+                                                   vbd_ref)
+            if other_config.get('osvol'):
+                # this is a nova/cinder volume
+                try:
+                    sr_ref = volume_utils.find_sr_from_vbd(self._session,
+                                                           vbd_ref)
+                    vm_utils.destroy_vbd(self._session, vbd_ref)
+                    # Forget SR only if not in use
+                    volume_utils.purge_sr(self._session, sr_ref)
+                except Exception as exc:
+                    LOG.exception(exc)
+                    raise
+
     def _destroy_vdis(self, instance, vm_ref, block_device_info=None):
         """Destroys all VDIs associated with a VM."""
         instance_uuid = instance['uuid']
         LOG.debug(_("Destroying VDIs for Instance %(instance_uuid)s")
                   % locals())
-        nodestroy = []
-        if block_device_info:
-            for bdm in block_device_info['block_device_mapping']:
-                LOG.debug(bdm)
-                # If there is no associated VDI, skip it
-                if 'vdi_uuid' not in bdm['connection_info']['data']:
-                    LOG.debug(_("BDM contains no vdi_uuid"), instance=instance)
-                    continue
-                # bdm vols should be left alone if delete_on_termination
-                # is false, or they will be destroyed on cleanup_volumes
-                nodestroy.append(bdm['connection_info']['data']['vdi_uuid'])
 
-        vdi_refs = vm_utils.lookup_vm_vdis(self._session, vm_ref, nodestroy)
-
+        vdi_refs = vm_utils.lookup_vm_vdis(self._session, vm_ref)
         if not vdi_refs:
             return
-
         for vdi_ref in vdi_refs:
             try:
                 vm_utils.destroy_vdi(self._session, vdi_ref)
@@ -1017,6 +1026,7 @@ class VMOps(object):
         vm_utils.shutdown_vm(self._session, instance, vm_ref)
 
         # Destroy VDIs
+        self._detach_vm_vols(instance, vm_ref, block_device_info)
         self._destroy_vdis(instance, vm_ref, block_device_info)
         self._destroy_kernel_ramdisk(instance, vm_ref)
 

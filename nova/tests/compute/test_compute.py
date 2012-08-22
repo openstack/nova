@@ -454,6 +454,41 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
+    def test_run_terminate_with_vol_attached(self):
+        """Make sure it is possible to  run and terminate instance with volume
+        attached
+        """
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        def fake_check_attach(*args, **kwargs):
+            pass
+
+        def fake_reserve_volume(*args, **kwargs):
+            pass
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id}
+
+        self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
+        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
+        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+                       fake_reserve_volume)
+
+        self.compute_api.attach_volume(self.context, instance, 1,
+                                       '/dev/vdc')
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After terminating instances: %s"), instances)
+        self.assertEqual(len(instances), 0)
+
     def test_terminate_no_network(self):
         # This is as reported in LP bug 1008875
         instance = jsonutils.to_primitive(self._create_fake_instance())
