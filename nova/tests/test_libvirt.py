@@ -1591,7 +1591,9 @@ class LibvirtConnTestCase(test.TestCase):
                                                      network_info,
                                                      time_module=fake_timer)
         except exception.NovaException, e:
-            c1 = (0 <= str(e).find('Timeout migrating for'))
+            msg = ('The firewall filter for %s does not exist' %
+                   instance_ref['name'])
+            c1 = (0 <= str(e).find(msg))
         self.assertTrue(c1)
 
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
