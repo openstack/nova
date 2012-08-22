@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.scheduler import filters
+from nova.scheduler.filters import extra_specs_ops
 from nova.scheduler.filters.trusted_filter import AttestationService
 from nova import test
 from nova.tests.scheduler import fakes
@@ -62,6 +63,192 @@ class TestFilter(filters.BaseHostFilter):
 class TestBogusFilter(object):
     """Class that doesn't inherit from BaseHostFilter"""
     pass
+
+
+class ExtraSpecsOpsTestCase(test.TestCase):
+    def _do_extra_specs_ops_test(self, value, req, matches):
+        assertion = self.assertTrue if matches else self.assertFalse
+        assertion(extra_specs_ops.match(value, req))
+
+    def test_extra_specs_matches_simple(self):
+        self._do_extra_specs_ops_test(
+            value='1',
+            req='1',
+            matches=True)
+
+    def test_extra_specs_fails_simple(self):
+        self._do_extra_specs_ops_test(
+            value='',
+            req='1',
+            matches=False)
+
+    def test_extra_specs_fails_simple2(self):
+        self._do_extra_specs_ops_test(
+            value='3',
+            req='1',
+            matches=False)
+
+    def test_extra_specs_fails_simple3(self):
+        self._do_extra_specs_ops_test(
+            value='222',
+            req='2',
+            matches=False)
+
+    def test_extra_specs_fails_with_bogus_ops(self):
+        self._do_extra_specs_ops_test(
+            value='4',
+            req='> 2',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_eq(self):
+        self._do_extra_specs_ops_test(
+            value='123',
+            req='= 123',
+            matches=True)
+
+    def test_extra_specs_matches_with_op_eq2(self):
+        self._do_extra_specs_ops_test(
+            value='124',
+            req='= 123',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_eq(self):
+        self._do_extra_specs_ops_test(
+            value='34',
+            req='= 234',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_eq3(self):
+        self._do_extra_specs_ops_test(
+            value='34',
+            req='=',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_seq(self):
+        self._do_extra_specs_ops_test(
+            value='123',
+            req='s== 123',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_seq(self):
+        self._do_extra_specs_ops_test(
+            value='1234',
+            req='s== 123',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_sneq(self):
+        self._do_extra_specs_ops_test(
+            value='1234',
+            req='s!= 123',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_sneq(self):
+        self._do_extra_specs_ops_test(
+            value='123',
+            req='s!= 123',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_sge(self):
+        self._do_extra_specs_ops_test(
+            value='1000',
+            req='s>= 234',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_sle(self):
+        self._do_extra_specs_ops_test(
+            value='1234',
+            req='s<= 1000',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_sl(self):
+        self._do_extra_specs_ops_test(
+            value='2',
+            req='s< 12',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_sg(self):
+        self._do_extra_specs_ops_test(
+            value='12',
+            req='s> 2',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_in(self):
+        self._do_extra_specs_ops_test(
+            value='12311321',
+            req='<in> 11',
+            matches=True)
+
+    def test_extra_specs_matches_with_op_in2(self):
+        self._do_extra_specs_ops_test(
+            value='12311321',
+            req='<in> 12311321',
+            matches=True)
+
+    def test_extra_specs_matches_with_op_in3(self):
+        self._do_extra_specs_ops_test(
+            value='12311321',
+            req='<in> 12311321 <in>',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_in(self):
+        self._do_extra_specs_ops_test(
+            value='12310321',
+            req='<in> 11',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_in2(self):
+        self._do_extra_specs_ops_test(
+            value='12310321',
+            req='<in> 11 <in>',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_or(self):
+        self._do_extra_specs_ops_test(
+            value='12',
+            req='<or> 11 <or> 12',
+            matches=True)
+
+    def test_extra_specs_matches_with_op_or2(self):
+        self._do_extra_specs_ops_test(
+            value='12',
+            req='<or> 11 <or> 12 <or>',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_or(self):
+        self._do_extra_specs_ops_test(
+            value='13',
+            req='<or> 11 <or> 12',
+            matches=False)
+
+    def test_extra_specs_fails_with_op_or2(self):
+        self._do_extra_specs_ops_test(
+            value='13',
+            req='<or> 11 <or> 12 <or>',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_le(self):
+        self._do_extra_specs_ops_test(
+            value='2',
+            req='<= 10',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_le(self):
+        self._do_extra_specs_ops_test(
+            value='3',
+            req='<= 2',
+            matches=False)
+
+    def test_extra_specs_matches_with_op_ge(self):
+        self._do_extra_specs_ops_test(
+            value='3',
+            req='>= 1',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_ge(self):
+        self._do_extra_specs_ops_test(
+            value='2',
+            req='>= 3',
+            matches=False)
 
 
 class HostFiltersTestCase(test.TestCase):
@@ -503,232 +690,16 @@ class HostFiltersTestCase(test.TestCase):
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(filt_cls.host_passes(host, filter_properties))
 
-    def test_compute_filter_passes_extra_specs_simple1(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_simple2(self):
+    def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '1', 'opt2': '2'},
             especs={'opt1': '1', 'opt2': '2'},
             passes=True)
 
-    def test_compute_filter_fails_extra_specs_simple1(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1111'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_simple2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': ''},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_simple3(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt3': '3'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_simple4(self):
+    def test_compute_filter_fails_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '1', 'opt2': '2'},
             especs={'opt1': '1', 'opt2': '222'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_simple5(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1111', 'opt2': '222'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_bogus_ops(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '2', 'opt2': '5'},
-            especs={'opt1': '> 4', 'opt2': '< 3'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_eq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '123'},
-            especs={'opt1': '= 123'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_with_op_eq2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '124'},
-            especs={'opt1': '= 123'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_with_op_eq3(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '124', 'opt2': '456'},
-            especs={'opt1': '= 123', 'opt2': '= 456'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_eq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '34'},
-            especs={'opt2': '= 234'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_eq2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '124', 'opt2': '4567'},
-            especs={'opt1': '= 123', 'opt2': '= 456'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_eq3(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '124'},
-            especs={'opt1': '='},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_op_eq4(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt3': '124', 'opt4': '456'},
-            especs={'opt11': '= 124', 'opt12': '= 456'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_seq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '123'},
-            especs={'opt1': 's== 123'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_seq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '2345'},
-            especs={'opt2': 's== 234'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_sneq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '11'},
-            especs={'opt1': 's!= 123'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_sneq(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '234'},
-            especs={'opt2': 's!= 234'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_sgle(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '11', 'opt2': '543'},
-            especs={'opt1': 's<= 123', 'opt2': 's>= 43'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_sge(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '1000'},
-            especs={'opt2': 's>= 234'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_op_sle(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '234'},
-            especs={'opt2': 's<= 1000'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_sgl(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '11', 'opt2': '543'},
-            especs={'opt1': 's< 123', 'opt2': 's> 43'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_sl(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '2'},
-            especs={'opt2': 's< 12'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_op_sg(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt2': '12'},
-            especs={'opt2': 's> 2'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_in(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12311321'},
-            especs={'opt1': '<in> 11'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_with_op_in2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12311321'},
-            especs={'opt1': '<in> 12311321'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_with_op_in3(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12311321'},
-            especs={'opt1': '<in> 12311321 <in>'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_in(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12310321'},
-            especs={'opt1': '<in> 11'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_op_in2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12310321'},
-            especs={'opt1': '<in> 11 <in>'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_or(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12'},
-            especs={'opt1': '<or> 11 <or> 12'},
-            passes=True)
-
-    def test_compute_filter_passes_extra_specs_with_op_or2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '12'},
-            especs={'opt1': '<or> 11 <or> 12 <or>'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_or(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '13'},
-            especs={'opt1': '<or> 11 <or> 12'},
-            passes=False)
-
-    def test_compute_filter_fails_extra_specs_with_op_or2(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': '13'},
-            especs={'opt1': '<or> 11 <or> 12 <or>'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_le(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 2, 'opt2': 2},
-            especs={'opt1': '<= 10', 'opt2': '<= 20'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_le(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 1, 'opt2': 3},
-            especs={'opt1': '<= 2', 'opt2': '<= 2'},
-            passes=False)
-
-    def test_compute_filter_passes_extra_specs_with_op_ge(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 2, 'opt2': 2},
-            especs={'opt1': '>= 1', 'opt2': '>= 2'},
-            passes=True)
-
-    def test_compute_filter_fails_extra_specs_with_op_ge(self):
-        self._do_test_compute_filter_extra_specs(
-            ecaps={'opt1': 1, 'opt2': 2},
-            especs={'opt1': '>= 2', 'opt2': '>= 2'},
             passes=False)
 
     def test_aggregate_filter_passes_no_extra_specs(self):
@@ -752,33 +723,20 @@ class HostFiltersTestCase(test.TestCase):
             db.aggregate_host_add(self.context.elevated(), result.id, host)
         return result
 
-    def test_aggregate_filter_passes_extra_specs(self):
+    def _do_test_aggregate_filter_extra_specs(self, emeta, especs, passes):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        extra_specs = {'opt1': '1', 'opt2': '2'}
-        self._create_aggregate_with_host(metadata={'opt1': '1'})
-        self._create_aggregate_with_host(name='fake2', metadata={'opt2': '2'})
-
-        filter_properties = {'context': self.context, 'instance_type':
-                {'memory_mb': 1024, 'extra_specs': extra_specs}}
+        self._create_aggregate_with_host(name='fake2', metadata=emeta)
+        filter_properties = {'context': self.context,
+            'instance_type': {'memory_mb': 1024, 'extra_specs': especs}}
         host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_filter_fails_extra_specs(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        extra_specs = {'opt1': 1, 'opt2': 3}
-        self._create_aggregate_with_host(metadata={'opt1': '1'})
-        self._create_aggregate_with_host(name='fake2', metadata={'opt2': '2'})
-        filter_properties = {'context': self.context, 'instance_type':
-                {'memory_mb': 1024, 'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        assertion = self.assertTrue if passes else self.assertFalse
+        assertion(filt_cls.host_passes(host, filter_properties))
 
     def test_aggregate_filter_fails_extra_specs_deleted_host(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        extra_specs = {'opt1': '1', 'opt2': '2'}
+        extra_specs = {'opt1': 's== 1', 'opt2': 's== 2'}
         self._create_aggregate_with_host(metadata={'opt1': '1'})
         agg2 = self._create_aggregate_with_host(name='fake2',
                 metadata={'opt2': '2'})
@@ -787,6 +745,18 @@ class HostFiltersTestCase(test.TestCase):
         host = fakes.FakeHostState('host1', 'compute', {'free_ram_mb': 1024})
         db.aggregate_host_delete(self.context.elevated(), agg2.id, 'host1')
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_filter_passes_extra_specs_simple(self):
+        self._do_test_aggregate_filter_extra_specs(
+            emeta={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '2'},
+            passes=True)
+
+    def test_aggregate_filter_fails_extra_specs_simple(self):
+        self._do_test_aggregate_filter_extra_specs(
+            emeta={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '222'},
+            passes=False)
 
     def test_isolated_hosts_fails_isolated_on_non_isolated(self):
         self.flags(isolated_images=['isolated'], isolated_hosts=['isolated'])

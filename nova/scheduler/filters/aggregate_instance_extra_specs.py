@@ -17,6 +17,7 @@
 from nova import db
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import extra_specs_ops
 
 
 LOG = logging.getLogger(__name__)
@@ -38,12 +39,17 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         context = filter_properties['context'].elevated()
         metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
 
-        for key, value in instance_type['extra_specs'].iteritems():
-            aggregate_value = metadata.get(key, None)
-            if not aggregate_value or value not in aggregate_value:
-                LOG.debug(_("%(host_state)s fails "
-                        "AggregateInstanceExtraSpecsFilter requirements, "
-                        "missing %(key)s,'%(value)s'="
-                        "'%(aggregate_value)s'"), locals())
+        for key, req in instance_type['extra_specs'].iteritems():
+            aggregate_vals = metadata.get(key, None)
+            if not aggregate_vals:
+                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
+                    "requirements"), locals())
+                return False
+            for aggregate_val in aggregate_vals:
+                if extra_specs_ops.match(aggregate_val, req):
+                    break
+            else:
+                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
+                    "requirements"), locals())
                 return False
         return True
