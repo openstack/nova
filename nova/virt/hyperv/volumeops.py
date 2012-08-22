@@ -32,10 +32,10 @@ from nova.virt.hyperv import volumeutils
 LOG = logging.getLogger(__name__)
 
 hyper_volumeops_opts = [
-    cfg.StrOpt('hyperv_attaching_volume_retry_count',
+    cfg.IntOpt('hyperv_attaching_volume_retry_count',
         default=10,
         help='The number of times we retry on attaching volume '),
-    cfg.StrOpt('hyperv_wait_between_attach_retry',
+    cfg.IntOpt('hyperv_wait_between_attach_retry',
         default=5,
         help='The seconds to wait between an volume attachment attempt'),
     ]
