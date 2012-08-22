@@ -52,15 +52,21 @@ def _parse_image_ref(image_href):
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
     image_id = o.path.split('/')[-1]
-    return (image_id, host, port)
+    use_ssl = (o.scheme == 'https')
+    return (image_id, host, port, use_ssl)
 
 
-def _create_glance_client(context, host, port):
+def _create_glance_client(context, host, port, use_ssl):
     """Instantiate a new glanceclient.Client object"""
+    if use_ssl:
+        scheme = 'https'
+    else:
+        scheme = 'http'
     params = {}
+    params['insecure'] = FLAGS.glance_api_insecure
     if FLAGS.auth_strategy == 'keystone':
         params['token'] = context.auth_token
-    endpoint = 'http://%s:%s' % (host, port)
+    endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client('1', endpoint, **params)
 
 
@@ -72,8 +78,13 @@ def get_api_servers():
     """
     api_servers = []
     for api_server in FLAGS.glance_api_servers:
-        host, port_str = api_server.split(':')
-        api_servers.append((host, int(port_str)))
+        if '//' not in api_server:
+            api_server = 'http://' + api_server
+        o = urlparse.urlparse(api_server)
+        port = o.port or 80
+        host = o.netloc.split(':', 1)[0]
+        use_ssl = (o.scheme == 'https')
+        api_servers.append((host, port, use_ssl))
     random.shuffle(api_servers)
     return itertools.cycle(api_servers)
 
@@ -81,25 +92,29 @@ def get_api_servers():
 class GlanceClientWrapper(object):
     """Glance client wrapper class that implements retries."""
 
-    def __init__(self, context=None, host=None, port=None):
+    def __init__(self, context=None, host=None, port=None, use_ssl=False):
         if host is not None:
-            self.client = self._create_static_client(context, host, port)
+            self.client = self._create_static_client(context,
+                                                     host, port, use_ssl)
         else:
             self.client = None
         self.api_servers = None
 
-    def _create_static_client(self, context, host, port):
+    def _create_static_client(self, context, host, port, use_ssl):
         """Create a client that we'll use for every call."""
         self.host = host
         self.port = port
-        return _create_glance_client(context, self.host, self.port)
+        self.use_ssl = use_ssl
+        return _create_glance_client(context,
+                                     self.host, self.port, self.use_ssl)
 
     def _create_onetime_client(self, context):
         """Create a client that will be used for one call."""
         if self.api_servers is None:
             self.api_servers = get_api_servers()
-        self.host, self.port = self.api_servers.next()
-        return _create_glance_client(context, self.host, self.port)
+        self.host, self.port, self.use_ssl = self.api_servers.next()
+        return _create_glance_client(context,
+                                     self.host, self.port, self.use_ssl)
 
     def call(self, context, method, *args, **kwargs):
         """
@@ -398,9 +413,10 @@ def get_remote_image_service(context, image_href):
         return image_service, image_href
 
     try:
-        (image_id, glance_host, glance_port) = _parse_image_ref(image_href)
+        (image_id, glance_host, glance_port, use_ssl) = \
+            _parse_image_ref(image_href)
         glance_client = GlanceClientWrapper(context=context,
-                host=glance_host, port=glance_port)
+                host=glance_host, port=glance_port, use_ssl=use_ssl)
     except ValueError:
         raise exception.InvalidImageRef(image_href=image_href)
 

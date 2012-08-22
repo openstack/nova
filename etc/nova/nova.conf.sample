@@ -125,8 +125,12 @@
 #### (IntOpt) default glance port
 
 # glance_api_servers=$glance_host:$glance_port
-#### (ListOpt) A list of the glance api servers available to nova
+#### (ListOpt) A list of the glance api servers available to nova.
+####           Prefix with https:// for ssl-based glance api servers.
 ####           ([hostname|ip]:port)
+
+# glance_api_insecure=false
+#### (BoolOpt) If passed, allow to perform insecure SSL (https) requests to glance
 
 # glance_num_retries=0
 #### (IntOpt) Number retries when downloading an image from glance
