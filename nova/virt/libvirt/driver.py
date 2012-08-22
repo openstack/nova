@@ -641,6 +641,17 @@ class LibvirtDriver(driver.ComputeDriver):
                     if child.get('dev') == device:
                         return etree.tostring(node)
 
+    def _get_domain_xml(self, instance):
+        try:
+            virt_dom = self._lookup_by_name(instance['name'])
+            xml = virt_dom.XMLDesc(0)
+        except exception.InstanceNotFound:
+            instance_dir = os.path.join(FLAGS.instances_path,
+                                        instance['name'])
+            xml_path = os.path.join(instance_dir, 'libvirt.xml')
+            xml = libvirt_utils.load_file(xml_path)
+        return xml
+
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
@@ -822,7 +833,8 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance, block_device_info=block_device_info)
+        return self._hard_reboot(instance, network_info,
+                                 block_device_info=block_device_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -859,7 +871,8 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, xml=None, block_device_info=None):
+    def _hard_reboot(self, instance, network_info, xml=None,
+                     block_device_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         Performs a Libvirt reset (if supported) on the domain.
@@ -872,23 +885,12 @@ class LibvirtDriver(driver.ComputeDriver):
         existing domain.
         """
 
-        block_device_mapping = driver.block_device_info_get_mapping(
-            block_device_info)
-
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
-            mount_device = vol['mount_device'].rpartition("/")[2]
-            self.volume_driver_method('connect_volume',
-                                      connection_info,
-                                      mount_device)
-
-        virt_dom = self._lookup_by_name(instance['name'])
-        # NOTE(itoumsn): Use XML delived from the running instance.
         if not xml:
-            xml = virt_dom.XMLDesc(0)
+            xml = self._get_domain_xml(instance)
 
         self._destroy(instance)
-        self._create_domain(xml, virt_dom)
+        self._create_domain_and_network(xml, instance, network_info,
+                                        block_device_info)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -948,8 +950,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted"""
-        virt_dom = self._lookup_by_name(instance['name'])
-        xml = virt_dom.XMLDesc(0)
+        xml = self._get_domain_xml(instance)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
@@ -965,8 +966,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        virt_dom = self._lookup_by_name(instance['name'])
-        unrescue_xml = virt_dom.XMLDesc(0)
+        unrescue_xml = self._get_domain_xml(instance)
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
@@ -983,7 +983,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            network_info=network_info,
                            admin_pass=rescue_password)
         self._destroy(instance)
-        self._create_domain(xml, virt_dom)
+        self._create_domain(xml)
 
     @exception.wrap_exception()
     def unrescue(self, instance, network_info):
