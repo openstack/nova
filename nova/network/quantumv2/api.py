@@ -144,11 +144,8 @@ class API(base.Base):
             try:
                 quantumv2.get_client(context).delete_port(port['id'])
             except Exception as ex:
-                with excutils.save_and_reraise_exception():
-                    msg = _("Fail to delete port %(portid)s with failure:"
-                            "%(exception)s")
-                    LOG.debug(msg, {'portid': port['id'],
-                                    'exception': ex})
+                LOG.exception(_("Failed to delete quantum port %(portid)s ")
+                              % {'portid': port['id']})
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None):
