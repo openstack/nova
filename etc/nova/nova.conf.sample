@@ -4,6 +4,44 @@
 
 [DEFAULT]
 
+######## defined in nova.openstack.common.cfg:CommonConfigOpts ########
+
+# debug=false
+#### (BoolOpt) Print debugging output
+
+# verbose=false
+#### (BoolOpt) Print more verbose output
+
+# log_config=<None>
+#### (StrOpt) If this option is specified, the logging configuration file
+####          specified is used and overrides any other logging options
+####          specified. Please see the Python logging module
+####          documentation for details on logging configuration files.
+
+# log_format=%(asctime)s %(levelname)8s [%(name)s] %(message)s
+#### (StrOpt) A logging.Formatter log message format string which may use
+####          any of the available logging.LogRecord attributes. Default:
+####          %default
+
+# log_date_format=%Y-%m-%d %H:%M:%S
+#### (StrOpt) Format string for %(asctime)s in log records. Default:
+####          %default
+
+# log_file=<None>
+#### (StrOpt) (Optional) Name of log file to output to. If not set,
+####          logging will go to stdout.
+
+# log_dir=<None>
+#### (StrOpt) (Optional) The directory to keep log files in (will be
+####          prepended to --logfile)
+
+# use_syslog=false
+#### (BoolOpt) Use syslog for logging.
+
+# syslog_log_facility=LOG_USER
+#### (StrOpt) syslog facility to receive log lines
+
+
 ######## defined in nova.crypto ########
 
 # ca_file=cacert.pem
@@ -1908,4 +1946,4 @@
 ####          beprepared. Maximum value is 600 seconds (10 minutes).
 
 
-# Total option count: 500
+# Total option count: 509
