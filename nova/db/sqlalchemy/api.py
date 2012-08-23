@@ -1756,29 +1756,30 @@ def instance_update_and_get_original(context, instance_uuid, values):
 def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     session = get_session()
 
-    if utils.is_uuid_like(instance_uuid):
-        instance_ref = instance_get_by_uuid(context, instance_uuid,
-                                            session=session)
-    else:
+    if not utils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
-    if copy_old_instance:
-        old_instance_ref = copy.copy(instance_ref)
-    else:
-        old_instance_ref = None
-
-    metadata = values.get('metadata')
-    if metadata is not None:
-        instance_metadata_update(
-            context, instance_ref['uuid'], values.pop('metadata'), delete=True)
-
-    system_metadata = values.get('system_metadata')
-    if system_metadata is not None:
-        instance_system_metadata_update(
-             context, instance_ref['uuid'], values.pop('system_metadata'),
-             delete=True)
-
     with session.begin():
+        instance_ref = instance_get_by_uuid(context, instance_uuid,
+                                            session=session)
+
+        if copy_old_instance:
+            old_instance_ref = copy.copy(instance_ref)
+        else:
+            old_instance_ref = None
+
+        metadata = values.get('metadata')
+        if metadata is not None:
+            instance_metadata_update(context, instance_ref['uuid'],
+                                     values.pop('metadata'), True,
+                                     session=session)
+
+        system_metadata = values.get('system_metadata')
+        if system_metadata is not None:
+            instance_system_metadata_update(
+                 context, instance_ref['uuid'], values.pop('system_metadata'),
+                 delete=True, session=session)
+
         instance_ref.update(values)
         instance_ref.save(session=session)
 
@@ -3957,8 +3958,9 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_metadata_get(context, instance_uuid):
-    rows = _instance_metadata_get_query(context, instance_uuid).all()
+def instance_metadata_get(context, instance_uuid, session=None):
+    rows = _instance_metadata_get_query(context, instance_uuid,
+                                        session=session).all()
 
     result = {}
     for row in rows:
@@ -3991,12 +3993,14 @@ def instance_metadata_get_item(context, instance_uuid, key, session=None):
 
 
 @require_context
-def instance_metadata_update(context, instance_uuid, metadata, delete):
-    session = get_session()
-
+def instance_metadata_update(context, instance_uuid, metadata, delete,
+                             session=None):
+    if session is None:
+        session = get_session()
     # Set existing metadata to deleted if delete argument is True
     if delete:
-        original_metadata = instance_metadata_get(context, instance_uuid)
+        original_metadata = instance_metadata_get(context, instance_uuid,
+                                                  session=session)
         for meta_key, meta_value in original_metadata.iteritems():
             if meta_key not in metadata:
                 meta_ref = instance_metadata_get_item(context, instance_uuid,
@@ -4035,8 +4039,9 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-def instance_system_metadata_get(context, instance_uuid):
-    rows = _instance_system_metadata_get_query(context, instance_uuid).all()
+def instance_system_metadata_get(context, instance_uuid, session=None):
+    rows = _instance_system_metadata_get_query(context, instance_uuid,
+                                               session=session).all()
 
     result = {}
     for row in rows:
@@ -4069,13 +4074,15 @@ def _instance_system_metadata_get_item(context, instance_uuid, key,
 
 
 @require_context
-def instance_system_metadata_update(context, instance_uuid, metadata, delete):
-    session = get_session()
+def instance_system_metadata_update(context, instance_uuid, metadata, delete,
+                                    session=None):
+    if session is None:
+        session = get_session()
 
     # Set existing metadata to deleted if delete argument is True
     if delete:
         original_metadata = instance_system_metadata_get(
-                context, instance_uuid)
+                context, instance_uuid, session=session)
         for meta_key, meta_value in original_metadata.iteritems():
             if meta_key not in metadata:
                 meta_ref = _instance_system_metadata_get_item(
