@@ -661,7 +661,7 @@ else:
 _semaphores = weakref.WeakValueDictionary()
 
 
-def synchronized(name, external=False):
+def synchronized(name, external=False, lock_path=None):
     """Synchronization decorator.
 
     Decorating a method like so::
@@ -688,6 +688,10 @@ def synchronized(name, external=False):
     multiple processes. This means that if two different workers both run a
     a method decorated with @synchronized('mylock', external=True), only one
     of them will execute at a time.
+
+    The lock_path keyword argument is used to specify a special location for
+    external lock files to live. If nothing is set, then FLAGS.lock_path is
+    used as a default.
     """
 
     def wrap(f):
@@ -703,9 +707,6 @@ def synchronized(name, external=False):
                 # (only valid in greenthreads)
                 _semaphores[name] = sem
 
-            LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
-                        '"%(method)s"...'), {'lock': name,
-                                             'method': f.__name__})
             with sem:
                 LOG.debug(_('Got semaphore "%(lock)s" for method '
                             '"%(method)s"...'), {'lock': name,
@@ -714,8 +715,25 @@ def synchronized(name, external=False):
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
                                 'method "%(method)s"...'),
                               {'lock': name, 'method': f.__name__})
-                    lock_path = FLAGS.lock_path or tempfile.mkdtemp()
-                    lock_file_path = os.path.join(lock_path, 'nova-%s' % name)
+                    cleanup_dir = False
+
+                    def wrap_mkdtemp():
+                        cleanup_dir = True
+                        return tempfile.mkdtemp()
+
+                    # We need a copy of lock_path because it is non-local
+                    local_lock_path = lock_path
+                    if not local_lock_path:
+                        local_lock_path = FLAGS.lock_path or wrap_mkdtemp()
+
+                    if not os.path.exists(local_lock_path):
+                        ensure_tree(local_lock_path)
+
+                    # NOTE(mikal): the lock name cannot contain directory
+                    # separators
+                    safe_name = name.replace(os.sep, '_')
+                    lock_file_path = os.path.join(local_lock_path,
+                                                  'nova-%s' % safe_name)
                     lock = InterProcessLock(lock_file_path)
                     try:
                         with lock:
@@ -727,8 +745,8 @@ def synchronized(name, external=False):
                         # NOTE(vish): This removes the tempdir if we needed
                         #             to create one. This is used to cleanup
                         #             the locks left behind by unit tests.
-                        if not FLAGS.lock_path:
-                            shutil.rmtree(lock_path)
+                        if cleanup_dir:
+                            shutil.rmtree(local_lock_path)
                 else:
                     retval = f(*args, **kwargs)
 

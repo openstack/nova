@@ -146,10 +146,11 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
+        self.flags(disable_process_locking=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
+                                   'Dom0IptablesFirewallDriver',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass')
         db_fakes.stub_out_db_instance_api(self.stubs)
         self.instance_values = {'id': 1,
                   'project_id': self.user_id,
@@ -260,11 +261,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
         self.network = importutils.import_object(FLAGS.network_manager)
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
+        self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
+                                   'Dom0IptablesFirewallDriver',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',)
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
