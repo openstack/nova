@@ -687,11 +687,6 @@ def instance_remove_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
-def instance_get_id_to_uuid_mapping(context, ids):
-    """Return a dictionary containing 'ID: UUID' given the ids"""
-    return IMPL.instance_get_id_to_uuid_mapping(context, ids)
-
-
 ###################
 
 

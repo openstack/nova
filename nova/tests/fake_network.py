@@ -135,13 +135,6 @@ class FakeNetworkManager(network_manager.NetworkManager):
         def virtual_interface_get_all(self, context):
             return self.vifs
 
-        def instance_get_id_to_uuid_mapping(self, context, ids):
-            # NOTE(jkoelker): This is just here until we can rely on UUIDs
-            mapping = {}
-            for id in ids:
-                mapping[id] = str(utils.gen_uuid())
-            return mapping
-
         def fixed_ips_by_virtual_interface(self, context, vif_id):
             return [ip for ip in self.fixed_ips
                     if ip['virtual_interface_id'] == vif_id]

@@ -1812,18 +1812,6 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
                         'updated_at': literal_column('updated_at')})
 
 
-@require_context
-def instance_get_id_to_uuid_mapping(context, ids):
-    session = get_session()
-    instances = session.query(models.Instance).\
-                        filter(models.Instance.id.in_(ids)).\
-                        all()
-    mapping = {}
-    for instance in instances:
-        mapping[instance['id']] = instance['uuid']
-    return mapping
-
-
 ###################
 
 
