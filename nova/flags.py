@@ -149,10 +149,6 @@ global_opts = [
                default='$my_ip',
                help='hostname or ip for openstack to use when accessing '
                     'the s3 api'),
-    cfg.StrOpt('s3_dmz',
-               default='$my_ip',
-               help='hostname or ip for the instances to use when accessing '
-                    'the s3 api'),
     cfg.StrOpt('cert_topic',
                default='cert',
                help='the topic cert nodes listen on'),
@@ -213,10 +209,6 @@ global_opts = [
                       'nova.api.openstack.volume.contrib.standard_extensions'
                       ],
                     help='osapi volume extension to load'),
-    cfg.StrOpt('osapi_scheme',
-               default='http',
-               help='the protocol to use when connecting to the openstack api '
-                    'server (http, https)'),
     cfg.StrOpt('osapi_path',
                default='/v1.1/',
                help='the path prefix used to call the openstack api server'),
@@ -238,9 +230,6 @@ global_opts = [
     cfg.IntOpt('metadata_port',
                default=8775,
                help='the port for the metadata api port'),
-    cfg.StrOpt('default_project',
-               default='openstack',
-               help='the default project to use for openstack'),
     cfg.StrOpt('default_image',
                default='ami-11111',
                help='default image to use, testing only'),
@@ -257,9 +246,6 @@ global_opts = [
     cfg.StrOpt('vpn_key_suffix',
                default='-vpn',
                help='Suffix to add to project name for vpn key and secgroups'),
-    cfg.IntOpt('auth_token_ttl',
-               default=3600,
-               help='Seconds for auth tokens to linger'),
     cfg.StrOpt('sqlite_db',
                default='nova.sqlite',
                help='the filename to use with sqlite'),
