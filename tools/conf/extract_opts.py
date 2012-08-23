@@ -41,7 +41,7 @@ OPTION_REGEX = re.compile(r"(%s)" % "|".join([STROPT, BOOLOPT, INTOPT,
 OPTION_HELP_INDENT = "####"
 
 PY_EXT = ".py"
-BASEDIR = os.path.abspath(os.path.dirname(__file__) + "../../")
+BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 WORDWRAP_WIDTH = 60
 
 
@@ -52,8 +52,8 @@ def main(srcfiles):
                cfg.__name__ + ':' + cfg.CommonConfigOpts.__name__)
     mods_by_pkg = dict()
     for filepath in srcfiles:
-        pkg_name = filepath.split(os.sep)[3]
-        mod_str = '.'.join(['.'.join(filepath.split(os.sep)[2:-1]),
+        pkg_name = filepath.split(os.sep)[1]
+        mod_str = '.'.join(['.'.join(filepath.split(os.sep)[:-1]),
                             os.path.basename(filepath).split('.')[0]])
         mods_by_pkg.setdefault(pkg_name, list()).append(mod_str)
     # NOTE(lzyeval): place top level modules before packages

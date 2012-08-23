@@ -1,0 +1,9 @@
+This tool is used to generate etc/nova/nova.conf.sample
+
+Run it from the top-level working directory i.e.
+
+  $> ./tools/conf/generate_sample.sh
+
+Watch out for warnings about modules like libvirt, qpid and zmq not
+being found - these warnings are significant because they result
+in options not appearing in the generated config file.
