@@ -208,20 +208,29 @@ class CloudController(object):
         else:
             return self._describe_availability_zones(context, **kwargs)
 
-    def _describe_availability_zones(self, context, **kwargs):
-        ctxt = context.elevated()
-        enabled_services = db.service_get_all(ctxt, False)
-        disabled_services = db.service_get_all(ctxt, True)
+    def _get_zones(self, context):
+        """Return available and unavailable zones."""
+        enabled_services = db.service_get_all(context, False)
+        disabled_services = db.service_get_all(context, True)
+
         available_zones = []
         for zone in [service.availability_zone for service
                      in enabled_services]:
             if not zone in available_zones:
                 available_zones.append(zone)
+
         not_available_zones = []
         for zone in [service.availability_zone for service in disabled_services
                      if not service['availability_zone'] in available_zones]:
             if not zone in not_available_zones:
                 not_available_zones.append(zone)
+
+        return (available_zones, not_available_zones)
+
+    def _describe_availability_zones(self, context, **kwargs):
+        ctxt = context.elevated()
+        available_zones, not_available_zones = self._get_zones(ctxt)
+
         result = []
         for zone in available_zones:
             result.append({'zoneName': zone,
@@ -232,30 +241,45 @@ class CloudController(object):
         return {'availabilityZoneInfo': result}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
-        rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
-                                        'zoneState': 'available'}]}
+        ctxt = context.elevated()
+        available_zones, not_available_zones = self._get_zones(ctxt)
 
-        services = db.service_get_all(context, False)
-        hosts = []
-        for host in [service['host'] for service in services]:
-            if not host in hosts:
-                hosts.append(host)
-        for host in hosts:
-            rv['availabilityZoneInfo'].append({'zoneName': '|- %s' % host,
-                                               'zoneState': ''})
-            hsvcs = [service for service in services
-                     if service['host'] == host]
-            for svc in hsvcs:
-                alive = utils.service_is_up(svc)
-                art = (alive and ":-)") or "XXX"
-                active = 'enabled'
-                if svc['disabled']:
-                    active = 'disabled'
-                rv['availabilityZoneInfo'].append({
-                        'zoneName': '| |- %s' % svc['binary'],
-                        'zoneState': '%s %s %s' % (active, art,
-                                                   svc['updated_at'])})
-        return rv
+        # Available services
+        enabled_services = db.service_get_all(context, False)
+        zone_hosts = {}
+        host_services = {}
+        for service in enabled_services:
+            zone_hosts.setdefault(service.availability_zone, [])
+            if not service.host in zone_hosts[service.availability_zone]:
+                zone_hosts[service.availability_zone].append(service.host)
+
+            host_services.setdefault(service.host, [])
+            host_services[service.host].append(service)
+
+        result = []
+        for zone in available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "available"})
+            for host in zone_hosts[zone]:
+                result.append({'zoneName': '|- %s' % host,
+                               'zoneState': ''})
+
+                for service in host_services[host]:
+                    alive = utils.service_is_up(service)
+                    art = (alive and ":-)") or "XXX"
+                    active = 'enabled'
+                    if service['disabled']:
+                        active = 'disabled'
+                    result.append({'zoneName': '| |- %s' % service['binary'],
+                                   'zoneState': ('%s %s %s'
+                                                 % (active, art,
+                                                    service['updated_at']))})
+
+        for zone in not_available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "not available"})
+
+        return {'availabilityZoneInfo': result}
 
     def describe_regions(self, context, region_name=None, **kwargs):
         if FLAGS.region_list:
