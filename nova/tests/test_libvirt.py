@@ -152,6 +152,24 @@ class LibvirtVolumeTestCase(test.TestCase):
             'host': 'fake_host'
         }
 
+    def test_libvirt_volume_driver_serial(self):
+        vol_driver = volume_driver.VolumeDriver()
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                    'device_path': '/foo',
+                },
+            'serial': 'fake_serial',
+        }
+        mount_device = "vde"
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'block')
+        self.assertEqual(tree.find('./serial').text, 'fake_serial')
+
     def test_libvirt_iscsi_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)

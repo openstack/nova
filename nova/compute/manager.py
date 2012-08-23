@@ -819,6 +819,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         for bdm in bdms:
             try:
                 cinfo = jsonutils.loads(bdm['connection_info'])
+                if cinfo and 'serial' not in cinfo:
+                    cinfo['serial'] = bdm['volume_id']
                 bdmap = {'connection_info': cinfo,
                          'mount_device': bdm['device_name'],
                          'delete_on_termination': bdm['delete_on_termination']}
@@ -2090,6 +2092,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.exception(msg % locals(), context=context,
                               instance=instance)
                 self.volume_api.unreserve_volume(context, volume)
+
+        if 'serial' not in connection_info:
+            connection_info['serial'] = volume_id
+
         try:
             self.driver.attach_volume(connection_info,
                                       instance['name'],
@@ -2131,7 +2137,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance['name'] not in self.driver.list_instances():
             LOG.warn(_('Detaching volume from unknown instance'),
                      context=context, instance=instance)
-        self.driver.detach_volume(jsonutils.loads(bdm['connection_info']),
+        connection_info = jsonutils.loads(bdm['connection_info'])
+        # NOTE(vish): We currently don't use the serial when disconnecting,
+        #             but added for completeness in case we ever do.
+        if connection_info and 'serial' not in connection_info:
+            connection_info['serial'] = volume_id
+        self.driver.detach_volume(connection_info,
                                   instance['name'],
                                   mp)
 
