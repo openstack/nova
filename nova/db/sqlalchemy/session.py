@@ -57,6 +57,15 @@ def synchronous_switch_listener(dbapi_conn, connection_rec):
     dbapi_conn.execute("PRAGMA synchronous = OFF")
 
 
+def add_regexp_listener(dbapi_con, con_record):
+    """Add REGEXP function to sqlite connections."""
+
+    def regexp(expr, item):
+        reg = re.compile(expr)
+        return reg.search(unicode(item)) is not None
+    dbapi_con.create_function('regexp', 2, regexp)
+
+
 def ping_listener(dbapi_conn, connection_rec, connection_proxy):
     """
     Ensures that MySQL connections checked out of the
@@ -86,16 +95,6 @@ def is_db_connection_error(args):
     return False
 
 
-def regexp(expr, item):
-    reg = re.compile(expr)
-    return reg.search(unicode(item)) is not None
-
-
-class AddRegexFactory(sqlalchemy.interfaces.PoolListener):
-    def connect(delf, dbapi_con, con_record):
-        dbapi_con.create_function('REGEXP', 2, regexp)
-
-
 def get_engine():
     """Return a SQLAlchemy engine."""
     global _ENGINE
@@ -120,7 +119,6 @@ def get_engine():
             if FLAGS.sql_connection == "sqlite://":
                 engine_args["poolclass"] = StaticPool
                 engine_args["connect_args"] = {'check_same_thread': False}
-                engine_args['listeners'] = [AddRegexFactory()]
 
         _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
@@ -130,6 +128,7 @@ def get_engine():
             if not FLAGS.sqlite_synchronous:
                 sqlalchemy.event.listen(_ENGINE, 'connect',
                                         synchronous_switch_listener)
+            sqlalchemy.event.listen(_ENGINE, 'connect', add_regexp_listener)
 
         if (FLAGS.sql_connection_trace and
                 _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
