@@ -3476,9 +3476,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.network_api,
                        'get_instance_uuids_by_ip_filter',
                        network_manager.get_instance_uuids_by_ip_filter)
-        self.stubs.Set(network_manager.db,
-                       'instance_get_id_to_uuid_mapping',
-                       db.instance_get_id_to_uuid_mapping)
 
         instance1 = self._create_fake_instance({
                 'display_name': 'woot',
