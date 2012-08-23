@@ -20,6 +20,7 @@
 
 import os
 import re
+import socket
 import sys
 import textwrap
 
@@ -100,11 +101,30 @@ def _print_module(mod_str):
     print
 
 
-def _convert_abspath(s):
-    """Set up a reasonably sensible default for pybasedir."""
-    if not s.startswith(BASEDIR):
-        return s
-    return s.replace(BASEDIR, '/usr/lib/python/site-packages')
+def _get_my_ip():
+    try:
+        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        csock.connect(('8.8.8.8', 80))
+        (addr, port) = csock.getsockname()
+        csock.close()
+        return addr
+    except socket.error:
+        return None
+
+
+MY_IP = _get_my_ip()
+HOST = socket.gethostname()
+
+
+def _sanitize_default(s):
+    """Set up a reasonably sensible default for pybasedir, my_ip and host."""
+    if s.startswith(BASEDIR):
+        return s.replace(BASEDIR, '/usr/lib/python/site-packages')
+    elif s == MY_IP:
+        return '10.0.0.1'
+    elif s == HOST:
+        return 'nova'
+    return s
 
 
 def _wrap(msg, indent):
@@ -128,7 +148,7 @@ def _print_opt(opt):
             print '# %s=<None>' % opt_name
         elif opt_type == STROPT:
             assert(isinstance(opt_default, basestring))
-            print '# %s=%s' % (opt_name, _convert_abspath(opt_default))
+            print '# %s=%s' % (opt_name, _sanitize_default(opt_default))
         elif opt_type == BOOLOPT:
             assert(isinstance(opt_default, bool))
             print '# %s=%s' % (opt_name, str(opt_default).lower())
