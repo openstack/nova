@@ -30,7 +30,7 @@ class RootwrapTestCase(test.TestCase):
             filters.RegExpFilter("/bin/ls", "root", 'ls', '/[a-z]+'),
             filters.CommandFilter("/usr/bin/foo_bar_not_exist", "root"),
             filters.RegExpFilter("/bin/cat", "root", 'cat', '/[a-z]+'),
-            filters.CommandFilter("/nonexistant/cat", "root"),
+            filters.CommandFilter("/nonexistent/cat", "root"),
             filters.CommandFilter("/bin/cat", "root")  # Keep this one last
             ]
 
@@ -85,7 +85,7 @@ class RootwrapTestCase(test.TestCase):
         # Our own PID does not match /bin/sleep, so it should fail
         self.assertFalse(f.match(usercmd) or f2.match(usercmd))
         usercmd = ['kill', 999999]
-        # Nonexistant PID should fail
+        # Nonexistent PID should fail
         self.assertFalse(f.match(usercmd) or f2.match(usercmd))
         usercmd = ['kill', p.pid]
         # Providing no signal should work

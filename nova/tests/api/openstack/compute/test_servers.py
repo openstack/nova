@@ -410,13 +410,13 @@ class ServersControllerTest(test.TestCase):
         }
         self.assertDictMatch(res_dict, expected)
 
-    def test_get_server_addresses_nonexistant_network(self):
+    def test_get_server_addresses_nonexistent_network(self):
         url = '/v2/fake/servers/%s/ips/network_0' % FAKE_UUID
         req = fakes.HTTPRequest.blank(url)
         self.assertRaises(webob.exc.HTTPNotFound, self.ips_controller.show,
                           req, FAKE_UUID, 'network_0')
 
-    def test_get_server_addresses_nonexistant_server(self):
+    def test_get_server_addresses_nonexistent_server(self):
         def fake_instance_get(*args, **kwargs):
             raise nova.exception.InstanceNotFound()
 

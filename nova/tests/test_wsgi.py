@@ -65,7 +65,7 @@ document_root = /tmp
         self.assertRaises(
             nova.exception.PasteAppNotFound,
             self.loader.load_app,
-            "non-existant app",
+            "nonexistent app",
         )
 
     def test_app_found(self):

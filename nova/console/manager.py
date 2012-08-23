@@ -99,7 +99,7 @@ class ConsoleProxyManager(manager.Manager):
         try:
             console = self.db.console_get(context, console_id)
         except exception.NotFound:
-            LOG.debug(_('Tried to remove non-existant console '
+            LOG.debug(_('Tried to remove non-existent console '
                             '%(console_id)s.') %
                             {'console_id': console_id})
             return
