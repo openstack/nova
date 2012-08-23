@@ -29,11 +29,6 @@ from nova.virt import netutils
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
-# The default Firewall driver must be listed at position 0
-drivers = ['nova.virt.firewall.IptablesFirewallDriver',
-           'nova.virt.firewall.NoopFirewallDriver',
-           'nova.virt.xenapi.firewall.Dom0IptablesFirewallDriver', ]
-
 
 class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
     """ Dom0IptablesFirewallDriver class

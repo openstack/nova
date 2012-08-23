@@ -21,6 +21,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import netutils
@@ -28,12 +29,23 @@ from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
 
-allow_same_net_traffic_opt = cfg.BoolOpt('allow_same_net_traffic',
-        default=True,
-        help='Whether to allow network traffic from same network')
+firewall_opts = [
+    cfg.StrOpt('firewall_driver',
+               default=None,
+               help='Firewall driver '
+                    '(defaults to hypervisor specific iptables driver)'),
+    cfg.BoolOpt('allow_same_net_traffic',
+                default=True,
+                help='Whether to allow network traffic from same network'),
+]
 
 FLAGS = flags.FLAGS
-FLAGS.register_opt(allow_same_net_traffic_opt)
+FLAGS.register_opts(firewall_opts)
+
+
+def load_driver(default, *args, **kwargs):
+    fw_class = importutils.import_class(FLAGS.firewall_driver or default)
+    return fw_class(*args, **kwargs)
 
 
 class FirewallDriver(object):
