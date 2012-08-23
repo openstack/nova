@@ -363,6 +363,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.auth_username = None
         self.auth_secret_type = None
         self.auth_secret_uuid = None
+        self.serial = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -403,6 +404,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         else:
             dev.append(etree.Element("target", dev=self.target_dev,
                                      bus=self.target_bus))
+
+        if self.serial is not None:
+            dev.append(self._text_node("serial", self.serial))
 
         return dev
 
