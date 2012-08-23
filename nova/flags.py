@@ -303,9 +303,6 @@ global_opts = [
     cfg.StrOpt('scheduler_manager',
                default='nova.scheduler.manager.SchedulerManager',
                help='full class name for the Manager for scheduler'),
-    cfg.StrOpt('firewall_driver',
-               default='nova.virt.firewall.IptablesFirewallDriver',
-               help='Firewall driver (defaults to iptables)'),
     cfg.StrOpt('host',
                default=socket.gethostname(),
                help='Name of this node.  This can be an opaque identifier.  '

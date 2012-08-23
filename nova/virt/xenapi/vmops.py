@@ -42,8 +42,8 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
+from nova.virt import firewall
 from nova.virt.xenapi import agent
-from nova.virt.xenapi import firewall
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
@@ -70,6 +70,9 @@ FLAGS.register_opts(xenapi_vmops_opts)
 
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
 
+DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
+    firewall.__name__,
+    firewall.IptablesFirewallDriver.__name__)
 
 RESIZE_TOTAL_STEPS = 5
 
@@ -151,10 +154,9 @@ class VMOps(object):
         self.compute_api = compute.API()
         self._session = session
         self.poll_rescue_last_ran = None
-        if FLAGS.firewall_driver not in firewall.drivers:
-            FLAGS.set_default('firewall_driver', firewall.drivers[0])
-        fw_class = importutils.import_class(FLAGS.firewall_driver)
-        self.firewall_driver = fw_class(xenapi_session=self._session)
+        self.firewall_driver = firewall.load_driver(
+            default=DEFAULT_FIREWALL_DRIVER,
+            xenapi_session=self._session)
         vif_impl = importutils.import_class(FLAGS.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'

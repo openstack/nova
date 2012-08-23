@@ -77,8 +77,7 @@ class _FakeDriverBackendTestCase(test.TestCase):
         nova.virt.libvirt.driver.libvirt_utils = fake_libvirt_utils
         nova.virt.libvirt.firewall.libvirt = fakelibvirt
 
-        self.flags(firewall_driver=nova.virt.libvirt.firewall.drivers[0],
-                   rescue_image_id="2",
+        self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None,
                    libvirt_snapshots_directory='./')

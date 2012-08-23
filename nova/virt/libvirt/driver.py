@@ -74,8 +74,9 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
+from nova.virt import firewall
 from nova.virt.libvirt import config
-from nova.virt.libvirt import firewall
+from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
@@ -195,6 +196,10 @@ FLAGS.register_opts(libvirt_opts)
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
 
+DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
+    libvirt_firewall.__name__,
+    libvirt_firewall.IptablesFirewallDriver.__name__)
+
 
 def patch_tpool_proxy():
     """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
@@ -264,10 +269,9 @@ class LibvirtDriver(driver.ComputeDriver):
         self._initiator = None
         self._wrapped_conn = None
         self.read_only = read_only
-        if FLAGS.firewall_driver not in firewall.drivers:
-            FLAGS.set_default('firewall_driver', firewall.drivers[0])
-        fw_class = importutils.import_class(FLAGS.firewall_driver)
-        self.firewall_driver = fw_class(get_connection=self._get_connection)
+        self.firewall_driver = firewall.load_driver(
+            default=DEFAULT_FIREWALL_DRIVER,
+            get_connection=self._get_connection)
         self.vif_driver = importutils.import_object(FLAGS.libvirt_vif_driver)
         self.volume_drivers = {}
         for driver_str in FLAGS.libvirt_volume_drivers:
