@@ -718,6 +718,31 @@ class ServersControllerTest(test.TestCase):
                                       use_admin_context=False)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
+    def test_get_servers_deleted_status_as_user(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=deleted',
+                                      use_admin_context=False)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.detail, req)
+
+    def test_get_servers_deleted_status_as_admin(self):
+        server_uuid = str(utils.gen_uuid())
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         sort_key=None, sort_dir='desc'):
+            self.assertTrue('vm_state' in search_opts)
+            self.assertEqual(search_opts['vm_state'], 'deleted')
+
+            return [fakes.stub_instance(100, uuid=server_uuid)]
+
+        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=deleted',
+                                      use_admin_context=True)
+
+        servers = self.controller.detail(req)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], server_uuid)
+
     def test_get_servers_allows_name(self):
         server_uuid = str(utils.gen_uuid())
 

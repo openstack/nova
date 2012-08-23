@@ -428,6 +428,13 @@ class Controller(wsgi.Controller):
                 # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
 
+        if search_opts.get("vm_state") == "deleted":
+            if context.is_admin:
+                search_opts['deleted'] = True
+            else:
+                msg = _("Only administrators may list deleted instances")
+                raise exc.HTTPBadRequest(explanation=msg)
+
         # NOTE(dprince) This prevents computes' get_all() from returning
         # instances from multiple tenants when an admin accounts is used.
         # By default non-admin accounts are always limited to project/user
