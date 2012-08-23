@@ -1181,7 +1181,7 @@ class CloudController(object):
         if image:
             image_state = self._get_image_state(image)
         else:
-            raise exception.ImageNotFound(image_id=kwargs['image_id'])
+            raise exception.ImageNotFoundEC2(image_id=kwargs['image_id'])
 
         if image_state != 'available':
             raise exception.EC2APIError(_('Image must be available'))

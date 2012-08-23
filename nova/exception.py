@@ -486,6 +486,13 @@ class ImageNotFound(NotFound):
     message = _("Image %(image_id)s could not be found.")
 
 
+class ImageNotFoundEC2(ImageNotFound):
+    message = _("Image %(image_id)s could not be found. The nova EC2 API "
+                "assigns image ids dynamically when they are listed for the "
+                "first time. Have you listed image ids since adding this "
+                "image?")
+
+
 class ProjectNotFound(NotFound):
     message = _("Project %(project_id)s could not be found.")
 
