@@ -103,7 +103,7 @@ def fetch_image(context, image, instance, **kwargs):
                                 kwargs.get("cookies"),
                                 kwargs.get("file_path"),
                                 file_size)
-    start_transfer(read_file_handle, file_size,
+    start_transfer(context, read_file_handle, file_size,
                    write_file_handle=write_file_handle)
     LOG.debug(_("Downloaded image %s from glance image server") % image,
               instance=instance)
@@ -131,8 +131,9 @@ def upload_image(context, image, instance, **kwargs):
                                      "vmware_ostype": kwargs.get("os_type"),
                                      "vmware_image_version":
                                             kwargs.get("image_version")}}
-    start_transfer(read_file_handle, file_size, image_service=image_service,
-                        image_id=image_id, image_meta=image_metadata)
+    start_transfer(context, read_file_handle, file_size,
+                   image_service=image_service,
+                   image_id=image_id, image_meta=image_metadata)
     LOG.debug(_("Uploaded image %s to the Glance image server") % image,
               instance=instance)
 
