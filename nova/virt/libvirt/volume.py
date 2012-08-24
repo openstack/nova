@@ -203,4 +203,4 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
             self._run_iscsiadm(iscsi_properties, ("--logout",),
                                check_exit_code=[0, 255])
             self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
-                               check_exit_code=[0, 255])
+                               check_exit_code=[0, 21, 255])
