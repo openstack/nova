@@ -1393,23 +1393,22 @@ class NetworkManager(manager.SchedulerDependentManager):
             if not kwargs[fld]:
                 raise exception.NetworkNotCreated(req=fld)
 
-        num_networks = kwargs["num_networks"] or FLAGS.num_networks
-        network_size = kwargs["network_size"]
-        cidr = kwargs["cidr"]
-        if not network_size and cidr:
-            fixnet = netaddr.IPNetwork(cidr)
-            each_subnet_size = fixnet.size / num_networks
-            if each_subnet_size > FLAGS.network_size:
-                network_size = FLAGS.network_size
-                subnet = 32 - int(math.log(network_size, 2))
-                oversize_msg = _(
-                    'Subnet(s) too large, defaulting to /%s.'
-                    '  To override, specify network_size flag.') % subnet
-                LOG.warn(oversize_msg)
+        kwargs["num_networks"] = kwargs["num_networks"] or FLAGS.num_networks
+        if not kwargs["network_size"]:
+            if kwargs["cidr"]:
+                fixnet = netaddr.IPNetwork(kwargs["cidr"])
+                each_subnet_size = fixnet.size / kwargs["num_networks"]
+                if each_subnet_size > FLAGS.network_size:
+                    subnet = 32 - int(math.log(FLAGS.network_size_size, 2))
+                    oversize_msg = _(
+                        'Subnet(s) too large, defaulting to /%s.'
+                        '  To override, specify network_size flag.') % subnet
+                    LOG.warn(oversize_msg)
+                    kwargs["network_size"] = FLAGS.network_size
+                else:
+                    kwargs["network_size"] = fixnet.size
             else:
-                network_size = fixnet.size
-        kwargs["num_networks"] = num_networks
-        kwargs["network_size"] = network_size
+                kwargs["network_size"] = FLAGS.network_size
 
         kwargs["multi_host"] = (FLAGS.multi_host
                                 if kwargs["multi_host"] is None
@@ -1418,7 +1417,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         kwargs["vlan_start"] = kwargs.get("vlan_start") or FLAGS.vlan_start
         kwargs["vpn_start"] = kwargs.get("vpn_start") or FLAGS.vpn_start
         kwargs["dns1"] = kwargs["dns1"] or FLAGS.flat_network_dns
-        kwargs["network_size"] = kwargs["network_size"] or FLAGS.network_size
 
         if kwargs["fixed_cidr"]:
             kwargs["fixed_cidr"] = netaddr.IPNetwork(kwargs["fixed_cidr"])
