@@ -1,0 +1,22 @@
+{
+    "server": {
+        "OS-DCF:diskConfig": "AUTO",
+        "adminPass": "ahW3PjQNAu6r",
+        "id": "e726f5ae-8179-44ba-bbfb-8a0c52b33095",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/e726f5ae-8179-44ba-bbfb-8a0c52b33095",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/e726f5ae-8179-44ba-bbfb-8a0c52b33095",
+                "rel": "bookmark"
+            }
+        ],
+        "security_groups": [
+            {
+                "name": "default"
+            }
+        ]
+    }
+}

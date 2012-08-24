@@ -15,6 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
 import nova.context
 from nova import db
@@ -396,3 +397,53 @@ def unset_stub_network_methods(stubs):
         cm = compute_manager.ComputeManager
         for name in _real_functions:
             stubs.Set(cm, name, _real_functions[name])
+
+
+def stub_compute_with_ips(stubs):
+    orig_get = compute_api.API.get
+    orig_get_all = compute_api.API.get_all
+
+    def fake_get(*args, **kwargs):
+        return _get_instances_with_cached_ips(orig_get, *args, **kwargs)
+
+    def fake_get_all(*args, **kwargs):
+        return _get_instances_with_cached_ips(orig_get_all, *args, **kwargs)
+
+    stubs.Set(compute_api.API, 'get', fake_get)
+    stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+
+def _get_fake_cache():
+    def _ip(ip, fixed=True, floats=None):
+        ip_dict = {'address': ip, 'type': 'fixed'}
+        if not fixed:
+            ip_dict['type'] = 'floating'
+        if fixed and floats:
+            ip_dict['floating_ips'] = [_ip(f, fixed=False) for f in floats]
+        return ip_dict
+
+    info = [{'address': 'aa:bb:cc:dd:ee:ff',
+             'id': 1,
+             'network': {'bridge': 'br0',
+                         'id': 1,
+                         'label': 'private',
+                         'subnets': [{'cidr': '192.168.0.0/24',
+                                      'ips': [_ip('192.168.0.3')]}]}}]
+    if FLAGS.use_ipv6:
+        ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
+        info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
+                                              'ips': [_ip(ipv6_addr)]})
+    return info
+
+
+def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
+    """Kludge the cache into instance(s) without having to create DB
+    entries
+    """
+    instances = orig_func(*args, **kwargs)
+    if isinstance(instances, list):
+        for instance in instances:
+            instance['info_cache'] = {'network_info': _get_fake_cache()}
+    else:
+        instances['info_cache'] = {'network_info': _get_fake_cache()}
+    return instances
