@@ -1724,6 +1724,10 @@ class API(base.Base):
     def detach_volume(self, context, volume_id):
         """Detach a volume from an instance."""
         volume = self.volume_api.get(context, volume_id)
+        if volume['attach_status'] == 'detached':
+            msg = _("Volume must be attached in order to detach.")
+            raise exception.InvalidVolume(reason=msg)
+
         instance_uuid = volume['instance_uuid']
         instance = self.db.instance_get_by_uuid(context.elevated(),
                                                 instance_uuid)
