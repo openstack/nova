@@ -101,14 +101,6 @@ class PowerVMDriver(driver.ComputeDriver):
     def list_instances(self):
         return self._powervm.list_instances()
 
-    def list_instances_detail(self):
-        """Return a list of InstanceInfo for all registered VMs"""
-        infos = []
-        for instance_name in self.list_instances():
-            state = self._powervm.get_info(instance_name)['state']
-            infos.append(driver.InstanceInfo(instance_name, state))
-        return infos
-
     def get_host_stats(self, refresh=False):
         """Return currently known host stats"""
         return self._powervm.get_host_stats(refresh=refresh)
