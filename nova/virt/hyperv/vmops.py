@@ -64,15 +64,6 @@ class VMOps(baseops.BaseOps):
                     Caption="Virtual Machine")]
         return vms
 
-    def list_instances_detail(self):
-        instance_infos = []
-        for instance_name in self.list_instances():
-            info = self._get_info(instance_name)
-            instance_info = driver.InstanceInfo(
-                instance_name, int(info['state']))
-            instance_infos.append(instance_info)
-        return instance_infos
-
     def get_info(self, instance):
         """Get information about the VM"""
         LOG.debug(_("get_info called for instance"), instance=instance)
