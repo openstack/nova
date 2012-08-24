@@ -345,15 +345,8 @@ class FloatingIP(object):
         """
         instance_id = kwargs.get('instance_id')
 
-        # NOTE(francois.charlier): in some cases the instance might be
-        # deleted before the IPs are released, so we need to get deleted
-        # instances too
-        read_deleted_context = context.elevated(read_deleted='yes')
-        LOG.debug(_("floating IP deallocation for instance |%s|"), instance_id,
-                                                  context=read_deleted_context)
-
         try:
-            fixed_ips = self.db.fixed_ip_get_by_instance(read_deleted_context,
+            fixed_ips = self.db.fixed_ip_get_by_instance(context,
                                                          instance_id)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
@@ -366,11 +359,11 @@ class FloatingIP(object):
             # disassociate floating ips related to fixed_ip
             for floating_ip in floating_ips:
                 address = floating_ip['address']
-                self.disassociate_floating_ip(read_deleted_context, address,
+                self.disassociate_floating_ip(context, address,
                                               affect_auto_assigned=True)
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
-                    self.deallocate_floating_ip(read_deleted_context, address,
+                    self.deallocate_floating_ip(context, address,
                                                 affect_auto_assigned=True)
 
         # call the next inherited class's deallocate_for_instance()
