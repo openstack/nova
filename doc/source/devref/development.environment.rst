@@ -62,7 +62,7 @@ Install the prerequisite packages.
 
 On Ubuntu::
 
-  sudo apt-get install python-dev libssl-dev python-pip git-core
+  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
