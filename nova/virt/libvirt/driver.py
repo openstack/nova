@@ -1014,8 +1014,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
-    def _enable_hairpin(self, instance):
-        interfaces = self.get_interfaces(instance['name'])
+    def _enable_hairpin(self, xml):
+        interfaces = self.get_interfaces(xml)
         for interface in interfaces:
             utils.execute('tee',
                           '/sys/class/net/%s/brport/hairpin_mode' % interface,
@@ -1846,6 +1846,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if xml:
             domain = self._conn.defineXML(xml)
         domain.createWithFlags(launch_flags)
+        self._enable_hairpin(domain.XMLDesc(0))
         return domain
 
     def _create_domain_and_network(self, xml, instance, network_info,
@@ -1866,7 +1867,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         domain = self._create_domain(xml)
-        self._enable_hairpin(instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
         return domain
 
@@ -1908,14 +1908,12 @@ class LibvirtDriver(driver.ComputeDriver):
                       [target.get("dev")
                        for target in doc.findall('devices/disk/target')])
 
-    def get_interfaces(self, instance_name):
+    def get_interfaces(self, xml):
         """
-        Note that this function takes an instance name.
+        Note that this function takes an domain xml.
 
         Returns a list of all network interfaces for this instance.
         """
-        domain = self._lookup_by_name(instance_name)
-        xml = domain.XMLDesc(0)
         doc = None
 
         try:
