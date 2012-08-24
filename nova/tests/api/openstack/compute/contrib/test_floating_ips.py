@@ -328,6 +328,35 @@ class FloatingIpTest(test.TestCase):
         rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
         self.assertTrue(rsp.status_int == 404)
 
+    def test_floating_ip_disassociate_wrong_instance_uuid(self):
+        def get_instance_by_floating_ip_addr(self, context, address):
+            if address == '10.10.10.10':
+                return 'test_inst'
+
+        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
+                       get_instance_by_floating_ip_addr)
+
+        wrong_uuid = 'aaaaaaaa-ffff-ffff-ffff-aaaaaaaaaaaa'
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        rsp = self.manager._remove_floating_ip(req, wrong_uuid, body)
+        self.assertTrue(rsp.status_int == 404)
+
+    def test_floating_ip_disassociate_wrong_instance_id(self):
+        def get_instance_by_floating_ip_addr(self, context, address):
+            if address == '10.10.10.10':
+                return 'wrong_inst'
+
+        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
+                       get_instance_by_floating_ip_addr)
+
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 404)
+
 # these are a few bad param tests
 
     def test_bad_address_param_in_remove_floating_ip(self):
