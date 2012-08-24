@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
@@ -44,6 +45,10 @@ def fake_compute_get_all(*args, **kwargs):
     ]
 
 
+def fake_cn_get(context, host):
+    return {"hypervisor_hostname": host}
+
+
 class ExtendedServerAttributesTest(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-SRV-ATTR:'
@@ -53,6 +58,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stubs.Set(db, 'compute_node_get_by_host', fake_cn_get)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
@@ -70,6 +76,8 @@ class ExtendedServerAttributesTest(test.TestCase):
         self.assertEqual(server.get('%shost' % self.prefix), host)
         self.assertEqual(server.get('%sinstance_name' % self.prefix),
                          instance_name)
+        self.assertEqual(server.get('%shypervisor_hostname' % self.prefix),
+                         host)
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3

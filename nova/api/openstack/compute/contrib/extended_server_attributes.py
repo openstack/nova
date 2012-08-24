@@ -102,6 +102,8 @@ def make_server(elem):
              '%s:instance_name' % Extended_server_attributes.alias)
     elem.set('{%s}host' % Extended_server_attributes.namespace,
              '%s:host' % Extended_server_attributes.alias)
+    elem.set('{%s}hypervisor_hostname' % Extended_server_attributes.namespace,
+             '%s:hypervisor_hostname' % Extended_server_attributes.alias)
 
 
 class ExtendedServerAttributeTemplate(xmlutil.TemplateBuilder):
