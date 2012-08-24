@@ -15,6 +15,10 @@
 #    under the License.
 
 import copy
+import itertools
+import math
+import netaddr
+import uuid
 
 import webob
 
@@ -22,6 +26,11 @@ from nova.api.openstack.compute.contrib import networks
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+
+from nova import flags
+
+
+FLAGS = flags.FLAGS
 
 
 FAKE_NETWORKS = [
@@ -75,6 +84,15 @@ FAKE_USER_NETWORKS = [
     },
 ]
 
+NEW_NETWORK = {
+    "network": {
+        "bridge_interface": "eth0",
+        "cidr": "10.20.105.0/24",
+        "label": "new net 111",
+        "vlan_start": 111,
+    }
+}
+
 
 class FakeNetworkAPI(object):
 
@@ -116,6 +134,32 @@ class FakeNetworkAPI(object):
             if network.get('uuid') == network_id:
                 return network
         raise exception.NetworkNotFound()
+
+    def create(self, context, **kwargs):
+        subnet_bits = int(math.ceil(math.log(kwargs.get(
+                        'network_size', FLAGS.network_size), 2)))
+        fixed_net_v4 = netaddr.IPNetwork(kwargs['cidr'])
+        prefixlen_v4 = 32 - subnet_bits
+        subnets_v4 = list(fixed_net_v4.subnet(
+                prefixlen_v4,
+                count=kwargs.get('num_networks', FLAGS.num_networks)))
+        new_networks = []
+        new_id = max((net['id'] for net in self.networks))
+        for index, subnet_v4 in enumerate(subnets_v4):
+            new_id += 1
+            net = {'id': new_id, 'uuid': str(uuid.uuid4())}
+
+            net['cidr'] = str(subnet_v4)
+            net['netmask'] = str(subnet_v4.netmask)
+            net['gateway'] = kwargs.get('gateway') or str(subnet_v4[1])
+            net['broadcast'] = str(subnet_v4.broadcast)
+            net['dhcp_start'] = str(subnet_v4[2])
+
+            for key in FAKE_NETWORKS[0].iterkeys():
+                net.setdefault(key, kwargs.get(key))
+            new_networks.append(net)
+        self.networks += new_networks
+        return new_networks
 
 
 class NetworksTest(test.TestCase):
@@ -204,3 +248,21 @@ class NetworksTest(test.TestCase):
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.show(req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
+
+    def test_network_create(self):
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
+        res_dict = self.controller.create(req, NEW_NETWORK)
+        self.assertTrue('network' in res_dict)
+        uuid = res_dict['network']['id']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+        self.assertTrue(res_dict['network']['label'].
+                        startswith(NEW_NETWORK['network']['label']))
+
+    def test_network_create_large(self):
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
+        large_network = copy.deepcopy(NEW_NETWORK)
+        large_network['network']['cidr'] = '128.0.0.0/4'
+        res_dict = self.controller.create(req, large_network)
+        self.assertEqual(res_dict['network']['cidr'],
+                         large_network['network']['cidr'])

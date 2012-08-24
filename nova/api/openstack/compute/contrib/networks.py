@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import netaddr
 import webob
 from webob import exc
 
@@ -111,8 +111,31 @@ class NetworkController(object):
             raise exc.HTTPNotFound(_("Network not found"))
         return exc.HTTPAccepted()
 
-    def create(self, req, id, body=None):
-        raise exc.HTTPNotImplemented()
+    def create(self, req, body):
+        context = req.environ['nova.context']
+        authorize(context)
+
+        def bad(e):
+            return exc.HTTPUnprocessableEntity(explanation=e)
+
+        if not (body and body.get("network")):
+            raise bad(_("Missing network in body"))
+
+        params = body["network"]
+        if not params.get("label"):
+            raise bad(_("Network label is required"))
+
+        cidr = params.get("cidr") or params.get("cidr_v6")
+        if not cidr:
+            raise bad(_("Network cidr or cidr_v6 is required"))
+
+        LOG.debug(_("Creating network with label %s") % params["label"])
+
+        params["num_networks"] = 1
+        params["network_size"] = netaddr.IPNetwork(cidr).size
+
+        network = self.network_api.create(context, **params)[0]
+        return {"network": network_dict(context, network)}
 
     def add(self, req, body):
         context = req.environ['nova.context']

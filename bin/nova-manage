@@ -83,6 +83,7 @@ from nova import db
 from nova.db import migration
 from nova import exception
 from nova import flags
+from nova.api.openstack.compute.contrib import networks
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -93,6 +94,8 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
 from nova.volume import volume_types
+
+from webob import exc
 
 FLAGS = flags.FLAGS
 flags.DECLARE('flat_network_bridge', 'nova.network.manager')
@@ -434,7 +437,7 @@ class NetworkCommands(object):
 
     @args('--label', dest="label", metavar='<label>',
             help='Label for network (ex: public)')
-    @args('--fixed_range_v4', dest="fixed_range_v4", metavar='<x.x.x.x/yy>',
+    @args('--fixed_range_v4', dest="cidr", metavar='<x.x.x.x/yy>',
             help='IPv4 subnet (ex: 10.0.0.0/8)')
     @args('--num_networks', dest="num_networks", metavar='<number>',
             help='Number of networks to create')
@@ -442,7 +445,7 @@ class NetworkCommands(object):
             help='Number of IPs per network')
     @args('--vlan', dest="vlan_start", metavar='<vlan id>', help='vlan id')
     @args('--vpn', dest="vpn_start", help='vpn start')
-    @args('--fixed_range_v6', dest="fixed_range_v6",
+    @args('--fixed_range_v6', dest="cidr_v6",
           help='IPv6 subnet (ex: fe80::/64')
     @args('--gateway', dest="gateway", help='gateway')
     @args('--gateway_v6', dest="gateway_v6", help='ipv6 gateway')
@@ -464,91 +467,22 @@ class NetworkCommands(object):
       help='Project id')
     @args('--priority', dest="priority", metavar="<number>",
       help='Network interface priority')
-    def create(self, label=None, fixed_range_v4=None, num_networks=None,
+    def create(self, label=None, cidr=None, num_networks=None,
                network_size=None, multi_host=None, vlan_start=None,
-               vpn_start=None, fixed_range_v6=None, gateway=None,
+               vpn_start=None, cidr_v6=None, gateway=None,
                gateway_v6=None, bridge=None, bridge_interface=None,
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range"""
-
-        # check for certain required inputs
-        if not label:
-            raise exception.NetworkNotCreated(req='--label')
-        # Size of "label" column in nova.networks is 255, hence the restriction
-        if len(label) > 255:
-            reason = _("Maximum allowed length for 'label' is 255.")
-            raise exception.InvalidInput(reason=reason)
-        if not (fixed_range_v4 or fixed_range_v6):
-            req = '--fixed_range_v4 or --fixed_range_v6'
-            raise exception.NetworkNotCreated(req=req)
-
-        bridge = bridge or FLAGS.flat_network_bridge
-        if not bridge:
-            bridge_required = ['nova.network.manager.FlatManager',
-                               'nova.network.manager.FlatDHCPManager']
-            if FLAGS.network_manager in bridge_required:
-                raise exception.NetworkNotCreated(req='--bridge')
-
-        bridge_interface = (bridge_interface or FLAGS.flat_interface or
-                            FLAGS.vlan_interface)
-        if not bridge_interface:
-            interface_required = ['nova.network.manager.VlanManager']
-            if FLAGS.network_manager in interface_required:
-                raise exception.NetworkNotCreated(req='--bridge_interface')
-
-        # sanitize other input using FLAGS if necessary
-        if not num_networks:
-            num_networks = FLAGS.num_networks
-        if not network_size and fixed_range_v4:
-            fixnet = netaddr.IPNetwork(fixed_range_v4)
-            each_subnet_size = fixnet.size / int(num_networks)
-            if each_subnet_size > FLAGS.network_size:
-                network_size = FLAGS.network_size
-                subnet = 32 - int(math.log(network_size, 2))
-                oversize_msg = _('Subnet(s) too large, defaulting to /%s.'
-                         '  To override, specify network_size flag.') % subnet
-                print oversize_msg
-            else:
-                network_size = fixnet.size
-        if not multi_host:
-            multi_host = FLAGS.multi_host
-        else:
-            multi_host = multi_host == 'T'
-        if not vlan_start:
-            vlan_start = FLAGS.vlan_start
-        if not vpn_start:
-            vpn_start = FLAGS.vpn_start
-        if not dns1 and FLAGS.flat_network_dns:
-            dns1 = FLAGS.flat_network_dns
-
-        if not network_size:
-            network_size = FLAGS.network_size
-
-        if fixed_cidr:
-            fixed_cidr = netaddr.IPNetwork(fixed_cidr)
-
-        # create the network
+        kwargs = dict(((k, v) for k, v in locals().iteritems()
+                       if v and k != "self"))
+        if multi_host is not None:
+            kwargs['multi_host'] = multi_host == 'T'
         net_manager = importutils.import_object(FLAGS.network_manager)
-        net_manager.create_networks(context.get_admin_context(),
-                                    label=label,
-                                    cidr=fixed_range_v4,
-                                    multi_host=multi_host,
-                                    num_networks=int(num_networks),
-                                    network_size=int(network_size),
-                                    vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start),
-                                    cidr_v6=fixed_range_v6,
-                                    gateway=gateway,
-                                    gateway_v6=gateway_v6,
-                                    bridge=bridge,
-                                    bridge_interface=bridge_interface,
-                                    dns1=dns1,
-                                    dns2=dns2,
-                                    project_id=project_id,
-                                    priority=priority,
-                                    uuid=uuid,
-                                    fixed_cidr=fixed_cidr)
+        try:
+            net_manager.create_networks(context.get_admin_context(), **kwargs)
+        except exc.HTTPBadRequest as ex:
+            print ex
 
     def list(self):
         """List all created networks"""
