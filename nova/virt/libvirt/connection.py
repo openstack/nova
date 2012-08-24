@@ -2105,8 +2105,10 @@ class LibvirtConnection(driver.ComputeDriver):
                              None,
                              FLAGS.live_migration_bandwidth)
 
-        except Exception:
+        except Exception as e:
             with utils.save_and_reraise_exception():
+                LOG.error(_("Live Migration failure: %(e)s") % locals(),
+                          instance=instance_ref)
                 recover_method(ctxt, instance_ref, dest, block_migration)
 
         # Waiting for completion of live_migration.
