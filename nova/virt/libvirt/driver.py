@@ -2552,7 +2552,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Remove any size tags which the cache manages
                 cache_name = cache_name.split('_')[0]
 
-                image = self.image_backend.image(instance['name'], cache_name,
+                image = self.image_backend.image(instance['name'],
+                                                 instance_disk,
                                                  FLAGS.libvirt_images_type)
                 image.cache(fn=libvirt_utils.fetch_image,
                             context=ctxt,
