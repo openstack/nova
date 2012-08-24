@@ -83,7 +83,6 @@ from nova import db
 from nova.db import migration
 from nova import exception
 from nova import flags
-from nova.api.openstack.compute.contrib import networks
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -94,8 +93,6 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
 from nova.volume import volume_types
-
-from webob import exc
 
 FLAGS = flags.FLAGS
 flags.DECLARE('flat_network_bridge', 'nova.network.manager')
@@ -479,10 +476,7 @@ class NetworkCommands(object):
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
         net_manager = importutils.import_object(FLAGS.network_manager)
-        try:
-            net_manager.create_networks(context.get_admin_context(), **kwargs)
-        except exc.HTTPBadRequest as ex:
-            print ex
+        net_manager.create_networks(context.get_admin_context(), **kwargs)
 
     def list(self):
         """List all created networks"""
