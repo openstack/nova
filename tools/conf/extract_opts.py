@@ -129,6 +129,8 @@ def _sanitize_default(s):
         return '10.0.0.1'
     elif s == HOST:
         return 'nova'
+    elif s.strip() != s:
+        return '"%s"' % s
     return s
 
 
