@@ -280,7 +280,7 @@ class FloatingIPDNSEntryController(object):
 class Floating_ip_dns(extensions.ExtensionDescriptor):
     """Floating IP DNS support"""
 
-    name = "Floating_ip_dns"
+    name = "FloatingIpDns"
     alias = "os-floating-ip-dns"
     namespace = "http://docs.openstack.org/ext/floating_ip_dns/api/v1.1"
     updated = "2011-12-23T00:00:00+00:00"

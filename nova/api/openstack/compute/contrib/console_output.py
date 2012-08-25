@@ -76,7 +76,7 @@ class ConsoleOutputController(wsgi.Controller):
 class Console_output(extensions.ExtensionDescriptor):
     """Console log output support, with tailing ability."""
 
-    name = "Console_output"
+    name = "ConsoleOutput"
     alias = "os-console-output"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "os-console-output/api/v2")
