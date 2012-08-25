@@ -51,7 +51,7 @@ class CertManager(manager.Manager):
 
     def revoke_certs_by_user_and_project(self, context, user_id, project_id):
         """Revoke certs for user in project."""
-        return crypto.revoke_certs_by_user_and_project(project_id)
+        return crypto.revoke_certs_by_user_and_project(user_id, project_id)
 
     def generate_x509_cert(self, context, user_id, project_id):
         """Generate and sign a cert for user in project"""
