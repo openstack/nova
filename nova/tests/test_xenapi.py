@@ -1039,14 +1039,6 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', instance_type, None)
 
-    def test_migrate_disk_and_power_off(self):
-        instance = db.instance_create(self.context, self.instance_values)
-        xenapi_fake.create_vm(instance.name, 'Running')
-        instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
-        conn = xenapi_conn.XenAPIDriver(False)
-        conn.migrate_disk_and_power_off(self.context, instance,
-                                        '127.0.0.1', instance_type, None)
-
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
