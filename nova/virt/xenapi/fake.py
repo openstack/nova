@@ -509,10 +509,6 @@ class SessionBase(object):
     def VM_pool_migrate(self, _1, vm_ref, host_ref, options):
         pass
 
-    def VM_migrate_send(self, vmref, migrate_data, islive, vdi_map,
-                        vif_map, options):
-        pass
-
     def VDI_remove_from_other_config(self, _1, vdi_ref, key):
         db_ref = _db_content['VDI'][vdi_ref]
         if not 'other_config' in db_ref:
