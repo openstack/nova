@@ -18,6 +18,8 @@
 
 import datetime
 
+import webob.exc
+
 from nova.api.openstack import extensions
 from nova import db
 from nova import flags
