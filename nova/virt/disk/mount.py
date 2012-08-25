@@ -30,6 +30,8 @@ class Mount(object):
     to be called in that order.
     """
 
+    mode = device_id_string = None  # to be overridden in subclasses
+
     def __init__(self, image, mount_dir, partition=None, device=None):
 
         # Input
