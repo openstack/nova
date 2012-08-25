@@ -411,7 +411,8 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.driver.compute_rpcapi,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
+        self.mox.StubOutWithMock(self.driver.compute_rpcapi,
+                                 'live_migration')
         self.mox.StubOutWithMock(notifications, 'send_update')
 
         dest = 'fake_host2'
@@ -433,8 +434,7 @@ class SchedulerTestCase(test.TestCase):
                         (instance, instance))
         notifications.send_update(self.context, instance, instance,
                                   service="scheduler")
-
-        compute_rpcapi.ComputeAPI.live_migration(self.context,
+        self.driver.compute_rpcapi.live_migration(self.context,
                 host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration, migrate_data={})
 
@@ -453,7 +453,8 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'live_migration')
+        self.mox.StubOutWithMock(self.driver.compute_rpcapi,
+                                 'live_migration')
 
         dest = 'fake_host2'
         block_migration = True
@@ -500,7 +501,7 @@ class SchedulerTestCase(test.TestCase):
                 {"task_state": task_states.MIGRATING}).AndReturn(
                         (instance, instance))
 
-        compute_rpcapi.ComputeAPI.live_migration(self.context,
+        self.driver.compute_rpcapi.live_migration(self.context,
                 host=instance['host'], instance=instance, dest=dest,
                 block_migration=block_migration, migrate_data={})
 
