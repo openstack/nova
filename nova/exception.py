@@ -1100,6 +1100,14 @@ class UnexpectedTaskStateError(NovaException):
                 "the actual state is %(actual)s")
 
 
+class CryptoCAFileNotFound(FileNotFound):
+    message = _("The CA file for %(project)s could not be found")
+
+
+class CryptoCRLFileNotFound(FileNotFound):
+    message = _("The CRL file for %(project)s could not be found")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 

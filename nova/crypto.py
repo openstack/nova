@@ -96,7 +96,10 @@ def crl_path(project_id=None):
 def fetch_ca(project_id=None):
     if not FLAGS.use_project_ca:
         project_id = None
-    with open(ca_path(project_id), 'r') as cafile:
+    ca_file_path = ca_path(project_id)
+    if not os.path.exists(ca_file_path):
+        raise exception.CryptoCAFileNotFound(project_id=project_id)
+    with open(ca_file_path, 'r') as cafile:
         return cafile.read()
 
 
@@ -140,8 +143,13 @@ def generate_key_pair(bits=1024):
         utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
                       '-t', 'rsa', '-f', keyfile)
         fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
+        if not os.path.exists(keyfile):
+            raise exception.FileNotFound(keyfile)
         private_key = open(keyfile).read()
-        public_key = open(keyfile + '.pub').read()
+        public_key_path = keyfile + '.pub'
+        if not os.path.exists(public_key_path):
+            raise exception.FileNotFound(public_key_path)
+        public_key = open(public_key_path).read()
 
     return (private_key, public_key, fingerprint)
 
@@ -150,7 +158,10 @@ def fetch_crl(project_id):
     """Get crl file for project."""
     if not FLAGS.use_project_ca:
         project_id = None
-    with open(crl_path(project_id), 'r') as crlfile:
+    crl_file_path = crl_path(project_id)
+    if not os.path.exists(crl_file_path):
+        raise exception.CryptoCRLFileNotFound(project_id)
+    with open(crl_file_path, 'r') as crlfile:
         return crlfile.read()
 
 
