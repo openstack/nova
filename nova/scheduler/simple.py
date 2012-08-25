@@ -51,7 +51,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         deprecated.warn(_('SimpleScheduler now only covers volume scheduling '
                 'and is deprecated in Folsom. Non-volume functionality in '
                 'SimpleScheduler has been replaced by FilterScheduler'))
-        super(SimpleScheduler, self).schedule_run_instance(self, context,
+        super(SimpleScheduler, self).schedule_run_instance(context,
                 request_spec, reservations, *_args, **_kwargs)
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
