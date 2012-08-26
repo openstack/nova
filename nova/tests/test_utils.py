@@ -753,3 +753,11 @@ class DiffDict(test.TestCase):
         diff = utils.diff_dict(old, new)
 
         self.assertEqual(diff, dict(b=['-']))
+
+
+class EnsureTree(test.TestCase):
+    def test_ensure_tree(self):
+        with utils.tempdir() as tmpdir:
+            testdir = '%s/foo/bar/baz' % (tmpdir,)
+            utils.ensure_tree(testdir)
+            self.assertTrue(os.path.isdir(testdir))

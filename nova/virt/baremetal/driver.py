@@ -303,7 +303,7 @@ class BareMetalDriver(driver.ComputeDriver):
         if not os.path.exists(target):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
-                libvirt_utils.ensure_tree(base_dir)
+                utils.ensure_tree(base_dir)
             base = os.path.join(base_dir, fname)
 
             @utils.synchronized(fname)
@@ -331,7 +331,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        libvirt_utils.ensure_tree(basepath(suffix=''))
+        utils.ensure_tree(basepath(suffix=''))
         utils.execute('chmod', '0777', basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'],
@@ -339,7 +339,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         if FLAGS.baremetal_type == 'lxc':
             container_dir = '%s/rootfs' % basepath(suffix='')
-            libvirt_utils.ensure_tree(container_dir)
+            utils.ensure_tree(container_dir)
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(basepath('console.log', ''), '', 007)

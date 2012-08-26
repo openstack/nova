@@ -63,10 +63,6 @@ def remove_logical_volumes(*paths):
     pass
 
 
-def ensure_tree(path):
-    pass
-
-
 def write_to_file(path, contents, umask=None):
     pass
 

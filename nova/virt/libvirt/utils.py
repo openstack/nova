@@ -250,21 +250,6 @@ def mkfs(fs, path, label=None):
         execute(*args)
 
 
-def ensure_tree(path):
-    """Create a directory (and any ancestor directories required)
-
-    :param path: Directory to create
-    """
-    try:
-        os.makedirs(path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST:
-            if not os.path.isdir(path):
-                raise
-        else:
-            raise
-
-
 def write_to_file(path, contents, umask=None):
     """Write the given contents to a file
 
@@ -479,7 +464,7 @@ def write_stored_info(target, field=None, value=None):
         return
 
     info_file = get_info_filename(target)
-    ensure_tree(os.path.dirname(info_file))
+    utils.ensure_tree(os.path.dirname(info_file))
 
     d = read_stored_info(info_file)
     d[field] = value

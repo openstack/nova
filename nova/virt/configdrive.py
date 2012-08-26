@@ -61,7 +61,7 @@ class ConfigDriveBuilder(object):
     def _add_file(self, path, data):
         filepath = os.path.join(self.tempdir, path)
         dirname = os.path.dirname(filepath)
-        virtutils.ensure_tree(dirname)
+        utils.ensure_tree(dirname)
         with open(filepath, 'w') as f:
             f.write(data)
 

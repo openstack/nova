@@ -1273,3 +1273,18 @@ class UndoManager(object):
                 LOG.exception(msg, **kwargs)
 
             self._rollback()
+
+
+def ensure_tree(path):
+    """Create a directory (and any ancestor directories required)
+
+    :param path: Directory to create
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            if not os.path.isdir(path):
+                raise
+        else:
+            raise

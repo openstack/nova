@@ -55,8 +55,8 @@ class _ImageTestCase(test.TestCase):
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'ensure_tree')
-        imagebackend.libvirt_utils.ensure_tree(self.TEMPLATE_DIR)
+        self.mox.StubOutWithMock(imagebackend.utils, 'ensure_tree')
+        imagebackend.utils.ensure_tree(self.TEMPLATE_DIR)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -82,7 +82,7 @@ class _ImageTestCase(test.TestCase):
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'ensure_tree')
+        self.mox.StubOutWithMock(imagebackend.utils, 'ensure_tree')
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
