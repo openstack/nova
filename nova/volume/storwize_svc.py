@@ -79,7 +79,7 @@ storwize_svc_opts = [
                help='Storage system compression option for volumes'),
     cfg.StrOpt('storwize_svc_flashcopy_timeout',
                default='120',
-               help='Maximum number of seconds to wait for FlashCopy to be'
+               help='Maximum number of seconds to wait for FlashCopy to be '
                     'prepared. Maximum value is 600 seconds (10 minutes).'),
 ]
 
