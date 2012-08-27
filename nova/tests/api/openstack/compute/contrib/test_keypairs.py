@@ -123,21 +123,6 @@ class KeypairsTest(test.TestCase):
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
 
-    def test_keypair_create_quota_limit(self):
-
-        def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return 100
-
-        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
-
-        req = webob.Request.blank('/v2/fake/os-keypairs')
-        req.method = 'POST'
-        req.headers['Content-Type'] = 'application/json'
-        body = {'keypair': {'name': 'foo'}}
-        req.body = jsonutils.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 413)
-
     def test_keypair_import(self):
         body = {
             'keypair': {
