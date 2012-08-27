@@ -109,8 +109,7 @@ def ensure_ca_filesystem():
                                          'genrootca.sh')
 
         start = os.getcwd()
-        if not os.path.exists(ca_dir):
-            os.makedirs(ca_dir)
+        utils.ensure_tree(ca_dir)
         os.chdir(ca_dir)
         utils.execute("sh", genrootca_sh_path)
         os.chdir(start)
@@ -291,9 +290,7 @@ def _sign_csr(csr_text, ca_folder):
         start = os.getcwd()
 
         # Change working dir to CA
-        if not os.path.exists(ca_folder):
-            os.makedirs(ca_folder)
-
+        utils.ensure_tree(ca_folder)
         os.chdir(ca_folder)
         utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
                       './openssl.cnf', '-infiles', inbound)

@@ -96,8 +96,7 @@ class TgtAdm(TargetAdmin):
 
     def create_iscsi_target(self, name, tid, lun, path, **kwargs):
         try:
-            if not os.path.exists(FLAGS.volumes_dir):
-                os.makedirs(FLAGS.volumes_dir)
+            utils.ensure_tree(FLAGS.volumes_dir)
 
             # grab the volume id
             vol_id = name.split(':')[1]
