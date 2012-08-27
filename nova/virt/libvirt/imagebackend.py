@@ -114,7 +114,7 @@ class Image(object):
         if not os.path.exists(self.path):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
-                libvirt_utils.ensure_tree(base_dir)
+                utils.ensure_tree(base_dir)
             base = os.path.join(base_dir, fname)
 
             self.create_image(call_if_not_exists, base, size,

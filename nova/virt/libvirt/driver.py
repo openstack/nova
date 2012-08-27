@@ -805,7 +805,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Export the snapshot to a raw image
         snapshot_directory = FLAGS.libvirt_snapshots_directory
-        libvirt_utils.ensure_tree(snapshot_directory)
+        utils.ensure_tree(snapshot_directory)
         with utils.tempdir(dir=snapshot_directory) as tmpdir:
             try:
                 out_path = os.path.join(tmpdir, snapshot_name)
@@ -1237,7 +1237,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return image(fname, image_type='raw')
 
         # ensure directories exist and are writable
-        libvirt_utils.ensure_tree(basepath(suffix=''))
+        utils.ensure_tree(basepath(suffix=''))
 
         LOG.info(_('Creating image'), instance=instance)
         libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
@@ -1246,7 +1246,7 @@ class LibvirtDriver(driver.ComputeDriver):
             container_dir = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'rootfs')
-            libvirt_utils.ensure_tree(container_dir)
+            utils.ensure_tree(container_dir)
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
         self._chown_console_log_for_instance(instance['name'])

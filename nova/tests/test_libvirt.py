@@ -3393,12 +3393,6 @@ disk size: 4.4M''', ''))
         libvirt_utils.mkfs('ext4', '/my/block/dev')
         libvirt_utils.mkfs('swap', '/my/swap/block/dev')
 
-    def test_ensure_tree(self):
-        with utils.tempdir() as tmpdir:
-            testdir = '%s/foo/bar/baz' % (tmpdir,)
-            libvirt_utils.ensure_tree(testdir)
-            self.assertTrue(os.path.isdir(testdir))
-
     def test_write_to_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
         try:
