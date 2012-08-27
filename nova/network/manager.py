@@ -228,7 +228,7 @@ class RPCAllocateFixedIP(object):
         network = self._get_network_by_id(context, network_id)
         return self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
-    def deallocate_fixed_ip(self, context, address, host, **kwargs):
+    def deallocate_fixed_ip(self, context, address, host=None):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
         otherwise call to the correct host"""
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
@@ -1000,7 +1000,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                   context=read_deleted_context)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, fixed_ip['address'], **kwargs)
+            self.deallocate_fixed_ip(context, fixed_ip['address'])
 
         # deallocate vifs (mac addresses)
         self.db.virtual_interface_delete_by_instance(read_deleted_context,
@@ -1271,7 +1271,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._setup_network_on_host(context, network)
         return address
 
-    def deallocate_fixed_ip(self, context, address, **kwargs):
+    def deallocate_fixed_ip(self, context, address, host=None):
         """Returns a fixed ip to the pool."""
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         vif_id = fixed_ip_ref['virtual_interface_id']
@@ -1811,10 +1811,9 @@ class FlatManager(NetworkManager):
             self.allocate_fixed_ip(context, instance_id,
                                    network, address=address)
 
-    def deallocate_fixed_ip(self, context, address, **kwargs):
+    def deallocate_fixed_ip(self, context, address, host=None):
         """Returns a fixed ip to the pool."""
-        super(FlatManager, self).deallocate_fixed_ip(context, address,
-                                                     **kwargs)
+        super(FlatManager, self).deallocate_fixed_ip(context, address)
         self.db.fixed_ip_disassociate(context, address)
 
     def _setup_network_on_host(self, context, network):
