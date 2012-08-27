@@ -2125,11 +2125,6 @@ class LibvirtDriver(driver.ComputeDriver):
             features.append(f.name)
         cpu_info['features'] = features
 
-        guest_arches = list()
-        for g in caps.guests:
-            guest_arches.append(g.arch)
-        cpu_info['permitted_instance_types'] = guest_arches
-
         # TODO(berrange): why do we bother converting the
         # libvirt capabilities XML into a special JSON format ?
         # The data format is different across all the drivers

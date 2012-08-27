@@ -2279,7 +2279,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         want = {"vendor": "AMD",
                 "features": ["extapic", "3dnow"],
-                "permitted_instance_types": ["x86_64", "i686"],
                 "model": "Opteron_G4",
                 "arch": "x86_64",
                 "topology": {"cores": 2, "threads": 1, "sockets": 4}}
