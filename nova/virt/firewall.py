@@ -523,10 +523,10 @@ class IptablesFirewallDriver(FirewallDriver):
 
 class NoopFirewallDriver(object):
     """Firewall driver which just provides No-op methods."""
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         pass
 
-    def _noop(*args, **kwargs):
+    def _noop(self, *args, **kwargs):
         pass
 
     def __getattr__(self, key):
