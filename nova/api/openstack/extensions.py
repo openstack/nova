@@ -175,7 +175,7 @@ class ExtensionsResource(wsgi.Resource):
 class ExtensionManager(object):
     """Load extensions from the configured extension path.
 
-    See nova/tests/api/openstack/extensions/foxinsocks/extension.py for an
+    See nova/tests/api/openstack/volume/extensions/foxinsocks.py or an
     example extension implementation.
 
     """
