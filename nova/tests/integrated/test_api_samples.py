@@ -44,15 +44,22 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         fake_network.stub_compute_with_ips(self.stubs)
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
 
-    def _pretty_data(self, data):
+    def _pretty_data(self, data, strip_text=True):
         if self.ctype == 'json':
             data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
                     indent=4)
 
         else:
-            data = etree.tostring(etree.XML(data), encoding="UTF-8",
+            xml = etree.XML(data)
+            # NOTE(vish): strip newlines from text blobs for matching
+            if strip_text:
+                for text in xml.xpath('//text()'):
+                    parent = text.getparent()
+                    parent.text = parent.text.replace('\n', '')
+
+            data = etree.tostring(xml, encoding="UTF-8",
                     xml_declaration=True, pretty_print=True)
-        return '\n'.join(line.rstrip() for line in data.split('\n'))
+        return '\n'.join(line.rstrip() for line in data.split('\n')).strip()
 
     @classmethod
     def _get_sample(cls, name, suffix=''):
@@ -75,7 +82,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _write_sample(self, name, data):
         with open(self._get_sample(name), 'w') as outf:
-            outf.write(data)
+            outf.write(self._pretty_data(data, False))
 
     def _verify_response(self, name, subs, response):
         expected = self._read_template(name)
@@ -86,9 +93,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
         expected = expected % subs
         data = response.read()
-        result = self._pretty_data(data).strip()
+        result = self._pretty_data(data)
         if self.generate_samples:
-            self._write_sample(name, result)
+            self._write_sample(name, data)
         result_lines = result.split('\n')
         expected_lines = expected.split('\n')
         if len(result_lines) != len(expected_lines):
@@ -113,9 +120,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return 'http://openstack.example.com'
 
     def _get_regexes(self):
+        if self.ctype == 'json':
+            text = r'(\\"|[^"])*'
+        else:
+            text = r'[^<]*'
         return {
             'timestamp': '[0-9]{4}-[0,1][0-9]-[0-3][0-9]T'
-                         '[0-9]{2}:[0-9]{2}:[0-9]{2}Z',
+                         '[0-9]{2}:[0-9]{2}:[0-9]{2}'
+                         '(Z|(\+|-)[0-9]{2}:[0-9]{2})',
             'password': '[0-9a-zA-Z]{12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'id': '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
@@ -124,6 +136,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
             'host': self._get_host(),
             'compute_host': self.compute.host,
+            'text': text,
         }
 
     def _get_response(self, url, method, body=None):
@@ -139,7 +152,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _do_post(self, url, name, subs):
         body = self._read_template(name) % subs
         if self.generate_samples:
-            self._write_sample(name, self._pretty_data(body))
+            self._write_sample(name, body)
         return self._get_response(url, 'POST', body)
 
 
@@ -172,3 +185,16 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 
 class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
+
+
+class ExtensionsSampleJsonTest(ApiSampleTestBase):
+    all_extensions = True
+
+    def test_extensions_get(self):
+        response = self._do_get('extensions')
+        subs = self._get_regexes()
+        return self._verify_response('extensions-get-resp', subs, response)
+
+
+class ExtensionsSampleXmlTest(ExtensionsSampleJsonTest):
+    ctype = 'xml'
