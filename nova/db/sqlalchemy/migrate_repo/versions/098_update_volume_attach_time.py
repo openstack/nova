@@ -64,7 +64,7 @@ def downgrade(migrate_engine):
                 where(volumes.c.id == v['id']).\
                 values(attach_string=attach_time).execute()
     except Exception:
-        attach_datetime.drop()
+        attach_string.drop()
         raise
 
     old_attachtime.alter(name='attach_time_old')
