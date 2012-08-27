@@ -149,7 +149,7 @@ class API(base.Base):
         cinderclient(context).volumes.reserve(volume['id'])
 
     def unreserve_volume(self, context, volume):
-        cinderclient(context).volumes.reserve(volume['id'])
+        cinderclient(context).volumes.unreserve(volume['id'])
 
     def attach(self, context, volume, instance_uuid, mountpoint):
         cinderclient(context).volumes.attach(volume['id'],
