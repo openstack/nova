@@ -288,6 +288,9 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.assertEqual(mddict['public_keys'][self.instance['key_name']],
             self.instance['key_data'])
 
+        self.assertTrue('launch_index' in mddict)
+        self.assertEqual(mddict['launch_index'], self.instance['launch_index'])
+
         # verify that each of the things we put in content
         # resulted in an entry in 'files', that their content
         # there is as expected, and that /content lists them.
