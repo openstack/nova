@@ -1499,7 +1499,7 @@ class API(base.Base):
 
         request_spec = {
                 'instance_type': new_instance_type,
-                'instance_uuids': instance['uuid'],
+                'instance_uuids': [instance['uuid']],
                 'instance_properties': instance}
 
         filter_properties = {'ignore_hosts': []}

@@ -241,8 +241,9 @@ class SchedulerManagerTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
-        request_spec = {'instance_properties':
-                {'uuid': fake_instance_uuid}}
+        request_spec = {'instance_type': 'fake_type',
+                        'instance_uuids': [fake_instance_uuid],
+                        'instance_properties': {'uuid': fake_instance_uuid}}
         kwargs = {
                 'context': self.context,
                 'image': 'fake_image',

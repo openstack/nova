@@ -3331,6 +3331,12 @@ class ComputeAPITestCase(BaseTestCase):
             request_spec = msg['args']['request_spec']
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
+            # resize with flavor_id = None will still send instance_type
+            self.assertEqual(request_spec['instance_type'],
+                             orig_instance_type)
+            self.assertEqual(request_spec['instance_uuids'],
+                             [instance['uuid']])
+            self.assertEqual(instance_properties['uuid'], instance['uuid'])
             self.assertEqual(instance_properties['host'], 'host2')
             # Ensure the instance passed to us has been updated with
             # progress set to 0 and task_state set to RESIZE_PREP.
@@ -3345,6 +3351,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
+        orig_instance_type = instance['instance_type']
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
         # the compute manager is using a cached copy of FLAGS.host,
