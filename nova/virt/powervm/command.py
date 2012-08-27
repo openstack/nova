@@ -59,6 +59,9 @@ class BaseCommand(object):
     def lshwres(self, args=''):
         return 'lshwres %s' % args
 
+    def hostname(self, args=''):
+        return 'hostname %s' % args
+
     def vhost_by_instance_id(self, instance_id_hex):
         pass
 
@@ -88,3 +91,6 @@ class IVMCommand(BaseCommand):
 
     def mkvdev(self, args=''):
         return 'ioscli ' + BaseCommand.mkvdev(self, args=args)
+
+    def hostname(self, args=''):
+        return 'ioscli ' + BaseCommand.hostname(self, args=args)
