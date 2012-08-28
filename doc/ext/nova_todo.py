@@ -73,8 +73,10 @@ def process_todo_nodes(app, doctree, fromdocname):
             priority = 5
             if m:
                 priority = int(m.group(1))
-                if (priority < 0): priority = 1
-                if (priority > 5): priority = 5
+                if priority < 0:
+                    priority = 1
+                if priority > 5:
+                    priority = 5
 
             item['classes'].append('todo_p' + str(priority))
             todo_entry['classes'].append('todo_p' + str(priority))
