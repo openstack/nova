@@ -500,11 +500,6 @@ def write_to_file(file, data, mode='w'):
         f.write(data)
 
 
-def ensure_path(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
 def metadata_forward():
     """Create forwarding rule for metadata."""
     if FLAGS.metadata_host != '127.0.0.1':
@@ -947,7 +942,7 @@ def _device_exists(device):
 
 def _dhcp_file(dev, kind):
     """Return path to a pid, leases or conf file for a bridge/device."""
-    ensure_path(FLAGS.networks_path)
+    utils.ensure_tree(FLAGS.networks_path)
     return os.path.abspath('%s/nova-%s.%s' % (FLAGS.networks_path,
                                               dev,
                                               kind))
@@ -955,7 +950,7 @@ def _dhcp_file(dev, kind):
 
 def _ra_file(dev, kind):
     """Return path to a pid or conf file for a bridge/device."""
-    ensure_path(FLAGS.networks_path)
+    utils.ensure_tree(FLAGS.networks_path)
     return os.path.abspath('%s/nova-ra-%s.%s' % (FLAGS.networks_path,
                                               dev,
                                               kind))

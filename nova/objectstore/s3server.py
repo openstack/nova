@@ -93,8 +93,7 @@ class S3Application(wsgi.Router):
         mapper.connect('/{bucket_name}/',
                 controller=lambda *a, **kw: BucketHandler(self)(*a, **kw))
         self.directory = os.path.abspath(root_directory)
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
+        utils.ensure_tree(self.directory)
         self.bucket_depth = bucket_depth
         super(S3Application, self).__init__(mapper)
 
@@ -286,7 +285,7 @@ class BucketHandler(BaseRequestHandler):
             os.path.exists(path)):
             self.set_status(403)
             return
-        os.makedirs(path)
+        utils.ensure_tree(path)
         self.finish()
 
     def delete(self, bucket_name):
@@ -335,8 +334,7 @@ class ObjectHandler(BaseRequestHandler):
             self.set_status(403)
             return
         directory = os.path.dirname(path)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        utils.ensure_tree(directory)
         object_file = open(path, "w")
         object_file.write(self.request.body)
         object_file.close()
