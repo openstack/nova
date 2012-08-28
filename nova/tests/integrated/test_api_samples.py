@@ -100,10 +100,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             try:
                 match = re.match(line, result_line)
             except Exception as exc:
-                self.fail(_('Response error on line %(i)s:\n'
+                self.fail(_('Response error on line:\n'
                           '%(line)s\n%(result_line)s') % locals())
             if not match:
-                self.fail(_('Response error on line %(i)s:\n'
+                self.fail(_('Response error on line:\n'
                           '%(line)s\n%(result_line)s') % locals())
             if match.groups():
                 result = match.groups()[0]
