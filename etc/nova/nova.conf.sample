@@ -125,12 +125,12 @@
 #### (IntOpt) default glance port
 
 # glance_api_servers=$glance_host:$glance_port
-#### (ListOpt) A list of the glance api servers available to nova.
-####           Prefix with https:// for ssl-based glance api servers.
+#### (ListOpt) A list of the glance api servers available to nova. Prefix
+####           with https:// for ssl-based glance api servers.
 ####           ([hostname|ip]:port)
 
 # glance_api_insecure=false
-#### (BoolOpt) If passed, allow to perform insecure SSL (https) requests to glance
+#### (BoolOpt) Allow to perform insecure SSL (https) requests to glance
 
 # glance_num_retries=0
 #### (IntOpt) Number retries when downloading an image from glance
@@ -141,10 +141,6 @@
 # s3_host=$my_ip
 #### (StrOpt) hostname or ip for openstack to use when accessing the s3
 ####          api
-
-# s3_dmz=$my_ip
-#### (StrOpt) hostname or ip for the instances to use when accessing the
-####          s3 api
 
 # cert_topic=cert
 #### (StrOpt) the topic cert nodes listen on
@@ -202,10 +198,6 @@
 # osapi_volume_extension=nova.api.openstack.volume.contrib.standard_extensions
 #### (MultiStrOpt) osapi volume extension to load
 
-# osapi_scheme=http
-#### (StrOpt) the protocol to use when connecting to the openstack api
-####          server (http, https)
-
 # osapi_path=/v1.1/
 #### (StrOpt) the path prefix used to call the openstack api server
 
@@ -227,9 +219,6 @@
 # metadata_port=8775
 #### (IntOpt) the port for the metadata api port
 
-# default_project=openstack
-#### (StrOpt) the default project to use for openstack
-
 # default_image=ami-11111
 #### (StrOpt) default image to use, testing only
 
@@ -245,9 +234,6 @@
 
 # vpn_key_suffix=-vpn
 #### (StrOpt) Suffix to add to project name for vpn key and secgroups
-
-# auth_token_ttl=3600
-#### (IntOpt) Seconds for auth tokens to linger
 
 # sqlite_db=nova.sqlite
 #### (StrOpt) the filename to use with sqlite
@@ -1551,9 +1537,6 @@
 # powervm_mgr=<None>
 #### (StrOpt) PowerVM manager host or ip
 
-# powervm_vios=powervm_mgr
-#### (StrOpt) PowerVM vios host or ip if different from manager
-
 # powervm_mgr_user=<None>
 #### (StrOpt) PowerVM manager user name
 
@@ -1947,8 +1930,8 @@
 #### (BoolOpt) Storage system compression option for volumes
 
 # storwize_svc_flashcopy_timeout=120
-#### (StrOpt) Maximum number of seconds to wait for FlashCopy to
-####          beprepared. Maximum value is 600 seconds (10 minutes).
+#### (StrOpt) Maximum number of seconds to wait for FlashCopy to be
+####          prepared. Maximum value is 600 seconds (10 minutes).
 
 
-# Total option count: 509
+# Total option count: 505
