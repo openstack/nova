@@ -294,6 +294,7 @@ class InstanceMetadata():
                                           FLAGS.dhcp_domain)
 
         metadata['name'] = self.instance['display_name']
+        metadata['launch_index'] = self.instance['launch_index']
         metadata['availability_zone'] = self.availability_zone
 
         data = {
