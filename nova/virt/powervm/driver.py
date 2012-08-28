@@ -105,22 +105,9 @@ class PowerVMDriver(driver.ComputeDriver):
     def plug_vifs(self, instance, network_info):
         pass
 
-    def spawn(self, context, instance, image_meta,
-              network_info=None, block_device_info=None):
-        """
-        Create a new instance/VM/domain on powerVM.
-
-        :param context: security context
-        :param instance: Instance object as returned by DB layer.
-                         This function should use the data there to guide
-                         the creation of the new instance.
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which to boot this instance
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
-        :param block_device_info: Information about block devices to be
-                                  attached to the instance.
-        """
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+        """Create a new instance/VM/domain on powerVM."""
         self._powervm.spawn(context, instance, image_meta['id'])
 
     def destroy(self, instance, network_info, block_device_info=None):
