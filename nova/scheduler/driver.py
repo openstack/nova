@@ -34,6 +34,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
+from nova import quota
 from nova import utils
 
 
@@ -173,7 +174,9 @@ class Scheduler(object):
 
         instance = self.compute_api.create_db_entry_for_new_instance(
                 context, instance_type, image, base_options,
-                security_group, block_device_mapping, reservations)
+                security_group, block_device_mapping)
+        if reservations:
+            quota.QUOTAS.commit(context, reservations)
         # NOTE(comstud): This needs to be set for the generic exception
         # checking in scheduler manager, so that it'll set this instance
         # to ERROR properly.

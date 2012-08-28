@@ -368,7 +368,7 @@ class SchedulerTestCase(test.TestCase):
         self.driver.compute_api.create_db_entry_for_new_instance(
                 self.context, instance_type, image, base_options,
                 security_group,
-                block_device_mapping, None).AndReturn(fake_instance)
+                block_device_mapping).AndReturn(fake_instance)
         self.mox.ReplayAll()
         instance = self.driver.create_instance_db_entry(self.context,
                 request_spec, None)
