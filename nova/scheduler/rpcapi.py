@@ -42,9 +42,11 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.5 - Add reservations argument to prep_resize()
         1.6 - Remove reservations argument to run_instance()
         1.7 - Add create_volume() method, remove topic from live_migration()
+
+        2.0 - Remove 1.x backwards compat
     '''
 
-    BASE_RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
         super(SchedulerAPI, self).__init__(topic=FLAGS.scheduler_topic,
@@ -58,7 +60,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 injected_files=injected_files,
                 requested_networks=requested_networks,
                 is_first_time=is_first_time,
-                filter_properties=filter_properties), version='1.6')
+                filter_properties=filter_properties))
 
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):
@@ -68,7 +70,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, instance_type=instance_type_p,
                 image=image, request_spec=request_spec,
                 filter_properties=filter_properties,
-                reservations=reservations), version='1.5')
+                reservations=reservations))
 
     def show_host_resources(self, ctxt, host):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))
@@ -81,14 +83,13 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('live_migration',
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit, instance=instance_p,
-                dest=dest), version='1.7')
+                dest=dest))
 
     def create_volume(self, ctxt, volume_id, snapshot_id, reservations):
         self.cast(ctxt,
                   self.make_msg('create_volume',
                                 volume_id=volume_id, snapshot_id=snapshot_id,
-                                reservations=reservations),
-                  version='1.7')
+                                reservations=reservations))
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):
