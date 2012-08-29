@@ -42,15 +42,6 @@ class FilterScheduler(driver.Scheduler):
         self.cost_function_cache = {}
         self.options = scheduler_options.SchedulerOptions()
 
-    def schedule(self, context, topic, method, *args, **kwargs):
-        """The schedule() contract requires we return the one
-        best-suited host for this request.
-
-        NOTE: We're only focused on compute instances right now,
-        so this method will always raise NoValidHost()."""
-        msg = _("No host selection for %s defined.") % topic
-        raise exception.NoValidHost(reason=msg)
-
     def schedule_create_volume(self, context, volume_id, snapshot_id,
                                reservations):
         # NOTE: We're only focused on compute instances right now,
@@ -61,17 +52,13 @@ class FilterScheduler(driver.Scheduler):
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties, reservations):
+                              filter_properties):
         """This method is called from nova.compute.api to provision
         an instance.  We first create a build plan (a list of WeightedHosts)
         and then provision.
 
         Returns a list of the instances created.
         """
-        if 'instance_uuids' not in request_spec:
-            return self._legacy_schedule_run_instance(context, request_spec,
-                    admin_password, injected_files, requested_networks,
-                    is_first_time, filter_properties, reservations)
         elevated = context.elevated()
         instance_uuids = request_spec.get('instance_uuids')
         num_instances = len(instance_uuids)
@@ -114,60 +101,9 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.end', notifier.INFO, payload)
 
-    def _legacy_schedule_run_instance(self, context, request_spec,
-                                      admin_password, injected_files,
-                                      requested_networks, is_first_time,
-                                      filter_properties, reservations):
-        elevated = context.elevated()
-        num_instances = request_spec.get('num_instances', 1)
-        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
-                locals())
-
-        payload = dict(request_spec=request_spec)
-        notifier.notify(context, notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance.start', notifier.INFO, payload)
-
-        weighted_hosts = self._schedule(context, "compute", request_spec,
-                                        filter_properties)
-
-        if not weighted_hosts:
-            raise exception.NoValidHost(reason="")
-
-        # NOTE(comstud): Make sure we do not pass this through.  It
-        # contains an instance of RpcContext that cannot be serialized.
-        filter_properties.pop('context', None)
-
-        instances = []
-        for num in xrange(num_instances):
-            if not weighted_hosts:
-                break
-            weighted_host = weighted_hosts.pop(0)
-
-            request_spec['instance_properties']['launch_index'] = num
-
-            instance = self._provision_resource(elevated, weighted_host,
-                                                request_spec,
-                                                filter_properties,
-                                                requested_networks,
-                                                injected_files, admin_password,
-                                                is_first_time,
-                                                reservations=reservations)
-            # scrub retry host list in case we're scheduling multiple
-            # instances:
-            retry = filter_properties.get('retry', {})
-            retry['hosts'] = []
-
-            if instance:
-                instances.append(instance)
-
-        notifier.notify(context, notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance.end', notifier.INFO, payload)
-
-        return instances
-
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,
-                             reservations=None):
+                             reservations):
         """Select a target for resize.
 
         Selects a target host for the instance, post-resize, and casts
@@ -186,13 +122,8 @@ class FilterScheduler(driver.Scheduler):
 
     def _provision_resource(self, context, weighted_host, request_spec,
             filter_properties, requested_networks, injected_files,
-            admin_password, is_first_time, reservations=None,
-            instance_uuid=None):
+            admin_password, is_first_time, instance_uuid=None):
         """Create the requested resource in this Zone."""
-        if reservations:
-            instance = self.create_instance_db_entry(context, request_spec,
-                                                     reservations)
-            instance_uuid = instance['uuid']
         # Add a retry entry for the selected compute host:
         self._add_retry_host(filter_properties, weighted_host.host_state.host)
 
@@ -212,16 +143,6 @@ class FilterScheduler(driver.Scheduler):
                 requested_networks=requested_networks,
                 injected_files=injected_files,
                 admin_password=admin_password, is_first_time=is_first_time)
-
-        if reservations:
-            inst = driver.encode_instance(updated_instance, local=True)
-
-            # So if another instance is created, create_instance_db_entry will
-            # actually create a new entry, instead of assume it's been created
-            # already
-            del request_spec['instance_properties']['uuid']
-
-            return inst
 
     def _add_retry_host(self, filter_properties, host):
         """Add a retry entry for the selected compute host.  In the event that

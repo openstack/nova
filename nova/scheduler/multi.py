@@ -65,11 +65,6 @@ class MultiScheduler(driver.Scheduler):
                         'volume': volume_driver,
                         'default': default_driver}
 
-    def schedule(self, context, topic, method, *_args, **_kwargs):
-        driver = self.drivers.get(topic, self.drivers['default'])
-        return driver.schedule(context, topic,
-                method, *_args, **_kwargs)
-
     def schedule_run_instance(self, *args, **kwargs):
         return self.drivers['compute'].schedule_run_instance(*args, **kwargs)
 
