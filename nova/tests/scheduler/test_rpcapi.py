@@ -86,10 +86,16 @@ class SchedulerRpcAPITestCase(test.TestCase):
         self._test_scheduler_api('live_migration', rpc_method='call',
                 block_migration='fake_block_migration',
                 disk_over_commit='fake_disk_over_commit',
-                instance='fake_instance', dest='fake_dest', topic='fake_topic',
-                version='1.3')
+                instance='fake_instance', dest='fake_dest',
+                version='1.7')
 
     def test_update_service_capabilities(self):
         self._test_scheduler_api('update_service_capabilities',
                 rpc_method='fanout_cast', service_name='fake_name',
                 host='fake_host', capabilities='fake_capabilities')
+
+    def test_create_volume(self):
+        self._test_scheduler_api('create_volume',
+                rpc_method='cast', volume_id="fake_volume",
+                snapshot_id="fake_snapshots", reservations=list('fake_res'),
+                version='1.7')

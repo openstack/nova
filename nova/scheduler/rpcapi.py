@@ -41,6 +41,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.4 - Remove update_db from prep_resize
         1.5 - Add reservations argument to prep_resize()
         1.6 - Remove reservations argument to run_instance()
+        1.7 - Add create_volume() method, remove topic from live_migration()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -73,14 +74,21 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))
 
     def live_migration(self, ctxt, block_migration, disk_over_commit,
-            instance, dest, topic):
+            instance, dest):
         # NOTE(comstud): Call vs cast so we can get exceptions back, otherwise
         # this call in the scheduler driver doesn't return anything.
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('live_migration',
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit, instance=instance_p,
-                dest=dest, topic=topic), version='1.3')
+                dest=dest), version='1.7')
+
+    def create_volume(self, ctxt, volume_id, snapshot_id, reservations):
+        self.cast(ctxt,
+                  self.make_msg('create_volume',
+                                volume_id=volume_id, snapshot_id=snapshot_id,
+                                reservations=reservations),
+                  version='1.7')
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):
