@@ -179,9 +179,15 @@ class ExtensionManager(object):
     example extension implementation.
 
     """
-
     def is_loaded(self, alias):
         return alias in self.extensions
+
+    def sorted_extensions(self):
+        if self.sorted_ext_list is None:
+            self.sorted_ext_list = sorted(self.extensions.iteritems())
+
+        for _alias, ext in self.sorted_ext_list:
+            yield ext
 
     def register(self, ext):
         # Do nothing if the extension doesn't check out
@@ -195,6 +201,7 @@ class ExtensionManager(object):
             raise exception.NovaException("Found duplicate extension: %s"
                                           % alias)
         self.extensions[alias] = ext
+        self.sorted_ext_list = None
 
     def get_resources(self):
         """Returns a list of ResourceExtension objects."""
@@ -202,8 +209,7 @@ class ExtensionManager(object):
         resources = []
         resources.append(ResourceExtension('extensions',
                                            ExtensionsResource(self)))
-
-        for ext in self.extensions.values():
+        for ext in self.sorted_extensions():
             try:
                 resources.extend(ext.get_resources())
             except AttributeError:
@@ -215,7 +221,7 @@ class ExtensionManager(object):
     def get_controller_extensions(self):
         """Returns a list of ControllerExtension objects."""
         controller_exts = []
-        for ext in self.extensions.values():
+        for ext in self.sorted_extensions():
             try:
                 controller_exts.extend(ext.get_controller_extensions())
             except AttributeError:

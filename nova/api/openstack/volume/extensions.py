@@ -27,8 +27,8 @@ FLAGS = flags.FLAGS
 class ExtensionManager(base_extensions.ExtensionManager):
     def __init__(self):
         LOG.audit(_('Initializing extension manager.'))
-
         self.cls_list = FLAGS.osapi_volume_extension
         self.extensions = {}
         self.plugins = []
+        self.sorted_ext_list = []
         self._load_extensions()
