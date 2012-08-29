@@ -1762,7 +1762,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn._check_shared_storage_test_file("file").AndReturn(True)
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
+        self.assertRaises(exception.InvalidLocalStorage,
                           conn.check_can_live_migrate_source,
                           self.context, instance_ref, dest_check_data)
 

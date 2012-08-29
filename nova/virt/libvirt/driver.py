@@ -2242,7 +2242,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.
-        dest = FLAGS.host
+        source = FLAGS.host
         filename = dest_check_data["filename"]
         block_migration = dest_check_data["block_migration"]
 
@@ -2252,12 +2252,12 @@ class LibvirtDriver(driver.ComputeDriver):
             if shared:
                 reason = _("Block migration can not be used "
                            "with shared storage.")
-                raise exception.InvalidSharedStorage(reason=reason, path=dest)
+                raise exception.InvalidLocalStorage(reason=reason, path=source)
 
         elif not shared:
             reason = _("Live migration can not be used "
                        "without shared storage.")
-            raise exception.InvalidSharedStorage(reason=reason, path=dest)
+            raise exception.InvalidSharedStorage(reason=reason, path=source)
 
     def _get_compute_info(self, context, host):
         """Get compute host's information specified by key"""
