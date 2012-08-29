@@ -118,5 +118,5 @@ class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
         'ietadm --op new --tid=%(tid)s --lun=%(lun)s '
                 '--params Path=%(path)s,Type=fileio',
         'ietadm --op show --tid=%(tid)s',
-        'ietadm --op delete --tid=%(tid)s',
-        'ietadm --op delete --tid=%(tid)s --lun=%(lun)s'])
+        'ietadm --op delete --tid=%(tid)s --lun=%(lun)s',
+        'ietadm --op delete --tid=%(tid)s'])
