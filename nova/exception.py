@@ -425,6 +425,10 @@ class VirtDriverNotFound(NotFound):
     message = _("Could not find driver for connection_type %(name)s")
 
 
+class PersistentVolumeFileNotFound(NotFound):
+    message = _("Volume %(volume_id)s persistence file could not be found.")
+
+
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 
@@ -468,6 +472,14 @@ class SnapshotIsBusy(NovaException):
 
 class ISCSITargetNotFoundForVolume(NotFound):
     message = _("No target id found for volume %(volume_id)s.")
+
+
+class ISCSITargetCreateFailed(NovaException):
+    message = _("Failed to create iscsi target for volume %(volume_id)s.")
+
+
+class ISCSITargetRemoveFailed(NovaException):
+    message = _("Failed to remove iscsi target for volume %(volume_id)s.")
 
 
 class DiskNotFound(NotFound):

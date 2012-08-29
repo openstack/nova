@@ -20,6 +20,7 @@ Drivers for volumes.
 
 """
 
+import os
 import time
 
 from nova import exception
@@ -263,65 +264,103 @@ class ISCSIDriver(VolumeDriver):
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
-        try:
-            iscsi_target = self.db.volume_get_iscsi_target_num(context,
-                                                           volume['id'])
-        except exception.NotFound:
-            LOG.info(_("Skipping ensure_export. No iscsi_target "
-                       "provisioned for volume: %s"), volume['id'])
-            return
+        # NOTE(jdg): tgtadm doesn't use the iscsi_targets table
+        # TODO(jdg): In the future move all of the dependent stuff into the
+        # cooresponding target admin class
+        if not isinstance(self.tgtadm, iscsi.TgtAdm):
+            try:
+                iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                               volume['id'])
+            except exception.NotFound:
+                LOG.info(_("Skipping ensure_export. No iscsi_target "
+                           "provisioned for volume: %s"), volume['id'])
+                return
+        else:
+            iscsi_target = 1  # dummy value when using TgtAdm
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
 
+        # NOTE(jdg): For TgtAdm case iscsi_name is the ONLY param we need
+        # should clean this all up at some point in the future
         self.tgtadm.create_iscsi_target(iscsi_name, iscsi_target,
-                0, volume_path, check_exit_code=False)
+                                        0, volume_path,
+                                        check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore."""
-        host_iscsi_targets = self.db.iscsi_target_count_by_host(context, host)
-        if host_iscsi_targets >= FLAGS.iscsi_num_targets:
-            return
-        # NOTE(vish): Target ids start at 1, not 0.
-        for target_num in xrange(1, FLAGS.iscsi_num_targets + 1):
-            target = {'host': host, 'target_num': target_num}
-            self.db.iscsi_target_create_safe(context, target)
+        # NOTE(jdg): tgtadm doesn't use the iscsi_targets table
+        # TODO(jdg): In the future move all of the dependent stuff into the
+        # cooresponding target admin class
+        if not isinstance(self.tgtadm, iscsi.TgtAdm):
+            host_iscsi_targets = self.db.iscsi_target_count_by_host(context,
+                                                                    host)
+            if host_iscsi_targets >= FLAGS.iscsi_num_targets:
+                return
+
+            # NOTE(vish): Target ids start at 1, not 0.
+            for target_num in xrange(1, FLAGS.iscsi_num_targets + 1):
+                target = {'host': host, 'target_num': target_num}
+                self.db.iscsi_target_create_safe(context, target)
 
     def create_export(self, context, volume):
         """Creates an export for a logical volume."""
-        self._ensure_iscsi_targets(context, volume['host'])
-        iscsi_target = self.db.volume_allocate_iscsi_target(context,
-                                                      volume['id'],
-                                                      volume['host'])
+        #BOOKMARK(jdg)
+
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
 
-        self.tgtadm.create_iscsi_target(iscsi_name, iscsi_target,
-                0, volume_path)
-
         model_update = {}
-        if FLAGS.iscsi_helper == 'tgtadm':
-            lun = 1
-        else:
+
+        # TODO(jdg): In the future move all of the dependent stuff into the
+        # cooresponding target admin class
+        if not isinstance(self.tgtadm, iscsi.TgtAdm):
             lun = 0
+            self._ensure_iscsi_targets(context, volume['host'])
+            iscsi_target = self.db.volume_allocate_iscsi_target(context,
+                                                                volume['id'],
+                                                                volume['host'])
+        else:
+            lun = 1  # For tgtadm the controller is lun 0, dev starts at lun 1
+            iscsi_target = 0  # NOTE(jdg): Not used by tgtadm
+
+        # NOTE(jdg): For TgtAdm case iscsi_name is the ONLY param we need
+        # should clean this all up at some point in the future
+        tid = self.tgtadm.create_iscsi_target(iscsi_name,
+                                              iscsi_target,
+                                              0,
+                                              volume_path)
         model_update['provider_location'] = _iscsi_location(
-            FLAGS.iscsi_ip_address, iscsi_target, iscsi_name, lun)
+            FLAGS.iscsi_ip_address, tid, iscsi_name, lun)
         return model_update
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
-        try:
-            iscsi_target = self.db.volume_get_iscsi_target_num(context,
-                                                           volume['id'])
-        except exception.NotFound:
-            LOG.info(_("Skipping remove_export. No iscsi_target "
-                       "provisioned for volume: %s"), volume['id'])
+        #BOOKMARK jdg
+        location = volume['provider_location'].split(' ')
+        iqn = location[1]
+        if 'iqn' not in iqn:
+            LOG.warning(_("Jacked... didn't get an iqn"))
             return
+
+        # NOTE(jdg): tgtadm doesn't use the iscsi_targets table
+        # TODO(jdg): In the future move all of the dependent stuff into the
+        # cooresponding target admin class
+        if not isinstance(self.tgtadm, iscsi.TgtAdm):
+            try:
+                iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                               volume['id'])
+            except exception.NotFound:
+                LOG.info(_("Skipping remove_export. No iscsi_target "
+                           "provisioned for volume: %s"), volume['id'])
+            return
+        else:
+            iscsi_target = 0
 
         try:
             # ietadm show will exit with an error
             # this export has already been removed
-            self.tgtadm.show_target(iscsi_target)
+            self.tgtadm.show_target(iscsi_target, iqn=iqn)
         except Exception as e:
             LOG.info(_("Skipping remove_export. No iscsi_target "
                        "is presently exported for volume: %s"), volume['id'])
@@ -453,10 +492,23 @@ class ISCSIDriver(VolumeDriver):
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
+        vol_uuid_file = 'volume-%s' % volume_id
+        volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
+        if os.path.isfile(volume_path):
+            iqn = '%s%s' % (FLAGS.iscsi_target_prefix,
+                            vol_uuid_file)
+        else:
+            raise exception.PersistentVolumeFileNotFound(volume_id=volume_id)
 
-        tid = self.db.volume_get_iscsi_target_num(context, volume_id)
+        # TODO(jdg): In the future move all of the dependent stuff into the
+        # cooresponding target admin class
+        if not isinstance(self.tgtadm, iscsi.TgtAdm):
+            tid = self.db.volume_get_iscsi_target_num(context, volume_id)
+        else:
+            tid = 0
+
         try:
-            self.tgtadm.show_target(tid)
+            self.tgtadm.show_target(tid, iqn=iqn)
         except exception.ProcessExecutionError, e:
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
