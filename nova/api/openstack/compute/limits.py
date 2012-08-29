@@ -212,6 +212,7 @@ DEFAULT_LIMITS = [
     Limit("PUT", "*", ".*", 10, PER_MINUTE),
     Limit("GET", "*changes-since*", ".*changes-since.*", 3, PER_MINUTE),
     Limit("DELETE", "*", ".*", 100, PER_MINUTE),
+    Limit("GET", "*/os-fping", "^/os-fping", 12, PER_HOUR),
 ]
 
 

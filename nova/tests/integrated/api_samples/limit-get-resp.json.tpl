@@ -66,6 +66,19 @@
                 ],
                 "regex": ".*changes-since.*",
                 "uri": "*changes-since*"
+            },
+            {
+                "limit": [
+                    {
+                        "next-available": "%(timestamp)s",
+                        "remaining": 12,
+                        "unit": "HOUR",
+                        "value": 12,
+                        "verb": "GET"
+                    }
+                ],
+                "regex": "^/os-fping",
+                "uri": "*/os-fping"
             }
         ]
     }
