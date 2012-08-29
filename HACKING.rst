@@ -235,6 +235,10 @@ readable. Follow these guidelines:
   description of the change, not just a reference to a bug or
   blueprint. It must be followed by a single blank line.
 
+  If the change relates to a specific driver (libvirt, xenapi, qpid, etc...),
+  begin the first line of the commit message with the driver name, lowercased,
+  followed by a colon.
+
   Following your brief summary, provide a more detailed description of
   the patch, manually wrapping the text at 72 characters. This
   description should provide enough detail that one does not have to
