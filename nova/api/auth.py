@@ -77,8 +77,9 @@ class NovaKeystoneContext(wsgi.Middleware):
         if user_id is None:
             LOG.debug("Neither X_USER_ID nor X_USER found in request")
             return webob.exc.HTTPUnauthorized()
-        # get the roles
-        roles = [r.strip() for r in req.headers.get('X_ROLE', '').split(',')]
+
+        roles = self._get_roles(req)
+
         if 'X_TENANT_ID' in req.headers:
             # This is the new header since Keystone went to ID/Name
             project_id = req.headers['X_TENANT_ID']
@@ -117,3 +118,16 @@ class NovaKeystoneContext(wsgi.Middleware):
 
         req.environ['nova.context'] = ctx
         return self.application
+
+    def _get_roles(self, req):
+        """Get the list of roles"""
+
+        if 'X_ROLES' in req.headers:
+            roles = req.headers.get('X_ROLES', '')
+        else:
+            # Fallback to deprecated role header:
+            roles = req.headers.get('X_ROLE', '')
+            if roles:
+                LOG.warn(_("Sourcing roles from deprecated X-Role HTTP "
+                           "header"))
+        return [r.strip() for r in roles.split(',')]

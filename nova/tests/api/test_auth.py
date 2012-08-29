@@ -64,3 +64,61 @@ class TestNovaKeystoneContextMiddleware(test.TestCase):
         self.request.headers['X_SERVICE_CATALOG'] = "bad json"
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '500 Internal Server Error')
+
+
+class TestKeystoneMiddlewareRoles(test.TestCase):
+
+    def setUp(self):
+        super(TestKeystoneMiddlewareRoles, self).setUp()
+
+        @webob.dec.wsgify()
+        def role_check_app(req):
+            context = req.environ['nova.context']
+
+            if "knight" in context.roles and "bad" not in context.roles:
+                return webob.Response(status=_("200 Role Match"))
+            elif context.roles == ['']:
+                return webob.Response(status=_("200 No Roles"))
+            else:
+                raise Exception(context.roles)
+                raise webob.exc.HTTPBadRequest(_("unexpected role header"))
+
+        self.middleware = nova.api.auth.NovaKeystoneContext(role_check_app)
+        self.request = webob.Request.blank('/')
+        self.request.headers['X_USER'] = 'testuser'
+        self.request.headers['X_TENANT_ID'] = 'testtenantid'
+        self.request.headers['X_AUTH_TOKEN'] = 'testauthtoken'
+        self.request.headers['X_SERVICE_CATALOG'] = json.dumps({})
+
+        self.roles = "pawn, knight, rook"
+
+    def test_roles(self):
+        """Test that the newer style role header takes precedence"""
+        self.request.headers['X_ROLES'] = 'pawn,knight,rook'
+        self.request.headers['X_ROLE'] = 'bad'
+
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 Role Match')
+
+    def test_roles_empty(self):
+        self.request.headers['X_ROLES'] = ''
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 No Roles')
+
+    def test_deprecated_role(self):
+        """Test fallback to older role header"""
+        self.request.headers['X_ROLE'] = 'pawn,knight,rook'
+
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 Role Match')
+
+    def test_role_empty(self):
+        self.request.headers['X_ROLE'] = ''
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 No Roles')
+
+    def test_no_role_headers(self):
+        """Test with no role headers set"""
+
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 No Roles')
