@@ -18,7 +18,7 @@
 """
 Volume manager manages creating, attaching, detaching, and persistent storage.
 
-Persistant storage volumes keep their state independent of instances.  You can
+Persistent storage volumes keep their state independent of instances.  You can
 attach to an instance, terminate the instance, spawn a new instance (even
 one from a different image) and re-attach the volume with the same data
 intact.
