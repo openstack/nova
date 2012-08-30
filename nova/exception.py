@@ -864,7 +864,11 @@ class VolumeTypeExists(Duplicate):
 
 
 class InvalidSharedStorage(NovaException):
-    message = _("%(path)s is on shared storage: %(reason)s")
+    message = _("%(path)s is not on shared storage: %(reason)s")
+
+
+class InvalidLocalStorage(NovaException):
+    message = _("%(path)s is not on local storage: %(reason)s")
 
 
 class MigrationError(NovaException):
