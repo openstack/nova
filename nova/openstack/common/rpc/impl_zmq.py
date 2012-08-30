@@ -677,7 +677,7 @@ def cleanup():
     global ZMQ_CTX
     global matchmaker
     matchmaker = None
-    ZMQ_CTX.destroy()
+    ZMQ_CTX.term()
     ZMQ_CTX = None
 
 
