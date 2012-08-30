@@ -84,8 +84,9 @@ def ec2_error(req, request_id, code, message):
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>%s</RequestID></Response>' %
-                     (utils.utf8(code), utils.utf8(message),
-                     utils.utf8(request_id)))
+                     (utils.xhtml_escape(utils.utf8(code)),
+                      utils.xhtml_escape(utils.utf8(message)),
+                      utils.xhtml_escape(utils.utf8(request_id))))
     return resp
 
 

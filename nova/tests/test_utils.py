@@ -460,6 +460,10 @@ class GenericUtilsTestCase(test.TestCase):
     def test_xhtml_escape(self):
         self.assertEqual('&quot;foo&quot;', utils.xhtml_escape('"foo"'))
         self.assertEqual('&apos;foo&apos;', utils.xhtml_escape("'foo'"))
+        self.assertEqual('&amp;', utils.xhtml_escape('&'))
+        self.assertEqual('&gt;', utils.xhtml_escape('>'))
+        self.assertEqual('&lt;', utils.xhtml_escape('<'))
+        self.assertEqual('&lt;foo&gt;', utils.xhtml_escape('<foo>'))
 
     def test_hash_file(self):
         data = 'Mary had a little lamb, its fleece as white as snow'
