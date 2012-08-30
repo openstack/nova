@@ -2720,7 +2720,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             start_time = utils.last_completed_audit_period()[1]
 
         curr_time = time.time()
-        if curr_time - self._last_bw_usage_poll > FLAGS.bandwith_poll_interval:
+        if (curr_time - self._last_bw_usage_poll >
+                FLAGS.bandwidth_poll_interval):
             self._last_bw_usage_poll = curr_time
             LOG.info(_("Updating bandwidth usage cache"))
 
