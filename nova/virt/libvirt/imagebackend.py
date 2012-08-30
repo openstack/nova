@@ -61,6 +61,11 @@ class Image(object):
         self.driver_format = driver_format
         self.is_block_dev = is_block_dev
 
+        # NOTE(mikal): We need a lock directory which is shared along with
+        # instance files, to cover the scenario where multiple compute nodes
+        # are trying to create a base file at the same time
+        self.lock_path = os.path.join(FLAGS.instances_path, 'locks')
+
     @abc.abstractmethod
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         """Create image from template.
@@ -106,7 +111,7 @@ class Image(object):
         :fname: Template name
         :size: Size of created image in bytes (optional)
         """
-        @utils.synchronized(fname)
+        @utils.synchronized(fname, external=True, lock_path=self.lock_path)
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fn(target=target, *args, **kwargs)
@@ -129,7 +134,7 @@ class Raw(Image):
                                  instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
@@ -153,7 +158,7 @@ class Qcow2(Image):
                                  instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
             qcow2_base = base
             if size:
@@ -189,7 +194,7 @@ class Lvm(Image):
         self.sparse = FLAGS.libvirt_sparse_logical_volumes
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base)
+        @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             resize = size > base_size

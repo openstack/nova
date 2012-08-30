@@ -35,7 +35,8 @@ class _ImageTestCase(test.TestCase):
 
     def setUp(self):
         super(_ImageTestCase, self).setUp()
-        self.flags(instances_path=self.INSTANCES_PATH)
+        self.flags(disable_process_locking=True,
+                   instances_path=self.INSTANCES_PATH)
         self.INSTANCE = 'instance'
         self.NAME = 'fake.vm'
         self.TEMPLATE = 'template'
