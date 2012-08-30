@@ -1075,6 +1075,11 @@ class InstanceUserDataMalformed(NovaException):
     message = _("User data needs to be valid base 64.")
 
 
+class UnexpectedTaskStateError(NovaException):
+    message = _("unexpected task state: expecting %(expected)s but "
+                "the actual state is %(actual)s")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 
