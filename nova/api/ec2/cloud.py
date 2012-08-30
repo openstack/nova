@@ -530,8 +530,6 @@ class CloudController(object):
                                   source_security_group_name=None,
                                   source_security_group_owner_id=None):
 
-        values = {}
-
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
                 source_security_group_owner_id)
