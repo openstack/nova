@@ -203,8 +203,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEquals(weight, -1.0)
         hostinfo = host_manager.HostState('host', 'compute')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
-                local_gb=0, vcpus=1, free_disk_gb=1000, free_ram_mb=1000,
-                vcpus_used=0))
+                local_gb=0, vcpus=1, disk_available_least=1000,
+                free_disk_mb=1000, free_ram_mb=1000, vcpus_used=0))
         self.assertEquals(1000 - 128, fn(hostinfo, {}))
 
     def test_max_attempts(self):

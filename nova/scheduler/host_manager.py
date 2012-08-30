@@ -122,7 +122,10 @@ class HostState(object):
         all_disk_mb = compute['local_gb'] * 1024
         all_ram_mb = compute['memory_mb']
 
-        free_disk_mb = compute['free_disk_gb'] * 1024
+        # Assume virtual size is all consumed by instances if use qcow2 disk.
+        least = compute.get('disk_available_least')
+        free_disk_mb = least if least is not None else compute['free_disk_gb']
+        free_disk_mb *= 1024
         free_ram_mb = compute['free_ram_mb']
 
         if FLAGS.reserved_host_disk_mb > 0:
