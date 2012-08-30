@@ -106,6 +106,32 @@ class PowerVMOperator(object):
                      if re.search(r'^instance-[0-9]{8}$', instance)]
         return instances
 
+    def get_available_resource(self):
+        """Retrieve resource info.
+
+        :returns: dictionary containing resource info
+        """
+        data = self.get_host_stats()
+        # Memory data is in MB already.
+        memory_mb_used = data['host_memory_total'] - data['host_memory_free']
+
+        # Convert to GB
+        local_gb = data['disk_total'] / 1024
+        local_gb_used = data['disk_used'] / 1024
+
+        dic = {'vcpus': data['vcpus'],
+               'memory_mb': data['host_memory_total'],
+               'local_gb': local_gb,
+               'vcpus_used': data['vcpus_used'],
+               'memory_mb_used': memory_mb_used,
+               'local_gb_used': local_gb_used,
+               'hypervisor_type': data['hypervisor_type'],
+               'hypervisor_version': data['hypervisor_version'],
+               'hypervisor_hostname': self._operator.get_hostname(),
+               'cpu_info': ','.join(data['cpu_info']),
+               'disk_available_least': data['disk_total']}
+        return dic
+
     def get_host_stats(self, refresh=False):
         """Return currently known host stats"""
         if refresh:
@@ -400,6 +426,14 @@ class BaseOperator(object):
             return output[0]
 
         return None
+
+    def get_hostname(self):
+        """Returns the managed system hostname.
+
+        :returns: string -- hostname
+        """
+        output = self.run_command(self.command.hostname())
+        return output[0]
 
     def remove_disk(self, disk_name):
         """Removes a disk.

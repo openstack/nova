@@ -169,17 +169,9 @@ class PowerVMDriver(driver.ComputeDriver):
         """Power on the specified instance"""
         self._powervm.power_on(instance['name'])
 
-    def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeNode table.
-
-        This method is called when nova-compute launches, and
-        whenever admin executes "nova-manage service update_resource".
-
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
-
-        """
-        pass
+    def get_available_resource(self):
+        """Retrieve resource info."""
+        return self._powervm.get_available_resource()
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
