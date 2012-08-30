@@ -33,6 +33,14 @@
             "updated": "2011-11-03T00:00:00+00:00"
         },
         {
+            "alias": "OS-FLV-DISABLED",
+            "description": "Support to show the disabled status of a flavor",
+            "links": [],
+            "name": "FlavorDisabled",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1",
+            "updated": "2012-08-29T00:00:00+00:00"
+        },
+        {
             "alias": "OS-FLV-EXT-DATA",
             "description": "Provide additional data for flavors",
             "links": [],

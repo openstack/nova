@@ -71,6 +71,7 @@ class FlavorManageController(wsgi.Controller):
             flavor = instance_types.create(name, memory_mb, vcpus,
                                            root_gb, ephemeral_gb, flavorid,
                                            swap, rxtx_factor, is_public)
+            req.cache_db_flavor(flavor)
         except exception.InstanceTypeExists as err:
             raise webob.exc.HTTPConflict(explanation=str(err))
 

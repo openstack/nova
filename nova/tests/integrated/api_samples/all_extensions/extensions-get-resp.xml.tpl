@@ -12,6 +12,9 @@
   <extension alias="OS-EXT-STS" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedStatus">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-FLV-DISABLED" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1" name="FlavorDisabled">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="OS-FLV-EXT-DATA" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>%(text)s</description>
   </extension>

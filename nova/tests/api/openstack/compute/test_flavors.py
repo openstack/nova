@@ -113,7 +113,6 @@ class FlavorsTest(test.TestCase):
         expected = {
             "flavor": {
                 "id": "1",
-                "OS-FLV-DISABLED:disabled": False,
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
@@ -142,7 +141,6 @@ class FlavorsTest(test.TestCase):
         expected = {
             "flavor": {
                 "id": "1",
-                "OS-FLV-DISABLED:disabled": False,
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
@@ -313,7 +311,6 @@ class FlavorsTest(test.TestCase):
             "flavors": [
                 {
                     "id": "1",
-                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 1",
                     "ram": "256",
                     "disk": "10",
@@ -333,7 +330,6 @@ class FlavorsTest(test.TestCase):
                 },
                 {
                     "id": "2",
-                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
@@ -435,7 +431,6 @@ class FlavorsTest(test.TestCase):
             "flavors": [
                 {
                     "id": "2",
-                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
@@ -793,11 +788,6 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
 
         self.assertEqual(flavor['name'], self.disabled_type['name'])
 
-        # FIXME(sirp): the disabled field is currently namespaced so that we
-        # don't impact the OpenStack API. Eventually this should probably be
-        # made a first-class attribute in the next OSAPI version.
-        self.assert_('OS-FLV-DISABLED:disabled' in flavor)
-
     def test_show_should_include_disabled_flavor_for_admin(self):
         self.context.is_admin = True
 
@@ -805,4 +795,3 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
                 self.req, self.disabled_type['flavorid'])['flavor']
 
         self.assertEqual(flavor['name'], self.disabled_type['name'])
-        self.assert_('OS-FLV-DISABLED:disabled' in flavor)
