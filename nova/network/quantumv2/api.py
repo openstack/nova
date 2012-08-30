@@ -367,6 +367,13 @@ class API(base.Base):
         """Return the subnets for a given port."""
 
         fixed_ips = port['fixed_ips']
+        # No fixed_ips for the port means there is no subnet associated
+        # with the network the port is created on.
+        # Since list_subnets(id=[]) returns all subnets visible for the
+        # current tenant, returned subnets may contain subnets which is not
+        # related to the port. To avoid this, the method returns here.
+        if not fixed_ips:
+            return []
         search_opts = {'id': [ip['subnet_id'] for ip in fixed_ips]}
         data = quantumv2.get_client(context).list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
