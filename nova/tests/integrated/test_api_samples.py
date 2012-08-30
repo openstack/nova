@@ -248,3 +248,28 @@ class ExtensionsSampleJsonTest(ApiSampleTestBase):
 
 class ExtensionsSampleXmlTest(ExtensionsSampleJsonTest):
     ctype = 'xml'
+
+
+class FlavorsSampleJsonTest(ApiSampleTestBase):
+
+    def test_flavors_get(self):
+        response = self._do_get('flavors/1')
+        subs = self._get_regexes()
+        return self._verify_response('flavor-get-resp', subs, response)
+
+    def test_flavors_list(self):
+        response = self._do_get('flavors')
+        subs = self._get_regexes()
+        return self._verify_response('flavors-list-resp', subs, response)
+
+
+class FlavorsSampleXmlTest(FlavorsSampleJsonTest):
+    ctype = 'xml'
+
+
+class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
+    all_extensions = True
+
+
+class FlavorsSampleAllExtensionXmlTest(FlavorsSampleXmlTest):
+    all_extensions = True
