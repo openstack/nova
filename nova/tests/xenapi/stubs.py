@@ -178,16 +178,6 @@ class FakeSessionForVMTests(fake.SessionBase):
             return (super(FakeSessionForVMTests, self).
                     host_call_plugin(_1, _2, plugin, method, _5))
 
-    def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
-        if (plugin, method) == ('glance', 'download_vhd'):
-            root_uuid = _make_fake_vdi()
-            swap_uuid = _make_fake_vdi()
-            return pickle.dumps(dict(root=dict(uuid=root_uuid),
-                                     swap=dict(uuid=swap_uuid)))
-        else:
-            return (super(FakeSessionForVMTests, self).
-                    host_call_plugin(_1, _2, plugin, method, _5))
-
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
         if vm['power_state'] != 'Halted':

@@ -617,30 +617,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
         self.check_vm_params_for_linux()
 
-    def test_spawn_vhd_glance_swapdisk(self):
-        # Change the default host_call_plugin to one that'll return
-        # a swap disk
-        orig_func = stubs.FakeSessionForVMTests.host_call_plugin
-        _host_call_plugin = stubs.FakeSessionForVMTests.host_call_plugin_swap
-        stubs.FakeSessionForVMTests.host_call_plugin = _host_call_plugin
-        # Stubbing out firewall driver as previous stub sets a particular
-        # stub for async plugin calls
-        stubs.stubout_firewall_driver(self.stubs, self.conn)
-        try:
-            # We'll steal the above glance linux test
-            self.test_spawn_vhd_glance_linux()
-        finally:
-            # Make sure to put this back
-            stubs.FakeSessionForVMTests.host_call_plugin = orig_func
-
-        # We should have 2 VBDs.
-        self.assertEqual(len(self.vm['VBDs']), 2)
-        # Now test that we have 1.
-        self.tearDown()
-        self.setUp()
-        self.test_spawn_vhd_glance_linux()
-        self.assertEqual(len(self.vm['VBDs']), 1)
-
     def test_spawn_vhd_glance_windows(self):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="windows", architecture="i386")
@@ -1372,7 +1348,6 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         super(XenAPIGenerateLocal, self).setUp()
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
-                   xenapi_generate_swap=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
