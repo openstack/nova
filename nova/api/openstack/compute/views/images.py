@@ -120,7 +120,7 @@ class ViewBuilder(common.ViewBuilder):
         }]
 
     def _get_alternate_link(self, request, identifier):
-        """Create an alternate link for a specific flavor id."""
+        """Create an alternate link for a specific image id."""
         glance_url = utils.generate_glance_url()
         glance_url = self._update_link_prefix(glance_url,
                                               FLAGS.osapi_glance_link_prefix)
