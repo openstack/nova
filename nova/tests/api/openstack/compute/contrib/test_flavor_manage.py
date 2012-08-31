@@ -47,7 +47,8 @@ def fake_get_instance_type_by_flavor_id(flavorid):
         'deleted_at': None,
         'vcpu_weight': None,
         'id': 7,
-        'is_public': True
+        'is_public': True,
+        'disabled': False,
     }
 
 

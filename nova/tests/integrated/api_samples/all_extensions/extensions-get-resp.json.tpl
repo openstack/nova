@@ -33,6 +33,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-FLV-DISABLED",
+            "description": "%(text)s",
+            "links": [],
+            "name": "FlavorDisabled",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-FLV-EXT-DATA",
             "description": "%(text)s",
             "links": [],

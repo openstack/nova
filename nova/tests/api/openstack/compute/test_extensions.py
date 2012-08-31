@@ -167,6 +167,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ExtendedStatus",
             "ExtendedServerAttributes",
             "FlavorAccess",
+            "FlavorDisabled",
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "FlavorManage",

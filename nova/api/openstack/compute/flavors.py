@@ -79,6 +79,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         flavors = self._get_flavors(req)
+        req.cache_db_flavors(flavors)
         return self._view_builder.detail(req, flavors)
 
     @wsgi.serializers(xml=FlavorTemplate)
@@ -86,6 +87,7 @@ class Controller(wsgi.Controller):
         """Return data about the given flavor id."""
         try:
             flavor = instance_types.get_instance_type_by_flavor_id(id)
+            req.cache_db_flavor(flavor)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound()
 

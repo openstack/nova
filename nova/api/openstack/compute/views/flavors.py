@@ -49,12 +49,6 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
-        # NOTE(sirp): disabled attribute is namespaced for now for
-        # compatability with the OpenStack API. This should ultimately be made
-        # a first class attribute.
-        flavor_dict["flavor"]["OS-FLV-DISABLED:disabled"] =\
-                flavor.get("disabled", "")
-
         return flavor_dict
 
     def index(self, request, flavors):
