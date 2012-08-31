@@ -65,7 +65,7 @@ class UsedLimitsController(wsgi.Controller):
 class Used_limits(extensions.ExtensionDescriptor):
     """Provide data on limited resources that are being used."""
 
-    name = "Used Limits"
+    name = "UsedLimits"
     alias = ALIAS
     namespace = XMLNS
     updated = "2012-07-13T00:00:00+00:00"

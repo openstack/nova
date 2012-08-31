@@ -78,7 +78,7 @@ class FloatingIPPoolsController(object):
 class Floating_ip_pools(extensions.ExtensionDescriptor):
     """Floating IPs support"""
 
-    name = "Floating_ip_pools"
+    name = "FloatingIpPools"
     alias = "os-floating-ip-pools"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "floating_ip_pools/api/v1.1")

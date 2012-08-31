@@ -80,7 +80,7 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
     """Virtual interface support"""
 
     name = "VirtualInterfaces"
-    alias = "virtual_interfaces"
+    alias = "os-virtual-interfaces"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "virtual_interfaces/api/v1.1")
     updated = "2011-08-17T00:00:00+00:00"
