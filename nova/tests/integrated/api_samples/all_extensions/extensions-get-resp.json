@@ -153,6 +153,22 @@
             "updated": "2012-01-19T00:00:00+00:00"
         },
         {
+            "alias": "os-flavor-rxtx",
+            "description": "Support to show the rxtx status of a flavor",
+            "links": [],
+            "name": "FlavorRxtx",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1",
+            "updated": "2012-08-29T00:00:00+00:00"
+        },
+        {
+            "alias": "os-flavor-swap",
+            "description": "Support to show the swap status of a flavor",
+            "links": [],
+            "name": "FlavorSwap",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1",
+            "updated": "2012-08-29T00:00:00+00:00"
+        },
+        {
             "alias": "os-floating-ip-dns",
             "description": "Floating IP DNS support",
             "links": [],

@@ -31,9 +31,7 @@ def make_flavor(elem, detailed=False):
     if detailed:
         elem.set('ram')
         elem.set('disk')
-
-        for attr in ("vcpus", "swap", "rxtx_factor"):
-            elem.set(attr, xmlutil.EmptyStringSelector(attr))
+        elem.set('vcpus', xmlutil.EmptyStringSelector('vcpus'))
 
     xmlutil.make_links(elem, 'links')
 

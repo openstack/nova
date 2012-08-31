@@ -14,8 +14,6 @@
         ],
         "name": "m1.tiny",
         "ram": 512,
-        "rxtx_factor": 1.0,
-        "swap": "",
         "vcpus": 1
     }
 }

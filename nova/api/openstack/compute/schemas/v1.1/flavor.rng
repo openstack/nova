@@ -4,8 +4,6 @@
   <attribute name="id">      <text/> </attribute>
   <attribute name="ram"> <text/> </attribute>
   <attribute name="disk">   <text/> </attribute>
-  <attribute name="rxtx_factor">   <text/> </attribute>
-  <attribute name="swap">   <text/> </attribute>
   <attribute name="vcpus">   <text/> </attribute>
   <zeroOrMore>
     <externalRef href="../atom-link.rng"/>

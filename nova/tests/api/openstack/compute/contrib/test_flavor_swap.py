@@ -15,7 +15,6 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import flavor_disabled
 from nova.compute import instance_types
 from nova import flags
 from nova.openstack.common import jsonutils
@@ -32,14 +31,14 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
-        "disabled": False,
+        "swap": 512,
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
-        "root_gb": '20',
-        "disabled": True,
+        "root_gb": '10',
+        "swap": None,
     },
 }
 
@@ -52,14 +51,14 @@ def fake_instance_type_get_all(*args, **kwargs):
     return FAKE_FLAVORS
 
 
-class FlavorDisabledTest(test.TestCase):
+class FlavorSwapTest(test.TestCase):
     content_type = 'application/json'
-    prefix = '%s:' % flavor_disabled.Flavor_disabled.alias
+    prefix = ''
 
     def setUp(self):
-        super(FlavorDisabledTest, self).setUp()
+        super(FlavorSwapTest, self).setUp()
         ext = ('nova.api.openstack.compute.contrib'
-              '.flavor_disabled.Flavor_disabled')
+              '.flavor_swap.Flavor_swap')
         self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(instance_types, "get_all_types",
@@ -80,15 +79,15 @@ class FlavorDisabledTest(test.TestCase):
     def _get_flavors(self, body):
         return jsonutils.loads(body).get('flavors')
 
-    def assertFlavorDisabled(self, flavor, disabled):
-        self.assertEqual(str(flavor.get('%sdisabled' % self.prefix)), disabled)
+    def assertFlavorSwap(self, flavor, swap):
+        self.assertEqual(str(flavor.get('%sswap' % self.prefix)), swap)
 
     def test_show(self):
         url = '/v2/fake/flavors/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertFlavorDisabled(self._get_flavor(res.body), 'False')
+        self.assertFlavorSwap(self._get_flavor(res.body), '512')
 
     def test_detail(self):
         url = '/v2/fake/flavors/detail'
@@ -96,13 +95,12 @@ class FlavorDisabledTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
         flavors = self._get_flavors(res.body)
-        self.assertFlavorDisabled(flavors[0], 'False')
-        self.assertFlavorDisabled(flavors[1], 'True')
+        self.assertFlavorSwap(flavors[0], '512')
+        self.assertFlavorSwap(flavors[1], '')
 
 
-class FlavorDisabledXmlTest(FlavorDisabledTest):
+class FlavorSwapXmlTest(FlavorSwapTest):
     content_type = 'application/xml'
-    prefix = '{%s}' % flavor_disabled.Flavor_disabled.namespace
 
     def _get_flavor(self, body):
         return etree.XML(body)

@@ -153,6 +153,22 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-flavor-rxtx",
+            "description": "%(text)s",
+            "links": [],
+            "name": "FlavorRxtx",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-flavor-swap",
+            "description": "%(text)s",
+            "links": [],
+            "name": "FlavorSwap",
+            "namespace": "http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-floating-ip-dns",
             "description": "%(text)s",
             "links": [],

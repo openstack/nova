@@ -57,6 +57,12 @@
   <extension alias="os-flavor-manage" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_manage/api/v1.1" name="FlavorManage">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-flavor-rxtx" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1" name="FlavorRxtx">
+    <description>%(text)s</description>
+  </extension>
+  <extension alias="os-flavor-swap" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1" name="FlavorSwap">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-floating-ip-dns" updated="%(timestamp)s" namespace="http://docs.openstack.org/ext/floating_ip_dns/api/v1.1" name="FloatingIpDns">
     <description>%(text)s</description>
   </extension>
