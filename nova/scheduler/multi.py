@@ -43,11 +43,6 @@ multi_scheduler_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(multi_scheduler_opts)
 
-# A mapping of methods to topics so we can figure out which driver to use.
-# There are currently no compute methods proxied through the map
-_METHOD_MAP = {'create_volume': 'volume',
-               'create_volumes': 'volume'}
-
 
 class MultiScheduler(driver.Scheduler):
     """A scheduler that holds multiple sub-schedulers.
@@ -69,14 +64,6 @@ class MultiScheduler(driver.Scheduler):
         self.drivers = {'compute': compute_driver,
                         'volume': volume_driver,
                         'default': default_driver}
-
-    def __getattr__(self, key):
-        if not key.startswith('schedule_'):
-            raise AttributeError(key)
-        method = key[len('schedule_'):]
-        if method not in _METHOD_MAP:
-            raise AttributeError(key)
-        return getattr(self.drivers[_METHOD_MAP[method]], key)
 
     def schedule(self, context, topic, method, *_args, **_kwargs):
         driver = self.drivers.get(topic, self.drivers['default'])
