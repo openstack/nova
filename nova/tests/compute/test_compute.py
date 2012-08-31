@@ -148,6 +148,8 @@ class BaseTestCase(test.TestCase):
         inst['architecture'] = 'x86_64'
         inst['os_type'] = 'Linux'
         inst.update(params)
+        _create_service_entries(self.context.elevated(),
+                {'fake_zone': [inst['host']]})
         return db.instance_create(self.context, inst)
 
     def _create_instance(self, params=None, type_name='m1.tiny'):
@@ -2403,8 +2405,8 @@ class ComputeAPITestCase(BaseTestCase):
                            'ramdisk_id': 'fake_ramdisk_id'},
         }
 
-    def _run_instance(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+    def _run_instance(self, params=None):
+        instance = jsonutils.to_primitive(self._create_fake_instance(params))
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
@@ -2719,7 +2721,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_delete(self):
-        instance, instance_uuid = self._run_instance()
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
 
         self.compute_api.delete(self.context, instance)
 
@@ -2742,7 +2745,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(QUOTAS, 'commit', fake_commit)
 
-        instance, instance_uuid = self._run_instance()
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
 
         self.compute_api.delete(self.context, instance)
         self.compute_api.delete(self.context, instance)
@@ -2761,7 +2765,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance['uuid'])
 
     def test_delete_handles_host_setting_race_condition(self):
-        instance, instance_uuid = self._run_instance()
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
         instance['host'] = None  # make it think host was never set
         self.compute_api.delete(self.context, instance)
 
@@ -2771,7 +2776,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_delete_fail(self):
-        instance, instance_uuid = self._run_instance()
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
 
         instance = db.instance_update(self.context, instance_uuid,
                                       {'disable_terminate': True})
@@ -2806,7 +2812,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_force_delete(self):
         """Ensure instance can be deleted after a soft delete"""
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = jsonutils.to_primitive(self._create_fake_instance(params={
+                'host': FLAGS.host}))
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
@@ -3999,7 +4006,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, i_ref['uuid'])
 
     def test_add_remove_fixed_ip(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance(params={'host': FLAGS.host})
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
         self.compute_api.delete(self.context, instance)
@@ -4097,7 +4104,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
 
     def test_inject_network_info(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance(params={'host': FLAGS.host})
         self.compute.run_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
         instance = self.compute_api.get(self.context, instance['uuid'])
