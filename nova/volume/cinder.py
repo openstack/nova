@@ -170,8 +170,12 @@ class API(base.Base):
     def create(self, context, size, name, description, snapshot=None,
                volume_type=None, metadata=None, availability_zone=None):
 
+        if snapshot is not None:
+            snapshot_id = snapshot['id']
+        else:
+            snapshot_id = None
         item = cinderclient(context).volumes.create(size,
-                                                    snapshot,
+                                                    snapshot_id,
                                                     name,
                                                     description,
                                                     volume_type,
