@@ -151,7 +151,7 @@ class ExtensionsResource(wsgi.Resource):
     @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
         extensions = []
-        for _alias, ext in self.extension_manager.extensions.iteritems():
+        for ext in self.extension_manager.sorted_extensions():
             extensions.append(self._translate(ext))
         return dict(extensions=extensions)
 
