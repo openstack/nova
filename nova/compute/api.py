@@ -2099,13 +2099,14 @@ class SecurityGroupAPI(base.Base):
 
         LOG.audit(_("Create Security Group %s"), name, context=context)
 
-        self.ensure_default(context)
-
-        if self.db.security_group_exists(context, context.project_id, name):
-            msg = _('Security group %s already exists') % name
-            self.raise_group_already_exists(msg)
-
         try:
+            self.ensure_default(context)
+
+            if self.db.security_group_exists(context,
+                                             context.project_id, name):
+                msg = _('Security group %s already exists') % name
+                self.raise_group_already_exists(msg)
+
             group = {'user_id': context.user_id,
                      'project_id': context.project_id,
                      'name': name,
