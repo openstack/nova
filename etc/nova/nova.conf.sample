@@ -294,7 +294,7 @@
 #### (StrOpt) time period to generate instance usages for.  Time period
 ####          must be hour, day, month or year
 
-# bandwith_poll_interval=600
+# bandwidth_poll_interval=600
 #### (IntOpt) interval to pull bandwidth usage info
 
 # start_guests_on_host_boot=false
