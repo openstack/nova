@@ -1864,11 +1864,12 @@ class ComputeTestCase(BaseTestCase):
                 {"method": "remove_volume_connection",
                  "args": {'instance': rpcinst,
                           'volume_id': volume_id},
-                 "version": "1.26"}, None)
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                 None)
         rpc.cast(c, topic,
                 {"method": "rollback_live_migration_at_destination",
                  "args": {'instance': rpcinst},
-                 "version": "1.32"})
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
         # start test
         self.mox.ReplayAll()
@@ -1902,7 +1903,7 @@ class ComputeTestCase(BaseTestCase):
                  "args": {'instance': instance,
                           'block_migration': False,
                           'disk': None},
-                 "version": '1.23'},
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
                 None)
 
         # start test
@@ -1944,7 +1945,8 @@ class ComputeTestCase(BaseTestCase):
         rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance': inst_ref, 'block_migration': False},
-             "version": "1.20"}, None)
+             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+            None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(inst_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
@@ -4031,7 +4033,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg1 = {'method': 'get_vnc_console',
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
-                   'version': '1.17'}
+                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc_msg2 = {'method': 'authorize_console',
                     'args': fake_connect_info,
                     'version': '1.0'}
@@ -4067,7 +4069,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg = {'method': 'get_console_output',
                    'args': {'instance': fake_instance,
                             'tail_length': fake_tail_length},
-                   'version': '1.7'}
+                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg, None).AndReturn(fake_console_output)
 
@@ -4177,7 +4179,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
                  "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version": '1.41'})
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_members_refresh(self.context, [1])
@@ -4205,7 +4207,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
                  "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version": '1.41'})
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_members_refresh(self.context, [1, 2])
@@ -4245,7 +4247,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
                  "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version": '1.41'})
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1])
@@ -4265,7 +4267,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
                  "args": {'instance': jsonutils.to_primitive(instance)},
-                 "version": '1.41'})
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
@@ -4593,7 +4595,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'get_host_uptime',
                  'args': {},
-                 'version': '1.1'})
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_host_power_action(self):
         ctxt = context.RequestContext('fake', 'fake')

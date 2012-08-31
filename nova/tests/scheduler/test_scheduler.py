@@ -495,7 +495,7 @@ class SchedulerTestCase(test.TestCase):
                     "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},
-                    "version": "1.10"},
+                    "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
                  None).AndReturn({})
 
         db.instance_update_and_get_original(self.context, instance_uuid,

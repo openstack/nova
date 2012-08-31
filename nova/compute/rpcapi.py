@@ -125,9 +125,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                finish_revert_resize()
         1.43 - Add migrate_data to live_migration()
         1.44 - Adds reserve_block_device_name()
+
+        2.0 - Remove 1.x backwards compat
     '''
 
-    BASE_RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
         super(ComputeAPI, self).__init__(
@@ -151,23 +153,20 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('add_fixed_ip_to_instance',
                 instance=instance_p, network_id=network_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.8')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('attach_volume',
                 instance=instance_p, volume_id=volume_id,
                 mountpoint=mountpoint),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.9')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def change_instance_metadata(self, ctxt, instance, diff):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('change_instance_metadata',
                   instance=instance_p, diff=diff),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version='1.36')
+                  topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
@@ -178,16 +177,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                                        block_migration=block_migration,
                                        disk_over_commit=disk_over_commit),
                          topic=_compute_topic(self.topic,
-                                              ctxt, destination, None),
-                         version='1.10')
+                                              ctxt, destination, None))
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         instance_p = jsonutils.to_primitive(instance)
         self.call(ctxt, self.make_msg('check_can_live_migrate_source',
                            instance=instance_p,
                            dest_check_data=dest_check_data),
-                  topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version='1.11')
+                  topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def confirm_resize(self, ctxt, instance, migration_id, host,
             reservations=None, cast=True):
@@ -196,15 +193,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return rpc_method(ctxt, self.make_msg('confirm_resize',
                 instance=instance_p, migration_id=migration_id,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='1.42')
+                topic=_compute_topic(self.topic, ctxt, host, instance))
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('detach_volume',
                 instance=instance_p, volume_id=volume_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.13')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def finish_resize(self, ctxt, instance, migration_id, image, disk_info,
             host, reservations=None):
@@ -212,8 +207,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('finish_resize',
                 instance=instance_p, migration_id=migration_id,
                 image=image, disk_info=disk_info, reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.42')
+                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def finish_revert_resize(self, ctxt, instance, migration_id, host,
                              reservations=None):
@@ -221,15 +215,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('finish_revert_resize',
                 instance=instance_p, migration_id=migration_id,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.42')
+                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_console_output',
                 instance=instance_p, tail_length=tail_length),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.7')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def get_console_pool_info(self, ctxt, console_type, host):
         return self.call(ctxt, self.make_msg('get_console_pool_info',
@@ -244,15 +236,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_diagnostics',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.16')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def get_vnc_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_vnc_console',
                 instance=instance_p, console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.17')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode
@@ -277,15 +267,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('inject_file',
                 instance=instance_p, path=path,
                 file_contents=file_contents),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.18')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def inject_network_info(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('inject_network_info',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.19')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migrate_data=None):
@@ -293,15 +281,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('live_migration', instance=instance_p,
                 dest=dest, block_migration=block_migration,
                 migrate_data=migrate_data),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.43')
+                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def pause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('pause_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.5')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
@@ -309,30 +295,26 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt,
                 self.make_msg('post_live_migration_at_destination',
                 instance=instance_p, block_migration=block_migration),
-                _compute_topic(self.topic, ctxt, host, None),
-                version='1.20')
+                _compute_topic(self.topic, ctxt, host, None))
 
     def power_off_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('power_off_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.21')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def power_on_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('power_on_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.22')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('pre_live_migration',
                 instance=instance_p, block_migration=block_migration,
-                disk=disk), _compute_topic(self.topic, ctxt, host, None),
-                version='1.23')
+                disk=disk), _compute_topic(self.topic, ctxt, host, None))
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None):
@@ -341,15 +323,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
                 image=image, reservations=reservations),
-                _compute_topic(self.topic, ctxt, host, None),
-                version='1.42')
+                _compute_topic(self.topic, ctxt, host, None))
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reboot_instance',
                 instance=instance_p, reboot_type=reboot_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.4')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref):
@@ -358,23 +338,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, new_pass=new_pass,
                 injected_files=injected_files, image_ref=image_ref,
                 orig_image_ref=orig_image_ref),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.24')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def refresh_provider_fw_rules(self, ctxt, host):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
                 _compute_topic(self.topic, ctxt, host, None))
-
-    def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        self.cast(ctxt, self.make_msg('refresh_security_group_rules',
-                security_group_id=security_group_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
-
-    def refresh_security_group_members(self, ctxt, security_group_id,
-            host):
-        self.cast(ctxt, self.make_msg('refresh_security_group_members',
-                security_group_id=security_group_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def remove_aggregate_host(self, ctxt, aggregate_id, host_param, host):
         '''Remove aggregate host.
@@ -393,30 +361,26 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('remove_fixed_ip_from_instance',
                 instance=instance_p, address=address),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.25')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('remove_volume_connection',
                 instance=instance_p, volume_id=volume_id),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.26')
+                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def rescue_instance(self, ctxt, instance, rescue_password):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rescue_instance',
                 instance=instance_p,
                 rescue_password=rescue_password),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.27')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def reset_network(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reset_network',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.28')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def resize_instance(self, ctxt, instance, migration_id, image,
                         reservations=None):
@@ -424,15 +388,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resize_instance',
                 instance=instance_p, migration_id=migration_id,
-                image=image, reservations=reservations), topic,
-                version='1.42')
+                image=image, reservations=reservations), topic)
 
     def resume_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resume_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.30')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def revert_resize(self, ctxt, instance, migration_id, host,
                       reservations=None):
@@ -440,15 +402,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('revert_resize',
                 instance=instance_p, migration_id=migration_id,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='1.42')
+                topic=_compute_topic(self.topic, ctxt, host, instance))
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',
             instance=instance_p),
-            topic=_compute_topic(self.topic, ctxt, host, None),
-            version='1.32')
+            topic=_compute_topic(self.topic, ctxt, host, None))
 
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,
@@ -460,15 +420,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 requested_networks=requested_networks,
                 injected_files=injected_files, admin_password=admin_password,
                 is_first_time=is_first_time),
-                topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.39')
+                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('set_admin_password',
                 instance=instance_p, new_pass=new_pass),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.33')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def set_host_enabled(self, ctxt, enabled, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
@@ -477,15 +435,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def get_host_uptime(self, ctxt, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
-        return self.call(ctxt, self.make_msg('get_host_uptime'), topic,
-                version='1.1')
+        return self.call(ctxt, self.make_msg('get_host_uptime'), topic)
 
     def reserve_block_device_name(self, ctxt, instance, device):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('reserve_block_device_name',
                 instance=instance_p, device=device),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.44')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):
@@ -494,51 +450,44 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, image_id=image_id,
                 image_type=image_type, backup_type=backup_type,
                 rotation=rotation),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.34')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def start_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('start_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.22')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def stop_instance(self, ctxt, instance, cast=True):
         rpc_method = self.cast if cast else self.call
         instance_p = jsonutils.to_primitive(instance)
         return rpc_method(ctxt, self.make_msg('stop_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.21')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def suspend_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('suspend_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.6')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def terminate_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('terminate_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.37')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def unpause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('unpause_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.5')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def unrescue_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('unrescue_instance',
                 instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='1.35')
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
@@ -548,9 +497,11 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
         1.0 - Initial version.
         1.41 - Adds refresh_instance_security_rules()
+
+        2.0 - Remove 1.x backwards compat
     '''
 
-    BASE_RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
         super(SecurityGroupAPI, self).__init__(
@@ -573,5 +524,4 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('refresh_instance_security_rules',
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, instance['host'],
-                instance),
-                version='1.41')
+                instance))
