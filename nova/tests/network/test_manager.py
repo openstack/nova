@@ -1063,6 +1063,22 @@ class CommonNetworkTestCase(test.TestCase):
     def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
         return None
 
+    def test_deallocate_for_instance_passes_host_info(self):
+        manager = fake_network.FakeNetworkManager()
+        db = manager.db
+        db.instance_get = lambda _x, _y: dict(uuid='ignoreduuid')
+        db.virtual_interface_delete_by_instance = lambda _x, _y: None
+        ctx = context.RequestContext('igonre', 'igonre')
+
+        db.fixed_ip_get_by_instance = lambda x, y: [dict(address='1.2.3.4')]
+
+        manager.deallocate_for_instance(
+            ctx, instance_id='ignore', host='somehost')
+
+        self.assertEquals([
+            (ctx, '1.2.3.4', 'somehost')
+        ], manager.deallocate_fixed_ip_calls)
+
     def test_remove_fixed_ip_from_instance(self):
         manager = fake_network.FakeNetworkManager()
         manager.remove_fixed_ip_from_instance(self.context, 99, HOST,

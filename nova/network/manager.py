@@ -1000,7 +1000,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                   context=read_deleted_context)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, fixed_ip['address'])
+            self.deallocate_fixed_ip(context, fixed_ip['address'],
+                host=kwargs.get('host'))
 
         # deallocate vifs (mac addresses)
         self.db.virtual_interface_delete_by_instance(read_deleted_context,
