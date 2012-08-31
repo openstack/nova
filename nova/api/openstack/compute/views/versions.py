@@ -18,13 +18,19 @@
 import copy
 import os
 
+from nova.api.openstack import common
+from nova import flags
+
+
+FLAGS = flags.FLAGS
+
 
 def get_view_builder(req):
     base_url = req.application_url
     return ViewBuilder(base_url)
 
 
-class ViewBuilder(object):
+class ViewBuilder(common.ViewBuilder):
 
     def __init__(self, base_url):
         """
@@ -86,9 +92,11 @@ class ViewBuilder(object):
 
     def generate_href(self, path=None):
         """Create an url that refers to a specific version_number."""
+        prefix = self._update_link_prefix(self.base_url,
+                                          FLAGS.osapi_compute_link_prefix)
         version_number = 'v2'
         if path:
             path = path.strip('/')
-            return os.path.join(self.base_url, version_number, path)
+            return os.path.join(prefix, version_number, path)
         else:
-            return os.path.join(self.base_url, version_number) + '/'
+            return os.path.join(prefix, version_number) + '/'

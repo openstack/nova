@@ -139,21 +139,32 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'text': text,
         }
 
-    def _get_response(self, url, method, body=None):
+    def _get_response(self, url, method, body=None, strip_version=False):
         headers = {}
         headers['Content-Type'] = 'application/' + self.ctype
         headers['Accept'] = 'application/' + self.ctype
         return self.api.api_request(url, body=body, method=method,
-                headers=headers)
+                headers=headers, strip_version=strip_version)
 
-    def _do_get(self, url):
-        return self._get_response(url, 'GET')
+    def _do_get(self, url, strip_version=False):
+        return self._get_response(url, 'GET', strip_version=strip_version)
 
     def _do_post(self, url, name, subs):
         body = self._read_template(name) % subs
         if self.generate_samples:
             self._write_sample(name, body)
         return self._get_response(url, 'POST', body)
+
+
+class VersionsSampleJsonTest(ApiSampleTestBase):
+    def test_servers_get(self):
+        response = self._do_get('', strip_version=True)
+        subs = self._get_regexes()
+        return self._verify_response('versions-get-resp', subs, response)
+
+
+class VersionsSampleXmlTest(VersionsSampleJsonTest):
+    ctype = 'xml'
 
 
 class ServersSampleJsonTest(ApiSampleTestBase):
