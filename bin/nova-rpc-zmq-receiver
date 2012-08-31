@@ -33,22 +33,23 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import exception
-from nova.openstack.common import cfg
+from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import impl_zmq
 from nova import utils
 
-CONF = cfg.CONF
+FLAGS = flags.FLAGS
+FLAGS.register_opts(rpc.rpc_opts)
 
 
 def main():
-    CONF.register_opts(rpc.rpc_opts)
-    impl_zmq.register_opts(CONF)
+    flags.parse_args(sys.argv)
+    impl_zmq.register_opts(FLAGS)
     logging.setup("nova")
     utils.monkey_patch()
 
-    ipc_dir = CONF.rpc_zmq_ipc_dir
+    ipc_dir = FLAGS.rpc_zmq_ipc_dir
 
     # Create the necessary directories/files for this service.
     if not os.path.isdir(ipc_dir):
@@ -61,10 +62,10 @@ def main():
             logging.error(_("Could not create IPC socket directory."))
             return
 
-    with contextlib.closing(impl_zmq.ZmqProxy(CONF)) as reactor:
+    with contextlib.closing(impl_zmq.ZmqProxy(FLAGS)) as reactor:
         consume_in = "tcp://%s:%s" % \
-            (CONF.rpc_zmq_bind_address,
-             CONF.rpc_zmq_port)
+            (FLAGS.rpc_zmq_bind_address,
+             FLAGS.rpc_zmq_port)
         consumption_proxy = impl_zmq.InternalContext(None)
 
         reactor.register(consumption_proxy,
