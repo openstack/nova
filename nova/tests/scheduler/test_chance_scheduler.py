@@ -63,27 +63,22 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
         fake_args = (1, 2, 3)
-        instance_opts = {'fake_opt1': 'meow'}
-        request_spec = {'num_instances': 2,
-                        'instance_properties': instance_opts}
+        instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
         instance1 = {'uuid': 'fake-uuid1'}
         instance2 = {'uuid': 'fake-uuid2'}
+        request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
+                        'instance_properties': instance_opts}
         instance1_encoded = {'uuid': 'fake-uuid1', '_is_precooked': False}
         instance2_encoded = {'uuid': 'fake-uuid2', '_is_precooked': False}
         reservations = ['resv1', 'resv2']
 
-        # create_instance_db_entry() usually does this, but we're
-        # stubbing it.
-        def _add_uuid1(ctxt, request_spec, reservations):
-            request_spec['instance_properties']['uuid'] = 'fake-uuid1'
-
-        def _add_uuid2(ctxt, request_spec, reservations):
-            request_spec['instance_properties']['uuid'] = 'fake-uuid2'
+        def inc_launch_index(*args):
+            request_spec['instance_properties']['launch_index'] = (
+                request_spec['instance_properties']['launch_index'] + 1)
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
         self.mox.StubOutWithMock(random, 'random')
-        self.mox.StubOutWithMock(self.driver, 'create_instance_db_entry')
         self.mox.StubOutWithMock(driver, 'encode_instance')
         self.mox.StubOutWithMock(driver, 'instance_update_db')
         self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
@@ -93,110 +88,39 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.5)
-        self.driver.create_instance_db_entry(ctxt, request_spec,
-                reservations).WithSideEffects(_add_uuid1).AndReturn(
-                instance1)
         driver.instance_update_db(ctxt, instance1['uuid'],
-                'host3').AndReturn(instance1)
+                'host3').WithSideEffects(inc_launch_index).AndReturn(instance1)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host3',
                 instance=instance1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
-
         driver.encode_instance(instance1).AndReturn(instance1_encoded)
+
         # instance 2
         ctxt.elevated().AndReturn(ctxt_elevated)
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.2)
-        self.driver.create_instance_db_entry(ctxt, request_spec,
-                reservations).WithSideEffects(_add_uuid2).AndReturn(
-                instance2)
         driver.instance_update_db(ctxt, instance2['uuid'],
-                'host1').AndReturn(instance2)
+                'host1').WithSideEffects(inc_launch_index).AndReturn(instance2)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host1',
                 instance=instance2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
-
         driver.encode_instance(instance2).AndReturn(instance2_encoded)
 
         self.mox.ReplayAll()
         result = self.driver.schedule_run_instance(ctxt, request_spec,
-                None, None, None, None, {}, reservations)
+                None, None, None, None, {})
         expected = [instance1_encoded, instance2_encoded]
         self.assertEqual(result, expected)
-
-    def test_scheduler_includes_launch_index(self):
-        ctxt = context.RequestContext('fake', 'fake', False)
-        instance_opts = {'fake_opt1': 'meow'}
-        request_spec = {'num_instances': 2,
-                        'instance_properties': instance_opts}
-        instance1 = {'uuid': 'fake-uuid1'}
-        instance2 = {'uuid': 'fake-uuid2'}
-
-        # create_instance_db_entry() usually does this, but we're
-        # stubbing it.
-        def _add_uuid(num):
-            """Return a function that adds the provided uuid number."""
-            def _add_uuid_num(_, spec, reservations):
-                spec['instance_properties']['uuid'] = 'fake-uuid%d' % num
-            return _add_uuid_num
-
-        def _has_launch_index(expected_index):
-            """Return a function that verifies the expected index."""
-            def _check_launch_index(value):
-                if 'instance_properties' in value:
-                    if 'launch_index' in value['instance_properties']:
-                        index = value['instance_properties']['launch_index']
-                        if index == expected_index:
-                            return True
-                return False
-            return _check_launch_index
-
-        self.mox.StubOutWithMock(self.driver, '_schedule')
-        self.mox.StubOutWithMock(self.driver, 'create_instance_db_entry')
-        self.mox.StubOutWithMock(driver, 'encode_instance')
-        self.mox.StubOutWithMock(driver, 'instance_update_db')
-        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
-
-        # instance 1
-        self.driver._schedule(ctxt, 'compute', request_spec,
-                              {}).AndReturn('host')
-        self.driver.create_instance_db_entry(
-            ctxt, mox.Func(_has_launch_index(0)), None
-            ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
-        driver.instance_update_db(ctxt, instance1['uuid'],
-                'host').AndReturn(instance1)
-        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host',
-                instance=instance1, requested_networks=None,
-                injected_files=None, admin_password=None, is_first_time=None,
-                request_spec=request_spec, filter_properties={})
-        driver.encode_instance(instance1).AndReturn(instance1)
-        # instance 2
-        self.driver._schedule(ctxt, 'compute', request_spec,
-                              {}).AndReturn('host')
-        self.driver.create_instance_db_entry(
-            ctxt, mox.Func(_has_launch_index(1)), None
-            ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)
-        driver.instance_update_db(ctxt, instance2['uuid'],
-                'host').AndReturn(instance2)
-        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host',
-                instance=instance2, requested_networks=None,
-                injected_files=None, admin_password=None, is_first_time=None,
-                request_spec=request_spec, filter_properties={})
-        driver.encode_instance(instance2).AndReturn(instance2)
-        self.mox.ReplayAll()
-
-        self.driver.schedule_run_instance(ctxt, request_spec, None, None,
-                None, None, {}, None)
 
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
         fake_args = (1, 2, 3)
-        instance_opts = 'fake_instance_opts'
-        request_spec = {'num_instances': 2,
+        instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
+        request_spec = {'instance_uuids': ['fake-uuid1'],
                         'instance_properties': instance_opts}
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
@@ -209,50 +133,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost,
                 self.driver.schedule_run_instance, ctxt, request_spec,
-                None, None, None, None, {}, None)
-
-    def test_basic_schedule_fallback(self):
-        ctxt = context.RequestContext('fake', 'fake', False)
-        ctxt_elevated = 'fake-context-elevated'
-        topic = 'fake_topic'
-        method = 'fake_method'
-        fake_args = (1, 2, 3)
-        fake_kwargs = {'fake_kwarg1': 'fake_value1',
-                       'fake_kwarg2': 'fake_value2'}
-
-        self.mox.StubOutWithMock(ctxt, 'elevated')
-        self.mox.StubOutWithMock(self.driver, 'hosts_up')
-        self.mox.StubOutWithMock(random, 'random')
-        self.mox.StubOutWithMock(driver, 'cast_to_host')
-
-        ctxt.elevated().AndReturn(ctxt_elevated)
-        self.driver.hosts_up(ctxt_elevated, topic).AndReturn(
-                ['host1', 'host2', 'host3', 'host4'])
-        random.random().AndReturn(.5)
-        driver.cast_to_host(ctxt, topic, 'host3', method, **fake_kwargs)
-
-        self.mox.ReplayAll()
-        self.driver.schedule(ctxt, topic, method, *fake_args, **fake_kwargs)
-
-    def test_basic_schedule_fallback_no_hosts(self):
-        ctxt = context.RequestContext('fake', 'fake', False)
-        ctxt_elevated = 'fake-context-elevated'
-        topic = 'fake_topic'
-        method = 'fake_method'
-        fake_args = (1, 2, 3)
-        fake_kwargs = {'fake_kwarg1': 'fake_value1',
-                       'fake_kwarg2': 'fake_value2'}
-
-        self.mox.StubOutWithMock(ctxt, 'elevated')
-        self.mox.StubOutWithMock(self.driver, 'hosts_up')
-
-        ctxt.elevated().AndReturn(ctxt_elevated)
-        self.driver.hosts_up(ctxt_elevated, topic).AndReturn([])
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.NoValidHost,
-                self.driver.schedule, ctxt, topic, method,
-                *fake_args, **fake_kwargs)
+                None, None, None, None, {})
 
     def test_schedule_prep_resize_doesnt_update_host(self):
         fake_context = context.RequestContext('user', 'project',
@@ -275,5 +156,5 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance = {'uuid': 'fake-uuid', 'host': 'host1'}
 
         self.driver.schedule_prep_resize(fake_context, {}, {}, {},
-                instance, {})
+                instance, {}, None)
         self.assertEqual(info['called'], 0)

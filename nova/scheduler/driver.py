@@ -161,35 +161,9 @@ class Scheduler(object):
                 for service in services
                 if utils.service_is_up(service)]
 
-    def create_instance_db_entry(self, context, request_spec, reservations):
-        """Create instance DB entry based on request_spec"""
-        base_options = request_spec['instance_properties']
-        if base_options.get('uuid'):
-            # Instance was already created before calling scheduler
-            return db.instance_get_by_uuid(context, base_options['uuid'])
-        image = request_spec['image']
-        instance_type = request_spec.get('instance_type')
-        security_group = request_spec.get('security_group', 'default')
-        block_device_mapping = request_spec.get('block_device_mapping', [])
-
-        instance = self.compute_api.create_db_entry_for_new_instance(
-                context, instance_type, image, base_options,
-                security_group, block_device_mapping)
-        if reservations:
-            quota.QUOTAS.commit(context, reservations)
-        # NOTE(comstud): This needs to be set for the generic exception
-        # checking in scheduler manager, so that it'll set this instance
-        # to ERROR properly.
-        base_options['uuid'] = instance['uuid']
-        return instance
-
-    def schedule(self, context, topic, method, *_args, **_kwargs):
-        """Must override schedule method for scheduler to work."""
-        raise NotImplementedError(_("Must implement a fallback schedule"))
-
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,
-                             reservations=None):
+                             reservations):
         """Must override schedule_prep_resize method for scheduler to work."""
         msg = _("Driver must implement schedule_prep_resize")
         raise NotImplementedError(msg)
@@ -197,7 +171,7 @@ class Scheduler(object):
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties, reservations):
+                              filter_properties):
         """Must override schedule_run_instance method for scheduler to work."""
         msg = _("Driver must implement schedule_run_instance")
         raise NotImplementedError(msg)
@@ -207,13 +181,11 @@ class Scheduler(object):
         msg = _("Driver must implement schedule_create_volune")
         raise NotImplementedError(msg)
 
-    def schedule_live_migration(self, context, dest,
-                                block_migration=False, disk_over_commit=False,
-                                instance=None, instance_id=None):
+    def schedule_live_migration(self, context, instance, dest,
+                                block_migration, disk_over_commit):
         """Live migration scheduling method.
 
         :param context:
-        :param instance_id: (deprecated)
         :param instance: instance dict
         :param dest: destination host
         :param block_migration: if true, block_migration.
@@ -225,9 +197,6 @@ class Scheduler(object):
             Then scheduler send request that host.
         """
         # Check we can do live migration
-        if not instance:
-            instance = db.instance_get(context, instance_id)
-
         self._live_migration_src_check(context, instance)
         self._live_migration_dest_check(context, instance, dest)
         self._live_migration_common_check(context, instance, dest)

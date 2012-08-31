@@ -35,7 +35,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
-from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova import quota
 
 
@@ -54,7 +53,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '1.7'
+    RPC_API_VERSION = '2.0'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -62,41 +61,8 @@ class SchedulerManager(manager.Manager):
         self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
-    def create_rpc_dispatcher(self):
-        """Get the rpc dispatcher for this manager.
-
-        Return a dispatcher which can call out to either SchedulerManager
-        or _V2SchedulerManagerProxy depending on the RPC API version.
-        """
-        return rpc_dispatcher.RpcDispatcher([self,
-                                              _V2SchedulerManagerProxy(self)])
-
-    def __getattr__(self, key):
-        """Converts all method calls to use the schedule method"""
-        # NOTE(russellb) Because of what this is doing, we must be careful
-        # when changing the API of the scheduler drivers, as that changes
-        # the rpc API as well, and the version should be updated accordingly.
-        # NOTE(markmc): This remains only for backwards compat support
-        # and can be removed when we bump the major version
-        return functools.partial(self._schedule, key)
-
-    def get_host_list(self, context):
-        """Get a list of hosts from the HostManager.
-
-        Currently unused, but left for backwards compatibility.
-        """
-        raise rpc_common.RPCException(message=_('Deprecated in version 1.0'))
-
-    def get_service_capabilities(self, context):
-        """Get the normalized set of capabilities for this zone.
-
-        Has been unused since pre-essex, but remains for rpc API 1.X
-        completeness.
-        """
-        raise rpc_common.RPCException(message=_('Deprecated in version 1.0'))
-
-    def update_service_capabilities(self, context, service_name=None,
-            host=None, capabilities=None, **kwargs):
+    def update_service_capabilities(self, context, service_name,
+                                    host, capabilities):
         """Process a capability update from a service node."""
         if capabilities is None:
             capabilities = {}
@@ -113,87 +79,45 @@ class SchedulerManager(manager.Manager):
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, {})
 
-    def live_migration(self, context, dest,
-                       block_migration=False, disk_over_commit=False,
-                       instance=None, instance_id=None, topic=None):
+    def live_migration(self, context, instance, dest,
+                       block_migration, disk_over_commit):
         try:
             return self.driver.schedule_live_migration(
-                context, dest,
-                block_migration, disk_over_commit,
-                instance, instance_id)
+                context, instance, dest,
+                block_migration, disk_over_commit)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('live_migration',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, {})
 
-    def _schedule(self, method, context, topic, *args, **kwargs):
-        """Tries to call schedule_* method on the driver to retrieve host.
-        Falls back to schedule(context, topic) if method doesn't exist.
-        """
-        driver_method_name = 'schedule_%s' % method
-        try:
-            driver_method = getattr(self.driver, driver_method_name)
-            args = (context,) + args
-        except AttributeError, e:
-            LOG.warning(_("Driver Method %(driver_method_name)s missing: "
-                       "%(e)s. Reverting to schedule()") % locals())
-            driver_method = self.driver.schedule
-            args = (context, topic, method) + args
-
-        # Scheduler methods are responsible for casting.
-        try:
-            return driver_method(*args, **kwargs)
-        except Exception as ex:
-            with excutils.save_and_reraise_exception():
-                request_spec = kwargs.get('request_spec', {})
-                self._set_vm_state_and_notify(method,
-                                             {'vm_state': vm_states.ERROR},
-                                             context, ex, request_spec)
-
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
-            filter_properties, reservations=None, topic=None):
+            filter_properties):
         """Tries to call schedule_run_instance on the driver.
         Sets instance vm_state to ERROR on exceptions
         """
         try:
-            result = self.driver.schedule_run_instance(context,
+            return self.driver.schedule_run_instance(context,
                     request_spec, admin_password, injected_files,
-                    requested_networks, is_first_time, filter_properties,
-                    reservations)
-            return result
+                    requested_networks, is_first_time, filter_properties)
         except exception.NoValidHost as ex:
             # don't re-raise
             self._set_vm_state_and_notify('run_instance',
                                          {'vm_state': vm_states.ERROR},
                                           context, ex, request_spec)
-            if reservations:
-                QUOTAS.rollback(context, reservations)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('run_instance',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, request_spec)
-                if reservations:
-                    QUOTAS.rollback(context, reservations)
 
-    # FIXME(comstud): Remove 'update_db' in a future version.  It's only
-    # here for rpcapi backwards compatibility.
     def prep_resize(self, context, image, request_spec, filter_properties,
-                    update_db=None, instance=None, instance_uuid=None,
-                    instance_type=None, instance_type_id=None,
-                    reservations=None, topic=None):
+                    instance, instance_type, reservations):
         """Tries to call schedule_prep_resize on the driver.
         Sets instance vm_state to ACTIVE on NoHostFound
         Sets vm_state to ERROR on other exceptions
         """
-        if not instance:
-            instance = db.instance_get_by_uuid(context, instance_uuid)
-
-        if not instance_type:
-            instance_type = db.instance_type_get(context, instance_type_id)
-
         try:
             kwargs = {
                 'context': context,
@@ -328,67 +252,3 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
-
-
-class _V2SchedulerManagerProxy(object):
-
-    RPC_API_VERSION = '2.0'
-
-    # Notes:
-    # - remove get_host_list()
-    # - remove get_service_capabilities()
-    # - add explicit live_migration() method
-    # - remove __getattr__ magic which is replaced by schedule()
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def create_volume(self, context, volume_id, snapshot_id, reservations):
-        return self.manager.create_volume(
-            context, volume_id, snapshot_id, reservations)
-
-    # Remove instance_id, require instance
-    # Remove topic
-    # Make block_migration and disk_over_commit required
-    def live_migration(self, context, instance, dest,
-                       block_migration, disk_over_commit):
-        return self.manager.live_migration(
-            context, dest, instance=instance,
-            block_migration=block_migration,
-            disk_over_commit=disk_over_commit,
-            instance_id=None)
-
-    # Remove update_db
-    # Remove instance_uuid, require instance
-    # Remove instance_type_id, require instance_type
-    # Remove topic
-    # Make reservations required
-    def prep_resize(self, context, image, request_spec, filter_properties,
-                    instance, instance_type, reservations):
-        return self.manager.prep_resize(
-            context, image=image, request_spec=request_spec,
-            filter_properties=filter_properties,
-            instance=instance, instance_type=instance_type,
-            reservations=reservations, topic=None,
-            update_db=None, instance_uuid=None, instance_type_id=None)
-
-    # Remove reservations and topic
-    # Require instance_uuids in request_spec
-    def run_instance(self, context, request_spec, admin_password,
-            injected_files, requested_networks, is_first_time,
-            filter_properties):
-        return self.manager.run_instance(
-            context, request_spec, admin_password, injected_files,
-            requested_networks, is_first_time, filter_properties,
-            reservations=None, topic=None)
-
-    def show_host_resources(self, context, host):
-        return self.manager.show_host_resources(context, host)
-
-    # remove kwargs
-    # require service_name, host and capabilities
-    def update_service_capabilities(self, context, service_name,
-                                    host, capabilities):
-        return self.manager.update_service_capabilities(
-            context, service_name=service_name, host=host,
-            capabilities=capabilities)

@@ -56,22 +56,11 @@ class ChanceScheduler(driver.Scheduler):
 
         return hosts[int(random.random() * len(hosts))]
 
-    def schedule(self, context, topic, method, *_args, **kwargs):
-        """Picks a host that is up at random."""
-
-        filter_properties = kwargs.get('filter_properties', {})
-        host = self._schedule(context, topic, None, filter_properties)
-        driver.cast_to_host(context, topic, host, method, **kwargs)
-
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
-                              filter_properties, reservations):
+                              filter_properties):
         """Create and run an instance or instances"""
-        if 'instance_uuids' not in request_spec:
-            return self._legacy_schedule_run_instance(context, request_spec,
-                    admin_password, injected_files, requested_networks,
-                    is_first_time, filter_properties, reservations)
         instances = []
         instance_uuids = request_spec.get('instance_uuids')
         for num, instance_uuid in enumerate(instance_uuids):
@@ -90,37 +79,9 @@ class ChanceScheduler(driver.Scheduler):
             instances.append(driver.encode_instance(updated_instance))
         return instances
 
-    def _legacy_schedule_run_instance(self, context, request_spec,
-                                      admin_password, injected_files,
-                                      requested_networks, is_first_time,
-                                      filter_properties, reservations):
-        num_instances = request_spec.get('num_instances', 1)
-        instances = []
-        for num in xrange(num_instances):
-            host = self._schedule(context, 'compute', request_spec,
-                                  filter_properties)
-            request_spec['instance_properties']['launch_index'] = num
-            instance = self.create_instance_db_entry(context, request_spec,
-                                                     reservations)
-            updated_instance = driver.instance_update_db(context,
-                    instance['uuid'], host)
-            self.compute_rpcapi.run_instance(context,
-                    instance=updated_instance, host=host,
-                    requested_networks=requested_networks,
-                    injected_files=injected_files,
-                    admin_password=admin_password, is_first_time=is_first_time,
-                    request_spec=request_spec,
-                    filter_properties=filter_properties)
-            instances.append(driver.encode_instance(updated_instance))
-            # So if we loop around, create_instance_db_entry will actually
-            # create a new entry, instead of assume it's been created
-            # already
-            del request_spec['instance_properties']['uuid']
-        return instances
-
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,
-                             reservations=None):
+                             reservations):
         """Select a target for resize."""
         host = self._schedule(context, 'compute', request_spec,
                               filter_properties)
@@ -129,6 +90,8 @@ class ChanceScheduler(driver.Scheduler):
 
     def schedule_create_volume(self, context, volume_id, snapshot_id,
                                reservations):
-        self.schedule(context, FLAGS.volume_topic, 'create_volume',
-                      volume_id=volume_id, snapshot_id=snapshot_id,
-                      reservations=reservations)
+        """Picks a host that is up at random."""
+        host = self._schedule(context, FLAGS.volume_topic, None, {})
+        driver.cast_to_host(context, FLAGS.volume_topic, host, 'create_volume',
+                            volume_id=volume_id, snapshot_id=snapshot_id,
+                            reservations=reservations)
