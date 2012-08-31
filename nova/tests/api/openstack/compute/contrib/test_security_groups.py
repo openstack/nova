@@ -29,6 +29,7 @@ import nova.db
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
+from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -121,6 +122,11 @@ class TestSecurityGroups(test.TestCase):
             security_groups.ServerSecurityGroupController())
         self.manager = security_groups.SecurityGroupActionController()
 
+    def _assert_no_security_groups_reserved(self, context):
+        """Check that no reservations are leaked during tests."""
+        result = quota.QUOTAS.get_project_quotas(context, context.project_id)
+        self.assertEqual(result['security_groups']['reserved'], 0)
+
     def test_create_security_group(self):
         sg = security_group_template()
 
@@ -138,6 +144,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, sg)
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_no_description(self):
         sg = security_group_template()
         del sg['description']
@@ -146,12 +154,16 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_blank_name(self):
         sg = security_group_template(name='')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
+
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_whitespace_name(self):
         sg = security_group_template(name=' ')
@@ -160,6 +172,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_blank_description(self):
         sg = security_group_template(description='')
 
@@ -167,12 +181,16 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_whitespace_description(self):
         sg = security_group_template(description=' ')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
+
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_duplicate_name(self):
         sg = security_group_template()
@@ -185,10 +203,14 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_no_body(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, None)
+
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_no_security_group(self):
         body = {'no-securityGroup': None}
@@ -197,12 +219,16 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, body)
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_above_255_characters_name(self):
         sg = security_group_template(name='1234567890' * 26)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
+
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_above_255_characters_description(self):
         sg = security_group_template(description='1234567890' * 26)
@@ -211,6 +237,8 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_non_string_name(self):
         sg = security_group_template(name=12)
 
@@ -218,12 +246,16 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_non_string_description(self):
         sg = security_group_template(description=12)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
+
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_quota_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
