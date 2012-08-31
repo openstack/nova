@@ -35,6 +35,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova import quota
 
 
@@ -60,6 +61,15 @@ class SchedulerManager(manager.Manager):
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
+
+    def create_rpc_dispatcher(self):
+        """Get the rpc dispatcher for this manager.
+
+        Return a dispatcher which can call out to either SchedulerManager
+        or _V2SchedulerManagerProxy depending on the RPC API version.
+        """
+        return rpc_dispatcher.RpcDispatcher([self,
+                                              _V2SchedulerManagerProxy(self)])
 
     def __getattr__(self, key):
         """Converts all method calls to use the schedule method"""
@@ -318,3 +328,67 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
+
+
+class _V2SchedulerManagerProxy(object):
+
+    RPC_API_VERSION = '2.0'
+
+    # Notes:
+    # - remove get_host_list()
+    # - remove get_service_capabilities()
+    # - add explicit live_migration() method
+    # - remove __getattr__ magic which is replaced by schedule()
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def create_volume(self, context, volume_id, snapshot_id, reservations):
+        return self.manager.create_volume(
+            context, volume_id, snapshot_id, reservations)
+
+    # Remove instance_id, require instance
+    # Remove topic
+    # Make block_migration and disk_over_commit required
+    def live_migration(self, context, instance, dest,
+                       block_migration, disk_over_commit):
+        return self.manager.live_migration(
+            context, dest, instance=instance,
+            block_migration=block_migration,
+            disk_over_commit=disk_over_commit,
+            instance_id=None)
+
+    # Remove update_db
+    # Remove instance_uuid, require instance
+    # Remove instance_type_id, require instance_type
+    # Remove topic
+    # Make reservations required
+    def prep_resize(self, context, image, request_spec, filter_properties,
+                    instance, instance_type, reservations):
+        return self.manager.prep_resize(
+            context, image=image, request_spec=request_spec,
+            filter_properties=filter_properties,
+            instance=instance, instance_type=instance_type,
+            reservations=reservations, topic=None,
+            update_db=None, instance_uuid=None, instance_type_id=None)
+
+    # Remove reservations and topic
+    # Require instance_uuids in request_spec
+    def run_instance(self, context, request_spec, admin_password,
+            injected_files, requested_networks, is_first_time,
+            filter_properties):
+        return self.manager.run_instance(
+            context, request_spec, admin_password, injected_files,
+            requested_networks, is_first_time, filter_properties,
+            reservations=None, topic=None)
+
+    def show_host_resources(self, context, host):
+        return self.manager.show_host_resources(context, host)
+
+    # remove kwargs
+    # require service_name, host and capabilities
+    def update_service_capabilities(self, context, service_name,
+                                    host, capabilities):
+        return self.manager.update_service_capabilities(
+            context, service_name=service_name, host=host,
+            capabilities=capabilities)

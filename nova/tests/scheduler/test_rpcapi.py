@@ -67,16 +67,14 @@ class SchedulerRpcAPITestCase(test.TestCase):
                 request_spec='fake_request_spec',
                 admin_password='pw', injected_files='fake_injected_files',
                 requested_networks='fake_requested_networks',
-                is_first_time=True, filter_properties='fake_filter_properties',
-                version='1.6')
+                is_first_time=True, filter_properties='fake_filter_properties')
 
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',
                 instance='fake_instance',
                 instance_type='fake_type', image='fake_image',
                 request_spec='fake_request_spec',
-                filter_properties='fake_props', reservations=list('fake_res'),
-                version='1.5')
+                filter_properties='fake_props', reservations=list('fake_res'))
 
     def test_show_host_resources(self):
         self._test_scheduler_api('show_host_resources', rpc_method='call',
@@ -86,8 +84,7 @@ class SchedulerRpcAPITestCase(test.TestCase):
         self._test_scheduler_api('live_migration', rpc_method='call',
                 block_migration='fake_block_migration',
                 disk_over_commit='fake_disk_over_commit',
-                instance='fake_instance', dest='fake_dest',
-                version='1.7')
+                instance='fake_instance', dest='fake_dest')
 
     def test_update_service_capabilities(self):
         self._test_scheduler_api('update_service_capabilities',
@@ -97,5 +94,4 @@ class SchedulerRpcAPITestCase(test.TestCase):
     def test_create_volume(self):
         self._test_scheduler_api('create_volume',
                 rpc_method='cast', volume_id="fake_volume",
-                snapshot_id="fake_snapshots", reservations=list('fake_res'),
-                version='1.7')
+                snapshot_id="fake_snapshots", reservations=list('fake_res'))
