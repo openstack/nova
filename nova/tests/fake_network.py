@@ -143,8 +143,12 @@ class FakeNetworkManager(network_manager.NetworkManager):
     def __init__(self):
         self.db = self.FakeDB()
         self.deallocate_called = None
+        self.deallocate_fixed_ip_calls = []
 
+    # TODO(matelakat) method signature should align with the faked one's
     def deallocate_fixed_ip(self, context, address=None, host=None):
+        self.deallocate_fixed_ip_calls.append((context, address, host))
+        # TODO(matelakat) use the deallocate_fixed_ip_calls instead
         self.deallocate_called = address
 
     def _create_fixed_ips(self, context, network_id, fixed_cidr=None):
