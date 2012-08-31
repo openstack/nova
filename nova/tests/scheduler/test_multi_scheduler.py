@@ -46,9 +46,6 @@ class FakeVolumeScheduler(driver.Scheduler):
         super(FakeVolumeScheduler, self).__init__()
         self.is_update_caps_called = False
 
-    def schedule_create_volume(self, *args, **kwargs):
-        pass
-
     def schedule_create_volumes(self, *args, **kwargs):
         pass
 
@@ -97,7 +94,7 @@ class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
 
         #no compute methods are proxied at this time
         test_methods = {compute_driver: [],
-                        volume_driver: ['create_volume', 'create_volumes']}
+                        volume_driver: ['create_volumes']}
 
         for driver, methods in test_methods.iteritems():
             for method in methods:

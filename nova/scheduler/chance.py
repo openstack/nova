@@ -24,7 +24,10 @@ Chance (Random) Scheduler implementation
 import random
 
 from nova import exception
+from nova import flags
 from nova.scheduler import driver
+
+FLAGS = flags.FLAGS
 
 
 class ChanceScheduler(driver.Scheduler):
@@ -123,3 +126,9 @@ class ChanceScheduler(driver.Scheduler):
                               filter_properties)
         self.compute_rpcapi.prep_resize(context, image, instance,
                 instance_type, host, reservations)
+
+    def schedule_create_volume(self, context, volume_id, snapshot_id,
+                               reservations):
+        self.schedule(context, FLAGS.volume_topic, 'create_volume',
+                      volume_id=volume_id, snapshot_id=snapshot_id,
+                      reservations=reservations)

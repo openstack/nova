@@ -31,6 +31,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
+from nova.scheduler import rpcapi as scheduler_rpcapi
 
 volume_host_opt = cfg.BoolOpt('snapshot_same_host',
         default=True,
@@ -71,6 +72,10 @@ def check_policy(context, action, target_obj=None):
 
 class API(base.Base):
     """API for interacting with the volume manager."""
+
+    def __init__(self, **kwargs):
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+        super(API, self).__init__(**kwargs)
 
     def create(self, context, size, name, description, snapshot=None,
                      volume_type=None, metadata=None, availability_zone=None):
@@ -172,13 +177,8 @@ class API(base.Base):
                       "args": {"volume_id": volume_id,
                                "snapshot_id": snapshot_id}})
         else:
-            rpc.cast(context,
-                     FLAGS.scheduler_topic,
-                     {"method": "create_volume",
-                      "args": {"topic": FLAGS.volume_topic,
-                               "volume_id": volume_id,
-                               "snapshot_id": snapshot_id,
-                               "reservations": reservations}})
+            self.scheduler_rpcapi.create_volume(
+                context, volume_id, snapshot_id, reservations)
 
     @wrap_check_policy
     def delete(self, context, volume):

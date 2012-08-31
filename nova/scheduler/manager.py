@@ -53,7 +53,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '1.6'
+    RPC_API_VERSION = '1.7'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -66,6 +66,8 @@ class SchedulerManager(manager.Manager):
         # NOTE(russellb) Because of what this is doing, we must be careful
         # when changing the API of the scheduler drivers, as that changes
         # the rpc API as well, and the version should be updated accordingly.
+        # NOTE(markmc): This remains only for backwards compat support
+        # and can be removed when we bump the major version
         return functools.partial(self._schedule, key)
 
     def get_host_list(self, context):
@@ -90,6 +92,30 @@ class SchedulerManager(manager.Manager):
             capabilities = {}
         self.driver.update_service_capabilities(service_name, host,
                 capabilities)
+
+    def create_volume(self, context, volume_id, snapshot_id, reservations):
+        try:
+            self.driver.schedule_create_volume(
+                context, volume_id, snapshot_id, reservations)
+        except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                self._set_vm_state_and_notify('create_volume',
+                                             {'vm_state': vm_states.ERROR},
+                                             context, ex, {})
+
+    def live_migration(self, context, dest,
+                       block_migration=False, disk_over_commit=False,
+                       instance=None, instance_id=None, topic=None):
+        try:
+            return self.driver.schedule_live_migration(
+                context, dest,
+                block_migration, disk_over_commit,
+                instance, instance_id)
+        except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                self._set_vm_state_and_notify('live_migration',
+                                             {'vm_state': vm_states.ERROR},
+                                             context, ex, {})
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.

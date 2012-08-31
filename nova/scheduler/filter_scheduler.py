@@ -51,6 +51,13 @@ class FilterScheduler(driver.Scheduler):
         msg = _("No host selection for %s defined.") % topic
         raise exception.NoValidHost(reason=msg)
 
+    def schedule_create_volume(self, context, volume_id, snapshot_id,
+                               reservations):
+        # NOTE: We're only focused on compute instances right now,
+        # so this method will always raise NoValidHost().
+        msg = _("No host selection for %s defined.") % FLAGS.volume_topic
+        raise exception.NoValidHost(reason=msg)
+
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
