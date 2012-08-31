@@ -1745,6 +1745,10 @@ def instance_update_and_get_original(context, instance_uuid, values):
     :param instance_uuid: = instance uuid
     :param values: = dict containing column values
 
+    If "expected_task_state" exists in values, the update can only happen
+    when the task state before update matches expected_task_state. Otherwise
+    a UnexpectedTaskStateError is thrown.
+
     :returns: a tuple of the form (old_instance_ref, new_instance_ref)
 
     Raises NotFound if instance does not exist.
@@ -1762,6 +1766,15 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     with session.begin():
         instance_ref = instance_get_by_uuid(context, instance_uuid,
                                             session=session)
+        if "expected_task_state" in values:
+            # it is not a db column so always pop out
+            expected = values.pop("expected_task_state")
+            if not isinstance(expected, (tuple, list, set)):
+                expected = (expected,)
+            actual_state = instance_ref["task_state"]
+            if actual_state not in expected:
+                raise exception.UnexpectedTaskStateError(actual=actual_state,
+                                                         expected=expected)
 
         if copy_old_instance:
             old_instance_ref = copy.copy(instance_ref)

@@ -463,6 +463,7 @@ class ServerActionsControllerTest(test.TestCase):
         update(context, mox.IgnoreArg(),
                 image_ref=self._image_href,
                 task_state=task_states.REBUILDING,
+                expected_task_state=None,
                 progress=0, **attributes).AndReturn(
                         fakes.stub_instance(1, host='fake_host'))
         self.mox.ReplayAll()
