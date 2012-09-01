@@ -496,6 +496,12 @@ class Reservation(BASE, NovaBase):
     delta = Column(Integer)
     expire = Column(DateTime, nullable=False)
 
+    usage = relationship(
+        "QuotaUsage",
+        foreign_keys=usage_id,
+        primaryjoin='and_(Reservation.usage_id == QuotaUsage.id,'
+                         'QuotaUsage.deleted == False)')
+
 
 class Snapshot(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""
