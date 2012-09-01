@@ -188,11 +188,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _do_get(self, url, strip_version=False):
         return self._get_response(url, 'GET', strip_version=strip_version)
 
-    def _do_post(self, url, name, subs):
+    def _do_post(self, url, name, subs, method='POST'):
         body = self._read_template(name) % subs
         if self.generate_samples:
             self._write_sample(name, body)
-        return self._get_response(url, 'POST', body)
+        return self._get_response(url, method, body)
+
+    def _do_put(self, url, name, subs):
+        return self._do_post(url, name, subs, method='PUT')
 
 
 class VersionsSampleJsonTest(ApiSampleTestBase):
