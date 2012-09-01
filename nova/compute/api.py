@@ -1238,14 +1238,21 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.RESCUED],
-                          task_state=[None])
+                          task_state=[None, task_states.REBOOTING])
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
+        if (reboot_type == 'SOFT' and
+            instance['task_state'] == task_states.REBOOTING):
+            raise exception.InstanceInvalidState(
+                attr='task_state',
+                instance_uuid=instance['uuid'],
+                state=instance['task_state'])
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
                                task_state=state,
-                               expected_task_state=None)
+                               expected_task_state=[None,
+                                                    task_states.REBOOTING])
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                 reboot_type=reboot_type)
 

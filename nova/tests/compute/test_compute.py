@@ -3074,6 +3074,42 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, inst_ref['uuid'])
 
+    def test_hard_reboot_of_soft_rebooting_instance(self):
+        """Ensure instance can be hard rebooted while soft rebooting"""
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.REBOOTING})
+
+        reboot_type = "HARD"
+        self.compute_api.reboot(self.context, inst_ref, reboot_type)
+
+        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+        self.assertEqual(inst_ref['task_state'], task_states.REBOOTING_HARD)
+
+        db.instance_destroy(self.context, inst_ref['uuid'])
+
+    def test_soft_reboot_of_rebooting_instance(self):
+        """Ensure instance can't be soft rebooted while rebooting"""
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.REBOOTING})
+
+        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+        reboot_type = "SOFT"
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.reboot,
+                          self.context,
+                          inst_ref,
+                          reboot_type)
+
     def test_hostname_create(self):
         """Ensure instance hostname is set during creation."""
         inst_type = instance_types.get_instance_type_by_name('m1.tiny')
