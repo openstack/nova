@@ -41,8 +41,9 @@ ROOT_GB = 10
 EPHEMERAL_GB = 20
 MEMORY_MB = 1024
 VCPUS = 2
-STOP = timeutils.utcnow()
-START = STOP - datetime.timedelta(hours=HOURS)
+NOW = timeutils.utcnow()
+START = NOW - datetime.timedelta(hours=HOURS)
+STOP = NOW
 
 
 def fake_instance_type_get(self, context, instance_type_id):
@@ -93,10 +94,10 @@ class SimpleTenantUsageTest(test.TestCase):
                                                       'faketenant_1',
                                                        is_admin=False)
 
-    def test_verify_index(self):
+    def _test_verify_index(self, start, stop):
         req = webob.Request.blank(
                     '/v2/faketenant_0/os-simple-tenant-usage?start=%s&end=%s' %
-                    (START.isoformat(), STOP.isoformat()))
+                    (start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
@@ -116,6 +117,20 @@ class SimpleTenantUsageTest(test.TestCase):
             self.assertEqual(int(usages[i]['total_vcpus_usage']),
                              SERVERS * VCPUS * HOURS)
             self.assertFalse(usages[i].get('server_usages'))
+
+    def test_verify_index(self):
+        self._test_verify_index(START, STOP)
+
+    def test_verify_index_futrue_end_time(self):
+        future = NOW + datetime.timedelta(hours=HOURS)
+        self._test_verify_index(START, future)
+
+    def test_verify_show(self):
+        self._test_verify_show(START, STOP)
+
+    def test_verify_show_futrue_end_time(self):
+        future = NOW + datetime.timedelta(hours=HOURS)
+        self._test_verify_show(START, future)
 
     def _get_tenant_usages(self, detailed=''):
         req = webob.Request.blank(
@@ -149,12 +164,12 @@ class SimpleTenantUsageTest(test.TestCase):
         for i in xrange(TENANTS):
             self.assertEqual(usages[i].get('server_usages'), None)
 
-    def test_verify_show(self):
+    def _test_verify_show(self, start, stop):
         tenant_id = 0
         req = webob.Request.blank(
                   '/v2/faketenant_0/os-simple-tenant-usage/'
                   'faketenant_%s?start=%s&end=%s' %
-                  (tenant_id, START.isoformat(), STOP.isoformat()))
+                  (tenant_id, start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
