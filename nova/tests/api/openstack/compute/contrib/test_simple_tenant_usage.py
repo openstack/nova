@@ -28,6 +28,7 @@ from nova.compute import api
 from nova import context
 from nova import flags
 from nova import test
+from nova import utils
 from nova.tests.api.openstack import fakes
 
 
@@ -40,8 +41,9 @@ ROOT_GB = 10
 EPHEMERAL_GB = 20
 MEMORY_MB = 1024
 VCPUS = 2
-STOP = datetime.datetime.utcnow()
-START = STOP - datetime.timedelta(hours=HOURS)
+NOW = utils.utcnow()
+START = NOW - datetime.timedelta(hours=HOURS)
+STOP = NOW
 
 
 def fake_instance_type_get(self, context, instance_type_id):
@@ -91,10 +93,10 @@ class SimpleTenantUsageTest(test.TestCase):
                                                       'faketenant_1',
                                                        is_admin=False)
 
-    def test_verify_index(self):
+    def _test_verify_index(self, start, stop):
         req = webob.Request.blank(
                     '/v2/faketenant_0/os-simple-tenant-usage?start=%s&end=%s' %
-                    (START.isoformat(), STOP.isoformat()))
+                    (start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
@@ -115,6 +117,20 @@ class SimpleTenantUsageTest(test.TestCase):
                              SERVERS * VCPUS * HOURS)
             self.assertFalse(usages[i].get('server_usages'))
 
+    def test_verify_index(self):
+        self._test_verify_index(START, STOP)
+
+    def test_verify_index_future_end_time(self):
+        future = NOW + datetime.timedelta(hours=HOURS)
+        self._test_verify_index(START, future)
+
+    def test_verify_show(self):
+        self._test_verify_show(START, STOP)
+
+    def test_verify_show_future_end_time(self):
+        future = NOW + datetime.timedelta(hours=HOURS)
+        self._test_verify_show(START, future)
+
     def test_verify_detailed_index(self):
         req = webob.Request.blank(
                     '/v2/faketenant_0/os-simple-tenant-usage?'
@@ -133,11 +149,11 @@ class SimpleTenantUsageTest(test.TestCase):
             for j in xrange(SERVERS):
                 self.assertEqual(int(servers[j]['hours']), HOURS)
 
-    def test_verify_show(self):
+    def _test_verify_show(self, start, stop):
         req = webob.Request.blank(
                   '/v2/faketenant_0/os-simple-tenant-usage/'
                   'faketenant_0?start=%s&end=%s' %
-                  (START.isoformat(), STOP.isoformat()))
+                  (start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 

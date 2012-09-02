@@ -24,6 +24,7 @@ from nova.api.openstack import xmlutil
 from nova.compute import api
 from nova import exception
 from nova import flags
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -217,6 +218,9 @@ class SimpleTenantUsageController(object):
         authorize_list(context)
 
         (period_start, period_stop, detailed) = self._get_datetime_range(req)
+        now = utils.utcnow()
+        if period_stop > now:
+            period_stop = now
         usages = self._tenant_usages_for_period(context,
                                                 period_start,
                                                 period_stop,
@@ -232,6 +236,9 @@ class SimpleTenantUsageController(object):
         authorize_show(context, {'project_id': tenant_id})
 
         (period_start, period_stop, ignore) = self._get_datetime_range(req)
+        now = utils.utcnow()
+        if period_stop > now:
+            period_stop = now
         usage = self._tenant_usages_for_period(context,
                                                period_start,
                                                period_stop,
