@@ -15,31 +15,24 @@
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
 
 
 class Stats(dict):
     """Handler for updates to compute node workload stats."""
 
-    def add_stats_for_instance(self, instance):
-        self._increment("num_task_%s" % instance['task_state'])
+    def __init__(self):
+        super(Stats, self).__init__()
 
-        self._increment("num_vm_%s" % instance['vm_state'])
-        self._increment("num_instances")
+        # Track instance states for compute node workload calculations:
+        self.states = {}
 
-        os_type = instance['os_type']
-        self._increment("num_os_type_%s" % os_type)
+    def clear(self):
+        super(Stats, self).clear()
 
-        proj_id = instance['project_id']
-        self._increment("num_proj_%s" % proj_id)
+        self.states.clear()
 
-        x = self.get("num_vcpus_used", 0)
-        self["num_vcpus_used"] = x + instance["vcpus"]
-
-    def calculate_io_workload(self):
+    @property
+    def io_workload(self):
         """Calculate an I/O based load by counting I/O heavy operations"""
 
         def _get(state, state_type):
@@ -82,32 +75,44 @@ class Stats(dict):
     def num_vcpus_used(self):
         return self.get("num_vcpus_used", 0)
 
-    def update_stats_for_instance(self, old_instance, instance):
+    def update_stats_for_instance(self, instance):
         """Update stats after an instance is changed."""
 
-        old_vm_state = old_instance['vm_state']
-        new_vm_state = instance['vm_state']
+        uuid = instance['uuid']
 
-        if old_vm_state != new_vm_state:
-            self._decrement("num_vm_%s" % old_vm_state)
-            self._increment("num_vm_%s" % new_vm_state)
+        # First, remove stats from the previous instance
+        # state:
+        if uuid in self.states:
+            old_state = self.states[uuid]
 
-        if new_vm_state == vm_states.DELETED:
-            self._decrement("num_instances")
-
-            self._decrement("num_os_type_%s" % old_instance['os_type'])
-
-            self._decrement("num_proj_%s" % old_instance["project_id"])
-
+            self._decrement("num_vm_%s" % old_state['vm_state'])
+            self._decrement("num_task_%s" % old_state['task_state'])
+            self._decrement("num_os_type_%s" % old_state['os_type'])
+            self._decrement("num_proj_%s" % old_state['project_id'])
             x = self.get("num_vcpus_used", 0)
-            self["num_vcpus_used"] = x - old_instance['vcpus']
+            self["num_vcpus_used"] = x - old_state['vcpus']
+        else:
+            # new instance
+            self._increment("num_instances")
 
-        old_task_state = old_instance['task_state']
-        new_task_state = instance['task_state']
+        # Now update stats from the new instance state:
+        (vm_state, task_state, os_type, project_id, vcpus) = \
+                self._extract_state_from_instance(instance)
 
-        if old_task_state != new_task_state:
-            self._decrement("num_task_%s" % old_task_state)
-            self._increment("num_task_%s" % new_task_state)
+        if vm_state == vm_states.DELETED:
+            self._decrement("num_instances")
+            self.states.pop(uuid)
+
+        else:
+            self._increment("num_vm_%s" % vm_state)
+            self._increment("num_task_%s" % task_state)
+            self._increment("num_os_type_%s" % os_type)
+            self._increment("num_proj_%s" % project_id)
+            x = self.get("num_vcpus_used", 0)
+            self["num_vcpus_used"] = x + vcpus
+
+        # save updated I/O workload in stats:
+        self["io_workload"] = self.io_workload
 
     def _decrement(self, key):
         x = self.get(key, 0)
@@ -116,3 +121,19 @@ class Stats(dict):
     def _increment(self, key):
         x = self.get(key, 0)
         self[key] = x + 1
+
+    def _extract_state_from_instance(self, instance):
+        """Save the useful bits of instance state for tracking purposes"""
+
+        uuid = instance['uuid']
+        vm_state = instance['vm_state']
+        task_state = instance['task_state']
+        os_type = instance['os_type']
+        project_id = instance['project_id']
+        vcpus = instance['vcpus']
+
+        self.states[uuid] = dict(vm_state=vm_state, task_state=task_state,
+                                 os_type=os_type, project_id=project_id,
+                                 vcpus=vcpus)
+
+        return (vm_state, task_state, os_type, project_id, vcpus)

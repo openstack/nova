@@ -86,6 +86,7 @@ class BaseTestCase(test.TestCase):
             "os_type": "Linux",
             "project_id": "1234",
             "vcpus": 1,
+            "uuid": "12-34-56-78-90",
         }
 
         self.stubs.Set(db, 'instance_get_all_by_filters',
@@ -476,17 +477,16 @@ class ResourceTestCase(BaseTestCase):
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
-        old_ref = self.instance_ref
-        old_ref['task_state'] = task_states.SCHEDULING
-        with self.tracker.instance_resource_claim(self.context, old_ref):
+        self.instance_ref['task_state'] = task_states.SCHEDULING
+        with self.tracker.instance_resource_claim(self.context,
+                self.instance_ref):
             pass
 
         self.assertEqual(1, self.tracker.compute_node['current_workload'])
 
-        new_ref = copy.copy(old_ref)
-        new_ref['vm_state'] = vm_states.ACTIVE
-        new_ref['task_state'] = None
+        self.instance_ref['vm_state'] = vm_states.ACTIVE
+        self.instance_ref['task_state'] = None
 
-        self.tracker.update_load_stats_for_instance(self.context, old_ref,
-                new_ref)
+        self.tracker.update_load_stats_for_instance(self.context,
+                self.instance_ref)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
