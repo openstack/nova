@@ -989,3 +989,392 @@ class NetAppDriverTestCase(test.TestCase):
         properties = connection_info['data']
         self.driver.terminate_connection(volume, connector)
         self.driver._remove_destroy(self.VOLUME_NAME, self.PROJECT_ID)
+
+
+WSDL_HEADER_CMODE = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+ xmlns:na="http://cloud.netapp.com/"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns="http://schemas.xmlsoap.org/wsdl/"
+targetNamespace="http://cloud.netapp.com/" name="CloudStorageService">
+"""
+
+WSDL_TYPES_CMODE = """<types>
+<xs:schema xmlns:na="http://cloud.netapp.com/"
+xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.0"
+targetNamespace="http://cloud.netapp.com/">
+
+      <xs:element name="ProvisionLun">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Name" type="xs:string"/>
+            <xs:element name="Size" type="xsd:long"/>
+            <xs:element name="Metadata" type="na:Metadata" minOccurs="0"
+              maxOccurs="unbounded"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ProvisionLunResult">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Lun" type="na:Lun"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="DestroyLun">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Handle" type="xsd:string"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DestroyLunResult">
+        <xs:complexType>
+          <xs:all/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="CloneLun">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Handle" type="xsd:string"/>
+            <xs:element name="NewName" type="xsd:string"/>
+            <xs:element name="Metadata" type="na:Metadata" minOccurs="0"
+              maxOccurs="unbounded"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="CloneLunResult">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Lun" type="na:Lun"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="MapLun">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Handle" type="xsd:string"/>
+            <xs:element name="InitiatorType" type="xsd:string"/>
+            <xs:element name="InitiatorName" type="xsd:string"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="MapLunResult">
+        <xs:complexType>
+          <xs:all/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="UnmapLun">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Handle" type="xsd:string"/>
+            <xs:element name="InitiatorType" type="xsd:string"/>
+            <xs:element name="InitiatorName" type="xsd:string"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="UnmapLunResult">
+        <xs:complexType>
+          <xs:all/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="ListLuns">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="NameFilter" type="xsd:string" minOccurs="0"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ListLunsResult">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Lun" type="na:Lun" minOccurs="0"
+              maxOccurs="unbounded"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="GetLunTargetDetails">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="Handle" type="xsd:string"/>
+            <xs:element name="InitiatorType" type="xsd:string"/>
+            <xs:element name="InitiatorName" type="xsd:string"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="GetLunTargetDetailsResult">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="TargetDetails" type="na:TargetDetails"
+              minOccurs="0" maxOccurs="unbounded"/>
+          </xs:all>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:complexType name="Metadata">
+        <xs:sequence>
+          <xs:element name="Key" type="xs:string"/>
+          <xs:element name="Value" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Lun">
+        <xs:sequence>
+          <xs:element name="Name" type="xs:string"/>
+          <xs:element name="Size" type="xs:long"/>
+          <xs:element name="Handle" type="xs:string"/>
+          <xs:element name="Metadata" type="na:Metadata" minOccurs="0"
+            maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="TargetDetails">
+        <xs:sequence>
+          <xs:element name="Address" type="xs:string"/>
+          <xs:element name="Port" type="xs:int"/>
+          <xs:element name="Portal" type="xs:int"/>
+          <xs:element name="Iqn" type="xs:string"/>
+          <xs:element name="LunNumber" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+
+    </xs:schema></types>"""
+
+WSDL_TRAILER_CMODE = """<service name="CloudStorageService">
+    <port name="CloudStoragePort" binding="na:CloudStorageBinding">
+      <soap:address location="http://hostname:8080/ws/ntapcloud"/>
+    </port>
+  </service>
+</definitions>"""
+
+RESPONSE_PREFIX_CMODE = """<?xml version='1.0' encoding='UTF-8'?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+<soapenv:Body>"""
+
+RESPONSE_SUFFIX_CMODE = """</soapenv:Body></soapenv:Envelope>"""
+
+CMODE_APIS = ['ProvisionLun', 'DestroyLun', 'CloneLun', 'MapLun', 'UnmapLun',
+              'ListLuns', 'GetLunTargetDetails']
+
+
+class FakeCMODEServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    """HTTP handler that fakes enough stuff to allow the driver to run"""
+
+    def do_GET(s):
+        """Respond to a GET request."""
+        if '/ntap_cloud.wsdl' != s.path:
+            s.send_response(404)
+            s.end_headers
+            return
+        s.send_response(200)
+        s.send_header("Content-Type", "application/wsdl+xml")
+        s.end_headers()
+        out = s.wfile
+        out.write(WSDL_HEADER_CMODE)
+        out.write(WSDL_TYPES_CMODE)
+        for api in CMODE_APIS:
+            out.write('<message name="%sRequest">' % api)
+            out.write('<part element="na:%s" name="req"/>' % api)
+            out.write('</message>')
+            out.write('<message name="%sResponse">' % api)
+            out.write('<part element="na:%sResult" name="res"/>' % api)
+            out.write('</message>')
+        out.write('<portType name="CloudStorage">')
+        for api in CMODE_APIS:
+            out.write('<operation name="%s">' % api)
+            out.write('<input message="na:%sRequest"/>' % api)
+            out.write('<output message="na:%sResponse"/>' % api)
+            out.write('</operation>')
+        out.write('</portType>')
+        out.write('<binding name="CloudStorageBinding" '
+                  'type="na:CloudStorage">')
+        out.write('<soap:binding style="document" ' +
+            'transport="http://schemas.xmlsoap.org/soap/http"/>')
+        for api in CMODE_APIS:
+            out.write('<operation name="%s">' % api)
+            out.write('<soap:operation soapAction=""/>')
+            out.write('<input><soap:body use="literal"/></input>')
+            out.write('<output><soap:body use="literal"/></output>')
+            out.write('</operation>')
+        out.write('</binding>')
+        out.write(WSDL_TRAILER_CMODE)
+
+    def do_POST(s):
+        """Respond to a POST request."""
+        if '/ws/ntapcloud' != s.path:
+            s.send_response(404)
+            s.end_headers
+            return
+        request_xml = s.rfile.read(int(s.headers['Content-Length']))
+        ntap_ns = 'http://cloud.netapp.com/'
+        nsmap = {'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
+            'na': ntap_ns}
+        root = etree.fromstring(request_xml)
+
+        body = root.xpath('/soapenv:Envelope/soapenv:Body',
+                          namespaces=nsmap)[0]
+        request = body.getchildren()[0]
+        tag = request.tag
+        if not tag.startswith('{' + ntap_ns + '}'):
+            s.send_response(500)
+            s.end_headers
+            return
+        api = tag[(2 + len(ntap_ns)):]
+        if 'ProvisionLun' == api:
+            body = """<ns:ProvisionLunResult xmlns:ns=
+            "http://cloud.netapp.com/">
+            <Lun><Name>lun1</Name><Size>20</Size>
+             <Handle>1d9c006c-a406-42f6-a23f-5ed7a6dc33e3</Handle>
+            <Metadata><Key>OsType</Key>
+            <Value>linux</Value></Metadata></Lun>
+            </ns:ProvisionLunResult>"""
+        elif 'DestroyLun' == api:
+            body = """<ns:DestroyLunResult xmlns:ns="http://cloud.netapp.com/"
+             />"""
+        elif 'CloneLun' == api:
+            body = """<ns:CloneLunResult xmlns:ns="http://cloud.netapp.com/">
+                     <Lun><Name>lun2</Name><Size>2</Size>
+                     <Handle>98ea1791d228453899d422b4611642c3</Handle>
+                     <Metadata><Key>OsType</Key>
+                     <Value>linux</Value></Metadata>
+                     </Lun></ns:CloneLunResult>"""
+        elif 'MapLun' == api:
+            body = """<ns1:MapLunResult xmlns:ns="http://cloud.netapp.com/"
+             />"""
+        elif 'Unmap' == api:
+            body = """<ns1:UnmapLunResult xmlns:ns="http://cloud.netapp.com/"
+             />"""
+        elif 'ListLuns' == api:
+            body = """<ns:ListLunsResult xmlns:ns="http://cloud.netapp.com/">
+                 <Lun>
+                 <Name>lun1</Name>
+                 <Size>20</Size>
+                 <Handle>asdjdnsd</Handle>
+                 </Lun>
+                 </ns:ListLunsResult>"""
+        elif 'GetLunTargetDetails' == api:
+            body = """<ns:GetLunTargetDetailsResult
+            xmlns:ns="http://cloud.netapp.com/">
+                    <TargetDetail>
+                     <Address>1.2.3.4</Address>
+                     <Port>3260</Port>
+                     <Portal>1000</Portal>
+                     <Iqn>iqn.199208.com.netapp:sn.123456789</Iqn>
+                     <LunNumber>0</LunNumber>
+                    </TargetDetail>
+                    </ns:GetLunTargetDetailsResult>"""
+        else:
+            # Unknown API
+            s.send_response(500)
+            s.end_headers
+            return
+        s.send_response(200)
+        s.send_header("Content-Type", "text/xml; charset=utf-8")
+        s.end_headers()
+        s.wfile.write(RESPONSE_PREFIX_CMODE)
+        s.wfile.write(body)
+        s.wfile.write(RESPONSE_SUFFIX_CMODE)
+
+
+class FakeCmodeHTTPConnection(object):
+    """A fake httplib.HTTPConnection for netapp tests
+
+    Requests made via this connection actually get translated and routed into
+    the fake Dfm handler above, we then turn the response into
+    the httplib.HTTPResponse that the caller expects.
+    """
+    def __init__(self, host, timeout=None):
+        self.host = host
+
+    def request(self, method, path, data=None, headers=None):
+        if not headers:
+            headers = {}
+        req_str = '%s %s HTTP/1.1\r\n' % (method, path)
+        for key, value in headers.iteritems():
+            req_str += "%s: %s\r\n" % (key, value)
+        if data:
+            req_str += '\r\n%s' % data
+
+        # NOTE(vish): normally the http transport normailizes from unicode
+        sock = FakeHttplibSocket(req_str.decode("latin-1").encode("utf-8"))
+        # NOTE(vish): stop the server from trying to look up address from
+        #             the fake socket
+        FakeCMODEServerHandler.address_string = lambda x: '127.0.0.1'
+        self.app = FakeCMODEServerHandler(sock, '127.0.0.1:8080', None)
+
+        self.sock = FakeHttplibSocket(sock.result)
+        self.http_response = httplib.HTTPResponse(self.sock)
+
+    def set_debuglevel(self, level):
+        pass
+
+    def getresponse(self):
+        self.http_response.begin()
+        return self.http_response
+
+    def getresponsebody(self):
+        return self.sock.result
+
+
+class NetAppCmodeISCSIDriverTestCase(test.TestCase):
+    """Test case for NetAppISCSIDriver"""
+    volume = {
+            'name': 'lun1', 'size': 1, 'volume_name': 'lun1',
+            'os_type': 'linux', 'provider_location': 'lun1',
+            'id': 'lun1', 'provider_auth': None, 'project_id': 'project',
+            'display_name': None, 'display_description': 'lun1',
+            'volume_type_id': None
+            }
+    snapshot = {
+            'name': 'lun2', 'size': 1, 'volume_name': 'lun1',
+            'volume_size': 1, 'project_id': 'project'
+            }
+    volume_sec = {
+            'name': 'vol_snapshot', 'size': 1, 'volume_name': 'lun1',
+            'os_type': 'linux', 'provider_location': 'lun1',
+            'id': 'lun1', 'provider_auth': None, 'project_id': 'project',
+            'display_name': None, 'display_description': 'lun1',
+            'volume_type_id': None
+            }
+
+    def setUp(self):
+        super(NetAppCmodeISCSIDriverTestCase, self).setUp()
+        driver = netapp.NetAppCmodeISCSIDriver()
+        self.stubs.Set(httplib, 'HTTPConnection', FakeCmodeHTTPConnection)
+        driver._create_client(wsdl_url='http://localhost:8080/ntap_cloud.wsdl',
+                              login='root', password='password',
+                              hostname='localhost', port=8080, cache=False)
+        self.driver = driver
+
+    def test_connect(self):
+        self.driver.check_for_setup_error()
+
+    def test_create_destroy(self):
+        self.driver.create_volume(self.volume)
+        self.driver.delete_volume(self.volume)
+
+    def test_create_vol_snapshot_destroy(self):
+        self.driver.create_volume(self.volume)
+        self.driver.create_snapshot(self.snapshot)
+        self.driver.create_volume_from_snapshot(self.volume_sec, self.snapshot)
+        self.driver.delete_snapshot(self.snapshot)
+        self.driver.delete_volume(self.volume)
+
+    def test_map_unmap(self):
+        self.driver.create_volume(self.volume)
+        updates = self.driver.create_export(None, self.volume)
+        self.assertTrue(updates['provider_location'])
+        self.volume['provider_location'] = updates['provider_location']
+        connector = {'initiator': 'init1'}
+        connection_info = self.driver.initialize_connection(self.volume,
+                                                             connector)
+        self.assertEqual(connection_info['driver_volume_type'], 'iscsi')
+        properties = connection_info['data']
+        self.driver.terminate_connection(self.volume, connector)
+        self.driver.delete_volume(self.volume)
