@@ -411,8 +411,7 @@ class ResourceTracker(object):
 
             # grab all instances that are not yet DELETED
             filters = {'host': self.host, 'deleted': False}
-            instances = db.instance_get_all_by_filters(context,
-                    {'host': self.host})
+            instances = db.instance_get_all_by_filters(context, filters)
 
         for instance in instances:
             self.stats.add_stats_for_instance(instance)
