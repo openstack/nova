@@ -34,11 +34,11 @@ class Backend(object):
                               size, *args, **kwargs):
                 pass
 
-            def cache(self, fn, fname, size=None, *args, **kwargs):
+            def cache(self, fetch_func, filename, size=None, *args, **kwargs):
                 pass
 
-            def libvirt_info(self, disk_bus, disk_dev,
-                             device_type, cache_mode):
+            def libvirt_info(self, disk_bus, disk_dev, device_type,
+                             cache_mode):
                 info = config.LibvirtConfigGuestDisk()
                 info.source_type = 'file'
                 info.source_device = device_type

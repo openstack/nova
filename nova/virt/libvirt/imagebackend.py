@@ -99,31 +99,31 @@ class Image(object):
         info.source_path = self.path
         return info
 
-    def cache(self, fn, fname, size=None, *args, **kwargs):
+    def cache(self, fetch_func, filename, size=None, *args, **kwargs):
         """Creates image from template.
 
         Ensures that template and image not already exists.
         Ensures that base directory exists.
         Synchronizes on template fetching.
 
-        :fn: function, that creates template.
-        Should accept `target` argument.
-        :fname: Template name
+        :fetch_func: Function that creates the base image
+                     Should accept `target` argument.
+        :filename: Name of the file in the image directory
         :size: Size of created image in bytes (optional)
         """
-        @utils.synchronized(fname, external=True, lock_path=self.lock_path)
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
-                fn(target=target, *args, **kwargs)
+                fetch_func(target=target, *args, **kwargs)
 
         if not os.path.exists(self.path):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
                 utils.ensure_tree(base_dir)
-            base = os.path.join(base_dir, fname)
+            base = os.path.join(base_dir, filename)
 
             self.create_image(call_if_not_exists, base, size,
-                               *args, **kwargs)
+                              *args, **kwargs)
 
 
 class Raw(Image):
@@ -177,8 +177,8 @@ class Qcow2(Image):
 
 class Lvm(Image):
     @staticmethod
-    def escape(fname):
-        return fname.replace('_', '__')
+    def escape(filename):
+        return filename.replace('_', '__')
 
     def __init__(self, instance, name):
         super(Lvm, self).__init__("block", "raw", is_block_dev=True)
@@ -237,8 +237,7 @@ class Backend(object):
             'default': Qcow2 if use_cow else Raw
         }
 
-    def image(self, instance, name,
-              image_type=None):
+    def image(self, instance, name, image_type=None):
         """Constructs image for selected backend
 
         :instance: Instance name.
