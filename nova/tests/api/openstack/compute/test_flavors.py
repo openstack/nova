@@ -44,14 +44,12 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
-        "disabled": False,
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
         "root_gb": '20',
-        "disabled": False,
     },
 }
 
@@ -89,6 +87,7 @@ def return_instance_type_not_found(flavor_id):
 class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
+        self.flags(osapi_compute_extension=[])
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(nova.compute.instance_types, "get_all_types",
@@ -116,8 +115,6 @@ class FlavorsTest(test.TestCase):
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
-                "rxtx_factor": "",
-                "swap": "",
                 "vcpus": "",
                 "links": [
                     {
@@ -144,8 +141,6 @@ class FlavorsTest(test.TestCase):
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
-                "rxtx_factor": "",
-                "swap": "",
                 "vcpus": "",
                 "links": [
                     {
@@ -314,8 +309,6 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 1",
                     "ram": "256",
                     "disk": "10",
-                    "rxtx_factor": "",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -333,8 +326,6 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
-                    "rxtx_factor": "",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -434,8 +425,6 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
-                    "rxtx_factor": "",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -464,8 +453,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
-                "rxtx_factor": "1",
-                "swap": "",
                 "vcpus": "",
                 "links": [
                     {
@@ -481,7 +468,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -494,8 +480,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
-                "rxtx_factor": "1",
-                "swap": "",
                 "vcpus": "",
                 "links": [
                     {
@@ -511,7 +495,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavor')
         flavor_dict = fixture['flavor']
@@ -534,8 +517,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": 256,
                 "disk": 10,
-                "rxtx_factor": "1",
-                "swap": "",
                 "vcpus": "",
                 "links": [
                     {
@@ -551,7 +532,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavor')
         flavor_dict = fixture['flavor']
@@ -575,8 +555,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 23",
                     "ram": "512",
                     "disk": "20",
-                    "rxtx_factor": "1",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -594,8 +572,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 13",
                     "ram": "256",
                     "disk": "10",
-                    "rxtx_factor": "1",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -612,7 +588,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors')
         flavor_elems = root.findall('{0}flavor'.format(NS))
@@ -639,8 +614,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 23",
                     "ram": "512",
                     "disk": "20",
-                    "rxtx_factor": "1",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -658,8 +631,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "name": "flavor 13",
                     "ram": "256",
                     "disk": "10",
-                    "rxtx_factor": "1",
-                    "swap": "",
                     "vcpus": "",
                     "links": [
                         {
@@ -676,7 +647,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors_index')
         flavor_elems = root.findall('{0}flavor'.format(NS))
@@ -701,7 +671,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors_index')
         flavor_elems = root.findall('{0}flavor'.format(NS))

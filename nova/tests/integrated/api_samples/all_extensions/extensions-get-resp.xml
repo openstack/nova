@@ -71,6 +71,12 @@
     Flavor create/delete API support
     </description>
   </extension>
+  <extension alias="os-flavor-rxtx" updated="2012-08-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1" name="FlavorRxtx">
+    <description>Support to show the rxtx status of a flavor</description>
+  </extension>
+  <extension alias="os-flavor-swap" updated="2012-08-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1" name="FlavorSwap">
+    <description>Support to show the swap status of a flavor</description>
+  </extension>
   <extension alias="os-floating-ip-dns" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/ext/floating_ip_dns/api/v1.1" name="FloatingIpDns">
     <description>Floating IP DNS support</description>
   </extension>

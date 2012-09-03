@@ -171,6 +171,8 @@ class ExtensionControllerTest(ExtensionTestCase):
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "FlavorManage",
+            "FlavorRxtx",
+            "FlavorSwap",
             "FloatingIps",
             "FloatingIpDns",
             "FloatingIpPools",

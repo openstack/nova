@@ -41,8 +41,6 @@ class ViewBuilder(common.ViewBuilder):
                 "ram": flavor["memory_mb"],
                 "disk": flavor["root_gb"],
                 "vcpus": flavor.get("vcpus") or "",
-                "swap": flavor.get("swap") or "",
-                "rxtx_factor": flavor.get("rxtx_factor") or "",
                 "links": self._get_links(request,
                                          flavor["flavorid"],
                                          self._collection_name),

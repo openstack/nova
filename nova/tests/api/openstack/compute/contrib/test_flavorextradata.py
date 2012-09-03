@@ -35,8 +35,6 @@ def fake_get_instance_type_by_flavor_id(flavorid):
         'updated_at': None,
         'memory_mb': 512,
         'vcpus': 1,
-        'swap': 512,
-        'rxtx_factor': 1.0,
         'extra_specs': {},
         'deleted_at': None,
         'vcpu_weight': None,
@@ -73,8 +71,6 @@ class FlavorextradataTest(test.TestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
-                'swap': 512,
-                'rxtx_factor': 1,
             }
         }
 
@@ -94,8 +90,6 @@ class FlavorextradataTest(test.TestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
-                'swap': 512,
-                'rxtx_factor': 1,
             },
             {
                 'id': '2',
@@ -104,8 +98,6 @@ class FlavorextradataTest(test.TestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
-                'swap': 512,
-                'rxtx_factor': 1,
             },
         ]
 

@@ -94,6 +94,8 @@
     "compute_extension:extended_status": [],
     "compute_extension:flavor_access": [],
     "compute_extension:flavor_disabled": [],
+    "compute_extension:flavor_rxtx": [],
+    "compute_extension:flavor_swap": [],
     "compute_extension:flavorextradata": [],
     "compute_extension:flavorextraspecs": [],
     "compute_extension:flavormanage": [],
