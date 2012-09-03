@@ -593,7 +593,7 @@ def compute_node_get_by_host(context, host):
     session = get_session()
     with session.begin():
         node = session.query(models.ComputeNode).\
-                             options(joinedload('service')).\
+                             join('service').\
                              filter(models.Service.host == host).\
                              filter_by(deleted=False)
         return node.first()
