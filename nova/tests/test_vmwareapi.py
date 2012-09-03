@@ -102,7 +102,9 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._create_instance_in_the_db()
         self.type_data = db.instance_type_get_by_name(None, 'm1.large')
         self.conn.spawn(self.context, self.instance, self.image,
-                        self.network_info)
+                        injected_files=[], admin_password=None,
+                        network_info=self.network_info,
+                        block_device_info=None)
         self._check_vm_record()
 
     def _check_vm_record(self):
