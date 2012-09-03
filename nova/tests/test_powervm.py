@@ -146,7 +146,7 @@ class PowerVMDriverTestCase(test.TestCase):
         image_meta = {}
         image_meta['id'] = '666'
         self.powervm_connection.spawn(context.get_admin_context(),
-                                      self.instance, image_meta)
+                                      self.instance, image_meta, 's3cr3t', [])
         state = self.powervm_connection.get_info(self.instance)['state']
         self.assertEqual(state, power_state.RUNNING)
 
