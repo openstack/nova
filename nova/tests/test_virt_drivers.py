@@ -63,9 +63,9 @@ class _FakeDriverBackendTestCase(test.TestCase):
         else:
             self.saved_libvirt = None
 
-        import fake_imagebackend
-        import fake_libvirt_utils
-        import fakelibvirt
+        import nova.tests.fake_imagebackend as fake_imagebackend
+        import nova.tests.fake_libvirt_utils as fake_libvirt_utils
+        import nova.tests.fakelibvirt as fakelibvirt
 
         sys.modules['libvirt'] = fakelibvirt
         import nova.virt.libvirt.driver

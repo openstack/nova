@@ -18,7 +18,7 @@ from nova import test
 
 from lxml import etree
 
-import fakelibvirt as libvirt
+import nova.tests.fakelibvirt as libvirt
 
 
 def get_vm_xml(name="testname", uuid=None, source_type='file',
