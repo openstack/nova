@@ -581,6 +581,19 @@ class VlanNetworkTestCase(test.TestCase):
                        'project_id': ctxt.project_id}
         self.network._floating_ip_owned_by_project(ctxt, floating_ip)
 
+        ctxt = context.RequestContext(None, None,
+                                      is_admin=True)
+
+        # does not raise (ctxt is admin)
+        floating_ip = {'address': '10.0.0.1',
+                       'project_id': None}
+        self.network._floating_ip_owned_by_project(ctxt, floating_ip)
+
+        # does not raise (ctxt is admin)
+        floating_ip = {'address': '10.0.0.1',
+                       'project_id': 'testproject'}
+        self.network._floating_ip_owned_by_project(ctxt, floating_ip)
+
     def test_allocate_floating_ip(self):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
