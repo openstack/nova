@@ -228,6 +228,26 @@ class QuotaIntegrationTestCase(test.TestCase):
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
+    def test_reservation_expire(self):
+        timeutils.set_time_override()
+
+        def assertInstancesReserved(reserved):
+            result = quota.QUOTAS.get_project_quotas(self.context,
+                                                     self.context.project_id)
+            self.assertEqual(result['instances']['reserved'], reserved)
+
+        quota.QUOTAS.reserve(self.context,
+                             expire=60,
+                             instances=2)
+
+        assertInstancesReserved(2)
+
+        timeutils.advance_time_seconds(80)
+
+        result = quota.QUOTAS.expire(self.context)
+
+        assertInstancesReserved(0)
+
 
 class FakeContext(object):
     def __init__(self, project_id, quota_class):

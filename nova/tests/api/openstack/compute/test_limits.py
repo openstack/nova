@@ -794,6 +794,7 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
     def tearDown(self):
         # restore original HTTPConnection object
         httplib.HTTPConnection = self.oldHTTPConnection
+        super(WsgiLimiterProxyTest, self).tearDown()
 
 
 class LimitsViewBuilderTest(test.TestCase):
