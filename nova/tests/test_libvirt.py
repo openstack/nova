@@ -1882,8 +1882,8 @@ class LibvirtConnTestCase(test.TestCase):
             # large disk space.
             self.mox.StubOutWithMock(imagebackend.Image, 'cache')
             imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                     fn=mox.IgnoreArg(),
-                                     fname='otherdisk',
+                                     fetch_func=mox.IgnoreArg(),
+                                     filename='otherdisk',
                                      image_id=123456,
                                      project_id='fake',
                                      size=10737418240L,

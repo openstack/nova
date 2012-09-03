@@ -286,7 +286,7 @@ class BareMetalDriver(driver.ComputeDriver):
         raise NotImplementedError()
 
     @staticmethod
-    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
+    def _cache_image(fetch_func, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -307,11 +307,11 @@ class BareMetalDriver(driver.ComputeDriver):
             base = os.path.join(base_dir, fname)
 
             @utils.synchronized(fname)
-            def call_if_not_exists(base, fn, *args, **kwargs):
+            def call_if_not_exists(base, fetch_func, *args, **kwargs):
                 if not os.path.exists(base):
-                    fn(target=base, *args, **kwargs)
+                    fetch_func(target=base, *args, **kwargs)
 
-            call_if_not_exists(base, fn, *args, **kwargs)
+            call_if_not_exists(base, fetch_func, *args, **kwargs)
 
             if cow:
                 libvirt_utils.create_cow_image(base, target)
@@ -351,7 +351,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         if disk_images['kernel_id']:
             fname = disk_images['kernel_id']
-            self._cache_image(fn=libvirt_utils.fetch_image,
+            self._cache_image(fetch_func=libvirt_utils.fetch_image,
                               context=context,
                               target=basepath('kernel'),
                               fname=fname,
@@ -361,7 +361,7 @@ class BareMetalDriver(driver.ComputeDriver):
                               project_id=inst['project_id'])
             if disk_images['ramdisk_id']:
                 fname = disk_images['ramdisk_id']
-                self._cache_image(fn=libvirt_utils.fetch_image,
+                self._cache_image(fetch_func=libvirt_utils.fetch_image,
                                   context=context,
                                   target=basepath('ramdisk'),
                                   fname=fname,
@@ -381,7 +381,7 @@ class BareMetalDriver(driver.ComputeDriver):
         else:
             root_fname += "_%d" % inst['root_gb']
 
-        self._cache_image(fn=libvirt_utils.fetch_image,
+        self._cache_image(fetch_func=libvirt_utils.fetch_image,
                           context=context,
                           target=basepath('root'),
                           fname=root_fname,
