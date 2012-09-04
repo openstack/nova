@@ -928,8 +928,8 @@ class LibvirtConnection(driver.ComputeDriver):
             LOG.info(_("Automatically confirming migration %d"), migration.id)
             self.compute_api.confirm_resize(ctxt, migration.instance_uuid)
 
-    def _enable_hairpin(self, instance):
-        interfaces = self.get_interfaces(instance['name'])
+    def _enable_hairpin(self, xml):
+        interfaces = self.get_interfaces(xml)
         for interface in interfaces:
             utils.execute('tee',
                           '/sys/class/net/%s/brport/hairpin_mode' % interface,
@@ -951,7 +951,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         self._create_new_domain(xml)
         LOG.debug(_("Instance is running"), instance=instance)
-        self._enable_hairpin(instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
@@ -1619,6 +1618,7 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             # createXML call creates a transient domain
             domain = self._conn.createXML(xml, launch_flags)
+        self._enable_hairpin(domain.XMLDesc(0))
 
         return domain
 
@@ -1675,14 +1675,12 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return disks
 
-    def get_interfaces(self, instance_name):
+    def get_interfaces(self, xml):
         """
-        Note that this function takes an instance name.
+        Note that this function takes an instance domain xml.
 
         Returns a list of all network interfaces for this instance.
         """
-        domain = self._lookup_by_name(instance_name)
-        xml = domain.XMLDesc(0)
         doc = None
 
         try:
