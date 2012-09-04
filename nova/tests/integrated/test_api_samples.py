@@ -19,6 +19,7 @@ import re
 from lxml import etree
 
 from nova import flags
+from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging
 from nova import test
@@ -90,7 +91,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         if cls.all_extensions:
             parts.append('all_extensions')
         if cls.extension_name:
-            parts.append(cls.extension_name)
+            alias = importutils.import_class(cls.extension_name).alias
+            parts.append(alias)
         parts.append(name + "." + cls.ctype + suffix)
         return os.path.join(*parts)
 
