@@ -139,14 +139,9 @@ class FlavorActionController(wsgi.Controller):
         if authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorextradatumTemplate())
+            db_flavor = req.get_db_flavor(id)
 
-            try:
-                flavor_ref = instance_types.get_instance_type_by_flavor_id(id)
-            except exception.FlavorNotFound:
-                explanation = _("Flavor not found.")
-                raise webob.exc.HTTPNotFound(explanation=explanation)
-
-            self._extend_flavor(resp_obj.obj['flavor'], flavor_ref)
+            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -156,11 +151,9 @@ class FlavorActionController(wsgi.Controller):
             resp_obj.attach(xml=FlavorextradataTemplate())
 
             flavors = list(resp_obj.obj['flavors'])
-            flavor_refs = self._get_flavor_refs(context)
-
             for flavor_rval in flavors:
-                flavor_ref = flavor_refs[flavor_rval['id']]
-                self._extend_flavor(flavor_rval, flavor_ref)
+                db_flavor = req.get_db_flavor(flavor_rval['id'])
+                self._extend_flavor(flavor_rval, db_flavor)
 
     @wsgi.extends(action='create')
     def create(self, req, body, resp_obj):
@@ -169,14 +162,9 @@ class FlavorActionController(wsgi.Controller):
             # Attach our slave template to the response object
             resp_obj.attach(xml=FlavorextradatumTemplate())
 
-            try:
-                fid = resp_obj.obj['flavor']['id']
-                flavor_ref = instance_types.get_instance_type_by_flavor_id(fid)
-            except exception.FlavorNotFound:
-                explanation = _("Flavor not found.")
-                raise webob.exc.HTTPNotFound(explanation=explanation)
+            db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
 
-            self._extend_flavor(resp_obj.obj['flavor'], flavor_ref)
+            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("addTenantAccess")
