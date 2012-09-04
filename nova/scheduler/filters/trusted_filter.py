@@ -199,7 +199,7 @@ class TrustedFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         instance = filter_properties.get('instance_type', {})
         extra = instance.get('extra_specs', {})
-        trust = extra.get('trusted_host')
+        trust = extra.get('trust:trusted_host')
         host = host_state.host
         if trust:
             return self._is_trusted(host, trust)

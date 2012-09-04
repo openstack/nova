@@ -40,6 +40,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
 
         for key, req in instance_type['extra_specs'].iteritems():
+            if key.count(':'):
+                continue
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
                 LOG.debug(_("%(host_state)s fails instance_type extra_specs "
