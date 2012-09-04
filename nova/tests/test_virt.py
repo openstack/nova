@@ -16,6 +16,7 @@
 #    under the License.
 
 import os
+import platform
 
 from nova import exception
 from nova import flags
@@ -165,22 +166,26 @@ class TestVirtDiskPaths(test.TestCase):
 
         self.stubs.Set(utils, 'execute', nonroot_execute)
 
+    @test.skip_unless(platform.mac_ver()[0] == '', "Unable to test on OSX")
     def test_check_safe_path(self):
         ret = disk_api._join_and_check_path_within_fs('/foo', 'etc',
                                                       'something.conf')
         self.assertEquals(ret, '/foo/etc/something.conf')
 
+    @test.skip_unless(platform.mac_ver()[0] == '', "Unable to test on OSX")
     def test_check_unsafe_path(self):
         self.assertRaises(exception.Invalid,
                           disk_api._join_and_check_path_within_fs,
                           '/foo', 'etc/../../../something.conf')
 
+    @test.skip_unless(platform.mac_ver()[0] == '', "Unable to test on OSX")
     def test_inject_files_with_bad_path(self):
         self.assertRaises(exception.Invalid,
                           disk_api._inject_file_into_fs,
                           '/tmp', '/etc/../../../../etc/passwd',
                           'hax')
 
+    @test.skip_unless(platform.mac_ver()[0] == '', "Unable to test on OSX")
     def test_inject_metadata(self):
         with utils.tempdir() as tmpdir:
             meta_objs = [{"key": "foo", "value": "bar"}]
