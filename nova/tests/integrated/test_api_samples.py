@@ -359,3 +359,14 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
 
 class ImagesSampleXmlTest(ImagesSampleJsonTest):
     ctype = 'xml'
+
+
+class LimitsSampleJsonTest(ApiSampleTestBase):
+    def test_limits_get(self):
+        response = self._do_get('limits')
+        subs = self._get_regexes()
+        return self._verify_response('limit-get-resp', subs, response)
+
+
+class LimitsSampleXmlTest(LimitsSampleJsonTest):
+    ctype = 'xml'
