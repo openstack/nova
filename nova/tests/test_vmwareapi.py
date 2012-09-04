@@ -215,21 +215,21 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.conn.suspend(self.instance)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.PAUSED)
-        self.conn.resume(self.instance)
+        self.conn.resume(self.instance, self.network_info)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.resume,
-                          self.instance)
+                          self.instance, self.network_info)
 
     def test_resume_not_suspended(self):
         self._create_vm()
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertRaises(exception.InstanceResumeFailure, self.conn.resume,
-                          self.instance)
+                          self.instance, self.network_info)
 
     def test_get_info(self):
         self._create_vm()
