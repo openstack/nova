@@ -131,3 +131,11 @@ def instance_block_mapping(instance, bdms):
             nebs += 1
 
     return mappings
+
+
+def match_device(device):
+    """Matches device name and returns prefix, suffix"""
+    match = re.match("(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$", device)
+    if not match:
+        return None
+    return match.groups()

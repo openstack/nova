@@ -4093,7 +4093,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context,
                 {'locked': False},
                 None,
-                '/dev/invalid')
+                '/invalid')
 
     def test_vnc_console(self):
         """Make sure we can a vnc console for an instance."""

@@ -676,10 +676,10 @@ class CinderCloudTestCase(test.TestCase):
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1,
-                  'block_device_mapping': [{'device_name': '/dev/vdb',
+                  'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
                                             'delete_on_termination': False},
-                                           {'device_name': '/dev/vdc',
+                                           {'device_name': '/dev/sdc',
                                             'volume_id': vol2_uuid,
                                             'delete_on_termination': True},
                                            ]}
@@ -695,28 +695,28 @@ class CinderCloudTestCase(test.TestCase):
                 str(vol['id']) == str(vol2_uuid))
             if(str(vol['id']) == str(vol1_uuid)):
                 self.volume_api.attach(self.context, vol,
-                                       instance_uuid, '/dev/vdb')
+                                       instance_uuid, '/dev/sdb')
             elif(str(vol['id']) == str(vol2_uuid)):
                 self.volume_api.attach(self.context, vol,
-                                       instance_uuid, '/dev/vdc')
+                                       instance_uuid, '/dev/sdc')
 
         vol = self.volume_api.get(self.context, vol1_uuid)
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/sdb')
 
         vol = self.volume_api.get(self.context, vol2_uuid)
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/sdc')
 
         result = self.cloud.stop_instances(self.context, [ec2_instance_id])
         self.assertTrue(result)
 
         vol = self.volume_api.get(self.context, vol1_uuid)
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/sdb')
 
         vol = self.volume_api.get(self.context, vol1_uuid)
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/sdb')
 
         vol = self.volume_api.get(self.context, vol2_uuid)
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/sdc')
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
         vols = self.volume_api.get_all(self.context)
@@ -725,8 +725,8 @@ class CinderCloudTestCase(test.TestCase):
         for vol in vols:
             self.assertTrue(str(vol['id']) == str(vol1_uuid) or
                             str(vol['id']) == str(vol2_uuid))
-            self.assertTrue(vol['mountpoint'] == '/dev/vdb' or
-                            vol['mountpoint'] == '/dev/vdc')
+            self.assertTrue(vol['mountpoint'] == '/dev/sdb' or
+                            vol['mountpoint'] == '/dev/sdc')
             self.assertEqual(vol['instance_uuid'], instance_uuid)
             self.assertEqual(vol['status'], "in-use")
             self.assertEqual(vol['attach_status'], "attached")
@@ -758,7 +758,7 @@ class CinderCloudTestCase(test.TestCase):
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1,
-                  'block_device_mapping': [{'device_name': '/dev/vdb',
+                  'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
@@ -771,7 +771,7 @@ class CinderCloudTestCase(test.TestCase):
         self.assertEqual(len(vols), 1)
         for vol in vols:
             self.assertEqual(vol['id'], vol1_uuid)
-            self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
+            self._assert_volume_attached(vol, instance_uuid, '/dev/sdb')
         vol = self.volume_api.get(self.context, vol2_uuid)
         self._assert_volume_detached(vol)
 
@@ -779,13 +779,13 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.compute_api.attach_volume(self.context,
                                              instance,
                                              volume_id=vol2_uuid,
-                                             device='/dev/vdc')
+                                             device='/dev/sdc')
 
         vol1 = self.volume_api.get(self.context, vol1_uuid)
-        self._assert_volume_attached(vol1, instance_uuid, '/dev/vdb')
+        self._assert_volume_attached(vol1, instance_uuid, '/dev/sdb')
 
         vol2 = self.volume_api.get(self.context, vol2_uuid)
-        self._assert_volume_attached(vol2, instance_uuid, '/dev/vdc')
+        self._assert_volume_attached(vol2, instance_uuid, '/dev/sdc')
 
         self.cloud.compute_api.detach_volume(self.context,
                                              volume_id=vol1_uuid)
@@ -797,7 +797,7 @@ class CinderCloudTestCase(test.TestCase):
         self.assertTrue(result)
 
         vol2 = self.volume_api.get(self.context, vol2_uuid)
-        self._assert_volume_attached(vol2, instance_uuid, '/dev/vdc')
+        self._assert_volume_attached(vol2, instance_uuid, '/dev/sdc')
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
         vols = self.volume_api.get_all(self.context)

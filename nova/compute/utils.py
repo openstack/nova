@@ -34,28 +34,31 @@ LOG = log.getLogger(__name__)
 
 
 def get_device_name_for_instance(context, instance, device):
-    # NOTE(vish): this will generate a unique device name that is not
-    #             in use already. It is a reasonable guess at where
-    #             it will show up in a linux guest, but it may not
-    #             always be correct
+    """Validates (or generates) a device name for instance.
+
+    If device is not set, it will generate a unique device appropriate
+    for the instance. It uses the block device mapping table to find
+    valid device names. If the device name is valid but applicable to
+    a different backend (for example /dev/vdc is specified but the
+    backend uses /dev/xvdc), the device name will be converted to the
+    appropriate format.
+    """
     req_prefix = None
     req_letters = None
     if device:
         try:
-            match = re.match("(^/dev/x{0,1}[a-z]d)([a-z]+)$", device)
-            req_prefix, req_letters = match.groups()
+            req_prefix, req_letters = block_device.match_device(device)
         except (TypeError, AttributeError, ValueError):
             raise exception.InvalidDevicePath(path=device)
     bdms = db.block_device_mapping_get_all_by_instance(context,
                 instance['uuid'])
     mappings = block_device.instance_block_mapping(instance, bdms)
     try:
-        match = re.match("(^/dev/x{0,1}[a-z]d)[a-z]+[0-9]*$", mappings['root'])
-        prefix = match.groups()[0]
+        prefix = block_device.match_device(mappings['root'])[0]
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
-    if not req_prefix:
-        req_prefix = prefix
+    if req_prefix != prefix:
+        LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
     letters_list = []
     for _name, device in mappings.iteritems():
         letter = block_device.strip_prefix(device)
@@ -68,7 +71,7 @@ def get_device_name_for_instance(context, instance, device):
         req_letters = _get_unused_letters(used_letters)
     if req_letters in used_letters:
         raise exception.DevicePathInUse(path=device)
-    return req_prefix + req_letters
+    return prefix + req_letters
 
 
 def _get_unused_letters(used_letters):

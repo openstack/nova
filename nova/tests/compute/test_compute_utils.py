@@ -110,6 +110,29 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdc')
 
+    def test_lxc_names_work(self):
+        self.instance = {
+                'uuid': 'fake',
+                'root_device_name': '/dev/a',
+                'default_ephemeral_device': '/dev/b'
+        }
+        data = []
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/c')
+
+    def test_name_conversion(self):
+        data = []
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: data)
+        device = self._validate_device('/dev/c')
+        self.assertEqual(device, '/dev/vdc')
+        device = self._validate_device('/dev/sdc')
+        self.assertEqual(device, '/dev/vdc')
+        device = self._validate_device('/dev/xvdc')
+        self.assertEqual(device, '/dev/vdc')
+
     def test_invalid_bdms(self):
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        lambda context, instance: [])

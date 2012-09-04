@@ -1722,7 +1722,7 @@ class API(base.Base):
         #             will need to be removed along with the test if we
         #             change the logic in the manager for what constitutes
         #             a valid device.
-        if device and not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
+        if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
         # NOTE(vish): This is done on the compute host because we want
         #             to avoid a race where two devices are requested at
