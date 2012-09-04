@@ -69,6 +69,7 @@ VIR_DOMAIN_SHUTOFF = 5
 VIR_DOMAIN_CRASHED = 6
 
 VIR_DOMAIN_XML_SECURE = 1
+VIR_DOMAIN_UNDEFINE_MANAGED_SAVE = 1
 
 VIR_CPU_COMPARE_ERROR = -1
 VIR_CPU_COMPARE_INCOMPATIBLE = 0
@@ -275,6 +276,12 @@ class Domain(object):
 
     def undefine(self):
         self._connection._undefine(self)
+
+    def undefineFlags(self, flags):
+        self.undefine()
+        if flags & VIR_DOMAIN_UNDEFINE_MANAGED_SAVE:
+            if self.hasManagedSaveImage(0):
+                self.managedSaveRemove()
 
     def destroy(self):
         self._state = VIR_DOMAIN_SHUTOFF
