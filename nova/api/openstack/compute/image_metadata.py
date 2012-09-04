@@ -66,7 +66,7 @@ class Controller(object):
                 image['properties'][key] = value
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
-        self.image_service.update(context, image_id, image, None)
+        image = self.image_service.update(context, image_id, image, None)
         return dict(metadata=image['properties'])
 
     @wsgi.serializers(xml=common.MetaItemTemplate)

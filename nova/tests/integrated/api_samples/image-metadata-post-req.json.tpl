@@ -1,0 +1,6 @@
+{
+    "metadata": {
+        "kernel_id": "False",
+        "Label": "UpdatedImage"
+    }
+}
