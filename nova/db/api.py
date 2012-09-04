@@ -274,6 +274,11 @@ def floating_ip_bulk_create(context, ips):
     return IMPL.floating_ip_bulk_create(context, ips)
 
 
+def floating_ip_bulk_destroy(context, ips):
+    """Destroy a lot of floating ips from the values dictionary."""
+    return IMPL.floating_ip_bulk_destroy(context, ips)
+
+
 def floating_ip_create(context, values):
     """Create a floating ip from the values dictionary."""
     return IMPL.floating_ip_create(context, values)

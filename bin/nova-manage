@@ -63,7 +63,6 @@ import optparse
 import os
 import sys
 
-
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -396,12 +395,11 @@ class FloatingIpCommands(object):
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range"""
-        for address in self.address_to_hosts(ip_range):
-            try:
-                db.floating_ip_destroy(context.get_admin_context(),
-                                       str(address))
-            except exception.FloatingIpNotFoundForAddress as ex:
-                print "Warning: %s" % ex
+        admin_context = context.get_admin_context()
+
+        ips = ({'address': str(address)}
+               for address in self.address_to_hosts(ip_range))
+        db.floating_ip_bulk_destroy(admin_context, ips)
 
     @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
