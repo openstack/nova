@@ -1777,6 +1777,8 @@ class LibvirtConnection(driver.ComputeDriver):
                 total += 1
             else:
                 total += len(vcpus[1])
+            # NOTE(gtt116): give change to do other task.
+            greenthread.sleep(0)
         return total
 
     def get_memory_mb_used(self):
@@ -2337,7 +2339,8 @@ class LibvirtConnection(driver.ComputeDriver):
             except exception.InstanceNotFound:
                 # Instance was deleted during the check so ignore it
                 pass
-
+            # NOTE(gtt116): give change to do other task.
+            greenthread.sleep(0)
         # Disk available least size
         available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
         return (available_least_size / 1024 / 1024 / 1024)
