@@ -88,6 +88,18 @@ class InstanceTypeTestCase(test.TestCase):
         new_list = instance_types.get_all_types()
         self.assertEqual(original_list, new_list)
 
+    def test_instance_type_create_without_flavorid(self):
+        name = 'Small Flavor'
+        inst_type = instance_types.create(name, 256, 1, 120, 100)
+        self.assertNotEqual(inst_type['flavorid'], None)
+        self.assertEqual(inst_type['name'], name)
+        self.assertEqual(inst_type['memory_mb'], 256)
+        self.assertEqual(inst_type['vcpus'], 1)
+        self.assertEqual(inst_type['root_gb'], 120)
+        self.assertEqual(inst_type['ephemeral_gb'], 100)
+        self.assertEqual(inst_type['swap'], 0)
+        self.assertEqual(inst_type['rxtx_factor'], 1)
+
     def test_instance_type_create_with_special_characters(self):
         """Ensure instance types raises InvalidInput for invalid characters"""
         name = "foo.bar!@#$%^-test_name"

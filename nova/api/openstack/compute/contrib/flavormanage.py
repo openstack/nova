@@ -58,7 +58,7 @@ class FlavorManageController(wsgi.Controller):
 
         vals = body['flavor']
         name = vals['name']
-        flavorid = vals['id']
+        flavorid = vals.get('id')
         memory_mb = vals.get('ram')
         vcpus = vals.get('vcpus')
         root_gb = vals.get('disk')

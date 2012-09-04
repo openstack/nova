@@ -35,10 +35,12 @@ LOG = logging.getLogger(__name__)
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
 
 
-def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
-           rxtx_factor=None, is_public=True):
+def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid=None,
+           swap=None, rxtx_factor=None, is_public=True):
     """Creates instance types."""
 
+    if flavorid is None:
+        flavorid = utils.gen_uuid()
     if swap is None:
         swap = 0
     if rxtx_factor is None:
