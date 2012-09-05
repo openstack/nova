@@ -53,6 +53,8 @@ This module provides Manager, a base class for managers.
 
 """
 
+import eventlet
+
 from nova.db import base
 from nova import flags
 from nova.openstack.common import log as logging
@@ -171,6 +173,9 @@ class Manager(base.Base):
 
             try:
                 task(self, context)
+                # NOTE(tiantian): After finished a task, allow manager to
+                # do other work (report_state, processing AMPQ request etc.)
+                eventlet.sleep(0)
             except Exception as e:
                 if raise_on_error:
                     raise
