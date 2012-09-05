@@ -58,7 +58,8 @@ class Fault(webob.exc.HTTPException):
                          '<Response><Errors><Error><Code>%s</Code>'
                          '<Message>%s</Message></Error></Errors>'
                          '<RequestID>%s</RequestID></Response>' %
-                         (utils.utf8(code), utils.utf8(message),
-                         utils.utf8(ctxt.request_id)))
+                         (utils.xhtml_escape(utils.utf8(code)),
+                          utils.xhtml_escape(utils.utf8(message)),
+                          utils.xhtml_escape(utils.utf8(ctxt.request_id))))
 
         return resp
