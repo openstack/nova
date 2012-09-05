@@ -784,8 +784,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             metadata['disk_format'] = image_format
 
-        if 'container_format' in base:
-            metadata['container_format'] = base['container_format']
+        metadata['container_format'] = base.get('container_format', 'bare')
 
         # Find the disk
         xml_desc = virt_dom.XMLDesc(0)
