@@ -215,8 +215,10 @@ class VolumeOps(object):
             raise Exception(_('Unable to locate volume %s') % mountpoint)
 
         try:
+            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
             sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
-            vm_utils.unplug_vbd(self._session, vbd_ref)
+            if vm_rec['power_state'] != 'Halted':
+                vm_utils.unplug_vbd(self._session, vbd_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
             raise Exception(_('Unable to detach volume %s') % mountpoint)
