@@ -65,7 +65,7 @@ class FlavorManageController(wsgi.Controller):
         ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral')
         swap = vals.get('swap')
         rxtx_factor = vals.get('rxtx_factor')
-        is_public = vals.get('os-flavor-access:is_public')
+        is_public = vals.get('os-flavor-access:is_public', True)
 
         try:
             flavor = instance_types.create(name, memory_mb, vcpus,
