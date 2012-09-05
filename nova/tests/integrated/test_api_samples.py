@@ -476,3 +476,28 @@ class LimitsSampleJsonTest(ApiSampleTestBase):
 
 class LimitsSampleXmlTest(LimitsSampleJsonTest):
     ctype = 'xml'
+
+
+class ServerStartStopJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+        ".server_start_stop.Server_start_stop"
+
+    def _test_server_action(self, uuid, action):
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server_start_stop',
+                                 {'action': action})
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
+
+    def test_server_start(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-stop')
+        self._test_server_action(uuid, 'os-start')
+
+    def test_server_stop(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-stop')
+
+
+class ServerStartStopXmlTest(ServerStartStopJsonTest):
+    ctype = 'xml'
