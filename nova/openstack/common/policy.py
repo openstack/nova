@@ -296,5 +296,5 @@ def _check_generic(brain, match_kind, match, target_dict, cred_dict):
     # TODO(termie): do dict inspection via dot syntax
     match = match % target_dict
     if match_kind in cred_dict:
-        return match == cred_dict[match_kind]
+        return match == unicode(cred_dict[match_kind])
     return False
