@@ -693,13 +693,13 @@ class HostFiltersTestCase(test.TestCase):
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '2', 'trust:trusted_host': 'true'},
             passes=True)
 
     def test_compute_filter_fails_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '222'},
+            especs={'opt1': '1', 'opt2': '222', 'trust:trusted_host': 'true'},
             passes=False)
 
     def test_aggregate_filter_passes_no_extra_specs(self):
@@ -736,7 +736,8 @@ class HostFiltersTestCase(test.TestCase):
     def test_aggregate_filter_fails_extra_specs_deleted_host(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        extra_specs = {'opt1': 's== 1', 'opt2': 's== 2'}
+        extra_specs = {'opt1': 's== 1', 'opt2': 's== 2',
+                       'trust:trusted_host': 'true'}
         self._create_aggregate_with_host(metadata={'opt1': '1'})
         agg2 = self._create_aggregate_with_host(name='fake2',
                 metadata={'opt2': '2'})
@@ -749,13 +750,15 @@ class HostFiltersTestCase(test.TestCase):
     def test_aggregate_filter_passes_extra_specs_simple(self):
         self._do_test_aggregate_filter_extra_specs(
             emeta={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '2'},
+            especs={'opt1': '1', 'opt2': '2',
+                    'trust:trusted_host': 'true'},
             passes=True)
 
     def test_aggregate_filter_fails_extra_specs_simple(self):
         self._do_test_aggregate_filter_extra_specs(
             emeta={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '222'},
+            especs={'opt1': '1', 'opt2': '222',
+                    'trust:trusted_host': 'true'},
             passes=False)
 
     def test_isolated_hosts_fails_isolated_on_non_isolated(self):
@@ -1116,7 +1119,7 @@ class HostFiltersTestCase(test.TestCase):
         DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trusted_host': 'trusted'}
+        extra_specs = {'trust:trusted_host': 'trusted'}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -1127,7 +1130,7 @@ class HostFiltersTestCase(test.TestCase):
         DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trusted_host': 'trusted'}
+        extra_specs = {'trust:trusted_host': 'trusted'}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -1138,7 +1141,7 @@ class HostFiltersTestCase(test.TestCase):
         DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trusted_host': 'untrusted'}
+        extra_specs = {'trust:trusted_host': 'untrusted'}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -1149,7 +1152,7 @@ class HostFiltersTestCase(test.TestCase):
         DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trusted_host': 'untrusted'}
+        extra_specs = {'trust:trusted_host': 'untrusted'}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute', {})

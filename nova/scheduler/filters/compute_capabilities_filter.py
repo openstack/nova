@@ -31,6 +31,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
             return True
 
         for key, req in instance_type['extra_specs'].iteritems():
+            if key.count(':'):
+                continue
             cap = capabilities.get(key, None)
             if not extra_specs_ops.match(cap, req):
                 return False
