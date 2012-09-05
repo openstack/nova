@@ -997,6 +997,26 @@ def _ip_bridge_cmd(action, params, device):
     return cmd
 
 
+def _create_veth_pair(dev1_name, dev2_name):
+    """Create a pair of veth devices with the specified names,
+    deleting any previous devices with those names.
+    """
+    for dev in [dev1_name, dev2_name]:
+        if _device_exists(dev):
+            try:
+                utils.execute('ip', 'link', 'delete', dev1_name,
+                              run_as_root=True, check_exit_code=[0, 2, 254])
+            except exception.ProcessExecutionError:
+                LOG.exception("Error clearing stale veth %s" % dev)
+
+    utils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
+                  'name', dev2_name, run_as_root=True)
+    for dev in [dev1_name, dev2_name]:
+        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+        utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
+                      run_as_root=True)
+
+
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.

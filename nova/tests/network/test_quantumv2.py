@@ -143,7 +143,8 @@ class TestQuantumv2(test.TestCase):
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
         self.instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
                          'uuid': str(utils.gen_uuid()),
-                         'display_name': 'test_instance'}
+                         'display_name': 'test_instance',
+                         'security_groups': []}
         self.nets1 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
                       'tenant_id': 'my_tenantid'}]
@@ -167,6 +168,8 @@ class TestQuantumv2(test.TestCase):
                            'fixed_ips': [{'ip_address': '10.0.1.2',
                                           'subnet_id': 'my_subid1'}],
                            'mac_address': 'my_mac1', }]
+        self.dhcp_port_data1 = [{'fixed_ips': [{'ip_address': '10.0.1.9',
+                                               'subnet_id': 'my_subid1'}]}]
         self.port_data2 = []
         self.port_data2.append(self.port_data1[0])
         self.port_data2.append({'network_id': 'my_netid2',
@@ -176,11 +179,15 @@ class TestQuantumv2(test.TestCase):
                                 'fixed_ips': [{'ip_address': '10.0.2.2',
                                                'subnet_id': 'my_subid2'}],
                                 'mac_address': 'my_mac2', })
-        self.subnet_data1 = [{'cidr': '10.0.1.0/24',
+        self.subnet_data1 = [{'id': 'my_subid1',
+                             'cidr': '10.0.1.0/24',
+                             'network_id': 'my_netid1',
                              'gateway_ip': '10.0.1.1',
                              'dns_nameservers': ['8.8.1.1', '8.8.1.2']}]
         self.subnet_data2 = []
-        self.subnet_data2.append({'cidr': '10.0.2.0/24',
+        self.subnet_data2.append({'id': 'my_subid2',
+                                  'cidr': '10.0.2.0/24',
+                                  'network_id': 'my_netid2',
                                   'gateway_ip': '10.0.2.1',
                                   'dns_nameservers': ['8.8.2.1', '8.8.2.2']})
 
@@ -226,6 +233,10 @@ class TestQuantumv2(test.TestCase):
             self.moxed_client.list_subnets(
                 id=mox.SameElementsAs(['my_subid%s' % i])).AndReturn(
                     {'subnets': subnet_data})
+            self.moxed_client.list_ports(
+                network_id=subnet_data[0]['network_id'],
+                device_owner='network:dhcp').AndReturn(
+                    {'ports': []})
         self.mox.ReplayAll()
         nw_inf = api.get_instance_nw_info(self.context, self.instance)
         for i in xrange(0, number):
@@ -253,6 +264,10 @@ class TestQuantumv2(test.TestCase):
         self.moxed_client.list_subnets(
             id=mox.SameElementsAs(['my_subid1'])).AndReturn(
                 {'subnets': self.subnet_data1})
+        self.moxed_client.list_ports(
+            network_id='my_netid1',
+            device_owner='network:dhcp').AndReturn(
+                {'ports': self.dhcp_port_data1})
         self.mox.ReplayAll()
         nw_inf = api.get_instance_nw_info(self.context,
                                           self.instance,

@@ -57,6 +57,8 @@ LOG = logging.getLogger(__name__)
 class API(base.Base):
     """API for interacting with the quantum 2.x API."""
 
+    security_group_api = None
+
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
         """Setup or teardown the network structures."""
@@ -147,6 +149,9 @@ class API(base.Base):
                                     " failure: %(exception)s")
                             LOG.debug(msg, {'portid': port_id,
                                             'exception': ex})
+
+        self.trigger_security_group_members_refresh(context, instance)
+
         return self.get_instance_nw_info(context, instance, networks=nets)
 
     def deallocate_for_instance(self, context, instance, **kwargs):
@@ -162,6 +167,7 @@ class API(base.Base):
             except Exception as ex:
                 LOG.exception(_("Failed to delete quantum port %(portid)s ")
                               % {'portid': port['id']})
+        self.trigger_security_group_members_refresh(context, instance)
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None):
@@ -232,6 +238,21 @@ class API(base.Base):
 
         return [{'instance_uuid': port['device_id']} for port in ports
                 if port['device_id']]
+
+    def trigger_security_group_members_refresh(self, context, instance_ref):
+
+        # used to avoid circular import
+        if not self.security_group_api:
+            from nova.compute import api as compute_api
+            self.security_group_api = compute_api.SecurityGroupAPI()
+
+        admin_context = context.elevated()
+        group_ids = [group['id'] for group in instance_ref['security_groups']]
+
+        self.security_group_api.trigger_members_refresh(admin_context,
+                                                        group_ids)
+        self.security_group_api.trigger_handler('security_group_members',
+                                                admin_context, group_ids)
 
     @refresh_cache
     def associate_floating_ip(self, context, instance,
@@ -350,13 +371,24 @@ class API(base.Base):
         data = quantumv2.get_client(context).list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
         subnets = []
+
         for subnet in ipam_subnets:
             subnet_dict = {'cidr': subnet['cidr'],
                            'gateway': network_model.IP(
                                 address=subnet['gateway_ip'],
                                 type='gateway'),
             }
-            # TODO(gongysh) deal with dhcp
+
+            # attempt to populate DHCP server field
+            search_opts = {'network_id': subnet['network_id'],
+                           'device_owner': 'network:dhcp'}
+            data = quantumv2.get_client(context).list_ports(**search_opts)
+            dhcp_ports = data.get('ports', [])
+            for p in dhcp_ports:
+                for ip_pair in p['fixed_ips']:
+                    if ip_pair['subnet_id'] == subnet['id']:
+                        subnet_dict['dhcp_server'] = ip_pair['ip_address']
+                        break
 
             subnet_object = network_model.Subnet(**subnet_dict)
             for dns in subnet.get('dns_nameservers', []):

@@ -154,3 +154,19 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEquals(script, "")
 
         d.unplug(None, (self.net, self.mapping))
+
+    def test_quantum_hybrid_driver(self):
+        d = vif.LibvirtHybridOVSBridgeDriver()
+        xml = self._get_instance_xml(d)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        self.assertEqual(node.get("type"), "bridge")
+        br_name = node.find("source").get("bridge")
+        self.assertEqual(br_name, self.net['bridge'])
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping['mac'])
+
+        d.unplug(None, (self.net, self.mapping))

@@ -45,6 +45,8 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(libvirt_vif_opts)
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
 
+LINUX_DEV_LEN = 14
+
 
 class LibvirtBridgeDriver(vif.VIFDriver):
     """VIF driver for Linux bridge."""
@@ -114,12 +116,29 @@ class LibvirtBridgeDriver(vif.VIFDriver):
 
 
 class LibvirtOpenVswitchDriver(vif.VIFDriver):
-    """VIF driver for Open vSwitch that uses type='ethernet'
-       libvirt XML.  Used for libvirt versions that do not support
-       OVS virtual port XML (0.9.10 or earlier)."""
+    """VIF driver for Open vSwitch that uses libivrt type='ethernet'
+
+    Used for libvirt versions that do not support
+    OVS virtual port XML (0.9.10 or earlier).
+    """
 
     def get_dev_name(self, iface_id):
-        return "tap" + iface_id[0:11]
+        return ("tap" + iface_id)[:LINUX_DEV_LEN]
+
+    def create_ovs_vif_port(self, dev, iface_id, mac, instance_id):
+        utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
+                FLAGS.libvirt_ovs_bridge, dev,
+                '--', 'set', 'Interface', dev,
+                'external-ids:iface-id=%s' % iface_id,
+                'external-ids:iface-status=active',
+                'external-ids:attached-mac=%s' % mac,
+                'external-ids:vm-uuid=%s' % instance_id,
+                run_as_root=True)
+
+    def delete_ovs_vif_port(self, dev):
+        utils.execute('ovs-vsctl', 'del-port', FLAGS.libvirt_ovs_bridge,
+                      dev, run_as_root=True)
+        utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
 
     def plug(self, instance, vif):
         network, mapping = vif
@@ -138,17 +157,9 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
                 # Second option: tunctl
                 utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
             utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
-        utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
-                FLAGS.libvirt_ovs_bridge, dev,
-                '--', 'set', 'Interface', dev,
-                "external-ids:iface-id=%s" % iface_id,
-                '--', 'set', 'Interface', dev,
-                "external-ids:iface-status=active",
-                '--', 'set', 'Interface', dev,
-                "external-ids:attached-mac=%s" % mapping['mac'],
-                '--', 'set', 'Interface', dev,
-                "external-ids:vm-uuid=%s" % instance['uuid'],
-                run_as_root=True)
+
+        self.create_ovs_vif_port(dev, iface_id, mapping['mac'],
+                                 instance['uuid'])
 
         conf = config.LibvirtConfigGuestInterface()
 
@@ -162,14 +173,76 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
         return conf
 
     def unplug(self, instance, vif):
-        """Unplug the VIF from the network by deleting the port from
-        the bridge."""
-        network, mapping = vif
-        dev = self.get_dev_name(mapping['vif_uuid'])
+        """Unplug the VIF by deleting the port from the bridge."""
         try:
-            utils.execute('ovs-vsctl', 'del-port',
-                          FLAGS.libvirt_ovs_bridge, dev, run_as_root=True)
-            utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+            network, mapping = vif
+            self.delete_ovs_vif_port(self.get_dev_name(mapping['vif_uuid']))
+        except exception.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
+
+class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
+                                   LibvirtOpenVswitchDriver):
+    """VIF driver that uses OVS + Linux Bridge for iptables compatibility.
+
+    Enables the use of OVS-based Quantum plugins while at the same
+    time using iptables-based filtering, which requires that vifs be
+    plugged into a linux bridge, not OVS.  IPtables filtering is useful for
+    in particular for Nova security groups.
+    """
+
+    def get_br_name(self, iface_id):
+        return ("qbr" + iface_id)[:LINUX_DEV_LEN]
+
+    def get_veth_pair_names(self, iface_id):
+        return (("qvb%s" % iface_id)[:LINUX_DEV_LEN],
+                ("qvo%s" % iface_id)[:LINUX_DEV_LEN])
+
+    def plug(self, instance, vif):
+        """Plug using hybrid strategy
+
+        Create a per-VIF linux bridge, then link that bridge to the OVS
+        integration bridge via a veth device, setting up the other end
+        of the veth device just like a normal OVS port.  Then boot the
+        VIF on the linux bridge using standard libvirt mechanisms
+        """
+
+        network, mapping = vif
+        iface_id = mapping['vif_uuid']
+        br_name = self.get_br_name(iface_id)
+        v1_name, v2_name = self.get_veth_pair_names(iface_id)
+
+        linux_net._create_veth_pair(v1_name, v2_name)
+
+        if not linux_net._device_exists(br_name):
+            utils.execute('brctl', 'addbr', br_name, run_as_root=True)
+
+        utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
+        utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
+        self.create_ovs_vif_port(v2_name, iface_id, mapping['mac'],
+                                 instance['uuid'])
+
+        network['bridge'] = br_name
+        return self._get_configurations(instance, network, mapping)
+
+    def unplug(self, instance, vif):
+        """UnPlug using hybrid strategy
+
+        Unhook port from OVS, unhook port from bridge, delete
+        bridge, and delete both veth devices.
+        """
+        try:
+            network, mapping = vif
+            iface_id = mapping['vif_uuid']
+            br_name = self.get_br_name(iface_id)
+            v1_name, v2_name = self.get_veth_pair_names(iface_id)
+
+            utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
+            utils.execute('ip', 'link', 'set', br_name, 'down',
+                          run_as_root=True)
+            utils.execute('brctl', 'delbr', br_name, run_as_root=True)
+
+            self.delete_ovs_vif_port(v2_name)
         except exception.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
@@ -203,7 +276,7 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
     """VIF driver for Linux Bridge when running Quantum."""
 
     def get_dev_name(self, iface_id):
-        return "tap" + iface_id[0:11]
+        return ("tap" + iface_id)[:LINUX_DEV_LEN]
 
     def plug(self, instance, vif):
         network, mapping = vif
@@ -225,8 +298,7 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         return conf
 
     def unplug(self, instance, vif):
-        """Unplug the VIF from the network by deleting the port from
-        the bridge."""
+        """Unplug the VIF by deleting the port from the bridge."""
         network, mapping = vif
         dev = self.get_dev_name(mapping['vif_uuid'])
         try:
