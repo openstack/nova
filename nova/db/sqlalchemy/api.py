@@ -716,10 +716,21 @@ def floating_ip_allocate_address(context, project_id, pool):
 
 @require_context
 def floating_ip_bulk_create(context, ips):
+    existing_ips = {}
+    for floating in _floating_ip_get_all(context).all():
+        existing_ips[floating['address']] = floating
+
     session = get_session()
     with session.begin():
         for ip in ips:
-            floating_ip_create(context, ip, session)
+            addr = ip['address']
+            if (addr in existing_ips and
+                ip.get('id') != existing_ips[addr]['id']):
+                raise exception.FloatingIpExists(**dict(existing_ips[addr]))
+
+            model = models.FloatingIp()
+            model.update(ip)
+            session.add(model)
 
 
 @require_context
