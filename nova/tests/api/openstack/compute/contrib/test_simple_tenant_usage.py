@@ -121,14 +121,14 @@ class SimpleTenantUsageTest(test.TestCase):
     def test_verify_index(self):
         self._test_verify_index(START, STOP)
 
-    def test_verify_index_futrue_end_time(self):
+    def test_verify_index_future_end_time(self):
         future = NOW + datetime.timedelta(hours=HOURS)
         self._test_verify_index(START, future)
 
     def test_verify_show(self):
         self._test_verify_show(START, STOP)
 
-    def test_verify_show_futrue_end_time(self):
+    def test_verify_show_future_end_time(self):
         future = NOW + datetime.timedelta(hours=HOURS)
         self._test_verify_show(START, future)
 
