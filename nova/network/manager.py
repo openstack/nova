@@ -388,6 +388,9 @@ class FloatingIP(object):
 
     def _floating_ip_owned_by_project(self, context, floating_ip):
         """Raises if floating ip does not belong to project"""
+        if context.is_admin:
+            return
+
         if floating_ip['project_id'] != context.project_id:
             if floating_ip['project_id'] is None:
                 LOG.warn(_('Address |%(address)s| is not allocated'),
