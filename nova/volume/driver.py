@@ -112,9 +112,20 @@ class VolumeDriver(object):
                           volume_name, FLAGS.volume_group, run_as_root=True)
 
     def _copy_volume(self, srcstr, deststr, size_in_g):
+        # Use O_DIRECT to avoid thrashing the system buffer cache
+        direct_flags = ('iflag=direct', 'oflag=direct')
+
+        # Check whether O_DIRECT is supported
+        try:
+            self._execute('dd', 'count=0', 'if=%s' % srcstr, 'of=%s' % deststr,
+                          *direct_flags, run_as_root=True)
+        except exception.ProcessExecutionError:
+            direct_flags = ()
+
+        # Perform the copy
         self._execute('dd', 'if=%s' % srcstr, 'of=%s' % deststr,
                       'count=%d' % (size_in_g * 1024), 'bs=1M',
-                      run_as_root=True)
+                      *direct_flags, run_as_root=True)
 
     def _volume_not_present(self, volume_name):
         path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
