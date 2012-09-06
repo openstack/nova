@@ -50,7 +50,7 @@
 A fake XenAPI SDK.
 """
 
-
+import pickle
 import random
 import uuid
 from xml.sax import saxutils
@@ -561,12 +561,15 @@ class SessionBase(object):
     def _plugin_noop(self, method, args):
         return ''
 
-    _plugin_glance_upload_vhd = _plugin_noop
+    def _plugin_pickle_noop(self, method, args):
+        return pickle.dumps(None)
+
+    _plugin_glance_upload_vhd = _plugin_pickle_noop
     _plugin_kernel_copy_vdi = _plugin_noop
     _plugin_kernel_create_kernel_ramdisk = _plugin_noop
     _plugin_kernel_remove_kernel_ramdisk = _plugin_noop
     _plugin_migration_move_vhds_into_sr = _plugin_noop
-    _plugin_migration_transfer_vhd = _plugin_noop
+    _plugin_migration_transfer_vhd = _plugin_pickle_noop
 
     def _plugin_xenhost_host_data(self, method, args):
             return jsonutils.dumps({'host_memory': {'total': 10,

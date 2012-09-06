@@ -16,6 +16,7 @@
 """Stubouts, mocks and fixtures for the test suite"""
 
 import contextlib
+import pickle
 import random
 import sys
 
@@ -169,7 +170,7 @@ class FakeSessionForVMTests(fake.SessionBase):
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
             root_uuid = _make_fake_vdi()
-            return jsonutils.dumps(dict(root=dict(uuid=root_uuid)))
+            return pickle.dumps(dict(root=dict(uuid=root_uuid)))
         elif (plugin, method) == ("xenhost", "iptables_config"):
             return fake.as_json(out=self._fake_iptables_save_output,
                                 err='')
@@ -181,8 +182,8 @@ class FakeSessionForVMTests(fake.SessionBase):
         if (plugin, method) == ('glance', 'download_vhd'):
             root_uuid = _make_fake_vdi()
             swap_uuid = _make_fake_vdi()
-            return jsonutils.dumps(dict(root=dict(uuid=root_uuid),
-                                        swap=dict(uuid=swap_uuid)))
+            return pickle.dumps(dict(root=dict(uuid=root_uuid),
+                                     swap=dict(uuid=swap_uuid)))
         else:
             return (super(FakeSessionForVMTests, self).
                     host_call_plugin(_1, _2, plugin, method, _5))

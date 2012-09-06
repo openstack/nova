@@ -18,37 +18,18 @@
 """
 XenAPI Plugin for transfering data between host nodes
 """
-
-import cPickle as pickle
-try:
-    import json
-except ImportError:
-    import simplejson as json
-import os
-import os.path
-import shlex
-import shutil
-import subprocess
-
-import XenAPIPlugin
-
 import utils
 
 from pluginlib_nova import *
 configure_logging('migration')
 
 
-def move_vhds_into_sr(session, args):
+def move_vhds_into_sr(session, instance_uuid, sr_path, uuid_stack):
     """Moves the VHDs from their copied location to the SR"""
-    params = pickle.loads(exists(args, 'params'))
-    instance_uuid = params['instance_uuid']
-    sr_path = params['sr_path']
-    uuid_stack = params['uuid_stack']
-
     staging_path = "/images/instance%s" % instance_uuid
     imported_vhds = utils.import_vhds(sr_path, staging_path, uuid_stack)
     utils.cleanup_staging_area(staging_path)
-    return json.dumps(imported_vhds)
+    return imported_vhds
 
 
 def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
@@ -65,15 +46,8 @@ def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
     utils.finish_subprocess(rsync_proc, rsync_cmd)
 
 
-def transfer_vhd(session, args):
+def transfer_vhd(session, instance_uuid, host, vdi_uuid, sr_path, seq_num):
     """Rsyncs a VHD to an adjacent host"""
-    params = pickle.loads(exists(args, 'params'))
-    instance_uuid = params['instance_uuid']
-    host = params['host']
-    vdi_uuid = params['vdi_uuid']
-    sr_path = params['sr_path']
-    seq_num = params['seq_num']
-
     staging_path = utils.make_staging_area(sr_path)
     try:
         utils.prepare_staging_area(
@@ -82,9 +56,6 @@ def transfer_vhd(session, args):
     finally:
         utils.cleanup_staging_area(staging_path)
 
-    return ""
-
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd,
-                           'move_vhds_into_sr': move_vhds_into_sr})
+    utils.register_plugin_calls(move_vhds_into_sr, transfer_vhd)

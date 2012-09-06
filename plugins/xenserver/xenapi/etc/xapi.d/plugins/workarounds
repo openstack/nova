@@ -17,21 +17,14 @@
 
 """Handle the uploading and downloading of images via Glance."""
 
-import cPickle as pickle
-try:
-    import json
-except ImportError:
-    import simplejson as json
 import os
 import shutil
-
-import XenAPIPlugin
 
 import utils
 
 #FIXME(sirp): should this use pluginlib from 5.6?
 from pluginlib_nova import *
-configure_logging('hacks')
+configure_logging('workarounds')
 
 
 def _copy_vdis(sr_path, staging_path, vdi_uuids):
@@ -43,23 +36,14 @@ def _copy_vdis(sr_path, staging_path, vdi_uuids):
         seq_num += 1
 
 
-def safe_copy_vdis(session, args):
-    params = pickle.loads(exists(args, 'params'))
-    sr_path = params["sr_path"]
-    vdi_uuids = params["vdi_uuids"]
-    uuid_stack = params["uuid_stack"]
-
+def safe_copy_vdis(session, sr_path, vdi_uuids, uuid_stack):
     staging_path = utils.make_staging_area(sr_path)
     try:
         _copy_vdis(sr_path, staging_path, vdi_uuids)
-        imported_vhds = utils.import_vhds(sr_path, staging_path, uuid_stack)
+        return utils.import_vhds(sr_path, staging_path, uuid_stack)
     finally:
         utils.cleanup_staging_area(staging_path)
 
-    # Right now, it's easier to return a single string via XenAPI,
-    # so we'll json encode the list of VHDs.
-    return json.dumps(imported_vhds)
-
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'safe_copy_vdis': safe_copy_vdis})
+    utils.register_plugin_calls(safe_copy_vdis)

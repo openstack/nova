@@ -38,6 +38,7 @@ A driver for XenServer or Xen Cloud Platform.
 """
 
 import contextlib
+import cPickle as pickle
 import time
 import urlparse
 import xmlrpclib
@@ -709,6 +710,11 @@ class XenAPISession(object):
             return self._unwrap_plugin_exceptions(
                                  session.xenapi.host.call_plugin,
                                  host, plugin, fn, args)
+
+    def call_plugin_serialized(self, plugin, fn, *args, **kwargs):
+        params = {'params': pickle.dumps(dict(args=args, kwargs=kwargs))}
+        rv = self.call_plugin(plugin, fn, params)
+        return pickle.loads(rv)
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
