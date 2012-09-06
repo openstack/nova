@@ -35,6 +35,10 @@ class TargetAdminTestCase(object):
         self.script_template = None
         self.stubs.Set(os.path, 'isfile', lambda _: True)
         self.stubs.Set(os, 'unlink', lambda _: '')
+        self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
+
+    def fake_get_target(obj, iqn):
+        return 1
 
     def get_script_params(self):
         return {'tid': self.tid,
@@ -71,7 +75,7 @@ class TargetAdminTestCase(object):
         tgtadm.set_execute(self.fake_execute)
         tgtadm.create_iscsi_target(self.target_name, self.tid,
                 self.lun, self.path)
-        tgtadm.show_target(self.tid)
+        tgtadm.show_target(self.tid, iqn=self.target_name)
         tgtadm.remove_iscsi_target(self.tid, self.lun, self.vol_id)
 
     def test_target_admin(self):
@@ -88,9 +92,8 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='tgtadm')
         self.flags(volumes_dir="./")
         self.script_template = "\n".join([
-        "tgt-admin --execute --conf ./blaa --update blaa",
-        "tgtadm --op show --lld=iscsi --mode=target --tid=1",
-        "tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa"])
+        'tgt-admin --update iqn.2011-09.org.foo.bar:blaa',
+        'tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa'])
 
 
 class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
@@ -100,9 +103,9 @@ class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
         TargetAdminTestCase.setUp(self)
         self.flags(iscsi_helper='ietadm')
         self.script_template = "\n".join([
-        "ietadm --op new --tid=%(tid)s --params Name=%(target_name)s",
-        "ietadm --op new --tid=%(tid)s --lun=%(lun)s "
-                "--params Path=%(path)s,Type=fileio",
-        "ietadm --op show --tid=%(tid)s",
-        "ietadm --op delete --tid=%(tid)s",
-        "ietadm --op delete --tid=%(tid)s --lun=%(lun)s"])
+        'ietadm --op new --tid=%(tid)s --params Name=%(target_name)s',
+        'ietadm --op new --tid=%(tid)s --lun=%(lun)s '
+                '--params Path=%(path)s,Type=fileio',
+        'ietadm --op show --tid=%(tid)s',
+        'ietadm --op delete --tid=%(tid)s',
+        'ietadm --op delete --tid=%(tid)s --lun=%(lun)s'])

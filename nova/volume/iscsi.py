@@ -94,58 +94,88 @@ class TgtAdm(TargetAdmin):
     def __init__(self, execute=utils.execute):
         super(TgtAdm, self).__init__('tgtadm', execute)
 
+    def _get_target(self, iqn):
+        (out, err) = self._execute('tgt-admin', '--show', run_as_root=True)
+        lines = out.split('\n')
+        for line in lines:
+            if iqn in line:
+                parsed = line.split()
+                tid = parsed[1]
+                return tid[:-1]
+
+        return None
+
     def create_iscsi_target(self, name, tid, lun, path, **kwargs):
+        # Note(jdg) tid and lun aren't used by TgtAdm but remain for
+        # compatability
+
+        utils.ensure_tree(FLAGS.volumes_dir)
+
+        vol_id = name.split(':')[1]
+        volume_conf = """
+            <target %s>
+                backing-store %s
+            </target>
+        """ % (name, path)
+
+        LOG.info(_('Creating volume: %s') % vol_id)
+        volume_path = os.path.join(FLAGS.volumes_dir, vol_id)
+
+        f = open(volume_path, 'w+')
+        f.write(volume_conf)
+        f.close()
+
         try:
-            utils.ensure_tree(FLAGS.volumes_dir)
+            (out, err) = self._execute('tgt-admin',
+                                       '--update',
+                                       name,
+                                       run_as_root=True)
+        except exception.ProcessExecutionError, e:
+            LOG.error(_("Failed to create iscsi target for volume "
+                        "id:%(volume_id)s.") % locals())
 
-            # grab the volume id
-            vol_id = name.split(':')[1]
+            #Dont forget to remove the persistent file we created
+            os.unlink(volume_path)
+            raise exception.ISCSITargetCreateFailed(volume_id=vol_id)
 
-            volume_conf = """
-                <target %s>
-                    backing-store %s
-                </target>
-            """ % (name, path)
+        iqn = '%s%s' % (FLAGS.iscsi_target_prefix, vol_id)
+        tid = self._get_target(iqn)
+        if tid is None:
+            raise exception.NotFound()
 
-            LOG.info(_('Creating volume: %s') % vol_id)
-            volume_path = os.path.join(FLAGS.volumes_dir, vol_id)
-            if not os.path.isfile(volume_path):
-                f = open(volume_path, 'w+')
-                f.write(volume_conf)
-                f.close()
-
-            self._execute('tgt-admin', '--execute',
-                          '--conf', volume_path,
-                          '--update', vol_id, run_as_root=True)
-
-        except Exception as ex:
-            LOG.exception(ex)
-            raise exception.NovaException(_('Failed to create volume: %s')
-                % vol_id)
+        return tid
 
     def remove_iscsi_target(self, tid, lun, vol_id, **kwargs):
+        LOG.info(_('Removing volume: %s') % vol_id)
+        vol_uuid_file = 'volume-%s' % vol_id
+        volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
+        if os.path.isfile(volume_path):
+            iqn = '%s%s' % (FLAGS.iscsi_target_prefix,
+                            vol_uuid_file)
+        else:
+            raise exception.ISCSITargetRemoveFailed(volume_id=vol_id)
         try:
-            LOG.info(_('Removing volume: %s') % vol_id)
-            vol_uuid_file = 'volume-%s' % vol_id
-            volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
-            if os.path.isfile(volume_path):
-                delete_file = '%s%s' % (FLAGS.iscsi_target_prefix,
-                                        vol_uuid_file)
-                self._execute('tgt-admin',
-                              '--delete',
-                              delete_file,
-                              run_as_root=True)
-                os.unlink(volume_path)
-        except Exception as ex:
-            LOG.exception(ex)
-            raise exception.NovaException(_('Failed to remove volume: %s')
-                    % vol_id)
+            self._execute('tgt-admin',
+                          '--delete',
+                          iqn,
+                          run_as_root=True)
+        except exception.ProcessExecutionError, e:
+            LOG.error(_("Failed to create iscsi target for volume "
+                        "id:%(volume_id)s.") % locals())
+            raise exception.ISCSITargetRemoveFailed(volume_id=vol_id)
+
+        os.unlink(volume_path)
 
     def show_target(self, tid, **kwargs):
-        self._run('--op', 'show',
-                  '--lld=iscsi', '--mode=target',
-                  '--tid=%s' % tid,
-                  **kwargs)
+        iqn = kwargs.get('iqn', None)
+
+        if iqn is None:
+            raise exception.InvalidParameterValue(
+                err=_('valid iqn needed for show_target'))
+
+        tid = self._get_target(iqn)
+        if tid is None:
+            raise exception.NotFound()
 
 
 class IetAdm(TargetAdmin):
@@ -157,6 +187,7 @@ class IetAdm(TargetAdmin):
     def create_iscsi_target(self, name, tid, lun, path, **kwargs):
         self._new_target(name, tid, **kwargs)
         self._new_logicalunit(tid, lun, path, **kwargs)
+        return tid
 
     def remove_iscsi_target(self, tid, lun, vol_id, **kwargs):
         LOG.info(_('Removing volume: %s') % vol_id)

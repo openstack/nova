@@ -46,6 +46,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import utils
 from nova.virt import fake as fake_virt
+from nova.volume import iscsi
 
 
 LOG = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ class CloudTestCase(test.TestCase):
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volumes_dir=vol_tmpdir)
+        self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -157,6 +159,9 @@ class CloudTestCase(test.TestCase):
             pass
         super(CloudTestCase, self).tearDown()
         fake.FakeImageService_reset()
+
+    def fake_get_target(obj, iqn):
+        return 1
 
     def _stub_instance_get_with_fixed_ips(self, func_name):
         orig_func = getattr(self.cloud.compute_api, func_name)
@@ -1993,9 +1998,12 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(result)
 
     def _volume_create(self, volume_id=None):
+        location = '10.0.2.15:3260'
+        iqn = 'iqn.2010-10.org.openstack:%s' % volume_id
         kwargs = {'status': 'available',
                   'host': self.volume.host,
                   'size': 1,
+                  'provider_location': '1 %s,fake %s' % (location, iqn),
                   'attach_status': 'detached', }
         if volume_id:
             kwargs['id'] = volume_id
