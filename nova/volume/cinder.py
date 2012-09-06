@@ -27,9 +27,19 @@ from cinderclient.v1 import client as cinder_client
 from nova.db import base
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
+cinder_opts = [
+    cfg.StrOpt('cinder_catalog_info',
+            default='volume:cinder:publicURL',
+            help='Info to match when looking for cinder in the service '
+                 'catalog. Format is : separated values of the form: '
+                 '<service_type>:<service_name>:<endpoint_type>'),
+]
+
 FLAGS = flags.FLAGS
+FLAGS.register_opts(cinder_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -42,7 +52,11 @@ def cinderclient(context):
         'access': {'serviceCatalog': context.service_catalog}
     }
     sc = service_catalog.ServiceCatalog(compat_catalog)
-    url = sc.url_for(service_type='volume', service_name='cinder')
+    info = FLAGS.cinder_catalog_info
+    service_type, service_name, endpoint_type = info.split(':')
+    url = sc.url_for(service_type=service_type,
+                     service_name=service_name,
+                     endpoint_type=endpoint_type)
 
     LOG.debug(_('Cinderclient connection created using URL: %s') % url)
 
