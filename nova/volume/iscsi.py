@@ -132,7 +132,7 @@ class TgtAdm(TargetAdmin):
                                        run_as_root=True)
         except exception.ProcessExecutionError, e:
             LOG.error(_("Failed to create iscsi target for volume "
-                        "id:%(volume_id)s.") % locals())
+                        "id:%(vol_id)s.") % locals())
 
             #Dont forget to remove the persistent file we created
             os.unlink(volume_path)
