@@ -73,6 +73,7 @@ LOG = logging.getLogger(__name__)
 class NovaWebSocketProxy(websockify.WebSocketProxy):
     def __init__(self, *args, **kwargs):
         websockify.WebSocketProxy.__init__(self, unix_target=None,
+                                           target_cfg=None,
                                            ssl_target=None, *args, **kwargs)
 
     def new_client(self):
