@@ -252,7 +252,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        self.resource_tracker.update_load_stats_for_instance(context, old_ref,
+        self.resource_tracker.update_load_stats_for_instance(context,
                 instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
