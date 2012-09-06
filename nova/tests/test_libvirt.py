@@ -2160,12 +2160,33 @@ class LibvirtConnTestCase(test.TestCase):
         instance = db.instance_create(self.context, self.test_instance)
         conn.destroy(instance, {})
 
-    def test_destroy_saved(self):
-        """Ensure destroy calls managedSaveRemove for saved instance"""
+    def test_destroy(self):
+        """Ensure destroy calls virDomain.undefineFlags"""
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.destroy()
-        mock.hasManagedSaveImage(0).AndReturn(1)
-        mock.managedSaveRemove(0)
+        mock.undefineFlags(1).AndReturn(1)
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock
+
+        def fake_get_info(instance_name):
+            return {'state': power_state.SHUTDOWN}
+
+        conn = libvirt_driver.LibvirtDriver(False)
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, 'get_info', fake_get_info)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        conn.destroy(instance, [])
+
+    def test_destroy_noflag(self):
+        """Ensure destroy calls virDomain.undefine
+        if mock.undefineFlags raises an error"""
+        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.destroy()
+        mock.undefineFlags(1).AndRaise(libvirt.libvirtError('Err'))
         mock.undefine()
 
         self.mox.ReplayAll()

@@ -483,18 +483,13 @@ class LibvirtDriver(driver.ComputeDriver):
             virt_dom = None
         if virt_dom:
             try:
-                # NOTE(derekh): we can switch to undefineFlags and
-                # VIR_DOMAIN_UNDEFINE_MANAGED_SAVE once we require 0.9.4
-                if virt_dom.hasManagedSaveImage(0):
-                    virt_dom.managedSaveRemove(0)
-            except libvirt.libvirtError as e:
-                errcode = e.get_error_code()
-                LOG.error(_("Error from libvirt during saved instance "
-                              "removal. Code=%(errcode)s Error=%(e)s") %
-                            locals(), instance=instance)
-            try:
-                # NOTE(justinsb): We remove the domain definition.
-                virt_dom.undefine()
+                try:
+                    virt_dom.undefineFlags(
+                        libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
+                except libvirt.libvirtError as e:
+                    LOG.debug(_("Error from libvirt during undefineFlags."
+                        " Retrying with undefine"), instance=instance)
+                    virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
                 LOG.error(_("Error from libvirt during undefine. "
