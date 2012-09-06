@@ -31,6 +31,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
             return True
 
         for key, req in instance_type['extra_specs'].iteritems():
+            # NOTE(jogo) any key containing a scope (scope is terminated
+            # by a `:') will be ignored by this filter. (bug 1039386)
             if key.count(':'):
                 continue
             cap = capabilities.get(key, None)

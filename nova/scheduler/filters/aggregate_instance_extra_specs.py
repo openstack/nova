@@ -40,6 +40,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
 
         for key, req in instance_type['extra_specs'].iteritems():
+            # NOTE(jogo) any key containing a scope (scope is terminated
+            # by a `:') will be ignored by this filter. (bug 1039386)
             if key.count(':'):
                 continue
             aggregate_vals = metadata.get(key, None)
