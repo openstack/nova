@@ -138,6 +138,17 @@ def volume_group_free_space(vg):
     return int(out.strip())
 
 
+def list_logical_volumes(vg):
+    """List logical volumes paths for given volume group.
+
+    :param vg: volume group name
+    """
+    out, err = execute('lvs', '--noheadings', '-o', 'lv_path', vg,
+                       run_as_root=True)
+
+    return [line.strip() for line in out.splitlines()]
+
+
 def remove_logical_volumes(*paths):
     """Remove one or more logical volume."""
     if paths:

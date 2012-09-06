@@ -565,7 +565,9 @@ class LibvirtDriver(driver.ComputeDriver):
             def fullpath(name):
                 return os.path.join(vg, name)
 
-            disk_names = filter(belongs_to_instance, os.listdir(vg))
+            logical_volumes = libvirt_utils.list_logical_volumes(vg)
+
+            disk_names = filter(belongs_to_instance, logical_volumes)
             disks = map(fullpath, disk_names)
             return disks
         return []
