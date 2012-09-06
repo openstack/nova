@@ -186,4 +186,7 @@ lvremove: CommandFilter, /sbin/lvremove, root
 lvcreate: CommandFilter, /sbin/lvcreate, root
 
 # nova/virt/libvirt/utils.py:
+lvs: CommandFilter, /sbin/lvs, root
+
+# nova/virt/libvirt/utils.py:
 vgs: CommandFilter, /sbin/vgs, root
