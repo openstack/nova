@@ -14,8 +14,6 @@
 
 """Connect your vlan to the world."""
 
-import os
-
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
