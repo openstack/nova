@@ -112,7 +112,7 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
                         pkey=privatekey)
         else:
             msg = _("Specify san_password or san_private_key")
-            raise exception.NovaException(msg)
+            raise exception.InvalidInput(reason=msg)
         return ssh
 
     def _execute(self, *cmd, **kwargs):
@@ -150,12 +150,12 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
         """Returns an error if prerequisites aren't met."""
         if not self.run_local:
             if not (FLAGS.san_password or FLAGS.san_private_key):
-                raise exception.NovaException(_('Specify san_password or '
-                                        'san_private_key'))
+                raise exception.InvalidInput(
+                    reason=_('Specify san_password or san_private_key'))
 
         # The san_ip must always be set, because we use it for the target
         if not (FLAGS.san_ip):
-            raise exception.NovaException(_("san_ip must be set"))
+            raise exception.InvalidInput(reason=_("san_ip must be set"))
 
 
 def _collect_lines(data):
@@ -226,8 +226,8 @@ class SolarisISCSIDriver(SanISCSIDriver):
         if "View Entry:" in out:
             return True
 
-        msg = _("Cannot parse list-view output: %s") % (out)
-        raise exception.NovaException()
+        msg = _("Cannot parse list-view output: %s") % out
+        raise exception.VolumeBackendAPIException(data=msg)
 
     def _get_target_groups(self):
         """Gets list of target groups from host."""
@@ -320,8 +320,9 @@ class SolarisISCSIDriver(SanISCSIDriver):
                 luid = items[0].strip()
                 return luid
 
-        raise Exception(_('LUID not found for %(zfs_poolname)s. '
-                          'Output=%(out)s') % locals())
+        msg = _('LUID not found for %(zfs_poolname)s. '
+                'Output=%(out)s') % locals()
+        raise exception.VolumeBackendAPIException(data=msg)
 
     def _is_lu_created(self, volume):
         luid = self._get_luid(volume)
@@ -461,7 +462,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
                 msg = (_("Malformed response to CLIQ command "
                          "%(verb)s %(cliq_args)s. Result=%(out)s") %
                        locals())
-                raise exception.NovaException(msg)
+                raise exception.VolumeBackendAPIException(data=msg)
 
             result_code = response_node.attrib.get("result")
 
@@ -469,7 +470,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
                 msg = (_("Error running CLIQ command %(verb)s %(cliq_args)s. "
                          " Result=%(out)s") %
                        locals())
-                raise exception.NovaException(msg)
+                raise exception.VolumeBackendAPIException(data=msg)
 
         return result_xml
 
@@ -499,7 +500,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
         msg = (_("Unexpected number of virtual ips for cluster "
                  " %(cluster_name)s. Result=%(_xml)s") %
                locals())
-        raise exception.NovaException(msg)
+        raise exception.VolumeBackendAPIException(data=msg)
 
     def _cliq_get_volume_info(self, volume_name):
         """Gets the volume info, including IQN"""
@@ -602,7 +603,8 @@ class HpSanISCSIDriver(SanISCSIDriver):
 
     def local_path(self, volume):
         # TODO(justinsb): Is this needed here?
-        raise exception.NovaException(_("local_path not supported"))
+        msg = _("local_path not supported")
+        raise exception.VolumeBackendAPIException(data=msg)
 
     def initialize_connection(self, volume, connector):
         """Assigns the volume to a server.

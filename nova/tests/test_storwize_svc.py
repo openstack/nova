@@ -882,7 +882,7 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         # Check for missing san_ip
         saved = storwize_svc.FLAGS.san_ip
         storwize_svc.FLAGS.san_ip = None
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.san_ip = saved
 
@@ -906,7 +906,7 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         orig_pool = getattr(storwize_svc.FLAGS, "storwize_svc_volpool_name")
         no_exist_pool = "i-dont-exist-%s" % random.randint(10000, 99999)
         storwize_svc.FLAGS.storwize_svc_volpool_name = no_exist_pool
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver.check_for_setup_error)
         storwize_svc.FLAGS.storwize_svc_volpool_name = orig_pool
 
@@ -934,44 +934,44 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         saved_key = storwize_svc.FLAGS.san_private_key
         storwize_svc.FLAGS.san_password = None
         storwize_svc.FLAGS.san_private_key = None
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.san_password = saved_pass
         storwize_svc.FLAGS.san_private_key = saved_key
 
         saved = storwize_svc.FLAGS.storwize_svc_vol_vtype
         storwize_svc.FLAGS.storwize_svc_vol_vtype = "invalid"
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_vol_vtype = saved
 
         saved = storwize_svc.FLAGS.storwize_svc_vol_rsize
         storwize_svc.FLAGS.storwize_svc_vol_rsize = "invalid"
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_vol_rsize = saved
 
         saved = storwize_svc.FLAGS.storwize_svc_vol_warning
         storwize_svc.FLAGS.storwize_svc_vol_warning = "invalid"
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_vol_warning = saved
 
         saved = storwize_svc.FLAGS.storwize_svc_vol_autoexpand
         storwize_svc.FLAGS.storwize_svc_vol_autoexpand = "invalid"
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_vol_autoexpand = saved
 
         saved = storwize_svc.FLAGS.storwize_svc_vol_grainsize
         storwize_svc.FLAGS.storwize_svc_vol_grainsize = str(42)
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_vol_grainsize = saved
 
         saved = storwize_svc.FLAGS.storwize_svc_flashcopy_timeout
         storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = str(601)
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
         storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = saved
 
