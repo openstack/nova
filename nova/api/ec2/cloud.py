@@ -1538,71 +1538,7 @@ class CloudController(object):
         glance_uuid = instance['image_ref']
         ec2_image_id = ec2utils.glance_id_to_ec2_id(context, glance_uuid)
         src_image = self._get_image(context, ec2_image_id)
-        new_image = dict(src_image)
-        properties = new_image['properties']
-        if instance['root_device_name']:
-            properties['root_device_name'] = instance['root_device_name']
-
-        # meaningful image name
-        name_map = dict(instance=instance['uuid'], now=timeutils.isotime())
-        new_image['name'] = (name or
-                             _('image of %(instance)s at %(now)s') % name_map)
-
-        mapping = []
-        for bdm in bdms:
-            if bdm.no_device:
-                continue
-            m = {}
-            for attr in ('device_name', 'snapshot_id', 'volume_id',
-                         'volume_size', 'delete_on_termination', 'no_device',
-                         'virtual_name'):
-                val = getattr(bdm, attr)
-                if val is not None:
-                    m[attr] = val
-
-            volume_id = m.get('volume_id')
-            snapshot_id = m.get('snapshot_id')
-            if snapshot_id and volume_id:
-                # create snapshot based on volume_id
-                volume = self.volume_api.get(context, volume_id)
-                # NOTE(yamahata): Should we wait for snapshot creation?
-                #                 Linux LVM snapshot creation completes in
-                #                 short time, it doesn't matter for now.
-                name = _('snapshot for %s') % new_image['name']
-                snapshot = self.volume_api.create_snapshot_force(
-                        context, volume, name, volume['display_description'])
-                m['snapshot_id'] = snapshot['id']
-                del m['volume_id']
-
-            if m:
-                mapping.append(m)
-
-        for m in _properties_get_mappings(properties):
-            virtual_name = m['virtual']
-            if virtual_name in ('ami', 'root'):
-                continue
-
-            assert block_device.is_swap_or_ephemeral(virtual_name)
-            device_name = m['device']
-            if device_name in [b['device_name'] for b in mapping
-                               if not b.get('no_device', False)]:
-                continue
-
-            # NOTE(yamahata): swap and ephemeral devices are specified in
-            #                 AMI, but disabled for this instance by user.
-            #                 So disable those device by no_device.
-            mapping.append({'device_name': device_name, 'no_device': True})
-
-        if mapping:
-            properties['block_device_mapping'] = mapping
-
-        for attr in ('status', 'location', 'id'):
-            new_image.pop(attr, None)
-
-        # the new image is simply a bucket of properties (particularly the
-        # block device mapping, kernel and ramdisk IDs) with no image data,
-        # hence the zero size
-        new_image['size'] = 0
+        image_meta = dict(src_image)
 
         def _unmap_id_property(properties, name):
             if properties[name]:
@@ -1610,11 +1546,18 @@ class CloudController(object):
                                                             properties[name])
 
         # ensure the ID properties are unmapped back to the glance UUID
-        _unmap_id_property(properties, 'kernel_id')
-        _unmap_id_property(properties, 'ramdisk_id')
+        _unmap_id_property(image_meta['properties'], 'kernel_id')
+        _unmap_id_property(image_meta['properties'], 'ramdisk_id')
 
-        new_image = self.image_service.service.create(context, new_image,
-                                                      data='')
+        # meaningful image name
+        name_map = dict(instance=instance['uuid'], now=timeutils.isotime())
+        name = name or _('image of %(instance)s at %(now)s') % name_map
+
+        new_image = self.compute_api.snapshot_volume_backed(context,
+                                                            instance,
+                                                            image_meta,
+                                                            name)
+
         ec2_id = ec2utils.glance_id_to_ec2_id(context, new_image['id'])
 
         if restart_instance:

@@ -1221,6 +1221,85 @@ class API(base.Base):
                 backup_type=backup_type, rotation=rotation)
         return recv_meta
 
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    def snapshot_volume_backed(self, context, instance, image_meta, name,
+                               extra_properties=None):
+        """Snapshot the given volume-backed instance.
+
+        :param instance: nova.db.sqlalchemy.models.Instance
+        :param image_meta: metadata for the new image
+        :param name: name of the backup or snapshot
+        :param extra_properties: dict of extra image properties to include
+
+        :returns: the new image metadata
+        """
+        image_meta['name'] = name
+        properties = image_meta['properties']
+        if instance['root_device_name']:
+            properties['root_device_name'] = instance['root_device_name']
+        properties.update(extra_properties or {})
+
+        bdms = self.get_instance_bdms(context, instance)
+
+        mapping = []
+        for bdm in bdms:
+            if bdm.no_device:
+                continue
+            m = {}
+            for attr in ('device_name', 'snapshot_id', 'volume_id',
+                         'volume_size', 'delete_on_termination', 'no_device',
+                         'virtual_name'):
+                val = getattr(bdm, attr)
+                if val is not None:
+                    m[attr] = val
+
+            volume_id = m.get('volume_id')
+            snapshot_id = m.get('snapshot_id')
+            if snapshot_id and volume_id:
+                # create snapshot based on volume_id
+                volume = self.volume_api.get(context, volume_id)
+                # NOTE(yamahata): Should we wait for snapshot creation?
+                #                 Linux LVM snapshot creation completes in
+                #                 short time, it doesn't matter for now.
+                name = _('snapshot for %s') % image_meta['name']
+                snapshot = self.volume_api.create_snapshot_force(
+                    context, volume, name, volume['display_description'])
+                m['snapshot_id'] = snapshot['id']
+                del m['volume_id']
+
+            if m:
+                mapping.append(m)
+
+        for m in block_device.mappings_prepend_dev(properties.get('mappings',
+                                                                  [])):
+            virtual_name = m['virtual']
+            if virtual_name in ('ami', 'root'):
+                continue
+
+            assert block_device.is_swap_or_ephemeral(virtual_name)
+            device_name = m['device']
+            if device_name in [b['device_name'] for b in mapping
+                               if not b.get('no_device', False)]:
+                continue
+
+            # NOTE(yamahata): swap and ephemeral devices are specified in
+            #                 AMI, but disabled for this instance by user.
+            #                 So disable those device by no_device.
+            mapping.append({'device_name': device_name, 'no_device': True})
+
+        if mapping:
+            properties['block_device_mapping'] = mapping
+
+        for attr in ('status', 'location', 'id'):
+            image_meta.pop(attr, None)
+
+        # the new image is simply a bucket of properties (particularly the
+        # block device mapping, kernel and ramdisk IDs) with no image data,
+        # hence the zero size
+        image_meta['size'] = 0
+
+        return self.image_service.create(context, image_meta, data='')
+
     def _get_minram_mindisk_params(self, context, instance):
         try:
             #try to get source image of the instance

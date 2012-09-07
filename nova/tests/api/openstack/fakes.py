@@ -416,7 +416,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   auto_disk_config=False, display_name=None,
                   include_fake_metadata=True, config_drive=None,
                   power_state=None, nw_cache=None, metadata=None,
-                  security_groups=None, limit=None, marker=None):
+                  security_groups=None, root_device_name=None,
+                  limit=None, marker=None):
 
     if user_id is None:
         user_id = 'fake_user'
@@ -493,7 +494,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "name": "instance-%s" % id,
         "shutdown_terminate": True,
         "disable_terminate": False,
-        "security_groups": security_groups}
+        "security_groups": security_groups,
+        "root_device_name": root_device_name}
 
     instance.update(info_cache)
 

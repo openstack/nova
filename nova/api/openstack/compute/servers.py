@@ -1173,14 +1173,29 @@ class Controller(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+
         try:
-            image = self.compute_api.snapshot(context,
-                                              instance,
-                                              image_name,
-                                              extra_properties=props)
+            if self.compute_api.is_volume_backed_instance(context, instance,
+                                                          bdms):
+                img = instance['image_ref']
+                src_image = self.compute_api.image_service.show(context, img)
+                image_meta = dict(src_image)
+
+                image = self.compute_api.snapshot_volume_backed(
+                                                       context,
+                                                       instance,
+                                                       image_meta,
+                                                       image_name,
+                                                       extra_properties=props)
+            else:
+                image = self.compute_api.snapshot(context,
+                                                  instance,
+                                                  image_name,
+                                                  extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'createImage')
+                        'createImage')
 
         # build location of newly-created image entity
         image_id = str(image['id'])
