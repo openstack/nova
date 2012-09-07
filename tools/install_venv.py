@@ -183,7 +183,10 @@ def install_dependencies(venv=VENV):
     print 'Installing dependencies with pip (this can take a while)...'
 
     # First things first, make sure our venv has the latest pip and distribute.
-    pip_install('pip')
+    # NOTE: we keep pip at version 1.1 since the most recent version causes
+    # the .venv creation to fail. See:
+    # https://bugs.launchpad.net/nova/+bug/1047120
+    pip_install('pip==1.1')
     pip_install('distribute')
 
     # Install greenlet by hand - just listing it in the requires file does not
