@@ -54,7 +54,7 @@ class NotificationsTestCase(test.TestCase):
         fake_network.set_stub_network_methods(self.stubs)
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-          notification_driver=['nova.openstack.common.notifier.test_notifier'],
+                   notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager',
                    notify_on_state_change="vm_and_task_state",
                    host='testhost')

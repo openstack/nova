@@ -51,9 +51,8 @@ class VolumeTestCase(test.TestCase):
         self.compute = importutils.import_object(FLAGS.compute_manager)
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   volumes_dir=vol_tmpdir)
-        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
-                ['nova.openstack.common.notifier.test_notifier'])
+                   volumes_dir=vol_tmpdir,
+                   notification_driver=[test_notifier.__name__])
         self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
