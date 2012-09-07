@@ -224,8 +224,6 @@ class VolumeController(object):
             raise exc.HTTPUnprocessableEntity()
 
         vol = body['volume']
-        size = vol['size']
-        LOG.audit(_("Create volume of %s GB"), size, context=context)
 
         vol_type = vol.get('volume_type', None)
         if vol_type:
@@ -243,6 +241,12 @@ class VolumeController(object):
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
         else:
             snapshot = None
+
+        size = vol.get('size', None)
+        if size is None and snapshot is not None:
+            size = snapshot['volume_size']
+
+        LOG.audit(_("Create volume of %s GB"), size, context=context)
 
         availability_zone = vol.get('availability_zone', None)
 
