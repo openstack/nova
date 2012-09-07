@@ -1371,11 +1371,12 @@ class NetworkManager(manager.SchedulerDependentManager):
                     "vlan_start", "vpn_start")
         for key in int_args:
             try:
-                kwargs[key] = int(kwargs[key])
+                value = kwargs.get(key)
+                if value is None:
+                    continue
+                kwargs[key] = int(value)
             except ValueError:
                 raise ValueError(_("%s must be an integer") % key)
-            except KeyError:
-                pass
 
         # check for certain required inputs
         label = kwargs["label"]
