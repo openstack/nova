@@ -1590,6 +1590,17 @@ def _get_all_vdis_in_sr(session, sr_ref):
             continue
 
 
+def get_instance_vdis_for_sr(session, vm_ref, sr_ref):
+    """Return opaqueRef for all the vdis which live on sr"""
+    for vbd_ref in session.call_xenapi('VM.get_VBDs', vm_ref):
+        try:
+            vdi_ref = session.call_xenapi('VBD.get_VDI', vbd_ref)
+            if sr_ref == session.call_xenapi('VDI.get_SR', vdi_ref):
+                yield vdi_ref
+        except session.XenAPI.Failure:
+            continue
+
+
 def _get_vhd_parent_uuid(session, vdi_ref):
     vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
 

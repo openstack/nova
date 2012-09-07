@@ -1534,10 +1534,12 @@ class VMOps(object):
 
         """
         if block_migration:
-            migrate_data = self._migrate_receive(ctxt)
-            dest_check_data = {}
-            dest_check_data["block_migration"] = block_migration
-            dest_check_data["migrate_data"] = migrate_data
+            migrate_send_data = self._migrate_receive(ctxt)
+            destination_sr_ref = vm_utils.safe_find_sr(self._session)
+            dest_check_data = {
+                "block_migration": block_migration,
+                "migrate_data": {"migrate_send_data": migrate_send_data,
+                                 "destination_sr_ref": destination_sr_ref}}
             return dest_check_data
         else:
             src = instance_ref['host']
@@ -1558,19 +1560,34 @@ class VMOps(object):
 
         """
         if dest_check_data and 'migrate_data' in dest_check_data:
-            vmref = self._get_vm_opaque_ref(instance_ref)
+            vm_ref = self._get_vm_opaque_ref(instance_ref)
             migrate_data = dest_check_data['migrate_data']
             try:
-                vdi_map = {}
-                vif_map = {}
-                options = {}
-                self._session.call_xenapi("VM.assert_can_migrate", vmref,
-                                          migrate_data, True, vdi_map, vif_map,
-                                          options)
+                self._call_live_migrate_command(
+                    "VM.assert_can_migrate", vm_ref, migrate_data)
             except self._session.XenAPI.Failure as exc:
                 LOG.exception(exc)
                 raise exception.MigrationError(_('VM.assert_can_migrate'
                                                  'failed'))
+
+    def _generate_vdi_map(self, destination_sr_ref, vm_ref):
+        """generate a vdi_map for _call_live_migrate_command """
+        sr_ref = vm_utils.safe_find_sr(self._session)
+        vm_vdis = vm_utils.get_instance_vdis_for_sr(self._session,
+                                                    vm_ref, sr_ref)
+        return dict((vdi, destination_sr_ref) for vdi in vm_vdis)
+
+    def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
+        """unpack xapi specific parameters, and call a live migrate command"""
+        destination_sr_ref = migrate_data['destination_sr_ref']
+        migrate_send_data = migrate_data['migrate_send_data']
+
+        vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
+        vif_map = {}
+        options = {}
+        self._session.call_xenapi(command_name, vm_ref,
+                                  migrate_send_data, True,
+                                  vdi_map, vif_map, options)
 
     def live_migrate(self, context, instance, destination_hostname,
                      post_method, recover_method, block_migration,
@@ -1582,12 +1599,8 @@ class VMOps(object):
                     raise exception.InvalidParameterValue('Block Migration '
                                     'requires migrate data from destination')
                 try:
-                    vdi_map = {}
-                    vif_map = {}
-                    options = {}
-                    self._session.call_xenapi("VM.migrate_send", vm_ref,
-                                              migrate_data, True,
-                                              vdi_map, vif_map, options)
+                    self._call_live_migrate_command(
+                        "VM.migrate_send", vm_ref, migrate_data)
                 except self._session.XenAPI.Failure as exc:
                     LOG.exception(exc)
                     raise exception.MigrationError(_('Migrate Send failed'))
