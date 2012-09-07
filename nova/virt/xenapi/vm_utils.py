@@ -22,7 +22,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import contextlib
-import cPickle as pickle
 import decimal
 import os
 import re
@@ -44,7 +43,6 @@ from nova import flags
 from nova.image import glance
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
@@ -467,17 +465,11 @@ def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
     """
     with _dummy_vm(session, instance, vdi_to_copy_ref) as vm_ref:
         label = "snapshot"
-
         with snapshot_attached_here(
                 session, instance, vm_ref, label) as vdi_uuids:
-            params = {'sr_path': get_sr_path(session),
-                      'vdi_uuids': vdi_uuids,
-                      'uuid_stack': _make_uuid_stack()}
-
-            kwargs = {'params': pickle.dumps(params)}
-            result = session.call_plugin(
-                    'workarounds', 'safe_copy_vdis', kwargs)
-            imported_vhds = jsonutils.loads(result)
+            imported_vhds = session.call_plugin_serialized(
+                'workarounds', 'safe_copy_vdis', sr_path=get_sr_path(session),
+                vdi_uuids=vdi_uuids, uuid_stack=_make_uuid_stack())
 
     root_uuid = imported_vhds['root']['uuid']
 
@@ -674,8 +666,7 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
               'auth_token': getattr(context, 'auth_token', None),
               'properties': properties}
 
-    kwargs = {'params': pickle.dumps(params)}
-    session.call_plugin('glance', 'upload_vhd', kwargs)
+    session.call_plugin_serialized('glance', 'upload_vhd', **params)
 
 
 def resize_disk(session, instance, vdi_ref, instance_type):
@@ -971,9 +962,9 @@ def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
         try:
             if callback:
                 callback(params)
-            kwargs = {'params': pickle.dumps(params)}
-            result = session.call_plugin(plugin_name, 'download_vhd', kwargs)
-            return jsonutils.loads(result)
+
+            return session.call_plugin_serialized(
+                    plugin_name, 'download_vhd', **params)
         except session.XenAPI.Failure as exc:
             _type, _method, error = exc.details[:3]
             if error == 'RetryableError':
@@ -2163,13 +2154,9 @@ def ensure_correct_host(session):
 
 def move_disks(session, instance, disk_info):
     """Move and possibly link VHDs via the XAPI plugin."""
-    params = {'instance_uuid': instance['uuid'],
-              'sr_path': get_sr_path(session),
-              'uuid_stack': _make_uuid_stack()}
-
-    result = session.call_plugin(
-            'migration', 'move_vhds_into_sr', {'params': pickle.dumps(params)})
-    imported_vhds = jsonutils.loads(result)
+    imported_vhds = session.call_plugin_serialized(
+            'migration', 'move_vhds_into_sr', instance_uuid=instance['uuid'],
+            sr_path=get_sr_path(session), uuid_stack=_make_uuid_stack())
 
     # Now we rescan the SR so we find the VHDs
     scan_default_sr(session)

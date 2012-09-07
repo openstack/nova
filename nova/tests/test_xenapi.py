@@ -2105,6 +2105,10 @@ class VmUtilsTestCase(test.TestCase):
             def call_plugin(session_self, service, command, kwargs):
                 self.kwargs = kwargs
 
+            def call_plugin_serialized(session_self, service, command, *args,
+                            **kwargs):
+                self.kwargs = kwargs
+
         def fake_dumps(thing):
             return thing
 
@@ -2119,7 +2123,7 @@ class VmUtilsTestCase(test.TestCase):
         session = FakeSession()
         vm_utils.upload_image(ctx, session, instance, "vmi uuids", "image id")
 
-        actual = self.kwargs['params']['properties']
+        actual = self.kwargs['properties']
         expected = dict(a=1, b=2, c='c', d='d',
                         auto_disk_config='auto disk config',
                         os_type='os type')

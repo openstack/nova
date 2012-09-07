@@ -19,7 +19,6 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
-import cPickle as pickle
 import functools
 import itertools
 import time
@@ -610,16 +609,10 @@ class VMOps(object):
         LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
                   locals(), instance=instance)
         instance_uuid = instance['uuid']
-        params = {'host': dest,
-                  'vdi_uuid': vdi_uuid,
-                  'instance_uuid': instance_uuid,
-                  'sr_path': sr_path,
-                  'seq_num': seq_num}
-
         try:
-            _params = {'params': pickle.dumps(params)}
-            self._session.call_plugin('migration', 'transfer_vhd',
-                                      _params)
+            self._session.call_plugin_serialized('migration', 'transfer_vhd',
+                    instance_uuid=instance_uuid, host=dest, vdi_uuid=vdi_uuid,
+                    sr_path=sr_path, seq_num=seq_num)
         except self._session.XenAPI.Failure:
             msg = _("Failed to transfer vhd to new host")
             raise exception.MigrationError(reason=msg)
