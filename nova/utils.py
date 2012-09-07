@@ -727,6 +727,7 @@ def synchronized(name, external=False, lock_path=None):
                         local_lock_path = FLAGS.lock_path or wrap_mkdtemp()
 
                     if not os.path.exists(local_lock_path):
+                        cleanup_dir = True
                         ensure_tree(local_lock_path)
 
                     # NOTE(mikal): the lock name cannot contain directory
