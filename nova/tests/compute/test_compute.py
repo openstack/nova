@@ -86,7 +86,7 @@ class BaseTestCase(test.TestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-         notification_driver=['nova.openstack.common.notifier.test_notifier'],
+                   notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
 

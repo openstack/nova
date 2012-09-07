@@ -38,9 +38,8 @@ class UsageInfoTestCase(test.TestCase):
     def setUp(self):
         super(UsageInfoTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   host='fake')
-        self.stubs.Set(flags.FLAGS, 'notification_driver',
-                ['nova.openstack.common.notifier.test_notifier'])
+                   host='fake',
+                   notification_driver=[test_notifier.__name__])
         fake_network.set_stub_network_methods(self.stubs)
 
         self.volume = importutils.import_object(FLAGS.volume_manager)

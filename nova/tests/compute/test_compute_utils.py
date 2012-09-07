@@ -166,7 +166,7 @@ class UsageInfoTestCase(test.TestCase):
                        fake_get_nw_info)
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-          notification_driver=['nova.openstack.common.notifier.test_notifier'],
+                   notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
         self.user_id = 'fake'
