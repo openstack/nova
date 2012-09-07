@@ -1317,7 +1317,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             eph['size'],
                                             instance["os_type"])
             image(_get_eph_disk(eph)).cache(fetch_func=fn,
-                                            fileman=fname,
+                                            filename=fname,
                                             size=size,
                                             ephemeral_size=eph['size'])
 
