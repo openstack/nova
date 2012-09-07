@@ -157,6 +157,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if match.groups():
                 matched_value = match.groups()[0]
         else:
+            if isinstance(expected, basestring):
+                # NOTE(danms): Ignore whitespace in this comparison
+                expected = expected.strip()
+                result = result.strip()
             if expected != result:
                 raise NoMatch(_('Values do not match:\n'
                         '%(expected)s\n%(result)s') % locals())
@@ -217,6 +221,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _do_put(self, url, name, subs):
         return self._do_post(url, name, subs, method='PUT')
 
+    def _do_delete(self, url):
+        return self._get_response(url, 'DELETE')
+
 
 class VersionsSampleJsonTest(ApiSampleTestBase):
     def test_servers_get(self):
@@ -229,8 +236,8 @@ class VersionsSampleXmlTest(VersionsSampleJsonTest):
     ctype = 'xml'
 
 
-class ServersSampleJsonTest(ApiSampleTestBase):
-    def test_servers_post(self):
+class ServersSampleBase(ApiSampleTestBase):
+    def _post_server(self):
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
@@ -239,6 +246,11 @@ class ServersSampleJsonTest(ApiSampleTestBase):
         self.assertEqual(response.status, 202)
         subs = self._get_regexes()
         return self._verify_response('server-post-resp', subs, response)
+
+
+class ServersSampleJsonTest(ServersSampleBase):
+    def test_servers_post(self):
+        return self._post_server()
 
     def test_servers_get(self):
         uuid = self.test_servers_post()
@@ -252,12 +264,93 @@ class ServersSampleXmlTest(ServersSampleJsonTest):
     ctype = 'xml'
 
 
+class ServersDetailJsonTest(ServersSampleBase):
+    def test_servers_detail_get(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-detail-get-resp', subs, response)
+
+
+class ServersDetailXmlTest(ServersDetailJsonTest):
+    ctype = 'xml'
+
+
 class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
     all_extensions = True
 
 
 class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
+
+
+class ServersMetadataJsonTest(ServersSampleBase):
+    def _create_and_set(self, subs):
+        uuid = self._post_server()
+        response = self._do_put('servers/%s/metadata' % uuid,
+                                'server-metadata-all-req',
+                                subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+        return uuid
+
+    def test_metadata_put_all(self):
+        """Test setting all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        return self._create_and_set(subs)
+
+    def test_metadata_post_all(self):
+        """Test updating all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        subs['value'] = 'Bar Value'
+        response = self._do_post('servers/%s/metadata' % uuid,
+                                 'server-metadata-all-req',
+                                 subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+    def test_metadata_get_all(self):
+        """Test getting all metadata for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_get('servers/%s/metadata' % uuid)
+        self.assertEqual(response.status, 200)
+        self._verify_response('server-metadata-all-resp', subs, response)
+
+    def test_metadata_put(self):
+        """Test putting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        subs['value'] = 'Bar Value'
+        response = self._do_put('servers/%s/metadata/foo' % uuid,
+                                'server-metadata-req',
+                                subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('server-metadata-resp', subs, response)
+
+    def test_metadata_get(self):
+        """Test getting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_get('servers/%s/metadata/foo' % uuid)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('server-metadata-resp', subs, response)
+
+    def test_metadata_delete(self):
+        """Test deleting an individual metadata item for a server"""
+        subs = {'value': 'Foo Value'}
+        uuid = self._create_and_set(subs)
+        response = self._do_delete('servers/%s/metadata/foo' % uuid)
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.read(), '')
+
+
+class ServersMetadataXmlTest(ServersMetadataJsonTest):
+    ctype = 'xml'
 
 
 class ExtensionsSampleJsonTest(ApiSampleTestBase):
