@@ -127,6 +127,8 @@ class TgtAdm(TargetAdmin):
 
         try:
             (out, err) = self._execute('tgt-admin',
+                                       '--conf',
+                                       volume_path,
                                        '--update',
                                        name,
                                        run_as_root=True)

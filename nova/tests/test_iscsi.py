@@ -92,7 +92,7 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='tgtadm')
         self.flags(volumes_dir="./")
         self.script_template = "\n".join([
-        'tgt-admin --update iqn.2011-09.org.foo.bar:blaa',
+        'tgt-admin --conf ./blaa --update iqn.2011-09.org.foo.bar:blaa',
         'tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa'])
 
 
