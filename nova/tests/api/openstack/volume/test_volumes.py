@@ -204,7 +204,7 @@ class VolumeApiTest(test.TestCase):
                           1)
 
     def test_admin_list_volumes_limited_to_project(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes',
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes',
                                       use_admin_context=True)
         res = self.controller.index(req)
 
@@ -212,20 +212,20 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(1, len(res['volumes']))
 
     def test_admin_list_volumes_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1',
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes?all_tenants=1',
                                       use_admin_context=True)
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(3, len(res['volumes']))
 
     def test_all_tenants_non_admin_gets_all_tenants(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes?all_tenants=1')
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes?all_tenants=1')
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(1, len(res['volumes']))
 
     def test_non_admin_get_by_project(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/volumes')
+        req = fakes.HTTPRequest.blank('/v1/fake/volumes')
         res = self.controller.index(req)
         self.assertTrue('volumes' in res)
         self.assertEqual(1, len(res['volumes']))
