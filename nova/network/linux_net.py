@@ -76,6 +76,9 @@ linux_net_opts = [
     cfg.BoolOpt('send_arp_for_ha',
                 default=False,
                 help='send gratuitous ARPs for HA setup'),
+    cfg.IntOpt('send_arp_for_ha_count',
+               default=3,
+               help='send this many gratuitous ARPs for HA setup'),
     cfg.BoolOpt('use_single_default_gateway',
                 default=False,
                 help='Use single default gateway. Only first nic of vm will '
@@ -563,15 +566,24 @@ def init_host(ip_range=None):
     iptables_manager.apply()
 
 
+def send_arp_for_ip(ip, device, count):
+    out, err = _execute('arping', '-U', ip,
+                        '-A', '-I', device,
+                        '-c', str(count),
+                        run_as_root=True, check_exit_code=False)
+
+    if err:
+        LOG.debug(_('arping error for ip %s'), ip)
+
+
 def bind_floating_ip(floating_ip, device):
     """Bind ip to public interface."""
     _execute('ip', 'addr', 'add', str(floating_ip) + '/32',
              'dev', device,
              run_as_root=True, check_exit_code=[0, 2, 254])
-    if FLAGS.send_arp_for_ha:
-        _execute('arping', '-U', floating_ip,
-                 '-A', '-I', device,
-                 '-c', 1, run_as_root=True, check_exit_code=False)
+
+    if FLAGS.send_arp_for_ha and FLAGS.send_arp_for_ha_count > 0:
+        send_arp_for_ip(floating_ip, device, FLAGS.send_arp_for_ha_count)
 
 
 def unbind_floating_ip(floating_ip, device):
@@ -669,10 +681,9 @@ def initialize_gateway_device(dev, network_ref):
         for fields in old_routes:
             _execute('ip', 'route', 'add', *fields,
                      run_as_root=True)
-        if FLAGS.send_arp_for_ha:
-            _execute('arping', '-U', network_ref['dhcp_server'],
-                     '-A', '-I', dev,
-                     '-c', 1, run_as_root=True, check_exit_code=False)
+        if FLAGS.send_arp_for_ha and FLAGS.send_arp_for_ha_count > 0:
+            send_arp_for_ip(network_ref['dhcp_server'], dev,
+                            FLAGS.send_arp_for_ha_count)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
                  'change', network_ref['cidr_v6'],
