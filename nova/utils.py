@@ -717,14 +717,14 @@ def synchronized(name, external=False, lock_path=None):
                               {'lock': name, 'method': f.__name__})
                     cleanup_dir = False
 
-                    def wrap_mkdtemp():
-                        cleanup_dir = True
-                        return tempfile.mkdtemp()
-
                     # We need a copy of lock_path because it is non-local
                     local_lock_path = lock_path
                     if not local_lock_path:
-                        local_lock_path = FLAGS.lock_path or wrap_mkdtemp()
+                        local_lock_path = FLAGS.lock_path
+
+                    if not local_lock_path:
+                        cleanup_dir = True
+                        local_lock_path = tempfile.mkdtemp()
 
                     if not os.path.exists(local_lock_path):
                         cleanup_dir = True
@@ -735,8 +735,8 @@ def synchronized(name, external=False, lock_path=None):
                     safe_name = name.replace(os.sep, '_')
                     lock_file_path = os.path.join(local_lock_path,
                                                   'nova-%s' % safe_name)
-                    lock = InterProcessLock(lock_file_path)
                     try:
+                        lock = InterProcessLock(lock_file_path)
                         with lock:
                             LOG.debug(_('Got file lock "%(lock)s" for '
                                         'method "%(method)s"...'),
