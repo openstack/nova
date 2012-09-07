@@ -99,6 +99,8 @@ class CloudTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volumes_dir=vol_tmpdir)
         self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
+        self.stubs.Set(iscsi.TgtAdm, 'remove_iscsi_target',
+                       self.fake_remove_iscsi_target)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -162,6 +164,9 @@ class CloudTestCase(test.TestCase):
 
     def fake_get_target(obj, iqn):
         return 1
+
+    def fake_remove_iscsi_target(obj, tid, lun, vol_id, **kwargs):
+        pass
 
     def _stub_instance_get_with_fixed_ips(self, func_name):
         orig_func = getattr(self.cloud.compute_api, func_name)
