@@ -35,7 +35,7 @@ def upgrade(migrate_engine):
                 volumes.c.id == v['id'])
             volumes.update().\
                 where(volumes.c.id == v['id']).\
-                values(attach_datetime=attach_time).execute()
+                values(attachtime_datetime=attach_time).execute()
     except Exception:
         attach_datetime.drop()
         raise
@@ -62,7 +62,7 @@ def downgrade(migrate_engine):
                 volumes.c.id == v['id'])
             volumes.update().\
                 where(volumes.c.id == v['id']).\
-                values(attach_string=attach_time).execute()
+                values(attachtime_string=attach_time).execute()
     except Exception:
         attach_string.drop()
         raise

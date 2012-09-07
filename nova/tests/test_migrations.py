@@ -303,3 +303,23 @@ class TestMigrations(test.TestCase):
         self.assertEqual(version,
                 migration_api.db_version(engine,
                                          TestMigrations.REPOSITORY))
+
+    def test_migration_98(self):
+        """Test that migration 98 runs
+
+        This test exists to prove bug 1047633 has been fixed
+        """
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 97)
+
+            # Set up a single volume, values don't matter
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+            volumes = sqlalchemy.Table('volumes', metadata, autoload=True)
+            vol_id = '9db3c2e5-8cac-4e94-9e6c-b5f750736727'
+            volumes.insert().values(id=vol_id).execute()
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 98)
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 97)
