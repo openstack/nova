@@ -582,10 +582,11 @@ def instance_get_all(context, columns_to_join=None):
 
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
-                                sort_dir='desc'):
+                                sort_dir='desc', limit=None, marker=None):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters, sort_key,
-                                            sort_dir)
+                                            sort_dir, limit=limit,
+                                            marker=marker)
 
 
 def instance_get_active_by_window(context, begin, end=None, project_id=None,

@@ -582,7 +582,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
@@ -597,7 +598,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('image' in search_opts)
             self.assertEqual(search_opts['image'], '12345')
@@ -613,7 +615,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
         def fake_get_all(context, filters=None, sort_key=None,
-                         sort_dir='desc'):
+                         sort_dir='desc', limit=None, marker=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'fake')
             self.assertFalse(filters.get('tenant_id'))
@@ -630,7 +632,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_admin_restricted_tenant(self):
         def fake_get_all(context, filters=None, sort_key=None,
-                         sort_dir='desc'):
+                         sort_dir='desc', limit=None, marker=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'fake')
             return [fakes.stub_instance(100)]
@@ -646,7 +648,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_admin_all_tenants(self):
         def fake_get_all(context, filters=None, sort_key=None,
-                         sort_dir='desc'):
+                         sort_dir='desc', limit=None, marker=None):
             self.assertNotEqual(filters, None)
             self.assertTrue('project_id' not in filters)
             return [fakes.stub_instance(100)]
@@ -662,7 +664,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_all_tenants(self):
         def fake_get_all(context, filters=None, sort_key=None,
-                         sort_dir='desc'):
+                         sort_dir='desc', limit=None, marker=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'fake')
             return [fakes.stub_instance(100)]
@@ -679,7 +681,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('flavor' in search_opts)
             # flavor is an integer ID
@@ -698,7 +701,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('vm_state' in search_opts)
             self.assertEqual(search_opts['vm_state'], vm_states.ACTIVE)
@@ -728,7 +732,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertTrue('vm_state' in search_opts)
             self.assertEqual(search_opts['vm_state'], 'deleted')
 
@@ -747,7 +752,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('name' in search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
@@ -765,7 +771,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('changes-since' in search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
@@ -796,7 +803,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             # Allowed by user
             self.assertTrue('name' in search_opts)
@@ -824,7 +832,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             # Allowed by user
             self.assertTrue('name' in search_opts)
@@ -852,7 +861,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('ip' in search_opts)
             self.assertEqual(search_opts['ip'], '10\..*')
@@ -874,7 +884,8 @@ class ServersControllerTest(test.TestCase):
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc'):
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('ip6' in search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')

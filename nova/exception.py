@@ -294,6 +294,10 @@ class InvalidGroup(Invalid):
     message = _("Group not valid. Reason: %(reason)s")
 
 
+class InvalidSortKey(Invalid):
+    message = _("Sort key supplied was not valid.")
+
+
 class InstanceInvalidState(Invalid):
     message = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")
