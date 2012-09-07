@@ -43,7 +43,7 @@ class Mount(object):
         self.error = ""
 
         # Internal
-        self.linked = self.mapped = self.mounted = False
+        self.linked = self.mapped = self.mounted = self.automapped = False
         self.device = self.mapped_device = device
 
         # Reset to mounted dir if possible
@@ -76,10 +76,12 @@ class Mount(object):
     def map_dev(self):
         """Map partitions of the device to the file system namespace."""
         assert(os.path.exists(self.device))
+        automapped_path = '/dev/%sp%s' % (os.path.basename(self.device),
+                                              self.partition)
 
         if self.partition == -1:
             self.error = _('partition search unsupported with %s') % self.mode
-        elif self.partition:
+        elif self.partition and not os.path.exists(automapped_path):
             map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
             assert(not os.path.exists(map_path))
@@ -99,6 +101,14 @@ class Mount(object):
             else:
                 self.mapped_device = map_path
                 self.mapped = True
+        elif self.partition and os.path.exists(automapped_path):
+            # Note auto mapping can be enabled with the 'max_part' option
+            # to the nbd or loop kernel modules. Beware of possible races
+            # in the partition scanning for _loop_ devices though
+            # (details in bug 1024586), which are currently uncatered for.
+            self.mapped_device = automapped_path
+            self.mapped = True
+            self.automapped = True
         else:
             self.mapped_device = self.device
             self.mapped = True
@@ -109,9 +119,10 @@ class Mount(object):
         """Remove partitions of the device from the file system namespace."""
         if not self.mapped:
             return
-        if self.partition:
+        if self.partition and not self.automapped:
             utils.execute('kpartx', '-d', self.device, run_as_root=True)
         self.mapped = False
+        self.automapped = False
 
     def mnt_dev(self):
         """Mount the device into the file system."""
