@@ -176,6 +176,7 @@ class _DiskImage(object):
     @staticmethod
     def _device_for_path(path):
         device = None
+        path = os.path.realpath(path)
         with open("/proc/mounts", 'r') as ifp:
             for line in ifp:
                 fields = line.split()
