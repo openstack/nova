@@ -209,7 +209,7 @@ class _DiskImage(object):
         with open("/proc/mounts", 'r') as ifp:
             for line in ifp:
                 fields = line.split()
-                if fields[1] == path:
+                if fields[1] == os.path.realpath(path):
                     device = fields[0]
                     break
         return device
