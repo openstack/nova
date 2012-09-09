@@ -20,6 +20,7 @@ Management class for basic VM operations.
 """
 import multiprocessing
 import os
+import platform
 import uuid
 
 from nova import db
@@ -555,23 +556,17 @@ class VMOps(baseops.BaseOps):
         LOG.info(_('Windows version: %s ') % version)
         return version
 
-    def update_available_resource(self, context, host):
-        """Updates compute manager resource info on ComputeNode table.
+    def get_available_resource(self):
+        """Retrieve resource info.
 
-        This method is called as an periodic tasks and is used only
-        in live migration currently.
+        This method is called when nova-compute launches, and
+        as part of a periodic task.
 
-        :param ctxt: security context
-        :param host: hostname that compute manager is currently running
+        :returns: dictionary describing resources
 
         """
+        LOG.info(_('get_available_resource called'))
 
-        try:
-            service_ref = db.service_get_all_compute_by_host(context, host)[0]
-        except exception.NotFound:
-            raise exception.ComputeServiceUnavailable(host=host)
-
-        # Updating host information
         # TODO(alexpilotti) implemented cpu_info
         dic = {'vcpus': self._get_vcpu_total(),
                'memory_mb': self._get_memory_mb_total(),
@@ -581,17 +576,10 @@ class VMOps(baseops.BaseOps):
                'local_gb_used': self._get_local_gb_used(),
                'hypervisor_type': "hyperv",
                'hypervisor_version': self._get_hypervisor_version(),
-               'cpu_info': "unknown",
-               'service_id': service_ref['id'],
-               'disk_available_least': 1}
+               'hypervisor_hostname': platform.node(),
+               'cpu_info': 'unknown'}
 
-        compute_node_ref = service_ref['compute_node']
-        if not compute_node_ref:
-            LOG.info(_('Compute_service record created for %s ') % host)
-            db.compute_node_create(context, dic)
-        else:
-            LOG.info(_('Compute_service record updated for %s ') % host)
-            db.compute_node_update(context, compute_node_ref[0]['id'], dic)
+        return dic
 
     def _cache_image(self, fn, target, fname, cow=False, Size=None,
         *args, **kwargs):

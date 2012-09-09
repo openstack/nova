@@ -19,6 +19,7 @@ Test suite for the Hyper-V driver and related APIs.
 """
 
 import os
+import platform
 import shutil
 import sys
 import uuid
@@ -150,6 +151,11 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             fake_image.FakeImageService_reset()
         finally:
             super(HyperVAPITestCase, self).tearDown()
+
+    def test_get_available_resource(self):
+        dic = self._conn.get_available_resource()
+
+        self.assertEquals(dic['hypervisor_hostname'], platform.node())
 
     def test_list_instances(self):
         num_vms = self._hypervutils.get_vm_count()
