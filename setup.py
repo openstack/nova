@@ -23,6 +23,7 @@ import setuptools
 from nova.openstack.common import setup as common_setup
 from nova import version
 
+requires = common_setup.parse_requirements()
 
 setuptools.setup(name='nova',
       version=version.canonical_version_string(),
@@ -32,6 +33,7 @@ setuptools.setup(name='nova',
       url='http://www.openstack.org/',
       cmdclass=common_setup.get_cmdclass(),
       packages=setuptools.find_packages(exclude=['bin', 'smoketests']),
+      install_requires=requires,
       include_package_data=True,
       test_suite='nose.collector',
       setup_requires=['setuptools_git>=0.4'],
