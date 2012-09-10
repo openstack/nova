@@ -356,12 +356,6 @@ class ISCSIDriver(VolumeDriver):
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
-        #BOOKMARK jdg
-        location = volume['provider_location'].split(' ')
-        iqn = location[1]
-        if 'iqn' not in iqn:
-            LOG.warning(_("Jacked... didn't get an iqn"))
-            return
 
         # NOTE(jdg): tgtadm doesn't use the iscsi_targets table
         # TODO(jdg): In the future move all of the dependent stuff into the
@@ -378,6 +372,12 @@ class ISCSIDriver(VolumeDriver):
             iscsi_target = 0
 
         try:
+
+            # NOTE: provider_location may be unset if the volume hasn't
+            # been exported
+            location = volume['provider_location'].split(' ')
+            iqn = location[1]
+
             # ietadm show will exit with an error
             # this export has already been removed
             self.tgtadm.show_target(iscsi_target, iqn=iqn)
