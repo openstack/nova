@@ -219,10 +219,6 @@ class VolumeController(object):
 
         volume = body['volume']
 
-        size = volume['size']
-
-        LOG.audit(_("Create volume of %s GB"), size, context=context)
-
         kwargs = {}
 
         req_volume_type = volume.get('volume_type', None)
@@ -241,6 +237,12 @@ class VolumeController(object):
                                                               snapshot_id)
         else:
             kwargs['snapshot'] = None
+
+        size = volume.get('size', None)
+        if size is None and kwargs['snapshot'] is not None:
+            size = kwargs['snapshot']['volume_size']
+
+        LOG.audit(_("Create volume of %s GB"), size, context=context)
 
         kwargs['availability_zone'] = volume.get('availability_zone', None)
 
