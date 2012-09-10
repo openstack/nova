@@ -31,10 +31,14 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   on the instance's image.  It passes hosts that can support the specified
   image properties contained in the instance.
 * |AvailabilityZoneFilter| - filters hosts by availability zone. It passes
-  hosts matching the availability zone specfied in the instance properties.
+  hosts matching the availability zone specified in the instance properties.
 * |ComputeCapabilityFilter| - checks that the capabilities provided by the
   host compute service satisfy any extra specifications associated with the
-  instance type.  It passes hosts that can create the specified instance type.
+  instance type (that have no scope, see |TrustedFilter| for details).  It
+  passes hosts that can create the specified instance type.
+* |AggregateInstanceExtraSpecsFilter| - checks that the aggregate metadata
+  satisfies any extra specifications associated with the instance type (that
+  have no scope).  It passes hosts that can create the specified instance type.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
@@ -52,7 +56,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |RetryFilter| - filters hosts that have been attempted for scheduling.
   Only passes hosts that have not been previously attempted.
 * |TrustedFilter| - filters hosts based on their trust.  Only passes hosts
-  that meet the trust requirements sepcified in the instance properties.
+  that meet the trust requirements specified in the instance properties.
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
@@ -91,16 +95,16 @@ The |ImagePropertiesFilter| filters hosts based on the architecture,
 hypervisor type, and virtual machine mode specified in the
 instance.  E.g., an instance might require a host that supports the arm
 architecture on a qemu compute host.  The |ImagePropertiesFilter| will only
-pass hosts that can statisfy this request.  These instance
+pass hosts that can satisfy this request.  These instance
 properties are populated from properties define on the instance's image.
 E.g. an image can be decorated with these properties using
 `glance image-update img-uuid --property architecture=arm --property
 hypervisor_type=qemu`
-Only hosts that statify these requirements will pass the
+Only hosts that satisfy these requirements will pass the
 |ImagePropertiesFilter|.
 
 |ComputeCapabilitesFilter| checks if the host satisfies any 'extra specs'
-specfied on the instance type.  The 'extra specs' can contain key/value pairs,
+specified on the instance type.  The 'extra specs' can contain key/value pairs,
 and the |ComputeCapabilitiesFilter| will only pass hosts whose capabilities
 satisfy the requested specifications.  All hosts are passed if no 'extra specs'
 are specified.
@@ -143,18 +147,19 @@ This query will filter all hosts with free RAM greater or equal than 1024 MB
 and at the same time with free disk space greater or equal than 200 GB.
 
 Many filters use data from `scheduler_hints`, that is defined in the moment of
-creation of the new server for the user. The only exeption for this rule is
+creation of the new server for the user. The only exception for this rule is
 |JsonFilter|, that takes data in some strange difficult to understand way.
 
 The |RetryFilter| filters hosts that have already been attempted for scheduling.
 It only passes hosts that have not been previously attempted.
 
 The |TrustedFilter| filters hosts based on their trust.  Only passes hosts
-that match the trust requested in the `extra_specs' for the flavor.  The
-`extra_specs' will contain a key/value pair where the key is `trust'.  The
-value of this pair (`trusted'/`untrusted') must match the integrity of a
-host (obtained from the Attestation service) before it is passed by the
-|TrustedFilter|.
+that match the trust requested in the `extra_specs' for the flavor.  The key
+for this filter is `trust:trusted_host', where `trust' is the scope of the
+key and `trusted_host' is the actual key value'.
+The value of this pair (`trusted'/`untrusted') must match the
+integrity of a host (obtained from the Attestation service) before it is
+passed by the |TrustedFilter|.
 
 To use filters you specify next two settings:
 
