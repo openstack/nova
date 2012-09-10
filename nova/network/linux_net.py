@@ -533,11 +533,13 @@ def metadata_accept():
 
 
 def add_snat_rule(ip_range):
-    iptables_manager.ipv4['nat'].add_rule('snat',
-                                          '-s %s -j SNAT --to-source %s' %
-                                           (ip_range,
-                                            FLAGS.routing_source_ip))
-    iptables_manager.apply()
+    if FLAGS.routing_source_ip:
+        rule = '-s %s -j SNAT --to-source %s' % (ip_range,
+                                                 FLAGS.routing_source_ip)
+        if FLAGS.public_interface:
+            rule += ' -o %s' % FLAGS.public_interface
+        iptables_manager.ipv4['nat'].add_rule('snat', rule)
+        iptables_manager.apply()
 
 
 def init_host(ip_range=None):
@@ -617,25 +619,27 @@ def ensure_vpn_forward(public_ip, port, private_ip):
     iptables_manager.apply()
 
 
-def ensure_floating_forward(floating_ip, fixed_ip):
+def ensure_floating_forward(floating_ip, fixed_ip, device):
     """Ensure floating ip forwarding rule."""
-    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
+    for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
 
 
-def remove_floating_forward(floating_ip, fixed_ip):
+def remove_floating_forward(floating_ip, fixed_ip, device):
     """Remove forwarding for floating ip."""
-    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
+    for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].remove_rule(chain, rule)
     iptables_manager.apply()
 
 
-def floating_forward_rules(floating_ip, fixed_ip):
+def floating_forward_rules(floating_ip, fixed_ip, device):
+    rule = '-s %s -j SNAT --to %s' % (fixed_ip, floating_ip)
+    if device:
+        rule += ' -o %s' % device
     return [('PREROUTING', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)),
             ('OUTPUT', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)),
-            ('float-snat',
-             '-s %s -j SNAT --to %s' % (fixed_ip, floating_ip))]
+            ('float-snat', rule)]
 
 
 def initialize_gateway_device(dev, network_ref):
