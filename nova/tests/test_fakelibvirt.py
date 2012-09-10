@@ -69,11 +69,13 @@ class FakeLibvirtTests(test.TestCase):
         return lambda uri: libvirt.openReadOnly(uri)
 
     def get_openAuth_curry_func(self):
+        def fake_cb(credlist):
+            return 0
         return lambda uri: libvirt.openAuth(uri,
                                             [[libvirt.VIR_CRED_AUTHNAME,
                                               libvirt.VIR_CRED_NOECHOPROMPT],
-                                            'root',
-                                            None], 0)
+                                             fake_cb,
+                                             None], 0)
 
     def _test_connect_method_accepts_None_uri_by_default(self, conn_method):
         conn = conn_method(None)

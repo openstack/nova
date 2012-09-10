@@ -376,8 +376,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _connect(uri, read_only):
-        auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
-                'root',
+        def _connect_auth_cb(creds, opaque):
+            if len(creds) == 0:
+                return 0
+            LOG.warning(
+                _("Can not handle authentication request for %d credentials")
+                % len(creds))
+            raise exception.NovaException(
+                _("Can not handle authentication request for %d credentials")
+                % len(creds))
+
+        auth = [[libvirt.VIR_CRED_AUTHNAME,
+                 libvirt.VIR_CRED_ECHOPROMPT,
+                 libvirt.VIR_CRED_REALM,
+                 libvirt.VIR_CRED_PASSPHRASE,
+                 libvirt.VIR_CRED_NOECHOPROMPT,
+                 libvirt.VIR_CRED_EXTERNAL],
+                _connect_auth_cb,
                 None]
 
         if read_only:

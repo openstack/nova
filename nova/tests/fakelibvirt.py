@@ -76,8 +76,15 @@ VIR_CPU_COMPARE_INCOMPATIBLE = 0
 VIR_CPU_COMPARE_IDENTICAL = 1
 VIR_CPU_COMPARE_SUPERSET = 2
 
+VIR_CRED_USERNAME = 1
 VIR_CRED_AUTHNAME = 2
+VIR_CRED_LANGUAGE = 3
+VIR_CRED_CNONCE = 4
+VIR_CRED_PASSPHRASE = 5
+VIR_CRED_ECHOPROMPT = 6
 VIR_CRED_NOECHOPROMPT = 7
+VIR_CRED_REALM = 8
+VIR_CRED_EXTERNAL = 9
 
 VIR_MIGRATE_PEER2PEER = 2
 VIR_MIGRATE_UNDEFINE_SOURCE = 16
@@ -828,11 +835,16 @@ def openAuth(uri, auth, flags):
         raise Exception(_("Please extend mock libvirt module to support "
                           "flags"))
 
-    if auth != [[VIR_CRED_AUTHNAME, VIR_CRED_NOECHOPROMPT],
-                 'root',
-                 None]:
-        raise Exception(_("Please extend fake libvirt module to support "
-                          "this auth method"))
+    if type(auth) != list:
+        raise Exception(_("Expected a list for 'auth' parameter"))
+
+    if type(auth[0]) != list:
+        raise Exception(
+            _("Expected a function in 'auth[0]' parameter"))
+
+    if not callable(auth[1]):
+        raise Exception(
+            _("Expected a function in 'auth[1]' parameter"))
 
     return Connection(uri, readonly=False)
 
