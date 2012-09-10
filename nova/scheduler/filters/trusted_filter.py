@@ -48,9 +48,12 @@ import httplib
 import socket
 import ssl
 
+from nova import context
+from nova import db
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova.scheduler import filters
 
 
@@ -78,6 +81,9 @@ trusted_opts = [
                deprecated_name='auth_blob',
                default=None,
                help='attestation authorization blob - must change'),
+    cfg.IntOpt('attestation_auth_timeout',
+               default=60,
+               help='Attestation status cache valid period length'),
 ]
 
 CONF = cfg.CONF
@@ -119,7 +125,7 @@ class HTTPSClientAuthConnection(httplib.HTTPSConnection):
                                     cert_reqs=ssl.CERT_REQUIRED)
 
 
-class AttestationService(httplib.HTTPSConnection):
+class AttestationService(object):
     # Provide access wrapper to attestation server to get integrity report.
 
     def __init__(self):
@@ -156,10 +162,10 @@ class AttestationService(httplib.HTTPSConnection):
         except (socket.error, IOError) as e:
             return IOError, None
 
-    def _request(self, cmd, subcmd, host):
+    def _request(self, cmd, subcmd, hosts):
         body = {}
-        body['count'] = 1
-        body['hosts'] = host
+        body['count'] = len(hosts)
+        body['hosts'] = hosts
         cooked = jsonutils.dumps(body)
         headers = {}
         headers['content-type'] = 'application/json'
@@ -173,33 +179,118 @@ class AttestationService(httplib.HTTPSConnection):
         else:
             return status, None
 
-    def _check_trust(self, data, host):
-        for item in data:
-            for state in item['hosts']:
-                if state['host_name'] == host:
-                    return state['trust_lvl']
-        return ""
+    def do_attestation(self, hosts):
+        """Attests compute nodes through OAT service.
 
-    def do_attestation(self, host):
-        state = []
-        status, data = self._request("POST", "PollHosts", host)
-        if status != httplib.OK:
-            return {}
-        state.append(data)
-        return self._check_trust(state, host)
+        :param hosts: hosts list to be attested
+        :returns: dictionary for trust level and validate time
+        """
+        result = None
+
+        status, data = self._request("POST", "PollHosts", hosts)
+        if data != None:
+            result = data.get('hosts')
+
+        return result
+
+
+class ComputeAttestationCache(object):
+    """Cache for compute node attestation
+
+    Cache compute node's trust level for sometime,
+    if the cache is out of date, poll OAT service to flush the
+    cache.
+
+    OAT service may have cache also. OAT service's cache valid time
+    should be set shorter than trusted filter's cache valid time.
+    """
+
+    def __init__(self):
+        self.attestservice = AttestationService()
+        self.compute_nodes = {}
+        admin = context.get_admin_context()
+
+        # Fetch compute node list to initialize the compute_nodes,
+        # so that we don't need poll OAT service one by one for each
+        # host in the first round that scheduler invokes us.
+        computes = db.compute_node_get_all(admin)
+        for compute in computes:
+            service = compute['service']
+            if not service:
+                LOG.warn(_("No service for compute ID %s") % compute['id'])
+                continue
+            host = service['host']
+            self._init_cache_entry(host)
+
+    def _cache_valid(self, host):
+        cachevalid = False
+        if host in self.compute_nodes:
+            node_stats = self.compute_nodes.get(host)
+            if not timeutils.is_older_than(
+                             node_stats['vtime'],
+                             CONF.trusted_computing.attestation_auth_timeout):
+                cachevalid = True
+        return cachevalid
+
+    def _init_cache_entry(self, host):
+        self.compute_nodes[host] = {
+            'trust_lvl': 'unknown',
+            'vtime': timeutils.normalize_time(
+                        timeutils.parse_isotime("1970-01-01T00:00:00Z"))}
+
+    def _invalidate_caches(self):
+        for host in self.compute_nodes:
+            self._init_cache_entry(host)
+
+    def _update_cache_entry(self, state):
+        entry = {}
+
+        host = state['host_name']
+        entry['trust_lvl'] = state['trust_lvl']
+
+        try:
+            # Normalize as naive object to interoperate with utcnow().
+            entry['vtime'] = timeutils.normalize_time(
+                            timeutils.parse_isotime(state['vtime']))
+        except ValueError:
+            # Mark the system as un-trusted if get invalid vtime.
+            entry['trust_lvl'] = 'unknown'
+            entry['vtime'] = timeutils.utcnow()
+
+        self.compute_nodes[host] = entry
+
+    def _update_cache(self):
+        self._invalidate_caches()
+        states = self.attestservice.do_attestation(self.compute_nodes.keys())
+        if states is None:
+            return
+        for state in states:
+            self._update_cache_entry(state)
+
+    def get_host_attestation(self, host):
+        """Check host's trust level."""
+        if not host in self.compute_nodes:
+            self._init_cache_entry(host)
+        if not self._cache_valid(host):
+            self._update_cache()
+        level = self.compute_nodes.get(host).get('trust_lvl')
+        return level
+
+
+class ComputeAttestation(object):
+    def __init__(self):
+        self.caches = ComputeAttestationCache()
+
+    def is_trusted(self, host, trust):
+        level = self.caches.get_host_attestation(host)
+        return trust == level
 
 
 class TrustedFilter(filters.BaseHostFilter):
     """Trusted filter to support Trusted Compute Pools."""
 
     def __init__(self):
-        self.attestation_service = AttestationService()
-
-    def _is_trusted(self, host, trust):
-        level = self.attestation_service.do_attestation(host)
-        LOG.debug(_("TCP: trust state of "
-                    "%(host)s:%(level)s(%(trust)s)") % locals())
-        return trust == level
+        self.compute_attestation = ComputeAttestation()
 
     def host_passes(self, host_state, filter_properties):
         instance = filter_properties.get('instance_type', {})
@@ -207,5 +298,5 @@ class TrustedFilter(filters.BaseHostFilter):
         trust = extra.get('trust:trusted_host')
         host = host_state.host
         if trust:
-            return self._is_trusted(host, trust)
+            return self.compute_attestation.is_trusted(host, trust)
         return True
