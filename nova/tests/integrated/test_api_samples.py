@@ -137,7 +137,17 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if not isinstance(result, list):
                 raise NoMatch(
                         _('Result: %(result)s is not a list.') % locals())
-            for ex_obj, res_obj in zip(sorted(expected), sorted(result)):
+            # NOTE(maurosr): sort the list of dicts by their __tag__ element
+            # when using xml. This will avoid some fails in keypairs api sample
+            # which order in different way when using a private key itself or
+            # its regular expression, and after all doesn't interfere with
+            # other tests.
+            # Should we define a criteria when ordering json? Doesn't seems
+            # necessary so far.
+            for ex_obj, res_obj in zip(sorted(expected, key=lambda k:
+                                                        k.get('__tag__', k)),
+                                       sorted(result, key=lambda k:
+                                                        k.get('__tag__', k))):
                 res = self._compare_result(subs, ex_obj, res_obj)
                 matched_value = res or matched_value
 
