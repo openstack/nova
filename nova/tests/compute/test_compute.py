@@ -4199,21 +4199,65 @@ class ComputeAPITestCase(BaseTestCase):
     def test_attach_volume(self):
         """Ensure instance can be soft rebooted"""
 
+        called = {}
+
         def fake_check_attach(*args, **kwargs):
-            pass
+            called['fake_check_attach'] = True
 
         def fake_reserve_volume(*args, **kwargs):
-            pass
+            called['fake_reserve_volume'] = True
 
         def fake_volume_get(self, context, volume_id):
+            called['fake_volume_get'] = True
             return {'id': volume_id}
+
+        def fake_rpc_attach_volume(self, context, **kwargs):
+            called['fake_rpc_attach_volume'] = True
 
         self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
         self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
         self.stubs.Set(nova.volume.api.API, 'reserve_volume',
                        fake_reserve_volume)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
+                       fake_rpc_attach_volume)
+
         instance = self._create_fake_instance()
         self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
+        self.assertTrue(called.get('fake_check_attach'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_rpc_attach_volume'))
+
+    def test_attach_volume_no_device(self):
+
+        called = {}
+
+        def fake_check_attach(*args, **kwargs):
+            called['fake_check_attach'] = True
+
+        def fake_reserve_volume(*args, **kwargs):
+            called['fake_reserve_volume'] = True
+
+        def fake_volume_get(self, context, volume_id):
+            called['fake_volume_get'] = True
+            return {'id': volume_id}
+
+        def fake_rpc_attach_volume(self, context, **kwargs):
+            called['fake_rpc_attach_volume'] = True
+
+        self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
+        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
+        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+                       fake_reserve_volume)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
+                       fake_rpc_attach_volume)
+
+        instance = self._create_fake_instance()
+        self.compute_api.attach_volume(self.context, instance, 1, device=None)
+        self.assertTrue(called.get('fake_check_attach'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_rpc_attach_volume'))
 
     def test_inject_network_info(self):
         instance = self._create_fake_instance()
