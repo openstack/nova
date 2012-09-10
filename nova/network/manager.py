@@ -1354,6 +1354,19 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not fixed_ip['allocated']:
             self.db.fixed_ip_disassociate(context, address)
 
+    @staticmethod
+    def _convert_int_args(kwargs):
+        int_args = ("network_size", "num_networks",
+                    "vlan_start", "vpn_start")
+        for key in int_args:
+            try:
+                value = kwargs.get(key)
+                if value is None:
+                    continue
+                kwargs[key] = int(value)
+            except ValueError:
+                raise ValueError(_("%s must be an integer") % key)
+
     def create_networks(self, context,
                         label, cidr=None, multi_host=None, num_networks=None,
                         network_size=None, cidr_v6=None,
@@ -1367,16 +1380,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                      "fixed_cidr")
         for name in arg_names:
             kwargs[name] = locals()[name]
-        int_args = ("network_size", "num_networks",
-                    "vlan_start", "vpn_start")
-        for key in int_args:
-            try:
-                value = kwargs.get(key)
-                if value is None:
-                    continue
-                kwargs[key] = int(value)
-            except ValueError:
-                raise ValueError(_("%s must be an integer") % key)
+        self._convert_int_args(kwargs)
 
         # check for certain required inputs
         label = kwargs["label"]
@@ -2012,6 +2016,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def create_networks(self, context, **kwargs):
         """Create networks based on parameters."""
+        self._convert_int_args(kwargs)
+
         # Check that num_networks + vlan_start is not > 4094, fixes lp708025
         if kwargs['num_networks'] + kwargs['vlan_start'] > 4094:
             raise ValueError(_('The sum between the number of networks and'
