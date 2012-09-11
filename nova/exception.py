@@ -909,8 +909,8 @@ class PasteAppNotFound(NovaException):
     message = _("Could not load paste app '%(name)s' from %(path)s")
 
 
-class CannotResizeToSameSize(NovaException):
-    message = _("When resizing, instances must change size!")
+class CannotResizeToSameFlavor(NovaException):
+    message = _("When resizing, instances must change flavor!")
 
 
 class ImageTooLarge(NovaException):

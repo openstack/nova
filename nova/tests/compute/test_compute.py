@@ -3422,7 +3422,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.terminate_instance(context, instance=instance)
 
-    def test_resize_same_size_fails(self):
+    def test_resize_same_flavor_fails(self):
         """Ensure invalid flavors raise"""
         context = self.context.elevated()
         instance = self._create_fake_instance()
@@ -3431,7 +3431,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance=instance)
 
-        self.assertRaises(exception.CannotResizeToSameSize,
+        self.assertRaises(exception.CannotResizeToSameFlavor,
                           self.compute_api.resize, context, instance, 1)
 
         self.compute.terminate_instance(context, instance=instance)
