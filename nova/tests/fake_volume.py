@@ -258,3 +258,13 @@ class API(object):
         LOG.info('unreserving volume %s', volume['id'])
         volume = self.get(context, volume['id'])
         volume['status'] = 'available'
+
+    def begin_detaching(self, context, volume):
+        LOG.info('beging detaching volume %s', volume['id'])
+        volume = self.get(context, volume['id'])
+        volume['status'] = 'detaching'
+
+    def roll_detaching(self, context, volume):
+        LOG.info('roll detaching volume %s', volume['id'])
+        volume = self.get(context, volume['id'])
+        volume['status'] = 'in-use'

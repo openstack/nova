@@ -1842,6 +1842,7 @@ class API(base.Base):
 
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_detach(context, volume)
+        self.volume_api.begin_detaching(context, volume)
 
         self.compute_rpcapi.detach_volume(context, instance=instance,
                 volume_id=volume_id)

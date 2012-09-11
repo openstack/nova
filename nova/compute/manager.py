@@ -1970,9 +1970,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             but added for completeness in case we ever do.
         if connection_info and 'serial' not in connection_info:
             connection_info['serial'] = volume_id
-        self.driver.detach_volume(connection_info,
-                                  instance['name'],
-                                  mp)
+        try:
+            self.driver.detach_volume(connection_info,
+                                      instance['name'],
+                                      mp)
+        except Exception:  # pylint: disable=W0702
+            with excutils.save_and_reraise_exception():
+                msg = _("Faild to detach volume %(volume_id)s from %(mp)s")
+                LOG.exception(msg % locals(), context=context,
+                              instance=instance)
+                volume = self.volume_api.get(context, volume_id)
+                self.volume_api.roll_detaching(context, volume)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
