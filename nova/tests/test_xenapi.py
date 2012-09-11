@@ -44,6 +44,7 @@ from nova.tests.xenapi import stubs
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
+from nova.virt.xenapi import pool
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
@@ -1870,15 +1871,44 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                               'host': xenapi_fake.get_record('host',
                                                              host_ref)['uuid']}
 
-    def test_add_to_aggregate_called(self):
-        def fake_add_to_aggregate(context, aggregate, host):
-            fake_add_to_aggregate.called = True
+    def test_pool_add_to_aggregate_called_by_driver(self):
+
+        calls = []
+
+        def pool_add_to_aggregate(context, aggregate, host, slave_info=None):
+            self.assertEquals("CONTEXT", context)
+            self.assertEquals("AGGREGATE", aggregate)
+            self.assertEquals("HOST", host)
+            self.assertEquals("SLAVEINFO", slave_info)
+            calls.append(pool_add_to_aggregate)
         self.stubs.Set(self.conn._pool,
                        "add_to_aggregate",
-                       fake_add_to_aggregate)
+                       pool_add_to_aggregate)
 
-        self.conn.add_to_aggregate(None, None, None)
-        self.assertTrue(fake_add_to_aggregate.called)
+        self.conn.add_to_aggregate("CONTEXT", "AGGREGATE", "HOST",
+                                   slave_info="SLAVEINFO")
+
+        self.assertTrue(pool_add_to_aggregate in calls)
+
+    def test_pool_remove_from_aggregate_called_by_driver(self):
+
+        calls = []
+
+        def pool_remove_from_aggregate(context, aggregate, host,
+                                       slave_info=None):
+            self.assertEquals("CONTEXT", context)
+            self.assertEquals("AGGREGATE", aggregate)
+            self.assertEquals("HOST", host)
+            self.assertEquals("SLAVEINFO", slave_info)
+            calls.append(pool_remove_from_aggregate)
+        self.stubs.Set(self.conn._pool,
+                       "remove_from_aggregate",
+                       pool_remove_from_aggregate)
+
+        self.conn.remove_from_aggregate("CONTEXT", "AGGREGATE", "HOST",
+                                        slave_info="SLAVEINFO")
+
+        self.assertTrue(pool_remove_from_aggregate in calls)
 
     def test_add_to_aggregate_for_first_host_sets_metadata(self):
         def fake_init_pool(id, name):
@@ -1900,11 +1930,11 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         aggregate = self._aggregate_setup(hosts=['host', 'host2'],
                                           metadata=self.fake_metadata)
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host2",
-                                         compute_uuid='fake_uuid',
+                                         dict(compute_uuid='fake_uuid',
                                          url='fake_url',
                                          user='fake_user',
                                          passwd='fake_pass',
-                                         xenhost_uuid='fake_uuid')
+                                         xenhost_uuid='fake_uuid'))
         self.assertTrue(fake_join_slave.called)
 
     def test_add_to_aggregate_first_host(self):
@@ -2060,7 +2090,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_add_aggregate_host_raise_err(self):
         """Ensure the undo operation works correctly on add."""
-        def fake_driver_add_to_aggregate(context, aggregate, host):
+        def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):
             raise exception.AggregateError
         self.stubs.Set(self.compute.driver, "add_to_aggregate",
                        fake_driver_add_to_aggregate)
@@ -2076,6 +2106,98 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.assertEqual(excepted.metadetails[pool_states.KEY],
                 pool_states.ERROR)
         self.assertEqual(excepted.hosts, [])
+
+
+class Aggregate(object):
+    def __init__(self, id=None, hosts=None):
+        self.id = id
+        self.hosts = hosts or []
+
+
+class MockComputeAPI(object):
+    def __init__(self):
+        self._mock_calls = []
+
+    def add_aggregate_host(self, ctxt, aggregate_id,
+                                     host_param, host, slave_info):
+        self._mock_calls.append((
+            self.add_aggregate_host, ctxt, aggregate_id,
+            host_param, host, slave_info))
+
+    def remove_aggregate_host(self, ctxt, aggregate_id, host_param,
+                              host, slave_info):
+        self._mock_calls.append((
+            self.remove_aggregate_host, ctxt, aggregate_id,
+            host_param, host, slave_info))
+
+
+class StubDependencies(object):
+    """Stub dependencies for ResourcePool"""
+
+    def __init__(self):
+        self.compute_rpcapi = MockComputeAPI()
+
+    def _is_hv_pool(self, *_ignore):
+        return True
+
+    def _get_metadata(self, *_ignore):
+        return {
+            pool_states.KEY: {},
+            'master_compute': 'master'
+        }
+
+    def _create_slave_info(self, *ignore):
+        return "SLAVE_INFO"
+
+
+class ResourcePoolWithStubs(StubDependencies, pool.ResourcePool):
+    """ A ResourcePool, use stub dependencies """
+
+
+class HypervisorPoolTestCase(test.TestCase):
+
+    def test_slave_asks_master_to_add_slave_to_pool(self):
+        slave = ResourcePoolWithStubs()
+        aggregate = Aggregate(id=98, hosts=[])
+
+        slave.add_to_aggregate("CONTEXT", aggregate, "slave")
+
+        self.assertIn(
+            (slave.compute_rpcapi.add_aggregate_host,
+            "CONTEXT", 98, "slave", "master", "SLAVE_INFO"),
+            slave.compute_rpcapi._mock_calls)
+
+    def test_slave_asks_master_to_remove_slave_from_pool(self):
+        slave = ResourcePoolWithStubs()
+        aggregate = Aggregate(id=98, hosts=[])
+
+        slave.remove_from_aggregate("CONTEXT", aggregate, "slave")
+
+        self.assertIn(
+            (slave.compute_rpcapi.remove_aggregate_host,
+            "CONTEXT", 98, "slave", "master", "SLAVE_INFO"),
+            slave.compute_rpcapi._mock_calls)
+
+
+class SwapXapiHostTestCase(test.TestCase):
+
+    def test_swapping(self):
+        self.assertEquals(
+            "http://otherserver:8765/somepath",
+            pool.swap_xapi_host(
+                "http://someserver:8765/somepath", 'otherserver'))
+
+    def test_no_port(self):
+        self.assertEquals(
+            "http://otherserver/somepath",
+            pool.swap_xapi_host(
+                "http://someserver/somepath", 'otherserver'))
+
+    def test_no_path(self):
+        self.assertEquals(
+            "http://otherserver",
+            pool.swap_xapi_host(
+                "http://someserver", 'otherserver'))
 
 
 class VmUtilsTestCase(test.TestCase):
