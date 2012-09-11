@@ -36,9 +36,34 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   host compute service satisfy any extra specifications associated with the
   instance type (that have no scope, see |TrustedFilter| for details).  It
   passes hosts that can create the specified instance type.
+
+  The extra specifications can have an operator at the beginning of the value
+  string of a key/value pair. If there is no operator specified, then a
+  default operator of 's==' is used. Valid operators are:
+
+::
+
+  * = (equal to or greater than as a number; same as vcpus case)
+  * == (equal to as a number)
+  * != (not equal to as a number)
+  * >= (greater than or equal to as a number)
+  * <= (less than or equal to as a number)
+  * s== (equal to as a string)
+  * s!= (not equal to as a string)
+  * s>= (greater than or equal to as a string)
+  * s> (greater than as a string)
+  * s<= (less than or equal to as a string)
+  * s< (less than as a string)
+  * <in> (substring)
+  * <or> (find one of these)
+
+  Examples are: ">= 5", "s== 2.1.0", "<in> gcc", and "<or> fpu <or> gpu"
+
 * |AggregateInstanceExtraSpecsFilter| - checks that the aggregate metadata
   satisfies any extra specifications associated with the instance type (that
   have no scope).  It passes hosts that can create the specified instance type.
+  The extra specifications can have the same operators as
+  |ComputeCapabilityFilter|.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
