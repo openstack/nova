@@ -2251,28 +2251,7 @@ class LibvirtConnTestCase(test.TestCase):
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(instance, [])
 
-    def test_private_destroy(self):
-        """Ensure Instance not found skips undefine"""
-        mock = self.mox.CreateMock(libvirt.virDomain)
-        mock.destroy()
-        self.mox.ReplayAll()
-
-        def fake_lookup_by_name(instance_name):
-            return mock
-
-        def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN}
-
-        conn = libvirt_driver.LibvirtDriver(False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
-        self.stubs.Set(conn, 'get_info', fake_get_info)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        result = conn._destroy(instance)
-        self.assertTrue(result)
-
     def test_private_destroy_not_found(self):
-        """Ensure Instance not found skips undefine"""
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.destroy()
         self.mox.ReplayAll()
@@ -2288,8 +2267,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        result = conn._destroy(instance)
-        self.assertFalse(result)
+        # NOTE(vish): verifies destory doesn't raise if the instance disappears
+        conn._destroy(instance)
 
     def test_available_least_handles_missing(self):
         """Ensure destroy calls managedSaveRemove for saved instance"""
@@ -3714,9 +3693,6 @@ class LibvirtDriverTestCase(test.TestCase):
         self.assertEquals(out, disk_info_text)
 
     def test_wait_for_running(self):
-        """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
-        ._wait_for_running. """
-
         def fake_get_info(instance):
             if instance['name'] == "not_found":
                 raise exception.NotFound
@@ -3729,7 +3705,7 @@ class LibvirtDriverTestCase(test.TestCase):
                        fake_get_info)
 
         """ instance not found case """
-        self.assertRaises(utils.LoopingCallDone,
+        self.assertRaises(exception.NotFound,
                 self.libvirtconnection._wait_for_running,
                     {'name': 'not_found',
                      'uuid': 'not_found_uuid'})

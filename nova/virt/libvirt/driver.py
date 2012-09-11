@@ -472,20 +472,24 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def _wait_for_destroy():
             """Called at an interval until the VM is gone."""
+            # NOTE(vish): If the instance disappears during the destroy
+            #             we ignore it so the cleanup can still be
+            #             attempted because we would prefer destroy to
+            #             never fail.
             try:
                 state = self.get_info(instance)['state']
             except exception.NotFound:
                 LOG.error(_("During wait destroy, instance disappeared."),
                           instance=instance)
-                raise utils.LoopingCallDone(False)
+                raise utils.LoopingCallDone()
 
             if state == power_state.SHUTDOWN:
                 LOG.info(_("Instance destroyed successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone(True)
+                raise utils.LoopingCallDone()
 
         timer = utils.LoopingCall(_wait_for_destroy)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     def destroy(self, instance, network_info, block_device_info=None):
         self._destroy(instance)
@@ -895,7 +899,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 self._create_domain(domain=dom)
                 timer = utils.LoopingCall(self._wait_for_running, instance)
-                return timer.start(interval=0.5).wait()
+                timer.start(interval=0.5).wait()
             greenthread.sleep(1)
         return False
 
@@ -922,20 +926,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
-            try:
-                state = self.get_info(instance)['state']
-            except exception.NotFound:
-                LOG.error(_("During reboot, instance disappeared."),
-                          instance=instance)
-                raise utils.LoopingCallDone
+            state = self.get_info(instance)['state']
 
             if state == power_state.RUNNING:
                 LOG.info(_("Instance rebooted successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone
+                raise utils.LoopingCallDone()
 
         timer = utils.LoopingCall(_wait_for_reboot)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
     def pause(self, instance):
@@ -960,7 +959,7 @@ class LibvirtDriver(driver.ComputeDriver):
         dom = self._lookup_by_name(instance['name'])
         self._create_domain(domain=dom)
         timer = utils.LoopingCall(self._wait_for_running, instance)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
     def suspend(self, instance):
@@ -1064,20 +1063,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
-            try:
-                state = self.get_info(instance)['state']
-            except exception.NotFound:
-                LOG.error(_("During spawn, instance disappeared."),
-                          instance=instance)
-                raise utils.LoopingCallDone
+            state = self.get_info(instance)['state']
 
             if state == power_state.RUNNING:
                 LOG.info(_("Instance spawned successfully."),
                          instance=instance)
-                raise utils.LoopingCallDone
+                raise utils.LoopingCallDone()
 
         timer = utils.LoopingCall(_wait_for_boot)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     def _flush_libvirt_console(self, pty):
         out, err = utils.execute('dd',
@@ -2509,7 +2503,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_method(ctxt, instance_ref, dest, block_migration)
 
         timer.f = wait_for_live_migration
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
                            network_info):
@@ -2824,16 +2818,11 @@ class LibvirtDriver(driver.ComputeDriver):
         return disk_info_text
 
     def _wait_for_running(self, instance):
-        try:
-            state = self.get_info(instance)['state']
-        except exception.NotFound:
-            LOG.error(_("During wait running, instance disappeared."),
-                      instance=instance)
-            raise utils.LoopingCallDone(False)
+        state = self.get_info(instance)['state']
 
         if state == power_state.RUNNING:
             LOG.info(_("Instance running successfully."), instance=instance)
-            raise utils.LoopingCallDone(True)
+            raise utils.LoopingCallDone()
 
     @exception.wrap_exception()
     def finish_migration(self, context, migration, instance, disk_info,
@@ -2882,7 +2871,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     block_device_info=None)
         self._create_domain_and_network(xml, instance, network_info)
         timer = utils.LoopingCall(self._wait_for_running, instance)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
     def finish_revert_migration(self, instance, network_info):
@@ -2898,7 +2887,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain_and_network(xml, instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
-        return timer.start(interval=0.5).wait()
+        timer.start(interval=0.5).wait()
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM"""
