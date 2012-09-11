@@ -283,16 +283,16 @@ class API(base.Base):
         raise NotImplementedError()
 
     def get_floating_ip_pools(self, context):
-        raise NotImplementedError()
+        return []
 
     def get_floating_ip_by_address(self, context, address):
         raise NotImplementedError()
 
     def get_floating_ips_by_project(self, context):
-        raise NotImplementedError()
+        return []
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        raise NotImplementedError()
+        return []
 
     def get_instance_id_by_floating_address(self, context, address):
         raise NotImplementedError()
