@@ -734,15 +734,15 @@ def floating_ip_bulk_create(context, ips):
             session.add(model)
 
 
-def _ip_range_splitter(ips):
-    """Yields blocks of IPs no more than 256 elements long."""
+def _ip_range_splitter(ips, block_size=256):
+    """Yields blocks of IPs no more than block_size elements long."""
     out = []
     count = 0
     for ip in ips:
         out.append(ip['address'])
         count += 1
 
-        if count > 255:
+        if count > block_size - 1:
             yield out
             out = []
             count = 0
