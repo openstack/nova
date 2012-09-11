@@ -1225,16 +1225,22 @@ class CloudController(object):
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context, resv_id)
 
-    def terminate_instances(self, context, instance_id, **kwargs):
-        """Terminate each instance in instance_id, which is a list of ec2 ids.
-        instance_id is a kwarg so its name cannot be modified."""
-        LOG.debug(_("Going to start terminating instances"))
-        previous_states = []
+    def _ec2_ids_to_instances(self, context, instance_id):
+        """Get all instances first, to prevent partial executions"""
+        instances = []
         for ec2_id in instance_id:
             validate_ec2_id(ec2_id)
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
-            previous_states.append(instance)
+            instances.append(instance)
+        return instances
+
+    def terminate_instances(self, context, instance_id, **kwargs):
+        """Terminate each instance in instance_id, which is a list of ec2 ids.
+        instance_id is a kwarg so its name cannot be modified."""
+        previous_states = self._ec2_ids_to_instances(context, instance_id)
+        LOG.debug(_("Going to start terminating instances"))
+        for instance in previous_states:
             self.compute_api.delete(context, instance)
         return self._format_terminate_instances(context,
                                                 instance_id,
@@ -1242,33 +1248,27 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
-        for ec2_id in instance_id:
-            validate_ec2_id(ec2_id)
-            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            instance = self.compute_api.get(context, _instance_id)
+        for instance in instances:
             self.compute_api.reboot(context, instance, 'HARD')
         return True
 
     def stop_instances(self, context, instance_id, **kwargs):
         """Stop each instances in instance_id.
         Here instance_id is a list of instance ids"""
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.debug(_("Going to stop instances"))
-        for ec2_id in instance_id:
-            validate_ec2_id(ec2_id)
-            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            instance = self.compute_api.get(context, _instance_id)
+        for instance in instances:
             self.compute_api.stop(context, instance)
         return True
 
     def start_instances(self, context, instance_id, **kwargs):
         """Start each instances in instance_id.
         Here instance_id is a list of instance ids"""
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.debug(_("Going to start instances"))
-        for ec2_id in instance_id:
-            validate_ec2_id(ec2_id)
-            _instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            instance = self.compute_api.get(context, _instance_id)
+        for instance in instances:
             self.compute_api.start(context, instance)
         return True
 
