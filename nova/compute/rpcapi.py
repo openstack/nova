@@ -128,6 +128,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
         2.0 - Remove 1.x backwards compat
         2.1 - Adds orig_sys_metadata to rebuild_instance()
+        2.2 - Adds slave_info parameter to add_aggregate_host() and
+              remove_aggregate_host()
     '''
 
     #
@@ -145,7 +147,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=FLAGS.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
-    def add_aggregate_host(self, ctxt, aggregate_id, host_param, host):
+    def add_aggregate_host(self, ctxt, aggregate_id, host_param, host,
+                           slave_info=None):
         '''Add aggregate host.
 
         :param ctxt: request context
@@ -154,9 +157,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
+
         self.cast(ctxt, self.make_msg('add_aggregate_host',
-                aggregate_id=aggregate_id, host=host_param),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                aggregate_id=aggregate_id, host=host_param,
+                slave_info=slave_info),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='2.2')
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
         instance_p = jsonutils.to_primitive(instance)
@@ -355,7 +361,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
                 _compute_topic(self.topic, ctxt, host, None))
 
-    def remove_aggregate_host(self, ctxt, aggregate_id, host_param, host):
+    def remove_aggregate_host(self, ctxt, aggregate_id, host_param, host,
+                              slave_info=None):
         '''Remove aggregate host.
 
         :param ctxt: request context
@@ -364,9 +371,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
+
         self.cast(ctxt, self.make_msg('remove_aggregate_host',
-                aggregate_id=aggregate_id, host=host_param),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                aggregate_id=aggregate_id, host=host_param,
+                slave_info=slave_info),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='2.2')
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
         instance_p = jsonutils.to_primitive(instance)
