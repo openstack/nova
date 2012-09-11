@@ -29,7 +29,6 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt import driver
 from nova.virt.hyperv import baseops
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
