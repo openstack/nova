@@ -127,10 +127,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.44 - Adds reserve_block_device_name()
 
         2.0 - Remove 1.x backwards compat
-        2.1 - Adds orig_sys_metadata to rebuild()
+        2.1 - Adds orig_sys_metadata to rebuild_instance()
     '''
 
-    BASE_RPC_API_VERSION = '2.1'
+    #
+    # NOTE(russellb): This is the default minimum version that the server
+    # (manager) side must implement unless otherwise specified using a version
+    # argument to self.call()/cast()/etc. here.  It should be left as X.0 where
+    # X is the current major API version (1.0, 2.0, ...).  For more information
+    # about rpc API versioning, see the docs in
+    # openstack/common/rpc/dispatcher.py.
+    #
+    BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
         super(ComputeAPI, self).__init__(
@@ -340,7 +348,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 injected_files=injected_files, image_ref=image_ref,
                 orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.1')
 
     def refresh_provider_fw_rules(self, ctxt, host):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
@@ -503,6 +512,14 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.0 - Remove 1.x backwards compat
     '''
 
+    #
+    # NOTE(russellb): This is the default minimum version that the server
+    # (manager) side must implement unless otherwise specified using a version
+    # argument to self.call()/cast()/etc. here.  It should be left as X.0 where
+    # X is the current major API version (1.0, 2.0, ...).  For more information
+    # about rpc API versioning, see the docs in
+    # openstack/common/rpc/dispatcher.py.
+    #
     BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
