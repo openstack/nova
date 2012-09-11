@@ -1752,6 +1752,18 @@
 ####           resides
 
 
+######## defined in nova.volume.cinder ########
+
+# cinder_catalog_info=volume:cinder:publicURL
+#### (StrOpt) Info to match when looking for cinder in the service catalog.
+####          Format is : separated values of the form:
+####          <service_type>:<service_name>:<endpoint_type>
+
+# cinder_endpoint_template=None
+#### (StrOpt) Override service catalog lookup with template for cinder 
+####          endpoint e.g. http://localhost:8776/v1/%(project_id)s
+
+
 ######## defined in nova.volume.driver ########
 
 # volume_group=nova-volumes

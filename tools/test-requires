@@ -10,3 +10,4 @@ pep8==1.1
 pylint==0.25.2
 sphinx>=1.1.2
 feedparser
+python-cinderclient
