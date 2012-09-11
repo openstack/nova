@@ -164,11 +164,6 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(network_opts)
 
 
-class AddressAlreadyAllocated(exception.NovaException):
-    """Address was already allocated."""
-    pass
-
-
 class RPCAllocateFixedIP(object):
     """Mixin class originally for FlatDCHP and VLAN network managers.
 
