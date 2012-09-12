@@ -5038,6 +5038,10 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         self._reschedule = self._reschedule_partial()
 
+        def fake_update(*args, **kwargs):
+            self.updated_task_state = kwargs.get('task_state')
+        self.stubs.Set(self.compute, '_instance_update', fake_update)
+
     def _reschedule_partial(self):
         uuid = "12-34-56-78-90"
 
@@ -5072,6 +5076,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
             request_spec=request_spec))
         self.assertEqual(1, len(request_spec['instance_uuids']))
+        self.assertEqual(self.updated_task_state, task_states.SCHEDULING)
 
 
 class ThatsNoOrdinaryRabbitException(Exception):

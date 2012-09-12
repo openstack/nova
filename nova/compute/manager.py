@@ -569,6 +569,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         LOG.debug(_("Re-scheduling instance: attempt %d"),
                   retry['num_attempts'], instance_uuid=instance_uuid)
+
+        # reset the task state:
+        self._instance_update(context, instance_uuid,
+                task_state=task_states.SCHEDULING)
+
         self.scheduler_rpcapi.run_instance(context,
                 request_spec, admin_password, injected_files,
                 requested_networks, is_first_time, filter_properties)
