@@ -317,8 +317,12 @@ class BaseOperator(object):
                            information to connect to the remote
                            ssh.
         """
-        self._connection = common.ssh_connect(connection)
+        self._connection = None
         self.connection_data = connection
+
+    def _set_connection(self):
+        if self._connection is None:
+            self._connection = common.ssh_connect(self.connection_data)
 
     def get_lpar(self, instance_name, resource_type='lpar'):
         """Return a LPAR object by its instance name.
@@ -640,6 +644,7 @@ class BaseOperator(object):
 
         :param command: String with the command to run.
         """
+        self._set_connection()
         stdout, stderr = utils.ssh_execute(self._connection, cmd,
                                            check_exit_code=check_exit_code)
         return stdout.strip().splitlines()
@@ -649,6 +654,7 @@ class BaseOperator(object):
 
         :param command: List of commands.
         """
+        self._set_connection()
         stdout, stderr = common.ssh_command_as_root(
             self._connection, command, check_exit_code=check_exit_code)
         return stdout.read().splitlines()
