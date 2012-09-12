@@ -509,6 +509,37 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
+    def test_terminate_failure_leaves_task_state(self):
+        """Ensure that a failure in terminate_instance does not result
+        in the task state being reverted from DELETING (see LP 1046236).
+        """
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        # Network teardown fails ungracefully
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.compute._get_instance_nw_info(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(TypeError())
+        self.mox.ReplayAll()
+
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.DELETING})
+        try:
+            self.compute.terminate_instance(self.context, instance=instance)
+        except TypeError:
+            pass
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After terminating instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0]['task_state'], 'deleting')
+
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -1240,7 +1271,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
-    def _test_state_revert(self, operation, pre_task_state):
+    def _test_state_revert(self, operation, pre_task_state,
+                           post_task_state):
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context, instance=instance)
 
@@ -1273,34 +1305,36 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(raised)
 
-        # Fetch the instance's task_state and make sure it went to None
+        # Fetch the instance's task_state and make sure it went to expected
+        # post-state
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance["task_state"], None)
+        self.assertEqual(instance["task_state"], post_task_state)
 
     def test_state_revert(self):
         """ensure that task_state is reverted after a failed operation"""
         actions = [
-            ("reboot_instance", task_states.REBOOTING),
-            ("stop_instance", task_states.STOPPING),
-            ("start_instance", task_states.STARTING),
-            ("terminate_instance", task_states.DELETING),
-            ("power_off_instance", task_states.POWERING_OFF),
-            ("power_on_instance", task_states.POWERING_ON),
-            ("rebuild_instance", task_states.REBUILDING),
-            ("set_admin_password", task_states.UPDATING_PASSWORD),
-            ("rescue_instance", task_states.RESCUING),
-            ("unrescue_instance", task_states.UNRESCUING),
-            ("revert_resize", task_states.RESIZE_REVERTING),
-            ("prep_resize", task_states.RESIZE_PREP),
-            ("resize_instance", task_states.RESIZE_PREP),
-            ("pause_instance", task_states.PAUSING),
-            ("unpause_instance", task_states.UNPAUSING),
-            ("suspend_instance", task_states.SUSPENDING),
-            ("resume_instance", task_states.RESUMING),
+            ("reboot_instance", task_states.REBOOTING, None),
+            ("stop_instance", task_states.STOPPING, None),
+            ("start_instance", task_states.STARTING, None),
+            ("terminate_instance", task_states.DELETING,
+                                   task_states.DELETING),
+            ("power_off_instance", task_states.POWERING_OFF, None),
+            ("power_on_instance", task_states.POWERING_ON, None),
+            ("rebuild_instance", task_states.REBUILDING, None),
+            ("set_admin_password", task_states.UPDATING_PASSWORD, None),
+            ("rescue_instance", task_states.RESCUING, None),
+            ("unrescue_instance", task_states.UNRESCUING, None),
+            ("revert_resize", task_states.RESIZE_REVERTING, None),
+            ("prep_resize", task_states.RESIZE_PREP, None),
+            ("resize_instance", task_states.RESIZE_PREP, None),
+            ("pause_instance", task_states.PAUSING, None),
+            ("unpause_instance", task_states.UNPAUSING, None),
+            ("suspend_instance", task_states.SUSPENDING, None),
+            ("resume_instance", task_states.RESUMING, None),
             ]
 
-        for operation, pre_state in actions:
-            self._test_state_revert(operation, pre_state)
+        for operation, pre_state, post_state in actions:
+            self._test_state_revert(operation, pre_state, post_state)
 
     def _ensure_quota_reservations_committed(self):
         """Mock up commit of quota reservations"""
