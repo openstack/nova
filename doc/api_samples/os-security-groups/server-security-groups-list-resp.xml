@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<security_groups xmlns="http://docs.openstack.org/compute/api/v1.1">
+  <security_group tenant_id="openstack" id="1" name="default">
+    <description>default</description>
+    <rules/>
+  </security_group>
+</security_groups>

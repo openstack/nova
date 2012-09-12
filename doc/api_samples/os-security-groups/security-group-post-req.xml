@@ -1,0 +1,5 @@
+<security_group name="xml-test">
+    <description>
+        description
+    </description>
+</security_group>

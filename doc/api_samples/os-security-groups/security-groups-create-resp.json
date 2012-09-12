@@ -1,0 +1,9 @@
+{
+    "security_group": {
+        "description": "description",
+        "id": 2,
+        "name": "json-test",
+        "rules": [],
+        "tenant_id": "openstack"
+    }
+}
