@@ -1938,8 +1938,9 @@ class API(base.Base):
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host):
         """Migrate a server lively to a new host."""
-        LOG.debug(_("Going to try to live migrate instance"),
-                  instance=instance)
+        LOG.debug(_("Going to try to live migrate instance to %s"),
+                  host, instance=instance)
+
         self.scheduler_rpcapi.live_migration(context, block_migration,
                 disk_over_commit, instance, host)
 

@@ -2214,14 +2214,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param ctxt: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance
-        :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
         """
+        disk_available_mb = None
         if block_migration:
-            self._assert_compute_node_has_enough_disk(ctxt,
-                                                     instance_ref,
-                                                     disk_over_commit)
+            disk_available_gb = self._get_compute_info(ctxt,
+                                    FLAGS.host)['disk_available_least']
+            disk_available_mb = \
+                    (disk_available_gb * 1024) - FLAGS.reserved_host_disk_mb
+
         # Compare CPU
         src = instance_ref['host']
         source_cpu_info = self._get_compute_info(ctxt, src)['cpu_info']
@@ -2230,14 +2232,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # Create file on storage, to be checked on source host
         filename = self._create_shared_storage_test_file()
 
-        return {"filename": filename, "block_migration": block_migration}
+        return {"filename": filename,
+                "block_migration": block_migration,
+                "disk_over_commit": disk_over_commit,
+                "disk_available_mb": disk_available_mb}
 
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
         :param ctxt: security context
-        :param disk_over_commit: if true, allow disk over commit
         """
         filename = dest_check_data["filename"]
         self._cleanup_shared_storage_test_file(filename)
@@ -2266,6 +2270,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
+            self._assert_dest_node_has_enough_disk(ctxt, instance_ref,
+                                    dest_check_data['disk_available_mb'],
+                                    dest_check_data['disk_over_commit'])
 
         elif not shared:
             reason = _("Live migration can not be used "
@@ -2277,9 +2284,9 @@ class LibvirtDriver(driver.ComputeDriver):
         compute_node_ref = db.service_get_all_compute_by_host(context, host)
         return compute_node_ref[0]['compute_node'][0]
 
-    def _assert_compute_node_has_enough_disk(self, context, instance_ref,
-                                             disk_over_commit):
-        """Checks if host has enough disk for block migration."""
+    def _assert_dest_node_has_enough_disk(self, context, instance_ref,
+                                             available_mb, disk_over_commit):
+        """Checks if destination has enough disk for block migration."""
         # Libvirt supports qcow2 disk format,which is usually compressed
         # on compute nodes.
         # Real disk image (compressed) may enlarged to "virtual disk size",
@@ -2290,11 +2297,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # if disk_over_commit is True,
         #  otherwise virtual disk size < available disk size.
 
-        # Getting total available disk of host
-        dest = FLAGS.host
-        available_gb = self._get_compute_info(context,
-                                              dest)['disk_available_least']
-        available = available_gb * (1024 ** 3)
+        available = available_mb * (1024 ** 2)
 
         ret = self.get_instance_disk_info(instance_ref['name'])
         disk_infos = jsonutils.loads(ret)
@@ -2310,9 +2313,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # Check that available disk > necessary disk
         if (available - necessary) < 0:
             instance_uuid = instance_ref['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                       "Lack of disk(host:%(available)s "
-                       "<= instance:%(necessary)s)")
+            reason = _("Unable to migrate %(instance_uuid)s: "
+                       "Disk of instance is too large(available"
+                       " on destination host:%(available)s "
+                       "< need:%(necessary)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def _compare_cpu(self, cpu_info):
