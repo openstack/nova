@@ -284,14 +284,15 @@ class KeypairsTest(test.TestCase):
         self.assertEquals(res_dict['server']['key_name'], '')
 
     def test_detail_servers(self):
-        self.stubs.Set(db, 'instance_get',
-                        fakes.fake_instance_get())
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                        fakes.fake_instance_get_all_by_filters())
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         server_dicts = jsonutils.loads(res.body)['servers']
+        self.assertEquals(len(server_dicts), 5)
 
         for server_dict in server_dicts:
-            self.asserTrue('key_name' in server_dict)
+            self.assertTrue('key_name' in server_dict)
             self.assertEquals(server_dict['key_name'], '')
 
 
