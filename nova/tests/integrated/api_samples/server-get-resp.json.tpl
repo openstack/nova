@@ -21,7 +21,7 @@
             ]
         },
         "hostId": "%(hostid)s",
-        "id": "%(uuid)s",
+        "id": "%(id)s",
         "image": {
             "id": "%(uuid)s",
             "links": [
@@ -33,11 +33,11 @@
         },
         "links": [
             {
-                "href": "%(host)s/v2/openstack/servers/%(uuid)s",
+                "href": "%(host)s/v2/openstack/servers/%(id)s",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/openstack/servers/%(uuid)s",
+                "href": "%(host)s/openstack/servers/%(id)s",
                 "rel": "bookmark"
             }
         ],
