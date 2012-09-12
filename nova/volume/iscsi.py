@@ -35,7 +35,7 @@ iscsi_helper_opt = [
                     help='iscsi target user-land tool to use'),
         cfg.StrOpt('volumes_dir',
                    default='$state_path/volumes',
-                   help='Volume configfuration file storage directory'),
+                   help='Volume configuration file storage directory'),
 ]
 
 FLAGS = flags.FLAGS
@@ -107,7 +107,7 @@ class TgtAdm(TargetAdmin):
 
     def create_iscsi_target(self, name, tid, lun, path, **kwargs):
         # Note(jdg) tid and lun aren't used by TgtAdm but remain for
-        # compatability
+        # compatibility
 
         utils.ensure_tree(FLAGS.volumes_dir)
 
@@ -136,7 +136,7 @@ class TgtAdm(TargetAdmin):
             LOG.error(_("Failed to create iscsi target for volume "
                         "id:%(vol_id)s.") % locals())
 
-            #Dont forget to remove the persistent file we created
+            #Don't forget to remove the persistent file we created
             os.unlink(volume_path)
             raise exception.ISCSITargetCreateFailed(volume_id=vol_id)
 
