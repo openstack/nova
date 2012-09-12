@@ -295,6 +295,18 @@ class KeypairsTest(test.TestCase):
             self.assertTrue('key_name' in server_dict)
             self.assertEquals(server_dict['key_name'], '')
 
+    def test_keypair_create_with_invalid_keypairBody(self):
+        body = {'alpha': {'name': 'create_test'}}
+        req = webob.Request.blank('/v1.1/fake/os-keypairs')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res_dict['badRequest']['message'],
+                         "Invalid request body")
+
 
 class KeypairsXMLSerializerTest(test.TestCase):
     def setUp(self):
