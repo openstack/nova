@@ -1580,11 +1580,8 @@ class API(base.Base):
         # NOTE(markwash): look up the image early to avoid auth problems later
         image = self.image_service.show(context, instance['image_ref'])
 
-        current_memory_mb = current_instance_type['memory_mb']
-        new_memory_mb = new_instance_type['memory_mb']
-
-        if (current_memory_mb == new_memory_mb) and flavor_id:
-            raise exception.CannotResizeToSameSize()
+        if same_instance_type and flavor_id:
+            raise exception.CannotResizeToSameFlavor()
 
         # ensure there is sufficient headroom for upsizes
         deltas = self._upsize_quota_delta(context, new_instance_type,

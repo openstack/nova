@@ -949,8 +949,8 @@ class Controller(wsgi.Controller):
         except exception.FlavorNotFound:
             msg = _("Unable to locate requested flavor.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.CannotResizeToSameSize:
-            msg = _("Resize requires a change in size.")
+        except exception.CannotResizeToSameFlavor:
+            msg = _("Resize requires a flavor change.")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
