@@ -891,10 +891,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 system_metadata=system_meta)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @reverts_task_state
     @wrap_instance_fault
     def terminate_instance(self, context, instance):
-        """Terminate an instance on this host."""
+        """Terminate an instance on this host.  """
+        # Note(eglynn): we do not decorate this action with reverts_task_state
+        # because a failure during termination should leave the task state as
+        # DELETING, as a signal to the API layer that a subsequent deletion
+        # attempt should not result in a further decrement of the quota_usages
+        # in_use count (see bug 1046236).
 
         elevated = context.elevated()
 
