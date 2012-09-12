@@ -456,7 +456,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 is_okay = False
                 errcode = e.get_error_code()
                 if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
-                    # If the instance if already shut off, we get this:
+                    # If the instance is already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
                     (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
