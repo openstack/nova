@@ -203,19 +203,10 @@ class Scheduler(object):
         migrate_data = self.compute_rpcapi.check_can_live_migrate_destination(
                 context, instance, dest, block_migration, disk_over_commit)
 
-        # Change instance_state
-        values = {"task_state": task_states.MIGRATING}
-
-        # update instance state and notify
-        (old_ref, new_instance_ref) = db.instance_update_and_get_original(
-                context, instance['uuid'], values)
-        notifications.send_update(context, old_ref, new_instance_ref,
-                service="scheduler")
-
         # Perform migration
         src = instance['host']
         self.compute_rpcapi.live_migration(context, host=src,
-                instance=new_instance_ref, dest=dest,
+                instance=instance, dest=dest,
                 block_migration=block_migration,
                 migrate_data=migrate_data)
 

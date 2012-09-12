@@ -1941,6 +1941,10 @@ class API(base.Base):
         LOG.debug(_("Going to try to live migrate instance to %s"),
                   host, instance=instance)
 
+        instance = self.update(context, instance,
+                               task_state=task_states.MIGRATING,
+                               expected_task_state=None)
+
         self.scheduler_rpcapi.live_migration(context, block_migration,
                 disk_over_commit, instance, host)
 
