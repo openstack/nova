@@ -861,3 +861,32 @@ class ResponseObjectTest(test.TestCase):
             self.assertEqual(response.headers['X-header2'], 'header2')
             self.assertEqual(response.status_int, 202)
             self.assertEqual(response.body, mtype)
+
+
+class ValidBodyTest(test.TestCase):
+
+    def setUp(self):
+        super(ValidBodyTest, self).setUp()
+        self.controller = wsgi.Controller()
+
+    def test_is_valid_body(self):
+        body = {'foo': {}}
+        self.assertTrue(self.controller.is_valid_body(body, 'foo'))
+
+    def test_is_valid_body_none(self):
+        resource = wsgi.Resource(controller=None)
+        self.assertFalse(self.controller.is_valid_body(None, 'foo'))
+
+    def test_is_valid_body_empty(self):
+        resource = wsgi.Resource(controller=None)
+        self.assertFalse(self.controller.is_valid_body({}, 'foo'))
+
+    def test_is_valid_body_no_entity(self):
+        resource = wsgi.Resource(controller=None)
+        body = {'bar': {}}
+        self.assertFalse(self.controller.is_valid_body(body, 'foo'))
+
+    def test_is_valid_body_malformed_entity(self):
+        resource = wsgi.Resource(controller=None)
+        body = {'foo': 'bar'}
+        self.assertFalse(self.controller.is_valid_body(body, 'foo'))

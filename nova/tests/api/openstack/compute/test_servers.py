@@ -2765,16 +2765,6 @@ class ServersControllerCreateTest(test.TestCase):
         # The fact that the action doesn't raise is enough validation
         self.controller.create(req, body)
 
-    def test_create_instance_malformed_entity(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers')
-        req.method = 'POST'
-        body = {'server': 'string'}
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = "application/json"
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
-
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
         bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
@@ -4866,6 +4856,10 @@ class ServersUnprocessableEntityTestCase(test.TestCase):
         body = {'foo': {'a': 'b'}}
         self._unprocessable_server_create(body=body)
 
+    def test_create_server_malformed_entity(self):
+        body = {'server': 'string'}
+        self._unprocessable_server_create(body=body)
+
     def _unprocessable_server_update(self, body):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -4878,4 +4872,8 @@ class ServersUnprocessableEntityTestCase(test.TestCase):
 
     def test_update_server_missing_server(self):
         body = {'foo': {'a': 'b'}}
+        self._unprocessable_server_update(body=body)
+
+    def test_create_update_malformed_entity(self):
+        body = {'server': 'string'}
         self._unprocessable_server_update(body=body)
