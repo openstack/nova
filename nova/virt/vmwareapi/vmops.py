@@ -588,7 +588,7 @@ class VMWareVMOps(object):
                            " while un-registering the VM: %s") % str(excep),
                          instance=instance)
 
-            self._unplug_vifs(instance, network_info)
+            self.unplug_vifs(instance, network_info)
 
             # Delete the folder holding the VM related content on
             # the datastore.
@@ -827,7 +827,7 @@ class VMWareVMOps(object):
         for (network, mapping) in network_info:
             self._vif_driver.plug(instance, (network, mapping))
 
-    def _unplug_vifs(self, instance, network_info):
+    def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         for (network, mapping) in network_info:
             self._vif_driver.unplug(instance, (network, mapping))
