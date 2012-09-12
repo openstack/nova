@@ -941,6 +941,15 @@ def bool_from_str(val):
                val.lower() == 'y'
 
 
+def is_valid_boolstr(val):
+    """Check if the provided string is a valid bool string or not. """
+    val = str(val).lower()
+    return val == 'true' or val == 'false' or \
+           val == 'yes' or val == 'no' or \
+           val == 'y' or val == 'n' or \
+           val == '1' or val == '0'
+
+
 def is_valid_ipv4(address):
     """valid the address strictly as per format xxx.xxx.xxx.xxx.
     where xxx is a value between 0 and 255.

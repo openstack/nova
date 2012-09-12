@@ -114,6 +114,16 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(resp_dict['snapshot']['display_description'],
                         snapshot['display_description'])
 
+        # Test invalid force paramter
+        snapshot = {"volume_id": 12,
+                "force": '**&&^^%%$$##@@'}
+        body = dict(snapshot=snapshot)
+        req = fakes.HTTPRequest.blank('/v1/snapshots')
+        self.assertRaises(exception.InvalidParameterValue,
+                          self.controller.create,
+                          req,
+                          body)
+
     def test_snapshot_delete(self):
         self.stubs.Set(volume.api.API, "get_snapshot", stub_snapshot_get)
         self.stubs.Set(volume.api.API, "delete_snapshot", stub_snapshot_delete)

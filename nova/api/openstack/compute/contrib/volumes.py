@@ -27,6 +27,7 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
+from nova import utils
 from nova import volume
 from nova.volume import volume_types
 
@@ -595,7 +596,11 @@ class SnapshotController(object):
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
                 context=context)
 
-        if force:
+        if not utils.is_valid_boolstr(force):
+            msg = _("Invalid value '%s' for force. ") % force
+            raise exception.InvalidParameterValue(err=msg)
+
+        if utils.bool_from_str(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
                                         volume,
                                         snapshot.get('display_name'),
