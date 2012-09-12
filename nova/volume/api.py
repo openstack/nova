@@ -304,6 +304,17 @@ class API(base.Base):
                                   {"status": "available"})
 
     @wrap_check_policy
+    def begin_detaching(self, context, volume):
+        self.db.volume_update(context, volume['id'], {"status": "detaching"})
+
+    @wrap_check_policy
+    def roll_detaching(self, context, volume):
+        if volume['status'] == "detaching":
+            self.db.volume_update(context,
+                                  volume['id'],
+                                  {"status": "in-use"})
+
+    @wrap_check_policy
     def attach(self, context, volume, instance_uuid, mountpoint):
         host = volume['host']
         queue = rpc.queue_get_for(context, FLAGS.volume_topic, host)

@@ -165,6 +165,12 @@ class API(base.Base):
     def unreserve_volume(self, context, volume):
         cinderclient(context).volumes.unreserve(volume['id'])
 
+    def begin_detaching(self, context, volume):
+        cinderclient(context).volumes.begin_detaching(volume['id'])
+
+    def roll_detaching(self, context, volume):
+        cinderclient(context).volumes.roll_detaching(volume['id'])
+
     def attach(self, context, volume, instance_uuid, mountpoint):
         cinderclient(context).volumes.attach(volume['id'],
                                              instance_uuid,

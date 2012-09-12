@@ -137,6 +137,8 @@
     "volume:detach": [],
     "volume:reserve_volume": [],
     "volume:unreserve_volume": [],
+    "volume:begin_detaching": [],
+    "volume:roll_detaching": [],
     "volume:check_attach": [],
     "volume:check_detach": [],
     "volume:initialize_connection": [],

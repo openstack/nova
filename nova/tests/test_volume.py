@@ -490,6 +490,17 @@ class VolumeTestCase(test.TestCase):
                           'name',
                           'description')
 
+    def test_begin_roll_detaching_volume(self):
+        """Test begin_detaching and roll_detaching functions."""
+        volume = self._create_volume()
+        volume_api = nova.volume.api.API()
+        volume_api.begin_detaching(self.context, volume)
+        volume = db.volume_get(self.context, volume['id'])
+        self.assertEqual(volume['status'], "detaching")
+        volume_api.roll_detaching(self.context, volume)
+        volume = db.volume_get(self.context, volume['id'])
+        self.assertEqual(volume['status'], "in-use")
+
 
 class DriverTestCase(test.TestCase):
     """Base Test class for Drivers."""
