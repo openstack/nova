@@ -511,3 +511,41 @@ class ServerStartStopJsonTest(ServersSampleBase):
 
 class ServerStartStopXmlTest(ServerStartStopJsonTest):
     ctype = 'xml'
+
+
+class FlavorsExtraDataJsonTest(ApiSampleTestBase):
+    extension_name = ('nova.api.openstack.compute.contrib.flavorextradata.'
+                      'Flavorextradata')
+
+    def _get_flags(self):
+        f = super(FlavorsExtraDataJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = FLAGS.osapi_compute_extension[:]
+        # Flavorextradata extension also needs Flavormanage to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
+        return f
+
+    def test_flavors_extra_data_get(self):
+        response = self._do_get('flavors/1')
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-get-resp', subs,
+                                     response)
+
+    def test_flavors_extra_data_list(self):
+        response = self._do_get('flavors/detail')
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-list-resp', subs,
+                                     response)
+
+    def test_flavors_extra_data_post(self):
+        response = self._do_post('flavors',
+                                 'flavors-extra-data-post-req',
+                                 {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavors-extra-data-post-resp',
+                                     subs, response)
+
+
+class FlavorsExtraDataXmlTest(FlavorsExtraDataJsonTest):
+    ctype = 'xml'
