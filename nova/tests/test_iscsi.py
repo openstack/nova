@@ -15,7 +15,9 @@
 #    under the License.
 
 import os.path
+import shutil
 import string
+import tempfile
 
 from nova import test
 from nova.volume import iscsi
@@ -89,11 +91,20 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
     def setUp(self):
         super(TgtAdmTestCase, self).setUp()
         TargetAdminTestCase.setUp(self)
+        self.persist_tempdir = tempfile.mkdtemp()
         self.flags(iscsi_helper='tgtadm')
-        self.flags(volumes_dir="./")
+        self.flags(volumes_dir=self.persist_tempdir)
         self.script_template = "\n".join([
-        'tgt-admin --conf ./blaa --update iqn.2011-09.org.foo.bar:blaa',
+        'tgt-admin --conf %s/blaa --update iqn.2011-09.org.foo.bar:blaa'
+            % self.persist_tempdir,
         'tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa'])
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.persist_tempdir)
+        except OSError:
+            pass
+        super(TgtAdmTestCase, self).tearDown()
 
 
 class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
