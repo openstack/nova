@@ -151,16 +151,6 @@ class VolumeTypesApiTest(test.TestCase):
         self.assertEqual(1, len(res_dict))
         self.assertEqual('vol_type_1', res_dict['volume_type']['name'])
 
-    def test_create_empty_body(self):
-        self.stubs.Set(volume_types, 'create',
-                       return_volume_types_create)
-        self.stubs.Set(volume_types, 'get_volume_type_by_name',
-                       return_volume_types_get_by_name)
-
-        req = fakes.HTTPRequest.blank('/v2/fake/os-volume-types')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller.create, req, '')
-
 
 class VolumeTypesSerializerTest(test.TestCase):
     def _verify_volume_type(self, vtype, tree):
@@ -204,3 +194,31 @@ class VolumeTypesSerializerTest(test.TestCase):
         tree = etree.fromstring(text)
 
         self._verify_volume_type(vtype, tree)
+
+
+class VolumeTypesUnprocessableEntityTestCase(test.TestCase):
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(VolumeTypesUnprocessableEntityTestCase, self).setUp()
+        self.controller = volumetypes.VolumeTypesController()
+
+    def _unprocessable_volume_type_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volume-types')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, body)
+
+    def test_create_volume_type_no_body(self):
+        self._unprocessable_volume_type_create(body=None)
+
+    def test_create_volume_type_missing_volume_type(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_volume_type_create(body=body)
+
+    def test_create_volume_type_malformed_entity(self):
+        body = {'volume_type': 'string'}
+        self._unprocessable_volume_type_create(body=body)

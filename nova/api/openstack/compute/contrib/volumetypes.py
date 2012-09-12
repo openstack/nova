@@ -53,7 +53,7 @@ class VolumeTypesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeTypesController(object):
+class VolumeTypesController(wsgi.Controller):
     """ The volume types API controller for the OpenStack API """
 
     @wsgi.serializers(xml=VolumeTypesTemplate)
@@ -69,13 +69,10 @@ class VolumeTypesController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body or body == "":
+        if not self.is_valid_body(body, 'volume_type'):
             raise exc.HTTPUnprocessableEntity()
 
-        vol_type = body.get('volume_type', None)
-        if vol_type is None or vol_type == "":
-            raise exc.HTTPUnprocessableEntity()
-
+        vol_type = body['volume_type']
         name = vol_type.get('name', None)
         specs = vol_type.get('extra_specs', {})
 

@@ -192,7 +192,7 @@ class CreateDeserializer(CommonDeserializer):
         return {'body': {'volume': volume}}
 
 
-class VolumeController(object):
+class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
@@ -253,11 +253,10 @@ class VolumeController(object):
     @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """Creates a new volume."""
-        context = req.environ['nova.context']
-
-        if not body:
+        if not self.is_valid_body(body, 'volume'):
             raise exc.HTTPUnprocessableEntity()
 
+        context = req.environ['nova.context']
         volume = body['volume']
 
         kwargs = {}

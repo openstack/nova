@@ -175,15 +175,6 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp_dict['volume']['availabilityZone'],
                          vol['availability_zone'])
 
-    def test_volume_create_no_body(self):
-        req = webob.Request.blank('/v2/fake/os-volumes')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(fakes.wsgi_app())
-        self.assertEqual(resp.status_int, 422)
-
     def test_volume_index(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
         resp = req.get_response(fakes.wsgi_app())
@@ -566,3 +557,64 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
         }
         self.maxDiff = None
         self.assertEquals(request['body'], expected)
+
+
+class CommonUnprocessableEntityTestCase(object):
+
+    resource = None
+    entity_name = None
+    controller_cls = None
+    kwargs = {}
+
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(CommonUnprocessableEntityTestCase, self).setUp()
+        self.controller = self.controller_cls()
+
+    def _unprocessable_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/' + self.resource)
+        req.method = 'POST'
+
+        kwargs = self.kwargs.copy()
+        kwargs['body'] = body
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, **kwargs)
+
+    def test_create_no_body(self):
+        self._unprocessable_create(body=None)
+
+    def test_create_missing_volume(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_create(body=body)
+
+    def test_create_malformed_entity(self):
+        body = {self.entity_name: 'string'}
+        self._unprocessable_create(body=body)
+
+
+class UnprocessableVolumeTestCase(CommonUnprocessableEntityTestCase,
+                                  test.TestCase):
+
+    resource = 'os-volumes'
+    entity_name = 'volume'
+    controller_cls = volumes.VolumeController
+
+
+class UnprocessableAttachmentTestCase(CommonUnprocessableEntityTestCase,
+                                      test.TestCase):
+
+    resource = 'servers/' + FAKE_UUID + '/os-volume_attachments'
+    entity_name = 'volumeAttachment'
+    controller_cls = volumes.VolumeAttachmentController
+    kwargs = {'server_id': FAKE_UUID}
+
+
+class UnprocessableSnapshotTestCase(CommonUnprocessableEntityTestCase,
+                                    test.TestCase):
+
+    resource = 'os-snapshots'
+    entity_name = 'snapshot'
+    controller_cls = volumes.SnapshotController

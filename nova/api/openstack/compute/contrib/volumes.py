@@ -160,7 +160,7 @@ class CreateDeserializer(CommonDeserializer):
         return {'body': {'volume': volume}}
 
 
-class VolumeController(object):
+class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
@@ -221,7 +221,7 @@ class VolumeController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
+        if not self.is_valid_body(body, 'volume'):
             raise exc.HTTPUnprocessableEntity()
 
         vol = body['volume']
@@ -323,7 +323,7 @@ class VolumeAttachmentsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeAttachmentController(object):
+class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
     A child resource of the server.  Note that we use the volume id
@@ -381,7 +381,7 @@ class VolumeAttachmentController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
+        if not self.is_valid_body(body, 'volumeAttachment'):
             raise exc.HTTPUnprocessableEntity()
 
         volume_id = body['volumeAttachment']['volumeId']
@@ -525,7 +525,7 @@ class SnapshotsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class SnapshotController(object):
+class SnapshotController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
@@ -585,8 +585,8 @@ class SnapshotController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body:
-            return exc.HTTPUnprocessableEntity()
+        if not self.is_valid_body(body, 'snapshot'):
+            raise exc.HTTPUnprocessableEntity()
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']

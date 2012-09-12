@@ -254,3 +254,32 @@ class SnapshotSerializerTest(test.TestCase):
         self.assertEqual(len(raw_snapshots), len(tree))
         for idx, child in enumerate(tree):
             self._verify_snapshot(raw_snapshots[idx], child)
+
+
+class SnapshotsUnprocessableEntityTestCase(test.TestCase):
+
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(SnapshotsUnprocessableEntityTestCase, self).setUp()
+        self.controller = snapshots.SnapshotsController()
+
+    def _unprocessable_snapshot_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/snapshots')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, body)
+
+    def test_create_no_body(self):
+        self._unprocessable_snapshot_create(body=None)
+
+    def test_create_missing_snapshot(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_snapshot_create(body=body)
+
+    def test_create_malformed_entity(self):
+        body = {'snapshot': 'string'}
+        self._unprocessable_snapshot_create(body=body)

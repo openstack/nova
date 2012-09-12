@@ -50,7 +50,7 @@ class VolumeTypeExtraSpecTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeTypeExtraSpecsController(object):
+class VolumeTypeExtraSpecsController(wsgi.Controller):
     """ The volume type extra specs API controller for the OpenStack API """
 
     def _get_extra_specs(self, context, type_id):
@@ -59,11 +59,6 @@ class VolumeTypeExtraSpecsController(object):
         for key, value in extra_specs.iteritems():
             specs_dict[key] = value
         return dict(extra_specs=specs_dict)
-
-    def _check_body(self, body):
-        if not body:
-            expl = _('No Request Body')
-            raise webob.exc.HTTPBadRequest(explanation=expl)
 
     def _check_type(self, context, type_id):
         try:
@@ -83,12 +78,13 @@ class VolumeTypeExtraSpecsController(object):
     def create(self, req, type_id, body=None):
         context = req.environ['nova.context']
         authorize(context)
+
+        if not self.is_valid_body(body, 'extra_specs'):
+            raise webob.exc.HTTPUnprocessableEntity()
+
         self._check_type(context, type_id)
-        self._check_body(body)
-        specs = body.get('extra_specs')
-        if not isinstance(specs, dict):
-            expl = _('Malformed extra specs')
-            raise webob.exc.HTTPBadRequest(explanation=expl)
+
+        specs = body['extra_specs']
         db.volume_type_extra_specs_update_or_create(context,
                                                     type_id,
                                                     specs)
@@ -98,8 +94,9 @@ class VolumeTypeExtraSpecsController(object):
     def update(self, req, type_id, id, body=None):
         context = req.environ['nova.context']
         authorize(context)
+        if not body:
+            raise webob.exc.HTTPUnprocessableEntity()
         self._check_type(context, type_id)
-        self._check_body(body)
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise webob.exc.HTTPBadRequest(explanation=expl)

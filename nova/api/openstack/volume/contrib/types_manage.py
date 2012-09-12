@@ -42,13 +42,10 @@ class VolumeTypesManageController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not body or body == "":
+        if not self.is_valid_body(body, 'volume_type'):
             raise webob.exc.HTTPUnprocessableEntity()
 
-        vol_type = body.get('volume_type', None)
-        if vol_type is None or vol_type == "":
-            raise webob.exc.HTTPUnprocessableEntity()
-
+        vol_type = body['volume_type']
         name = vol_type.get('name', None)
         specs = vol_type.get('extra_specs', {})
 

@@ -118,15 +118,6 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
 
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
-    def test_create_empty_body(self):
-        self.stubs.Set(nova.db,
-                       'volume_type_extra_specs_update_or_create',
-                       return_create_volume_type_extra_specs)
-
-        req = fakes.HTTPRequest.blank(self.api_path)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, 1, '')
-
     def test_update_item(self):
         self.stubs.Set(nova.db,
                        'volume_type_extra_specs_update_or_create',
@@ -137,15 +128,6 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         res_dict = self.controller.update(req, 1, 'key1', body)
 
         self.assertEqual('value1', res_dict['key1'])
-
-    def test_update_item_empty_body(self):
-        self.stubs.Set(nova.db,
-                       'volume_type_extra_specs_update_or_create',
-                       return_create_volume_type_extra_specs)
-
-        req = fakes.HTTPRequest.blank(self.api_path + '/key1')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 1, 'key1', '')
 
     def test_update_item_too_many_keys(self):
         self.stubs.Set(nova.db,
@@ -200,3 +182,45 @@ class VolumeTypeExtraSpecsSerializerTest(test.TestCase):
         self.assertEqual('key1', tree.tag)
         self.assertEqual('value1', tree.text)
         self.assertEqual(0, len(tree))
+
+
+class VolumeTypeExtraSpecsUnprocessableEntityTestCase(test.TestCase):
+
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(VolumeTypeExtraSpecsUnprocessableEntityTestCase, self).setUp()
+        self.controller = types_extra_specs.VolumeTypeExtraSpecsController()
+
+    def _unprocessable_extra_specs_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/types/1/extra_specs')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, '1', body)
+
+    def test_create_no_body(self):
+        self._unprocessable_extra_specs_create(body=None)
+
+    def test_create_missing_volume(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_extra_specs_create(body=body)
+
+    def test_create_malformed_entity(self):
+        body = {'extra_specs': 'string'}
+        self._unprocessable_extra_specs_create(body=body)
+
+    def _unprocessable_extra_specs_update(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/types/1/extra_specs')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.update, req, '1', body)
+
+    def test_update_no_body(self):
+        self._unprocessable_extra_specs_update(body=None)
+
+    def test_update_empty_body(self):
+        self._unprocessable_extra_specs_update(body={})
