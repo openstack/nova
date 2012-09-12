@@ -25,11 +25,13 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get_instance_type_by_flavor_id(flavorid):
+def fake_get_instance_type_by_flavor_id(flavorid, read_deleted='yes'):
     if flavorid == 'failtest':
         raise exception.NotFound("Not found sucka!")
     elif not str(flavorid) == '1234':
         raise Exception("This test expects flavorid 1234, not %s" % flavorid)
+    if read_deleted != 'no':
+        raise test.TestingException("Should not be reading deleted")
 
     return {
         'root_gb': 1,
@@ -60,7 +62,8 @@ def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
                 flavorid, swap, rxtx_factor, is_public):
     if flavorid is None:
         flavorid = 1234
-    newflavor = fake_get_instance_type_by_flavor_id(flavorid)
+    newflavor = fake_get_instance_type_by_flavor_id(flavorid,
+                                                    read_deleted="no")
 
     newflavor["name"] = name
     newflavor["memory_mb"] = int(memory_mb)
