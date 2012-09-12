@@ -25,5 +25,7 @@
     <limit name="maxTotalFloatingIps" value="10"/>
     <limit name="maxTotalVolumeGigabytes" value="1000"/>
     <limit name="maxTotalRAMSize" value="51200"/>
+    <limit name="maxSecurityGroups" value="10"/>
+    <limit name="maxSecurityGroupRules" value="20"/>
   </absolute>
 </limits>

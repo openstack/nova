@@ -19,8 +19,10 @@
     <limit name="maxPersonality" value="5"/>
     <limit name="maxImageMeta" value="128"/>
     <limit name="maxPersonalitySize" value="10240"/>
+    <limit name="maxSecurityGroupRules" value="20"/>
     <limit name="maxTotalKeypairs" value="100"/>
     <limit name="maxTotalVolumes" value="10"/>
+    <limit name="maxSecurityGroups" value="10"/>
     <limit name="maxTotalCores" value="20"/>
     <limit name="maxTotalFloatingIps" value="10"/>
     <limit name="maxTotalVolumeGigabytes" value="1000"/>

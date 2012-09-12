@@ -124,6 +124,8 @@ class LimitsControllerTest(BaseLimitTestSuite):
             'volumes': 5,
             'key_pairs': 10,
             'floating_ips': 10,
+            'security_groups': 10,
+            'security_group_rules': 20,
         }
         response = request.get_response(self.controller)
         expected = {
@@ -172,6 +174,8 @@ class LimitsControllerTest(BaseLimitTestSuite):
                     "maxTotalVolumes": 5,
                     "maxTotalKeypairs": 10,
                     "maxTotalFloatingIps": 10,
+                    "maxSecurityGroups": 10,
+                    "maxSecurityGroupRules": 20,
                     },
             },
         }
@@ -269,6 +273,17 @@ class LimitsControllerTest(BaseLimitTestSuite):
         expected = {
             'maxPersonality': 17,
             'maxPersonalitySize': 86753,
+        }
+        self._test_index_absolute_limits_json(expected)
+
+    def test_index_absolute_security_groups(self):
+        self.absolute_limits = {
+            'security_groups': 8,
+            'security_group_rules': 16,
+        }
+        expected = {
+            'maxSecurityGroups': 8,
+            'maxSecurityGroupRules': 16,
         }
         self._test_index_absolute_limits_json(expected)
 
