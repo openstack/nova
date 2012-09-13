@@ -25,10 +25,12 @@ Includes injection of SSH PGP keys into authorized_keys file.
 
 """
 
-import crypt
 import os
 import random
 import tempfile
+
+if os.name != 'nt':
+    import crypt
 
 from nova import exception
 from nova import flags
@@ -511,6 +513,9 @@ def _set_passwd(username, admin_passwd, passwd_file, shadow_file):
     :raises: exception.NovaException(), IOError()
 
     """
+    if os.name == 'nt':
+        raise exception.NovaException(_('Not implemented on Windows'))
+
     salt_set = ('abcdefghijklmnopqrstuvwxyz'
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                 '0123456789./')
