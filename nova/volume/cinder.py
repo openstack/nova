@@ -36,6 +36,10 @@ cinder_opts = [
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is : separated values of the form: '
                  '<service_type>:<service_name>:<endpoint_type>'),
+    cfg.StrOpt('cinder_endpoint_template',
+               default=None,
+               help='Override service catalog lookup with template for cinder '
+                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
 ]
 
 FLAGS = flags.FLAGS
@@ -49,14 +53,17 @@ def cinderclient(context):
     # FIXME: the cinderclient ServiceCatalog object is mis-named.
     #        It actually contains the entire access blob.
     compat_catalog = {
-        'access': {'serviceCatalog': context.service_catalog}
+        'access': {'serviceCatalog': context.service_catalog or {}}
     }
     sc = service_catalog.ServiceCatalog(compat_catalog)
-    info = FLAGS.cinder_catalog_info
-    service_type, service_name, endpoint_type = info.split(':')
-    url = sc.url_for(service_type=service_type,
-                     service_name=service_name,
-                     endpoint_type=endpoint_type)
+    if FLAGS.cinder_endpoint_template:
+        url = FLAGS.cinder_endpoint_template % context.to_dict()
+    else:
+        info = FLAGS.cinder_catalog_info
+        service_type, service_name, endpoint_type = info.split(':')
+        url = sc.url_for(service_type=service_type,
+                         service_name=service_name,
+                         endpoint_type=endpoint_type)
 
     LOG.debug(_('Cinderclient connection created using URL: %s') % url)
 
@@ -64,7 +71,9 @@ def cinderclient(context):
                              context.auth_token,
                              project_id=context.project_id,
                              auth_url=url)
-    c.client.auth_token = context.auth_token
+    # noauth extracts user_id:project_id from auth_token
+    c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
+                                                           context.project_id)
     c.client.management_url = url
     return c
 
