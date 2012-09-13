@@ -22,6 +22,7 @@ import mox
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
@@ -133,3 +134,21 @@ class RevokeCertsTest(test.TestCase):
         self.mox.ReplayAll()
 
         crypto.revoke_certs_by_project(project_id)
+
+
+class CertExceptionTests(test.TestCase):
+    def test_fetch_ca_file_not_found(self):
+        with utils.tempdir() as tmpdir:
+            self.flags(ca_path=tmpdir)
+            self.flags(use_project_ca=True)
+
+            self.assertRaises(exception.CryptoCAFileNotFound, crypto.fetch_ca,
+                              project_id='fake')
+
+    def test_fetch_crl_file_not_found(self):
+        with utils.tempdir() as tmpdir:
+            self.flags(ca_path=tmpdir)
+            self.flags(use_project_ca=True)
+
+            self.assertRaises(exception.CryptoCRLFileNotFound,
+                              crypto.fetch_crl, project_id='fake')
