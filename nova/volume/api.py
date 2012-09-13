@@ -175,7 +175,8 @@ class API(base.Base):
                      topic,
                      {"method": "create_volume",
                       "args": {"volume_id": volume_id,
-                               "snapshot_id": snapshot_id}})
+                               "snapshot_id": snapshot_id,
+                               "reservations": reservations}})
         else:
             self.scheduler_rpcapi.create_volume(
                 context, volume_id, snapshot_id, reservations)
