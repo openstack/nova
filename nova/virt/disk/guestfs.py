@@ -112,6 +112,10 @@ class Mount(mount.Mount):
         wait_cmd = 'until ! ps -C guestmount -o args= | grep -qF "%s"; '
         wait_cmd += 'do sleep .2; done'
         wait_cmd %= self.mount_dir
-        utils.execute('timeout', '10s', 'sh', '-c', wait_cmd)
-
-        self.mounted = False
+        try:
+            utils.execute('timeout', '10s', 'sh', '-c', wait_cmd)
+            self.mounted = False
+        except exception.ProcessExecutionError:
+            msg = _("Failed to umount image at %s, guestmount was "
+                    "still running after 10s") % (self.mount_dir)
+            raise exception.NovaException(msg)
