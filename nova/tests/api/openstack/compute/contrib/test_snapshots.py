@@ -165,6 +165,19 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(resp_dict['snapshot']['displayDescription'],
                         snapshot['display_description'])
 
+        # Test invalid force paramter
+        snapshot = {"volume_id": 12,
+                "force": '**&&^^%%$$##@@'}
+        body = dict(snapshot=snapshot)
+        req = webob.Request.blank('/v2/fake/os-snapshots')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+
+        resp = req.get_response(fakes.wsgi_app())
+        LOG.debug(_("test_snapshot_create_force: param=%s"), _last_param)
+        self.assertEqual(resp.status_int, 400)
+
     def test_snapshot_delete(self):
         global _last_param
         _last_param = {}
