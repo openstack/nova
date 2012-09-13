@@ -118,18 +118,23 @@ class FloatingIPController(object):
         return self.compute_api.get(context, instance_id)
 
     def _set_metadata(self, context, floating_ip):
-        fixed_ip_id = floating_ip['fixed_ip_id']
-        floating_ip['fixed_ip'] = self._get_fixed_ip(context,
-                                                     fixed_ip_id)
-        instance_uuid = None
-        if floating_ip['fixed_ip']:
-            instance_uuid = floating_ip['fixed_ip']['instance_uuid']
+        # When Quantum v2 API is used, 'fixed_ip' and 'instance' are
+        # already set. In this case we don't need to update the fields.
 
-        if instance_uuid:
-            floating_ip['instance'] = self._get_instance(context,
-                                                         instance_uuid)
-        else:
-            floating_ip['instance'] = None
+        if 'fixed_ip' not in floating_ip:
+            fixed_ip_id = floating_ip['fixed_ip_id']
+            floating_ip['fixed_ip'] = self._get_fixed_ip(context,
+                                                         fixed_ip_id)
+        if 'instance' not in floating_ip:
+            instance_uuid = None
+            if floating_ip['fixed_ip']:
+                instance_uuid = floating_ip['fixed_ip']['instance_uuid']
+
+            if instance_uuid:
+                floating_ip['instance'] = self._get_instance(context,
+                                                             instance_uuid)
+            else:
+                floating_ip['instance'] = None
 
     @wsgi.serializers(xml=FloatingIPTemplate)
     def show(self, req, id):

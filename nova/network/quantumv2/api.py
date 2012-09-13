@@ -25,6 +25,7 @@ from nova.network import quantumv2
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 quantum_opts = [
@@ -49,9 +50,13 @@ quantum_opts = [
                     'quantum in admin context'),
     ]
 
+flags.DECLARE('default_floating_pool', 'nova.network.manager')
+
 FLAGS = flags.FLAGS
 FLAGS.register_opts(quantum_opts)
 LOG = logging.getLogger(__name__)
+
+NET_EXTERNAL = 'router:external'
 
 
 class API(base.Base):
@@ -261,12 +266,40 @@ class API(base.Base):
         self.security_group_api.trigger_handler('security_group_members',
                                                 admin_context, group_ids)
 
+    def _get_port_id_by_fixed_address(self, client,
+                                      instance, address):
+        zone = 'compute:%s' % FLAGS.node_availability_zone
+        search_opts = {'device_id': instance['uuid'],
+                       'device_owner': zone}
+        data = client.list_ports(**search_opts)
+        ports = data['ports']
+        port_id = None
+        for p in ports:
+            for ip in p['fixed_ips']:
+                if ip['ip_address'] == address:
+                    port_id = p['id']
+                    break
+        if not port_id:
+            raise exception.FixedIpNotFoundForAddress(address=address)
+        return port_id
+
     @refresh_cache
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
         """Associate a floating ip with a fixed ip."""
-        raise NotImplementedError()
+
+        # Note(amotoki): 'affect_auto_assigned' is not respected
+        # since it is not used anywhere in nova code and I could
+        # find why this parameter exists.
+
+        client = quantumv2.get_client(context)
+        port_id = self._get_port_id_by_fixed_address(client, instance,
+                                                     fixed_address)
+        fip = self._get_floating_ip_by_address(client, floating_address)
+        param = {'port_id': port_id,
+                 'fixed_ip_address': fixed_address}
+        client.update_floatingip(fip['id'], {'floatingip': param})
 
     def get_all(self, context):
         raise NotImplementedError()
@@ -293,23 +326,94 @@ class API(base.Base):
             raise exception.FixedIpAssociatedWithMultipleInstances(
                 address=address)
 
+    def _setup_net_dict(self, client, network_id):
+        if not network_id:
+            return {}
+        pool = client.show_network(network_id)['network']
+        return {pool['id']: pool}
+
+    def _setup_port_dict(self, client, port_id):
+        if not port_id:
+            return {}
+        port = client.show_port(port_id)['port']
+        return {port['id']: port}
+
+    def _setup_pools_dict(self, client):
+        pools = self._get_floating_ip_pools(client)
+        return dict([(i['id'], i) for i in pools])
+
+    def _setup_ports_dict(self, client, project_id=None):
+        search_opts = {'tenant_id': project_id} if project_id else {}
+        ports = client.list_ports(**search_opts)['ports']
+        return dict([(p['id'], p) for p in ports])
+
     def get_floating_ip(self, context, id):
-        raise NotImplementedError()
+        client = quantumv2.get_client(context)
+        fip = client.show_floatingip(id)['floatingip']
+        pool_dict = self._setup_net_dict(client,
+                                         fip['floating_network_id'])
+        port_dict = self._setup_port_dict(client, fip['port_id'])
+        return self._format_floating_ip_model(fip, pool_dict, port_dict)
+
+    def _get_floating_ip_pools(self, client, project_id=None):
+        search_opts = {NET_EXTERNAL: True}
+        if project_id:
+            search_opts.update({'tenant_id': project_id})
+        data = client.list_networks(**search_opts)
+        return data['networks']
 
     def get_floating_ip_pools(self, context):
-        return []
+        client = quantumv2.get_client(context)
+        pools = self._get_floating_ip_pools(client)
+        return [{'name': n['name'] or n['id']} for n in pools]
+
+    def _format_floating_ip_model(self, fip, pool_dict, port_dict):
+        pool = pool_dict[fip['floating_network_id']]
+        result = {'id': fip['id'],
+                  'address': fip['floating_ip_address'],
+                  'pool': pool['name'] or pool['id'],
+                  'project_id': fip['tenant_id'],
+                  # In Quantum v2, an exact fixed_ip_id does not exist.
+                  'fixed_ip_id': fip['port_id'],
+                  }
+        # In Quantum v2 API fixed_ip_address and instance uuid
+        # (= device_id) are known here, so pass it as a result.
+        result['fixed_ip'] = {'address': fip['fixed_ip_address']}
+        if fip['port_id']:
+            instance_uuid = port_dict[fip['port_id']]['device_id']
+            result['instance'] = {'uuid': instance_uuid}
+        else:
+            result['instance'] = None
+        return result
 
     def get_floating_ip_by_address(self, context, address):
-        raise NotImplementedError()
+        client = quantumv2.get_client(context)
+        fip = self._get_floating_ip_by_address(client, address)
+        pool_dict = self._setup_net_dict(client,
+                                         fip['floating_network_id'])
+        port_dict = self._setup_port_dict(client, fip['port_id'])
+        return self._format_floating_ip_model(fip, pool_dict, port_dict)
 
     def get_floating_ips_by_project(self, context):
-        return []
+        client = quantumv2.get_client(context)
+        project_id = context.project_id
+        fips = client.list_floatingips(tenant_id=project_id)['floatingips']
+        pool_dict = self._setup_pools_dict(client)
+        port_dict = self._setup_ports_dict(client, project_id)
+        return [self._format_floating_ip_model(fip, pool_dict, port_dict)
+                for fip in fips]
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         return []
 
     def get_instance_id_by_floating_address(self, context, address):
-        raise NotImplementedError()
+        """Returns the instance id a floating ip's fixed ip is allocated to"""
+        client = quantumv2.get_client(context)
+        fip = self._get_floating_ip_by_address(client, address)
+        if not fip['port_id']:
+            return None
+        port = client.show_port(fip['port_id'])['port']
+        return port['device_id']
 
     def get_vifs_by_instance(self, context, instance):
         raise NotImplementedError()
@@ -317,21 +421,78 @@ class API(base.Base):
     def get_vif_by_mac_address(self, context, mac_address):
         raise NotImplementedError()
 
+    def _get_floating_ip_pool_id_by_name_or_id(self, client, name_or_id):
+        search_opts = {NET_EXTERNAL: True, 'fields': 'id'}
+        if utils.is_uuid_like(name_or_id):
+            search_opts.update({'id': name_or_id})
+        else:
+            search_opts.update({'name': name_or_id})
+        data = client.list_networks(**search_opts)
+        nets = data['networks']
+
+        if len(nets) == 1:
+            return nets[0]['id']
+        elif len(nets) == 0:
+            raise exception.FloatingIpPoolNotFound()
+        else:
+            msg = (_("Multiple floating IP pools matches found for name '%s'")
+                   % name_or_id)
+            raise exception.NovaException(message=msg)
+
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating ip to a project from a pool."""
-        raise NotImplementedError()
+        client = quantumv2.get_client(context)
+        pool = pool or FLAGS.default_floating_pool
+        pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
+
+        # TODO(amotoki): handle exception during create_floatingip()
+        # At this timing it is ensured that a network for pool exists.
+        # quota error may be returned.
+        param = {'floatingip': {'floating_network_id': pool_id}}
+        fip = client.create_floatingip(param)
+        return fip['floatingip']['floating_ip_address']
+
+    def _get_floating_ip_by_address(self, client, address):
+        """Get floatingip from floating ip address"""
+        data = client.list_floatingips(floating_ip_address=address)
+        fips = data['floatingips']
+        if len(fips) == 0:
+            raise exception.FloatingIpNotFoundForAddress(address=address)
+        elif len(fips) > 1:
+            raise exception.FloatingIpMultipleFoundForAddress(address=address)
+        return fips[0]
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Remove a floating ip with the given address from a project."""
-        raise NotImplementedError()
+
+        # Note(amotoki): We cannot handle a case where multiple pools
+        # have overlapping IP address range. In this case we cannot use
+        # 'address' as a unique key.
+        # This is a limitation of the current nova.
+
+        # Note(amotoki): 'affect_auto_assigned' is not respected
+        # since it is not used anywhere in nova code and I could
+        # find why this parameter exists.
+
+        client = quantumv2.get_client(context)
+        fip = self._get_floating_ip_by_address(client, address)
+        if fip['port_id']:
+            raise exception.FloatingIpAssociated(address=address)
+        client.delete_floatingip(fip['id'])
 
     @refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
-        """Disassociate a floating ip from the fixed ip
-        it is associated with."""
-        raise NotImplementedError()
+        """Disassociate a floating ip from the instance."""
+
+        # Note(amotoki): 'affect_auto_assigned' is not respected
+        # since it is not used anywhere in nova code and I could
+        # find why this parameter exists.
+
+        client = quantumv2.get_client(context)
+        fip = self._get_floating_ip_by_address(client, address)
+        client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
