@@ -15,6 +15,7 @@
 
 import os
 import re
+import uuid
 
 from lxml import etree
 
@@ -595,4 +596,25 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
 
 
 class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):
+    ctype = 'xml'
+
+
+class SchedulerHintsJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.scheduler_hints."
+                     "Scheduler_hints")
+
+    def test_scheduler_hints_post(self):
+        """Get api sample of scheduler hint post request"""
+        hints = {'image_id': fake.get_valid_image_id(),
+                 'image_near': str(uuid.uuid4())
+        }
+        response = self._do_post('servers', 'scheduler-hints-post-req',
+                                 hints)
+        self.assertEqual(response.status, 202)
+        subs = self._get_regexes()
+        return self._verify_response('scheduler-hints-post-resp', subs,
+                                     response)
+
+
+class SchedulerHintsXmlTest(SchedulerHintsJsonTest):
     ctype = 'xml'
