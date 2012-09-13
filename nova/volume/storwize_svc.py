@@ -28,9 +28,9 @@ Notes:
    key file only.
 2. When using a key file for authentication, it is up to the user or
    system administrator to store the private key in a safe manner.
-3. The defaults for creating volumes are "-vtype striped -rsize 2% -autoexpand
-   -grainsize 256 -warning 0".  These can be changed in the configuration file
-   (recommended only for advanced users).
+3. The defaults for creating volumes are "-rsize 2% -autoexpand
+   -grainsize 256 -warning 0".  These can be changed in the configuration
+   file or by using volume types(recommended only for advanced users).
 
 Limitations:
 1. The driver was not tested with SVC or clustered configurations of Storwize
@@ -57,9 +57,6 @@ storwize_svc_opts = [
     cfg.StrOpt('storwize_svc_volpool_name',
                default='volpool',
                help='Storage system storage pool for volumes'),
-    cfg.StrOpt('storwize_svc_vol_vtype',
-               default='striped',
-               help='Storage system volume type for volumes'),
     cfg.StrOpt('storwize_svc_vol_rsize',
                default='2%',
                help='Storage system space-efficiency parameter for volumes'),
@@ -77,6 +74,9 @@ storwize_svc_opts = [
     cfg.BoolOpt('storwize_svc_vol_compression',
                default=False,
                help='Storage system compression option for volumes'),
+    cfg.BoolOpt('storwize_svc_vol_easytier',
+               default=True,
+               help='Enable Easy Tier for volumes'),
     cfg.StrOpt('storwize_svc_flashcopy_timeout',
                default='120',
                help='Maximum number of seconds to wait for FlashCopy to be '
@@ -149,11 +149,11 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                 % {'cmd': ssh_cmd,
                    'out': str(out),
                    'err': str(err)})
-        search_text = '!%s!' % getattr(FLAGS, 'storwize_svc_volpool_name')
+        search_text = '!%s!' % FLAGS.storwize_svc_volpool_name
         if search_text not in out:
             raise exception.InvalidInput(
                     reason=(_('pool %s doesn\'t exist')
-                        % getattr(FLAGS, 'storwize_svc_volpool_name')))
+                        % FLAGS.storwize_svc_volpool_name))
 
         storage_nodes = {}
         # Get the iSCSI names of the Storwize/SVC nodes
@@ -326,45 +326,29 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                         reason=_('%s is not set') % flag)
 
         # Ensure that either password or keyfile were set
-        if not (getattr(FLAGS, 'san_password', None)
-                or getattr(FLAGS, 'san_private_key', None)):
+        if not (FLAGS.san_password or FLAGS.san_private_key):
             raise exception.InvalidInput(
                 reason=_('Password or SSH private key is required for '
                          'authentication: set either san_password or '
                          'san_private_key option'))
 
-        # vtype should either be 'striped' or 'seq'
-        vtype = getattr(FLAGS, 'storwize_svc_vol_vtype')
-        if vtype not in ['striped', 'seq']:
-            raise exception.InvalidInput(
-                reason=_('Illegal value specified for storwize_svc_vol_vtype: '
-                         'set to either \'striped\' or \'seq\''))
-
         # Check that rsize is a number or percentage
-        rsize = getattr(FLAGS, 'storwize_svc_vol_rsize')
-        if not self._check_num_perc(rsize) and (rsize not in ['auto', '-1']):
+        rsize = FLAGS.storwize_svc_vol_rsize
+        if not self._check_num_perc(rsize) and (rsize != '-1'):
             raise exception.InvalidInput(
                 reason=_('Illegal value specified for storwize_svc_vol_rsize: '
                          'set to either a number or a percentage'))
 
         # Check that warning is a number or percentage
-        warning = getattr(FLAGS, 'storwize_svc_vol_warning')
+        warning = FLAGS.storwize_svc_vol_warning
         if not self._check_num_perc(warning):
             raise exception.InvalidInput(
                 reason=_('Illegal value specified for '
                          'storwize_svc_vol_warning: '
                          'set to either a number or a percentage'))
 
-        # Check that autoexpand is a boolean
-        autoexpand = getattr(FLAGS, 'storwize_svc_vol_autoexpand')
-        if type(autoexpand) != type(True):
-            raise exception.InvalidInput(
-                reason=_('Illegal value specified for '
-                         'storwize_svc_vol_autoexpand: set to either '
-                         'True or False'))
-
         # Check that grainsize is 32/64/128/256
-        grainsize = getattr(FLAGS, 'storwize_svc_vol_grainsize')
+        grainsize = FLAGS.storwize_svc_vol_grainsize
         if grainsize not in ['32', '64', '128', '256']:
             raise exception.InvalidInput(
                 reason=_('Illegal value specified for '
@@ -372,7 +356,7 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                          '\'32\', \'64\', \'128\', or \'256\''))
 
         # Check that flashcopy_timeout is numeric and 32/64/128/256
-        flashcopy_timeout = getattr(FLAGS, 'storwize_svc_flashcopy_timeout')
+        flashcopy_timeout = FLAGS.storwize_svc_flashcopy_timeout
         if not (flashcopy_timeout.isdigit() and int(flashcopy_timeout) > 0 and
             int(flashcopy_timeout) <= 600):
             raise exception.InvalidInput(
@@ -381,13 +365,13 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
                          'valid values are between 0 and 600')
                                          % flashcopy_timeout)
 
-        # Check that compression is a boolean
-        volume_compression = getattr(FLAGS, 'storwize_svc_vol_compression')
-        if type(volume_compression) != type(True):
+        # Check that rsize is set
+        volume_compression = FLAGS.storwize_svc_vol_compression
+        if ((volume_compression == True) and
+                (FLAGS.storwize_svc_vol_rsize == '-1')):
             raise exception.InvalidInput(
-                reason=_('Illegal value specified for '
-                         'storwize_svc_vol_compression: set to either '
-                         'True or False'))
+                reason=_('If compression is set to True, rsize must '
+                         'also be set (not equal to -1)'))
 
     def do_setup(self, context):
         """Validate the flags."""
@@ -402,42 +386,43 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
     def _create_volume(self, volume, units='gb'):
         """Create a new volume."""
 
-        default_size = '1'  # 1GB
         name = volume['name']
         model_update = None
 
         LOG.debug(_('enter: create_volume: volume %s ') % name)
 
-        if int(volume['size']) > 0:
-            size = int(volume['size'])
-        else:
-            size = default_size
+        size = int(volume['size'])
 
-        if getattr(FLAGS, 'storwize_svc_vol_autoexpand'):
-            autoexpand = '-autoexpand'
+        if FLAGS.storwize_svc_vol_autoexpand == True:
+            autoex = '-autoexpand'
         else:
-            autoexpand = ''
+            autoex = ''
+
+        if FLAGS.storwize_svc_vol_easytier == True:
+            easytier = '-easytier on'
+        else:
+            easytier = '-easytier off'
 
         # Set space-efficient options
-        if getattr(FLAGS, 'storwize_svc_vol_rsize').strip() == '-1':
+        if FLAGS.storwize_svc_vol_rsize.strip() == '-1':
             ssh_cmd_se_opt = ''
         else:
-            ssh_cmd_se_opt = ('-rsize %(rsize)s %(autoexpand)s ' %
-                        {'rsize': getattr(FLAGS, 'storwize_svc_vol_rsize'),
-                         'autoexpand': autoexpand})
-            if getattr(FLAGS, 'storwize_svc_vol_compression'):
-                ssh_cmd_se_opt = ssh_cmd_se_opt + '-compressed'
+            ssh_cmd_se_opt = ('-rsize %(rsize)s %(autoex)s -warning %(warn)s' %
+                        {'rsize': FLAGS.storwize_svc_vol_rsize,
+                         'autoex': autoex,
+                         'warn': FLAGS.storwize_svc_vol_warning})
+            if FLAGS.storwize_svc_vol_compression:
+                ssh_cmd_se_opt = ssh_cmd_se_opt + ' -compressed'
             else:
-                ssh_cmd_se_opt = ssh_cmd_se_opt + ('-grainsize %(grain)s' %
-                       {'grain': getattr(FLAGS, 'storwize_svc_vol_grainsize')})
+                ssh_cmd_se_opt = ssh_cmd_se_opt + (' -grainsize %(grain)s' %
+                       {'grain': FLAGS.storwize_svc_vol_grainsize})
 
         ssh_cmd = ('mkvdisk -name %(name)s -mdiskgrp %(mdiskgrp)s '
-                    '-iogrp 0 -vtype %(vtype)s -size %(size)s -unit '
-                    '%(unit)s %(ssh_cmd_se_opt)s'
+                    '-iogrp 0 -size %(size)s -unit '
+                    '%(unit)s %(easytier)s %(ssh_cmd_se_opt)s'
                     % {'name': name,
-                    'mdiskgrp': getattr(FLAGS, 'storwize_svc_volpool_name'),
-                    'vtype': getattr(FLAGS, 'storwize_svc_vol_vtype'),
-                    'size': size, 'unit': units,
+                    'mdiskgrp': FLAGS.storwize_svc_volpool_name,
+                    'size': size, 'unit': units, 'easytier': easytier,
                     'ssh_cmd_se_opt': ssh_cmd_se_opt})
         out, err = self._run_ssh(ssh_cmd)
         self._driver_assert(len(out.strip()) > 0,
@@ -724,8 +709,8 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
         mapping_ready = False
         wait_time = 5
         # Allow waiting of up to timeout (set as parameter)
-        max_retries = (int(getattr(FLAGS,
-                        'storwize_svc_flashcopy_timeout')) / wait_time) + 1
+        max_retries = (int(FLAGS.storwize_svc_flashcopy_timeout)
+                        / wait_time) + 1
         for try_number in range(1, max_retries):
             mapping_attributes = self._get_flashcopy_mapping_attributes(
                                                             fc_map_id)
@@ -752,8 +737,7 @@ class StorwizeSVCDriver(san.SanISCSIDriver):
             exception_msg = (_('mapping %(id)s prepare failed to complete '
                                'within the alloted %(to)s seconds timeout. '
                                'Terminating') % {'id': fc_map_id,
-                               'to': getattr(
-                                FLAGS, 'storwize_svc_flashcopy_timeout')})
+                               'to': FLAGS.storwize_svc_flashcopy_timeout})
             LOG.error(_('_run_flashcopy: fail to start FlashCopy '
                         'from %(source)s to %(target)s with '
                         'exception %(ex)s')

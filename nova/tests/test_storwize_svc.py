@@ -28,10 +28,13 @@ import random
 import socket
 
 from nova import exception
+from nova import flags
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import test
 from nova.volume import storwize_svc
+
+FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)
 
@@ -46,6 +49,7 @@ class StorwizeSVCManagementSimulator:
         self._next_cmd_error = {
             "lsportip": "",
             "lsnodecanister": "",
+            "mkvdisk": "",
             "lsvdisk": "",
             "lsfcmap": "",
             "prestartfcmap": "",
@@ -92,6 +96,9 @@ class StorwizeSVCManagementSimulator:
                                "virtual disks (VDisks) are different sizes."),
             "CMMVC6303E": ("", "CMMVC6303E The create failed because the " +
                                "source and target VDisks are the same."),
+            "CMMVC7050E": ("", "CMMVC7050E The command failed because at " +
+                               "least one node in the I/O group does not " +
+                               "support compressed VDisks."),
         }
 
     # Find an unused ID
@@ -142,7 +149,8 @@ class StorwizeSVCManagementSimulator:
             "source",
             "target",
             "unit",
-            "vtype",
+            "easytier",
+            "warning",
         ]
 
         # Handle the special case of lsnode which is a two-word command
@@ -182,14 +190,18 @@ class StorwizeSVCManagementSimulator:
 
     # Print mostly made-up stuff in the correct syntax
     def _cmd_lsmdiskgrp(self, **kwargs):
-        rows = [None] * 2
+        rows = [None] * 3
         rows[0] = ["id", "name", "status", "mdisk_count",
                    "vdisk_count capacity", "extent_size", "free_capacity",
                    "virtual_capacity", "used_capacity", "real_capacity",
                    "overallocation", "warning", "easy_tier",
                    "easy_tier_status"]
-        rows[1] = ["0", self._flags["storwize_svc_volpool_name"], "online",
+        rows[1] = ["1", self._flags["storwize_svc_volpool_name"], "online",
                    "1", str(len(self._volumes_list)), "3.25TB", "256",
+                   "3.21TB", "1.54TB", "264.97MB", "35.58GB", "47", "80",
+                   "auto", "inactive"]
+        rows[2] = ["2", "volpool2", "online",
+                   "1", "0", "3.25TB", "256",
                    "3.21TB", "1.54TB", "264.97MB", "35.58GB", "47", "80",
                    "auto", "inactive"]
         return self._print_info_cmd(rows=rows, **kwargs)
@@ -302,17 +314,64 @@ class StorwizeSVCManagementSimulator:
         unit = kwargs["unit"]
 
         if unit == "b":
-            volume_info["capacity"] = capacity
+            cap_bytes = capacity
         elif unit == "kb":
-            volume_info["capacity"] = capacity * pow(1024, 1)
+            cap_bytes = capacity * pow(1024, 1)
         elif unit == "mb":
-            volume_info["capacity"] = capacity * pow(1024, 2)
+            cap_bytes = capacity * pow(1024, 2)
         elif unit == "gb":
-            volume_info["capacity"] = capacity * pow(1024, 3)
+            cap_bytes = capacity * pow(1024, 3)
         elif unit == "tb":
-            volume_info["capacity"] = capacity * pow(1024, 4)
+            cap_bytes = capacity * pow(1024, 4)
         elif unit == "pb":
-            volume_info["capacity"] = capacity * pow(1024, 5)
+            cap_bytes = capacity * pow(1024, 5)
+        volume_info["cap_bytes"] = str(cap_bytes)
+        volume_info["capacity"] = str(capacity) + unit.upper()
+
+        if "easytier" in kwargs:
+            if kwargs["easytier"] == "on":
+                volume_info["easy_tier"] = "on"
+            else:
+                volume_info["easy_tier"] = "off"
+
+        if "rsize" in kwargs:
+            # Fake numbers
+            volume_info["used_capacity"] = "0.75MB"
+            volume_info["real_capacity"] = "36.98MB"
+            volume_info["free_capacity"] = "36.23MB"
+            volume_info["used_capacity_bytes"] = "786432"
+            volume_info["real_capacity_bytes"] = "38776340"
+            volume_info["free_capacity_bytes"] = "37989908"
+            if "warning" in kwargs:
+                volume_info["warning"] = kwargs["warning"].rstrip('%')
+            else:
+                volume_info["warning"] = "80"
+            if "autoexpand" in kwargs:
+                volume_info["autoexpand"] = "on"
+            else:
+                volume_info["autoexpand"] = "off"
+            if "grainsize" in kwargs:
+                volume_info["grainsize"] = kwargs["grainsize"]
+            else:
+                volume_info["grainsize"] = "32"
+            if "compressed" in kwargs:
+                if self._next_cmd_error["mkvdisk"] == "no_compression":
+                    self._next_cmd_error["mkvdisk"] = ""
+                    return self._errors["CMMVC7050E"]
+                volume_info["compressed_copy"] = "yes"
+            else:
+                volume_info["compressed_copy"] = "no"
+        else:
+            volume_info["used_capacity"] = volume_info["capacity"]
+            volume_info["real_capacity"] = volume_info["capacity"]
+            volume_info["free_capacity"] = "0.00MB"
+            volume_info["used_capacity_bytes"] = volume_info["cap_bytes"]
+            volume_info["real_capacity_bytes"] = volume_info["cap_bytes"]
+            volume_info["free_capacity_bytes"] = "0"
+            volume_info["warning"] = ""
+            volume_info["autoexpand"] = ""
+            volume_info["grainsize"] = ""
+            volume_info["compressed_copy"] = "no"
 
         if volume_info["name"] in self._volumes_list:
             return self._errors["CMMVC6035E"]
@@ -375,10 +434,14 @@ class StorwizeSVCManagementSimulator:
                         (kwargs["filtervalue"] == "name=" + vol["name"])):
                     fcmap_info = self._get_fcmap_info(vol["name"])
 
+                    if "bytes" in kwargs:
+                        cap = vol["cap_bytes"]
+                    else:
+                        cap = vol["capacity"]
                     rows.append([str(vol["id"]), vol["name"], "0", "io_grp0",
                                 "online", "0",
                                 self._flags["storwize_svc_volpool_name"],
-                                str(vol["capacity"]), "striped",
+                                cap, "striped",
                                 fcmap_info["fc_id"], fcmap_info["fc_name"],
                                 "", "", vol["uid"],
                                 fcmap_info["fc_map_count"], "1", "empty",
@@ -391,7 +454,18 @@ class StorwizeSVCManagementSimulator:
                 return self._errors["CMMVC5754E"]
             vol = self._volumes_list[kwargs["obj"]]
             fcmap_info = self._get_fcmap_info(vol["name"])
+            if "bytes" in kwargs:
+                cap = vol["cap_bytes"]
+                cap_u = vol["used_capacity_bytes"]
+                cap_r = vol["real_capacity_bytes"]
+                cap_f = vol["free_capacity_bytes"]
+            else:
+                cap = vol["capacity"]
+                cap_u = vol["used_capacity"]
+                cap_r = vol["real_capacity"]
+                cap_f = vol["free_capacity"]
             rows = []
+
             rows.append(["id", str(vol["id"])])
             rows.append(["name", vol["name"]])
             rows.append(["IO_group_id", "0"])
@@ -400,7 +474,7 @@ class StorwizeSVCManagementSimulator:
             rows.append(["mdisk_grp_id", "0"])
             rows.append(["mdisk_grp_name",
                     self._flags["storwize_svc_volpool_name"]])
-            rows.append(["capacity", str(vol["capacity"])])
+            rows.append(["capacity", cap])
             rows.append(["type", "striped"])
             rows.append(["formatted", "no"])
             rows.append(["mdisk_id", ""])
@@ -428,6 +502,14 @@ class StorwizeSVCManagementSimulator:
             rows.append(["se_copy_count", "0"])
             rows.append(["mirror_write_priority", "latency"])
             rows.append(["RC_change", "no"])
+            rows.append(["used_capacity", cap_u])
+            rows.append(["real_capacity", cap_r])
+            rows.append(["free_capacity", cap_f])
+            rows.append(["autoexpand", vol["autoexpand"]])
+            rows.append(["warning", vol["warning"]])
+            rows.append(["grainsize", vol["grainsize"]])
+            rows.append(["easy_tier", vol["easy_tier"]])
+            rows.append(["compressed_copy", vol["compressed_copy"]])
 
             if "nohdr" in kwargs:
                 for index in range(len(rows)):
@@ -625,8 +707,8 @@ class StorwizeSVCManagementSimulator:
         if source == target:
             return self._errors["CMMVC6303E"]
 
-        if (self._volumes_list[source]["capacity"] !=
-                self._volumes_list[target]["capacity"]):
+        if (self._volumes_list[source]["cap_bytes"] !=
+                self._volumes_list[target]["cap_bytes"]):
             return self._errors["CMMVC5924E"]
 
         fcmap_info = {}
@@ -835,27 +917,29 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         super(StorwizeSVCDriverTestCase, self).setUp()
         self.USESIM = 1
         if self.USESIM == 1:
+            self.flags(
+                san_ip="hostname",
+                san_login="user",
+                san_password="pass",
+                storwize_svc_flashcopy_timeout="20",
+            )
             self.sim = StorwizeSVCManagementSimulator("volpool")
-            driver = StorwizeSVCFakeDriver()
-            driver.set_fake_storage(self.sim)
-            storwize_svc.FLAGS.san_ip = "hostname"
-            storwize_svc.FLAGS.san_login = "user"
-            storwize_svc.FLAGS.san_password = "pass"
-            storwize_svc.FLAGS.storwize_svc_volpool_name = "volpool"
-            storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = "20"
+            self.driver = StorwizeSVCFakeDriver()
+            self.driver.set_fake_storage(self.sim)
         else:
-            driver = storwize_svc.StorwizeSVCDriver()
-            storwize_svc.FLAGS.san_ip = "-1.-1.-1.-1"
-            storwize_svc.FLAGS.san_login = "user"
-            storwize_svc.FLAGS.san_password = "password"
-            storwize_svc.FLAGS.storwize_svc_volpool_name = "pool"
+            self.flags(
+                san_ip="-1.-1.-1.-1",
+                san_login="user",
+                san_password="password",
+                storwize_svc_volpool_name="pool",
+            )
+            self.driver = storwize_svc.StorwizeSVCDriver()
 
-        self.driver = driver
         self.driver.do_setup(None)
         self.driver.check_for_setup_error()
 
     def test_storwize_svc_volume_tests(self):
-        storwize_svc.FLAGS.storwize_svc_vol_rsize = "-1"
+        self.flags(storwize_svc_vol_rsize="-1")
         volume = {}
         volume["name"] = "test1_volume%s" % random.randint(10000, 99999)
         volume["size"] = 10
@@ -867,48 +951,38 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         self.driver.delete_volume(volume)
 
         if self.USESIM == 1:
-            saved_rsize = storwize_svc.FLAGS.storwize_svc_vol_rsize
-            saved_comp = storwize_svc.FLAGS.storwize_svc_vol_compression
-            storwize_svc.FLAGS.storwize_svc_vol_rsize = "2%"
-            storwize_svc.FLAGS.storwize_svc_vol_compression = True
+            self.flags(storwize_svc_vol_rsize="2%")
+            self.flags(storwize_svc_vol_compression=True)
             self.driver.create_volume(volume)
             is_volume_defined = self.driver._is_volume_defined(volume["name"])
             self.assertEqual(is_volume_defined, True)
             self.driver.delete_volume(volume)
-            storwize_svc.FLAGS.storwize_svc_vol_rsize = saved_rsize
-            storwize_svc.FLAGS.storwize_svc_vol_compression = saved_comp
+            FLAGS.reset()
 
     def test_storwize_svc_ip_connectivity(self):
         # Check for missing san_ip
-        saved = storwize_svc.FLAGS.san_ip
-        storwize_svc.FLAGS.san_ip = None
+        self.flags(san_ip=None)
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.san_ip = saved
 
         if self.USESIM != 1:
-            saved = storwize_svc.FLAGS.san_ip
-
             # Check for invalid ip
-            storwize_svc.FLAGS.san_ip = "-1.-1.-1.-1"
+            self.flags(san_ip="-1.-1.-1.-1")
             self.assertRaises(socket.gaierror,
                         self.driver.check_for_setup_error)
 
             # Check for unreachable IP
-            storwize_svc.FLAGS.san_ip = "1.1.1.1"
+            self.flags(san_ip="1.1.1.1")
             self.assertRaises(socket.error,
                         self.driver.check_for_setup_error)
 
-            storwize_svc.FLAGS.san_ip = saved
-
     def test_storwize_svc_connectivity(self):
         # Make sure we detect if the pool doesn't exist
-        orig_pool = getattr(storwize_svc.FLAGS, "storwize_svc_volpool_name")
         no_exist_pool = "i-dont-exist-%s" % random.randint(10000, 99999)
-        storwize_svc.FLAGS.storwize_svc_volpool_name = no_exist_pool
+        self.flags(storwize_svc_volpool_name=no_exist_pool)
         self.assertRaises(exception.InvalidInput,
                 self.driver.check_for_setup_error)
-        storwize_svc.FLAGS.storwize_svc_volpool_name = orig_pool
+        FLAGS.reset()
 
         # Check the case where the user didn't configure IP addresses
         # as well as receiving unexpected results from the storage
@@ -930,57 +1004,49 @@ class StorwizeSVCDriverTestCase(test.TestCase):
                     self.driver.check_for_setup_error)
 
         # Check with bad parameters
-        saved_pass = storwize_svc.FLAGS.san_password
-        saved_key = storwize_svc.FLAGS.san_private_key
-        storwize_svc.FLAGS.san_password = None
-        storwize_svc.FLAGS.san_private_key = None
+        self.flags(san_password=None)
+        self.flags(san_private_key=None)
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.san_password = saved_pass
-        storwize_svc.FLAGS.san_private_key = saved_key
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_vol_vtype
-        storwize_svc.FLAGS.storwize_svc_vol_vtype = "invalid"
+        self.flags(storwize_svc_vol_rsize="invalid")
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_vol_vtype = saved
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_vol_rsize
-        storwize_svc.FLAGS.storwize_svc_vol_rsize = "invalid"
+        self.flags(storwize_svc_vol_warning="invalid")
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_vol_rsize = saved
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_vol_warning
-        storwize_svc.FLAGS.storwize_svc_vol_warning = "invalid"
+        self.flags(storwize_svc_vol_autoexpand="invalid")
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_vol_warning = saved
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_vol_autoexpand
-        storwize_svc.FLAGS.storwize_svc_vol_autoexpand = "invalid"
+        self.flags(storwize_svc_vol_grainsize=str(42))
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_vol_autoexpand = saved
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_vol_grainsize
-        storwize_svc.FLAGS.storwize_svc_vol_grainsize = str(42)
+        self.flags(storwize_svc_flashcopy_timeout=str(601))
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_vol_grainsize = saved
+        FLAGS.reset()
 
-        saved = storwize_svc.FLAGS.storwize_svc_flashcopy_timeout
-        storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = str(601)
+        self.flags(storwize_svc_vol_compression=True)
+        self.flags(storwize_svc_vol_rsize="-1")
         self.assertRaises(exception.InvalidInput,
                 self.driver._check_flags)
-        storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = saved
+        FLAGS.reset()
 
         # Finally, check with good parameters
         self.driver.check_for_setup_error()
 
     def test_storwize_svc_flashcopy(self):
         volume1 = {}
-        volume1["name"] = "test_volume%s" % random.randint(10000, 99999)
+        volume1["name"] = "test1_volume%s" % random.randint(10000, 99999)
         volume1["size"] = 10
         volume1["id"] = 10
         self.driver.create_volume(volume1)
@@ -990,13 +1056,12 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         snapshot["volume_name"] = volume1["name"]
 
         # Test timeout and volume cleanup
-        saved = storwize_svc.FLAGS.storwize_svc_flashcopy_timeout
-        storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = str(1)
+        self.flags(storwize_svc_flashcopy_timeout=str(1))
         self.assertRaises(exception.InvalidSnapshot,
                 self.driver.create_snapshot, snapshot)
         is_volume_defined = self.driver._is_volume_defined(snapshot["name"])
         self.assertEqual(is_volume_defined, False)
-        storwize_svc.FLAGS.storwize_svc_flashcopy_timeout = saved
+        FLAGS.reset()
 
         # Test bogus statuses
         if self.USESIM == 1:
@@ -1069,7 +1134,7 @@ class StorwizeSVCDriverTestCase(test.TestCase):
 
         # Check with target with different size
         volume3 = {}
-        volume3["name"] = "test_volume%s" % random.randint(10000, 99999)
+        volume3["name"] = "test3_volume%s" % random.randint(10000, 99999)
         volume3["size"] = 11
         volume3["id"] = 11
         self.driver.create_volume(volume3)
@@ -1107,10 +1172,8 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         attributes = self.driver._get_volume_attributes(volume["name"])
         attr_size = float(attributes["capacity"]) / 1073741824  # bytes to GB
         self.assertEqual(attr_size, float(volume["size"]))
-        pool = getattr(storwize_svc.FLAGS, "storwize_svc_volpool_name")
+        pool = storwize_svc.FLAGS.storwize_svc_volpool_name
         self.assertEqual(attributes["mdisk_grp_name"], pool)
-        vtype = getattr(storwize_svc.FLAGS, "storwize_svc_vol_vtype")
-        self.assertEqual(attributes["type"], vtype)
 
         # Try to create the volume again (should fail)
         self.assertRaises(exception.ProcessExecutionError,
@@ -1125,14 +1188,91 @@ class StorwizeSVCDriverTestCase(test.TestCase):
         # Delete the volume
         self.driver.delete_volume(volume)
 
-        # Check auto-expand option
-        saved = storwize_svc.FLAGS.storwize_svc_vol_autoexpand
-        storwize_svc.FLAGS.storwize_svc_vol_autoexpand = False
+    def _create_test_vol(self):
+        volume = {}
+        volume["name"] = "testparam_volume%s" % random.randint(10000, 99999)
+        volume["size"] = 1
+        volume["id"] = 1
         self.driver.create_volume(volume)
-        is_volume_defined = self.driver._is_volume_defined(volume["name"])
-        self.assertEqual(is_volume_defined, True)
+
+        attrs = self.driver._get_volume_attributes(volume["name"])
         self.driver.delete_volume(volume)
-        storwize_svc.FLAGS.storwize_svc_vol_autoexpand = saved
+        return attrs
+
+    def test_storwize_svc_volume_params(self):
+        # Option test matrix
+        # Option        Value   Covered by test #
+        # rsize         -1      1
+        # rsize         2%      2,3
+        # warning       0       2
+        # warning       80%     3
+        # autoexpand    True    2
+        # autoexpand    False   3
+        # grainsize     32      2
+        # grainsize     256     3
+        # compression   True    4
+        # compression   False   2,3
+        # easytier      True    1,3
+        # easytier      False   2
+
+        # Test 1
+        self.flags(storwize_svc_vol_rsize="-1")
+        self.flags(storwize_svc_vol_easytier=True)
+        attrs = self._create_test_vol()
+        self.assertEquals(attrs["free_capacity"], "0")
+        self.assertEquals(attrs["easy_tier"], "on")
+        FLAGS.reset()
+
+        # Test 2
+        self.flags(storwize_svc_vol_rsize="2%")
+        self.flags(storwize_svc_vol_compression=False)
+        self.flags(storwize_svc_vol_warning="0")
+        self.flags(storwize_svc_vol_autoexpand=True)
+        self.flags(storwize_svc_vol_grainsize="32")
+        self.flags(storwize_svc_vol_easytier=False)
+        attrs = self._create_test_vol()
+        self.assertNotEqual(attrs["capacity"], attrs["real_capacity"])
+        self.assertEquals(attrs["compressed_copy"], "no")
+        self.assertEquals(attrs["warning"], "0")
+        self.assertEquals(attrs["autoexpand"], "on")
+        self.assertEquals(attrs["grainsize"], "32")
+        self.assertEquals(attrs["easy_tier"], "off")
+        FLAGS.reset()
+
+        # Test 3
+        self.flags(storwize_svc_vol_rsize="2%")
+        self.flags(storwize_svc_vol_compression=False)
+        self.flags(storwize_svc_vol_warning="80%")
+        self.flags(storwize_svc_vol_autoexpand=False)
+        self.flags(storwize_svc_vol_grainsize="256")
+        self.flags(storwize_svc_vol_easytier=True)
+        attrs = self._create_test_vol()
+        self.assertNotEqual(attrs["capacity"], attrs["real_capacity"])
+        self.assertEquals(attrs["compressed_copy"], "no")
+        self.assertEquals(attrs["warning"], "80")
+        self.assertEquals(attrs["autoexpand"], "off")
+        self.assertEquals(attrs["grainsize"], "256")
+        self.assertEquals(attrs["easy_tier"], "on")
+        FLAGS.reset()
+
+        # Test 4
+        self.flags(storwize_svc_vol_rsize="2%")
+        self.flags(storwize_svc_vol_compression=True)
+        try:
+            attrs = self._create_test_vol()
+            self.assertNotEqual(attrs["capacity"], attrs["real_capacity"])
+            self.assertEquals(attrs["compressed_copy"], "yes")
+        except exception.ProcessExecutionError as e:
+            if "CMMVC7050E" not in e.stderr:
+                raise exception.ProcessExecutionError(exit_code=e.exit_code,
+                                                      stdout=e.stdout,
+                                                      stderr=e.stderr,
+                                                      cmd=e.cmd)
+        if self.USESIM == 1:
+            self.sim.error_injection("mkvdisk", "no_compression")
+            self.assertRaises(exception.ProcessExecutionError,
+                    self._create_test_vol)
+        FLAGS.reset()
 
     def test_storwize_svc_unicode_host_and_volume_names(self):
         volume1 = {}
