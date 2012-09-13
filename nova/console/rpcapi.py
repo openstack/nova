@@ -33,6 +33,14 @@ class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.0 - Initial version.
     '''
 
+    #
+    # NOTE(russellb): This is the default minimum version that the server
+    # (manager) side must implement unless otherwise specified using a version
+    # argument to self.call()/cast()/etc. here.  It should be left as X.0 where
+    # X is the current major API version (1.0, 2.0, ...).  For more information
+    # about rpc API versioning, see the docs in
+    # openstack/common/rpc/dispatcher.py.
+    #
     BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self, topic=None):
