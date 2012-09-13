@@ -1029,6 +1029,18 @@ class VolumeBackendAPIException(NovaException):
                 "backend API: %(data)s")
 
 
+class NfsException(NovaException):
+    message = _("Unknown NFS exception")
+
+
+class NfsNoSharesMounted(NotFound):
+    message = _("No mounted NFS shares found")
+
+
+class NfsNoSuitableShareFound(NotFound):
+    message = _("There is no share which can host %(volume_size)sG")
+
+
 class InstanceTypeCreateFailed(NovaException):
     message = _("Unable to create instance type")
 
