@@ -542,7 +542,7 @@ class HostFiltersTestCase(test.TestCase):
         filt_cls.host_passes(host, filter_properties)
 
         self.assertEqual(host.total_usable_ram_mb * 2.0,
-                filter_properties['memory_limit_mb'])
+                filter_properties['memory_mb_limit'])
 
     def test_compute_filter_fails_on_service_disabled(self):
         self._stub_service_is_up(True)
