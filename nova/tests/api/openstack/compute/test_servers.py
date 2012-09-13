@@ -900,13 +900,6 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
-    def test_update_server_no_body(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller.update, req, FAKE_UUID, None)
-
     def test_update_server_all_attributes(self):
         self.stubs.Set(nova.db, 'instance_get',
                 fakes.fake_instance_get(name='server_test',
@@ -4791,6 +4784,22 @@ class ServerXMLSerializationTest(test.TestCase):
 class ServersAllExtensionsTestCase(test.TestCase):
     """
     Servers tests using default API router with all extensions enabled.
+
+    The intent here is to catch cases where extensions end up throwing
+    an exception because of a malformed request before the core API
+    gets a chance to validate the request and return a 422 response.
+
+    For example, ServerDiskConfigController extends servers.Controller:
+
+      @wsgi.extends
+      def create(self, req, body):
+          if 'server' in body:
+                self._set_disk_config(body['server'])
+          resp_obj = (yield)
+          self._show(req, resp_obj)
+
+    we want to ensure that the extension isn't barfing on an invalid
+    body.
     """
 
     def setUp(self):
@@ -4830,3 +4839,43 @@ class ServersAllExtensionsTestCase(test.TestCase):
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(422, res.status_int)
+
+
+class ServersUnprocessableEntityTestCase(test.TestCase):
+    """
+    Tests of places we throw 422 Unprocessable Entity from
+    """
+
+    def setUp(self):
+        super(ServersUnprocessableEntityTestCase, self).setUp()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
+
+    def _unprocessable_server_create(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.create, req, body)
+
+    def test_create_server_no_body(self):
+        self._unprocessable_server_create(body=None)
+
+    def test_create_server_missing_server(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_server_create(body=body)
+
+    def _unprocessable_server_update(self, body):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.controller.update, req, FAKE_UUID, body)
+
+    def test_update_server_no_body(self):
+        self._unprocessable_server_update(body=None)
+
+    def test_update_server_missing_server(self):
+        body = {'foo': {'a': 'b'}}
+        self._unprocessable_server_update(body=body)
