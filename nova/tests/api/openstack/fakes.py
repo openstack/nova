@@ -567,7 +567,7 @@ def stub_volume_get(self, context, volume_id):
 
 
 def stub_volume_get_notfound(self, context, volume_id):
-    raise exc.NotFound
+    raise exc.VolumeNotFound(volume_id=volume_id)
 
 
 def stub_volume_get_all(context, search_opts=None):
