@@ -14,8 +14,8 @@
       <ip version="4" addr="%(ip)s"/>
     </network>
   </addresses>
-  <atom:link href="%(host)s/v2/openstack/servers/%(uuid)s" rel="self"/>
-  <atom:link href="%(host)s/openstack/servers/%(uuid)s" rel="bookmark"/>
+  <atom:link href="%(host)s/v2/openstack/servers/%(id)s" rel="self"/>
+  <atom:link href="%(host)s/openstack/servers/%(id)s" rel="bookmark"/>
   <security_groups>
     <security_group name="default"/>
   </security_groups>
