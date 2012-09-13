@@ -139,6 +139,13 @@ class AdminActionsTest(test.TestCase):
             }
         })
         req.content_type = 'application/json'
+
+        def fake_update(inst, context, instance,
+                        task_state, expected_task_state):
+            return None
+
+        self.stubs.Set(compute.API, 'update', fake_update)
+
         res = req.get_response(app)
         self.assertEqual(res.status_int, 202)
 

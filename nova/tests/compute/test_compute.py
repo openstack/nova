@@ -80,6 +80,10 @@ class FakeSchedulerAPI(object):
             filter_properties):
         pass
 
+    def live_migration(self, ctxt, block_migration, disk_over_commit,
+            instance, dest):
+        pass
+
 
 class BaseTestCase(test.TestCase):
 
@@ -4482,6 +4486,19 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
+
+    def test_live_migrate(self):
+        instance, instance_uuid = self._run_instance()
+
+        self.compute_api.live_migrate(self.context, instance,
+                                      block_migration=True,
+                                      disk_over_commit=True,
+                                      host='fake_dest_host')
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.MIGRATING)
+
+        db.instance_destroy(self.context, instance['uuid'])
 
 
 def fake_rpc_method(context, topic, msg, do_cast=True):
