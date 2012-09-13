@@ -1803,7 +1803,7 @@
 #### (StrOpt) iscsi target user-land tool to use
 
 # volumes_dir=$state_path/volumes
-#### (StrOpt) Volume configfuration file storage directory
+#### (StrOpt) Volume configuration file storage directory
 
 
 ######## defined in nova.volume.manager ########
