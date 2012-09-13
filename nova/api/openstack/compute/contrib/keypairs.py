@@ -70,8 +70,13 @@ class KeypairController(object):
 
         context = req.environ['nova.context']
         authorize(context)
-        params = body['keypair']
-        name = params['name']
+
+        try:
+            params = body['keypair']
+            name = params['name']
+        except KeyError:
+            msg = _("Invalid request body")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             if 'public_key' in params:
