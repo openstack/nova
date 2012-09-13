@@ -3807,6 +3807,55 @@ class LibvirtDriverTestCase(test.TestCase):
 
             self.libvirtconnection.finish_revert_migration(ins_ref, None)
 
+    def test_confirm_migration(self):
+        ins_ref = self._create_instance()
+
+        self.mox.StubOutWithMock(self.libvirtconnection, "_cleanup_resize")
+        self.libvirtconnection._cleanup_resize(ins_ref,
+                             _fake_network_info(self.stubs, 1))
+
+        self.mox.ReplayAll()
+        self.libvirtconnection.confirm_migration("migration_ref", ins_ref,
+                                            _fake_network_info(self.stubs, 1))
+
+    def test_cleanup_resize_same_host(self):
+        ins_ref = self._create_instance({'host': FLAGS.host})
+
+        def fake_os_path_exists(path):
+            return True
+
+        def fake_shutil_rmtree(target):
+            pass
+
+        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        self.stubs.Set(shutil, 'rmtree', fake_shutil_rmtree)
+
+        self.mox.ReplayAll()
+        self.libvirtconnection._cleanup_resize(ins_ref,
+                                            _fake_network_info(self.stubs, 1))
+
+    def test_cleanup_resize_not_same_host(self):
+        host = 'not' + FLAGS.host
+        ins_ref = self._create_instance({'host': host})
+
+        def fake_os_path_exists(path):
+            return True
+
+        def fake_shutil_rmtree(target):
+            pass
+
+        def fake_unfilter_instance(instance, network_info):
+            pass
+
+        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        self.stubs.Set(shutil, 'rmtree', fake_shutil_rmtree)
+        self.stubs.Set(self.libvirtconnection.firewall_driver,
+                       'unfilter_instance', fake_unfilter_instance)
+
+        self.mox.ReplayAll()
+        self.libvirtconnection._cleanup_resize(ins_ref,
+                                            _fake_network_info(self.stubs, 1))
+
 
 class LibvirtNonblockingTestCase(test.TestCase):
     """Test libvirt_nonblocking option"""
