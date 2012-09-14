@@ -47,4 +47,10 @@ class CoreFilter(filters.BaseHostFilter):
 
         instance_vcpus = instance_type['vcpus']
         vcpus_total = host_state.vcpus_total * FLAGS.cpu_allocation_ratio
+
+        # Only provide a VCPU limit to compute if the virt driver is reporting
+        # an accurate count of installed VCPUs. (XenServer driver does not)
+        if vcpus_total > 0:
+            host_state.limits['vcpu'] = vcpus_total
+
         return (vcpus_total - host_state.vcpus_used) >= instance_vcpus

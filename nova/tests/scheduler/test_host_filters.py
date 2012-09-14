@@ -514,6 +514,18 @@ class HostFiltersTestCase(test.TestCase):
                  'capabilities': capabilities, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_ram_filter_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['RamFilter']()
+        self.flags(ram_allocation_ratio=1.0)
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024,
+                 'capabilities': capabilities, 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
     def test_ram_filter_oversubscribe(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
@@ -525,24 +537,62 @@ class HostFiltersTestCase(test.TestCase):
                 {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048,
                  'capabilities': capabilities, 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
 
-    def test_ram_filter_sets_memory_limit(self):
-        """Test that ram filter sets a filter_property denoting the memory
-        ceiling.
-        """
+    def test_disk_filter_passes(self):
         self._stub_service_is_up(True)
-        filt_cls = self.class_map['RamFilter']()
-        self.flags(ram_allocation_ratio=2.0)
-        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        filt_cls = self.class_map['DiskFilter']()
+        self.flags(disk_allocation_ratio=1.0)
+        filter_properties = {'instance_type': {'root_gb': 1,
+                                               'ephemeral_gb': 1}}
         capabilities = {'enabled': True}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048,
+                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
                  'capabilities': capabilities, 'service': service})
-        filt_cls.host_passes(host, filter_properties)
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
-        self.assertEqual(host.total_usable_ram_mb * 2.0,
-                filter_properties['memory_mb_limit'])
+    def test_disk_filter_fails(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['DiskFilter']()
+        self.flags(disk_allocation_ratio=1.0)
+        filter_properties = {'instance_type': {'root_gb': 2,
+                                               'ephemeral_gb': 1}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
+                 'capabilities': capabilities, 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_disk_filter_oversubscribe(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['DiskFilter']()
+        self.flags(disk_allocation_ratio=10.0)
+        filter_properties = {'instance_type': {'root_gb': 100,
+                                               'ephemeral_gb': 19}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        # 1GB used... so 119GB allowed...
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 12,
+                 'capabilities': capabilities, 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertEqual(12 * 10.0, host.limits['disk_gb'])
+
+    def test_disk_filter_oversubscribe_fail(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['DiskFilter']()
+        self.flags(disk_allocation_ratio=10.0)
+        filter_properties = {'instance_type': {'root_gb': 100,
+                                               'ephemeral_gb': 20}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        # 1GB used... so 119GB allowed...
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 12,
+                 'capabilities': capabilities, 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_fails_on_service_disabled(self):
         self._stub_service_is_up(True)

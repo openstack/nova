@@ -251,8 +251,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        self.resource_tracker.update_load_stats_for_instance(context,
-                instance_ref)
+        self.resource_tracker.update_usage(context, instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
@@ -480,10 +479,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
             try:
-                memory_mb_limit = filter_properties.get('memory_mb_limit',
-                        None)
-                with self.resource_tracker.instance_resource_claim(context,
-                        instance, memory_mb_limit=memory_mb_limit):
+                limits = filter_properties.get('limits', {})
+                with self.resource_tracker.resource_claim(context, instance,
+                        limits):
+                    # Resources are available to build this instance here,
+                    # mark it as belonging to this host:
+                    self._instance_update(context, instance['uuid'],
+                            host=self.host, launched_on=self.host)
+
                     block_device_info = self._prep_block_device(context,
                             instance)
                     instance = self._spawn(context, instance, image_meta,
@@ -684,7 +687,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Starting instance...'), context=context,
                   instance=instance)
         self._instance_update(context, instance['uuid'],
-                              host=self.host, launched_on=self.host,
                               vm_state=vm_states.BUILDING,
                               task_state=None,
                               expected_task_state=(task_states.SCHEDULING,
@@ -889,8 +891,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_destroy(context, instance_uuid)
         system_meta = self.db.instance_system_metadata_get(context,
             instance_uuid)
-        # mark resources free
-        self.resource_tracker.free_resources(context)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 

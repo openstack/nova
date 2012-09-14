@@ -122,8 +122,6 @@ class HostManagerTestCase(test.TestCase):
         self.assertDictMatch(service_states, expected)
 
     def test_get_all_host_states(self):
-        self.flags(reserved_host_memory_mb=512,
-                reserved_host_disk_mb=1024)
 
         context = 'fake_context'
         topic = 'compute'
@@ -145,18 +143,18 @@ class HostManagerTestCase(test.TestCase):
             host = compute_node['service']['host']
             self.assertEqual(host_states[host].service,
                     compute_node['service'])
-        self.assertEqual(host_states['host1'].free_ram_mb, 0)
+        self.assertEqual(host_states['host1'].free_ram_mb, 512)
         # 511GB
-        self.assertEqual(host_states['host1'].free_disk_mb, 523264)
-        self.assertEqual(host_states['host2'].free_ram_mb, 512)
+        self.assertEqual(host_states['host1'].free_disk_mb, 524288)
+        self.assertEqual(host_states['host2'].free_ram_mb, 1024)
         # 1023GB
-        self.assertEqual(host_states['host2'].free_disk_mb, 1047552)
-        self.assertEqual(host_states['host3'].free_ram_mb, 2560)
+        self.assertEqual(host_states['host2'].free_disk_mb, 1048576)
+        self.assertEqual(host_states['host3'].free_ram_mb, 3072)
         # 3071GB
-        self.assertEqual(host_states['host3'].free_disk_mb, 3144704)
-        self.assertEqual(host_states['host4'].free_ram_mb, 7680)
+        self.assertEqual(host_states['host3'].free_disk_mb, 3145728)
+        self.assertEqual(host_states['host4'].free_ram_mb, 8192)
         # 8191GB
-        self.assertEqual(host_states['host4'].free_disk_mb, 8387584)
+        self.assertEqual(host_states['host4'].free_disk_mb, 8388608)
 
 
 class HostStateTestCase(test.TestCase):
