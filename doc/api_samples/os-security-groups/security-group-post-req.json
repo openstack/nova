@@ -1,0 +1,6 @@
+{
+    "security_group": {
+        "name": "json-test",
+        "description": "description"
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "server": {
+        "adminPass": "QmKpgBk7izBM",
+        "id": "3ad37a3a-d5c4-40ab-9bff-af5b66a0e35b",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/3ad37a3a-d5c4-40ab-9bff-af5b66a0e35b",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/3ad37a3a-d5c4-40ab-9bff-af5b66a0e35b",
+                "rel": "bookmark"
+            }
+        ],
+        "security_groups": [
+            {
+                "name": "default"
+            }
+        ]
+    }
+}

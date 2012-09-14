@@ -553,3 +553,46 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBase):
 
 class FlavorsExtraDataXmlTest(FlavorsExtraDataJsonTest):
     ctype = 'xml'
+
+
+class SecurityGroupsSampleJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+                     ".security_groups.Security_groups"
+
+    def test_security_group_create(self):
+        name = self.ctype + '-test'
+        subs = {
+                'group_name': name,
+                "description": "description",
+        }
+        response = self._do_post('os-security-groups',
+                                 'security-group-post-req', subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('security-groups-create-resp', subs, response)
+
+    def test_security_groups_list(self):
+        """Get api sample of security groups get list request"""
+        response = self._do_get('os-security-groups')
+        subs = self._get_regexes()
+        return self._verify_response('security-groups-list-get-resp',
+                                      subs, response)
+
+    def test_security_groups_get(self):
+        """Get api sample of security groups get request"""
+        security_group_id = '1'
+        response = self._do_get('os-security-groups/%s' % security_group_id)
+        subs = self._get_regexes()
+        return self._verify_response('security-groups-get-resp',
+                                      subs, response)
+
+    def test_security_groups_list_server(self):
+        """Get api sample of security groups for a specific server."""
+        uuid = self._post_server()
+        response = self._do_get('servers/%s/os-security-groups' % uuid)
+        subs = self._get_regexes()
+        return self._verify_response('server-security-groups-list-resp',
+                                      subs, response)
+
+
+class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):
+    ctype = 'xml'
