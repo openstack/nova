@@ -166,6 +166,7 @@ class API(BaseAPI):
 
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
+        self.sgh = utils.import_object(FLAGS.security_group_handler)
         super(API, self).__init__(**kwargs)
 
     def _check_injected_file_quota(self, context, injected_files):
@@ -708,6 +709,7 @@ class API(BaseAPI):
                       'user_id': context.user_id,
                       'project_id': context.project_id}
             self.db.security_group_create(context, values)
+            self.sgh.trigger_security_group_create_refresh(context, values)
 
     def trigger_security_group_rules_refresh(self, context, security_group_id):
         """Called when a rule is added to or removed from a security_group."""
