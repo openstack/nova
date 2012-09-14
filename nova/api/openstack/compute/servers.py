@@ -392,7 +392,8 @@ class Controller(wsgi.Controller):
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
         return servers
 
     @wsgi.serializers(xml=ServersTemplate)
@@ -403,7 +404,8 @@ class Controller(wsgi.Controller):
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=str(err))
         except exception.NotFound as err:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
         return servers
 
     def _add_instance_faults(self, ctxt, instances):
@@ -493,7 +495,8 @@ class Controller(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, instance_uuid)
         except exception.NotFound:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
         req.cache_db_instance(instance)
         return instance
 
@@ -648,7 +651,8 @@ class Controller(wsgi.Controller):
             self._add_instance_faults(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
@@ -893,7 +897,8 @@ class Controller(wsgi.Controller):
             req.cache_db_instance(instance)
             self.compute_api.update(ctxt, instance, **update_dict)
         except exception.NotFound:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
 
         instance.update(update_dict)
 
@@ -995,7 +1000,8 @@ class Controller(wsgi.Controller):
         try:
             self._delete(req.environ['nova.context'], req, id)
         except exception.NotFound:
-            raise exc.HTTPNotFound()
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete')
