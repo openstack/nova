@@ -810,9 +810,9 @@ def network_disassociate(context, network_id):
     return IMPL.network_disassociate(context, network_id)
 
 
-def network_get(context, network_id):
+def network_get(context, network_id, project_only="allow_none"):
     """Get a network or raise if it does not exist."""
-    return IMPL.network_get(context, network_id)
+    return IMPL.network_get(context, network_id, project_only=project_only)
 
 
 def network_get_all(context):
@@ -820,9 +820,11 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
-def network_get_all_by_uuids(context, network_uuids, project_id=None):
+def network_get_all_by_uuids(context, network_uuids,
+                             project_only="allow_none"):
     """Return networks by ids."""
-    return IMPL.network_get_all_by_uuids(context, network_uuids, project_id)
+    return IMPL.network_get_all_by_uuids(context, network_uuids,
+                                         project_only=project_only)
 
 
 # pylint: disable=C0103
