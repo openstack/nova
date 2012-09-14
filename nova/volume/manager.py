@@ -105,6 +105,12 @@ class VolumeManager(manager.SchedulerDependentManager):
             else:
                 LOG.info(_("volume %s: skipping export"), volume['name'])
 
+        LOG.debug(_('Resuming any in progress delete operations'))
+        for volume in volumes:
+            if volume['status'] == 'deleting':
+                LOG.info(_("Resuming delete on volume: %s"), volume['id'])
+                self.delete_volume(ctxt, volume['id'])
+
     def create_volume(self, context, volume_id, snapshot_id=None,
                       reservations=None):
         """Creates and exports the volume."""
