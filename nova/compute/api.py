@@ -862,7 +862,7 @@ class API(base.Base):
                                               cores=-instance['vcpus'],
                                               ram=-instance['memory_mb'])
 
-            if not instance['host']:
+            if not host:
                 # Just update database, nothing else we can do
                 constraint = self.db.constraint(host=self.db.equal_any(host))
                 try:
@@ -901,7 +901,20 @@ class API(base.Base):
                             host=src_host, cast=False,
                             reservations=downsize_reservations)
 
-            self.compute_rpcapi.terminate_instance(context, instance)
+            services = self.db.service_get_all_compute_by_host(
+                    context.elevated(), instance['host'])
+            is_up = False
+            #Note(jogo): db allows for multiple compute services per host
+            for service in services:
+                if utils.service_is_up(service):
+                    is_up = True
+                    self.compute_rpcapi.terminate_instance(context, instance)
+                    break
+            if is_up == False:
+                # If compute node isn't up, just delete from DB
+                LOG.warning(_('host for instance is down, deleting from '
+                        'database'), instance=instance)
+                self.db.instance_destroy(context, instance['uuid'])
 
             if reservations:
                 QUOTAS.commit(context, reservations)
