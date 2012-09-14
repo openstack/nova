@@ -27,14 +27,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
 
-
 host_manager_opts = [
-    cfg.IntOpt('reserved_host_disk_mb',
-               default=0,
-               help='Amount of disk in MB to reserve for host/dom0'),
-    cfg.IntOpt('reserved_host_memory_mb',
-               default=512,
-               help='Amount of memory in MB to reserve for host/dom0'),
     cfg.MultiStrOpt('scheduler_available_filters',
             default=['nova.scheduler.filters.standard_filters'],
             help='Filter classes available to the scheduler which may '
@@ -112,32 +105,31 @@ class HostState(object):
         self.service = ReadOnlyDict(service)
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
+        self.total_usable_disk_gb = 0
+        self.disk_mb_used = 0
         self.free_ram_mb = 0
         self.free_disk_mb = 0
         self.vcpus_total = 0
         self.vcpus_used = 0
 
+        # Resource oversubscription values for the compute host:
+        self.limits = {}
+
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
-        all_disk_mb = compute['local_gb'] * 1024
         all_ram_mb = compute['memory_mb']
 
         # Assume virtual size is all consumed by instances if use qcow2 disk.
         least = compute.get('disk_available_least')
         free_disk_mb = least if least is not None else compute['free_disk_gb']
         free_disk_mb *= 1024
-        free_ram_mb = compute['free_ram_mb']
 
-        if FLAGS.reserved_host_disk_mb > 0:
-            all_disk_mb -= FLAGS.reserved_host_disk_mb
-            free_disk_mb -= FLAGS.reserved_host_disk_mb
-        if FLAGS.reserved_host_memory_mb > 0:
-            all_ram_mb -= FLAGS.reserved_host_memory_mb
-            free_ram_mb -= FLAGS.reserved_host_memory_mb
+        self.disk_mb_used = compute['local_gb_used'] * 1024
 
         #NOTE(jogo) free_ram_mb can be negative
-        self.free_ram_mb = free_ram_mb
+        self.free_ram_mb = compute['free_ram_mb']
         self.total_usable_ram_mb = all_ram_mb
+        self.total_usable_disk_gb = compute['local_gb']
         self.free_disk_mb = free_disk_mb
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']

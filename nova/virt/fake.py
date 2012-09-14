@@ -231,7 +231,7 @@ class FakeDriver(driver.ComputeDriver):
         """
 
         dic = {'vcpus': 1,
-               'memory_mb': 4096,
+               'memory_mb': 8192,
                'local_gb': 1028,
                'vcpus_used': 0,
                'memory_mb_used': 0,

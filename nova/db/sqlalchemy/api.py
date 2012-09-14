@@ -47,8 +47,6 @@ from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
-flags.DECLARE('reserved_host_disk_mb', 'nova.scheduler.host_manager')
-flags.DECLARE('reserved_host_memory_mb', 'nova.scheduler.host_manager')
 
 LOG = logging.getLogger(__name__)
 

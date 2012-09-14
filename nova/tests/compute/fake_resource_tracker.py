@@ -22,11 +22,10 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
     """Version without a DB requirement"""
 
     def _create(self, context, values):
-        return values
+        self.compute_node = values
 
     def _update(self, context, values, prune_stats=False):
         self.compute_node.update(values)
-        return self.compute_node
 
     def _get_service(self, context):
         return {
