@@ -51,5 +51,5 @@ class RamFilter(filters.BaseHostFilter):
 
         # save oversubscribe ram limit so the compute host can verify
         # memory availability on builds:
-        filter_properties['memory_limit_mb'] = oversubscribed_ram_limit_mb
+        filter_properties['memory_mb_limit'] = oversubscribed_ram_limit_mb
         return True
