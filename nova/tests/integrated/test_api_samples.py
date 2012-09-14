@@ -71,6 +71,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         if not data:
             return {}
         if self.ctype == 'json':
+            # NOTE(vish): allow non-quoted replacements to survive json
+            data = re.sub(r'([^"])%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
             return jsonutils.loads(data)
         else:
             def to_dict(node):
@@ -163,13 +165,22 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
                 expected = expected.replace(char, '\\%s' % char)
+            # NOTE(vish): special handling of subs that are not quoted. We are
+            #             expecting an int but we had to pass in a string
+            #             so the json would parse properly.
+            if expected.startswith("%(int:"):
+                result = str(result)
+                expected = expected.replace('int:', '')
             expected = expected % subs
             match = re.match(expected, result)
             if not match:
                 raise NoMatch(_('Values do not match:\n'
                         '%(expected)s\n%(result)s') % locals())
-            if match.groups():
-                matched_value = match.groups()[0]
+            try:
+                matched_value = match.group('id')
+            except IndexError:
+                if match.groups():
+                    matched_value = match.groups()[0]
         else:
             if isinstance(expected, basestring):
                 # NOTE(danms): Ignore whitespace in this comparison
@@ -201,13 +212,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         else:
             text = r'[^<]*'
         return {
-            'timestamp': '[0-9]{4}-[0,1][0-9]-[0-3][0-9]T'
-                         '[0-9]{2}:[0-9]{2}:[0-9]{2}'
-                         '(Z|(\+|-)[0-9]{2}:[0-9]{2})',
+            # NOTE(treinish): Could result in a false positive, but it
+            # shouldn't be an issue for this case.
+            'timestamp': '\d{4}-[0,1]\d-[0-3]\d[ ,T]'
+                         '\d{2}:\d{2}:\d{2}'
+                         '(Z|(\+|-)\d{2}:\d{2}|\.\d{6})',
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]',
-            'id': '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
+            'id': '(?P<id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                   '-[0-9a-f]{4}-[0-9a-f]{12})',
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
@@ -1060,3 +1073,75 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
 
 class CloudPipeSampleXmlTest(CloudPipeSampleJsonTest):
     ctype = "xml"
+
+
+class AggregatesSampleJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+                                     ".aggregates.Aggregates"
+
+    def test_aggregate_create(self):
+        subs = {
+            "aggregate_id": '(?P<id>\d+)'
+        }
+        response = self._do_post('os-aggregates', 'aggregate-post-req', subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('aggregate-post-resp', subs, response)
+
+    def test_list_aggregates(self):
+        self.test_aggregate_create()
+        response = self._do_get('os-aggregates')
+        subs = self._get_regexes()
+        return self._verify_response('aggregates-list-get-resp',
+                                      subs, response)
+
+    def test_aggregate_get(self):
+        agg_id = self.test_aggregate_create()
+        response = self._do_get('os-aggregates/%s' % agg_id)
+        subs = self._get_regexes()
+        return self._verify_response('aggregates-get-resp', subs, response)
+
+    def test_add_metadata(self):
+        agg_id = self.test_aggregate_create()
+        response = self._do_post('os-aggregates/%s/action' % agg_id,
+                                 'aggregate-metadata-post-req',
+                                 {'action': 'set_metadata'})
+        subs = self._get_regexes()
+        return self._verify_response('aggregates-metadata-post-resp',
+                                      subs, response)
+
+    def test_add_host(self):
+        aggregate_id = self.test_aggregate_create()
+        subs = {
+            "action": "add_host",
+            "host_name": self.compute.host,
+        }
+        response = self._do_post('os-aggregates/%s/action' % aggregate_id,
+                                 'aggregate-add-host-post-req', subs)
+        subs.update(self._get_regexes())
+        return self._verify_response('aggregates-add-host-post-resp',
+                                      subs, response)
+
+    def test_remove_host(self):
+        self.test_add_host()
+        subs = {
+            "action": "add_host",
+            "host_name": self.compute.host,
+        }
+        response = self._do_post('os-aggregates/1/action',
+                                 'aggregate-remove-host-post-req', subs)
+        subs.update(self._get_regexes())
+        return self._verify_response('aggregates-remove-host-post-resp',
+                                      subs, response)
+
+    def test_update_aggregate(self):
+        aggregate_id = self.test_aggregate_create()
+        response = self._do_put('os-aggregates/%s' % aggregate_id,
+                                  'aggregate-update-post-req', {})
+        subs = self._get_regexes()
+        return self._verify_response('aggregate-update-post-resp',
+                                      subs, response)
+
+
+class AggregatesSampleXmlTest(AggregatesSampleJsonTest):
+    ctype = 'xml'
