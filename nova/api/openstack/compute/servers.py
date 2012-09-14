@@ -613,10 +613,7 @@ class Controller(wsgi.Controller):
     @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """Creates a new server for a given user."""
-        if not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not 'server' in body:
+        if not self.is_valid_body(body, 'server'):
             raise exc.HTTPUnprocessableEntity()
 
         body['server']['key_name'] = self._get_key_name(req, body)
@@ -815,13 +812,7 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=ServerTemplate)
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
-        if len(req.body) == 0:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not body:
-            raise exc.HTTPUnprocessableEntity()
-
-        if not 'server' in body:
+        if not self.is_valid_body(body, 'server'):
             raise exc.HTTPUnprocessableEntity()
 
         ctxt = req.environ['nova.context']

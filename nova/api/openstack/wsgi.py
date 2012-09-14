@@ -1102,6 +1102,23 @@ class Controller(object):
         else:
             self._view_builder = None
 
+    @staticmethod
+    def is_valid_body(body, entity_name):
+        if not (body and entity_name in body):
+            return False
+
+        def is_dict(d):
+            try:
+                d.get(None)
+                return True
+            except AttributeError:
+                return False
+
+        if not is_dict(body[entity_name]):
+            return False
+
+        return True
+
 
 class Fault(webob.exc.HTTPException):
     """Wrap webob.exc.HTTPException to provide API friendly response."""
