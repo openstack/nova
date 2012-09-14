@@ -266,8 +266,12 @@ class SecurityGroupController(SecurityGroupControllerBase):
         """Returns a list of security groups"""
         context = self._authorize_context(req)
 
+        search_opts = {}
+        search_opts.update(req.GET)
+
         raw_groups = self.security_group_api.list(context,
-                                                  project=context.project_id)
+                                                  project=context.project_id,
+                                                  search_opts=search_opts)
 
         limited_list = common.limited(raw_groups, req)
         result = [self._format_security_group(context, group)

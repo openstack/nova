@@ -301,6 +301,38 @@ class CloudTestCase(test.TestCase):
                 sec['name'])
         db.security_group_destroy(self.context, sec['id'])
 
+    def test_describe_security_groups_all_tenants(self):
+        """Makes sure describe_security_groups works and filters results."""
+        sec = db.security_group_create(self.context,
+                                       {'project_id': 'foobar',
+                                        'name': 'test'})
+
+        def _check_name(result, i, expected):
+            self.assertEqual(result['securityGroupInfo'][i]['groupName'],
+                             expected)
+
+        # include all tenants
+        filter = [{'name': 'all-tenants', 'value': {'1': 1}}]
+        result = self.cloud.describe_security_groups(self.context,
+                                                     filter=filter)
+        self.assertEqual(len(result['securityGroupInfo']), 2)
+        _check_name(result, 0, 'default')
+        _check_name(result, 1, sec['name'])
+
+        # exclude all tenants
+        filter = [{'name': 'all-tenants', 'value': {'1': 0}}]
+        result = self.cloud.describe_security_groups(self.context,
+                                                     filter=filter)
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        _check_name(result, 0, 'default')
+
+        # default all tenants
+        result = self.cloud.describe_security_groups(self.context)
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        _check_name(result, 0, 'default')
+
+        db.security_group_destroy(self.context, sec['id'])
+
     def test_describe_security_groups_by_id(self):
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,

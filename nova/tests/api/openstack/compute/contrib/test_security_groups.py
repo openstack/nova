@@ -291,6 +291,45 @@ class TestSecurityGroups(test.TestCase):
 
         self.assertEquals(res_dict, expected)
 
+    def test_get_security_group_list_all_tenants(self):
+        all_groups = []
+        tenant_groups = []
+
+        for i, name in enumerate(['default', 'test']):
+            sg = security_group_template(id=i + 1,
+                                         name=name,
+                                         description=name + '-desc',
+                                         rules=[])
+            all_groups.append(sg)
+            if name == 'default':
+                tenant_groups.append(sg)
+
+        all = {'security_groups': all_groups}
+        tenant_specific = {'security_groups': tenant_groups}
+
+        def return_all_security_groups(context):
+            return [security_group_db(sg) for sg in all_groups]
+
+        self.stubs.Set(nova.db, 'security_group_get_all',
+                       return_all_security_groups)
+
+        def return_tenant_security_groups(context, project_id):
+            return [security_group_db(sg) for sg in tenant_groups]
+
+        self.stubs.Set(nova.db, 'security_group_get_by_project',
+                       return_tenant_security_groups)
+
+        path = '/v2/fake/os-security-groups'
+
+        req = fakes.HTTPRequest.blank(path, use_admin_context=True)
+        res_dict = self.controller.index(req)
+        self.assertEquals(res_dict, tenant_specific)
+
+        req = fakes.HTTPRequest.blank('%s?all_tenants=1' % path,
+                                      use_admin_context=True)
+        res_dict = self.controller.index(req)
+        self.assertEquals(res_dict, all)
+
     def test_get_security_group_by_instance(self):
         groups = []
         for i, name in enumerate(['default', 'test']):

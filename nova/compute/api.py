@@ -2281,7 +2281,8 @@ class SecurityGroupAPI(base.Base):
             else:
                 raise
 
-    def list(self, context, names=None, ids=None, project=None):
+    def list(self, context, names=None, ids=None, project=None,
+             search_opts=None):
         self.ensure_default(context)
 
         groups = []
@@ -2296,7 +2297,14 @@ class SecurityGroupAPI(base.Base):
                     groups.append(self.db.security_group_get(context, id))
 
         elif context.is_admin:
-            groups = self.db.security_group_get_all(context)
+            # TODO(eglynn): support a wider set of search options than just
+            # all_tenants, at least include the standard filters defined for
+            # the EC2 DescribeSecurityGroups API for the non-admin case also
+            if (search_opts and 'all_tenants' in search_opts):
+                groups = self.db.security_group_get_all(context)
+            else:
+                groups = self.db.security_group_get_by_project(context,
+                                                               project)
 
         elif project:
             groups = self.db.security_group_get_by_project(context, project)
