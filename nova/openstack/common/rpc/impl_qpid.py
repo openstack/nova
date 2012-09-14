@@ -69,7 +69,7 @@ qpid_opts = [
                default=0,
                help='Equivalent to setting max and min to the same value'),
     cfg.IntOpt('qpid_heartbeat',
-               default=5,
+               default=60,
                help='Seconds between connection keepalive heartbeats'),
     cfg.StrOpt('qpid_protocol',
                default='tcp',
