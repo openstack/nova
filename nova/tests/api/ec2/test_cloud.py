@@ -1575,7 +1575,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'delete', fake_delete)
         # valid image
         result = deregister_image(self.context, 'ami-00000001')
-        self.assertEqual(result['imageId'], 'ami-00000001')
+        self.assertTrue(result)
         # invalid image
         self.stubs.UnsetAll()
 

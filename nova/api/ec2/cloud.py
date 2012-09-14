@@ -1365,7 +1365,7 @@ class CloudController(object):
         image = self._get_image(context, image_id)
         internal_id = image['id']
         self.image_service.delete(context, internal_id)
-        return {'imageId': image_id}
+        return True
 
     def _register_image(self, context, metadata):
         image = self.image_service.create(context, metadata)
