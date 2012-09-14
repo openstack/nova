@@ -200,8 +200,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'timestamp': '[0-9]{4}-[0,1][0-9]-[0-3][0-9]T'
                          '[0-9]{2}:[0-9]{2}:[0-9]{2}'
                          '(Z|(\+|-)[0-9]{2}:[0-9]{2})',
-            'password': '[0-9a-zA-Z]{12}',
+            'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
+            'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]',
             'id': '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                   '-[0-9a-f]{4}-[0-9a-f]{12})',
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
@@ -489,6 +490,77 @@ class LimitsSampleJsonTest(ApiSampleTestBase):
 
 
 class LimitsSampleXmlTest(LimitsSampleJsonTest):
+    ctype = 'xml'
+
+
+class ServersActionsJsonTest(ServersSampleBase):
+    def setUp(self):
+        super(ServersActionsJsonTest, self).setUp()
+
+    def _test_server_action(self, uuid, action,
+                            subs={}, resp_tpl=None, code=202):
+        subs.update({'action': action})
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-%s' % action.lower(),
+                                 subs)
+        self.assertEqual(response.status, code)
+        if resp_tpl:
+            subs.update(self._get_regexes())
+            return self._verify_response(resp_tpl, subs, response)
+        else:
+            self.assertEqual(response.read(), "")
+
+    def test_server_password(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, "changePassword",
+                                 {"password": "foo"})
+
+    def test_server_reboot(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, "reboot",
+                                 {"type": "HARD"})
+        self._test_server_action(uuid, "reboot",
+                                 {"type": "SOFT"})
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        image = self.api.get_images()[0]['id']
+        subs = {'host': self._get_host(),
+                'uuid': image,
+                'name': 'foobar',
+                'pass': 'seekr3t',
+                'ip': '1.2.3.4',
+                'ip6': 'fe80::100',
+                'hostid': '[a-f0-9]+',
+                }
+        self._test_server_action(uuid, 'rebuild', subs,
+                                 'server-action-rebuild-resp')
+
+    def test_server_resize(self):
+        FLAGS.allow_resize_to_same_host = True
+        uuid = self._post_server()
+        self._test_server_action(uuid, "resize",
+                                 {"id": 2,
+                                  "host": self._get_host()})
+        return uuid
+
+    def test_server_revert_resize(self):
+        uuid = self.test_server_resize()
+        self._test_server_action(uuid, "revertResize")
+
+    def test_server_confirm_resize(self):
+        uuid = self.test_server_resize()
+        self._test_server_action(uuid, "confirmResize", code=204)
+
+    def test_server_create_image(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'createImage',
+                                 {'name': 'foo-image',
+                                  'meta_var': 'myvar',
+                                  'meta_val': 'foobar'})
+
+
+class ServersActionsXmlTest(ServersActionsJsonTest):
     ctype = 'xml'
 
 
