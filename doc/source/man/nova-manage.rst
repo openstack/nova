@@ -89,7 +89,7 @@ Nova VPN
 
 ``nova-manage vpn list``
 
-    Displays a list of projects, their IP prot numbers, and what state they're in.
+    Displays a list of projects, their IP port numbers, and what state they're in.
 
 ``nova-manage vpn run <projectname>``
 

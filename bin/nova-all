@@ -18,7 +18,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Starter script for All nova services.
+"""Starter script for all nova services.
 
 This script attempts to start all the nova services in one process.  Each
 service is started in its own greenthread.  Please note that exceptions and
