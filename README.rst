@@ -39,7 +39,7 @@ the master GIT repository at:
 
    http://github.com/openstack/nova
 
-Developers should also join the dicussion on the mailing list,
+Developers should also join the discussion on the mailing list,
 at:
 
    https://lists.launchpad.net/openstack/
