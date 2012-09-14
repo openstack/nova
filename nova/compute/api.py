@@ -136,6 +136,7 @@ class API(base.Base):
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
         self.security_group_api = security_group_api or SecurityGroupAPI()
+        self.sgh = importutils.import_object(FLAGS.security_group_handler)
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -2232,7 +2233,9 @@ class SecurityGroupAPI(base.Base):
 
         :param context: the security context
         """
-        self.db.security_group_ensure_default(context)
+        existed, group = self.db.security_group_ensure_default(context)
+        if not existed:
+            self.sgh.trigger_security_group_create_refresh(context, group)
 
     def create(self, context, name, description):
         try:

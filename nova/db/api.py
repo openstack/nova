@@ -1288,7 +1288,12 @@ def security_group_create(context, values):
 
 
 def security_group_ensure_default(context):
-    """Ensure default security group exists for a project_id."""
+    """Ensure default security group exists for a project_id.
+
+    Returns a tuple with the first element being a bool indicating
+    if the default security group previously existed. Second
+    element is the dict used to create the default security group.
+    """
     return IMPL.security_group_ensure_default(context)
 
 
