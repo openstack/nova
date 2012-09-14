@@ -823,6 +823,9 @@ class Controller(wsgi.Controller):
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}
             raise exc.HTTPBadRequest(explanation=msg)
+        except UnicodeDecodeError as error:
+            msg = "UnicodeError: %s" % unicode(error)
+            raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 
         # If the caller wanted a reservation_id, return it
