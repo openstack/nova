@@ -709,3 +709,35 @@ class ConsoleOutputSampleJsonTest(ServersSampleBase):
 
 class ConsoleOutputSampleXmlTest(ConsoleOutputSampleJsonTest):
         ctype = 'xml'
+
+
+class ExtendedServerAttributesJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+                     ".extended_server_attributes" + \
+                     ".Extended_server_attributes"
+
+    def test_extended_server_attrs_get(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/%s' % uuid)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
+        return self._verify_response('extended-server-attrs-get',
+                                     subs, response)
+
+    def test_extended_server_attrs_list(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/detail')
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
+        return self._verify_response('extended-server-attrs-list',
+                                     subs, response)
+
+
+class ExtendedServerAttributesXmlTest(ExtendedServerAttributesJsonTest):
+    ctype = 'xml'

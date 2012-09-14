@@ -1,0 +1,57 @@
+{
+    "server": {
+        "OS-EXT-SRV-ATTR:host": "f852c7db3f344eec955c369b8478fef7",
+        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+        "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2012-09-13T17:48:30Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "4f846b99d954c7eb75dcbb25e1b92ccc5e77ba74f2bf22c2d8dd24d5",
+        "id": "0b57a8d2-b1d0-43d8-b81b-9ef446281bfa",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/0b57a8d2-b1d0-43d8-b81b-9ef446281bfa",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/0b57a8d2-b1d0-43d8-b81b-9ef446281bfa",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2012-09-13T17:48:30Z",
+        "user_id": "fake"
+    }
+}

@@ -1,0 +1,59 @@
+{
+    "servers": [
+        {
+            "OS-EXT-SRV-ATTR:host": "c90b8445a27f4057ac2457d4f511a617",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+            "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+            "accessIPv4": "",
+            "accessIPv6": "",
+            "addresses": {
+                "private": [
+                    {
+                        "addr": "192.168.0.3",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2012-09-14T09:30:19Z",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "hostId": "5cb28923c8cc3f45fca3dd884249a8bf98f8a81900dd4b244d446cfd",
+            "id": "f678aaae-1430-409d-8a48-efa08b885b25",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/openstack/servers/f678aaae-1430-409d-8a48-efa08b885b25",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/openstack/servers/f678aaae-1430-409d-8a48-efa08b885b25",
+                    "rel": "bookmark"
+                }
+            ],
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "progress": 0,
+            "status": "ACTIVE",
+            "tenant_id": "openstack",
+            "updated": "2012-09-14T09:30:19Z",
+            "user_id": "fake"
+        }
+    ]
+}
