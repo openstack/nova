@@ -47,16 +47,18 @@ class APIRouter(nova.api.openstack.APIRouter):
 
         mapper.redirect("", "/")
 
-        self.resources['volumes'] = volumes.create_resource()
+        self.resources['volumes'] = volumes.create_resource(ext_mgr)
         mapper.resource("volume", "volumes",
                         controller=self.resources['volumes'],
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET'},
+                        member={'action': 'POST'})
 
         self.resources['types'] = types.create_resource()
         mapper.resource("type", "types",
                         controller=self.resources['types'])
 
-        self.resources['snapshots'] = snapshots.create_resource()
+        self.resources['snapshots'] = snapshots.create_resource(ext_mgr)
         mapper.resource("snapshot", "snapshots",
                         controller=self.resources['snapshots'],
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET'},
+                        member={'action': 'POST'})

@@ -1,4 +1,6 @@
 {
+    "admin_api": [["role:admin"]],
+
     "context_is_admin": [["role:admin"], ["role:administrator"]],
     "compute:create": [],
     "compute:create:attach_network": [],
@@ -149,6 +151,9 @@
     "volume:get_all_snapshots": [],
 
 
+    "volume_extension:volume_admin_actions:reset_status": [["rule:admin_api"]],
+    "volume_extension:snapshot_admin_actions:reset_status": [["rule:admin_api"]],
+    "volume_extension:volume_admin_actions:force_delete": [["rule:admin_api"]],
     "volume_extension:types_manage": [],
     "volume_extension:types_extra_specs": [],
 

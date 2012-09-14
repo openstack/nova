@@ -30,6 +30,9 @@ LOG = logging.getLogger(__name__)
 
 
 class FakeController(object):
+    def __init__(self, ext_mgr=None):
+        self.ext_mgr = ext_mgr
+
     def index(self, req):
         return {}
 
@@ -37,8 +40,8 @@ class FakeController(object):
         return {}
 
 
-def create_resource():
-    return wsgi.Resource(FakeController())
+def create_resource(ext_mgr):
+    return wsgi.Resource(FakeController(ext_mgr))
 
 
 class VolumeRouterTestCase(test.TestCase):
