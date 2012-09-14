@@ -616,8 +616,6 @@ class Controller(wsgi.Controller):
         if not self.is_valid_body(body, 'server'):
             raise exc.HTTPUnprocessableEntity()
 
-        body['server']['key_name'] = self._get_key_name(req, body)
-
         context = req.environ['nova.context']
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
@@ -959,14 +957,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete')
-
-    def _get_key_name(self, req, body):
-        if 'server' in body:
-            try:
-                return body['server'].get('key_name')
-            except AttributeError:
-                msg = _("Malformed server entity")
-                raise exc.HTTPBadRequest(explanation=msg)
 
     def _image_ref_from_req_data(self, data):
         try:
