@@ -1112,8 +1112,8 @@ class CloudController(object):
         if floating_ip['fixed_ip_id']:
             fixed_id = floating_ip['fixed_ip_id']
             fixed = self.network_api.get_fixed_ip(context, fixed_id)
-            if fixed['instance_id'] is not None:
-                ec2_id = ec2utils.id_to_ec2_inst_id(fixed['instance_id'])
+            if fixed['instance_uuid'] is not None:
+                ec2_id = ec2utils.id_to_ec2_inst_id(fixed['instance_uuid'])
         address = {'public_ip': floating_ip['address'],
                    'instance_id': ec2_id}
         if context.is_admin:
