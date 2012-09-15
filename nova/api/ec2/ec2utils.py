@@ -301,3 +301,8 @@ def dict_from_dotted_str(items):
                 args[key] = value
 
     return args
+
+
+def search_opts_from_filters(filters):
+    return dict((f['name'].replace('-', '_'), f['value']['1'])
+                for f in filters if f['value']['1']) if filters else {}

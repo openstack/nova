@@ -431,10 +431,13 @@ class CloudController(object):
 
     def describe_security_groups(self, context, group_name=None, group_id=None,
                                  **kwargs):
+        search_opts = ec2utils.search_opts_from_filters(kwargs.get('filter'))
+
         raw_groups = self.security_group_api.list(context,
                                                   group_name,
                                                   group_id,
-                                                  context.project_id)
+                                                  context.project_id,
+                                                  search_opts=search_opts)
 
         groups = [self._format_security_group(context, g) for g in raw_groups]
 
