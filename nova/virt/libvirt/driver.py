@@ -2765,13 +2765,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info):
+                                   instance_type, network_info,
+                                   block_device_info=None):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)
         disk_info_text = self.get_instance_disk_info(instance['name'])
         disk_info = jsonutils.loads(disk_info_text)
 
         self.power_off(instance)
+
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self.volume_driver_method('disconnect_volume',
+                                      connection_info,
+                                      mount_device)
 
         # copy disks to destination
         # rename instance dir to +_resize at first for using
@@ -2826,7 +2836,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance):
+                         network_info, image_meta, resize_instance,
+                         block_device_info=None):
         LOG.debug(_("Starting finish_migration"), instance=instance)
 
         # resize disks. only "disk" and "disk.local" are necessary.
@@ -2863,18 +2874,21 @@ class LibvirtDriver(driver.ComputeDriver):
                               '-O', 'qcow2', info['path'], path_qcow)
                 utils.execute('mv', path_qcow, info['path'])
 
-        xml = self.to_xml(instance, network_info)
+        xml = self.to_xml(instance, network_info,
+                          block_device_info=block_device_info)
         # assume _create_image do nothing if a target file exists.
         # TODO(oda): injecting files is not necessary
         self._create_image(context, instance, xml,
                                     network_info=network_info,
                                     block_device_info=None)
-        self._create_domain_and_network(xml, instance, network_info)
+        self._create_domain_and_network(xml, instance, network_info,
+                                        block_device_info)
         timer = utils.LoopingCall(self._wait_for_running, instance)
         timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
-    def finish_revert_migration(self, instance, network_info):
+    def finish_revert_migration(self, instance, network_info,
+                                block_device_info=None):
         LOG.debug(_("Starting finish_revert_migration"),
                    instance=instance)
 
@@ -2882,9 +2896,10 @@ class LibvirtDriver(driver.ComputeDriver):
         inst_base_resize = inst_base + "_resize"
         utils.execute('mv', inst_base_resize, inst_base)
 
-        xml_path = os.path.join(inst_base, 'libvirt.xml')
-        xml = open(xml_path).read()
-        self._create_domain_and_network(xml, instance, network_info)
+        xml = self.to_xml(instance, network_info,
+                          block_device_info=block_device_info)
+        self._create_domain_and_network(xml, instance, network_info,
+                                        block_device_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
         timer.start(interval=0.5).wait()

@@ -189,7 +189,8 @@ class VMOps(object):
         self._start(instance, vm_ref)
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance):
+                         network_info, image_meta, resize_instance,
+                         block_device_info=None):
         root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
 
         if resize_instance:

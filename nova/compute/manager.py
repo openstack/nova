@@ -1445,8 +1445,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             old_instance_type = migration_ref['old_instance_type_id']
             instance_type = instance_types.get_instance_type(old_instance_type)
 
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance['uuid'])
+
             self.driver.finish_revert_migration(instance,
-                                       self._legacy_nw_info(network_info))
+                                       self._legacy_nw_info(network_info),
+                                       block_device_info)
 
             # Just roll back the record. There's no need to resize down since
             # the 'old' VM already has the preferred attributes
@@ -1558,9 +1562,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance['uuid'])
+
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration_ref['dest_host'],
-                    instance_type_ref, self._legacy_nw_info(network_info))
+                    instance_type_ref, self._legacy_nw_info(network_info),
+                    block_device_info)
 
             self.db.migration_update(context,
                                      migration_id,
@@ -1609,10 +1617,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance['uuid'])
+
         self.driver.finish_migration(context, migration_ref, instance,
                                      disk_info,
                                      self._legacy_nw_info(network_info),
-                                     image, resize_instance)
+                                     image, resize_instance,
+                                     block_device_info)
 
         instance = self._instance_update(context,
                                          instance['uuid'],
