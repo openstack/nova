@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from migrate import ForeignKeyConstraint
 from sqlalchemy import MetaData, select, Table
 
 from nova.openstack.common import log as logging
@@ -38,10 +39,31 @@ def upgrade(migrate_engine):
     volume_mappings = Table('volume_id_mappings', meta, autoload=True)
     snapshot_mappings = Table('snapshot_id_mappings', meta, autoload=True)
 
+    fkey_columns = [
+        iscsi_targets.c.volume_id,
+        volume_metadata.c.volume_id,
+        sm_volumes.c.id,
+    ]
+    for column in fkey_columns:
+        fkeys = list(column.foreign_keys)
+        if fkeys:
+            fkey_name = fkeys[0].constraint.name
+            LOG.info('Dropping foreign key %s' % fkey_name)
+            fkey = ForeignKeyConstraint(columns=[column],
+                                        refcolumns=[volumes.c.id],
+                                        name=fkey_name)
+            try:
+                fkey.drop()
+            except Exception:
+                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
+                    pass
+                else:
+                    raise
+
     volume_list = list(volumes.select().execute())
     for v in volume_list:
         new_id = select([volume_mappings.c.uuid],
-            volume_mappings.c.id == v['id'])
+            volume_mappings.c.id == v['id']).execute().fetchone()[0]
 
         volumes.update().\
             where(volumes.c.id == v['id']).\
@@ -70,7 +92,7 @@ def upgrade(migrate_engine):
     snapshot_list = list(snapshots.select().execute())
     for s in snapshot_list:
         new_id = select([snapshot_mappings.c.uuid],
-            volume_mappings.c.id == s['id'])
+            snapshot_mappings.c.id == s['id']).execute().fetchone()[0]
 
         volumes.update().\
             where(volumes.c.snapshot_id == s['id']).\
@@ -78,11 +100,25 @@ def upgrade(migrate_engine):
 
         snapshots.update().\
             where(snapshots.c.id == s['id']).\
-            values(volume_id=new_id).execute()
+            values(id=new_id).execute()
 
         block_device_mapping.update().\
             where(block_device_mapping.c.snapshot_id == s['id']).\
             values(snapshot_id=new_id).execute()
+
+    for column in fkey_columns:
+        fkeys = list(column.foreign_keys)
+        if fkeys:
+            fkey = ForeignKeyConstraint(columns=[column],
+                                        refcolumns=[volumes.c.id])
+            try:
+                fkey.create()
+                LOG.info('Created foreign key %s' % fkey_name)
+            except Exception:
+                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
+                    pass
+                else:
+                    raise
 
 
 def downgrade(migrate_engine):
@@ -100,10 +136,31 @@ def downgrade(migrate_engine):
     volume_mappings = Table('volume_id_mappings', meta, autoload=True)
     snapshot_mappings = Table('snapshot_id_mappings', meta, autoload=True)
 
+    fkey_columns = [
+        iscsi_targets.c.volume_id,
+        volume_metadata.c.volume_id,
+        sm_volumes.c.id,
+    ]
+    for column in fkey_columns:
+        fkeys = list(column.foreign_keys)
+        if fkeys:
+            fkey_name = fkeys[0].constraint.name
+            LOG.info('Dropping foreign key %s' % fkey_name)
+            fkey = ForeignKeyConstraint(columns=[column],
+                                        refcolumns=[volumes.c.id],
+                                        name=fkey_name)
+            try:
+                fkey.drop()
+            except Exception:
+                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
+                    pass
+                else:
+                    raise
+
     volume_list = list(volumes.select().execute())
     for v in volume_list:
         new_id = select([volume_mappings.c.id],
-            volume_mappings.c.uuid == v['id'])
+            volume_mappings.c.uuid == v['id']).execute().fetchone()[0]
 
         volumes.update().\
             where(volumes.c.id == v['id']).\
@@ -132,7 +189,7 @@ def downgrade(migrate_engine):
     snapshot_list = list(snapshots.select().execute())
     for s in snapshot_list:
         new_id = select([snapshot_mappings.c.id],
-            volume_mappings.c.uuid == s['id'])
+            snapshot_mappings.c.uuid == s['id']).execute().fetchone()[0]
 
         volumes.update().\
             where(volumes.c.snapshot_id == s['id']).\
@@ -140,8 +197,22 @@ def downgrade(migrate_engine):
 
         snapshots.update().\
             where(snapshots.c.id == s['id']).\
-            values(volume_id=new_id).execute()
+            values(id=new_id).execute()
 
         block_device_mapping.update().\
             where(block_device_mapping.c.snapshot_id == s['id']).\
             values(snapshot_id=new_id).execute()
+
+    for column in fkey_columns:
+        fkeys = list(column.foreign_keys)
+        if fkeys:
+            fkey = ForeignKeyConstraint(columns=[column],
+                                        refcolumns=[volumes.c.id])
+            try:
+                fkey.create()
+                LOG.info('Created foreign key %s' % fkey_name)
+            except Exception:
+                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
+                    pass
+                else:
+                    raise
