@@ -18,6 +18,7 @@
 
 import re
 import string
+import traceback
 
 from nova import block_device
 from nova import db
@@ -31,6 +32,27 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = log.getLogger(__name__)
+
+
+def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
+    """Adds the specified fault to the database."""
+
+    code = 500
+    if hasattr(fault, "kwargs"):
+        code = fault.kwargs.get('code', 500)
+
+    details = unicode(fault)
+    if exc_info and code == 500:
+        tb = exc_info[2]
+        details += '\n' + ''.join(traceback.format_tb(tb))
+
+    values = {
+        'instance_uuid': instance_uuid,
+        'code': code,
+        'message': fault.__class__.__name__,
+        'details': unicode(details),
+    }
+    db.instance_fault_create(context, values)
 
 
 def get_device_name_for_instance(context, instance, device):
