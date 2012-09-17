@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import datetime
 import urlparse
 
@@ -92,6 +93,43 @@ class MockSetAdminPassword(object):
     def __call__(self, context, instance_id, password):
         self.instance_id = instance_id
         self.password = password
+
+
+class Base64ValidationTest(test.TestCase):
+    def setUp(self):
+        super(Base64ValidationTest, self).setUp()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers.Controller(self.ext_mgr)
+
+    def test_decode_base64(self):
+        value = "A random string"
+        result = self.controller._decode_base64(base64.b64encode(value))
+        self.assertEqual(result, value)
+
+    def test_decode_base64_binary(self):
+        value = "\x00\x12\x75\x99"
+        result = self.controller._decode_base64(base64.b64encode(value))
+        self.assertEqual(result, value)
+
+    def test_decode_base64_whitespace(self):
+        value = "A random string"
+        encoded = base64.b64encode(value)
+        white = "\n \n%s\t%s\n" % (encoded[:2], encoded[2:])
+        result = self.controller._decode_base64(white)
+        self.assertEqual(result, value)
+
+    def test_decode_base64_invalid(self):
+        invalid = "A random string"
+        result = self.controller._decode_base64(invalid)
+        self.assertEqual(result, None)
+
+    def test_decode_base64_illegal_bytes(self):
+        value = "A random string"
+        encoded = base64.b64encode(value)
+        white = ">\x01%s*%s()" % (encoded[:2], encoded[2:])
+        result = self.controller._decode_base64(white)
+        self.assertEqual(result, None)
 
 
 class ServersControllerTest(test.TestCase):

@@ -16,11 +16,12 @@
 
 import base64
 import os
+import re
 import socket
-from xml.dom import minidom
 
 import webob
 from webob import exc
+from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import ips
@@ -166,6 +167,10 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         metadata_node = self.find_first_child_named(server_node, "metadata")
         if metadata_node is not None:
             server["metadata"] = self.extract_metadata(metadata_node)
+
+        user_data_node = self.find_first_child_named(server_node, "user_data")
+        if user_data_node is not None:
+            server["user_data"] = self.extract_text(user_data_node)
 
         personality = self._extract_personality(server_node)
         if personality is not None:
@@ -509,9 +514,8 @@ class Controller(wsgi.Controller):
             except TypeError:
                 expl = _('Bad personality format')
                 raise exc.HTTPBadRequest(explanation=expl)
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
+            contents = self._decode_base64(contents)
+            if contents is None:
                 expl = _('Personality content for %s cannot be decoded') % path
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
@@ -581,13 +585,27 @@ class Controller(wsgi.Controller):
 
         return networks
 
+    # NOTE(vish): Without this regex, b64decode will happily
+    #             ignore illegal bytes in the base64 encoded
+    #             data.
+    B64_REGEX = re.compile('^(?:[A-Za-z0-9+\/]{4})*'
+                           '(?:[A-Za-z0-9+\/]{2}=='
+                           '|[A-Za-z0-9+\/]{3}=)?$')
+
+    def _decode_base64(self, data):
+        data = re.sub(r'\s', '', data)
+        if not self.B64_REGEX.match(data):
+            return None
+        try:
+            return base64.b64decode(data)
+        except TypeError:
+            return None
+
     def _validate_user_data(self, user_data):
         """Check if the user_data is encoded properly."""
         if not user_data:
             return
-        try:
-            user_data = base64.b64decode(user_data)
-        except TypeError:
+        if self._decode_base64(user_data) is None:
             expl = _('Userdata content cannot be decoded')
             raise exc.HTTPBadRequest(explanation=expl)
 
