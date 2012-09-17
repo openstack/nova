@@ -37,6 +37,41 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
+class ByteConversionTest(test.TestCase):
+    def test_string_conversions(self):
+        working_examples = {
+            '1024KB': 1048576,
+            '1024TB': 1125899906842624,
+            '1024K': 1048576,
+            '1024T': 1125899906842624,
+            '1TB': 1099511627776,
+            '1T': 1099511627776,
+            '1KB': 1024,
+            '1K': 1024,
+            '1B': 1,
+            '1B': 1,
+            '1': 1,
+            '1MB': 1048576,
+            '7MB': 7340032,
+            '0MB': 0,
+            '0KB': 0,
+            '0TB': 0,
+            '': 0,
+        }
+        for (in_value, expected_value) in working_examples.items():
+            b_value = utils.to_bytes(in_value)
+            self.assertEquals(expected_value, b_value)
+            if len(in_value):
+                in_value = "-" + in_value
+                b_value = utils.to_bytes(in_value)
+                self.assertEquals(expected_value * -1, b_value)
+        breaking_examples = [
+            'junk1KB', '1023BBBB',
+        ]
+        for v in breaking_examples:
+            self.assertRaises(TypeError, utils.to_bytes, v)
+
+
 class ExecuteTestCase(test.TestCase):
     def test_retry_on_failure(self):
         fd, tmpfilename = tempfile.mkstemp()

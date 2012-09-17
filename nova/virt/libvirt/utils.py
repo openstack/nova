@@ -94,18 +94,18 @@ def create_cow_image(backing_file, path):
         cow_opts += ['backing_file=%s' % backing_file]
         base_details = images.qemu_img_info(backing_file)
     else:
-        base_details = {}
+        base_details = None
     # This doesn't seem to get inherited so force it to...
     # http://paste.ubuntu.com/1213295/
     # TODO(harlowja) probably file a bug against qemu-img/qemu
-    if 'cluster_size' in base_details:
-        cow_opts += ['cluster_size=%s' % base_details['cluster_size']]
+    if base_details and base_details.cluster_size is not None:
+        cow_opts += ['cluster_size=%s' % base_details.cluster_size]
     # For now don't inherit this due the following discussion...
     # See: http://www.gossamer-threads.com/lists/openstack/dev/10592
     # if 'preallocation' in base_details:
     #     cow_opts += ['preallocation=%s' % base_details['preallocation']]
-    if 'encryption' in base_details:
-        cow_opts += ['encryption=%s' % base_details['encryption']]
+    if base_details and base_details.encryption:
+        cow_opts += ['encryption=%s' % base_details.encryption]
     if cow_opts:
         # Format as a comma separated list
         csv_opts = ",".join(cow_opts)
@@ -228,8 +228,7 @@ def get_disk_size(path):
     :returns: Size (in bytes) of the given disk image as it would be seen
               by a virtual machine.
     """
-    size = images.qemu_img_info(path)['virtual size']
-    size = size.split('(')[1].split()[0]
+    size = images.qemu_img_info(path).virtual_size
     return int(size)
 
 
@@ -239,11 +238,8 @@ def get_disk_backing_file(path):
     :param path: Path to the disk image
     :returns: a path to the image's backing store
     """
-    backing_file = images.qemu_img_info(path).get('backing file')
-
+    backing_file = images.qemu_img_info(path).backing_file
     if backing_file:
-        if 'actual path: ' in backing_file:
-            backing_file = backing_file.split('actual path: ')[1][:-1]
         backing_file = os.path.basename(backing_file)
 
     return backing_file
