@@ -233,7 +233,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_api = network.API()
         self.volume_api = volume.API()
-        self.network_manager = importutils.import_object(FLAGS.network_manager)
+        self.network_manager = importutils.import_object(
+            FLAGS.network_manager, host=kwargs.get('host', None))
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._last_info_cache_heal = 0
@@ -1492,7 +1493,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
 
-            same_host = instance['host'] == FLAGS.host
+            same_host = instance['host'] == self.host
             if same_host and not FLAGS.allow_resize_to_same_host:
                 self._set_instance_error_state(context, instance['uuid'])
                 msg = _('destination same as source!')
@@ -1507,7 +1508,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             migration_ref = self.db.migration_create(context,
                     {'instance_uuid': instance['uuid'],
                      'source_compute': instance['host'],
-                     'dest_compute': FLAGS.host,
+                     'dest_compute': self.host,
                      'dest_host': self.driver.get_host_ip_addr(),
                      'old_instance_type_id': old_instance_type['id'],
                      'new_instance_type_id': instance_type['id'],
@@ -2397,7 +2398,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _poll_unconfirmed_resizes(self, context):
         if FLAGS.resize_confirm_window > 0:
             migrations = self.db.migration_get_unconfirmed_by_dest_compute(
-                    context, FLAGS.resize_confirm_window, FLAGS.host)
+                    context, FLAGS.resize_confirm_window, self.host)
 
             migrations_info = dict(migration_count=len(migrations),
                     confirm_window=FLAGS.resize_confirm_window)

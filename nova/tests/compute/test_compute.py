@@ -1597,7 +1597,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance=instance)
         new_instance = db.instance_update(self.context, instance['uuid'],
-                                          {'host': 'foo'})
+                                          {'host': self.compute.host})
         new_instance = jsonutils.to_primitive(new_instance)
         instance_type = instance_types.get_default_instance_type()
 
