@@ -187,7 +187,8 @@ class TestS3ImageService(test.TestCase):
 
         img = self.image_service._s3_create(self.context, metadata)
         eventlet.sleep()
-        translated = self.image_service._translate_id_to_uuid(context, img)
+        translated = self.image_service._translate_id_to_uuid(self.context,
+                                                              img)
         uuid = translated['id']
         image_service = fake.FakeImageService()
         updated_image = image_service.update(self.context, uuid,

@@ -118,7 +118,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
             fakenet['id'] = 999
             return fakenet
 
-        def network_get(self, context, network_id):
+        def network_get(self, context, network_id, project_only="allow_none"):
             return {'cidr_v6': '2001:db8:69:%x::/64' % network_id}
 
         def network_get_by_uuid(self, context, network_uuid):
@@ -127,7 +127,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
         def network_get_all(self, context):
             raise exception.NoNetworksFound()
 
-        def network_get_all_by_uuids(self, context):
+        def network_get_all_by_uuids(self, context, project_only="allow_none"):
             raise exception.NoNetworksFound()
 
         def network_disassociate(self, context, network_id):
@@ -294,7 +294,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
                'network': None,
                'instance_uuid': 0}
 
-    def network_get_fake(context, network_id):
+    def network_get_fake(context, network_id, project_only='allow_none'):
         nets = [n for n in networks if n['id'] == network_id]
         if not nets:
             raise exception.NetworkNotFound(network_id=network_id)
