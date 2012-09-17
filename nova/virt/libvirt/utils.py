@@ -86,8 +86,28 @@ def create_cow_image(backing_file, path):
     :param backing_file: Existing image on which to base the COW image
     :param path: Desired location of the COW image
     """
-    execute('qemu-img', 'create', '-f', 'qcow2', '-o',
-             'backing_file=%s' % backing_file, path)
+    base_cmd = ['qemu-img', 'create', '-f', 'qcow2']
+    cow_opts = []
+    if backing_file:
+        cow_opts += ['backing_file=%s' % backing_file]
+        base_details = images.qemu_img_info(backing_file)
+    else:
+        base_details = {}
+    # This doesn't seem to get inherited so force it to...
+    # http://paste.ubuntu.com/1213295/
+    # TODO(harlowja) probably file a bug against qemu-img/qemu
+    if 'cluster_size' in base_details:
+        cow_opts += ['cluster_size=%s' % base_details['cluster_size']]
+    # For now don't inherit this due the following discussion...
+    # See: http://www.gossamer-threads.com/lists/openstack/dev/10592
+    # if 'preallocation' in base_details:
+    #     cow_opts += ['preallocation=%s' % base_details['preallocation']]
+    if 'encryption' in base_details:
+        cow_opts += ['encryption=%s' % base_details['encryption']]
+    if cow_opts:
+        cow_opts.insert(0, '-o')
+    cmd = base_cmd + cow_opts + [path]
+    execute(*cmd)
 
 
 def create_lvm_image(vg, lv, size, sparse=False):
