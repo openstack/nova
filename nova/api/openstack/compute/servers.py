@@ -282,6 +282,15 @@ class ActionDeserializer(CommonDeserializer):
             raise AttributeError("No imageRef was specified in request")
         rebuild["imageRef"] = node.getAttribute("imageRef")
 
+        if node.hasAttribute("adminPass"):
+            rebuild["adminPass"] = node.getAttribute("adminPass")
+
+        if node.hasAttribute("accessIPv4"):
+            rebuild["accessIPv4"] = node.getAttribute("accessIPv4")
+
+        if node.hasAttribute("accessIPv6"):
+            rebuild["accessIPv6"] = node.getAttribute("accessIPv6")
+
         return rebuild
 
     def _action_resize(self, node):
