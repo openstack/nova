@@ -19,6 +19,7 @@ import uuid
 
 from lxml import etree
 
+from nova import context
 from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -740,4 +741,98 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
 
 
 class ExtendedServerAttributesXmlTest(ExtendedServerAttributesJsonTest):
+    ctype = 'xml'
+
+
+class FloatingIpsJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib." \
+        "floating_ips.Floating_ips"
+
+    def setUp(self):
+        super(FloatingIpsJsonTest, self).setUp()
+        pool = FLAGS.default_floating_pool
+        interface = FLAGS.public_interface
+
+        self.ip_pool = [
+            {
+                'address': "10.10.10.1",
+                'pool': pool,
+                'interface': interface
+                },
+            {
+                'address': "10.10.10.2",
+                'pool': pool,
+                'interface': interface
+                },
+            {
+                'address': "10.10.10.3",
+                'pool': pool,
+                'interface': interface
+                },
+            ]
+        self.compute.db.floating_ip_bulk_create(
+            context.get_admin_context(), self.ip_pool)
+
+    def tearDown(self):
+        self.compute.db.floating_ip_bulk_destroy(
+            context.get_admin_context(), self.ip_pool)
+        super(FloatingIpsJsonTest, self).tearDown()
+
+    def test_floating_ips_list_empty(self):
+        response = self._do_get('os-floating-ips')
+
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('floating-ips-list-empty-resp',
+                                     subs, response)
+
+    def test_floating_ips_list(self):
+        self._do_post('os-floating-ips',
+                      'floating-ips-create-nopool-req',
+                      {})
+        self._do_post('os-floating-ips',
+                      'floating-ips-create-nopool-req',
+                      {})
+
+        response = self._do_get('os-floating-ips')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('floating-ips-list-resp',
+                                     subs, response)
+
+    def test_floating_ips_create_nopool(self):
+        response = self._do_post('os-floating-ips',
+                                 'floating-ips-create-nopool-req',
+                                 {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('floating-ips-create-resp',
+                              subs, response)
+
+    def test_floating_ips_create(self):
+        response = self._do_post('os-floating-ips',
+                                 'floating-ips-create-req',
+                                 {"pool": FLAGS.default_floating_pool})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('floating-ips-create-resp',
+                              subs, response)
+
+    def test_floating_ips_get(self):
+        self.test_floating_ips_create()
+        # NOTE(sdague): the first floating ip will always have 1 as an id,
+        # but it would be better if we could get this from the create
+        response = self._do_get('os-floating-ips/%d' % 1)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('floating-ips-create-resp',
+                              subs, response)
+
+    def test_floating_ips_delete(self):
+        self.test_floating_ips_create()
+        response = self._do_delete('os-floating-ips/%d' % 1)
+        self.assertEqual(response.status, 202)
+
+
+class FloatingIpsXmlTest(FloatingIpsJsonTest):
     ctype = 'xml'
