@@ -1,0 +1,11 @@
+{
+    "server": {
+        "name": "new-server-test",
+        "imageRef": "70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef": "1"
+    },
+    "os:scheduler_hints": {
+        "hypervisor": "xen",
+        "near": "2b7c42eb-7736-4a0f-afab-f23969a35ada"
+    }
+}

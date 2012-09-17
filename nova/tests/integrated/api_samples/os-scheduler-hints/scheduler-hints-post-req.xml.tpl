@@ -1,0 +1,10 @@
+<server
+        name='new-server-test'
+        imageRef='%(image_id)s'
+        flavorRef='1'
+>
+        <scheduler_hints>
+                <hypervisor>xen</hypervisor>
+                <near>%(image_near)s</near>
+        </scheduler_hints>
+</server>
