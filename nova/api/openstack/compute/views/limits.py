@@ -54,6 +54,8 @@ class ViewBuilder(object):
             "metadata_items": ["maxServerMeta", "maxImageMeta"],
             "injected_files": ["maxPersonality"],
             "injected_file_content_bytes": ["maxPersonalitySize"],
+            "security_groups": ["maxSecurityGroups"],
+            "security_group_rules": ["maxSecurityGroupRules"],
         }
         limits = {}
         for name, value in absolute_limits.iteritems():
