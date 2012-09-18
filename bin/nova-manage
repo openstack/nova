@@ -91,7 +91,6 @@ from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
-from nova.volume import volume_types
 
 FLAGS = flags.FLAGS
 flags.DECLARE('flat_network_bridge', 'nova.network.manager')
@@ -115,13 +114,13 @@ def args(*args, **kwargs):
 
 
 def param2id(object_id):
-    """Helper function to convert various id types to internal id.
+    """Helper function to convert various volume id types to internal id.
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
     """
     if '-' in object_id:
-        return ec2utils.ec2_id_to_id(object_id)
+        return ec2utils.ec2_vol_id_to_uuid(object_id)
     else:
-        return int(object_id)
+        return object_id
 
 
 class VpnCommands(object):
@@ -782,8 +781,17 @@ class VolumeCommands(object):
     @args('--volume', dest='volume_id', metavar='<volume id>',
             help='Volume ID')
     def delete(self, volume_id):
-        """Delete a volume, bypassing the check that it
+        """WARNING: This method is deprecated and will be removed.
+        Delete a volume, bypassing the check that it
         must be available."""
+
+        print(_("\"nova-manage volume delete\" is deprecated; use"
+                " the os-reset_status os-admin-actions extension instead."))
+        if 'cinder' in FLAGS.volume_api_class:
+            print(_("\"nova-manage volume delete\" only valid "
+                    "when using nova-volume service"))
+            sys.exit(1)
+
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
         host = volume['host']
@@ -791,7 +799,7 @@ class VolumeCommands(object):
         if not host:
             print "Volume not yet assigned to host."
             print "Deleting volume from database and skipping rpc."
-            db.volume_destroy(ctxt, param2id(volume_id))
+            db.volume_destroy(ctxt, volume_id)
             return
 
         if volume['status'] == 'in-use':
@@ -810,8 +818,15 @@ class VolumeCommands(object):
         """Re-attach a volume that has previously been attached
         to an instance.  Typically called after a compute host
         has been rebooted."""
+
+        if 'cinder' in FLAGS.volume_api_class:
+            print(_("\"nova-manage volume reattach\" only valid "
+                    "when using nova-volume service"))
+            sys.exit(1)
+
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
+
         if not volume['instance_id']:
             print "volume is not attached to an instance"
             return
