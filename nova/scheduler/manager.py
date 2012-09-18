@@ -53,7 +53,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.1'
+    RPC_API_VERSION = '2.2'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -70,10 +70,10 @@ class SchedulerManager(manager.Manager):
                 capabilities)
 
     def create_volume(self, context, volume_id, snapshot_id,
-                      reservations, image_id=None):
+                      reservations=None, image_id=None):
         try:
             self.driver.schedule_create_volume(
-                context, volume_id, snapshot_id, image_id, reservations)
+                context, volume_id, snapshot_id, image_id)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('create_volume',
