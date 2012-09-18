@@ -1,7 +1,8 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """
-:mod:`nova.console` -- Console Prxy to set up VM console access (i.e. with xvp)
+:mod:`nova.console` -- Console Proxy to set up VM console access
+      (i.e. with xvp)
 =====================================================
 
 .. automodule:: nova.console
