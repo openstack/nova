@@ -1972,7 +1972,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_scheduler_hints_enabled(self):
-        self.ext_mgr.extensions = {'os-scheduler-hints': 'fake'}
+        self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake'}
         hints = {'a': 'b'}
         params = {'scheduler_hints': hints}
         old_create = nova.compute.api.API.create
@@ -3285,6 +3285,51 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "min_count": "1",
                 "max_count": "3",
                 "return_reservation_id": True,
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_disk_config(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+     xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
+     name="new-server-test" imageRef="1" flavorRef="1"
+     OS-DCF:diskConfig="True">
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "OS-DCF:diskConfig": True,
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_scheduler_hints(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+     xmlns:OS-SCH-HNT=
+     "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2"
+     name="new-server-test" imageRef="1" flavorRef="1">
+       <OS-SCH-HNT:scheduler_hints>
+         <different_host>
+           7329b667-50c7-46a6-b913-cb2a09dfeee0
+         </different_host>
+         <different_host>
+           f31efb24-34d2-43e1-8b44-316052956a39
+         </different_host>
+       </OS-SCH-HNT:scheduler_hints>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "OS-SCH-HNT:scheduler_hints": {
+                    "different_host": [
+                        "7329b667-50c7-46a6-b913-cb2a09dfeee0",
+                        "f31efb24-34d2-43e1-8b44-316052956a39",
+                    ]
+                }
                 }}
         self.assertEquals(request['body'], expected)
 

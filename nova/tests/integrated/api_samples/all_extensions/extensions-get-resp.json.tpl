@@ -49,6 +49,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-SCH-HNT",
+            "description": "%(text)s",
+            "links": [],
+            "name": "SchedulerHints",
+            "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-admin-actions",
             "description": "%(text)s",
             "links": [],
@@ -262,14 +270,6 @@
             "links": [],
             "name": "Rescue",
             "namespace": "http://docs.openstack.org/compute/ext/rescue/api/v1.1",
-            "updated": "%(timestamp)s"
-        },
-        {
-            "alias": "os-scheduler-hints",
-            "description": "%(text)s",
-            "links": [],
-            "name": "SchedulerHints",
-            "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
             "updated": "%(timestamp)s"
         },
         {

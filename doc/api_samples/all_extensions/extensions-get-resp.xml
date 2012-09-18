@@ -18,6 +18,9 @@
   <extension alias="OS-FLV-EXT-DATA" updated="2011-09-14T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>Provide additional data for flavors</description>
   </extension>
+  <extension alias="OS-SCH-HNT" updated="2011-07-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
+    <description>Pass arbitrary key/value pairs to the scheduler</description>
+  </extension>
   <extension alias="os-admin-actions" updated="2011-09-20T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/admin-actions/api/v1.1" name="AdminActions">
     <description>Enable admin-only server actions
 
@@ -112,9 +115,6 @@
   </extension>
   <extension alias="os-rescue" updated="2011-08-18T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
     <description>Instance rescue mode</description>
-  </extension>
-  <extension alias="os-scheduler-hints" updated="2011-07-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
-    <description>Pass arbitrary key/value pairs to the scheduler</description>
   </extension>
   <extension alias="os-security-groups" updated="2011-07-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/securitygroups/api/v1.1" name="SecurityGroups">
     <description>Security group support</description>
