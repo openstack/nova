@@ -16,7 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -24,6 +27,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
@@ -166,3 +170,80 @@ class EC2ValidateTestCase(test.TestCase):
                               self.cloud.detach_volume,
                               context=self.context,
                               volume_id=ec2_id)
+
+
+class EC2TimestampValidationTestCase(test.TestCase):
+    """Test case for EC2 request timestamp validation"""
+
+    def test_validate_ec2_timestamp_valid(self):
+        params = {'Timestamp': '2011-04-22T11:29:49Z'}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertFalse(expired)
+
+    def test_validate_ec2_timestamp_old_format(self):
+        params = {'Timestamp': '2011-04-22T11:29:49'}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertTrue(expired)
+
+    def test_validate_ec2_timestamp_not_set(self):
+        params = {}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertFalse(expired)
+
+    def test_validate_ec2_timestamp_invalid_format(self):
+        params = {'Timestamp': '2011-04-22T11:29:49.000P'}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertTrue(expired)
+
+    def test_validate_ec2_timestamp_advanced_time(self):
+
+        #EC2 request with Timestamp in advanced time
+        timestamp = timeutils.utcnow() + datetime.timedelta(seconds=250)
+        params = {'Timestamp': timeutils.strtime(timestamp,
+                                           "%Y-%m-%dT%H:%M:%SZ")}
+        expired = ec2utils.is_ec2_timestamp_expired(params, expires=300)
+        self.assertFalse(expired)
+
+    def test_validate_ec2_timestamp_advanced_time_expired(self):
+        timestamp = timeutils.utcnow() + datetime.timedelta(seconds=350)
+        params = {'Timestamp': timeutils.strtime(timestamp,
+                                           "%Y-%m-%dT%H:%M:%SZ")}
+        expired = ec2utils.is_ec2_timestamp_expired(params, expires=300)
+        self.assertTrue(expired)
+
+    def test_validate_ec2_req_timestamp_not_expired(self):
+        params = {'Timestamp': timeutils.isotime()}
+        expired = ec2utils.is_ec2_timestamp_expired(params, expires=15)
+        self.assertFalse(expired)
+
+    def test_validate_ec2_req_timestamp_expired(self):
+        params = {'Timestamp': '2011-04-22T12:00:00Z'}
+        compare = ec2utils.is_ec2_timestamp_expired(params, expires=300)
+        self.assertTrue(compare)
+
+    def test_validate_ec2_req_expired(self):
+        params = {'Expires': timeutils.isotime()}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertTrue(expired)
+
+    def test_validate_ec2_req_not_expired(self):
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=350)
+        params = {'Expires': timeutils.strtime(expire, "%Y-%m-%dT%H:%M:%SZ")}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertFalse(expired)
+
+    def test_validate_Expires_timestamp_invalid_format(self):
+
+        #EC2 request with invalid Expires
+        params = {'Expires': '2011-04-22T11:29:49'}
+        expired = ec2utils.is_ec2_timestamp_expired(params)
+        self.assertTrue(expired)
+
+    def test_validate_ec2_req_timestamp_Expires(self):
+
+        #EC2 request with both Timestamp and Expires
+        params = {'Timestamp': '2011-04-22T11:29:49Z',
+                  'Expires': timeutils.isotime()}
+        self.assertRaises(exception.InvalidRequest,
+                          ec2utils.is_ec2_timestamp_expired,
+                          params)
