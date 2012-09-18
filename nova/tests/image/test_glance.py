@@ -105,7 +105,7 @@ class TestGlanceImageService(test.TestCase):
         self.context = context.RequestContext('fake', 'fake', auth_token=True)
 
     def _create_image_service(self, client):
-        def _fake_create_glance_client(context, host, port, use_ssl):
+        def _fake_create_glance_client(context, host, port, use_ssl, version):
             return client
 
         self.stubs.Set(glance, '_create_glance_client',
@@ -569,7 +569,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         info = {'num_calls': 0}
 
-        def _fake_create_glance_client(context, host, port, use_ssl):
+        def _fake_create_glance_client(context, host, port, use_ssl, version):
             self.assertEqual(host, fake_host)
             self.assertEqual(port, fake_port)
             self.assertEqual(use_ssl, fake_use_ssl)
@@ -581,7 +581,7 @@ class TestGlanceClientWrapper(test.TestCase):
         client = glance.GlanceClientWrapper(context=ctxt,
                 host=fake_host, port=fake_port, use_ssl=fake_use_ssl)
         self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 'get', 'meow')
+                client.call, ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
     def test_default_client_without_retries(self):
@@ -598,7 +598,7 @@ class TestGlanceClientWrapper(test.TestCase):
         def _fake_shuffle(servers):
             pass
 
-        def _fake_create_glance_client(context, host, port, use_ssl):
+        def _fake_create_glance_client(context, host, port, use_ssl, version):
             self.assertEqual(host, info['host'])
             self.assertEqual(port, info['port'])
             self.assertEqual(use_ssl, info['use_ssl'])
@@ -611,7 +611,7 @@ class TestGlanceClientWrapper(test.TestCase):
         client = glance.GlanceClientWrapper()
         client2 = glance.GlanceClientWrapper()
         self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 'get', 'meow')
+                client.call, ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
         info = {'num_calls': 0,
@@ -626,7 +626,7 @@ class TestGlanceClientWrapper(test.TestCase):
         self.stubs.Set(random, 'shuffle', _fake_shuffle2)
 
         self.assertRaises(exception.GlanceConnectionFailed,
-                client2.call, ctxt, 'get', 'meow')
+                client2.call, ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 1)
 
     def test_static_client_with_retries(self):
@@ -639,7 +639,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         info = {'num_calls': 0}
 
-        def _fake_create_glance_client(context, host, port, use_ssl):
+        def _fake_create_glance_client(context, host, port, use_ssl, version):
             self.assertEqual(host, fake_host)
             self.assertEqual(port, fake_port)
             self.assertEqual(use_ssl, fake_use_ssl)
@@ -650,7 +650,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         client = glance.GlanceClientWrapper(context=ctxt,
                 host=fake_host, port=fake_port, use_ssl=fake_use_ssl)
-        client.call(ctxt, 'get', 'meow')
+        client.call(ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
 
     def test_default_client_with_retries(self):
@@ -670,7 +670,7 @@ class TestGlanceClientWrapper(test.TestCase):
         def _fake_shuffle(servers):
             pass
 
-        def _fake_create_glance_client(context, host, port, use_ssl):
+        def _fake_create_glance_client(context, host, port, use_ssl, version):
             attempt = info['num_calls']
             self.assertEqual(host, info['host%s' % attempt])
             self.assertEqual(port, info['port%s' % attempt])
@@ -683,7 +683,7 @@ class TestGlanceClientWrapper(test.TestCase):
 
         client = glance.GlanceClientWrapper()
         client2 = glance.GlanceClientWrapper()
-        client.call(ctxt, 'get', 'meow')
+        client.call(ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
 
         def _fake_shuffle2(servers):
@@ -700,5 +700,5 @@ class TestGlanceClientWrapper(test.TestCase):
                 'port1': 9294,
                 'use_ssl1': False}
 
-        client2.call(ctxt, 'get', 'meow')
+        client2.call(ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
