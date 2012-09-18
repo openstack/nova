@@ -31,3 +31,6 @@ iscsiadm_usr: CommandFilter, /usr/bin/iscsiadm, root
 # nova/volume/driver.py
 dmsetup: CommandFilter, /sbin/dmsetup, root
 dmsetup_usr: CommandFilter, /usr/sbin/dmsetup, root
+
+#nova/volume/.py: utils.temporary_chown(path, 0), ...
+chown: CommandFilter, /bin/chown, root

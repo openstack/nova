@@ -197,21 +197,25 @@ class API(base.Base):
                  volumes.terminate_connection(volume['id'], connector)
 
     def create(self, context, size, name, description, snapshot=None,
-               volume_type=None, metadata=None, availability_zone=None):
+               image_id=None, volume_type=None, metadata=None,
+               availability_zone=None):
 
         if snapshot is not None:
             snapshot_id = snapshot['id']
         else:
             snapshot_id = None
-        item = cinderclient(context).volumes.create(size,
-                                                    snapshot_id,
-                                                    name,
-                                                    description,
-                                                    volume_type,
-                                                    context.user_id,
-                                                    context.project_id,
-                                                    availability_zone,
-                                                    metadata)
+
+        kwargs = dict(snapshot_id=snapshot_id,
+                      display_name=name,
+                      display_description=description,
+                      volume_type=volume_type,
+                      user_id=context.user_id,
+                      project_id=context.project_id,
+                      availability_zone=availability_zone,
+                      metadata=metadata,
+                      imageRef=image_id)
+
+        item = cinderclient(context).volumes.create(size, **kwargs)
 
         return _untranslate_volume_summary_view(context, item)
 

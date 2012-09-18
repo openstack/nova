@@ -189,6 +189,9 @@ class ExtensionManager(object):
         for _alias, ext in self.sorted_ext_list:
             yield ext
 
+    def is_loaded(self, alias):
+        return alias in self.extensions
+
     def register(self, ext):
         # Do nothing if the extension doesn't check out
         if not self._check_extension(ext):

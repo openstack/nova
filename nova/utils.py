@@ -1135,6 +1135,18 @@ def read_cached_file(filename, cache_info, reload_func=None):
     return cache_info['data']
 
 
+def file_open(*args, **kwargs):
+    """Open file
+
+    see built-in file() documentation for more details
+
+    Note: The reason this is kept in a separate module is to easily
+          be able to provide a stub module that doesn't alter system
+          state at all (for unit tests)
+    """
+    return file(*args, **kwargs)
+
+
 def hash_file(file_like_object):
     """Generate a hash for the contents of a file."""
     checksum = hashlib.sha1()
