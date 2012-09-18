@@ -690,3 +690,22 @@ class SchedulerHintsJsonTest(ApiSampleTestBase):
 
 class SchedulerHintsXmlTest(SchedulerHintsJsonTest):
     ctype = 'xml'
+
+
+class ConsoleOutputSampleJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib" + \
+                                     ".console_output.Console_output"
+
+    def test_get_console_output(self):
+        uuid = self._post_server()
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'console-output-post-req',
+                                {'action': 'os-getConsoleOutput'})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('console-output-post-resp',
+                                       subs, response)
+
+
+class ConsoleOutputSampleXmlTest(ConsoleOutputSampleJsonTest):
+        ctype = 'xml'
