@@ -2435,9 +2435,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         {'status': 'error'})
 
             for migration in migrations:
-                # NOTE(comstud): Yield to other greenthreads.  Putting this
-                # at the top so we make sure to do it on each iteration.
-                greenthread.sleep(0)
                 migration_id = migration['id']
                 instance_uuid = migration['instance_uuid']
                 LOG.info(_("Automatically confirming migration "
@@ -2539,8 +2536,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             refreshed = timeutils.utcnow()
             for usage in bw_usage:
-                # Allow switching of greenthreads between queries.
-                greenthread.sleep(0)
                 self.db.bw_usage_update(context,
                                         usage['uuid'],
                                         usage['mac_address'],
@@ -2584,8 +2579,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                        "%(num_vm_instances)s on the hypervisor.") % locals())
 
         for db_instance in db_instances:
-            # Allow other periodic tasks to do some work...
-            greenthread.sleep(0)
             db_power_state = db_instance['power_state']
             if db_instance['task_state'] is not None:
                 LOG.info(_("During sync_power_state the instance has a "
