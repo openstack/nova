@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import os
 import re
 import uuid
@@ -587,6 +588,28 @@ class ServerStartStopJsonTest(ServersSampleBase):
 
 
 class ServerStartStopXmlTest(ServerStartStopJsonTest):
+    ctype = 'xml'
+
+
+class UserDataJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.user_data.User_data"
+
+    def test_user_data_post(self):
+        user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'
+        user_data = base64.b64encode(user_data_contents)
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'host': self._get_host(),
+            'user_data': user_data
+            }
+        response = self._do_post('servers', 'userdata-post-req', subs)
+
+        self.assertEqual(response.status, 202)
+        subs.update(self._get_regexes())
+        return self._verify_response('userdata-post-resp', subs, response)
+
+
+class UserDataXmlTest(UserDataJsonTest):
     ctype = 'xml'
 
 
