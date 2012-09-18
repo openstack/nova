@@ -35,6 +35,7 @@ from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -212,7 +213,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
+        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -232,7 +233,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(self.compute, '_add_instance_fault_from_exc',
+        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @nova.compute.manager.wrap_instance_fault
@@ -2131,7 +2132,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
                                                   NotImplementedError('test'),
                                                   exc_info)
 
@@ -2159,7 +2160,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
             user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
@@ -2177,7 +2178,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        self.compute._add_instance_fault_from_exc(ctxt, instance_uuid,
+        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
                                                   NotImplementedError('test'))
 
     def test_cleanup_running_deleted_instances(self):

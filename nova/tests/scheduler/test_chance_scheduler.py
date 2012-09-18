@@ -23,7 +23,10 @@ import random
 import mox
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova import context
+from nova import db
 from nova import exception
 from nova.scheduler import chance
 from nova.scheduler import driver
@@ -79,7 +82,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
         self.mox.StubOutWithMock(random, 'random')
-        self.mox.StubOutWithMock(driver, 'encode_instance')
         self.mox.StubOutWithMock(driver, 'instance_update_db')
         self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
 
@@ -94,7 +96,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance=instance1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
-        driver.encode_instance(instance1).AndReturn(instance1_encoded)
 
         # instance 2
         ctxt.elevated().AndReturn(ctxt_elevated)
@@ -107,33 +108,37 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance=instance2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
-        driver.encode_instance(instance2).AndReturn(instance2_encoded)
 
         self.mox.ReplayAll()
-        result = self.driver.schedule_run_instance(ctxt, request_spec,
+        self.driver.schedule_run_instance(ctxt, request_spec,
                 None, None, None, None, {})
-        expected = [instance1_encoded, instance2_encoded]
-        self.assertEqual(result, expected)
 
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
         fake_args = (1, 2, 3)
+        uuid = 'fake-uuid1'
         instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
-        request_spec = {'instance_uuids': ['fake-uuid1'],
+        request_spec = {'instance_uuids': [uuid],
                         'instance_properties': instance_opts}
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         # instance 1
         ctxt.elevated().AndReturn(ctxt_elevated)
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn([])
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+        db.instance_update_and_get_original(ctxt, uuid,
+                {'vm_state': vm_states.ERROR,
+                 'task_state': None}).AndReturn(({}, {}))
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.NoValidHost,
-                self.driver.schedule_run_instance, ctxt, request_spec,
-                None, None, None, None, {})
+        self.driver.schedule_run_instance(
+                ctxt, request_spec, None, None, None, None, {})
 
     def test_schedule_prep_resize_doesnt_update_host(self):
         fake_context = context.RequestContext('user', 'project',

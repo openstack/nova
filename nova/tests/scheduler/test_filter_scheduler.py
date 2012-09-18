@@ -18,7 +18,10 @@ Tests For Filter Scheduler.
 
 import mox
 
+from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova import context
+from nova import db
 from nova import exception
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
@@ -38,26 +41,31 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     driver_cls = filter_scheduler.FilterScheduler
 
     def test_run_instance_no_hosts(self):
-        """
-        Ensure empty hosts & child_zones result in NoValidHosts exception.
-        """
+
         def _fake_empty_call_zone_method(*args, **kwargs):
             return []
 
         sched = fakes.FakeFilterScheduler()
 
+        uuid = 'fake-uuid1'
         fake_context = context.RequestContext('user', 'project')
         request_spec = {'instance_type': {'memory_mb': 1, 'root_gb': 1,
                                           'ephemeral_gb': 0},
                         'instance_properties': {'project_id': 1},
-                        'instance_uuids': ['fake-uuid1']}
-        self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
-                          fake_context, request_spec, None, None, None,
-                          None, {})
+                        'instance_uuids': [uuid]}
+
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        compute_utils.add_instance_fault_from_exc(fake_context,
+                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+        db.instance_update_and_get_original(fake_context, uuid,
+                {'vm_state': vm_states.ERROR,
+                 'task_state': None}).AndReturn(({}, {}))
+        self.mox.ReplayAll()
+        sched.schedule_run_instance(
+                fake_context, request_spec, None, None, None, None, {})
 
     def test_run_instance_non_admin(self):
-        """Test creating an instance locally using run_instance, passing
-        a non-admin context.  DB actions should work."""
         self.was_admin = False
 
         def fake_get(context, *args, **kwargs):
@@ -71,12 +79,20 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         fake_context = context.RequestContext('user', 'project')
 
+        uuid = 'fake-uuid1'
         request_spec = {'instance_type': {'memory_mb': 1, 'local_gb': 1},
                         'instance_properties': {'project_id': 1},
-                        'instance_uuids': ['fake-uuid1']}
-        self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
-                          fake_context, request_spec, None, None, None,
-                          None, {})
+                        'instance_uuids': [uuid]}
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        compute_utils.add_instance_fault_from_exc(fake_context,
+                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+        db.instance_update_and_get_original(fake_context, uuid,
+                {'vm_state': vm_states.ERROR,
+                 'task_state': None}).AndReturn(({}, {}))
+        self.mox.ReplayAll()
+        sched.schedule_run_instance(
+                fake_context, request_spec, None, None, None, None, {})
         self.assertTrue(self.was_admin)
 
     def test_schedule_bad_topic(self):

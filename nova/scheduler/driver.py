@@ -21,10 +21,13 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
+import sys
+
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import task_states
+from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova import flags
@@ -32,9 +35,9 @@ from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
-from nova import quota
 from nova import utils
 
 
@@ -54,6 +57,34 @@ FLAGS.register_opts(scheduler_driver_opts)
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
+
+
+def handle_schedule_error(context, ex, instance_uuid, request_spec):
+    if not isinstance(ex, exception.NoValidHost):
+        LOG.exception(_("Exception during scheduler.run_instance"))
+    compute_utils.add_instance_fault_from_exc(context,
+            instance_uuid, ex, sys.exc_info())
+    state = vm_states.ERROR.upper()
+    LOG.warning(_('Setting instance to %(state)s state.'),
+                locals(), instance_uuid=instance_uuid)
+
+    # update instance state and notify on the transition
+    (old_ref, new_ref) = db.instance_update_and_get_original(context,
+            instance_uuid, {'vm_state': vm_states.ERROR,
+                            'task_state': None})
+    notifications.send_update(context, old_ref, new_ref,
+            service="scheduler")
+
+    properties = request_spec.get('instance_properties', {})
+    payload = dict(request_spec=request_spec,
+                   instance_properties=properties,
+                   instance_id=instance_uuid,
+                   state=vm_states.ERROR,
+                   method='run_instance',
+                   reason=ex)
+
+    notifier.notify(context, notifier.publisher_id("scheduler"),
+                    'scheduler.run_instance', notifier.ERROR, payload)
 
 
 def cast_to_volume_host(context, host, method, **kwargs):

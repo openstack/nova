@@ -61,23 +61,28 @@ class ChanceScheduler(driver.Scheduler):
                               requested_networks, is_first_time,
                               filter_properties):
         """Create and run an instance or instances"""
-        instances = []
         instance_uuids = request_spec.get('instance_uuids')
         for num, instance_uuid in enumerate(instance_uuids):
-            host = self._schedule(context, 'compute', request_spec,
-                                  filter_properties)
             request_spec['instance_properties']['launch_index'] = num
-            updated_instance = driver.instance_update_db(context,
-                    instance_uuid, host)
-            self.compute_rpcapi.run_instance(context,
-                    instance=updated_instance, host=host,
-                    requested_networks=requested_networks,
-                    injected_files=injected_files,
-                    admin_password=admin_password, is_first_time=is_first_time,
-                    request_spec=request_spec,
-                    filter_properties=filter_properties)
-            instances.append(driver.encode_instance(updated_instance))
-        return instances
+            try:
+                host = self._schedule(context, 'compute', request_spec,
+                                      filter_properties)
+                updated_instance = driver.instance_update_db(context,
+                        instance_uuid, host)
+                self.compute_rpcapi.run_instance(context,
+                        instance=updated_instance, host=host,
+                        requested_networks=requested_networks,
+                        injected_files=injected_files,
+                        admin_password=admin_password,
+                        is_first_time=is_first_time,
+                        request_spec=request_spec,
+                        filter_properties=filter_properties)
+            except Exception as ex:
+                # NOTE(vish): we don't reraise the exception here to make sure
+                #             that all instances in the request get set to
+                #             error properly
+                driver.handle_schedule_error(context, ex, instance_uuid,
+                                             request_spec)
 
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,

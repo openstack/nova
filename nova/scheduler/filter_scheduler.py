@@ -72,27 +72,32 @@ class FilterScheduler(driver.Scheduler):
         weighted_hosts = self._schedule(context, "compute", request_spec,
                                         filter_properties, instance_uuids)
 
-        if not weighted_hosts:
-            raise exception.NoValidHost(reason="")
-
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
         filter_properties.pop('context', None)
 
         for num, instance_uuid in enumerate(instance_uuids):
-            if not weighted_hosts:
-                break
-            weighted_host = weighted_hosts.pop(0)
-
             request_spec['instance_properties']['launch_index'] = num
 
-            self._provision_resource(elevated, weighted_host,
-                                     request_spec,
-                                     filter_properties,
-                                     requested_networks,
-                                     injected_files, admin_password,
-                                     is_first_time,
-                                     instance_uuid=instance_uuid)
+            try:
+                try:
+                    weighted_host = weighted_hosts.pop(0)
+                except IndexError:
+                    raise exception.NoValidHost(reason="")
+
+                self._provision_resource(elevated, weighted_host,
+                                         request_spec,
+                                         filter_properties,
+                                         requested_networks,
+                                         injected_files, admin_password,
+                                         is_first_time,
+                                         instance_uuid=instance_uuid)
+            except Exception as ex:
+                # NOTE(vish): we don't reraise the exception here to make sure
+                #             that all instances in the request get set to
+                #             error properly
+                driver.handle_schedule_error(context, ex, instance_uuid,
+                                             request_spec)
             # scrub retry host list in case we're scheduling multiple
             # instances:
             retry = filter_properties.get('retry', {})

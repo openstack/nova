@@ -198,7 +198,7 @@ def wrap_instance_fault(function):
             raise
         except Exception, e:
             with excutils.save_and_reraise_exception():
-                self._add_instance_fault_from_exc(context,
+                compute_utils.add_instance_fault_from_exc(context,
                         kwargs['instance']['uuid'], e, sys.exc_info())
 
     return decorated_function
@@ -1099,8 +1099,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)
-            self._add_instance_fault_from_exc(context, instance['uuid'], exc,
-                                             sys.exc_info())
+            compute_utils.add_instance_fault_from_exc(context,
+                    instance['uuid'], exc, sys.exc_info())
             # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
@@ -2716,27 +2716,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         """
         self.resource_tracker.update_available_resource(context)
-
-    def _add_instance_fault_from_exc(self, context, instance_uuid, fault,
-                                    exc_info=None):
-        """Adds the specified fault to the database."""
-
-        code = 500
-        if hasattr(fault, "kwargs"):
-            code = fault.kwargs.get('code', 500)
-
-        details = unicode(fault)
-        if exc_info and code == 500:
-            tb = exc_info[2]
-            details += '\n' + ''.join(traceback.format_tb(tb))
-
-        values = {
-            'instance_uuid': instance_uuid,
-            'code': code,
-            'message': fault.__class__.__name__,
-            'details': unicode(details),
-        }
-        self.db.instance_fault_create(context, values)
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)
