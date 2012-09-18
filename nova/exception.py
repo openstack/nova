@@ -605,6 +605,11 @@ class FixedIpAlreadyInUse(NovaException):
                 "%(instance_uuid)s.")
 
 
+class FixedIpAssociatedWithMultipleInstances(NovaException):
+    message = _("More than one instance is associated with fixed ip address "
+                "'%(address)s'.")
+
+
 class FixedIpInvalid(Invalid):
     message = _("Fixed IP address %(address)s is invalid.")
 
