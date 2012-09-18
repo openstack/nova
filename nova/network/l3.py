@@ -101,11 +101,13 @@ class LinuxNetL3(L3Driver):
 
     def add_floating_ip(self, floating_ip, fixed_ip, l3_interface_id):
         linux_net.bind_floating_ip(floating_ip, l3_interface_id)
-        linux_net.ensure_floating_forward(floating_ip, fixed_ip)
+        linux_net.ensure_floating_forward(floating_ip, fixed_ip,
+                                          l3_interface_id)
 
     def remove_floating_ip(self, floating_ip, fixed_ip, l3_interface_id):
         linux_net.unbind_floating_ip(floating_ip, l3_interface_id)
-        linux_net.remove_floating_forward(floating_ip, fixed_ip)
+        linux_net.remove_floating_forward(floating_ip, fixed_ip,
+                                          l3_interface_id)
 
     def add_vpn(self, public_ip, port, private_ip):
         linux_net.ensure_vpn_forward(public_ip, port, private_ip)
