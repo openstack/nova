@@ -3256,6 +3256,38 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 }}
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_availability_zone(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+     name="new-server-test" imageRef="1" flavorRef="1"
+     availability_zone="some_zone:some_host">
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "availability_zone": "some_zone:some_host",
+                }}
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_multiple_create_args(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+     name="new-server-test" imageRef="1" flavorRef="1"
+     min_count="1" max_count="3" return_reservation_id="True">
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "min_count": "1",
+                "max_count": "3",
+                "return_reservation_id": True,
+                }}
+        self.assertEquals(request['body'], expected)
+
 
 class TestAddressesXMLSerialization(test.TestCase):
 

@@ -159,10 +159,15 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         server_node = self.find_first_child_named(node, 'server')
 
         attributes = ["name", "imageRef", "flavorRef", "adminPass",
-                      "accessIPv4", "accessIPv6", "key_name"]
+                      "accessIPv4", "accessIPv6", "key_name",
+                      "availability_zone", "min_count", "max_count"]
         for attr in attributes:
             if server_node.getAttribute(attr):
                 server[attr] = server_node.getAttribute(attr)
+
+        res_id = server_node.getAttribute('return_reservation_id')
+        if res_id:
+            server['return_reservation_id'] = utils.bool_from_str(res_id)
 
         scheduler_hints = self._extract_scheduler_hints(server_node)
         if scheduler_hints:
