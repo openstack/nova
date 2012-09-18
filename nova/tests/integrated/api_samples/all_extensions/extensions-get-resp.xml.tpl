@@ -18,6 +18,9 @@
   <extension alias="OS-FLV-EXT-DATA" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1" name="FlavorExtraData">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-SCH-HNT" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-admin-actions" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/admin-actions/api/v1.1" name="AdminActions">
     <description>%(text)s</description>
   </extension>
@@ -97,9 +100,6 @@
     <description>%(text)s</description>
   </extension>
   <extension alias="os-rescue" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
-    <description>%(text)s</description>
-  </extension>
-  <extension alias="os-scheduler-hints" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2" name="SchedulerHints">
     <description>%(text)s</description>
   </extension>
   <extension alias="os-security-groups" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/securitygroups/api/v1.1" name="SecurityGroups">

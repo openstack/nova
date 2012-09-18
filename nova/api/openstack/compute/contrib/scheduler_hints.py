@@ -29,13 +29,13 @@ class SchedulerHintsController(wsgi.Controller):
     def _extract_scheduler_hints(body):
         hints = {}
 
+        attr = '%s:scheduler_hints' % Scheduler_hints.alias
         try:
-            hints.update(body['os:scheduler_hints'])
-
-        # Ignore if data is not present
-        except KeyError:
-            pass
-
+            if 'os:scheduler_hints' in body:
+                # NOTE(vish): This is for legacy support
+                hints.update(body['os:scheduler_hints'])
+            elif attr in body:
+                hints.update(body[attr])
         # Fail if non-dict provided
         except ValueError:
             msg = _("Malformed scheduler_hints attribute")
@@ -56,7 +56,7 @@ class Scheduler_hints(extensions.ExtensionDescriptor):
     """Pass arbitrary key/value pairs to the scheduler"""
 
     name = "SchedulerHints"
-    alias = "os-scheduler-hints"
+    alias = "OS-SCH-HNT"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "scheduler-hints/api/v2")
     updated = "2011-07-19T00:00:00+00:00"

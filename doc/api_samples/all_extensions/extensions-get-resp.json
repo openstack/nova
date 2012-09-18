@@ -49,6 +49,14 @@
             "updated": "2011-09-14T00:00:00+00:00"
         },
         {
+            "alias": "OS-SCH-HNT",
+            "description": "Pass arbitrary key/value pairs to the scheduler",
+            "links": [],
+            "name": "SchedulerHints",
+            "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
+            "updated": "2011-07-19T00:00:00+00:00"
+        },
+        {
             "alias": "os-admin-actions",
             "description": "Enable admin-only server actions\n\n    Actions include: pause, unpause, suspend, resume, migrate,\n    resetNetwork, injectNetworkInfo, lock, unlock, createBackup\n    ",
             "links": [],
@@ -263,14 +271,6 @@
             "name": "Rescue",
             "namespace": "http://docs.openstack.org/compute/ext/rescue/api/v1.1",
             "updated": "2011-08-18T00:00:00+00:00"
-        },
-        {
-            "alias": "os-scheduler-hints",
-            "description": "Pass arbitrary key/value pairs to the scheduler",
-            "links": [],
-            "name": "SchedulerHints",
-            "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
-            "updated": "2011-07-19T00:00:00+00:00"
         },
         {
             "alias": "os-security-groups",
