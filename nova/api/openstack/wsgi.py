@@ -1198,10 +1198,11 @@ class OverLimitFault(webob.exc.HTTPException):
         hdrs = OverLimitFault._retry_after(retry_time)
         self.wrapped_exc = webob.exc.HTTPRequestEntityTooLarge(headers=hdrs)
         self.content = {
-            "overLimitFault": {
+            "overLimit": {
                 "code": self.wrapped_exc.status_int,
                 "message": message,
                 "details": details,
+                "retryAfter": hdrs['Retry-After'],
             },
         }
 
@@ -1219,7 +1220,7 @@ class OverLimitFault(webob.exc.HTTPException):
         error format.
         """
         content_type = request.best_match_content_type()
-        metadata = {"attributes": {"overLimitFault": "code"}}
+        metadata = {"attributes": {"overLimit": ["code", "retryAfter"]}}
 
         xml_serializer = XMLDictSerializer(metadata, XMLNS_V11)
         serializer = {
@@ -1229,6 +1230,7 @@ class OverLimitFault(webob.exc.HTTPException):
 
         content = serializer.serialize(self.content)
         self.wrapped_exc.body = content
+        self.wrapped_exc.content_type = content_type
 
         return self.wrapped_exc
 

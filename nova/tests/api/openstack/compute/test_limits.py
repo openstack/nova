@@ -336,8 +336,12 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
 
         body = jsonutils.loads(response.body)
         expected = "Only 1 GET request(s) can be made to * every minute."
-        value = body["overLimitFault"]["details"].strip()
+        value = body["overLimit"]["details"].strip()
         self.assertEqual(value, expected)
+
+        self.assertTrue("retryAfter" in body["overLimit"])
+        retryAfter = body["overLimit"]["retryAfter"]
+        self.assertEqual(retryAfter, "60")
 
     def test_limited_request_xml(self):
         """Test a rate-limited (413) response as XML"""
@@ -352,6 +356,10 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
 
         root = minidom.parseString(response.body).childNodes[0]
         expected = "Only 1 GET request(s) can be made to * every minute."
+
+        self.assertNotEqual(root.attributes.getNamedItem("retryAfter"), None)
+        retryAfter = root.attributes.getNamedItem("retryAfter").value
+        self.assertEqual(retryAfter, "60")
 
         details = root.getElementsByTagName("details")
         self.assertEqual(details.length, 1)
