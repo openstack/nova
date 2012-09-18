@@ -323,3 +323,136 @@ class TestMigrations(test.TestCase):
 
             migration_api.upgrade(engine, TestMigrations.REPOSITORY, 98)
             migration_api.downgrade(engine, TestMigrations.REPOSITORY, 97)
+
+    def test_migration_91(self):
+        """Test that migration 91 works correctly.
+
+        This test prevents regression of bugs 1052244 and 1052220.
+        """
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 90)
+
+            vol1_id = '10'
+            vol1_uuid = '9db3c2e5-8cac-4e94-9e6c-b5f750736727'
+
+            vol2_id = '11'
+            vol2_uuid = 'fb17fb5a-ca3d-4bba-8903-fc776ea81d78'
+
+            snap_id = '7'
+            snap_uuid = 'a87e5108-8a2b-4c89-be96-0e8760db2c6a'
+
+            inst_id = '0ec45d38-aefd-4c42-a209-361e848240b7'
+
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+
+            instances = sqlalchemy.Table('instances', metadata, autoload=True)
+            volumes = sqlalchemy.Table('volumes', metadata, autoload=True)
+            sm_flavors = sqlalchemy.Table(
+                    'sm_flavors', metadata, autoload=True)
+            sm_backend_config = sqlalchemy.Table(
+                    'sm_backend_config', metadata, autoload=True)
+            sm_volume = sqlalchemy.Table(
+                    'sm_volume', metadata, autoload=True)
+            volume_mappings = sqlalchemy.Table(
+                    'volume_id_mappings', metadata, autoload=True)
+            iscsi_targets = sqlalchemy.Table(
+                    'iscsi_targets', metadata, autoload=True)
+            volume_metadata = sqlalchemy.Table(
+                    'volume_metadata', metadata, autoload=True)
+            snapshots = sqlalchemy.Table('snapshots', metadata, autoload=True)
+            snapshot_mappings = sqlalchemy.Table(
+                    'snapshot_id_mappings', metadata, autoload=True)
+            block_device_mapping = sqlalchemy.Table(
+                    'block_device_mapping', metadata, autoload=True)
+
+            volumes.insert().values(id=vol1_id).execute()
+            volume_mappings.insert() \
+                    .values(id=vol1_id, uuid=vol1_uuid).execute()
+            snapshots.insert().values(id=snap_id, volume_id=vol1_id).execute()
+            snapshot_mappings.insert() \
+                    .values(id=snap_id, uuid=snap_uuid).execute()
+            volumes.insert().values(id=vol2_id, snapshot_id=snap_id).execute()
+            volume_mappings.insert() \
+                    .values(id=vol2_id, uuid=vol2_uuid).execute()
+            sm_flavors.insert().values(id=7).execute()
+            sm_backend_config.insert().values(id=7, flavor_id=7).execute()
+            sm_volume.insert().values(id=vol1_id, backend_id=7).execute()
+            volume_metadata.insert().values(id=7, volume_id=vol1_id).execute()
+            iscsi_targets.insert().values(id=7, volume_id=vol1_id).execute()
+            instances.insert().values(id=7, uuid=inst_id).execute()
+            block_device_mapping.insert()\
+                    .values(id=7, volume_id=vol1_id, instance_uuid=inst_id) \
+                    .execute()
+
+            vols = volumes.select().execute().fetchall()
+            self.assertEqual(set([vol.id for vol in vols]),
+                             set([vol1_id, vol2_id]))
+            self.assertEqual(snap_id, vols[1].snapshot_id)
+
+            query = volume_metadata.select(volume_metadata.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            query = iscsi_targets.select(iscsi_targets.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            query = block_device_mapping.select(block_device_mapping.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            snaps = sqlalchemy.select([snapshots.c.id]).execute().fetchall()
+            self.assertEqual(set([snap.id for snap in snaps]),
+                             set([snap_id]))
+
+            sm_vols = sqlalchemy.select([sm_volume.c.id]).execute().fetchall()
+            self.assertEqual(set([sm_vol.id for sm_vol in sm_vols]),
+                             set([vol1_id]))
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 91)
+
+            vols = volumes.select().execute().fetchall()
+            self.assertEqual(set([vol.id for vol in vols]),
+                             set([vol1_uuid, vol2_uuid]))
+            self.assertEqual(snap_uuid, vols[1].snapshot_id)
+
+            query = volume_metadata.select(volume_metadata.c.id == 7)
+            self.assertEqual(vol1_uuid, query.execute().fetchone().volume_id)
+
+            query = iscsi_targets.select(iscsi_targets.c.id == 7)
+            self.assertEqual(vol1_uuid, query.execute().fetchone().volume_id)
+
+            query = block_device_mapping.select(block_device_mapping.c.id == 7)
+            self.assertEqual(vol1_uuid, query.execute().fetchone().volume_id)
+
+            snaps = sqlalchemy.select([snapshots.c.id]).execute().fetchall()
+            self.assertEqual(set([snap.id for snap in snaps]),
+                             set([snap_uuid]))
+
+            sm_vols = sqlalchemy.select([sm_volume.c.id]).execute().fetchall()
+            self.assertEqual(set([sm_vol.id for sm_vol in sm_vols]),
+                             set([vol1_uuid]))
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 90)
+
+            vols = volumes.select().execute().fetchall()
+            self.assertEqual(set([vol.id for vol in vols]),
+                             set([vol1_id, vol2_id]))
+            self.assertEqual(snap_id, vols[1].snapshot_id)
+
+            query = volume_metadata.select(volume_metadata.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            query = iscsi_targets.select(iscsi_targets.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            query = block_device_mapping.select(block_device_mapping.c.id == 7)
+            self.assertEqual(vol1_id, query.execute().fetchone().volume_id)
+
+            snaps = sqlalchemy.select([snapshots.c.id]).execute().fetchall()
+            self.assertEqual(set([snap.id for snap in snaps]),
+                             set([snap_id]))
+
+            sm_vols = sqlalchemy.select([sm_volume.c.id]).execute().fetchall()
+            self.assertEqual(set([sm_vol.id for sm_vol in sm_vols]),
+                             set([vol1_id]))
