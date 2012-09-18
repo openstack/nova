@@ -18,6 +18,7 @@ import datetime
 from lxml import etree
 import webob
 
+from nova.api.openstack.volume import extensions
 from nova.api.openstack.volume import volumes
 from nova import db
 from nova import exception
@@ -34,7 +35,9 @@ FLAGS = flags.FLAGS
 class VolumeApiTest(test.TestCase):
     def setUp(self):
         super(VolumeApiTest, self).setUp()
-        self.controller = volumes.VolumeController()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = volumes.VolumeController(self.ext_mgr)
 
         self.stubs.Set(db, 'volume_get_all', fakes.stub_volume_get_all)
         self.stubs.Set(db, 'volume_get_all_by_project',

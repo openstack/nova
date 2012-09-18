@@ -88,8 +88,9 @@ class SnapshotsTemplate(xmlutil.TemplateBuilder):
 class SnapshotsController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
-    def __init__(self):
+    def __init__(self, ext_mgr=None):
         self.volume_api = volume.API()
+        self.ext_mgr = ext_mgr
         super(SnapshotsController, self).__init__()
 
     @wsgi.serializers(xml=SnapshotTemplate)
@@ -175,5 +176,5 @@ class SnapshotsController(wsgi.Controller):
         return {'snapshot': retval}
 
 
-def create_resource():
-    return wsgi.Resource(SnapshotsController())
+def create_resource(ext_mgr):
+    return wsgi.Resource(SnapshotsController(ext_mgr))
