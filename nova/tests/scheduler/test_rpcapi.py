@@ -95,4 +95,4 @@ class SchedulerRpcAPITestCase(test.TestCase):
         self._test_scheduler_api('create_volume',
                 rpc_method='cast', volume_id="fake_volume",
                 snapshot_id="fake_snapshots", image_id="fake_image",
-                reservations=list('fake_res'))
+                reservations=list('fake_res'), version='2.1')
