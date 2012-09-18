@@ -349,3 +349,21 @@ class InstanceTypeCommandsTestCase(test.TestCase):
 
         self.unset_key(self.instance_type_name, "k1")
         self.unset_key(self.instance_type_name, "k3")
+
+
+class ProjectCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(ProjectCommandsTestCase, self).setUp()
+        self.commands = nova_manage.ProjectCommands()
+
+    def test_quota(self):
+        output = StringIO.StringIO()
+        sys.stdout = output
+        self.commands.quota(project_id='admin',
+                            key='volumes',
+                            value='unlimited',
+                           )
+
+        sys.stdout = sys.__stdout__
+        result = output.getvalue()
+        self.assertEquals(('volumes: unlimited' in result), True)
