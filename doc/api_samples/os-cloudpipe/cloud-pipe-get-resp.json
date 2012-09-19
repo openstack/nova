@@ -1,0 +1,15 @@
+{
+    "cloudpipes": [
+        {
+            "cloudpipe": {
+                "created_at": "2012-09-25T18:18:55Z",
+                "instance_id": "72afecab-24b0-437e-b1d9-88a83be701b3",
+                "internal_ip": "192.168.0.3",
+                "project_id": "cloudpipe-059f21e3-c20e-4efc-9e7a-eba2ab3c6f9a",
+                "public_ip": "127.0.0.1",
+                "public_port": 22,
+                "state": "down"
+            }
+        }
+    ]
+}
