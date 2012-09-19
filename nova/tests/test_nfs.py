@@ -109,8 +109,9 @@ class NfsDriverTestCase(test.TestCase):
         volume['provider_location'] = self.TEST_NFS_EXPORT1
         volume['name'] = 'volume-123'
 
-        self.assertEqual('/mnt/test/12118957640568004265/volume-123',
-                         drv.local_path(volume))
+        self.assertEqual(
+            '/mnt/test/2f4f60214cf43c595666dd815f0360a4/volume-123',
+            drv.local_path(volume))
 
     def test_mount_nfs_should_mount_correctly(self):
         """_mount_nfs common case usage"""
@@ -212,7 +213,7 @@ class NfsDriverTestCase(test.TestCase):
         """_get_hash_str should calculation correct value"""
         drv = self._driver
 
-        self.assertEqual('12118957640568004265',
+        self.assertEqual('2f4f60214cf43c595666dd815f0360a4',
                          drv._get_hash_str(self.TEST_NFS_EXPORT1))
 
     def test_get_mount_point_for_share(self):
@@ -221,7 +222,7 @@ class NfsDriverTestCase(test.TestCase):
 
         nfs.FLAGS.nfs_mount_point_base = self.TEST_MNT_POINT_BASE
 
-        self.assertEqual('/mnt/test/12118957640568004265',
+        self.assertEqual('/mnt/test/2f4f60214cf43c595666dd815f0360a4',
                          drv._get_mount_point_for_share(self.TEST_NFS_EXPORT1))
 
     def test_get_available_capacity_with_df(self):
