@@ -109,6 +109,8 @@ class API(base.Base):
             msg = (_("Volume size '%s' must be an integer and greater than 0")
                    % size)
             raise exception.InvalidInput(reason=msg)
+
+        reservations = None
         try:
             reservations = QUOTAS.reserve(context, volumes=1, gigabytes=size)
         except exception.OverQuota as e:
@@ -165,12 +167,16 @@ class API(base.Base):
             'metadata': metadata,
             }
         volume = self.db.volume_create(context, options)
+
+        if reservations:
+            QUOTAS.commit(context, reservations)
+
         self._cast_create_volume(context, volume['id'],
-                                 snapshot_id, image_id, reservations)
+                                 snapshot_id, image_id)
         return volume
 
     def _cast_create_volume(self, context, volume_id,
-                            snapshot_id, image_id, reservations):
+                            snapshot_id, image_id):
 
         # NOTE(Rongze Zhu): It is a simple solution for bug 1008866
         # If snapshot_id is set, make the call create volume directly to
@@ -189,19 +195,29 @@ class API(base.Base):
                      {"method": "create_volume",
                       "args": {"volume_id": volume_id,
                                "snapshot_id": snapshot_id,
-                               "reservations": reservations,
                                "image_id": image_id}})
 
         else:
             self.scheduler_rpcapi.create_volume(
-                context, volume_id, snapshot_id, image_id, reservations)
+                context, volume_id, snapshot_id, image_id)
 
     @wrap_check_policy
     def delete(self, context, volume, force=False):
         volume_id = volume['id']
         if not volume['host']:
             # NOTE(vish): scheduling failed, so delete it
+            # Note(zhiteng): update volume quota reservation
+            try:
+                reservations = QUOTAS.reserve(context, volumes=-1,
+                                              gigabytes=-volume['size'])
+            except Exception:
+                reservations = None
+                LOG.exception(_("Failed to update quota for deleting volume."))
+
             self.db.volume_destroy(context, volume_id)
+
+            if reservations:
+                QUOTAS.commit(context, reservations)
             return
         if not force and volume['status'] not in ["available", "error"]:
             msg = _("Volume status must be available or error")

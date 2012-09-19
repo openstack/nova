@@ -207,8 +207,8 @@ class Scheduler(object):
         msg = _("Driver must implement schedule_run_instance")
         raise NotImplementedError(msg)
 
-    def schedule_create_volume(self, context, volume_id, snapshot_id, image_id,
-                               reservations):
+    def schedule_create_volume(self, context, volume_id, snapshot_id,
+                               image_id):
         msg = _("Driver must implement schedule_create_volune")
         raise NotImplementedError(msg)
 

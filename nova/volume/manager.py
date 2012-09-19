@@ -160,14 +160,8 @@ class VolumeManager(manager.SchedulerDependentManager):
             model_update = self.driver.create_export(context, volume_ref)
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
-
-            # Commit the reservation
-            if reservations:
-                QUOTAS.commit(context, reservations)
         except Exception:
             with excutils.save_and_reraise_exception():
-                if reservations:
-                    QUOTAS.rollback(context, reservations)
                 self.db.volume_update(context,
                                       volume_ref['id'], {'status': 'error'})
 
