@@ -1409,6 +1409,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         source machine.
 
         """
+        context = context.elevated()
         migration_ref = self.db.migration_get(context, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
@@ -1543,6 +1544,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def resize_instance(self, context, instance,
                         migration_id, image, reservations=None):
         """Starts the migration of a running instance to another host."""
+        context = context.elevated()
         migration_ref = self.db.migration_get(context, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
