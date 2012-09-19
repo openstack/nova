@@ -25,6 +25,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+from nova import notifications
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi as base_wsgi
@@ -70,6 +71,8 @@ class FaultWrapper(base_wsgi.Middleware):
         if safe:
             outer.explanation = '%s: %s' % (inner.__class__.__name__,
                                             unicode(inner))
+
+        notifications.send_api_fault(req.url, status, inner)
         return wsgi.Fault(outer)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
