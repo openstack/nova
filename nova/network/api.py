@@ -184,7 +184,8 @@ class API(base.Base):
                         FLAGS.network_topic,
                         {'method': 'allocate_floating_ip',
                          'args': {'project_id': context.project_id,
-                                  'pool': pool}})
+                                  'pool': pool,
+                                  'auto_assigned': False}})
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
