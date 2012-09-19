@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-NOVA_VERSION = ['2012', '2', None]
+NOVA_VERSION = ['2013', '1', None]
 YEAR, COUNT, REVISION = NOVA_VERSION
 FINAL = False   # This becomes true at Release Candidate time
 
