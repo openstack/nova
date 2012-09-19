@@ -159,6 +159,19 @@ class QuotaIntegrationTestCase(test.TestCase):
                           self.project_id)
         db.floating_ip_destroy(context.get_admin_context(), address)
 
+    def test_auto_assigned(self):
+        address = '192.168.0.100'
+        db.floating_ip_create(context.get_admin_context(),
+                              {'address': address,
+                               'project_id': self.project_id})
+        # auto allocated addresses should not be counted
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          self.network.allocate_floating_ip,
+                          self.context,
+                          self.project_id,
+                          True)
+        db.floating_ip_destroy(context.get_admin_context(), address)
+
     def test_too_many_metadata_items(self):
         metadata = {}
         for i in range(FLAGS.quota_metadata_items + 1):

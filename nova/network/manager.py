@@ -320,7 +320,8 @@ class FloatingIP(object):
                                                                 **kwargs)
         if FLAGS.auto_assign_floating_ip:
             # allocate a floating ip
-            floating_address = self.allocate_floating_ip(context, project_id)
+            floating_address = self.allocate_floating_ip(context, project_id,
+                True)
             # set auto_assigned column to true for the floating ip
             self.db.floating_ip_set_auto_assigned(context, floating_address)
 
@@ -399,15 +400,18 @@ class FloatingIP(object):
                 raise exception.NotAuthorized()
 
     @wrap_check_policy
-    def allocate_floating_ip(self, context, project_id, pool=None):
+    def allocate_floating_ip(self, context, project_id, auto_assigned=False,
+                             pool=None):
         """Gets a floating ip from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
         pool = pool or FLAGS.default_floating_pool
+        use_quota = not auto_assigned
 
         # Check the quota; can't put this in the API because we get
         # called into from other places
         try:
-            reservations = QUOTAS.reserve(context, floating_ips=1)
+            if use_quota:
+                reservations = QUOTAS.reserve(context, floating_ips=1)
         except exception.OverQuota:
             pid = context.project_id
             LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
@@ -425,10 +429,12 @@ class FloatingIP(object):
                             notifier.INFO, payload)
 
             # Commit the reservations
-            QUOTAS.commit(context, reservations)
+            if use_quota:
+                QUOTAS.commit(context, reservations)
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                if use_quota:
+                    QUOTAS.rollback(context, reservations)
 
         return floating_ip
 
@@ -441,6 +447,7 @@ class FloatingIP(object):
         # handle auto_assigned
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
+        use_quota = not floating_ip.get('auto_assigned')
 
         # make sure project ownz this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
@@ -462,7 +469,10 @@ class FloatingIP(object):
 
         # Get reservations...
         try:
-            reservations = QUOTAS.reserve(context, floating_ips=-1)
+            if use_quota:
+                reservations = QUOTAS.reserve(context, floating_ips=-1)
+            else:
+                reservations = None
         except Exception:
             reservations = None
             LOG.exception(_("Failed to update usages deallocating "
