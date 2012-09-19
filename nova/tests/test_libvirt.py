@@ -3757,7 +3757,8 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_extend(path, size):
             pass
 
-        def fake_to_xml(instance, network_info):
+        def fake_to_xml(instance, network_info, image_meta=None, rescue=None,
+                        block_device_info=None):
             return ""
 
         def fake_plug_vifs(instance, network_info):
@@ -3823,6 +3824,11 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_get_info(instance):
             return {'state': power_state.RUNNING}
 
+        def fake_to_xml(instance, network_info, image_meta=None, rescue=None,
+                        block_device_info=None):
+            return ""
+
+        self.stubs.Set(self.libvirtconnection, 'to_xml', fake_to_xml)
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
