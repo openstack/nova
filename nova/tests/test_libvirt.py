@@ -375,9 +375,17 @@ class CacheConcurrencyTestCase(test.TestCase):
         super(CacheConcurrencyTestCase, self).setUp()
         self.flags(instances_path='nova.compute.manager')
 
+        # utils.synchronized() will create the lock_path for us if it
+        # doesn't already exist. It will also delete it when it's done,
+        # which can cause race conditions with the multiple threads we
+        # use for tests. So, create the path here so utils.synchronized()
+        # won't delete it out from under one of the threads.
+        self.lock_path = os.path.join(FLAGS.instances_path, 'locks')
+        utils.ensure_tree(self.lock_path)
+
         def fake_exists(fname):
             basedir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
-            if fname == basedir:
+            if fname == basedir or fname == self.lock_path:
                 return True
             return False
 
@@ -394,6 +402,11 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def tearDown(self):
         imagebackend.libvirt_utils = libvirt_utils
+
+        # Make sure the lock_path for this test is cleaned up
+        if os.path.exists(self.lock_path):
+            shutil.rmtree(self.lock_path)
+
         super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
@@ -401,11 +414,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
-        eventlet.spawn(backend.image('instance', 'name').cache,
+        thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
                 _concurrency, 'fname', None, wait=wait1, done=done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
-        eventlet.spawn(backend.image('instance', 'name').cache,
+        thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
                 _concurrency, 'fname', None, wait=wait2, done=done2)
         wait2.send()
         eventlet.sleep(0)
@@ -416,17 +429,21 @@ class CacheConcurrencyTestCase(test.TestCase):
         done1.wait()
         eventlet.sleep(0)
         self.assertTrue(done2.ready())
+        # Wait on greenthreads to assert they didn't raise exceptions
+        # during execution
+        thr1.wait()
+        thr2.wait()
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
-        eventlet.spawn(backend.image('instance', 'name').cache,
+        thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
                 _concurrency, 'fname2', None, wait=wait1, done=done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
-        eventlet.spawn(backend.image('instance', 'name').cache,
+        thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
                 _concurrency, 'fname1', None, wait=wait2, done=done2)
         wait2.send()
         eventlet.sleep(0)
@@ -435,6 +452,10 @@ class CacheConcurrencyTestCase(test.TestCase):
         finally:
             wait1.send()
             eventlet.sleep(0)
+        # Wait on greenthreads to assert they didn't raise exceptions
+        # during execution
+        thr1.wait()
+        thr2.wait()
 
 
 class FakeVolumeDriver(object):
