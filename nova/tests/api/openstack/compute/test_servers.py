@@ -2803,6 +2803,43 @@ class ServersControllerCreateTest(test.TestCase):
         # The fact that the action doesn't raise is enough validation
         self.controller.create(req, body)
 
+    def test_create_instance_invalid_personality(self):
+
+        def fake_create(*args, **kwargs):
+            codec = 'utf8'
+            content = 'b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=='
+            start_position = 19
+            end_position = 20
+            msg = 'invalid start byte'
+            raise UnicodeDecodeError(codec, content, start_position,
+                                                    end_position, msg)
+
+        self.stubs.Set(nova.compute.api.API,
+                                'create',
+                                fake_create)
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/v2/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_uuid,
+                'flavorRef': flavor_ref,
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, body)
+
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
         bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
