@@ -534,15 +534,14 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
 
     def testContextClaimWithException(self):
+        instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1)
         try:
-            with self.tracker.resource_claim(self.context, memory_mb=1,
-                    disk_gb=1):
+            with self.tracker.resource_claim(self.context, instance):
                 # <insert exciting things that utilize resources>
-                raise Exception("THE SKY IS FALLING")
-        except Exception:
+                raise test.TestingException()
+        except test.TestingException:
             pass
 
-        self.tracker.update_available_resource(self.context)
         self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
         self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
         self.assertEqual(0, self.compute['memory_mb_used'])
