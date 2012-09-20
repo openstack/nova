@@ -124,6 +124,20 @@ class SnapshotApiTest(test.TestCase):
                           req,
                           body)
 
+    def test_snapshot_create_nonexistent_volume_id(self):
+        self.stubs.Set(volume.api.API, 'get', fakes.stub_volume_get_notfound)
+
+        snapshot = {"volume_id": 13,
+                "force": False,
+                "display_name": "Snapshot Test Name",
+                "display_description": "Snapshot Test Desc"}
+        body = dict(snapshot=snapshot)
+        req = fakes.HTTPRequest.blank('/v1/snapshots')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.create,
+                          req,
+                          body)
+
     def test_snapshot_delete(self):
         self.stubs.Set(volume.api.API, "get_snapshot", stub_snapshot_get)
         self.stubs.Set(volume.api.API, "delete_snapshot", stub_snapshot_delete)

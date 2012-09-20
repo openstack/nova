@@ -151,7 +151,12 @@ class SnapshotsController(wsgi.Controller):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
-        volume = self.volume_api.get(context, volume_id)
+
+        try:
+            volume = self.volume_api.get(context, volume_id)
+        except exception.VolumeNotFound as err:
+            raise exc.HTTPNotFound(explanation=unicode(err))
+
         force = snapshot.get('force', False)
         msg = _("Create snapshot from volume %s")
         LOG.audit(msg, volume_id, context=context)
