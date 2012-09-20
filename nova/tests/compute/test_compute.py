@@ -5303,10 +5303,6 @@ class ComputeReschedulingTestCase(BaseTestCase):
         self.assertEqual(self.updated_task_state, task_states.SCHEDULING)
 
 
-class ThatsNoOrdinaryRabbitException(Exception):
-    pass
-
-
 class ComputeReschedulingExceptionTestCase(BaseTestCase):
     """Tests for re-scheduling exception handling logic"""
 
@@ -5315,7 +5311,7 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
 
         # cause _spawn to raise an exception to test the exception logic:
         def exploding_spawn(*args, **kwargs):
-            raise ThatsNoOrdinaryRabbitException()
+            raise test.TestingException()
         self.stubs.Set(self.compute, '_spawn',
                 exploding_spawn)
 
@@ -5326,7 +5322,7 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
     def test_exception_with_rescheduling_disabled(self):
         """Spawn fails and re-scheduling is disabled."""
         # this won't be re-scheduled:
-        self.assertRaises(ThatsNoOrdinaryRabbitException,
+        self.assertRaises(test.TestingException,
                 self.compute._run_instance, self.context,
                 None, {}, None, None, None, None, self.fake_instance)
 
@@ -5338,7 +5334,7 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
         request_spec = dict(num_attempts=1)
-        self.assertNotRaises(ThatsNoOrdinaryRabbitException,
+        self.assertNotRaises(test.TestingException,
                 self.compute._run_instance, self.context,
                 filter_properties=filter_properties, request_spec=request_spec,
                 instance=self.fake_instance)
@@ -5356,6 +5352,6 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_reschedule', reschedule_explode)
 
         # the original exception should now be raised:
-        self.assertRaises(ThatsNoOrdinaryRabbitException,
+        self.assertRaises(test.TestingException,
                 self.compute._run_instance, self.context,
                 None, {}, None, None, None, None, self.fake_instance)
