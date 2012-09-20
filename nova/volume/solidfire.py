@@ -55,9 +55,9 @@ sf_opts = [
                default='',
                help='Password for SF Cluster Admin'),
 
-    cfg.StrOpt('sf_allow_tenant_qos',
-               default=True,
-               help='Allow tenants to specify QOS on create'), ]
+    cfg.BoolOpt('sf_allow_tenant_qos',
+                default=True,
+                help='Allow tenants to specify QOS on create'), ]
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(sf_opts)
