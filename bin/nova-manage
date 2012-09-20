@@ -227,7 +227,7 @@ class ProjectCommands(object):
         ctxt = context.get_admin_context()
         if key:
             if value.lower() == 'unlimited':
-                value = None
+                value = -1
             try:
                 db.quota_update(ctxt, project_id, key, value)
             except exception.ProjectQuotaNotFound:
