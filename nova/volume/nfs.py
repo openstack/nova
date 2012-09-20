@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ctypes
 import errno
+import hashlib
 import os
 
 from nova import exception
@@ -290,4 +290,4 @@ class NfsDriver(driver.VolumeDriver):
 
     def _get_hash_str(self, base_str):
         """returns string that represents hash of base_str (in a hex format)"""
-        return str(ctypes.c_uint64(hash(base_str)).value)
+        return hashlib.md5(base_str).hexdigest()
