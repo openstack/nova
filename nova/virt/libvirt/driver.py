@@ -900,6 +900,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_domain(domain=dom)
                 timer = utils.LoopingCall(self._wait_for_running, instance)
                 timer.start(interval=0.5).wait()
+                return True
             greenthread.sleep(1)
         return False
 
