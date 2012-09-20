@@ -334,6 +334,10 @@ class FloatingIP(object):
                                        floating_address,
                                        fixed_address,
                                        affect_auto_assigned=True)
+
+            # create a fresh set of network info that contains the floating ip
+            nw_info = self.get_instance_nw_info(context, **kwargs)
+
         return nw_info
 
     @wrap_check_policy
