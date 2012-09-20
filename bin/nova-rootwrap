@@ -34,6 +34,7 @@
 
 import ConfigParser
 import os
+import signal
 import subprocess
 import sys
 
@@ -41,6 +42,13 @@ import sys
 RC_UNAUTHORIZED = 99
 RC_NOCOMMAND = 98
 RC_BADCONFIG = 97
+
+
+def _subprocess_setup():
+    # Python installs a SIGPIPE handler by default. This is usually not what
+    # non-Python subprocesses expect.
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
 
 if __name__ == '__main__':
     # Split arguments, require at least a command
@@ -77,6 +85,7 @@ if __name__ == '__main__':
                                stdin=sys.stdin,
                                stdout=sys.stdout,
                                stderr=sys.stderr,
+                               preexec_fn=_subprocess_setup,
                                env=filtermatch.get_environment(userargs))
         obj.wait()
         sys.exit(obj.returncode)
