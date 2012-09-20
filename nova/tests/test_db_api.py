@@ -610,6 +610,17 @@ class AggregateDBApiTestCase(test.TestCase):
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertDictMatch(expected_metadata, _get_fake_aggr_metadata())
 
+    def test_aggregate_create_delete_create_with_metadata(self):
+        """Ensure aggregate metadata is deleted bug 1052479."""
+        ctxt = context.get_admin_context()
+        result = _create_aggregate(context=ctxt)
+        expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
+        self.assertDictMatch(expected_metadata, _get_fake_aggr_metadata())
+        db.aggregate_delete(ctxt, result['id'])
+        result = _create_aggregate(metadata=None)
+        expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
+        self.assertEqual(expected_metadata, {})
+
     def test_aggregate_create_low_privi_context(self):
         """Ensure right context is applied when creating aggregate."""
         self.assertRaises(exception.AdminRequired,

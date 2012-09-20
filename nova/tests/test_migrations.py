@@ -480,3 +480,26 @@ class TestMigrations(test.TestCase):
             migration_api.downgrade(engine, TestMigrations.REPOSITORY, 111)
             agg = sqlalchemy.select([aggregate_hosts.c.host]).execute().first()
             self.assertEqual(host, agg.host)
+
+    def test_migration_133(self):
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 132)
+
+            # Set up a single volume, values don't matter
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+            aggregates = sqlalchemy.Table('aggregates', metadata,
+                    autoload=True)
+            name = 'name'
+            aggregates.insert().values(id=1, availability_zone='nova',
+                    aggregate_name=1, name=name).execute()
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 133)
+            aggregates.insert().values(id=2, availability_zone='nova',
+                    aggregate_name=2, name=name).execute()
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 132)
+            agg = sqlalchemy.select([aggregates.c.name]).execute().first()
+            self.assertEqual(name, agg.name)

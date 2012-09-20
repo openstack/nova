@@ -4861,14 +4861,9 @@ def aggregate_create(context, values, metadata=None):
                                      models.Aggregate.name,
                                      values['name'],
                                      session=session,
-                                     read_deleted='yes').first()
+                                     read_deleted='no').first()
     if not aggregate:
         aggregate = models.Aggregate()
-        aggregate.update(values)
-        aggregate.save(session=session)
-    elif aggregate.deleted:
-        values['deleted'] = False
-        values['deleted_at'] = None
         aggregate.update(values)
         aggregate.save(session=session)
     else:
@@ -4954,6 +4949,14 @@ def aggregate_delete(context, aggregate_id):
                       'updated_at': literal_column('updated_at')})
     else:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+    #Delete Metadata
+    rows = model_query(context,
+                       models.AggregateMetadata).\
+                       filter_by(aggregate_id=aggregate_id).\
+                       update({'deleted': True,
+                      'deleted_at': timeutils.utcnow(),
+                      'updated_at': literal_column('updated_at')})
 
 
 @require_admin_context

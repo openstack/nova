@@ -879,7 +879,7 @@ class Aggregate(BASE, NovaBase):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True)
+    name = Column(String(255))
     availability_zone = Column(String(255), nullable=False)
     _hosts = relationship(AggregateHost,
                           lazy="joined",
