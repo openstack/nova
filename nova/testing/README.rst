@@ -54,13 +54,33 @@ Writing Integration Tests
 
 TBD
 
-Tests and assertRaises
-----------------------
-When asserting that a test should raise an exception, test against the
-most specific exception possible. An overly broad exception type (like
-Exception) can mask errors in the unit test itself.
+Tests and Exceptions
+--------------------
+A properly written test asserts that particular behavior occurs. This can
+be a success condition or a failure condition, including an exception.
+When asserting that a particular exception is raised, the most specific
+exception possible should be used.
+
+In particular, testing for Exception being raised is almost always a
+mistake since it will match (almost) every exception, even those
+unrelated to the exception intended to be tested.
+
+This applies to catching exceptions manually with a try/except block,
+or using assertRaises().
 
 Example::
 
     self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
                       elevated, instance_uuid)
+
+If a stubbed function/method needs a generic exception for testing
+purposes, test.TestingException is available.
+
+Example::
+
+    def stubbed_method(self):
+        raise test.TestingException()
+    self.stubs.Set(cls, 'inner_method', stubbed_method)
+
+    obj = cls()
+    self.assertRaises(test.TestingException, obj.outer_method)

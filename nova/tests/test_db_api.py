@@ -46,11 +46,10 @@ class DbApiTestCase(test.TestCase):
         return db.instance_create(self.context, args)
 
     def test_ec2_ids_not_found_are_printable(self):
-
         def check_exc_format(method):
             try:
                 method(self.context, 'fake')
-            except Exception as exc:
+            except exception.NotFound as exc:
                 self.assertTrue('fake' in unicode(exc))
 
         check_exc_format(db.get_ec2_volume_id_by_uuid)

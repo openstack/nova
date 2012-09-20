@@ -290,10 +290,8 @@ class MiscFunctionsTest(test.TestCase):
         try:
             common.raise_http_conflict_for_instance_invalid_state(exc,
                     'meow')
-        except Exception, e:
-            self.assertTrue(isinstance(e, webob.exc.HTTPConflict))
-            msg = str(e)
-            self.assertEqual(msg,
+        except webob.exc.HTTPConflict as e:
+            self.assertEqual(unicode(e),
                 "Cannot 'meow' while instance is in fake_attr fake_state")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
@@ -303,10 +301,8 @@ class MiscFunctionsTest(test.TestCase):
         try:
             common.raise_http_conflict_for_instance_invalid_state(exc,
                     'meow')
-        except Exception, e:
-            self.assertTrue(isinstance(e, webob.exc.HTTPConflict))
-            msg = str(e)
-            self.assertEqual(msg,
+        except webob.exc.HTTPConflict as e:
+            self.assertEqual(unicode(e),
                 "Instance is in an invalid state for 'meow'")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
