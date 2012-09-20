@@ -175,7 +175,7 @@ class HpSanISCSITestCase(test.TestCase):
     def test_create_volume(self):
         volume = {'name': self.volume_name, 'size': 1}
         model_update = self.driver.create_volume(volume)
-        expected_iqn = "iqn.2003-10.com.lefthandnetworks:group01:25366:fakev"
+        expected_iqn = "iqn.2003-10.com.lefthandnetworks:group01:25366:fakev 0"
         expected_location = "10.0.1.6:3260,1 %s" % expected_iqn
         self.assertEqual(model_update['provider_location'], expected_location)
 
