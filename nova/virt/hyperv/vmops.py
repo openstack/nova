@@ -157,7 +157,7 @@ class VMOps(baseops.BaseOps):
         except Exception as exn:
             LOG.exception(_('spawn vm failed: %s'), exn)
             self.destroy(instance)
-            raise exn
+            raise
 
     def _create_vm(self, instance):
         """Create a VM but don't start it.  """
