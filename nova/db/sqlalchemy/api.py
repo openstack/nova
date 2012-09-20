@@ -1596,6 +1596,11 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     query_prefix = regex_filter(query_prefix, models.Instance, filters)
 
     # paginate query
+    if marker is not None:
+        try:
+            marker = instance_get_by_uuid(context, marker, session=session)
+        except exception.InstanceNotFound as e:
+            raise exception.MarkerNotFound(marker)
     query_prefix = paginate_query(query_prefix, models.Instance, limit,
                            [sort_key, 'created_at', 'id'],
                            marker=marker,
