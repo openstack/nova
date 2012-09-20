@@ -926,7 +926,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Stopping an instance on this host.
 
         Alias for power_off_instance for compatibility"""
-        self.power_off_instance(context, instance,
+        self.power_off_instance(context, instance=instance,
                                 final_state=vm_states.STOPPED)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -936,7 +936,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Starting an instance on this host.
 
         Alias for power_on_instance for compatibility"""
-        self.power_on_instance(context, instance)
+        self.power_on_instance(context, instance=instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
