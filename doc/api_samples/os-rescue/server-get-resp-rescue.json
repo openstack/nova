@@ -1,0 +1,53 @@
+{
+    "server": {
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2012-09-19T09:22:27Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "c02c15d17499304e9893d9fc41c415f5096f8aa880bc651cac092650",
+        "id": "7e21a264-6cc1-4d90-b7b5-f9f49cec3a85",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/7e21a264-6cc1-4d90-b7b5-f9f49cec3a85",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/7e21a264-6cc1-4d90-b7b5-f9f49cec3a85",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "status": "RESCUE",
+        "tenant_id": "openstack",
+        "updated": "2012-09-19T09:22:27Z",
+        "user_id": "fake"
+    }
+}
