@@ -456,3 +456,27 @@ class TestMigrations(test.TestCase):
             sm_vols = sqlalchemy.select([sm_volume.c.id]).execute().fetchall()
             self.assertEqual(set([sm_vol.id for sm_vol in sm_vols]),
                              set([vol1_id]))
+
+    def test_migration_111(self):
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 110)
+
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+            aggregate_hosts = sqlalchemy.Table('aggregate_hosts', metadata,
+                    autoload=True)
+            host = 'host'
+            aggregate_hosts.insert().values(id=1,
+                    aggregate_id=1, host=host).execute()
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 111)
+            agg = sqlalchemy.select([aggregate_hosts.c.host]).execute().first()
+            self.assertEqual(host, agg.host)
+            aggregate_hosts.insert().values(id=2,
+                    aggregate_id=2, host=host).execute()
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 111)
+            agg = sqlalchemy.select([aggregate_hosts.c.host]).execute().first()
+            self.assertEqual(host, agg.host)
