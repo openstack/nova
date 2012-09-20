@@ -2077,9 +2077,6 @@ class ComputeTestCase(BaseTestCase):
 
         # creating mocks
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, FLAGS.volume_topic,
-                 {"method": "check_for_export",
-                  "args": {'instance_id': inst_id}})
 
         self.mox.StubOutWithMock(self.compute.driver,
                                  'get_instance_disk_info')
