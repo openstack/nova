@@ -278,6 +278,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             for count, instance in enumerate(instances):
                 db_state = instance['power_state']
                 drv_state = self._get_power_state(context, instance)
+                closing_vm_states = (vm_states.DELETED,
+                                     vm_states.SOFT_DELETED)
+
+                # instance was supposed to shut down - don't attempt
+                # recovery in any case
+                if instance['vm_state'] in closing_vm_states:
+                    continue
 
                 expect_running = (db_state == power_state.RUNNING and
                                   drv_state != db_state)
