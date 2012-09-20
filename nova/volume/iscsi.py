@@ -193,8 +193,8 @@ class IetAdm(TargetAdmin):
 
     def remove_iscsi_target(self, tid, lun, vol_id, **kwargs):
         LOG.info(_('Removing volume: %s') % vol_id)
-        self._delete_target(tid, **kwargs)
         self._delete_logicalunit(tid, lun, **kwargs)
+        self._delete_target(tid, **kwargs)
 
     def _new_target(self, name, tid, **kwargs):
         self._run('--op', 'new',
