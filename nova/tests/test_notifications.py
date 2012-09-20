@@ -86,6 +86,30 @@ class NotificationsTestCase(test.TestCase):
             inst.update(params)
         return db.instance_create(self.context, inst)
 
+    def test_send_api_fault_disabled(self):
+        self.flags(notify_api_faults=False)
+        notifications.send_api_fault("http://example.com/foo", 500, None)
+        self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
+
+    def test_send_api_fault(self):
+        self.flags(notify_api_faults=True)
+        exception = None
+        try:
+            # Get a real exception with a call stack.
+            raise test.TestingException("junk")
+        except test.TestingException, e:
+            exception = e
+
+        notifications.send_api_fault("http://example.com/foo", 500, exception)
+
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+        n = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(n['priority'], 'ERROR')
+        self.assertEquals(n['event_type'], 'api.fault')
+        self.assertEquals(n['payload']['url'], 'http://example.com/foo')
+        self.assertEquals(n['payload']['status'], 500)
+        self.assertTrue(n['payload']['exception'] is not None)
+
     def test_notif_disabled(self):
 
         # test config disable of the notifcations

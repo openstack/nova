@@ -45,9 +45,29 @@ notify_any_opt = cfg.BoolOpt('notify_on_any_change', default=False,
          'state changes.  Valid values are False for no notifications, '
          'True for notifications on any instance changes.')
 
+notify_api_faults = cfg.BoolOpt('notify_api_faults', default=False,
+    help='If set, send api.fault notifications on caught exceptions '
+         'in the API service.')
+
+
 FLAGS = flags.FLAGS
 FLAGS.register_opt(notify_state_opt)
 FLAGS.register_opt(notify_any_opt)
+FLAGS.register_opt(notify_api_faults)
+
+
+def send_api_fault(url, status, exception):
+    """Send an api.fault notification."""
+
+    if not FLAGS.notify_api_faults:
+        return
+
+    payload = {'url': url, 'exception': str(exception), 'status': status}
+
+    publisher_id = notifier_api.publisher_id("api")
+
+    notifier_api.notify(None, publisher_id, 'api.fault', notifier_api.ERROR,
+                        payload)
 
 
 def send_update(context, old_instance, new_instance, service=None, host=None):
