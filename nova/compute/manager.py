@@ -67,8 +67,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
-from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
