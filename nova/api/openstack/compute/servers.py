@@ -496,9 +496,14 @@ class Controller(wsgi.Controller):
                 search_opts['user_id'] = context.user_id
 
         limit, marker = common.get_limit_and_marker(req)
-        instance_list = self.compute_api.get_all(context,
-                                                 search_opts=search_opts,
-                                                 limit=limit, marker=marker)
+        try:
+            instance_list = self.compute_api.get_all(context,
+                                                     search_opts=search_opts,
+                                                     limit=limit,
+                                                     marker=marker)
+        except exception.MarkerNotFound as e:
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if is_detail:
             self._add_instance_faults(context, instance_list)

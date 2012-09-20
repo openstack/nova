@@ -1067,6 +1067,10 @@ class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
 
+class MarkerNotFound(NotFound):
+    message = _("Marker %(marker)s could not be found.")
+
+
 class InvalidInstanceIDMalformed(Invalid):
     message = _("Invalid id: %(val)s (expecting \"i-...\").")
 
