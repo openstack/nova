@@ -193,6 +193,12 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if security_groups is not None:
             server["security_groups"] = security_groups
 
+        # NOTE(vish): this is not namespaced in json, so leave it without a
+        #             namespace for now
+        block_device_mapping = self._extract_block_device_mapping(server_node)
+        if block_device_mapping is not None:
+            server["block_device_mapping"] = block_device_mapping
+
         # NOTE(vish): Support this incorrect version because it was in the code
         #             base for a while and we don't want to accidentally break
         #             anyone that might be using it.
@@ -205,6 +211,31 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             server['OS-DCF:diskConfig'] = utils.bool_from_str(auto_disk_config)
 
         return server
+
+    def _extract_block_device_mapping(self, server_node):
+        """Marshal the block_device_mapping node of a parsed request"""
+        node = self.find_first_child_named(server_node, "block_device_mapping")
+        if node:
+            block_device_mapping = []
+            for child in self.extract_elements(node):
+                if child.nodeName != "mapping":
+                    continue
+                mapping = {}
+                attributes = ["volume_id", "snapshot_id", "device_name",
+                              "virtual_name", "volume_size"]
+                for attr in attributes:
+                    value = child.getAttribute(attr)
+                    if value:
+                        mapping[attr] = value
+                attributes = ["delete_on_termination", "no_device"]
+                for attr in attributes:
+                    value = child.getAttribute(attr)
+                    if value:
+                        mapping[attr] = utils.bool_from_str(value)
+                block_device_mapping.append(mapping)
+            return block_device_mapping
+        else:
+            return None
 
     def _extract_scheduler_hints(self, server_node):
         """Marshal the scheduler hints attribute of a parsed request"""

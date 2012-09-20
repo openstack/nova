@@ -3370,6 +3370,46 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 }}
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_block_device_mapping(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+     name="new-server-test" imageRef="1" flavorRef="1">
+       <block_device_mapping>
+         <mapping volume_id="7329b667-50c7-46a6-b913-cb2a09dfeee0"
+          device_name="/dev/vda" virtual_name="root"
+          delete_on_termination="False" />
+         <mapping snapshot_id="f31efb24-34d2-43e1-8b44-316052956a39"
+          device_name="/dev/vdb" virtual_name="ephemeral0"
+          delete_on_termination="False" />
+         <mapping device_name="/dev/vdc" no_device="True" />
+       </block_device_mapping>
+    </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "block_device_mapping": [
+                    {
+                        "volume_id": "7329b667-50c7-46a6-b913-cb2a09dfeee0",
+                        "device_name": "/dev/vda",
+                        "virtual_name": "root",
+                        "delete_on_termination": False,
+                    },
+                    {
+                        "snapshot_id": "f31efb24-34d2-43e1-8b44-316052956a39",
+                        "device_name": "/dev/vdb",
+                        "virtual_name": "ephemeral0",
+                        "delete_on_termination": False,
+                    },
+                    {
+                        "device_name": "/dev/vdc",
+                        "no_device": True,
+                    },
+                ]
+                }}
+        self.assertEquals(request['body'], expected)
+
 
 class TestAddressesXMLSerialization(test.TestCase):
 
