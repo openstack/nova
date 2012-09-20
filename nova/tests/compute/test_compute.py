@@ -2264,7 +2264,7 @@ class ComputeTestCase(BaseTestCase):
 
         try:
             raise NotImplementedError('test')
-        except Exception:
+        except NotImplementedError:
             exc_info = sys.exc_info()
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
@@ -2292,7 +2292,7 @@ class ComputeTestCase(BaseTestCase):
 
         try:
             raise user_exc
-        except Exception:
+        except exception.Invalid:
             exc_info = sys.exc_info()
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
