@@ -676,6 +676,12 @@
 
 ######## defined in nova.compute.resource_tracker ########
 
+# reserved_host_disk_mb=0
+#### (IntOpt) Amount of disk in MB to reserve for the host
+
+# reserved_host_memory_mb=512
+#### (IntOpt) Amount of memory in MB to reserve for the host
+
 # claim_timeout_seconds=600
 #### (IntOpt) How long, in seconds, before a resource claim times out
 
@@ -863,6 +869,9 @@
 
 # send_arp_for_ha=false
 #### (BoolOpt) send gratuitous ARPs for HA setup
+
+# send_arp_for_ha_count=3
+#### (IntOpt) send this many gratuitous ARPs for HA setup
 
 # use_single_default_gateway=false
 #### (BoolOpt) Use single default gateway. Only first nic of vm will get
@@ -1155,7 +1164,7 @@
 # qpid_reconnect_interval=0
 #### (IntOpt) Equivalent to setting max and min to the same value
 
-# qpid_heartbeat=5
+# qpid_heartbeat=60
 #### (IntOpt) Seconds between connection keepalive heartbeats
 
 # qpid_protocol=tcp
@@ -1210,6 +1219,12 @@
 #### (FloatOpt) Virtual CPU to Physical CPU allocation ratio
 
 
+######## defined in nova.scheduler.filters.disk_filter ########
+
+# disk_allocation_ratio=1.0
+#### (FloatOpt) virtual disk to physical disk allocation ratio
+
+
 ######## defined in nova.scheduler.filters.ram_filter ########
 
 # ram_allocation_ratio=1.5
@@ -1235,12 +1250,6 @@
 
 
 ######## defined in nova.scheduler.host_manager ########
-
-# reserved_host_disk_mb=0
-#### (IntOpt) Amount of disk in MB to reserve for host/dom0
-
-# reserved_host_memory_mb=512
-#### (IntOpt) Amount of memory in MB to reserve for host/dom0
 
 # scheduler_available_filters=nova.scheduler.filters.standard_filters
 #### (MultiStrOpt) Filter classes available to the scheduler which may be
@@ -1755,12 +1764,12 @@
 ######## defined in nova.volume.cinder ########
 
 # cinder_catalog_info=volume:cinder:publicURL
-#### (StrOpt) Info to match when looking for cinder in the service catalog.
-####          Format is : separated values of the form:
+#### (StrOpt) Info to match when looking for cinder in the service
+####          catalog. Format is : separated values of the form:
 ####          <service_type>:<service_name>:<endpoint_type>
 
-# cinder_endpoint_template=None
-#### (StrOpt) Override service catalog lookup with template for cinder 
+# cinder_endpoint_template=<None>
+#### (StrOpt) Override service catalog lookup with template for cinder
 ####          endpoint e.g. http://localhost:8776/v1/%(project_id)s
 
 
@@ -1796,6 +1805,10 @@
 # rbd_secret_uuid=<None>
 #### (StrOpt) the libvirt uuid of the secret for the rbd_uservolumes
 
+# volume_tmp_dir=<None>
+#### (StrOpt) where to store temporary image files if the volume driver
+####          does not write them directly to the volume
+
 
 ######## defined in nova.volume.iscsi ########
 
@@ -1822,6 +1835,38 @@
 
 
 ######## defined in nova.volume.netapp ########
+
+# netapp_wsdl_url=<None>
+#### (StrOpt) URL of the WSDL file for the DFM server
+
+# netapp_login=<None>
+#### (StrOpt) User name for the DFM server
+
+# netapp_password=<None>
+#### (StrOpt) Password for the DFM server
+
+# netapp_server_hostname=<None>
+#### (StrOpt) Hostname for the DFM server
+
+# netapp_server_port=8088
+#### (IntOpt) Port number for the DFM server
+
+# netapp_storage_service=<None>
+#### (StrOpt) Storage service to use for provisioning (when
+####          volume_type=None)
+
+# netapp_storage_service_prefix=<None>
+#### (StrOpt) Prefix of storage service name to use for provisioning
+####          (volume_type name will be appended)
+
+# netapp_vfiler=<None>
+#### (StrOpt) Vfiler to use for provisioning
+
+
+######## defined in nova.volume.netapp_nfs ########
+
+# synchronous_snapshot_create=0
+#### (IntOpt) Does snapshot creation call returns immediately
 
 # netapp_wsdl_url=<None>
 #### (StrOpt) URL of the WSDL file for the DFM server
@@ -1886,6 +1931,20 @@
 #### (BoolOpt) flag to create sparse volumes
 
 
+######## defined in nova.volume.nfs ########
+
+# nfs_shares_config=<None>
+#### (StrOpt) File with the list of available nfs shares
+
+# nfs_disk_util=df
+#### (StrOpt) Use du or df for free space calculation
+
+# nfs_sparsed_volumes=true
+#### (BoolOpt) Create volumes as sparsed files which take no space.If set
+####           to False volume is created as regular file.In such case
+####           volume creation takes a lot of time.
+
+
 ######## defined in nova.volume.san ########
 
 # san_thin_provision=true
@@ -1917,6 +1976,24 @@
 #### (StrOpt) The ZFS path under which to create zvols for volumes.
 
 
+######## defined in nova.volume.solidfire ########
+
+# sf_emulate_512=true
+#### (BoolOpt) Set 512 byte emulation on volume creation;
+
+# sf_mvip=
+#### (StrOpt) IP address of SolidFire MVIP
+
+# sf_login=admin
+#### (StrOpt) Username for SF Cluster Admin
+
+# sf_password=
+#### (StrOpt) Password for SF Cluster Admin
+
+# sf_allow_tenant_qos=true
+#### (BoolOpt) Allow tenants to specify QOS on create
+
+
 ######## defined in nova.volume.storwize_svc ########
 
 # storwize_svc_volpool_name=volpool
@@ -1946,4 +2023,4 @@
 ####          prepared. Maximum value is 600 seconds (10 minutes).
 
 
-# Total option count: 505
+# Total option count: 527
