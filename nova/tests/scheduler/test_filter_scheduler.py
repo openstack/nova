@@ -216,7 +216,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(info['called'], 0)
 
     def test_get_cost_functions(self):
-        self.flags(reserved_host_memory_mb=128)
         fixture = fakes.FakeFilterScheduler()
         fns = fixture.get_cost_functions()
         self.assertEquals(len(fns), 1)
@@ -225,8 +224,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         hostinfo = host_manager.HostState('host', 'compute')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0, vcpus=1, disk_available_least=1000,
-                free_disk_mb=1000, free_ram_mb=1000, vcpus_used=0))
-        self.assertEquals(1000 - 128, fn(hostinfo, {}))
+                free_disk_mb=1000, free_ram_mb=872, vcpus_used=0,
+                local_gb_used=0))
+        self.assertEquals(872, fn(hostinfo, {}))
 
     def test_max_attempts(self):
         self.flags(scheduler_max_attempts=4)
