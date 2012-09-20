@@ -881,8 +881,17 @@ class Resource(wsgi.Application):
         #            function.  If we try to audit __call__(), we can
         #            run into troubles due to the @webob.dec.wsgify()
         #            decorator.
-        return self._process_stack(request, action, action_args,
+        try:
+            return self._process_stack(request, action, action_args,
                                    content_type, body, accept)
+        except expat.ExpatError:
+            msg = _("Invalid XML in request body")
+            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
+        except LookupError as e:
+        #NOTE(Vijaya Erukala): XML input such as
+        #                      <?xml version="1.0" encoding="TF-8"?>
+        #                      raises LookupError: unknown encoding: TF-8
+            return Fault(webob.exc.HTTPBadRequest(explanation=unicode(e)))
 
     def _process_stack(self, request, action, action_args,
                        content_type, body, accept):
