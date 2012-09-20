@@ -21,6 +21,7 @@
 import re
 import time
 
+from eventlet import greenthread
 from sqlalchemy.exc import DisconnectionError, OperationalError
 import sqlalchemy.interfaces
 import sqlalchemy.orm
@@ -64,6 +65,16 @@ def add_regexp_listener(dbapi_con, con_record):
         reg = re.compile(expr)
         return reg.search(unicode(item)) is not None
     dbapi_con.create_function('regexp', 2, regexp)
+
+
+def greenthread_yield(dbapi_con, con_record):
+    """
+    Ensure other greenthreads get a chance to execute by forcing a context
+    switch. With common database backends (eg MySQLdb and sqlite), there is
+    no implicit yield caused by network I/O since they are implemented by
+    C libraries that eventlet cannot monkey patch.
+    """
+    greenthread.sleep(0)
 
 
 def ping_listener(dbapi_conn, connection_rec, connection_proxy):
@@ -122,9 +133,11 @@ def get_engine():
 
         _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
+        sqlalchemy.event.listen(_ENGINE, 'checkin', greenthread_yield)
+
         if 'mysql' in connection_dict.drivername:
             sqlalchemy.event.listen(_ENGINE, 'checkout', ping_listener)
-        elif "sqlite" in connection_dict.drivername:
+        elif 'sqlite' in connection_dict.drivername:
             if not FLAGS.sqlite_synchronous:
                 sqlalchemy.event.listen(_ENGINE, 'connect',
                                         synchronous_switch_listener)
