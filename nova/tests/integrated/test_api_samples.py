@@ -155,15 +155,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 matched_value = res or matched_value
 
         elif isinstance(expected, basestring) and '%' in expected:
-            try:
-                # NOTE(vish): escape stuff for regex
-                for char in ['[', ']', '<', '>', '?']:
-                    expected = expected.replace(char, '\%s' % char)
-                expected = expected % subs
-                match = re.match(expected, result)
-            except Exception as exc:
-                raise NoMatch(_('Values do not match:\n'
-                        '%(expected)s\n%(result)s') % locals())
+            # NOTE(vish): escape stuff for regex
+            for char in '[]<>?':
+                expected = expected.replace(char, '\\%s' % char)
+            expected = expected % subs
+            match = re.match(expected, result)
             if not match:
                 raise NoMatch(_('Values do not match:\n'
                         '%(expected)s\n%(result)s') % locals())
