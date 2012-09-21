@@ -76,9 +76,9 @@ class SchedulerManager(manager.Manager):
                 context, volume_id, snapshot_id, image_id)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                self._set_vm_state_and_notify('create_volume',
-                                             {'vm_state': vm_states.ERROR},
-                                             context, ex, {})
+                LOG.warning(_("Failed to schedule create_volume: %(ex)s") %
+                            locals())
+                db.volume_update(context, volume_id, {'status': 'error'})
 
     def live_migration(self, context, instance, dest,
                        block_migration, disk_over_commit):
