@@ -308,7 +308,14 @@ class VolumeTests(base.UserSmokeTestCase):
     def test_007_me_can_detach_volume(self):
         result = self.conn.detach_volume(volume_id=self.data['volume'].id)
         self.assertTrue(result)
-        time.sleep(5)
+        volume = self.data['volume']
+        for x in xrange(10):
+            volume.update()
+            if volume.status.startswith('available'):
+                break
+            time.sleep(1)
+        else:
+            self.fail('cannot detach volume. state %s' % volume.status)
 
     def test_008_me_can_delete_volume(self):
         result = self.conn.delete_volume(self.data['volume'].id)
