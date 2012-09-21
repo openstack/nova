@@ -178,6 +178,8 @@
     "network:deallocate_floating_ip": "",
     "network:associate_floating_ip": "",
     "network:disassociate_floating_ip": "",
+    "network:migrate_instance_start": "",
+    "network:migrate_instance_finish": "",
 
     "network:get_fixed_ip": "",
     "network:get_fixed_ip_by_address": "",

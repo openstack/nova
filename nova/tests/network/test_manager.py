@@ -1627,6 +1627,79 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance['id'])
 
+    def test_migrate_instance_start(self):
+        called = {'count': 0}
+
+        def fake_floating_ip_get_by_address(context, address):
+            return {'address': address,
+                    'fixed_ip_id': 0}
+
+        def fake_is_stale_floating_ip_address(context, floating_ip):
+            return floating_ip['address'] == '172.24.4.23'
+
+        def fake_fixed_ip_get(context, fixed_ip_id):
+            return {'instance_uuid': 'fake_uuid',
+                    'address': '10.0.0.2'}
+
+        def fake_remove_floating_ip(floating_addr, fixed_addr, interface):
+            called['count'] += 1
+
+        def fake_floating_ip_update(context, address, args):
+            pass
+
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
+                       fake_floating_ip_get_by_address)
+        self.stubs.Set(self.network, '_is_stale_floating_ip_address',
+                                 fake_is_stale_floating_ip_address)
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
+        self.stubs.Set(self.network.db, 'floating_ip_update',
+                       fake_floating_ip_update)
+        self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
+                       fake_remove_floating_ip)
+        self.mox.ReplayAll()
+        floating_ip_addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
+        self.network.migrate_instance_start(self.context, FAKEUUID,
+                                               floating_ip_addresses)
+
+        self.assertEqual(called['count'], 2)
+
+    def test_migrate_instance_finish(self):
+        called = {'count': 0}
+
+        def fake_floating_ip_get_by_address(context, address):
+            return {'address': address,
+                    'fixed_ip_id': 0}
+
+        def fake_is_stale_floating_ip_address(context, floating_ip):
+            return floating_ip['address'] == '172.24.4.23'
+
+        def fake_fixed_ip_get(context, fixed_ip_id):
+            return {'instance_uuid': 'fake_uuid',
+                    'address': '10.0.0.2'}
+
+        def fake_add_floating_ip(floating_addr, fixed_addr, interface):
+            called['count'] += 1
+
+        def fake_floating_ip_update(context, address, args):
+            pass
+
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
+                       fake_floating_ip_get_by_address)
+        self.stubs.Set(self.network, '_is_stale_floating_ip_address',
+                                 fake_is_stale_floating_ip_address)
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
+        self.stubs.Set(self.network.db, 'floating_ip_update',
+                       fake_floating_ip_update)
+        self.stubs.Set(self.network.l3driver, 'add_floating_ip',
+                       fake_add_floating_ip)
+        self.mox.ReplayAll()
+        floating_ip_addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
+        self.network.migrate_instance_finish(self.context, FAKEUUID,
+                                               floating_ip_addresses,
+                                               'fake_dest')
+
+        self.assertEqual(called['count'], 2)
+
     def test_floating_dns_create_conflict(self):
         zone = "example.org"
         address1 = "10.10.10.11"

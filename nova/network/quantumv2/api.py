@@ -494,6 +494,18 @@ class API(base.Base):
         fip = self._get_floating_ip_by_address(client, address)
         client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
+    def migrate_instance_start(self, context, instance, host):
+        """Start to migrate the network of an instance"""
+        # NOTE(wenjianhn): just pass to make migrate instance doesn't
+        # raise for now.
+        pass
+
+    def migrate_instance_finish(self, context, instance, dest):
+        """Finish migrating the network of an instance"""
+        # NOTE(wenjianhn): just pass to make migrate instance doesn't
+        # raise for now.
+        pass
+
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
         raise NotImplementedError()

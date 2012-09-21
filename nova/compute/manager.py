@@ -1471,6 +1471,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
+            if migration_ref['dest_compute'] != \
+                                   migration_ref['source_compute']:
+                self.network_api.migrate_instance_start(context, instance,
+                                                migration_ref['dest_compute'])
+
             network_info = self._get_instance_nw_info(context, instance)
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance['uuid'])
@@ -1531,6 +1536,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.finish_revert_migration(instance,
                                        self._legacy_nw_info(network_info),
                                        block_device_info)
+
+            if migration_ref['dest_compute'] != \
+                                    migration_ref['source_compute']:
+                self.network_api.migrate_instance_finish(context, instance,
+                                            migration_ref['source_compute'])
 
             # Just roll back the record. There's no need to resize down since
             # the 'old' VM already has the preferred attributes
@@ -1659,6 +1669,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self.volume_api.terminate_connection(context, volume,
                             connector)
 
+            if migration_ref['dest_compute'] != \
+                                    migration_ref['source_compute']:
+                self.network_api.migrate_instance_start(context, instance,
+                                                           self.host)
+
             self.db.migration_update(context,
                                      migration_id,
                                      {'status': 'post-migrating'})
@@ -1695,6 +1710,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
+                                                migration_ref['dest_compute'])
+
+        if migration_ref['dest_compute'] != \
+                                    migration_ref['source_compute']:
+            self.network_api.migrate_instance_finish(context, instance,
                                                 migration_ref['dest_compute'])
 
         network_info = self._get_instance_nw_info(context, instance)

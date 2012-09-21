@@ -1738,6 +1738,19 @@ def instance_get_floating_address(context, instance_id):
     return floating_ips[0]['address']
 
 
+@require_context
+def instance_floating_address_get_all(context, instance_uuid):
+    fixed_ips = fixed_ip_get_by_instance(context, instance_uuid)
+
+    floating_ips = []
+    for fixed_ip in fixed_ips:
+        _floating_ips = floating_ip_get_by_fixed_ip_id(context,
+                                                    fixed_ip['id'])
+        floating_ips += _floating_ips
+
+    return floating_ips
+
+
 @require_admin_context
 def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
     reboot_window = (timeutils.utcnow() -

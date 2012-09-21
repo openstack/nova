@@ -636,6 +636,68 @@ class FloatingIP(object):
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
 
+    def _is_stale_floating_ip_address(self, context, floating_ip):
+        try:
+            self._floating_ip_owned_by_project(context, floating_ip)
+        except exception.NotAuthorized:
+            return True
+        return False if floating_ip.get('fixed_ip_id') else True
+
+    @wrap_check_policy
+    def migrate_instance_start(self, context, instance_uuid,
+                               floating_addresses):
+        LOG.info(_("Starting migration network for instance"
+                   " %(instance_uuid)s"), locals())
+        for address in floating_addresses:
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             address)
+
+            if self._is_stale_floating_ip_address(context, floating_ip):
+                LOG.warn(_("Floating ip address |%(address)s| no longer "
+                           "belongs to instance %(instance_uuid)s. Will not"
+                           "migrate it "), locals())
+                continue
+
+            interface = FLAGS.public_interface or floating_ip['interface']
+            fixed_ip = self.db.fixed_ip_get(context,
+                                            floating_ip['fixed_ip_id'])
+            self.l3driver.remove_floating_ip(floating_ip['address'],
+                                             fixed_ip['address'],
+                                             interface)
+
+            # NOTE(wenjianhn): Make this address will not be bound to public
+            # interface when restarts nova-network on dest compute node
+            self.db.floating_ip_update(context,
+                                       floating_ip['address'],
+                                       {'host': None})
+
+    @wrap_check_policy
+    def migrate_instance_finish(self, context, instance_uuid,
+                                floating_addresses, host):
+        LOG.info(_("Finishing migration network for instance"
+                   " %(instance_uuid)s"), locals())
+
+        for address in floating_addresses:
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             address)
+
+            if self._is_stale_floating_ip_address(context, floating_ip):
+                LOG.warn(_("Floating ip address |%(address)s| no longer "
+                           "belongs to instance %(instance_uuid)s. Will not"
+                           "setup it."), locals())
+                continue
+
+            self.db.floating_ip_update(context,
+                                       floating_ip['address'],
+                                       {'host': host})
+
+            interface = FLAGS.public_interface or floating_ip['interface']
+            fixed_ip = self.db.fixed_ip_get(context,
+                                            floating_ip['fixed_ip_id'])
+            self.l3driver.add_floating_ip(floating_ip['address'],
+                                          fixed_ip['address'],
+                                          interface)
+
     def _prepare_domain_entry(self, context, domain):
         domainref = self.db.dnsdomain_get(context, domain)
         scope = domainref.scope
@@ -749,7 +811,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False

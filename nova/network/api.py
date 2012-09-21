@@ -320,4 +320,37 @@ class API(base.Base):
         args = {'instance_id': instance['id'],
                 'host': host,
                 'teardown': teardown}
+
         self.network_rpcapi.setup_networks_on_host(context, **args)
+
+    def _is_multi_host(self, context, instance):
+        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance['uuid'])
+
+        network = self.db.network_get(context, fixed_ips[0]['network_id'],
+                                      project_only=True)
+        return network['multi_host']
+
+    def _get_floating_ip_addresses(self, context, instance):
+        floating_ips = self.db.instance_floating_address_get_all(context,
+                                                            instance['uuid'])
+        return [floating_ip['address'] for floating_ip in floating_ips]
+
+    def migrate_instance_start(self, context, instance, host):
+        """Start to migrate the network of an instance"""
+        if self._is_multi_host(context, instance):
+            addresses = self._get_floating_ip_addresses(context, instance)
+            if addresses:
+                self.network_rpcapi.migrate_instance_start(context,
+                                                           instance['uuid'],
+                                                           addresses,
+                                                           host)
+
+    def migrate_instance_finish(self, context, instance, dest):
+        """Finish migrating the network of an instance"""
+        if self._is_multi_host(context, instance):
+            addresses = self._get_floating_ip_addresses(context, instance)
+            if addresses:
+                self.network_rpcapi.migrate_instance_finish(context,
+                                                            instance['uuid'],
+                                                            addresses,
+                                                            dest)
