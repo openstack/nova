@@ -175,6 +175,18 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.run_instance(self.context, request_spec,
                 None, None, None, None, {})
 
+    def test_create_volume_no_valid_host_puts_volume_in_error(self):
+        self._mox_schedule_method_helper('schedule_create_volume')
+        self.mox.StubOutWithMock(db, 'volume_update')
+
+        self.manager.driver.schedule_create_volume(self.context, '1', '2',
+                None).AndRaise(exception.NoValidHost(reason=''))
+        db.volume_update(self.context, '1', {'status': 'error'})
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NoValidHost, self.manager.create_volume,
+                          self.context, '1', '2')
+
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         fake_instance_uuid = 'fake-instance-id'
         inst = {"vm_state": "", "task_state": ""}
