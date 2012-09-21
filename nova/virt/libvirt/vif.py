@@ -212,15 +212,15 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
         br_name = self.get_br_name(iface_id)
         v1_name, v2_name = self.get_veth_pair_names(iface_id)
 
-        linux_net._create_veth_pair(v1_name, v2_name)
-
         if not linux_net._device_exists(br_name):
             utils.execute('brctl', 'addbr', br_name, run_as_root=True)
 
-        utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
-        utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-        self.create_ovs_vif_port(v2_name, iface_id, mapping['mac'],
-                                 instance['uuid'])
+        if not linux_net._device_exists(v2_name):
+            linux_net._create_veth_pair(v1_name, v2_name)
+            utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
+            utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
+            self.create_ovs_vif_port(v2_name, iface_id, mapping['mac'],
+                                     instance['uuid'])
 
         network['bridge'] = br_name
         return self._get_configurations(instance, network, mapping)
