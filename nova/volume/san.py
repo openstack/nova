@@ -579,9 +579,12 @@ class HpSanISCSIDriver(SanISCSIDriver):
         iscsi_portal = cluster_vip + ":3260," + cluster_interface
 
         model_update = {}
-        model_update['provider_location'] = ("%s %s" %
+
+        # NOTE(jdg): LH volumes always at lun 0 ?
+        model_update['provider_location'] = ("%s %s %s" %
                                              (iscsi_portal,
-                                              iscsi_iqn))
+                                              iscsi_iqn,
+                                              0))
 
         return model_update
 
