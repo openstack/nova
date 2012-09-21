@@ -2148,14 +2148,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         try:
-            # Checking volume node is working correctly when any volumes
-            # are attached to instances.
-            if self._get_instance_volume_bdms(context, instance['uuid']):
-                rpc.call(context,
-                          FLAGS.volume_topic,
-                          {'method': 'check_for_export',
-                           'args': {'instance_id': instance['id']}})
-
             if block_migration:
                 disk = self.driver.get_instance_disk_info(instance['name'])
             else:
