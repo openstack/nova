@@ -1148,7 +1148,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         e.args = e.args + ([dict(type=ImageType.to_string(image_type),
                                  uuid=vdi_uuid,
                                  file=filename)],)
-        raise e
+        raise
 
 
 def determine_disk_image_type(image_meta):

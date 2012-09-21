@@ -1183,11 +1183,11 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.error(_("Error on '%(path)s' while checking direct I/O: "
                             "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
-                raise e
+                raise
         except Exception, e:
             LOG.error(_("Error on '%(path)s' while checking direct I/O: "
                         "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
-            raise e
+            raise
         finally:
             try:
                 os.unlink(testfile)
@@ -2764,6 +2764,16 @@ class LibvirtDriver(driver.ComputeDriver):
         """Manage the local cache of images."""
         self.image_cache_manager.verify_base_images(context)
 
+    def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize):
+        """Used only for cleanup in case migrate_disk_and_power_off fails"""
+        try:
+            if os.path.exists(inst_base_resize):
+                utils.execute('rm', '-rf', inst_base)
+                utils.execute('mv', inst_base_resize, inst_base)
+                utils.execute('ssh', dest, 'rm', '-rf', inst_base)
+        except Exception:
+            pass
+
     @exception.wrap_exception()
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
@@ -2816,15 +2826,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 else:  # raw or qcow2 with no backing file
                     libvirt_utils.copy_image(from_path, img_path, host=dest)
-        except Exception, e:
-            try:
-                if os.path.exists(inst_base_resize):
-                    utils.execute('rm', '-rf', inst_base)
-                    utils.execute('mv', inst_base_resize, inst_base)
-                    utils.execute('ssh', dest, 'rm', '-rf', inst_base)
-            except Exception:
-                pass
-            raise e
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._cleanup_remote_migration(dest, inst_base,
+                                               inst_base_resize)
 
         return disk_info_text
 

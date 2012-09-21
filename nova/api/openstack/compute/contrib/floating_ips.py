@@ -175,7 +175,7 @@ class FloatingIPController(object):
                 nmfi.message = _("No more floating ips in pool %s.") % pool
             else:
                 nmfi.message = _("No more floating ips available.")
-            raise nmfi
+            raise
 
         return _translate_floating_ip_view(ip)
 
