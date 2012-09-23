@@ -33,7 +33,7 @@ Below you will find a helpful explanation of the different components.
                   [ Auth Manager ] ---
                           |           \- ( DB )
                           |
-                          |       [ scheduler ] - [ volume ]  - ( ATAoE/iSCSI )
+                          |       [ scheduler ] - [ volume ]  - ( iSCSI )
                           |                /
   [ Web Dashboard ] -> [ api ] -- < AMQP > ------ [ network ] - ( Flat/Vlan )
                           |                \
