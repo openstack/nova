@@ -887,7 +887,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_info_cache_delete(context, instance_uuid)
         self._notify_about_instance_usage(context, instance, "delete.start")
         self._shutdown_instance(context, instance)
-        self._cleanup_volumes(context, instance_uuid)
+        # NOTE(vish): We have already deleted the instance, so we have
+        #             to ignore problems cleaning up the volumes. It would
+        #             be nice to let the user know somehow that the volume
+        #             deletion failed, but it is not acceptable to have an
+        #             instance that can not be deleted. Perhaps this could
+        #             be reworked in the future to set an instance fault
+        #             the first time and to only ignore the failure if the
+        #             instance is already in ERROR.
+        try:
+            self._cleanup_volumes(context, instance_uuid)
+        except Exception as exc:
+            LOG.warn(_("Ignoring volume cleanup failure due to %s") % exc,
+                     instance_uuid=instance_uuid)
         # if a delete task succeed, always update vm state and task state
         # without expecting task state to be DELETING
         instance = self._instance_update(context,

@@ -1329,6 +1329,18 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def test_delete_instance_succedes_on_volume_fail(self):
+        instance = self._create_fake_instance()
+
+        def fake_cleanup_volumes(context, instance):
+            raise test.TestingException()
+
+        self.stubs.Set(self.compute, '_cleanup_volumes',
+                       fake_cleanup_volumes)
+
+        self.compute._delete_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
+
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure
         which is propagated up from the underlying driver.
