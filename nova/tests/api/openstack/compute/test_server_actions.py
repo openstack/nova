@@ -630,13 +630,13 @@ class ServerActionsControllerTest(test.TestCase):
 
         image_service = nova.image.glance.get_default_image_service()
 
-        bdm = [dict(snapshot_id=_fake_id('a'),
+        bdm = [dict(volume_id=_fake_id('a'),
                     volume_size=1,
-                    device_name='sda1',
+                    device_name='vda',
                     delete_on_termination=False)]
         props = dict(kernel_id=_fake_id('b'),
                      ramdisk_id=_fake_id('c'),
-                     root_device_name='/dev/sda1',
+                     root_device_name='/dev/vda',
                      block_device_mapping=bdm)
         original_image = dict(properties=props,
                               container_format='ami',
@@ -649,11 +649,10 @@ class ServerActionsControllerTest(test.TestCase):
             class BDM(object):
                 def __init__(self):
                     self.no_device = None
-                    self.values = dict(snapshot_id=_fake_id('a'),
-                                       volume_id=_fake_id('d'),
+                    self.values = dict(volume_id=_fake_id('a'),
                                        virtual_name=None,
                                        volume_size=1,
-                                       device_name='sda1',
+                                       device_name='vda',
                                        delete_on_termination=False)
 
                 def __getattr__(self, name):
@@ -669,32 +668,38 @@ class ServerActionsControllerTest(test.TestCase):
 
         instance = fakes.fake_instance_get(image_ref=original_image['id'],
                                            vm_state=vm_states.ACTIVE,
-                                           root_device_name='/dev/sda1')
+                                           root_device_name='/dev/vda')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', instance)
 
-        def fake_volume_get(context, volume_id):
-            return dict(id=volume_id,
-                        size=1,
-                        host='fake',
-                        display_description='fake')
+        volume = dict(id=_fake_id('a'),
+                      size=1,
+                      host='fake',
+                      display_description='fake')
+        snapshot = dict(id=_fake_id('d'))
+        self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
+        volume_api = self.controller.compute_api.volume_api
+        volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
+        volume_api.create_snapshot_force(mox.IgnoreArg(), volume,
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
-        self.stubs.Set(nova.db, 'volume_get', fake_volume_get)
+        self.mox.ReplayAll()
 
         req = fakes.HTTPRequest.blank(self.url)
         response = self.controller._action_create_image(req, FAKE_UUID, body)
 
         location = response.headers['Location']
         image_id = location.replace('http://localhost/v2/fake/images/', '')
-        snapshot = image_service.show(None, image_id)
+        image = image_service.show(None, image_id)
 
-        self.assertEquals(snapshot['name'], 'snapshot_of_volume_backed')
-        properties = snapshot['properties']
+        self.assertEquals(image['name'], 'snapshot_of_volume_backed')
+        properties = image['properties']
         self.assertEquals(properties['kernel_id'], _fake_id('b'))
         self.assertEquals(properties['ramdisk_id'], _fake_id('c'))
-        self.assertEquals(properties['root_device_name'], '/dev/sda1')
+        self.assertEquals(properties['root_device_name'], '/dev/vda')
         bdms = properties['block_device_mapping']
         self.assertEquals(len(bdms), 1)
-        self.assertEquals(bdms[0]['device_name'], 'sda1')
+        self.assertEquals(bdms[0]['device_name'], 'vda')
+        self.assertEquals(bdms[0]['snapshot_id'], snapshot['id'])
         for k in extra_properties.keys():
             self.assertEquals(properties[k], extra_properties[k])
 
