@@ -23,6 +23,7 @@ import tempfile
 from nova import context
 from nova import db
 from nova import exception
+from nova.network import ldapdns
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.openstack.common import importutils
@@ -30,6 +31,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 import nova.policy
 from nova import test
+from nova.tests import fake_ldap
 from nova.tests import fake_network
 from nova import utils
 
@@ -1827,17 +1829,27 @@ domain1 = "example.org"
 domain2 = "example.com"
 
 
+class FakeLdapDNS(ldapdns.LdapDNS):
+    """For testing purposes, a DNS driver backed with a fake ldap driver."""
+    def __init__(self):
+        self.lobj = fake_ldap.FakeLDAP()
+        attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
+                                 'domain', 'dcobject', 'top'],
+                 'associateddomain': ['root'],
+                 'dc': ['root']}
+        self.lobj.add_s("ou=hosts,dc=example,dc=org",
+                        ldapdns.create_modlist(attrs))
+
+
 class LdapDNSTestCase(test.TestCase):
     """Tests nova.network.ldapdns.LdapDNS"""
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 
         self.saved_ldap = sys.modules.get('ldap')
-        import nova.auth.fakeldap
-        sys.modules['ldap'] = nova.auth.fakeldap
+        sys.modules['ldap'] = fake_ldap
 
-        temp = importutils.import_object('nova.network.ldapdns.FakeLdapDNS')
-        self.driver = temp
+        self.driver = FakeLdapDNS()
         self.driver.create_domain(domain1)
         self.driver.create_domain(domain2)
 

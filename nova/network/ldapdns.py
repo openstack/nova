@@ -15,7 +15,6 @@
 import ldap
 import time
 
-from nova.auth import fakeldap
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -360,14 +359,3 @@ class LdapDNS(object):
     def delete_dns_file(self):
         LOG.warn("This shouldn't be getting called except during testing.")
         pass
-
-
-class FakeLdapDNS(LdapDNS):
-    """For testing purposes, a DNS driver backed with a fake ldap driver."""
-    def __init__(self):
-        self.lobj = fakeldap.FakeLDAP()
-        attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
-                                 'domain', 'dcobject', 'top'],
-                 'associateddomain': ['root'],
-                 'dc': ['root']}
-        self.lobj.add_s(flags.FLAGS.ldap_dns_base_dn, create_modlist(attrs))
