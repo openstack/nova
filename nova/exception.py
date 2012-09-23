@@ -213,6 +213,10 @@ class PolicyNotAuthorized(NotAuthorized):
     message = _("Policy doesn't allow %(action)s to be performed.")
 
 
+class ImageNotActive(NovaException):
+    message = _("Image %(image_id)s is not active.")
+
+
 class ImageNotAuthorized(NovaException):
     message = _("Not authorized for image %(image_id)s.")
 
