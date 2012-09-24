@@ -645,9 +645,13 @@ class VMOps(object):
                                        step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
+        vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                self._session, vm_ref)
+        vdi_uuid = vm_vdi_rec['uuid']
+
         old_gb = instance['root_gb']
         new_gb = instance_type['root_gb']
-        LOG.debug(_("Resizing down VDI %(cow_uuid)s from "
+        LOG.debug(_("Resizing down VDI %(vdi_uuid)s from "
                     "%(old_gb)dGB to %(new_gb)dGB"), locals(),
                   instance=instance)
 
@@ -660,8 +664,6 @@ class VMOps(object):
 
         # 3. Copy VDI, resize partition and filesystem, forget VDI,
         # truncate VHD
-        vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
-                self._session, vm_ref)
         new_ref, new_uuid = vm_utils.resize_disk(self._session,
                                                  instance,
                                                  vdi_ref,
