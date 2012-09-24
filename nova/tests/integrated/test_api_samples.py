@@ -964,3 +964,23 @@ class RescueJsonTest(ServersSampleBase):
 
 class RescueXmlTest(RescueJsonTest):
     ctype = 'xml'
+
+
+class VirtualInterfacesJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                     ".virtual_interfaces.Virtual_interfaces")
+
+    def test_vifs_list(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/%s/os-virtual-interfaces' % uuid)
+        self.assertEqual(response.status, 200)
+
+        subs = self._get_regexes()
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+
+        self._verify_response('vifs-list-resp', subs, response)
+
+
+class VirtualInterfacesXmlTest(VirtualInterfacesJsonTest):
+    ctype = 'xml'
