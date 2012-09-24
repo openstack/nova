@@ -1268,8 +1268,7 @@ class API(base.Base):
                     m[attr] = val
 
             volume_id = m.get('volume_id')
-            snapshot_id = m.get('snapshot_id')
-            if snapshot_id and volume_id:
+            if volume_id:
                 # create snapshot based on volume_id
                 volume = self.volume_api.get(context, volume_id)
                 # NOTE(yamahata): Should we wait for snapshot creation?
