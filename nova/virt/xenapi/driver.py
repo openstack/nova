@@ -298,35 +298,27 @@ class XenAPIDriver(driver.ComputeDriver):
         """Return data about VM diagnostics"""
         return self._vmops.get_diagnostics(instance)
 
-    def get_all_bw_usage(self, instances, start_time, stop_time=None):
-        """Return bandwidth usage info for each interface on each
+    def get_all_bw_counters(self, instances):
+        """Return bandwidth usage counters for each interface on each
            running VM"""
 
         # we only care about VMs that correspond to a nova-managed
         # instance:
         imap = dict([(inst.name, inst.uuid) for inst in instances])
-
-        bwusage = []
-        start_time = time.mktime(start_time.timetuple())
-        if stop_time:
-            stop_time = time.mktime(stop_time.timetuple())
+        bwcounters = []
 
         # get a dictionary of instance names.  values are dictionaries
-        # of mac addresses with values that are the bw stats:
+        # of mac addresses with values that are the bw counters:
         # e.g. {'instance-001' : { 12:34:56:78:90:12 : {'bw_in': 0, ....}}
-        iusages = self._vmops.get_all_bw_usage(start_time, stop_time)
-        for instance_name in iusages:
+        all_counters = self._vmops.get_all_bw_counters()
+        for instance_name, counters in all_counters.iteritems():
             if instance_name in imap:
                 # yes these are stats for a nova-managed vm
                 # correlate the stats with the nova instance uuid:
-                iusage = iusages[instance_name]
-
-                for macaddr, usage in iusage.iteritems():
-                    bwusage.append(dict(mac_address=macaddr,
-                                        uuid=imap[instance_name],
-                                        bw_in=usage['bw_in'],
-                                        bw_out=usage['bw_out']))
-        return bwusage
+                for vif_counter in counters.values():
+                    vif_counter['uuid'] = imap[instance_name]
+                    bwcounters.append(vif_counter)
+        return bwcounters
 
     def get_console_output(self, instance):
         """Return snapshot of console"""

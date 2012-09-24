@@ -1442,11 +1442,23 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.assertCalled(instance)
 
 
-class XenAPIBWUsageTestCase(stubs.XenAPITestBase):
+class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
+    FAKE_VMS = {'test1:ref': dict(name_label='test1',
+                                   other_config=dict(nova_uuid='hash'),
+                                   domid='12',
+                                   _vifmap={'0': "a:b:c:d...",
+                                           '1': "e:f:12:q..."}),
+                'test2:ref': dict(name_label='test2',
+                                   other_config=dict(nova_uuid='hash'),
+                                   domid='42',
+                                   _vifmap={'0': "a:3:c:d...",
+                                           '1': "e:f:42:q..."}),
+               }
+
     def setUp(self):
-        super(XenAPIBWUsageTestCase, self).setUp()
-        self.stubs.Set(vm_utils, 'compile_metrics',
-                       XenAPIBWUsageTestCase._fake_compile_metrics)
+        super(XenAPIBWCountersTestCase, self).setUp()
+        self.stubs.Set(vm_utils, 'list_vms',
+                       XenAPIBWCountersTestCase._fake_list_vms)
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
                    firewall_driver='nova.virt.xenapi.firewall.'
@@ -1454,21 +1466,75 @@ class XenAPIBWUsageTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(False)
 
-    @classmethod
-    def _fake_compile_metrics(cls, start_time, stop_time=None):
-        raise exception.CouldNotFetchMetrics()
+        def _fake_get_vif_device_map(vm_rec):
+            return vm_rec['_vifmap']
 
-    def test_get_all_bw_usage_in_failure_case(self):
-        """Test that get_all_bw_usage returns an empty list when metrics
-        compilation failed.  c.f. bug #910045.
+        self.stubs.Set(self.conn._vmops, "_get_vif_device_map",
+                                         _fake_get_vif_device_map)
+
+    @classmethod
+    def _fake_list_vms(cls, session):
+        return cls.FAKE_VMS.iteritems()
+
+    @classmethod
+    def _fake_fetch_bandwidth_mt(cls, session):
+        return {}
+
+    @classmethod
+    def _fake_fetch_bandwidth(cls, session):
+        return {'42':
+                    {'0': {'bw_in': 21024, 'bw_out': 22048},
+                     '1': {'bw_in': 231337, 'bw_out': 221212121}},
+                '12':
+                    {'0': {'bw_in': 1024, 'bw_out': 2048},
+                     '1': {'bw_in': 31337, 'bw_out': 21212121}},
+                }
+
+    def test_get_all_bw_counters(self):
+        class testinstance(object):
+            def __init__(self, name, uuid):
+                self.name = name
+                self.uuid = uuid
+
+        self.stubs.Set(vm_utils, 'fetch_bandwidth',
+                       XenAPIBWCountersTestCase._fake_fetch_bandwidth)
+        result = self.conn.get_all_bw_counters([testinstance(
+                                                   name='test1',
+                                                   uuid='1-2-3'),
+                                                testinstance(
+                                                   name='test2',
+                                                   uuid='4-5-6')])
+        self.assertEqual(len(result), 4)
+        self.assertIn(dict(uuid='1-2-3',
+                           mac_address="a:b:c:d...",
+                           bw_in=1024,
+                           bw_out=2048), result)
+        self.assertIn(dict(uuid='1-2-3',
+                           mac_address="e:f:12:q...",
+                           bw_in=31337,
+                           bw_out=21212121), result)
+
+        self.assertIn(dict(uuid='4-5-6',
+                           mac_address="a:3:c:d...",
+                           bw_in=21024,
+                           bw_out=22048), result)
+        self.assertIn(dict(uuid='4-5-6',
+                           mac_address="e:f:42:q...",
+                           bw_in=231337,
+                           bw_out=221212121), result)
+
+    def test_get_all_bw_counters_in_failure_case(self):
+        """Test that get_all_bw_conters returns an empty list when
+        no data returned from Xenserver.  c.f. bug #910045.
         """
         class testinstance(object):
             def __init__(self):
                 self.name = "instance-0001"
                 self.uuid = "1-2-3-4-5"
 
-        result = self.conn.get_all_bw_usage([testinstance()],
-                                            timeutils.utcnow())
+        self.stubs.Set(vm_utils, 'fetch_bandwidth',
+                       XenAPIBWCountersTestCase._fake_fetch_bandwidth_mt)
+        result = self.conn.get_all_bw_counters([testinstance()])
         self.assertEqual(result, [])
 
 

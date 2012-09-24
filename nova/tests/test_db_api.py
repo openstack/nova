@@ -478,18 +478,24 @@ class DbApiTestCase(test.TestCase):
                                'start_period': start_period,
                                'bw_in': 100,
                                'bw_out': 200,
+                               'last_ctr_in': 12345,
+                               'last_ctr_out': 67890,
                                'last_refreshed': now},
                               {'uuid': 'fake_uuid2',
                                'mac': 'fake_mac2',
                                'start_period': start_period,
                                'bw_in': 200,
                                'bw_out': 300,
+                               'last_ctr_in': 22345,
+                               'last_ctr_out': 77890,
                                'last_refreshed': now},
                               {'uuid': 'fake_uuid3',
                                'mac': 'fake_mac3',
                                'start_period': start_period,
                                'bw_in': 400,
                                'bw_out': 500,
+                               'last_ctr_in': 32345,
+                               'last_ctr_out': 87890,
                                'last_refreshed': uuid3_refreshed}]
 
         def _compare(bw_usage, expected):
@@ -504,18 +510,19 @@ class DbApiTestCase(test.TestCase):
         # Add 3 entries
         db.bw_usage_update(ctxt, 'fake_uuid1',
                 'fake_mac1', start_period,
-                100, 200)
+                100, 200, 12345, 67890)
         db.bw_usage_update(ctxt, 'fake_uuid2',
                 'fake_mac2', start_period,
-                100, 200)
+                100, 200, 42, 42)
         # Test explicit refreshed time
         db.bw_usage_update(ctxt, 'fake_uuid3',
                 'fake_mac3', start_period,
-                400, 500, last_refreshed=uuid3_refreshed)
+                400, 500, 32345, 87890,
+                last_refreshed=uuid3_refreshed)
         # Update 2nd entry
         db.bw_usage_update(ctxt, 'fake_uuid2',
                 'fake_mac2', start_period,
-                200, 300)
+                200, 300, 22345, 77890)
 
         bw_usages = db.bw_usage_get_by_uuids(ctxt,
                 ['fake_uuid1', 'fake_uuid2', 'fake_uuid3'], start_period)

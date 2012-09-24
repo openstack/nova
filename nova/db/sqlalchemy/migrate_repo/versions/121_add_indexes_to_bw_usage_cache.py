@@ -16,7 +16,7 @@
 #    under the License.
 
 from sqlalchemy import Index, MetaData, Table
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 
 def upgrade(migrate_engine):
@@ -41,4 +41,19 @@ def downgrade(migrate_engine):
     t = Table('bw_usage_cache', meta, autoload=True)
     i = Index('bw_usage_cache_uuid_start_period_idx',
               t.c.uuid, t.c.start_period)
-    i.drop(migrate_engine)
+    if migrate_engine.url.get_dialect().name.startswith('sqlite'):
+        try:
+            i.drop(migrate_engine)
+        except OperationalError:
+            # Sqlite is very broken for any kind of table modification.
+            # adding columns creates a new table, then copies the data,
+            # and looses the indexes.
+            # Thus later migrations that add columns will cause the
+            # earlier migration's downgrade unittests to fail on
+            # dropping indexes.
+            # Honestly testing migrations on sqlite is not really a very
+            # valid test (because of above facts), but that is for
+            # another day. (mdragon)
+            pass
+    else:
+        i.drop(migrate_engine)

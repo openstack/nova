@@ -221,8 +221,8 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def get_all_bw_usage(self, instances, start_time, stop_time=None):
-        """Return bandwidth usage info for each interface on each
+    def get_all_bw_counters(self, instances):
+        """Return bandwidth usage counters for each interface on each
            running VM"""
         raise NotImplementedError()
 

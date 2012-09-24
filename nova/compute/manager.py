@@ -2525,9 +2525,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               time.time() - start_time))
 
     @manager.periodic_task
-    def _poll_bandwidth_usage(self, context, start_time=None, stop_time=None):
-        if not start_time:
-            start_time = utils.last_completed_audit_period()[1]
+    def _poll_bandwidth_usage(self, context):
+        prev_time, start_time = utils.last_completed_audit_period()
 
         curr_time = time.time()
         if (curr_time - self._last_bw_usage_poll >
@@ -2537,8 +2536,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             instances = self.db.instance_get_all_by_host(context, self.host)
             try:
-                bw_usage = self.driver.get_all_bw_usage(instances, start_time,
-                        stop_time)
+                bw_counters = self.driver.get_all_bw_counters(instances)
             except NotImplementedError:
                 # NOTE(mdragon): Not all hypervisors have bandwidth polling
                 # implemented yet.  If they don't it doesn't break anything,
@@ -2546,12 +2544,52 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
             refreshed = timeutils.utcnow()
-            for usage in bw_usage:
+            for bw_ctr in bw_counters:
+                # Allow switching of greenthreads between queries.
+                greenthread.sleep(0)
+                bw_in = 0
+                bw_out = 0
+                last_ctr_in = None
+                last_ctr_out = None
+                usage = self.db.bw_usage_get(context,
+                                             bw_ctr['uuid'],
+                                             start_time,
+                                             bw_ctr['mac_address'])
+                if usage:
+                    bw_in = usage['bw_in']
+                    bw_out = usage['bw_out']
+                    last_ctr_in = usage['last_ctr_in']
+                    last_ctr_out = usage['last_ctr_out']
+                else:
+                    usage = self.db.bw_usage_get(context,
+                                             bw_ctr['uuid'],
+                                             prev_time,
+                                             bw_ctr['mac_address'])
+                    last_ctr_in = usage['last_ctr_in']
+                    last_ctr_out = usage['last_ctr_out']
+
+                if last_ctr_in is not None:
+                    if bw_ctr['bw_in'] < last_ctr_in:
+                        # counter rollover
+                        bw_in += bw_ctr['bw_in']
+                    else:
+                        bw_in += (bw_ctr['bw_in'] - last_ctr_in)
+
+                if last_ctr_out is not None:
+                    if bw_ctr['bw_out'] < last_ctr_out:
+                        # counter rollover
+                        bw_out += bw_ctr['bw_out']
+                    else:
+                        bw_out += (bw_ctr['bw_out'] - last_ctr_out)
+
                 self.db.bw_usage_update(context,
-                                        usage['uuid'],
-                                        usage['mac_address'],
+                                        bw_ctr['uuid'],
+                                        bw_ctr['mac_address'],
                                         start_time,
-                                        usage['bw_in'], usage['bw_out'],
+                                        bw_in,
+                                        bw_out,
+                                        bw_ctr['bw_in'],
+                                        bw_ctr['bw_out'],
                                         last_refreshed=refreshed)
 
     @manager.periodic_task

@@ -937,6 +937,8 @@ class BandwidthUsage(BASE, NovaBase):
     last_refreshed = Column(DateTime)
     bw_in = Column(BigInteger)
     bw_out = Column(BigInteger)
+    last_ctr_in = Column(BigInteger)
+    last_ctr_out = Column(BigInteger)
 
 
 class S3Image(BASE, NovaBase):
