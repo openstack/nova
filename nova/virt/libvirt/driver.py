@@ -495,7 +495,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
         self._cleanup(instance, network_info, block_device_info)
 
-    def _cleanup(self, instance, network_info, block_device_info):
+    def _undefine_domain(self, instance):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
         except exception.NotFound:
@@ -526,6 +526,8 @@ class LibvirtDriver(driver.ComputeDriver):
                             locals(), instance=instance)
                 raise
 
+    def _cleanup(self, instance, network_info, block_device_info):
+        self._undefine_domain(instance)
         self.unplug_vifs(instance, network_info)
         try:
             self.firewall_driver.unfilter_instance(instance,
@@ -615,6 +617,8 @@ class LibvirtDriver(driver.ComputeDriver):
             shutil.rmtree(target)
 
         if instance['host'] != FLAGS.host:
+            self._undefine_domain(instance)
+            self.unplug_vifs(instance, network_info)
             self.firewall_driver.unfilter_instance(instance, network_info)
 
     def volume_driver_method(self, method_name, connection_info,
