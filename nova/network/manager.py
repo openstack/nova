@@ -449,7 +449,7 @@ class FloatingIP(object):
             return
         use_quota = not floating_ip.get('auto_assigned')
 
-        # make sure project ownz this floating ip (allocated)
+        # make sure project owns this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
 
         # make sure floating ip is not associated
@@ -498,7 +498,7 @@ class FloatingIP(object):
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
 
-        # make sure project ownz this floating ip (allocated)
+        # make sure project owns this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
 
         # disassociate any already associated
@@ -578,7 +578,7 @@ class FloatingIP(object):
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
 
-        # make sure project ownz this floating ip (allocated)
+        # make sure project owns this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
 
         # make sure floating ip is associated
