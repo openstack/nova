@@ -17,6 +17,8 @@ Tests For HostManager
 """
 
 
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.openstack.common import timeutils
@@ -67,7 +69,7 @@ class HostManagerTestCase(test.TestCase):
         fake_host1 = host_manager.HostState('host1', topic)
         fake_host2 = host_manager.HostState('host2', topic)
         hosts = [fake_host1, fake_host2]
-        filter_properties = 'fake_properties'
+        filter_properties = {'fake_prop': 'fake_val'}
 
         self.mox.StubOutWithMock(self.host_manager,
                 '_choose_host_filters')
@@ -247,3 +249,55 @@ class HostStateTestCase(test.TestCase):
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
         self.assertTrue(result)
+
+    def test_stat_consumption_from_compute_node(self):
+        stats = [
+            dict(key='num_instances', value='5'),
+            dict(key='num_proj_12345', value='3'),
+            dict(key='num_proj_23456', value='1'),
+            dict(key='num_vm_%s' % vm_states.BUILDING, value='2'),
+            dict(key='num_vm_%s' % vm_states.SUSPENDED, value='1'),
+            dict(key='num_task_%s' % task_states.RESIZE_MIGRATING, value='1'),
+            dict(key='num_task_%s' % task_states.MIGRATING, value='2'),
+            dict(key='num_os_type_linux', value='4'),
+            dict(key='num_os_type_windoze', value='1'),
+            dict(key='io_workload', value='42'),
+        ]
+        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0)
+
+        host = host_manager.HostState("fakehost", "faketopic")
+        host.update_from_compute_node(compute)
+
+        self.assertEqual(5, host.num_instances)
+        self.assertEqual(3, host.num_instances_by_project['12345'])
+        self.assertEqual(1, host.num_instances_by_project['23456'])
+        self.assertEqual(2, host.vm_states[vm_states.BUILDING])
+        self.assertEqual(1, host.vm_states[vm_states.SUSPENDED])
+        self.assertEqual(1, host.task_states[task_states.RESIZE_MIGRATING])
+        self.assertEqual(2, host.task_states[task_states.MIGRATING])
+        self.assertEqual(4, host.num_instances_by_os_type['linux'])
+        self.assertEqual(1, host.num_instances_by_os_type['windoze'])
+        self.assertEqual(42, host.num_io_ops)
+
+    def test_stat_consumption_from_instance(self):
+        host = host_manager.HostState("fakehost", "faketopic")
+
+        instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
+                        project_id='12345', vm_state=vm_states.BUILDING,
+                        task_state=task_states.SCHEDULING, os_type='Linux')
+        host.consume_from_instance(instance)
+
+        instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
+                        project_id='12345', vm_state=vm_states.PAUSED,
+                        task_state=None, os_type='Linux')
+        host.consume_from_instance(instance)
+
+        self.assertEqual(2, host.num_instances)
+        self.assertEqual(2, host.num_instances_by_project['12345'])
+        self.assertEqual(1, host.vm_states[vm_states.BUILDING])
+        self.assertEqual(1, host.vm_states[vm_states.PAUSED])
+        self.assertEqual(1, host.task_states[task_states.SCHEDULING])
+        self.assertEqual(1, host.task_states[None])
+        self.assertEqual(2, host.num_instances_by_os_type['Linux'])
+        self.assertEqual(1, host.num_io_ops)
