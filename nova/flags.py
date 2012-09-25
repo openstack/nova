@@ -295,7 +295,7 @@ global_opts = [
                default='nova.scheduler.manager.SchedulerManager',
                help='full class name for the Manager for scheduler'),
     cfg.StrOpt('host',
-               default=socket.gethostname(),
+               default=socket.getfqdn(),
                help='Name of this node.  This can be an opaque identifier.  '
                     'It is not necessarily a hostname, FQDN, or IP address. '
                     'However, the node name must be valid within '

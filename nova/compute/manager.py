@@ -91,7 +91,7 @@ compute_opts = [
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
                    'vmwareapi.VMWareESXDriver'),
     cfg.StrOpt('console_host',
-               default=socket.gethostname(),
+               default=socket.getfqdn(),
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
     cfg.IntOpt('live_migration_retry_count',

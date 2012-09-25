@@ -37,7 +37,7 @@ console_manager_opts = [
                 default=False,
                 help='Stub calls to compute worker for tests'),
     cfg.StrOpt('console_public_hostname',
-               default=socket.gethostname(),
+               default=socket.getfqdn(),
                help='Publicly visible name for this console host'),
     ]
 

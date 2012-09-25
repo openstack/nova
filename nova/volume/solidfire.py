@@ -167,7 +167,7 @@ class SolidFire(SanISCSIDriver):
         just return it.  If not, then create it.
         """
 
-        sf_account_name = socket.gethostname() + '-' + nova_project_id
+        sf_account_name = socket.getfqdn() + '-' + nova_project_id
         sfaccount = self._get_sfaccount_by_name(sf_account_name)
         if sfaccount is None:
             LOG.debug(_('solidfire account: %s does not exist, create it...'),
@@ -194,7 +194,7 @@ class SolidFire(SanISCSIDriver):
     def _do_export(self, volume):
         """Gets the associated account, retrieves CHAP info and updates."""
 
-        sfaccount_name = '%s-%s' % (socket.gethostname(), volume['project_id'])
+        sfaccount_name = '%s-%s' % (socket.getfqdn(), volume['project_id'])
         sfaccount = self._get_sfaccount_by_name(sfaccount_name)
 
         model_update = {}
@@ -304,7 +304,7 @@ class SolidFire(SanISCSIDriver):
         """
 
         LOG.debug(_("Enter SolidFire delete_volume..."))
-        sf_account_name = socket.gethostname() + '-' + volume['project_id']
+        sf_account_name = socket.getfqdn() + '-' + volume['project_id']
         sfaccount = self._get_sfaccount_by_name(sf_account_name)
         if sfaccount is None:
             raise exception.SfAccountNotFound(account_name=sf_account_name)
@@ -352,7 +352,7 @@ class SolidFire(SanISCSIDriver):
     def _do_create_snapshot(self, snapshot, snapshot_name):
         """Creates a snapshot."""
         LOG.debug(_("Enter SolidFire create_snapshot..."))
-        sf_account_name = socket.gethostname() + '-' + snapshot['project_id']
+        sf_account_name = socket.getfqdn() + '-' + snapshot['project_id']
         sfaccount = self._get_sfaccount_by_name(sf_account_name)
         if sfaccount is None:
             raise exception.SfAccountNotFound(account_name=sf_account_name)

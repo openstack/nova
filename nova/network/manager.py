@@ -143,7 +143,7 @@ network_opts = [
                 default=False,
                 help='Autoassigning floating ip to VM'),
     cfg.StrOpt('network_host',
-               default=socket.gethostname(),
+               default=socket.getfqdn(),
                help='Network host to use for ip allocation in flat modes'),
     cfg.BoolOpt('fake_call',
                 default=False,
