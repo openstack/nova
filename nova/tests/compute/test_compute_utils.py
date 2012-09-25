@@ -46,8 +46,16 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.instance = {
                 'uuid': 'fake',
                 'root_device_name': '/dev/vda',
-                'default_ephemeral_device': '/dev/vdb'
+                'default_ephemeral_device': '/dev/vdb',
+                'instance_type_id': 'fake',
         }
+        self.data = []
+
+        def fake_get(instance_type_id, ctxt=None):
+            return self.instance_type
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       lambda context, instance: self.data)
 
     def _validate_device(self, device=None):
         return compute_utils.get_device_name_for_instance(self.context,
@@ -64,68 +72,51 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         }
 
     def test_wrap(self):
-        data = []
+        self.data = []
         for letter in string.ascii_lowercase[2:]:
-            data.append(self._fake_bdm('/dev/vd' + letter))
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
+            self.data.append(self._fake_bdm('/dev/vd' + letter))
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdaa')
 
     def test_wrap_plus_one(self):
-        data = []
+        self.data = []
         for letter in string.ascii_lowercase[2:]:
-            data.append(self._fake_bdm('/dev/vd' + letter))
-        data.append(self._fake_bdm('/dev/vdaa'))
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
+            self.data.append(self._fake_bdm('/dev/vd' + letter))
+        self.data.append(self._fake_bdm('/dev/vdaa'))
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdab')
 
     def test_later(self):
-        data = [
+        self.data = [
             self._fake_bdm('/dev/vdc'),
             self._fake_bdm('/dev/vdd'),
             self._fake_bdm('/dev/vde'),
         ]
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdf')
 
     def test_gap(self):
-        data = [
+        self.data = [
             self._fake_bdm('/dev/vdc'),
             self._fake_bdm('/dev/vde'),
         ]
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdd')
 
     def test_no_bdms(self):
-        data = []
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
+        self.data = []
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdc')
 
     def test_lxc_names_work(self):
-        self.instance = {
-                'uuid': 'fake',
-                'root_device_name': '/dev/a',
-                'default_ephemeral_device': '/dev/b'
-        }
-        data = []
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
+        self.instance['root_device_name'] = '/dev/a'
+        self.instance['ephemeral_device_name'] = '/dev/b'
+        self.data = []
         device = self._validate_device()
         self.assertEqual(device, '/dev/c')
 
     def test_name_conversion(self):
-        data = []
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: data)
+        self.data = []
         device = self._validate_device('/dev/c')
         self.assertEqual(device, '/dev/vdc')
         device = self._validate_device('/dev/sdc')
@@ -134,23 +125,64 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.assertEqual(device, '/dev/vdc')
 
     def test_invalid_bdms(self):
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: [])
         self.instance['root_device_name'] = "baddata"
         self.assertRaises(exception.InvalidDevicePath,
                           self._validate_device)
 
     def test_invalid_device_prefix(self):
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: [])
         self.assertRaises(exception.InvalidDevicePath,
                           self._validate_device, '/baddata/vdc')
 
     def test_device_in_use(self):
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: [])
         self.assertRaises(exception.DevicePathInUse,
                           self._validate_device, '/dev/vdb')
+
+    def test_swap(self):
+        self.instance['default_swap_device'] = "/dev/vdc"
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdd')
+
+    def test_swap_no_ephemeral(self):
+        del self.instance['default_ephemeral_device']
+        self.instance['default_swap_device'] = "/dev/vdb"
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/vdc')
+
+    def test_ephemeral_xenapi(self):
+        self.flags(compute_driver='xenapi.XenAPIDriver')
+        del self.instance['default_ephemeral_device']
+        self.instance_type = {
+            'ephemeral_gb': 10,
+            'swap': 0,
+        }
+        self.stubs.Set(instance_types, 'get_instance_type',
+                       lambda instance_type_id, ctxt=None: self.instance_type)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/xvdc')
+
+    def test_swap_xenapi(self):
+        self.flags(compute_driver='xenapi.XenAPIDriver')
+        del self.instance['default_ephemeral_device']
+        self.instance_type = {
+            'ephemeral_gb': 0,
+            'swap': 10,
+        }
+        self.stubs.Set(instance_types, 'get_instance_type',
+                       lambda instance_type_id, ctxt=None: self.instance_type)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/xvdb')
+
+    def test_swap_and_ephemeral_xenapi(self):
+        self.flags(compute_driver='xenapi.XenAPIDriver')
+        del self.instance['default_ephemeral_device']
+        self.instance_type = {
+            'ephemeral_gb': 10,
+            'swap': 10,
+        }
+        self.stubs.Set(instance_types, 'get_instance_type',
+                       lambda instance_type_id, ctxt=None: self.instance_type)
+        device = self._validate_device()
+        self.assertEqual(device, '/dev/xvdd')
 
 
 class UsageInfoTestCase(test.TestCase):
