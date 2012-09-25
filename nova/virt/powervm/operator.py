@@ -88,7 +88,7 @@ class PowerVMOperator(object):
         lpar_instance = self._operator.get_lpar(instance_name)
 
         if lpar_instance is None:
-            LOG.exception(_("LPAR instance '%s' not found") % instance_name)
+            LOG.error(_("LPAR instance '%s' not found") % instance_name)
             raise exception.PowerVMLPARInstanceNotFound(
                                                 instance_name=instance_name)
         return lpar_instance
@@ -176,7 +176,7 @@ class PowerVMOperator(object):
             # Memory
             mem = instance['memory_mb']
             if mem > host_stats['host_memory_free']:
-                LOG.exception(_('Not enough free memory in the host'))
+                LOG.error(_('Not enough free memory in the host'))
                 raise exception.PowerVMInsufficientFreeMemory(
                                                instance_name=instance['name'])
             mem_min = min(mem, constants.POWERVM_MIN_MEM)
@@ -186,7 +186,7 @@ class PowerVMOperator(object):
             cpus = instance['vcpus']
             avail_cpus = host_stats['vcpus'] - host_stats['vcpus_used']
             if cpus > avail_cpus:
-                LOG.exception(_('Insufficient available CPU on PowerVM'))
+                LOG.error(_('Insufficient available CPU on PowerVM'))
                 raise exception.PowerVMInsufficientCPU(
                                                instance_name=instance['name'])
             cpus_min = min(cpus, constants.POWERVM_MIN_CPUS)
@@ -480,8 +480,8 @@ class BaseOperator(object):
                 break
 
         if not found_vg:
-            LOG.exception(_('Could not create logical volume. '
-                            'No space left on any volume group.'))
+            LOG.error(_('Could not create logical volume. '
+                        'No space left on any volume group.'))
             raise exception.PowerVMNoSpaceLeftOnVolumeGroup()
 
         cmd = self.command.mklv('%s %sB' % (found_vg, size / 512))
@@ -539,10 +539,10 @@ class BaseOperator(object):
                    "/usr/bin/awk '{print $1}'" % comp_path)
             output = self.run_command_as_root(cmd)
             if not len(output):
-                LOG.exception("Unable to get checksum")
+                LOG.error(_("Unable to get checksum"))
                 raise exception.PowerVMFileTransferFailed()
             if source_cksum != output[0]:
-                LOG.exception("Image checksums do not match")
+                LOG.error(_("Image checksums do not match"))
                 raise exception.PowerVMFileTransferFailed()
 
             # Unzip the image
@@ -567,7 +567,7 @@ class BaseOperator(object):
         if len(output):
             size = int(output[0])
         else:
-            LOG.exception("Uncompressed image file not found")
+            LOG.error(_("Uncompressed image file not found"))
             raise exception.PowerVMFileTransferFailed()
         if (size % 512 != 0):
             size = (int(size / 512) + 1) * 512
