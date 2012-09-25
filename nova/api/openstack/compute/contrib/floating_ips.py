@@ -140,7 +140,8 @@ class FloatingIPController(object):
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
         except exception.NotFound:
-            raise webob.exc.HTTPNotFound()
+            msg = _("Floating ip not found for id %s") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         self._set_metadata(context, floating_ip)
 
@@ -184,7 +185,11 @@ class FloatingIPController(object):
         authorize(context)
 
         # get the floating ip object
-        floating_ip = self.network_api.get_floating_ip(context, id)
+        try:
+            floating_ip = self.network_api.get_floating_ip(context, id)
+        except exception.NotFound:
+            msg = _("Floating ip not found for id %s") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
         address = floating_ip['address']
 
         # get the associated instance object (if any)
