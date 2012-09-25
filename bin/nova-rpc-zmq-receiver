@@ -41,11 +41,11 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(rpc.rpc_opts)
+FLAGS.register_opts(impl_zmq.zmq_opts)
 
 
 def main():
     flags.parse_args(sys.argv)
-    impl_zmq.register_opts(FLAGS)
     logging.setup("nova")
     utils.monkey_patch()
 
