@@ -808,16 +808,11 @@ class LibvirtDriver(driver.ComputeDriver):
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
 
-        source_format = base.get('disk_format') or 'raw'
-        if source_format == 'ami':
-            # NOTE(vish): assume amis are raw
-            source_format = 'raw'
+        disk_path = libvirt_utils.find_disk(virt_dom)
+        source_format = libvirt_utils.get_disk_type(disk_path)
+
         image_format = FLAGS.snapshot_image_format or source_format
-        use_qcow2 = ((FLAGS.libvirt_images_type == 'default' and
-                FLAGS.use_cow_images) or
-                FLAGS.libvirt_images_type == 'qcow2')
-        if use_qcow2:
-            source_format = 'qcow2'
+
         # NOTE(vish): glance forces ami disk format to be ami
         if base.get('disk_format') == 'ami':
             metadata['disk_format'] = 'ami'
@@ -825,9 +820,6 @@ class LibvirtDriver(driver.ComputeDriver):
             metadata['disk_format'] = image_format
 
         metadata['container_format'] = base.get('container_format', 'bare')
-
-        # Find the disk
-        disk_path = libvirt_utils.find_disk(virt_dom)
 
         snapshot_name = uuid.uuid4().hex
 

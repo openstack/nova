@@ -1162,6 +1162,7 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
+        self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
 
         self.mox.ReplayAll()
 
