@@ -1999,9 +1999,6 @@
 # storwize_svc_volpool_name=volpool
 #### (StrOpt) Storage system storage pool for volumes
 
-# storwize_svc_vol_vtype=striped
-#### (StrOpt) Storage system volume type for volumes
-
 # storwize_svc_vol_rsize=2%
 #### (StrOpt) Storage system space-efficiency parameter for volumes
 
@@ -2017,6 +2014,9 @@
 
 # storwize_svc_vol_compression=false
 #### (BoolOpt) Storage system compression option for volumes
+
+# storwize_svc_vol_easytier=true
+#### (BoolOpt) Enable Easy Tier for volumes
 
 # storwize_svc_flashcopy_timeout=120
 #### (StrOpt) Maximum number of seconds to wait for FlashCopy to be
