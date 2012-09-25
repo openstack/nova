@@ -134,8 +134,16 @@ class ImageType(object):
         return dict(zip(ImageType._ids, ImageType._strs)).get(image_type)
 
     @classmethod
-    def from_string(cls, image_type_str):
-        return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
+    def get_role(cls, image_type_id):
+        " Get the role played by the image, based on its type "
+        return {
+            cls.KERNEL: 'kernel',
+            cls.RAMDISK: 'ramdisk',
+            cls.DISK: 'root',
+            cls.DISK_RAW: 'root',
+            cls.DISK_VHD: 'root',
+            cls.DISK_ISO: 'iso'
+        }.get(image_type_id)
 
 
 def create_vm(session, instance, name_label, kernel, ramdisk,
@@ -864,8 +872,7 @@ def _create_cached_image(context, session, instance, name_label,
     session.call_xenapi('VDI.remove_from_other_config',
                         new_vdi_ref, 'image-id')
 
-    vdi_type = ("root" if image_type == ImageType.DISK_VHD
-                else ImageType.to_string(image_type))
+    vdi_type = ImageType.get_role(image_type)
     vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
     vdis[vdi_type] = dict(uuid=vdi_uuid, file=None)
 
@@ -1136,11 +1143,11 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
             destroy_vdi(session, vdi_ref)
             LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref,
                       instance=instance)
-            vdi_type = ImageType.to_string(image_type)
-            return {vdi_type: dict(uuid=None, file=filename)}
+            vdi_role = ImageType.get_role(image_type)
+            return {vdi_role: dict(uuid=None, file=filename)}
         else:
-            vdi_type = ImageType.to_string(image_type)
-            return {vdi_type: dict(uuid=vdi_uuid, file=None)}
+            vdi_role = ImageType.get_role(image_type)
+            return {vdi_role: dict(uuid=vdi_uuid, file=None)}
     except (session.XenAPI.Failure, IOError, OSError) as e:
         # We look for XenAPI and OS failures.
         LOG.exception(_("Failed to fetch glance image"),
