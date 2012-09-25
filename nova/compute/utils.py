@@ -21,6 +21,7 @@ import string
 import traceback
 
 from nova import block_device
+from nova.compute import instance_types
 from nova import db
 from nova import exception
 from nova import flags
@@ -79,6 +80,10 @@ def get_device_name_for_instance(context, instance, device):
         prefix = block_device.match_device(mappings['root'])[0]
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
+    # NOTE(vish): remove this when xenapi is setting default_root_device
+    if (FLAGS.connection_type == 'xenapi' or
+        FLAGS.compute_driver.endswith('xenapi.XenAPIDriver')):
+        prefix = '/dev/xvd'
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
     letters_list = []
@@ -89,6 +94,18 @@ def get_device_name_for_instance(context, instance, device):
         letter = re.sub("\d+", "", letter)
         letters_list.append(letter)
     used_letters = set(letters_list)
+
+    # NOTE(vish): remove this when xenapi is properly setting
+    #             default_ephemeral_device and default_swap_device
+    if (FLAGS.connection_type == 'xenapi' or
+        FLAGS.compute_driver.endswith('xenapi.XenAPIDriver')):
+        instance_type_id = instance['instance_type_id']
+        instance_type = instance_types.get_instance_type(instance_type_id)
+        if instance_type['ephemeral_gb']:
+            used_letters.update('b')
+        if instance_type['swap']:
+            used_letters.update('c')
+
     if not req_letters:
         req_letters = _get_unused_letters(used_letters)
     if req_letters in used_letters:
