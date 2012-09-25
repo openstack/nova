@@ -993,4 +993,4 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    LOG.exception('Downgrade from Essex is unsupported.')
+    raise Exception('Downgrade from Essex is unsupported.')
