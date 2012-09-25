@@ -98,6 +98,10 @@ def file_open(path, mode=None):
     return File(path, mode)
 
 
+def find_disk(virt_dom):
+    return "some/path"
+
+
 def load_file(path):
     if os.path.exists(path):
         with open(path, 'r') as fp:

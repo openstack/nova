@@ -24,6 +24,7 @@ import hashlib
 import os
 import re
 
+from lxml import etree
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -392,6 +393,22 @@ def file_delete(path):
           state at all (for unit tests)
     """
     return os.unlink(path)
+
+
+def find_disk(virt_dom):
+    """Find root device path for instance
+
+    May be file or device"""
+    xml_desc = virt_dom.XMLDesc(0)
+    domain = etree.fromstring(xml_desc)
+    source = domain.find('devices/disk/source')
+    disk_path = source.get('file') or source.get('dev')
+
+    if not disk_path:
+        raise RuntimeError(_("Can't retrieve root device path "
+                             "from instance libvirt configuration"))
+
+    return disk_path
 
 
 def get_fs_info(path):

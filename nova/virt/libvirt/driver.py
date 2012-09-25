@@ -823,10 +823,7 @@ class LibvirtDriver(driver.ComputeDriver):
         metadata['container_format'] = base.get('container_format', 'bare')
 
         # Find the disk
-        xml_desc = virt_dom.XMLDesc(0)
-        domain = etree.fromstring(xml_desc)
-        source = domain.find('devices/disk/source')
-        disk_path = source.get('file')
+        disk_path = libvirt_utils.find_disk(virt_dom)
 
         snapshot_name = uuid.uuid4().hex
 
