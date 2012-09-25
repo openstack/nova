@@ -396,7 +396,7 @@ class ISCSIDriver(VolumeDriver):
             except exception.NotFound:
                 LOG.info(_("Skipping remove_export. No iscsi_target "
                            "provisioned for volume: %s"), volume['id'])
-            return
+                return
         else:
             iscsi_target = 0
 
