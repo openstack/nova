@@ -95,8 +95,7 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='tgtadm')
         self.flags(volumes_dir=self.persist_tempdir)
         self.script_template = "\n".join([
-        'tgt-admin --conf %s/blaa --update iqn.2011-09.org.foo.bar:blaa'
-            % self.persist_tempdir,
+        'tgt-admin --update iqn.2011-09.org.foo.bar:blaa',
         'tgt-admin --delete iqn.2010-10.org.openstack:volume-blaa'])
 
     def tearDown(self):
