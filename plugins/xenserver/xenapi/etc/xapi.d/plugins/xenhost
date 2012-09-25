@@ -398,7 +398,9 @@ def cleanup(dct):
         for oc_fld in oc.split("; "):
             ock, ocv = strip_kv(oc_fld)
             ocd[ock] = ocv
-#    out["host_capabilities"] = dct.get("capabilities", "").split("; ")
+
+    capabilities = dct.get("capabilities", "")
+    out["host_capabilities"] = capabilities.replace(";", "").split()
 #    out["host_allowed-operations"] = dct.get(
 #            "allowed-operations", "").split("; ")
 #    lsrv = dct.get("license-server", "")
