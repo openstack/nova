@@ -1279,7 +1279,7 @@ class NetAppCmodeISCSIDriver(driver.ISCSIDriver):
         if not name in self.lun_table:
             LOG.warn(_("Could not find handle for LUN named %s") % name)
             return None
-        return self.lun_table[name]
+        return self.lun_table[name].handle
 
     def _create_dict_from_meta(self, metadata):
         """Creates dictionary from metadata array."""
