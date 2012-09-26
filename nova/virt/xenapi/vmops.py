@@ -738,18 +738,18 @@ class VMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
+        # NOTE(sirp): in case we're resizing to the same host (for dev
+        # purposes), apply a suffix to name-label so the two VM records
+        # extant until a confirm_resize don't collide.
+        name_label = self._get_orig_vm_name_label(instance)
+        vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
+
         if resize_down:
             self._migrate_disk_resizing_down(
                     context, instance, dest, instance_type, vm_ref, sr_path)
         else:
             self._migrate_disk_resizing_up(
                     context, instance, dest, vm_ref, sr_path)
-
-        # NOTE(sirp): in case we're resizing to the same host (for dev
-        # purposes), apply a suffix to name-label so the two VM records
-        # extant until a confirm_resize don't collide.
-        name_label = self._get_orig_vm_name_label(instance)
-        vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
         # NOTE(sirp): disk_info isn't used by the xenapi driver, instead it
         # uses a staging-area (/images/instance<uuid>) and sequence-numbered
