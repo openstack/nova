@@ -273,6 +273,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEqual(vol['attach_status'], "attached")
         self.assertEqual(vol['mountpoint'], mountpoint)
         self.assertEqual(vol['instance_uuid'], instance_uuid)
+        self.assertNotEqual(vol['attach_time'], None)
 
         self.assertRaises(exception.VolumeAttached,
                           self.volume.delete_volume,
@@ -286,6 +287,7 @@ class VolumeTestCase(test.TestCase):
                                        volume_id)
         vol = db.volume_get(self.context, volume_id)
         self.assertEqual(vol['status'], "available")
+        self.assertEqual(vol['attach_time'], None)
 
         self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.VolumeNotFound,
