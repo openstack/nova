@@ -1439,9 +1439,6 @@ class API(base.Base):
         context = context.elevated()
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'finished')
-        if not migration_ref:
-            raise exception.MigrationNotFoundByStatus(
-                    instance_id=instance['uuid'], status='finished')
 
         # reverse quota reservation for increased resource usage
         deltas = self._reverse_upsize_quota_delta(context, migration_ref)
@@ -1466,9 +1463,6 @@ class API(base.Base):
         context = context.elevated()
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'finished')
-        if not migration_ref:
-            raise exception.MigrationNotFoundByStatus(
-                    instance_id=instance['uuid'], status='finished')
 
         # reserve quota only for any decrease in resource usage
         deltas = self._downsize_quota_delta(context, migration_ref)
