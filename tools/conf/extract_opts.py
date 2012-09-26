@@ -118,7 +118,7 @@ def _get_my_ip():
 
 
 MY_IP = _get_my_ip()
-HOST = socket.gethostname()
+HOST = socket.getfqdn()
 
 
 def _sanitize_default(s):

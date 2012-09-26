@@ -64,7 +64,7 @@ zmq_opts = [
     cfg.StrOpt('rpc_zmq_ipc_dir', default='/var/run/openstack',
                help='Directory for holding IPC sockets'),
 
-    cfg.StrOpt('rpc_zmq_host', default=socket.gethostname(),
+    cfg.StrOpt('rpc_zmq_host', default=socket.getfqdn(),
                help='Name of this node. Must be a valid hostname, FQDN, or '
                     'IP address. Must match "host" option, if running Nova.')
 ]
