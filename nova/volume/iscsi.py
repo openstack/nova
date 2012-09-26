@@ -75,7 +75,7 @@ class TargetAdmin(object):
         """Delete a target."""
         raise NotImplementedError()
 
-    def show_target(self, tid, **kwargs):
+    def show_target(self, tid, iqn=None, **kwargs):
         """Query the given target ID."""
         raise NotImplementedError()
 
@@ -170,9 +170,7 @@ class TgtAdm(TargetAdmin):
 
         os.unlink(volume_path)
 
-    def show_target(self, tid, **kwargs):
-        iqn = kwargs.get('iqn', None)
-
+    def show_target(self, tid, iqn=None, **kwargs):
         if iqn is None:
             raise exception.InvalidParameterValue(
                 err=_('valid iqn needed for show_target'))
@@ -209,7 +207,7 @@ class IetAdm(TargetAdmin):
                   '--tid=%s' % tid,
                   **kwargs)
 
-    def show_target(self, tid, **kwargs):
+    def show_target(self, tid, iqn=None, **kwargs):
         self._run('--op', 'show',
                   '--tid=%s' % tid,
                   **kwargs)
