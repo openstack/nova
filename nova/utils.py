@@ -21,6 +21,7 @@
 
 import contextlib
 import datetime
+import errno
 import functools
 import hashlib
 import inspect
@@ -1000,11 +1001,12 @@ def cleanup_file_locks():
                   {'filename': filename, 'pid': pid})
         try:
             os.kill(int(pid), 0)
-        except OSError, e:
-            # PID wasn't found
-            delete_if_exists(os.path.join(FLAGS.lock_path, filename))
-            LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s') %
-                      {'filename': filename, 'pid': pid})
+        except OSError as e:
+            if e.errno == errno.ESRCH:
+                # PID wasn't found
+                delete_if_exists(os.path.join(FLAGS.lock_path, filename))
+                LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s') %
+                          {'filename': filename, 'pid': pid})
 
     # cleanup lock files
     for filename in files:
@@ -1013,8 +1015,8 @@ def cleanup_file_locks():
             continue
         try:
             stat_info = os.stat(os.path.join(FLAGS.lock_path, filename))
-        except OSError as (errno, strerror):
-            if errno == 2:  # doesn't exist
+        except OSError as e:
+            if e.errno == errno.ENOENT:
                 continue
             else:
                 raise
@@ -1033,8 +1035,8 @@ def delete_if_exists(pathname):
 
     try:
         os.unlink(pathname)
-    except OSError as (errno, strerror):
-        if errno == 2:  # doesn't exist
+    except OSError as e:
+        if e.errno == errno.ENOENT:
             return
         else:
             raise
