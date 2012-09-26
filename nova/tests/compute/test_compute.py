@@ -2999,6 +2999,19 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_delete_in_resized(self):
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
+
+        instance['vm_state'] = vm_states.RESIZED
+
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_repeated_delete_quota(self):
         in_use = {'instances': 1}
 
