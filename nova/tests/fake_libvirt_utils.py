@@ -104,7 +104,7 @@ def file_open(path, mode=None):
 
 
 def find_disk(virt_dom):
-    return "some/path"
+    return "filename"
 
 
 def load_file(path):
@@ -113,6 +113,10 @@ def load_file(path):
             return fp.read()
     else:
         return ''
+
+
+def logical_volume_info(path):
+    return {}
 
 
 def file_delete(path):

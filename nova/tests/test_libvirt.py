@@ -53,6 +53,7 @@ from nova.virt.libvirt import config
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import snapshots
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 from nova.virt.libvirt import volume_nfs
@@ -484,6 +485,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(libvirt_snapshots_directory='')
         self.call_libvirt_dependant_setup = False
         libvirt_driver.libvirt_utils = fake_libvirt_utils
+        snapshots.libvirt_utils = fake_libvirt_utils
 
         def fake_extend(image, size):
             pass
@@ -532,7 +534,7 @@ class LibvirtConnTestCase(test.TestCase):
     def fake_lookup(self, instance_name):
         return FakeVirtDomain()
 
-    def fake_execute(self, *args):
+    def fake_execute(self, *args, **kwargs):
         open(args[-1], "a").close()
 
     def create_service(self, **kwargs):
@@ -1129,6 +1131,7 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
 
         self.mox.ReplayAll()
 
@@ -1164,6 +1167,11 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.utils.execute = self.fake_execute
         self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
 
+        def convert_image(source, dest, out_format):
+            libvirt_driver.libvirt_utils.files[dest] = ''
+
+        images.convert_image = convert_image
+
         self.mox.ReplayAll()
 
         conn = libvirt_driver.LibvirtDriver(False)
@@ -1197,6 +1205,7 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
 
         self.mox.ReplayAll()
 

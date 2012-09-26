@@ -37,6 +37,9 @@ class Backend(object):
             def cache(self, fetch_func, filename, size=None, *args, **kwargs):
                 pass
 
+            def snapshot(self, name):
+                pass
+
             def libvirt_info(self, disk_bus, disk_dev, device_type,
                              cache_mode):
                 info = config.LibvirtConfigGuestDisk()
@@ -50,3 +53,8 @@ class Backend(object):
                 return info
 
         return FakeImage(instance, name)
+
+    def snapshot(self, path, name, image_type=''):
+        #NOTE(bfilippov): this is done in favor for
+        # snapshot tests in test_libvirt.LibvirtConnTestCase
+        return imagebackend.Backend(True).snapshot(path, name, image_type)
