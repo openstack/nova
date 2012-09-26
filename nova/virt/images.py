@@ -60,6 +60,12 @@ def qemu_img_info(path):
     return data
 
 
+def convert_image(source, dest, out_format):
+    """Convert image to other format"""
+    cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
+    utils.execute(*cmd)
+
+
 def fetch(context, image_href, path, _user_id, _project_id):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no
@@ -94,8 +100,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
             with utils.remove_path_on_error(staged):
-                utils.execute('qemu-img', 'convert', '-O', 'raw', path_tmp,
-                              staged)
+                convert_image(path_tmp, staged, 'raw')
 
                 data = qemu_img_info(staged)
                 if data.get('file format') != "raw":
