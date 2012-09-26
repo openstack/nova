@@ -31,26 +31,37 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 xenapi_agent_opts = [
+    cfg.IntOpt('agent_timeout',
+               default=30,
+               help='number of seconds to wait for agent reply'),
     cfg.IntOpt('agent_version_timeout',
                default=300,
                help='number of seconds to wait for agent '
                     'to be fully operational'),
+    cfg.IntOpt('agent_resetnetwork_timeout',
+               default=60,
+               help='number of seconds to wait for agent reply '
+                    'to resetnetwork request'),
 ]
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(xenapi_agent_opts)
 
 
-def _call_agent(session, instance, vm_ref, method, addl_args=None):
+def _call_agent(session, instance, vm_ref, method, addl_args=None,
+                timeout=None):
     """Abstracts out the interaction with the agent xenapi plugin."""
     if addl_args is None:
         addl_args = {}
+    if timeout is None:
+        timeout = FLAGS.agent_timeout
 
     vm_rec = session.call_xenapi("VM.get_record", vm_ref)
 
     args = {
         'id': str(uuid.uuid4()),
         'dom_id': vm_rec['domid'],
+        'timeout': str(timeout),
     }
     args.update(addl_args)
 
@@ -204,7 +215,8 @@ def inject_file(session, instance, vm_ref, path, contents):
 def resetnetwork(session, instance, vm_ref):
     LOG.debug(_('Resetting network'), instance=instance)
 
-    resp = _call_agent(session, instance, vm_ref, 'resetnetwork')
+    resp = _call_agent(session, instance, vm_ref, 'resetnetwork',
+                       timeout=FLAGS.agent_resetnetwork_timeout)
     if resp['returncode'] != '0':
         LOG.error(_('Failed to reset network: %(resp)r'), locals(),
                   instance=instance)

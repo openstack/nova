@@ -40,7 +40,7 @@ from pluginlib_nova import *
 configure_logging("agent")
 import xenstore
 
-AGENT_TIMEOUT = 30
+DEFAULT_TIMEOUT = 30
 
 
 class TimeoutError(StandardError):
@@ -49,12 +49,13 @@ class TimeoutError(StandardError):
 
 def version(self, arg_dict):
     """Get version of agent."""
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     arg_dict["value"] = json.dumps({"name": "version", "value": "agent"})
     request_id = arg_dict["id"]
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -66,6 +67,7 @@ def key_init(self, arg_dict):
     info to be passed, such as passwords. Returns the shared
     secret key value.
     """
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     # WARNING: Some older Windows agents will crash if the public key isn't
     # a string
     pub = arg_dict["pub"]
@@ -74,7 +76,7 @@ def key_init(self, arg_dict):
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -87,13 +89,14 @@ def password(self, arg_dict):
     previous call to key_init. The encrypted password value should
     be passed as the value for the 'enc_pass' key in arg_dict.
     """
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     enc_pass = arg_dict["enc_pass"]
     arg_dict["value"] = json.dumps({"name": "password", "value": enc_pass})
     request_id = arg_dict["id"]
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -103,12 +106,13 @@ def resetnetwork(self, arg_dict):
     """Writes a resquest to xenstore that tells the agent
     to reset networking.
     """
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     arg_dict['value'] = json.dumps({'name': 'resetnetwork', 'value': ''})
     request_id = arg_dict['id']
     arg_dict['path'] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -125,6 +129,7 @@ def inject_file(self, arg_dict):
     need to test to determine if the file injection method on the agent has
     been disabled, and raise a NotImplemented error if that is the case.
     """
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     b64_path = arg_dict["b64_path"]
     b64_file = arg_dict["b64_contents"]
     request_id = arg_dict["id"]
@@ -151,7 +156,7 @@ def inject_file(self, arg_dict):
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -160,6 +165,7 @@ def inject_file(self, arg_dict):
 def agent_update(self, arg_dict):
     """Expects an URL and md5sum of the contents, then directs the agent to
     update itself."""
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     request_id = arg_dict["id"]
     url = arg_dict["url"]
     md5sum = arg_dict["md5sum"]
@@ -168,7 +174,7 @@ def agent_update(self, arg_dict):
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
-        resp = _wait_for_agent(self, request_id, arg_dict)
+        resp = _wait_for_agent(self, request_id, arg_dict, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     return resp
@@ -176,6 +182,7 @@ def agent_update(self, arg_dict):
 
 def _get_agent_features(self, arg_dict):
     """Return an array of features that an agent supports."""
+    timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
     tmp_id = commands.getoutput("uuidgen")
     dct = {}
     dct.update(arg_dict)
@@ -183,7 +190,7 @@ def _get_agent_features(self, arg_dict):
     dct["path"] = "data/host/%s" % tmp_id
     xenstore.write_record(self, dct)
     try:
-        resp = _wait_for_agent(self, tmp_id, dct)
+        resp = _wait_for_agent(self, tmp_id, dct, timeout)
     except TimeoutError, e:
         raise PluginError(e)
     response = json.loads(resp)
@@ -193,18 +200,17 @@ def _get_agent_features(self, arg_dict):
         return {}
 
 
-def _wait_for_agent(self, request_id, arg_dict):
+def _wait_for_agent(self, request_id, arg_dict, timeout):
     """Periodically checks xenstore for a response from the agent.
     The request is always written to 'data/host/{id}', and
     the agent's response for that request will be in 'data/guest/{id}'.
-    If no value appears from the agent within the time specified by
-    AGENT_TIMEOUT, the original request is deleted and a TimeoutError
-    is returned.
+    If no value appears from the agent within the timeout specified,
+    the original request is deleted and a TimeoutError is raised.
     """
     arg_dict["path"] = "data/guest/%s" % request_id
     arg_dict["ignore_missing_path"] = True
     start = time.time()
-    while time.time() - start < AGENT_TIMEOUT:
+    while time.time() - start < timeout:
         ret = xenstore.read_record(self, arg_dict)
         # Note: the response for None with be a string that includes
         # double quotes.
@@ -219,7 +225,7 @@ def _wait_for_agent(self, request_id, arg_dict):
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.delete_record(self, arg_dict)
     raise TimeoutError(_("TIMEOUT: No response from agent within"
-                         " %s seconds.") % AGENT_TIMEOUT)
+                         " %s seconds.") % timeout)
 
 
 if __name__ == "__main__":
