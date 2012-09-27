@@ -199,8 +199,8 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
             self._iscsiadm_update(iscsi_properties, "node.startup", "manual",
-                                  check_exit_code=[0, 255])
+                                  check_exit_code=[0, 21, 255])
             self._run_iscsiadm(iscsi_properties, ("--logout",),
-                               check_exit_code=[0, 255])
+                               check_exit_code=[0, 21, 255])
             self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
                                check_exit_code=[0, 21, 255])
