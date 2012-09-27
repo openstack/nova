@@ -37,15 +37,21 @@ authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
 class CloudpipeTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('cloudpipe'), 1)
+        root = xmlutil.TemplateElement('cloudpipe')
+        elem = xmlutil.SubTemplateElement(root, 'instance_id',
+                                          selector='instance_id')
+        elem.text = str
+        return xmlutil.MasterTemplate(root, 1)
 
 
 class CloudpipesTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('cloudpipes')
-        elem = xmlutil.make_flat_dict('cloudpipe', selector='cloudpipes',
-                                      subselector='cloudpipe')
-        root.append(elem)
+        elem1 = xmlutil.SubTemplateElement(root, 'cloudpipe',
+                                           selector='cloudpipes')
+        elem2 = xmlutil.SubTemplateElement(elem1, xmlutil.Selector(0),
+                                           selector=xmlutil.get_items)
+        elem2.text = 1
         return xmlutil.MasterTemplate(root, 1)
 
 

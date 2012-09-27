@@ -152,25 +152,24 @@ class CloudpipesXMLSerializerTest(test.TestCase):
     def test_index_serializer(self):
         serializer = cloudpipe.CloudpipesTemplate()
         exemplar = dict(cloudpipes=[
-                dict(cloudpipe=dict(
+                dict(
                         project_id='1234',
                         public_ip='1.2.3.4',
                         public_port='321',
                         instance_id='1234-1234-1234-1234',
                         created_at=timeutils.isotime(),
-                        state='running')),
-                dict(cloudpipe=dict(
+                        state='running'),
+                dict(
                         project_id='4321',
                         public_ip='4.3.2.1',
                         public_port='123',
-                        state='pending'))])
+                        state='pending')])
         text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
         self.assertEqual('cloudpipes', tree.tag)
         self.assertEqual(len(exemplar['cloudpipes']), len(tree))
         for idx, cl_pipe in enumerate(tree):
-            self.assertEqual('cloudpipe', cl_pipe.tag)
-            kp_data = exemplar['cloudpipes'][idx]['cloudpipe']
+            kp_data = exemplar['cloudpipes'][idx]
             for child in cl_pipe:
                 self.assertTrue(child.tag in kp_data)
                 self.assertEqual(child.text, kp_data[child.tag])
