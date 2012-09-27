@@ -197,6 +197,21 @@ class FloatingIpTest(test.TestCase):
                                       'id': 2}]}
         self.assertEqual(res_dict, response)
 
+    def test_floating_ip_release_nonexisting(self):
+        def fake_get_floating_ip(*args, **kwargs):
+            raise exception.FloatingIpNotFound(id=id)
+
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       fake_get_floating_ip)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/9876')
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+        expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
+                                         'for id 9876", "code": 404}}')
+        self.assertEqual(res.body, expected_msg)
+
     def test_floating_ip_show(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
         res_dict = self.controller.show(req, 1)
@@ -214,8 +229,11 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/9876')
 
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, req, 9876)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+        expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
+                        'for id 9876", "code": 404}}')
+        self.assertEqual(res.body, expected_msg)
 
     def test_show_associated_floating_ip(self):
         def get_floating_ip(self, context, id):

@@ -274,7 +274,8 @@ class VolumeController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new volume."""
         if not self.is_valid_body(body, 'volume'):
-            raise exc.HTTPUnprocessableEntity()
+            msg = _("Invalid request body. 'volume' not found")
+            raise exc.HTTPUnprocessableEntity(explanation=msg)
 
         context = req.environ['nova.context']
         volume = body['volume']
@@ -301,6 +302,10 @@ class VolumeController(wsgi.Controller):
         size = volume.get('size', None)
         if size is None and kwargs['snapshot'] is not None:
             size = kwargs['snapshot']['volume_size']
+
+        if size is None:
+            msg = _("Invalid request body. 'size' not found")
+            raise exc.HTTPUnprocessableEntity(explanation=msg)
 
         LOG.audit(_("Create volume of %s GB"), size, context=context)
 
