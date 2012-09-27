@@ -92,6 +92,7 @@ class CinderCloudTestCase(test.TestCase):
             return {'id': id,
                     'name': 'fake_name',
                     'container_format': 'ami',
+                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -530,6 +531,7 @@ class CinderCloudTestCase(test.TestCase):
         image1 = {
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
             'name': 'fake_name',
+            'status': 'active',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'type': 'machine',
@@ -545,6 +547,7 @@ class CinderCloudTestCase(test.TestCase):
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             'name': 'fake_name',
+            'status': 'active',
             'properties': {
                 'kernel_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'type': 'machine',

@@ -106,6 +106,7 @@ class CloudTestCase(test.TestCase):
             return {'id': id,
                     'name': 'fake_name',
                     'container_format': 'ami',
+                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1202,6 +1203,7 @@ class CloudTestCase(test.TestCase):
             return [{'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                      'name': 'fake_name',
                      'container_format': 'ami',
+                     'status': 'active',
                      'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1269,6 +1271,7 @@ class CloudTestCase(test.TestCase):
         image1 = {
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
             'name': 'fake_name',
+            'status': 'active',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'type': 'machine',
@@ -1284,6 +1287,7 @@ class CloudTestCase(test.TestCase):
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             'name': 'fake_name',
+            'status': 'active',
             'properties': {
                 'kernel_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'type': 'machine',
@@ -1394,6 +1398,7 @@ class CloudTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
+                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1451,6 +1456,7 @@ class CloudTestCase(test.TestCase):
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
             'name': 'fake_name',
             'container_format': 'ami',
+            'status': 'active',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1490,13 +1496,14 @@ class CloudTestCase(test.TestCase):
             # NOTE(vish): We are mocking s3 so make sure we have converted
             #             to ids instead of uuids.
             return {'id': 1,
-            'name': 'fake_name',
-            'container_format': 'ami',
-            'properties': {
-                'kernel_id': 1,
-                'ramdisk_id': 1,
-                'type': 'machine'},
-            'is_public': False}
+                    'name': 'fake_name',
+                    'container_format': 'ami',
+                    'properties': {'kernel_id': 1,
+                                   'ramdisk_id': 1,
+                                   'type': 'machine'
+                                   },
+                    'is_public': False
+                    }
 
         self.stubs.Set(s3.S3ImageService, 'create', fake_create)
         image_location = 'fake_bucket/fake.img.manifest.xml'
@@ -1812,6 +1819,7 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
+                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1832,6 +1840,7 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
+                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',

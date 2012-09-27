@@ -401,6 +401,8 @@ class API(base.Base):
         (image_service, image_id) = glance.get_remote_image_service(context,
                                                                     image_href)
         image = image_service.show(context, image_id)
+        if image['status'] != 'active':
+            raise exception.ImageNotActive(image_id=image_id)
 
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
             QUOTAS.rollback(context, quota_reservations)
