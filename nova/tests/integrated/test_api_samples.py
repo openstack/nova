@@ -145,12 +145,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             # which order in different way when using a private key itself or
             # its regular expression, and after all doesn't interfere with
             # other tests.
+            # Besides that, there are some cases like Aggregates extension
+            # where we got a list of strings. For those cases key will be None
+            # (python's default) and the elements will be compared directly.
             # Should we define a criteria when ordering json? Doesn't seems
             # necessary so far.
-            for ex_obj, res_obj in zip(sorted(expected, key=lambda k:
-                                                        k.get('__tag__', k)),
-                                       sorted(result, key=lambda k:
-                                                        k.get('__tag__', k))):
+            key = (lambda k: k.get('__tag__', k) if isinstance(k, dict)
+                                                 else None)
+            for ex_obj, res_obj in zip(sorted(expected, key=key),
+                                       sorted(result, key=key)):
                 res = self._compare_result(subs, ex_obj, res_obj)
                 matched_value = res or matched_value
 
