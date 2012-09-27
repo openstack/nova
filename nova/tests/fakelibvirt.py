@@ -69,7 +69,10 @@ VIR_DOMAIN_SHUTOFF = 5
 VIR_DOMAIN_CRASHED = 6
 
 VIR_DOMAIN_XML_SECURE = 1
+
 VIR_DOMAIN_UNDEFINE_MANAGED_SAVE = 1
+
+VIR_DOMAIN_AFFECT_CURRENT = 0
 
 VIR_CPU_COMPARE_ERROR = -1
 VIR_CPU_COMPARE_INCOMPATIBLE = 0
@@ -334,10 +337,16 @@ class Domain(object):
         self._def['devices']['disks'] += [disk_info]
         return True
 
+    def attachDeviceFlags(self, xml, _flags):
+        self.attachDevice(xml)
+
     def detachDevice(self, xml):
         disk_info = _parse_disk_info(etree.fromstring(xml))
         disk_info['_attached'] = True
         return disk_info in self._def['devices']['disks']
+
+    def detachDeviceFlags(self, xml, _flags):
+        self.detachDevice(xml)
 
     def XMLDesc(self, flags):
         disks = ''
