@@ -1,7 +1,7 @@
 SQLAlchemy>=0.7.8
 Cheetah==2.4.4
 amqplib==0.6.1
-anyjson==0.2.4
+anyjson>=0.2.4
 boto==2.1.1
 eventlet>=0.9.17
 kombu==1.0.4
