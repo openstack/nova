@@ -689,9 +689,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def detach_volume(self, connection_info, instance_name, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
         try:
-            # NOTE(vish): This is called to cleanup volumes after live
-            #             migration, so we should still logout even if
-            #             the instance doesn't exist here anymore.
             virt_dom = self._lookup_by_name(instance_name)
             xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
             if not xml:
@@ -707,10 +704,20 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 flags = (libvirt.VIR_DOMAIN_AFFECT_CURRENT)
                 virt_dom.detachDeviceFlags(xml, flags)
-        finally:
-            self.volume_driver_method('disconnect_volume',
-                                      connection_info,
-                                      mount_device)
+        except libvirt.libvirtError as ex:
+            # NOTE(vish): This is called to cleanup volumes after live
+            #             migration, so we should still disconnect even if
+            #             the instance doesn't exist here anymore.
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                # NOTE(vish):
+                LOG.warn(_("During detach_volume, instance disappeared."))
+            else:
+                raise
+
+        self.volume_driver_method('disconnect_volume',
+                                  connection_info,
+                                  mount_device)
 
     @exception.wrap_exception()
     def _attach_lxc_volume(self, xml, virt_dom, instance_name):
