@@ -1435,7 +1435,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                     teardown=True)
 
             network_info = self._get_instance_nw_info(context, instance)
-            self.driver.destroy(instance, self._legacy_nw_info(network_info))
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance['uuid'])
+
+            self.driver.destroy(instance, self._legacy_nw_info(network_info),
+                                block_device_info)
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration_ref['id'], migration_ref['source_compute'],
                     reservations)
