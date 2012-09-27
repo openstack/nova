@@ -1358,6 +1358,27 @@ class API(base.Base):
 
         return min_ram, min_disk
 
+    def _get_block_device_info(self, context, instance_uuid):
+        bdms = self.db.block_device_mapping_get_all_by_instance(context,
+                                                                instance_uuid)
+        block_device_mapping = []
+        for bdm in bdms:
+            if not bdm['volume_id']:
+                continue
+            try:
+                cinfo = jsonutils.loads(bdm['connection_info'])
+                if cinfo and 'serial' not in cinfo:
+                    cinfo['serial'] = bdm['volume_id']
+                bdmap = {'connection_info': cinfo,
+                         'mount_device': bdm['volume_id'],
+                         'delete_on_termination': bdm['delete_on_termination']}
+                block_device_mapping.append(bdmap)
+            except TypeError:
+                # if the block_device_mapping has no value in connection_info
+                # (returned as None), don't include in the mapping
+                pass
+        return {'block_device_mapping': block_device_mapping}
+
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -1377,8 +1398,16 @@ class API(base.Base):
                                task_state=state,
                                expected_task_state=[None,
                                                     task_states.REBOOTING])
+        elevated = context.elevated()
+        block_info = self._get_block_device_info(elevated,
+                                                        instance['uuid'])
+        network_info = self.network_api.get_instance_nw_info(elevated,
+                                                             instance)
+
         self.compute_rpcapi.reboot_instance(context, instance=instance,
-                reboot_type=reboot_type)
+                                            block_device_info=block_info,
+                                            network_info=network_info,
+                                            reboot_type=reboot_type)
 
     def _get_image(self, context, image_href):
         """Throws an ImageNotFound exception if image_href does not exist."""

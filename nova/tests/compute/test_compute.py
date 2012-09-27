@@ -870,6 +870,15 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def _stub_out_reboot(self, fake_net_info, fake_block_dev_info):
+        def fake_reboot(driver, inst, net_info, reboot_type, block_dev_info):
+            self.assertEqual(block_dev_info, fake_block_dev_info)
+            self.assertEqual(net_info, fake_net_info)
+
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'legacy_nwinfo',
+                       lambda x: False)
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'reboot', fake_reboot)
+
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -878,8 +887,12 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
-        self.compute.reboot_instance(self.context,
-                                     instance=instance,
+        fake_net_info = {'bar': 'baz'}
+        fake_block_dev_info = {'foo': 'bar'}
+        self._stub_out_reboot(fake_net_info, fake_block_dev_info)
+        self.compute.reboot_instance(self.context, instance=instance,
+                                     network_info=fake_net_info,
+                                     block_device_info=fake_block_dev_info,
                                      reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
@@ -897,7 +910,12 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
+        fake_net_info = {'bar': 'baz'}
+        fake_block_dev_info = {'foo': 'bar'}
+        self._stub_out_reboot(fake_net_info, fake_block_dev_info)
         self.compute.reboot_instance(self.context, instance=instance,
+                                     network_info=fake_net_info,
+                                     block_device_info=fake_block_dev_info,
                                      reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
@@ -3268,15 +3286,40 @@ class ComputeAPITestCase(BaseTestCase):
                 'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['uuid'])
 
+    def _stub_out_reboot(self, volume_id):
+        def fake_reboot_instance(rpcapi, context, instance,
+                                 block_device_info,
+                                 network_info,
+                                 reboot_type):
+            self.assertEqual(
+                block_device_info['block_device_mapping'][0]['mount_device'],
+                volume_id)
+            self.assertEqual(network_info[0]['network']['bridge'], 'fake_br1')
+        self.stubs.Set(nova.compute.rpcapi.ComputeAPI, 'reboot_instance',
+                       fake_reboot_instance)
+
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'legacy_nwinfo',
+                       lambda x: False)
+
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        volume_id = db.volume_create(context.get_admin_context(),
+                                     {'size': 1})['id']
+        volume = {'instance_uuid': instance['uuid'],
+                  'device_name': '/dev/vdc',
+                  'delete_on_termination': False,
+                  'connection_info': '{"foo": "bar"}',
+                  'volume_id': volume_id}
+        db.block_device_mapping_create(self.context, volume)
+
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "SOFT"
+        self._stub_out_reboot(volume_id)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
@@ -3289,10 +3332,20 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        volume_id = db.volume_create(context.get_admin_context(),
+                                     {'size': 1})['id']
+        volume = {'instance_uuid': instance['uuid'],
+                  'device_name': '/dev/vdc',
+                  'delete_on_termination': False,
+                  'connection_info': '{"foo": "bar"}',
+                  'volume_id': volume_id}
+        db.block_device_mapping_create(self.context, volume)
+
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "HARD"
+        self._stub_out_reboot(volume_id)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])

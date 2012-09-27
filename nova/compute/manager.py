@@ -210,7 +210,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.4'
+    RPC_API_VERSION = '2.5'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1093,10 +1093,21 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def reboot_instance(self, context, instance, reboot_type="SOFT"):
+    def reboot_instance(self, context, instance,
+                        block_device_info=None,
+                        network_info=None,
+                        reboot_type="SOFT"):
         """Reboot an instance on this host."""
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
+
+        # NOTE(danms): remove these when RPC API < 2.5 compatibility
+        # is no longer needed
+        if block_device_info is None:
+            block_device_info = self._get_instance_volume_block_device_info(
+                                context, instance['uuid'])
+        if network_info is None:
+            network_info = self._get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
@@ -1112,11 +1123,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                      'instance: (state: %(state)s '
                      'expected: %(running)s)') % locals(),
                      context=context, instance=instance)
-
-        network_info = self._get_instance_nw_info(context, instance)
-
-        block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance['uuid'])
 
         try:
             self.driver.reboot(instance, self._legacy_nw_info(network_info),

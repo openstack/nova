@@ -132,6 +132,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
               remove_aggregate_host()
         2.3 - Adds volume_id to reserve_block_device_name()
         2.4 - Add bdms to terminate_instance
+        2.5 - Add block device and network info to reboot_instance
     '''
 
     #
@@ -342,11 +343,16 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 image=image, reservations=reservations),
                 _compute_topic(self.topic, ctxt, host, None))
 
-    def reboot_instance(self, ctxt, instance, reboot_type):
+    def reboot_instance(self, ctxt, instance,
+                        block_device_info, network_info, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reboot_instance',
-                instance=instance_p, reboot_type=reboot_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p,
+                block_device_info=block_device_info,
+                network_info=network_info,
+                reboot_type=reboot_type),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.5')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata):
