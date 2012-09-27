@@ -105,7 +105,9 @@ def create_cow_image(backing_file, path):
     if 'encryption' in base_details:
         cow_opts += ['encryption=%s' % base_details['encryption']]
     if cow_opts:
-        cow_opts.insert(0, '-o')
+        # Format as a comma separated list
+        csv_opts = ",".join(cow_opts)
+        cow_opts = ['-o', csv_opts]
     cmd = base_cmd + cow_opts + [path]
     execute(*cmd)
 
