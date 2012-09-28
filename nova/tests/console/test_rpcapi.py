@@ -29,13 +29,6 @@ FLAGS = flags.FLAGS
 
 
 class ConsoleRpcAPITestCase(test.TestCase):
-
-    def setUp(self):
-        super(ConsoleRpcAPITestCase, self).setUp()
-
-    def tearDown(self):
-        super(ConsoleRpcAPITestCase, self).tearDown()
-
     def _test_console_api(self, method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = console_rpcapi.ConsoleAPI()

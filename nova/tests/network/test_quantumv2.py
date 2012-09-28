@@ -84,9 +84,6 @@ class MyComparator(mox.Comparator):
 
 
 class TestQuantumClient(test.TestCase):
-    def setUp(self):
-        super(TestQuantumClient, self).setUp()
-
     def test_withtoken(self):
         self.flags(quantum_url='http://anyhost/')
         self.flags(quantum_url_timeout=30)

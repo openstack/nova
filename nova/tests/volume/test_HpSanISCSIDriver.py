@@ -38,9 +38,6 @@ class HpSanISCSITestCase(test.TestCase):
                         'iqn.2003-10.com.lefthandnetworks:group01:25366:fakev',
                            'volume_id': 1}
 
-    def tearDown(self):
-        super(HpSanISCSITestCase, self).tearDown()
-
     def _fake_get_iscsi_properties(self, volume):
         return self.properties
 

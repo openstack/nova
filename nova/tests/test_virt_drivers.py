@@ -554,9 +554,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
 
-    def tearDown(self):
-        super(LibvirtConnTestCase, self).tearDown()
-
     def test_force_hard_reboot(self):
         self.flags(libvirt_wait_soft_reboot_seconds=0)
         self.test_reboot()

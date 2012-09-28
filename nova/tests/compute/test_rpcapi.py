@@ -39,9 +39,6 @@ class ComputeRpcAPITestCase(test.TestCase):
         self.fake_instance = jsonutils.to_primitive(inst)
         super(ComputeRpcAPITestCase, self).setUp()
 
-    def tearDown(self):
-        super(ComputeRpcAPITestCase, self).tearDown()
-
     def test_serialized_instance_has_name(self):
         self.assertTrue('name' in self.fake_instance)
 

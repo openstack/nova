@@ -48,9 +48,6 @@ class TestNexentaDriver(nova.test.TestCase):
         'volume_name': TEST_VOLUME_NAME,
     }
 
-    def __init__(self, method):
-        super(TestNexentaDriver, self).__init__(method)
-
     def setUp(self):
         super(TestNexentaDriver, self).setUp()
         self.flags(

@@ -3912,9 +3912,6 @@ class LibvirtNonblockingTestCase(test.TestCase):
         super(LibvirtNonblockingTestCase, self).setUp()
         self.flags(libvirt_nonblocking=True, libvirt_uri="test:///default")
 
-    def tearDown(self):
-        super(LibvirtNonblockingTestCase, self).tearDown()
-
     def test_connection_to_primitive(self):
         """Test bug 962840"""
         import nova.virt.libvirt.driver as libvirt_driver
