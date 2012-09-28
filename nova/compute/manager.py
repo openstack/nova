@@ -2578,8 +2578,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         virtual machines known by the hypervisor and if the number matches the
         number of virtual machines known by the database, we proceed in a lazy
         loop, one database record at a time, checking if the hypervisor has the
-        same power state as is in the database. We call eventlet.sleep(0) after
-        each loop to allow the periodic task eventlet to do other work.
+        same power state as is in the database.
 
         If the instance is not found on the hypervisor, but is in the database,
         then a stop() API will be called on the instance.
