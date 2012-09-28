@@ -25,7 +25,7 @@ class PowerVMFileTransferFailed(exception.NovaException):
     message = _("File '%(file_path)' transfer to PowerVM manager failed")
 
 
-class PowerVMLPARInstanceNotFound(exception.NovaException):
+class PowerVMLPARInstanceNotFound(exception.InstanceNotFound):
     message = _("LPAR instance '%(instance_name)s' could not be found")
 
 

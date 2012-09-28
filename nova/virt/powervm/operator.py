@@ -281,8 +281,8 @@ class PowerVMOperator(object):
                        "PowerVM system.") % instance_name)
 
     def _cleanup(self, instance_name):
+        lpar_id = self._get_instance(instance_name)['lpar_id']
         try:
-            lpar_id = self._get_instance(instance_name)['lpar_id']
             vhost = self._operator.get_vhost_by_instance_id(lpar_id)
             disk_name = self._operator.get_disk_name_by_vhost(vhost)
 
