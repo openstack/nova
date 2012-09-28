@@ -366,7 +366,7 @@ class ApiEc2TestCase(test.TestCase):
         for test in test_raise:
             self.expect_http()
             self.mox.ReplayAll()
-            FLAGS.ec2_strict_validation = test[0]
+            self.flags(ec2_strict_validation=test[0])
             self.assertRaises(boto_exc.EC2ResponseError,
                               self.ec2.create_security_group,
                               test[1],
@@ -378,7 +378,7 @@ class ApiEc2TestCase(test.TestCase):
         for test in test_accept:
             self.expect_http()
             self.mox.ReplayAll()
-            FLAGS.ec2_strict_validation = test[0]
+            self.flags(ec2_strict_validation=test[0])
             self.ec2.create_security_group(test[1], test[2])
             self.expect_http()
             self.mox.ReplayAll()

@@ -2340,8 +2340,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
         self.compute.driver.list_instances().AndReturn([instance['name']])
-        FLAGS.running_deleted_instance_timeout = 3600
-        FLAGS.running_deleted_instance_action = 'reap'
+        self.flags(running_deleted_instance_timeout=3600,
+                   running_deleted_instance_action='reap')
 
         self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
         self.compute.db.instance_get_all_by_host(admin_context,
