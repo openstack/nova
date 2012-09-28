@@ -208,10 +208,11 @@ class _DiskImage(object):
     @staticmethod
     def _device_for_path(path):
         device = None
+        path = os.path.realpath(path)
         with open("/proc/mounts", 'r') as ifp:
             for line in ifp:
                 fields = line.split()
-                if fields[1] == os.path.realpath(path):
+                if fields[1] == path:
                     device = fields[0]
                     break
         return device
