@@ -123,7 +123,6 @@ class PowerVMDriver(driver.ComputeDriver):
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param reboot_type: Either a HARD or SOFT reboot
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
     def get_host_ip_addr(self):
@@ -168,7 +167,6 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         Indicate if the driver requires the legacy network_info format.
         """
-        # TODO(tr3buchet): update all subclasses and remove this
         return False
 
     def manage_image_cache(self, context):

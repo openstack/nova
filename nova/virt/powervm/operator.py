@@ -99,12 +99,7 @@ class PowerVMOperator(object):
         layer, as a list.
         """
         lpar_instances = self._operator.list_lpar_instances()
-        # We filter out instances that haven't been created
-        # via OpenStack. Notice that this is fragile and it can
-        # be improved later.
-        instances = [instance for instance in lpar_instances
-                     if re.search(r'^instance-[0-9]{8}$', instance)]
-        return instances
+        return lpar_instances
 
     def get_available_resource(self):
         """Retrieve resource info.
