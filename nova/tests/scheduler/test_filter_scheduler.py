@@ -49,9 +49,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         uuid = 'fake-uuid1'
         fake_context = context.RequestContext('user', 'project')
+        instance_properties = {'project_id': 1, 'os_type': 'Linux'}
         request_spec = {'instance_type': {'memory_mb': 1, 'root_gb': 1,
                                           'ephemeral_gb': 0},
-                        'instance_properties': {'project_id': 1},
+                        'instance_properties': instance_properties,
                         'instance_uuids': [uuid]}
 
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
@@ -80,8 +81,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         fake_context = context.RequestContext('user', 'project')
 
         uuid = 'fake-uuid1'
+        instance_properties = {'project_id': 1, 'os_type': 'Linux'}
         request_spec = {'instance_type': {'memory_mb': 1, 'local_gb': 1},
-                        'instance_properties': {'project_id': 1},
+                        'instance_properties': instance_properties,
                         'instance_uuids': [uuid]}
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
@@ -180,7 +182,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'root_gb': 512,
                                                 'memory_mb': 512,
                                                 'ephemeral_gb': 0,
-                                                'vcpus': 1}}
+                                                'vcpus': 1,
+                                                'os_type': 'Linux'}}
         self.mox.ReplayAll()
         weighted_hosts = sched._schedule(fake_context, 'compute',
                 request_spec, {})
@@ -245,7 +248,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.flags(scheduler_max_attempts=1)
         sched = fakes.FakeFilterScheduler()
 
-        instance_properties = {}
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
 
@@ -260,7 +263,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
-        instance_properties = {}
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
 
@@ -275,7 +278,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
-        instance_properties = {}
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
         request_spec = dict(instance_properties=instance_properties)
 
         retry = dict(num_attempts=1)
@@ -292,7 +295,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
-        instance_properties = {}
+        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
         request_spec = dict(instance_properties=instance_properties)
 
         retry = dict(num_attempts=2)

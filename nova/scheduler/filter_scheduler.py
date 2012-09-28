@@ -174,7 +174,11 @@ class FilterScheduler(driver.Scheduler):
         """Stuff things into filter_properties.  Can be overridden in a
         subclass to add more data.
         """
-        pass
+        # Save useful information from the request spec for filter processing:
+        project_id = request_spec['instance_properties']['project_id']
+        os_type = request_spec['instance_properties']['os_type']
+        filter_properties['project_id'] = project_id
+        filter_properties['os_type'] = os_type
 
     def _max_attempts(self):
         max_attempts = FLAGS.scheduler_max_attempts
