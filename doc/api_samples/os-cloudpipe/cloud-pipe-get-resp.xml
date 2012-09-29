@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<cloudpipes>
+  <cloudpipe>
+    <public_ip>127.0.0.1</public_ip>
+    <created_at>2012-09-25T18:18:49Z</created_at>
+    <public_port>22</public_port>
+    <state>down</state>
+    <instance_id>1a17f615-343b-430f-976a-457c029eddb7</instance_id>
+    <internal_ip>192.168.0.3</internal_ip>
+    <project_id>cloudpipe-6405f2ca-caf9-493b-a1f6-e55f595d75ab</project_id>
+  </cloudpipe>
+</cloudpipes>

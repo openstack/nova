@@ -20,8 +20,10 @@ import uuid
 
 from lxml import etree
 
+from nova.cloudpipe.pipelib import CloudPipe
 from nova import context
 from nova import flags
+from nova.network.manager import NetworkManager
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging
@@ -987,3 +989,49 @@ class VirtualInterfacesJsonTest(ServersSampleBase):
 
 class VirtualInterfacesXmlTest(VirtualInterfacesJsonTest):
     ctype = 'xml'
+
+
+class CloudPipeSampleJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe"
+
+    def setUp(self):
+        super(CloudPipeSampleJsonTest, self).setUp()
+
+        def get_user_data(self, project_id):
+            """Stub method to generate user data for cloudpipe tests"""
+            return "VVNFUiBEQVRB\n"
+
+        def network_api_get(self, context, network_uuid):
+            """Stub to get a valid network and its information"""
+            return {'vpn_public_address': '127.0.0.1',
+                    'vpn_public_port': 22}
+
+        self.stubs.Set(CloudPipe, 'get_encoded_zip', get_user_data)
+        self.stubs.Set(NetworkManager, "get_network", network_api_get)
+
+    def test_cloud_pipe_create(self):
+        """Get api samples of cloud pipe extension creation"""
+        FLAGS.vpn_image_id = fake.get_valid_image_id()
+        project = {'project_id': 'cloudpipe-' + str(uuid.uuid4())}
+        response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
+                                 project)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs.update(project)
+        subs['image_id'] = FLAGS.vpn_image_id
+        self._verify_response('cloud-pipe-create-resp', subs, response)
+        return project
+
+    def test_cloud_pipe_list(self):
+        """Get api samples of cloud pipe extension get request"""
+        project = self.test_cloud_pipe_create()
+        response = self._do_get('os-cloudpipe')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs.update(project)
+        subs['image_id'] = FLAGS.vpn_image_id
+        return self._verify_response('cloud-pipe-get-resp', subs, response)
+
+
+class CloudPipeSampleXmlTest(CloudPipeSampleJsonTest):
+    ctype = "xml"
