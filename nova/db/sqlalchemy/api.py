@@ -3875,7 +3875,7 @@ def instance_type_create(context, values):
         try:
             instance_type_get_by_flavor_id(context, values['flavorid'],
                                            session)
-            raise exception.InstanceTypeExists(name=values['name'])
+            raise exception.InstanceTypeIdExists(flavor_id=values['flavorid'])
         except exception.FlavorNotFound:
             pass
         try:

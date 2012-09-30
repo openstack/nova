@@ -159,7 +159,7 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensures that flavorid duplicates raise InstanceTypeCreateFailed"""
         flavorid = 'flavor1'
         instance_types.create('name one', 256, 1, 120, 200, flavorid)
-        self.assertRaises(exception.InstanceTypeExists,
+        self.assertRaises(exception.InstanceTypeIdExists,
                           instance_types.create,
                           'name two', 256, 1, 120, 200, flavorid)
 

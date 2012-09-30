@@ -880,7 +880,11 @@ class InstanceExists(Duplicate):
 
 
 class InstanceTypeExists(Duplicate):
-    message = _("Instance Type %(name)s already exists.")
+    message = _("Instance Type with name %(name)s already exists.")
+
+
+class InstanceTypeIdExists(Duplicate):
+    message = _("Instance Type with ID %(flavor_id)s already exists.")
 
 
 class FlavorAccessExists(Duplicate):
