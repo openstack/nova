@@ -1278,3 +1278,19 @@ class HostFiltersTestCase(test.TestCase):
         retry = dict(num_attempts=1, hosts=['host3', 'host1'])
         filter_properties = dict(retry=retry)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_filter_num_iops_passes(self):
+        self.flags(max_io_ops_per_host=8)
+        filt_cls = self.class_map['IoOpsFilter']()
+        host = fakes.FakeHostState('host1', 'compute',
+                                   {'num_io_ops': 7})
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_filter_num_iops_fails(self):
+        self.flags(max_io_ops_per_host=8)
+        filt_cls = self.class_map['IoOpsFilter']()
+        host = fakes.FakeHostState('host1', 'compute',
+                                   {'num_io_ops': 8})
+        filter_properties = {}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
