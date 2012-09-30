@@ -382,6 +382,26 @@ class ServersMetadataXmlTest(ServersMetadataJsonTest):
     ctype = 'xml'
 
 
+class ServersIpsJsonTest(ServersSampleBase):
+    def test_get(self):
+        """Test getting a server's IP information"""
+        uuid = self._post_server()
+        response = self._do_get('servers/%s/ips' % uuid)
+        subs = self._get_regexes()
+        return self._verify_response('server-ips-resp', subs, response)
+
+    def test_get_by_network(self):
+        """Test getting a server's IP information by network id"""
+        uuid = self._post_server()
+        response = self._do_get('servers/%s/ips/private' % uuid)
+        subs = self._get_regexes()
+        return self._verify_response('server-ips-network-resp', subs, response)
+
+
+class ServersIpsXmlTest(ServersIpsJsonTest):
+    ctype = 'xml'
+
+
 class ExtensionsSampleJsonTest(ApiSampleTestBase):
     all_extensions = True
 
