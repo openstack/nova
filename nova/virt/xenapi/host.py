@@ -162,6 +162,9 @@ class HostState(object):
             data["disk_total"] = total
             data["disk_used"] = used
             data["disk_available"] = total - used
+            data["supported_instances"] = to_supported_instances(
+                data.get("host_capabilities")
+            )
             host_memory = data.get('host_memory', None)
             if host_memory:
                 data["host_memory_total"] = host_memory.get('total', 0)
@@ -171,6 +174,22 @@ class HostState(object):
                                                     'free-computed', 0)
                 del data['host_memory']
             self._stats = data
+
+
+def to_supported_instances(host_capabilities):
+    if not host_capabilities:
+        return []
+
+    result = []
+    for capability in host_capabilities:
+        try:
+            ostype, _version, arch = capability.split("-")
+            result.append((arch, 'xapi', ostype))
+        except ValueError:
+            LOG.warning(
+                _("Failed to extract instance support from %s"), capability)
+
+    return result
 
 
 def call_xenhost(session, method, arg_dict):
