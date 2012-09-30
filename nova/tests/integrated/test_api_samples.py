@@ -528,9 +528,6 @@ class LimitsSampleXmlTest(LimitsSampleJsonTest):
 
 
 class ServersActionsJsonTest(ServersSampleBase):
-    def setUp(self):
-        super(ServersActionsJsonTest, self).setUp()
-
     def _test_server_action(self, uuid, action,
                             subs={}, resp_tpl=None, code=202):
         subs.update({'action': action})

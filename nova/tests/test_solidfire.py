@@ -24,9 +24,6 @@ LOG = logging.getLogger(__name__)
 
 
 class SolidFireVolumeTestCase(test.TestCase):
-    def setUp(self):
-        super(SolidFireVolumeTestCase, self).setUp()
-
     def fake_issue_api_request(obj, method, params):
         if method is 'GetClusterInfo':
             LOG.info('Called Fake GetClusterInfo...')

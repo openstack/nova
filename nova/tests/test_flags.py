@@ -28,10 +28,6 @@ FLAGS.register_opt(cfg.StrOpt('flags_unittest',
 
 
 class FlagsTestCase(test.TestCase):
-
-    def setUp(self):
-        super(FlagsTestCase, self).setUp()
-
     def test_declare(self):
         self.assert_('answer' not in FLAGS)
         flags.DECLARE('answer', 'nova.tests.declare_flags')

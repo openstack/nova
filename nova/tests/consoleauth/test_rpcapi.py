@@ -29,13 +29,6 @@ FLAGS = flags.FLAGS
 
 
 class ConsoleAuthRpcAPITestCase(test.TestCase):
-
-    def setUp(self):
-        super(ConsoleAuthRpcAPITestCase, self).setUp()
-
-    def tearDown(self):
-        super(ConsoleAuthRpcAPITestCase, self).tearDown()
-
     def _test_consoleauth_api(self, method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()

@@ -164,9 +164,6 @@ class FakeSessionForVMTests(fake.SessionBase):
                                   "COMMIT\n"
                                   "# Completed on Sun Nov  6 22:49:02 2011\n")
 
-    def __init__(self, uri):
-        super(FakeSessionForVMTests, self).__init__(uri)
-
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
             root_uuid = _make_fake_vdi()
@@ -286,9 +283,6 @@ def stub_out_vm_methods(stubs):
 
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
-    def __init__(self, uri):
-        super(FakeSessionForVolumeTests, self).__init__(uri)
-
     def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
                       _6, _7, _8, _9, _10, _11):
         valid_vdi = False
@@ -303,9 +297,6 @@ class FakeSessionForVolumeTests(fake.SessionBase):
 
 class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
     """ Stubs out a XenAPISession for Volume tests: it injects failures """
-    def __init__(self, uri):
-        super(FakeSessionForVolumeFailedTests, self).__init__(uri)
-
     def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
                       _6, _7, _8, _9, _10, _11):
         # This is for testing failure
@@ -358,9 +349,6 @@ def stub_out_migration_methods(stubs):
 
 
 class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
-    def __init__(self, uri):
-        super(FakeSessionForFailedMigrateTests, self).__init__(uri)
-
     def VM_assert_can_migrate(self, session, vmref, migrate_data,
                               live, vdi_map, vif_map, options):
         raise fake.Failure("XenAPI VM.assert_can_migrate failed")

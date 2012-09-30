@@ -14,9 +14,6 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',)
 
-    def tearDown(self):
-        super(GetInstanceForVdisForSrTestCase, self).tearDown()
-
     def test_get_instance_vdis_for_sr(self):
         vm_ref = fake.create_vm("foo", "Running")
         sr_ref = fake.create_sr()

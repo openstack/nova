@@ -889,9 +889,6 @@ class StorwizeSVCManagementSimulator:
 
 
 class StorwizeSVCFakeDriver(storwize_svc.StorwizeSVCDriver):
-    def __init__(self, *args, **kwargs):
-        super(StorwizeSVCFakeDriver, self).__init__(*args, **kwargs)
-
     def set_fake_storage(self, fake):
         self.fake_storage = fake
 

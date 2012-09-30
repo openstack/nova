@@ -29,13 +29,6 @@ FLAGS = flags.FLAGS
 
 
 class SchedulerRpcAPITestCase(test.TestCase):
-
-    def setUp(self):
-        super(SchedulerRpcAPITestCase, self).setUp()
-
-    def tearDown(self):
-        super(SchedulerRpcAPITestCase, self).tearDown()
-
     def _test_scheduler_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = scheduler_rpcapi.SchedulerAPI()

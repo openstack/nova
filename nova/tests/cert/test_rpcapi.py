@@ -29,13 +29,6 @@ FLAGS = flags.FLAGS
 
 
 class CertRpcAPITestCase(test.TestCase):
-
-    def setUp(self):
-        super(CertRpcAPITestCase, self).setUp()
-
-    def tearDown(self):
-        super(CertRpcAPITestCase, self).tearDown()
-
     def _test_cert_api(self, method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = cert_rpcapi.CertAPI()
