@@ -589,6 +589,11 @@ class XenAPIDriver(driver.ComputeDriver):
         # TODO(tr3buchet): remove this function once all virts return false
         return False
 
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
+        """resume guest state when a host is booted"""
+        self._vmops.power_on(instance)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
