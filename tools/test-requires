@@ -12,3 +12,4 @@ pylint==0.25.2
 sphinx>=1.1.2
 feedparser
 python-cinderclient
+MySQL-python
