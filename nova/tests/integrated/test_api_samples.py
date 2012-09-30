@@ -598,6 +598,14 @@ class ServersActionsXmlTest(ServersActionsJsonTest):
     ctype = 'xml'
 
 
+class ServersActionsAllJsonTest(ServersActionsJsonTest):
+    all_extensions = True
+
+
+class ServersActionsAllXmlTest(ServersActionsXmlTest):
+    all_extensions = True
+
+
 class ServerStartStopJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
         ".server_start_stop.Server_start_stop"

@@ -1,0 +1,8 @@
+{
+    "createImage" : {
+        "name" : "foo-image",
+        "metadata": {
+            "myvar": "foobar"
+        }
+    }
+}
