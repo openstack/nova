@@ -20,6 +20,8 @@
 from nova import context
 from nova import db
 from nova import flags
+from nova import network
+from nova.network import linux_net
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -138,7 +140,6 @@ class IptablesFirewallDriver(FirewallDriver):
     """Driver which enforces security groups through iptables rules."""
 
     def __init__(self, **kwargs):
-        from nova.network import linux_net
         self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.network_infos = {}
@@ -392,8 +393,7 @@ class IptablesFirewallDriver(FirewallDriver):
                         #                 has access to a nw_api handle,
                         #                 and should be the only one making
                         #                 making rpc calls.
-                        import nova.network
-                        nw_api = nova.network.API()
+                        nw_api = network.API()
                         for instance in rule['grantee_group']['instances']:
                             nw_info = nw_api.get_instance_nw_info(ctxt,
                                                                   instance)

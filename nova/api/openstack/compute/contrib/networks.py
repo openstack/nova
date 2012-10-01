@@ -23,7 +23,7 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova import exception
 from nova import flags
-import nova.network.api
+from nova import network
 from nova.openstack.common import log as logging
 
 
@@ -58,7 +58,7 @@ def network_dict(context, network):
 class NetworkController(object):
 
     def __init__(self, network_api=None):
-        self.network_api = network_api or nova.network.api.API()
+        self.network_api = network_api or network.API()
 
     def action(self, req, id, body):
         _actions = {
