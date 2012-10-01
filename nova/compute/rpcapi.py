@@ -137,6 +137,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.7 - Remove migration_id, add migration to confirm_resize
         2.8 - Remove migration_id, add migration to finish_resize
         2.9 - Add publish_service_capabilities()
+        2.10 - Adds filter_properties and request_spec to prep_resize()
     '''
 
     #
@@ -343,13 +344,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 disk=disk), _compute_topic(self.topic, ctxt, host, None))
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
-                    reservations=None):
+                    reservations=None, request_spec=None,
+                    filter_properties=None):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
-                image=image, reservations=reservations),
-                _compute_topic(self.topic, ctxt, host, None))
+                image=image, reservations=reservations,
+                request_spec=request_spec,
+                filter_properties=filter_properties),
+                _compute_topic(self.topic, ctxt, host, None),
+                version='2.10')
 
     def reboot_instance(self, ctxt, instance,
                         block_device_info, network_info, reboot_type):

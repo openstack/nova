@@ -213,7 +213,10 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('prep_resize', 'cast',
                 instance=self.fake_instance, instance_type='fake_type',
                 image='fake_image', host='host',
-                reservations=list('fake_res'))
+                reservations=list('fake_res'),
+                request_spec='fake_spec',
+                filter_properties={'fakeprop': 'fakeval'},
+                version='2.10')
 
     def test_reboot_instance(self):
         self.maxDiff = None

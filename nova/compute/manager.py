@@ -212,7 +212,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.9'
+    RPC_API_VERSION = '2.10'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -531,32 +531,39 @@ class ComputeManager(manager.SchedulerDependentManager):
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance['uuid'])
 
+    def _log_original_error(self, exc_info, instance_uuid):
+        type_, value, tb = exc_info
+        LOG.error(_('Error: %s') %
+                  traceback.format_exception(type_, value, tb),
+                  instance_uuid=instance_uuid)
+
     def _reschedule_or_reraise(self, context, instance, requested_networks,
                                admin_password, injected_files, is_first_time,
                                request_spec, filter_properties):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
-        type_, value, tb = sys.exc_info()  # save original exception
-        rescheduled = False
+        exc_info = sys.exc_info()
         instance_uuid = instance['uuid']
-
-        def _log_original_error():
-            LOG.error(_('Build error: %s') %
-                    traceback.format_exception(type_, value, tb),
-                    instance_uuid=instance_uuid)
+        rescheduled = False
 
         try:
             self._deallocate_network(context, instance)
         except Exception:
             # do not attempt retry if network de-allocation failed:
-            _log_original_error()
+            self._log_original_error(exc_info, instance_uuid)
             raise
 
         try:
-            rescheduled = self._reschedule(context, instance_uuid,
-                    requested_networks, admin_password, injected_files,
-                    is_first_time, request_spec, filter_properties)
+            method_args = (request_spec, admin_password, injected_files,
+                    requested_networks, is_first_time, filter_properties)
+            task_state = task_states.SCHEDULING
+
+            rescheduled = self._reschedule(context, request_spec,
+                    instance['uuid'], filter_properties,
+                    self.scheduler_rpcapi.run_instance, method_args,
+                    task_state)
+
         except Exception:
             rescheduled = False
             LOG.exception(_("Error trying to reschedule"),
@@ -564,14 +571,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if rescheduled:
             # log the original build error
-            _log_original_error()
+            self._log_original_error(exc_info, instance_uuid)
         else:
             # not re-scheduling
-            raise type_, value, tb
+            raise exc_info[0], exc_info[1], exc_info[2]
 
-    def _reschedule(self, context, instance_uuid, requested_networks,
-            admin_password, injected_files, is_first_time, request_spec,
-            filter_properties):
+    def _reschedule(self, context, request_spec, filter_properties,
+            instance_uuid, scheduler_method, method_args, task_state):
+        """Attempt to re-schedule a compute operation."""
 
         retry = filter_properties.get('retry', None)
         if not retry:
@@ -587,16 +594,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         request_spec['instance_uuids'] = [instance_uuid]
 
-        LOG.debug(_("Re-scheduling instance: attempt %d"),
-                  retry['num_attempts'], instance_uuid=instance_uuid)
+        LOG.debug(_("Re-scheduling %(method)s: attempt %(num)d") %
+                {'method': scheduler_method.func_name,
+                 'num': retry['num_attempts']}, instance_uuid=instance_uuid)
 
         # reset the task state:
-        self._instance_update(context, instance_uuid,
-                task_state=task_states.SCHEDULING)
+        self._instance_update(context, instance_uuid, task_state=task_state)
 
-        self.scheduler_rpcapi.run_instance(context,
-                request_spec, admin_password, injected_files,
-                requested_networks, is_first_time, filter_properties)
+        scheduler_method(context, *method_args)
         return True
 
     @manager.periodic_task
@@ -1590,7 +1595,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
-                    reservations=None):
+                    reservations=None, request_spec=None,
+                    filter_properties=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -1603,38 +1609,82 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
 
-            same_host = instance['host'] == self.host
-            if same_host and not FLAGS.allow_resize_to_same_host:
-                self._set_instance_error_state(context, instance['uuid'])
-                msg = _('destination same as source!')
-                raise exception.MigrationError(msg)
+            try:
+                same_host = instance['host'] == self.host
+                if same_host and not FLAGS.allow_resize_to_same_host:
+                    self._set_instance_error_state(context, instance['uuid'])
+                    msg = _('destination same as source!')
+                    raise exception.MigrationError(msg)
 
-            # TODO(russellb): no-db-compute: Send the old instance type info
-            # that is needed via rpc so db access isn't required here.
-            old_instance_type_id = instance['instance_type_id']
-            old_instance_type = instance_types.get_instance_type(
-                    old_instance_type_id)
+                # TODO(russellb): no-db-compute: Send the old instance type
+                # info that is needed via rpc so db access isn't required
+                # here.
+                old_instance_type_id = instance['instance_type_id']
+                old_instance_type = instance_types.get_instance_type(
+                        old_instance_type_id)
 
-            migration_ref = self.db.migration_create(context.elevated(),
-                    {'instance_uuid': instance['uuid'],
-                     'source_compute': instance['host'],
-                     'dest_compute': self.host,
-                     'dest_host': self.driver.get_host_ip_addr(),
-                     'old_instance_type_id': old_instance_type['id'],
-                     'new_instance_type_id': instance_type['id'],
-                     'status': 'pre-migrating'})
+                migration_ref = self.db.migration_create(context.elevated(),
+                        {'instance_uuid': instance['uuid'],
+                         'source_compute': instance['host'],
+                         'dest_compute': self.host,
+                         'dest_host': self.driver.get_host_ip_addr(),
+                         'old_instance_type_id': old_instance_type['id'],
+                         'new_instance_type_id': instance_type['id'],
+                         'status': 'pre-migrating'})
 
-            LOG.audit(_('Migrating'), context=context, instance=instance)
-            self.compute_rpcapi.resize_instance(context, instance,
-                    migration_ref, image, reservations)
+                LOG.audit(_('Migrating'), context=context,
+                        instance=instance)
+                self.compute_rpcapi.resize_instance(context, instance,
+                        migration_ref, image, reservations)
 
-            extra_usage_info = dict(
-                    new_instance_type=instance_type['name'],
-                    new_instance_type_id=instance_type['id'])
+            except Exception:
+                # try to re-schedule the resize elsewhere:
+                self._reschedule_resize_or_reraise(context, image, instance,
+                        instance_type, reservations, request_spec,
+                        filter_properties)
+            finally:
+                extra_usage_info = dict(
+                        new_instance_type=instance_type['name'],
+                        new_instance_type_id=instance_type['id'])
 
-            self._notify_about_instance_usage(
-                context, instance, "resize.prep.end",
-                extra_usage_info=extra_usage_info)
+                self._notify_about_instance_usage(
+                    context, instance, "resize.prep.end",
+                    extra_usage_info=extra_usage_info)
+
+    def _reschedule_resize_or_reraise(self, context, image, instance,
+            instance_type, reservations, request_spec, filter_properties):
+        """Try to re-schedule the resize or re-raise the original error to
+        error out the instance.
+        """
+        if not request_spec:
+            request_spec = {}
+        if not filter_properties:
+            filter_properties = {}
+
+        exc_info = sys.exc_info()
+        rescheduled = False
+        instance_uuid = instance['uuid']
+
+        try:
+            scheduler_method = self.scheduler_rpcapi.prep_resize
+            method_args = (instance, instance_type, image, request_spec,
+                           filter_properties, reservations)
+            task_state = task_states.RESIZE_PREP
+
+            rescheduled = self._reschedule(context, request_spec,
+                    filter_properties, instance_uuid, scheduler_method,
+                    method_args, task_state)
+        except Exception:
+            rescheduled = False
+            LOG.exception(_("Error trying to reschedule"),
+                          instance_uuid=instance_uuid)
+
+        if rescheduled:
+            # log the original build error
+            self._log_original_error(exc_info, instance_uuid)
+        else:
+            # not re-scheduling
+            raise exc_info[0], exc_info[1], exc_info[2]
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
