@@ -1145,3 +1145,29 @@ class AggregatesSampleJsonTest(ServersSampleBase):
 
 class AggregatesSampleXmlTest(AggregatesSampleJsonTest):
     ctype = 'xml'
+
+
+class CertificatesSamplesJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.certificates."
+                      "Certificates")
+
+    def setUp(self):
+        super(CertificatesSamplesJsonTest, self).setUp()
+
+    def test_create_certificates(self):
+        response = self._do_post('os-certificates',
+                                 'certificate-create-req', {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('certificate-create-resp', subs, response)
+
+    def test_get_root_certificate(self):
+        response = self._do_get('os-certificates/root')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('certificate-get-root-resp', subs,
+                                     response)
+
+
+class CertificatesSamplesXmlTest(CertificatesSamplesJsonTest):
+    ctype = "xml"
