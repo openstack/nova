@@ -2437,11 +2437,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                             'destination_sr_ref': None,
                             'migrate_send_data': None
                            }}
-        self.assertNotRaises(None,
-                             self.conn.check_can_live_migrate_source,
-                             self.context,
-                             {'host': 'host'},
-                             dest_check_data)
+        self.conn.check_can_live_migrate_source(self.context,
+                                                {'host': 'host'},
+                                                dest_check_data)
 
     def test_check_can_live_migrate_source_with_block_migrate_fails(self):
         stubs.stubout_session(self.stubs,

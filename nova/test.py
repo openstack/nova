@@ -285,33 +285,6 @@ class TestCase(unittest.TestCase):
         else:
             f(a, b, *args, **kwargs)
 
-    def assertNotRaises(self, exc_class, func, *args, **kwargs):
-        """Assert that a particular exception is not raised.
-
-        If exc_class is None, then we assert that *no* error is raised.
-
-        Otherwise, we assert that only a particular error wasn't raised;
-        if any different exceptions were raised, we just silently capture
-        them and return.
-        """
-        exc_msg = kwargs.pop('exc_msg', '')
-
-        if exc_class is None:
-            # Ensure no errors were raised
-            try:
-                return func(*args, **kwargs)
-            except Exception:
-                raise
-                raise AssertionError(exc_msg)
-        else:
-            # Ensure a specific error wasn't raised
-            try:
-                return func(*args, **kwargs)
-            except exc_class:
-                raise AssertionError(exc_msg)
-            except Exception:
-                pass  # Any other errors are fine
-
     def assertIsInstance(self, a, b, *args, **kwargs):
         """Python < v2.7 compatibility.  Assert 'a' is Instance of 'b'"""
         try:
