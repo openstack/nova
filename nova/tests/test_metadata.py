@@ -32,7 +32,7 @@ from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova import flags
-from nova import network
+from nova.network import api as network_api
 from nova import test
 from nova.tests import fake_network
 
@@ -362,7 +362,7 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.status_int, 404)
 
     def test_user_data_non_existing_fixed_address(self):
-        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
+        self.stubs.Set(network_api.API, 'get_fixed_ip_by_address',
                        return_non_existing_address)
         response = fake_request(None, self.mdinst, "/2009-04-04/user-data",
                                 "127.1.1.1")

@@ -25,7 +25,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import flags
-import nova.network
+from nova.network import api as network_api
 from nova import notifications
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
@@ -49,7 +49,7 @@ class NotificationsTestCase(test.TestCase):
             self.assertTrue(ctxt.is_admin)
             return self.net_info
 
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                 fake_get_nw_info)
         fake_network.set_stub_network_methods(self.stubs)
 

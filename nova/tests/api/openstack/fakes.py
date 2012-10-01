@@ -38,6 +38,7 @@ from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.image.glance
+from nova.network import api as network_api
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import quota
@@ -189,7 +190,7 @@ def stub_out_nw_api_get_floating_ips_by_fixed_address(stubs, func=None):
 
     if func is None:
         func = get_floating_ips_by_fixed_address
-    stubs.Set(nova.network.API, 'get_floating_ips_by_fixed_address', func)
+    stubs.Set(network_api.API, 'get_floating_ips_by_fixed_address', func)
 
 
 def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
@@ -207,7 +208,7 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
 
     if cls is None:
         cls = Fake
-    stubs.Set(nova.network, 'API', cls)
+    stubs.Set(network_api, 'API', cls)
     fake_network.stub_out_nw_api_get_instance_nw_info(stubs, spectacular=True)
 
 
