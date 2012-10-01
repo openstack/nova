@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2012-09-30 00:02+0000\n"
+"POT-Creation-Date: 2012-10-01 00:02+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -914,292 +914,297 @@ msgid "Instance %(name)s already exists."
 msgstr "实例 %(name)s 已经存在。"
 
 #: nova/exception.py:883
-#, python-format
-msgid "Instance Type %(name)s already exists."
+#, fuzzy, python-format
+msgid "Instance Type with name %(name)s already exists."
 msgstr "实例类型 %(name)s 已经存在。"
 
 #: nova/exception.py:887
+#, fuzzy, python-format
+msgid "Instance Type with ID %(flavor_id)s already exists."
+msgstr "实例类型 %(name)s 已经存在。"
+
+#: nova/exception.py:891
 #, python-format
 msgid ""
 "Flavor access alreay exists for flavor %(flavor_id)s and project "
 "%(project_id)s combination."
 msgstr ""
 
-#: nova/exception.py:892
+#: nova/exception.py:896
 #, python-format
 msgid "Volume Type %(name)s already exists."
 msgstr "卷类型 %(name)s 已经存在。"
 
-#: nova/exception.py:896
+#: nova/exception.py:900
 #, fuzzy, python-format
 msgid "%(path)s is not on shared storage: %(reason)s"
 msgstr "%(path)s 在共享存储上：%(reason)s"
 
-#: nova/exception.py:900
+#: nova/exception.py:904
 #, fuzzy, python-format
 msgid "%(path)s is not on local storage: %(reason)s"
 msgstr "%(path)s 在共享存储上：%(reason)s"
 
-#: nova/exception.py:904
+#: nova/exception.py:908
 msgid "Migration error"
 msgstr "迁移错误"
 
-#: nova/exception.py:908
+#: nova/exception.py:912
 #, python-format
 msgid "Malformed message body: %(reason)s"
 msgstr "错误格式的消息体： %(reason)s"
 
-#: nova/exception.py:914
+#: nova/exception.py:918
 #, python-format
 msgid "Could not find config at %(path)s"
 msgstr "在 %(path)s 找不到配置文件。"
 
-#: nova/exception.py:918
+#: nova/exception.py:922
 #, python-format
 msgid "Could not load paste app '%(name)s' from %(path)s"
 msgstr "无法从路径 %(path)s 中加载应用 '%(name)s'"
 
-#: nova/exception.py:922
+#: nova/exception.py:926
 #, fuzzy
 msgid "When resizing, instances must change flavor!"
 msgstr "调整时实例的大小必须要发生变化。"
 
-#: nova/exception.py:926
+#: nova/exception.py:930
 msgid "Image is larger than instance type allows"
 msgstr "镜像比实例类型所允许的大。"
 
-#: nova/exception.py:930
+#: nova/exception.py:934
 msgid "Instance type's memory is too small for requested image."
 msgstr "实例类型的内存对于所请求的镜像太小。"
 
-#: nova/exception.py:934
+#: nova/exception.py:938
 msgid "Instance type's disk is too small for requested image."
 msgstr "实例类型的磁盘对于所请求的镜像太小。"
 
-#: nova/exception.py:938
+#: nova/exception.py:942
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr "没有足够的可用内存来启动计算节点  %(uuid)s。"
 
-#: nova/exception.py:942
+#: nova/exception.py:946
 msgid "Could not fetch bandwidth/cpu/disk metrics for this host."
 msgstr "无法获取此主机的带宽、CPU和磁盘指标。"
 
-#: nova/exception.py:946
+#: nova/exception.py:950
 #, python-format
 msgid "No valid host was found. %(reason)s"
 msgstr "找不到有效主机，原因是 %(reason)s。"
 
-#: nova/exception.py:950
+#: nova/exception.py:954
 #, python-format
 msgid "Host %(host)s is not up or doesn't exist."
 msgstr "主机 %(host)s 没有启动或者不存在。"
 
-#: nova/exception.py:954
+#: nova/exception.py:958
 msgid "Quota exceeded"
 msgstr "超出配额"
 
-#: nova/exception.py:961
+#: nova/exception.py:965
 #, fuzzy, python-format
 msgid ""
 "Quota exceeded for %(overs)s: Requested %(req)s, but already used "
 "%(used)d of %(allowed)d %(resource)s"
 msgstr "%(pid)s 已经超过配额，试图运行 %(min_count)s 个实例"
 
-#: nova/exception.py:966
+#: nova/exception.py:970
 msgid "Maximum volume size exceeded"
 msgstr ""
 
-#: nova/exception.py:970
+#: nova/exception.py:974
 #, fuzzy, python-format
 msgid "Maximum number of volumes allowed (%(allowed)d) exceeded"
 msgstr "所选择主机的最大数目(%d)"
 
-#: nova/exception.py:974
+#: nova/exception.py:978
 #, fuzzy
 msgid "Maximum number of floating ips exceeded"
 msgstr "所选择主机的最大数目(%d)"
 
-#: nova/exception.py:978
+#: nova/exception.py:982
 #, fuzzy, python-format
 msgid "Maximum number of metadata items exceeds %(allowed)d"
 msgstr "所选择主机的最大数目(%d)"
 
-#: nova/exception.py:982
+#: nova/exception.py:986
 msgid "Personality file limit exceeded"
 msgstr "超过个性化文件限制"
 
-#: nova/exception.py:986
+#: nova/exception.py:990
 msgid "Personality file path too long"
 msgstr "个性化文件路径太长"
 
-#: nova/exception.py:990
+#: nova/exception.py:994
 msgid "Personality file content too long"
 msgstr "个性化文件内容太长"
 
-#: nova/exception.py:994
+#: nova/exception.py:998
 #, fuzzy
 msgid "Maximum number of key pairs exceeded"
 msgstr "所选择主机的最大数目(%d)"
 
-#: nova/exception.py:998
+#: nova/exception.py:1002
 #, fuzzy
 msgid "Maximum number of security groups or rules exceeded"
 msgstr "所选择主机的最大数目(%d)"
 
-#: nova/exception.py:1002
+#: nova/exception.py:1006
 #, fuzzy, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: action '%(action)s' caused an error: "
 "%(reason)s."
 msgstr "聚合 %(aggregate_id)s没有主机 %(host)s。"
 
-#: nova/exception.py:1007
+#: nova/exception.py:1011
 #, python-format
 msgid "Aggregate %(aggregate_id)s could not be found."
 msgstr "找不到聚合 %(aggregate_id)s。"
 
-#: nova/exception.py:1011
+#: nova/exception.py:1015
 #, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "聚合 %(aggregate_name)s 已经存在。"
 
-#: nova/exception.py:1015
+#: nova/exception.py:1019
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no host %(host)s."
 msgstr "聚合 %(aggregate_id)s没有主机 %(host)s。"
 
-#: nova/exception.py:1019
+#: nova/exception.py:1023
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
 msgstr "聚合 %(aggregate_id)s 没有键为 %(metadata_key)s 的元数据。"
 
-#: nova/exception.py:1024
+#: nova/exception.py:1028
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "聚合 %(aggregate_id)s已经有主机 %(host)s。"
 
-#: nova/exception.py:1028
+#: nova/exception.py:1032
 #, fuzzy, python-format
 msgid "Detected more than one volume with name %(vol_name)s"
 msgstr "检测到不止一个名称为 %(vol_name) 的卷。"
 
-#: nova/exception.py:1032
+#: nova/exception.py:1036
 #, python-format
 msgid "Cannot create volume_type with name %(name)s and specs %(extra_specs)s"
 msgstr "无法创建名称为 %(name)s 规格为 %(extra_specs)s 的卷类型。"
 
-#: nova/exception.py:1037
+#: nova/exception.py:1041
 #, python-format
 msgid "Bad or unexpected response from the storage volume backend API: %(data)s"
 msgstr ""
 
-#: nova/exception.py:1042
+#: nova/exception.py:1046
 #, fuzzy
 msgid "Unknown NFS exception"
 msgstr "发生未知异常。"
 
-#: nova/exception.py:1046
+#: nova/exception.py:1050
 msgid "No mounted NFS shares found"
 msgstr ""
 
-#: nova/exception.py:1050
+#: nova/exception.py:1054
 #, python-format
 msgid "There is no share which can host %(volume_size)sG"
 msgstr ""
 
-#: nova/exception.py:1054
+#: nova/exception.py:1058
 msgid "Unable to create instance type"
 msgstr "无法创建实例类型。"
 
-#: nova/exception.py:1058
+#: nova/exception.py:1062
 #, fuzzy, python-format
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
 msgstr "设置管理员密码失败。实例 %s 没有运行"
 
-#: nova/exception.py:1064
+#: nova/exception.py:1068
 msgid "Bad response from SolidFire API"
 msgstr "来自SolidFire API的错误响应"
 
-#: nova/exception.py:1068
+#: nova/exception.py:1072
 #, python-format
 msgid "Error in SolidFire API response: data=%(data)s"
 msgstr "SolidFire API响应里发生错误：data=%(data)s"
 
-#: nova/exception.py:1072
+#: nova/exception.py:1076
 #, fuzzy, python-format
 msgid "Detected existing vlan with id %(vlan)d"
 msgstr "检测到已存在的id为%(vlan) vlan"
 
-#: nova/exception.py:1076
+#: nova/exception.py:1080
 #, python-format
 msgid "Instance %(instance_id)s could not be found."
 msgstr "实例 %(instance_id)s 没有找到。"
 
-#: nova/exception.py:1080
+#: nova/exception.py:1084
 #, fuzzy, python-format
 msgid "Marker %(marker)s could not be found."
 msgstr "镜像 %(image_id)s 没有找到。"
 
-#: nova/exception.py:1084
+#: nova/exception.py:1088
 #, python-format
 msgid "Invalid id: %(val)s (expecting \"i-...\")."
 msgstr ""
 
-#: nova/exception.py:1088
+#: nova/exception.py:1092
 #, fuzzy, python-format
 msgid "Could not fetch image %(image_id)s"
 msgstr "获取镜像 %(image)s"
 
-#: nova/exception.py:1092
+#: nova/exception.py:1096
 #, python-format
 msgid "Task %(task_name)s is already running on host %(host)s"
 msgstr ""
 
-#: nova/exception.py:1096
+#: nova/exception.py:1100
 #, fuzzy, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "没有为主机 %(host)s 找到浮动IP。"
 
-#: nova/exception.py:1100
+#: nova/exception.py:1104
 #, fuzzy, python-format
 msgid "Instance %(instance_uuid)s is locked"
 msgstr "没有找到实例 %(instance_id)s"
 
-#: nova/exception.py:1104
+#: nova/exception.py:1108
 #, python-format
 msgid "Could not mount vfat config drive. %(operation)s failed. Error: %(error)s"
 msgstr ""
 
-#: nova/exception.py:1109
+#: nova/exception.py:1113
 #, python-format
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
 msgstr ""
 
-#: nova/exception.py:1114
+#: nova/exception.py:1118
 #, python-format
 msgid ""
 "User data too large. User data must be no larger than %(maxsize)s bytes "
 "once base64 encoded. Your data is %(length)d bytes"
 msgstr ""
 
-#: nova/exception.py:1120
+#: nova/exception.py:1124
 msgid "User data needs to be valid base 64."
 msgstr ""
 
-#: nova/exception.py:1124
+#: nova/exception.py:1128
 #, python-format
 msgid ""
 "unexpected task state: expecting %(expected)s but the actual state is "
 "%(actual)s"
 msgstr ""
 
-#: nova/exception.py:1129
+#: nova/exception.py:1133
 #, fuzzy, python-format
 msgid "The CA file for %(project)s could not be found"
 msgstr "没有为项目 %(project_id)s 找到配额。"
 
-#: nova/exception.py:1133
+#: nova/exception.py:1137
 #, fuzzy, python-format
 msgid "The CRL file for %(project)s could not be found"
 msgstr "项目 %(project_id)s 没有找到。"
@@ -3938,42 +3943,42 @@ msgstr "无法识别的 read_deleted 取值”%s“"
 msgid "Change will make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4669
+#: nova/db/sqlalchemy/api.py:4675
 #, fuzzy
 msgid "Backend exists"
 msgstr "后台 %s"
 
-#: nova/db/sqlalchemy/api.py:4689 nova/db/sqlalchemy/api.py:4715
+#: nova/db/sqlalchemy/api.py:4695 nova/db/sqlalchemy/api.py:4721
 #, python-format
 msgid "No backend config with id %(sm_backend_id)s"
 msgstr "没有id为%(sm_backend_id)s的后台配置"
 
-#: nova/db/sqlalchemy/api.py:4727
+#: nova/db/sqlalchemy/api.py:4733
 #, fuzzy, python-format
 msgid "No backend config with sr uuid %(sr_uuid)s"
 msgstr "没有id为%(sm_backend_id)s的后台配置"
 
-#: nova/db/sqlalchemy/api.py:4761
+#: nova/db/sqlalchemy/api.py:4767
 #, fuzzy
 msgid "Flavor exists"
 msgstr "类型：%s"
 
-#: nova/db/sqlalchemy/api.py:4776
+#: nova/db/sqlalchemy/api.py:4782
 #, fuzzy, python-format
 msgid "%(sm_flavor_id) flavor not found"
 msgstr "类型 %(flavor_id)s 没有找到。"
 
-#: nova/db/sqlalchemy/api.py:4795
+#: nova/db/sqlalchemy/api.py:4801
 #, fuzzy, python-format
 msgid "No sm_flavor called %(sm_flavor_id)s"
 msgstr "没有 sm_flavor 调用 %(sm_flavor)s"
 
-#: nova/db/sqlalchemy/api.py:4812
+#: nova/db/sqlalchemy/api.py:4818
 #, fuzzy, python-format
 msgid "No sm_flavor called %(sm_flavor_label)s"
 msgstr "没有 sm_flavor 调用 %(sm_flavor)s"
 
-#: nova/db/sqlalchemy/api.py:4850
+#: nova/db/sqlalchemy/api.py:4856
 #, python-format
 msgid "No sm_volume with id %(volume_id)s"
 msgstr "没有id为 %(volume_id)s 的 sm_volume"
@@ -5074,6 +5079,13 @@ msgstr ""
 msgid "%(host_state)s does not support requested instance_properties"
 msgstr ""
 
+#: nova/scheduler/filters/io_ops_filter.py:42
+#, python-format
+msgid ""
+"%(host_state)s fails I/O ops check: Max IOs per host is set to "
+"%(max_io_ops)s"
+msgstr ""
+
 #: nova/scheduler/filters/ram_filter.py:46
 #, python-format
 msgid ""
@@ -5130,19 +5142,19 @@ msgstr "已经附加"
 msgid "already detached"
 msgstr "已经分离"
 
-#: nova/tests/fakelibvirt.py:835
+#: nova/tests/fakelibvirt.py:844
 msgid "Please extend mock libvirt module to support flags"
 msgstr "请扩展模拟的 libvirt 模块来支持标记"
 
-#: nova/tests/fakelibvirt.py:839
+#: nova/tests/fakelibvirt.py:848
 msgid "Expected a list for 'auth' parameter"
 msgstr ""
 
-#: nova/tests/fakelibvirt.py:843
+#: nova/tests/fakelibvirt.py:852
 msgid "Expected a function in 'auth[0]' parameter"
 msgstr ""
 
-#: nova/tests/fakelibvirt.py:847
+#: nova/tests/fakelibvirt.py:856
 msgid "Expected a function in 'auth[1]' parameter"
 msgstr ""
 
@@ -5196,12 +5208,12 @@ msgstr "uuid"
 msgid "unrecognized argument %s"
 msgstr "无法识别的 read_deleted 取值”%s“"
 
-#: nova/tests/test_storwize_svc.py:900
+#: nova/tests/test_storwize_svc.py:897
 #, python-format
 msgid "Run CLI command: %s"
 msgstr ""
 
-#: nova/tests/test_storwize_svc.py:903
+#: nova/tests/test_storwize_svc.py:900
 #, python-format
 msgid ""
 "CLI output:\n"
@@ -5209,7 +5221,7 @@ msgid ""
 " stderr: %(err)s"
 msgstr ""
 
-#: nova/tests/test_storwize_svc.py:908
+#: nova/tests/test_storwize_svc.py:905
 #, python-format
 msgid ""
 "CLI Exception output:\n"
@@ -5227,12 +5239,12 @@ msgstr "给定数据：%s"
 msgid "Result data: %s"
 msgstr "结果数据：%s"
 
-#: nova/tests/test_xenapi.py:709
+#: nova/tests/test_xenapi.py:710
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
 msgstr "在%s 创建文件模拟客户代理"
 
-#: nova/tests/test_xenapi.py:720
+#: nova/tests/test_xenapi.py:721
 #, python-format
 msgid "Removing simulated guest agent files in %s"
 msgstr "移除在 %s 的模拟的客户代理文件"
@@ -5685,7 +5697,7 @@ msgid "instance %s: finished toXML method"
 msgstr "实例 %s：方法toXML 完成"
 
 #: nova/virt/baremetal/driver.py:558 nova/virt/hyperv/vmops.py:486
-#: nova/virt/libvirt/driver.py:1973
+#: nova/virt/libvirt/driver.py:1980
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. This error can be safely ignored for now."
@@ -5700,7 +5712,7 @@ msgstr "#### RLK: cpu_arch = %s "
 msgid "Updating!"
 msgstr "正在更新。"
 
-#: nova/virt/baremetal/driver.py:730 nova/virt/libvirt/driver.py:3025
+#: nova/virt/baremetal/driver.py:730 nova/virt/libvirt/driver.py:3032
 #: nova/virt/xenapi/host.py:148
 msgid "Updating host stats"
 msgstr "正在更新主机状态"
@@ -6432,7 +6444,7 @@ msgstr ""
 msgid "The ISCSI initiator name can't be found. Choosing the default one"
 msgstr ""
 
-#: nova/virt/hyperv/volumeutils.py:121 nova/virt/libvirt/driver.py:1447
+#: nova/virt/hyperv/volumeutils.py:121 nova/virt/libvirt/driver.py:1454
 #: nova/virt/xenapi/vm_utils.py:407
 #, python-format
 msgid "block_device_list %s"
@@ -6495,144 +6507,149 @@ msgstr "删除实例文件 %(target)s"
 msgid "Failed to cleanup directory %(target)s: %(e)s"
 msgstr "schedule_%(method)s 失败：%(ex)s"
 
-#: nova/virt/libvirt/driver.py:717
+#: nova/virt/libvirt/driver.py:714
+#, fuzzy
+msgid "During detach_volume, instance disappeared."
+msgstr "%s 在运行中消失了。"
+
+#: nova/virt/libvirt/driver.py:724
 msgid "attaching LXC block device"
 msgstr "附加 LXC 块设备"
 
-#: nova/virt/libvirt/driver.py:730
+#: nova/virt/libvirt/driver.py:737
 msgid "detaching LXC block device"
 msgstr "分离LXC 块设备"
 
-#: nova/virt/libvirt/driver.py:862
+#: nova/virt/libvirt/driver.py:869
 #, fuzzy
 msgid "Instance soft rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/driver.py:866
+#: nova/virt/libvirt/driver.py:873
 #, fuzzy
 msgid "Failed to soft reboot instance."
 msgstr "重新启动实例失败"
 
-#: nova/virt/libvirt/driver.py:898
+#: nova/virt/libvirt/driver.py:905
 #, fuzzy
 msgid "Instance shutdown successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/driver.py:933
+#: nova/virt/libvirt/driver.py:940
 msgid "Instance rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/driver.py:1063
+#: nova/virt/libvirt/driver.py:1070
 msgid "Instance is running"
 msgstr "实例在运行"
 
-#: nova/virt/libvirt/driver.py:1070 nova/virt/powervm/operator.py:258
+#: nova/virt/libvirt/driver.py:1077 nova/virt/powervm/operator.py:258
 msgid "Instance spawned successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/driver.py:1086
+#: nova/virt/libvirt/driver.py:1093
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data：%(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:1132
+#: nova/virt/libvirt/driver.py:1139
 #, fuzzy
 msgid "Guest does not have a console available"
 msgstr "用户没有管理员权限"
 
-#: nova/virt/libvirt/driver.py:1176
+#: nova/virt/libvirt/driver.py:1183
 #, python-format
 msgid "Path '%(path)s' supports direct I/O"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1180
+#: nova/virt/libvirt/driver.py:1187
 #, python-format
 msgid "Path '%(path)s' does not support direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1184 nova/virt/libvirt/driver.py:1188
+#: nova/virt/libvirt/driver.py:1191 nova/virt/libvirt/driver.py:1195
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1242
+#: nova/virt/libvirt/driver.py:1249
 msgid "Using config drive"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1261
+#: nova/virt/libvirt/driver.py:1268
 msgid "Creating image"
 msgstr "正在创建镜像"
 
-#: nova/virt/libvirt/driver.py:1396
+#: nova/virt/libvirt/driver.py:1403
 #, fuzzy, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "注入文件路径：'%s'"
 
-#: nova/virt/libvirt/driver.py:1410
+#: nova/virt/libvirt/driver.py:1417
 #, python-format
 msgid "Injecting %(injection)s into image %(img_id)s"
 msgstr "将 %(injection)s 注入到镜像 %(img_id)s"
 
-#: nova/virt/libvirt/driver.py:1420
+#: nova/virt/libvirt/driver.py:1427
 #, python-format
 msgid "Ignoring error injecting data into image %(img_id)s (%(e)s)"
 msgstr "忽略向镜像 %(img_id)s  注入的数据的错误 (%(e)s)"
 
-#: nova/virt/libvirt/driver.py:1494
+#: nova/virt/libvirt/driver.py:1501
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt "
 "hypervisor '%s' does not support selecting CPU models"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1500
+#: nova/virt/libvirt/driver.py:1507
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1504
+#: nova/virt/libvirt/driver.py:1511
 msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1508
+#: nova/virt/libvirt/driver.py:1515
 #, python-format
 msgid "CPU mode '%(mode)s' model '%(model)s' was chosen"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1524
+#: nova/virt/libvirt/driver.py:1531
 msgid ""
 "Passthrough of the host CPU was requested but this libvirt version does "
 "not support this feature"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1818
+#: nova/virt/libvirt/driver.py:1825
 msgid "Starting toXML method"
 msgstr "正在启动 toXML 方法"
 
-#: nova/virt/libvirt/driver.py:1822
+#: nova/virt/libvirt/driver.py:1829
 msgid "Finished toXML method"
 msgstr "toXML方法完成"
 
-#: nova/virt/libvirt/driver.py:1839
+#: nova/virt/libvirt/driver.py:1846
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr "查找 %(instance_name)s时libvirt出错：[错误代码 %(error_code)s] %(ex)s"
 
-#: nova/virt/libvirt/driver.py:2091
+#: nova/virt/libvirt/driver.py:2098
 msgid "libvirt version is too old (does not support getVersion)"
 msgstr "libvirt版本过旧(不支持getVersion)"
 
-#: nova/virt/libvirt/driver.py:2278
+#: nova/virt/libvirt/driver.py:2285
 msgid "Block migration can not be used with shared storage."
 msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/virt/libvirt/driver.py:2286
+#: nova/virt/libvirt/driver.py:2293
 #, fuzzy
 msgid "Live migration can not be used without shared storage."
 msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/virt/libvirt/driver.py:2324
+#: nova/virt/libvirt/driver.py:2331
 #, fuzzy, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s: Disk of instance is too "
@@ -6641,7 +6658,7 @@ msgstr ""
 "无法迁移%(instance_id)s 到 %(dest)s 上：缺少磁盘(主机:%(available)s <= "
 "实例:%(necessary)s)"
 
-#: nova/virt/libvirt/driver.py:2344
+#: nova/virt/libvirt/driver.py:2351
 #, python-format
 msgid ""
 "Instance launched has CPU info:\n"
@@ -6650,7 +6667,7 @@ msgstr ""
 "已启动实例的CPU信息：\n"
 "%s"
 
-#: nova/virt/libvirt/driver.py:2356
+#: nova/virt/libvirt/driver.py:2363
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -6665,54 +6682,54 @@ msgstr ""
 "\n"
 "参考 %(u)s"
 
-#: nova/virt/libvirt/driver.py:2373
+#: nova/virt/libvirt/driver.py:2380
 #, python-format
 msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
 msgstr "创建tmpfile %s 来通知其他的计算节点需要挂载相同的存储。"
 
-#: nova/virt/libvirt/driver.py:2421
+#: nova/virt/libvirt/driver.py:2428
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2491
+#: nova/virt/libvirt/driver.py:2498
 #, fuzzy, python-format
 msgid "Live Migration failure: %(e)s"
 msgstr "预在线迁移在%(dest)s失败"
 
-#: nova/virt/libvirt/driver.py:2535
+#: nova/virt/libvirt/driver.py:2542
 #, python-format
 msgid "plug_vifs() failed %(cnt)d.Retry up to %(max_retry)d for %(hostname)s."
 msgstr "plug_vifs() 失败%(cnt)d 次。最多重新尝试 %(max_retry)d 次在主机 %(hostname)s。"
 
-#: nova/virt/libvirt/driver.py:2662
+#: nova/virt/libvirt/driver.py:2669
 #, python-format
 msgid "skipping %(path)s since it looks like volume"
 msgstr "因它像卷，所以跳过 %(path)s"
 
-#: nova/virt/libvirt/driver.py:2711
+#: nova/virt/libvirt/driver.py:2718
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2781
+#: nova/virt/libvirt/driver.py:2788
 #, fuzzy
 msgid "Starting migrate_disk_and_power_off"
 msgstr "实例 %s：开始执行 migrate_disk_and_power_off"
 
-#: nova/virt/libvirt/driver.py:2840
+#: nova/virt/libvirt/driver.py:2847
 #, fuzzy
 msgid "Instance running successfully."
 msgstr "实例 %s 成功运行。"
 
-#: nova/virt/libvirt/driver.py:2847
+#: nova/virt/libvirt/driver.py:2854
 #, fuzzy
 msgid "Starting finish_migration"
 msgstr "实例 %s：开始执行 finish_migration"
 
-#: nova/virt/libvirt/driver.py:2898
+#: nova/virt/libvirt/driver.py:2905
 #, fuzzy
 msgid "Starting finish_revert_migration"
 msgstr "实例 %s：开始执行 finish_revert_migration"
@@ -7656,15 +7673,15 @@ msgstr "解密私钥失败：%s"
 msgid "Host startup on XenServer is not supported."
 msgstr "不支持在XenServer启动主机"
 
-#: nova/virt/xenapi/driver.py:601
+#: nova/virt/xenapi/driver.py:606
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr "无法登录到XenAPI(Dom0磁盘是空么？)"
 
-#: nova/virt/xenapi/driver.py:639
+#: nova/virt/xenapi/driver.py:644
 msgid "Host is member of a pool, but DB says otherwise"
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:723 nova/virt/xenapi/driver.py:737
+#: nova/virt/xenapi/driver.py:728 nova/virt/xenapi/driver.py:742
 #, python-format
 msgid "Got exception: %s"
 msgstr "得到异常：%s"
@@ -7713,12 +7730,17 @@ msgstr ""
 msgid "Unable to get SR for this host: %s"
 msgstr "无法为主机得到存储库：%s"
 
-#: nova/virt/xenapi/host.py:188
+#: nova/virt/xenapi/host.py:190
+#, fuzzy, python-format
+msgid "Failed to extract instance support from %s"
+msgstr "重新启动实例失败"
+
+#: nova/virt/xenapi/host.py:207
 #, fuzzy
 msgid "Unable to get updated status"
 msgstr "无法得到最新的状态：%s"
 
-#: nova/virt/xenapi/host.py:191
+#: nova/virt/xenapi/host.py:210
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s."
 msgstr "对 %(method)s 的调用返回错误：%(e)s。"
@@ -10002,25 +10024,4 @@ msgid ""
 "Got error trying to delete target %(target)s, assuming it is already "
 "gone: %(exc)s"
 msgstr ""
-
-#~ msgid "Could not get bandwidth info."
-#~ msgstr "无法得到带宽信息"
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_vtype: set to either "
-#~ "'striped' or 'seq'"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_autoexpand: set to either "
-#~ "True or False"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Illegal value specified for "
-#~ "storwize_svc_vol_compression: set to either "
-#~ "True or False"
-#~ msgstr ""
 
