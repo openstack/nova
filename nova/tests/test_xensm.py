@@ -89,11 +89,8 @@ class XenSMTestCase(stubs.XenAPITestBase):
         ctxt = context.get_admin_context()
         beconf = self._setup_step(ctxt)
         volume = self._create_volume()
-        self.assertNotRaises(None, self.driver.create_volume, volume)
-        self.assertNotRaises(None,
-                             db.sm_volume_get,
-                             ctxt,
-                             volume['id'])
+        self.driver.create_volume(volume)
+        db.sm_volume_get(ctxt, volume['id'])
 
     def test_local_path(self):
         ctxt = context.get_admin_context()
@@ -106,7 +103,7 @@ class XenSMTestCase(stubs.XenAPITestBase):
         beconf = self._setup_step(ctxt)
         volume = self._create_volume()
         self.driver.create_volume(volume)
-        self.assertNotRaises(None, self.driver.delete_volume, volume)
+        self.driver.delete_volume(volume)
         self.assertRaises(exception.NotFound,
                           db.sm_volume_get,
                           ctxt,

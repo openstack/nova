@@ -1182,8 +1182,7 @@ class SMVolumeDBApiTestCase(test.TestCase):
 
     def test_sm_backend_conf_delete_nonexisting(self):
         ctxt = context.get_admin_context()
-        self.assertNotRaises(None, db.sm_backend_conf_delete,
-                              ctxt, "FA15E-1D")
+        db.sm_backend_conf_delete(ctxt, "FA15E-1D")
 
     def test_sm_flavor_create(self):
         ctxt = context.get_admin_context()
@@ -1231,8 +1230,7 @@ class SMVolumeDBApiTestCase(test.TestCase):
 
     def test_sm_flavor_delete_nonexisting(self):
         ctxt = context.get_admin_context()
-        self.assertNotRaises(None, db.sm_flavor_delete,
-                             ctxt, 7)
+        db.sm_flavor_delete(ctxt, 7)
 
     def test_sm_flavor_get(self):
         ctxt = context.get_admin_context()

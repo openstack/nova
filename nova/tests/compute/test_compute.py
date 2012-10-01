@@ -5171,10 +5171,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
 
     def test_can_build_instance_from_visible_instance_type(self):
         self.inst_type['disabled'] = False
-
-        self.assertNotRaises(exception.InstanceTypeNotFound,
-            self.compute_api.create, self.context, self.inst_type, None,
-            exc_msg="Visible instance-types can be built from")
+        # Assert that exception.InstanceTypeNotFound is not raised
+        self.compute_api.create(self.context, self.inst_type, None)
 
     def test_cannot_build_instance_from_disabled_instance_type(self):
         self.inst_type['disabled'] = True
@@ -5189,10 +5187,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         instance['instance_type']['disabled'] = True
 
         # Assert no errors were raised
-        self.assertNotRaises(None,
-            self.compute_api.rebuild, self.context, instance, image_href,
-            admin_password,
-            exc_msg="Visible instance-types can be rebuilt from")
+        self.compute_api.rebuild(self.context, instance, image_href,
+                                 admin_password)
 
     def test_can_rebuild_instance_from_disabled_instance_type(self):
         """
@@ -5207,10 +5203,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         instance['instance_type']['disabled'] = True
 
         # Assert no errors were raised
-        self.assertNotRaises(None,
-            self.compute_api.rebuild, self.context, instance, image_href,
-            admin_password,
-            exc_msg="Disabled instance-types can be rebuilt from")
+        self.compute_api.rebuild(self.context, instance, image_href,
+                                 admin_password)
 
     def test_can_resize_to_visible_instance_type(self):
         instance = self._create_fake_instance()
@@ -5226,11 +5220,9 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
                        fake_get_instance_type_by_flavor_id)
 
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
-        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound; we should eventually make it raise
         # InstanceTypeNotFound for consistency.
-        self.assertNotRaises(exception.FlavorNotFound,
-            self.compute_api.resize, self.context, instance, '4',
-            exc_msg="Visible flavors can be resized to")
+        self.compute_api.resize(self.context, instance, '4')
 
     def test_cannot_resize_to_disabled_instance_type(self):
         instance = self._create_fake_instance()
@@ -5256,11 +5248,9 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         instance['instance_type']['disabled'] = False
 
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
-        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound; we should eventually make it raise
         # InstanceTypeNotFound for consistency.
-        self.assertNotRaises(exception.FlavorNotFound,
-            self.compute_api.resize, self.context, instance, None,
-            exc_msg="Visible flavors can be migrated to")
+        self.compute_api.resize(self.context, instance, None)
 
     def test_can_migrate_to_disabled_instance_type(self):
         """
@@ -5271,11 +5261,9 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         instance['instance_type']['disabled'] = True
 
         # FIXME(sirp): for legacy this raises FlavorNotFound instead of
-        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound; we should eventually make it raise
         # InstanceTypeNotFound for consistency.
-        self.assertNotRaises(exception.FlavorNotFound,
-            self.compute_api.resize, self.context, instance, None,
-            exc_msg="Disabled flavors can be migrated to")
+        self.compute_api.resize(self.context, instance, None)
 
 
 class ComputeReschedulingTestCase(BaseTestCase):
@@ -5358,10 +5346,10 @@ class ComputeReschedulingExceptionTestCase(BaseTestCase):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
         request_spec = dict(num_attempts=1)
-        self.assertNotRaises(test.TestingException,
-                self.compute._run_instance, self.context,
-                filter_properties=filter_properties, request_spec=request_spec,
-                instance=self.fake_instance)
+        # Assert that test.TestingException is not raised
+        self.compute._run_instance(self.context, request_spec,
+                                   filter_properties, None, None, None,
+                                   True, self.fake_instance)
 
     def test_exception_context_cleared(self):
         """Test with no rescheduling and an additional exception occurs
