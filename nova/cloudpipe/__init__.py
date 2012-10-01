@@ -23,7 +23,4 @@
 .. automodule:: nova.cloudpipe
    :platform: Unix
    :synopsis: An OpenVPN server for every nova user.
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@gmail.com>
-.. moduleauthor:: Joshua McKenty <jmckenty@gmail.com>
 """
