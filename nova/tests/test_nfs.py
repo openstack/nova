@@ -93,7 +93,7 @@ class NfsDriverTestCase(test.TestCase):
 
     def test_local_path(self):
         """local_path common use case"""
-        nfs.FLAGS.nfs_mount_point_base = self.TEST_MNT_POINT_BASE
+        self.flags(nfs_mount_point_base=self.TEST_MNT_POINT_BASE)
         drv = self._driver
 
         volume = DumbVolume()
@@ -201,7 +201,7 @@ class NfsDriverTestCase(test.TestCase):
         """_get_mount_point_for_share should calculate correct value"""
         drv = self._driver
 
-        nfs.FLAGS.nfs_mount_point_base = self.TEST_MNT_POINT_BASE
+        self.flags(nfs_mount_point_base=self.TEST_MNT_POINT_BASE)
 
         self.assertEqual('/mnt/test/2f4f60214cf43c595666dd815f0360a4',
                          drv._get_mount_point_for_share(self.TEST_NFS_EXPORT1))
@@ -216,7 +216,7 @@ class NfsDriverTestCase(test.TestCase):
         df_data = 'nfs-host:/export 2620544 996864 %d 41%% /mnt' % df_avail
         df_output = df_head + df_data
 
-        setattr(nfs.FLAGS, 'nfs_disk_util', 'df')
+        self.flags(nfs_disk_util='df')
 
         mox.StubOutWithMock(drv, '_get_mount_point_for_share')
         drv._get_mount_point_for_share(self.TEST_NFS_EXPORT1).\
@@ -231,14 +231,12 @@ class NfsDriverTestCase(test.TestCase):
         self.assertEquals(df_avail,
                           drv._get_available_capacity(self.TEST_NFS_EXPORT1))
 
-        delattr(nfs.FLAGS, 'nfs_disk_util')
-
     def test_get_available_capacity_with_du(self):
         """_get_available_capacity should calculate correct value"""
         mox = self.mox
         drv = self._driver
 
-        setattr(nfs.FLAGS, 'nfs_disk_util', 'du')
+        self.flags(nfs_disk_util='du')
 
         df_total_size = 2620544
         df_used_size = 996864
@@ -270,13 +268,11 @@ class NfsDriverTestCase(test.TestCase):
         self.assertEquals(df_total_size - du_used,
                           drv._get_available_capacity(self.TEST_NFS_EXPORT1))
 
-        delattr(nfs.FLAGS, 'nfs_disk_util')
-
     def test_load_shares_config(self):
         mox = self.mox
         drv = self._driver
 
-        nfs.FLAGS.nfs_shares_config = self.TEST_SHARES_CONFIG_FILE
+        self.flags(nfs_shares_config=self.TEST_SHARES_CONFIG_FILE)
 
         mox.StubOutWithMock(__builtin__, 'open')
         config_data = []
@@ -343,7 +339,7 @@ class NfsDriverTestCase(test.TestCase):
         """do_setup should throw error if shares config is not configured """
         drv = self._driver
 
-        nfs.FLAGS.nfs_shares_config = self.TEST_SHARES_CONFIG_FILE
+        self.flags(nfs_shares_config=self.TEST_SHARES_CONFIG_FILE)
 
         self.assertRaises(exception.NfsException,
                           drv.do_setup, IsA(context.RequestContext))
@@ -353,7 +349,7 @@ class NfsDriverTestCase(test.TestCase):
         mox = self.mox
         drv = self._driver
 
-        nfs.FLAGS.nfs_shares_config = self.TEST_SHARES_CONFIG_FILE
+        self.flags(nfs_shares_config=self.TEST_SHARES_CONFIG_FILE)
 
         mox.StubOutWithMock(os.path, 'exists')
         os.path.exists(self.TEST_SHARES_CONFIG_FILE).AndReturn(True)
@@ -424,7 +420,7 @@ class NfsDriverTestCase(test.TestCase):
         drv = self._driver
         volume = self._simple_volume()
 
-        setattr(nfs.FLAGS, 'nfs_sparsed_volumes', True)
+        self.flags(nfs_sparsed_volumes=True)
 
         mox.StubOutWithMock(drv, '_create_sparsed_file')
         mox.StubOutWithMock(drv, '_set_rw_permissions_for_all')
@@ -436,14 +432,12 @@ class NfsDriverTestCase(test.TestCase):
 
         drv._do_create_volume(volume)
 
-        delattr(nfs.FLAGS, 'nfs_sparsed_volumes')
-
     def test_create_nonsparsed_volume(self):
         mox = self.mox
         drv = self._driver
         volume = self._simple_volume()
 
-        setattr(nfs.FLAGS, 'nfs_sparsed_volumes', False)
+        self.flags(nfs_sparsed_volumes=False)
 
         mox.StubOutWithMock(drv, '_create_regular_file')
         mox.StubOutWithMock(drv, '_set_rw_permissions_for_all')
@@ -454,8 +448,6 @@ class NfsDriverTestCase(test.TestCase):
         mox.ReplayAll()
 
         drv._do_create_volume(volume)
-
-        delattr(nfs.FLAGS, 'nfs_sparsed_volumes')
 
     def test_create_volume_should_ensure_nfs_mounted(self):
         """create_volume should ensure shares provided in config are mounted"""

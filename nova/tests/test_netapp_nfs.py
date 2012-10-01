@@ -77,31 +77,23 @@ class NetappNfsDriverTestCase(test.TestCase):
     def test_check_for_setup_error(self):
         mox = self.mox
         drv = self._driver
-        required_flags = [
-                'netapp_wsdl_url',
-                'netapp_login',
-                'netapp_password',
-                'netapp_server_hostname',
-                'netapp_server_port'
-            ]
 
         # check exception raises when flags are not set
         self.assertRaises(exception.NovaException,
                           drv.check_for_setup_error)
 
         # set required flags
-        for flag in required_flags:
-            setattr(netapp.FLAGS, flag, 'val')
+        self.flags(netapp_wsdl_url='val',
+                   netapp_login='val',
+                   netapp_password='val',
+                   netapp_server_hostname='val',
+                   netapp_server_port='val')
 
         mox.StubOutWithMock(nfs.NfsDriver, 'check_for_setup_error')
         nfs.NfsDriver.check_for_setup_error()
         mox.ReplayAll()
 
         drv.check_for_setup_error()
-
-        # restore initial FLAGS
-        for flag in required_flags:
-            delattr(netapp.FLAGS, flag)
 
     def test_do_setup(self):
         mox = self.mox
