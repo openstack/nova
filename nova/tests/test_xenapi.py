@@ -1957,8 +1957,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host',
-                   connection_type='xenapi',
-                   compute_driver='nova.virt.xenapi.driver.XenAPIDriver')
+                   compute_driver='xenapi.XenAPIDriver')
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()

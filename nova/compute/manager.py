@@ -85,7 +85,6 @@ compute_opts = [
                     "This is NOT the full path - just a folder name."
                     "For per-compute-host cached images, set to _base_$my_ip"),
     cfg.StrOpt('compute_driver',
-               default='nova.virt.connection.get_connection',
                help='Driver to use for controlling virtualization. Options '
                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
                    'fake.FakeDriver, baremetal.BareMetalDriver, '

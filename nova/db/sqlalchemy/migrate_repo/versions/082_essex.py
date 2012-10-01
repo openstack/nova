@@ -30,16 +30,7 @@ LOG = logging.getLogger(__name__)
 # of integral type, so is no longer set explicitly in such cases.
 
 def _populate_instance_types(instance_types_table):
-    if FLAGS.connection_type == "libvirt":
-        default_inst_types = {
-        'm1.tiny': dict(mem=512, vcpus=1, root_gb=0, eph_gb=0, flavid=1),
-        'm1.small': dict(mem=2048, vcpus=1, root_gb=10, eph_gb=20, flavid=2),
-        'm1.medium': dict(mem=4096, vcpus=2, root_gb=10, eph_gb=40, flavid=3),
-        'm1.large': dict(mem=8192, vcpus=4, root_gb=10, eph_gb=80, flavid=4),
-        'm1.xlarge': dict(mem=16384, vcpus=8, root_gb=10, eph_gb=160, flavid=5)
-        }
-    else:
-        default_inst_types = {
+    default_inst_types = {
         'm1.tiny': dict(mem=512, vcpus=1, root_gb=0, eph_gb=0, flavid=1),
         'm1.small': dict(mem=2048, vcpus=1, root_gb=20, eph_gb=0, flavid=2),
         'm1.medium': dict(mem=4096, vcpus=2, root_gb=40, eph_gb=0, flavid=3),

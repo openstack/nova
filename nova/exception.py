@@ -434,7 +434,7 @@ class NotFound(NovaException):
 
 
 class VirtDriverNotFound(NotFound):
-    message = _("Could not find driver for connection_type %(name)s")
+    message = _("Could not find driver for compute_driver %(name)s")
 
 
 class PersistentVolumeFileNotFound(NotFound):

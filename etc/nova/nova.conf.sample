@@ -73,10 +73,6 @@
 
 ######## defined in nova.flags ########
 
-# connection_type=<None>
-#### (StrOpt) Deprecated (use compute_driver instead): Virtualization api
-####          connection type : libvirt, xenapi, or fake
-
 # sql_connection=sqlite:///$state_path/$sqlite_db
 #### (StrOpt) The SQLAlchemy connection string used to connect to the
 ####          database
