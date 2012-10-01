@@ -35,7 +35,7 @@ class ApiTestCase(test.TestCase):
 
         new_instance = {'uuid': 'new-uuid'}
 
-        def fake_rpc_call(context, topic, msg):
+        def fake_rpc_call(context, topic, msg, timeout=None):
             return orig_instance_uuid
 
         self.stubs.Set(rpc, 'call', fake_rpc_call)

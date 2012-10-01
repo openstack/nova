@@ -2129,7 +2129,8 @@ class ComputeTestCase(BaseTestCase):
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
                                 'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
-                                         'teardown': False}})
+                                         'teardown': False},
+                                'version': '1.0'}, None)
         rpcinst = jsonutils.to_primitive(
                 db.instance_get_by_uuid(self.context, instance['uuid']))
         rpc.call(c, topic,
@@ -2224,7 +2225,8 @@ class ComputeTestCase(BaseTestCase):
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
                                 'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
-                                         'teardown': True}})
+                                         'teardown': True},
+                                'version': '1.0'}, None)
 
         # start test
         self.mox.ReplayAll()
