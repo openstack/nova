@@ -259,6 +259,9 @@ class FloatingIPActionController(wsgi.Controller):
         except exception.NoFloatingIpInterface:
             msg = _('l3driver call to add floating ip failed')
             raise webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.FloatingIpNotFoundForAddress:
+            msg = _('floating ip not found')
+            raise webob.exc.HTTPNotFound(explanation=msg)
         except Exception:
             msg = _('Error. Unable to associate floating ip')
             LOG.exception(msg)
@@ -282,8 +285,13 @@ class FloatingIPActionController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         # get the floating ip object
-        floating_ip = self.network_api.get_floating_ip_by_address(context,
-                                                                  address)
+        try:
+            floating_ip = self.network_api.get_floating_ip_by_address(context,
+                                                                      address)
+        except exception.FloatingIpNotFoundForAddress:
+            msg = _("floating ip not found")
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
         # get the associated instance object (if any)
         instance = get_instance_by_floating_ip_addr(self, context, address)
 

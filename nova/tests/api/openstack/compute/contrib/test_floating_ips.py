@@ -346,6 +346,39 @@ class FloatingIpTest(test.TestCase):
         rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
         self.assertTrue(rsp.status_int == 404)
 
+    def test_floating_ip_associate_non_existent_ip(self):
+        def fake_network_api_associate(self, context, instance,
+                                             floating_address=None,
+                                             fixed_address=None):
+            floating_ips = ["10.10.10.10", "10.10.10.11"]
+            if floating_address not in floating_ips:
+                    raise exception.FloatingIpNotFoundForAddress()
+
+            self.stubs.Set(network.api.API, "associate_floating_ip",
+                                             fake_network_api_associate)
+
+            body = dict(addFloatingIp=dict(address='1.1.1.1'))
+            req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.manager._add_floating_ip,
+                              req, 'test_inst', body)
+
+    def test_floating_ip_disassociate_non_existent_ip(self):
+        def network_api_get_floating_ip_by_address(self, context,
+                                                         floating_address):
+            floating_ips = ["10.10.10.10", "10.10.10.11"]
+            if floating_address not in floating_ips:
+                    raise exception.FloatingIpNotFoundForAddress()
+
+        self.stubs.Set(network.api.API, "get_floating_ip_by_address",
+                                        network_api_get_floating_ip_by_address)
+
+        body = dict(removeFloatingIp=dict(address='1.1.1.1'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.manager._remove_floating_ip,
+                          req, 'test_inst', body)
+
     def test_floating_ip_disassociate_wrong_instance_uuid(self):
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
