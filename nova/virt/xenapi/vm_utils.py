@@ -848,12 +848,6 @@ def _create_cached_image(context, session, instance, name_label,
         session.call_xenapi('VDI.add_to_other_config',
                             root_vdi_ref, 'image-id', str(image_id))
 
-        swap_vdi = vdis.get('swap')
-        if swap_vdi:
-            session.call_xenapi(
-                    'VDI.add_to_other_config', root_vdi_ref, 'swap-disk',
-                    str(swap_vdi['uuid']))
-
     if FLAGS.use_cow_images and sr_type == 'ext':
         new_vdi_ref = _clone_vdi(session, root_vdi_ref)
     else:
@@ -868,19 +862,6 @@ def _create_cached_image(context, session, instance, name_label,
                 else ImageType.to_string(image_type))
     vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
     vdis[vdi_type] = dict(uuid=vdi_uuid, file=None)
-
-    # Create a swap disk if the glance image had one associated with it.
-    vdi_rec = session.call_xenapi('VDI.get_record', root_vdi_ref)
-    if 'swap-disk' in vdi_rec['other_config']:
-        swap_disk_uuid = vdi_rec['other_config']['swap-disk']
-        swap_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
-                                           swap_disk_uuid)
-        new_swap_vdi_ref = _safe_copy_vdi(
-                session, sr_ref, instance, swap_vdi_ref)
-        new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
-                                                new_swap_vdi_ref)
-        vdis['swap'] = dict(uuid=new_swap_vdi_uuid, file=None)
-
     return vdis
 
 

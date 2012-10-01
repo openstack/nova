@@ -57,11 +57,7 @@ xenapi_vmops_opts = [
                     'to go to running state'),
     cfg.StrOpt('xenapi_vif_driver',
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-               help='The XenAPI VIF driver using XenServer Network APIs.'),
-    cfg.BoolOpt('xenapi_generate_swap',
-                default=False,
-                help='Whether to generate swap '
-                     '(False means fetching it from OVA)'),
+               help='The XenAPI VIF driver using XenServer Network APIs.')
     ]
 
 FLAGS = flags.FLAGS
@@ -425,6 +421,7 @@ class VMOps(object):
     def _attach_disks(self, instance, vm_ref, name_label, disk_image_type,
                       vdis):
         ctx = nova_context.get_admin_context()
+        instance_type = db.instance_type_get(ctx, instance['instance_type_id'])
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
@@ -447,8 +444,6 @@ class VMOps(object):
             if instance['auto_disk_config']:
                 LOG.debug(_("Auto configuring disk, attempting to "
                             "resize partition..."), instance=instance)
-                instance_type = db.instance_type_get(ctx,
-                        instance['instance_type_id'])
                 vm_utils.auto_configure_disk(self._session,
                                              root_vdi['ref'],
                                              instance_type['root_gb'])
@@ -457,22 +452,10 @@ class VMOps(object):
                                 DEVICE_ROOT, bootable=True)
 
         # Attach (optional) swap disk
-        swap_vdi = vdis.get('swap')
-
-        instance_type = db.instance_type_get(ctx, instance['instance_type_id'])
         swap_mb = instance_type['swap']
-        generate_swap = swap_mb and FLAGS.xenapi_generate_swap
-        if generate_swap:
+        if swap_mb:
             vm_utils.generate_swap(self._session, instance, vm_ref,
                                    DEVICE_SWAP, name_label, swap_mb)
-
-            if swap_vdi:
-                # We won't be using packaged swap VDI, so destroy it
-                vm_utils.destroy_vdi(self._session, swap_vdi['ref'])
-        elif swap_vdi:
-            # Attach packaged swap VDI to VM
-            vm_utils.create_vbd(self._session, vm_ref, swap_vdi['ref'],
-                                DEVICE_SWAP, bootable=False)
 
         # Attach (optional) ephemeral disk
         ephemeral_gb = instance_type['ephemeral_gb']

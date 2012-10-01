@@ -221,6 +221,7 @@ def _validate_sequenced_vhds(staging_path):
         if not filename.endswith('.vhd'):
             continue
 
+        # Ignore legacy swap embedded in the image, generated on-the-fly now
         if filename == "swap.vhd":
             continue
 
@@ -242,13 +243,11 @@ def import_vhds(sr_path, staging_path, uuid_stack):
 
     Returns: A dict of imported VHDs:
 
-        {'root': {'uuid': 'ffff-aaaa'},
-         'swap': {'uuid': 'ffff-bbbb'}}
+        {'root': {'uuid': 'ffff-aaaa'}}
     """
     _handle_old_style_images(staging_path)
     _validate_sequenced_vhds(staging_path)
 
-    imported_vhds = {}
     files_to_move = []
 
     # Collect sequenced VHDs and assign UUIDs to them
@@ -286,26 +285,12 @@ def import_vhds(sr_path, staging_path, uuid_stack):
     _assert_vhd_not_hidden(leaf_vhd_path)
     _validate_vdi_chain(leaf_vhd_path)
 
-    imported_vhds["root"] = {"uuid": leaf_vhd_uuid}
-
-    # Handle swap file if present
-    orig_swap_path = os.path.join(staging_path, "swap.vhd")
-    if os.path.exists(orig_swap_path):
-        # Rename swap.vhd -> aaaa-bbbb-cccc-dddd.vhd
-        vhd_uuid = uuid_stack.pop()
-        swap_path = os.path.join(staging_path, "%s.vhd" % vhd_uuid)
-        _rename(orig_swap_path, swap_path)
-
-        _assert_vhd_not_hidden(swap_path)
-
-        imported_vhds["swap"] = {"uuid": vhd_uuid}
-        files_to_move.append(swap_path)
-
     # Move files into SR
     for orig_path in files_to_move:
         new_path = os.path.join(sr_path, os.path.basename(orig_path))
         _rename(orig_path, new_path)
 
+    imported_vhds = dict(root=dict(uuid=leaf_vhd_uuid))
     return imported_vhds
 
 
