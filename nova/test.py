@@ -24,6 +24,7 @@ inline callbacks.
 """
 
 import functools
+import sys
 import unittest
 import uuid
 
@@ -138,6 +139,7 @@ class TestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.injected = []
         self._services = []
+        self._modules = {}
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -150,6 +152,14 @@ class TestCase(unittest.TestCase):
         finally:
             # Reset any overridden flags
             FLAGS.reset()
+
+            # Unstub modules
+            for name, mod in self._modules.iteritems():
+                if mod is not None:
+                    sys.modules[name] = mod
+                else:
+                    sys.modules.pop(name)
+            self._modules = {}
 
             # Stop any timers
             for x in self.injected:
@@ -170,6 +180,11 @@ class TestCase(unittest.TestCase):
             # suite
             for key in [k for k in self.__dict__.keys() if k[0] != '_']:
                 del self.__dict__[key]
+
+    def stub_module(self, name, mod):
+        if name not in self._modules:
+            self._modules[name] = sys.modules.get(name)
+        sys.modules[name] = mod
 
     def flags(self, **kw):
         """Override flag variables for a test."""

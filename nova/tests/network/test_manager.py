@@ -1846,8 +1846,7 @@ class LdapDNSTestCase(test.TestCase):
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 
-        self.saved_ldap = sys.modules.get('ldap')
-        sys.modules['ldap'] = fake_ldap
+        self.stub_module('ldap', fake_ldap)
 
         self.driver = FakeLdapDNS()
         self.driver.create_domain(domain1)
@@ -1856,7 +1855,6 @@ class LdapDNSTestCase(test.TestCase):
     def tearDown(self):
         self.driver.delete_domain(domain1)
         self.driver.delete_domain(domain2)
-        sys.modules['ldap'] = self.saved_ldap
         super(LdapDNSTestCase, self).tearDown()
 
     def test_ldap_dns_domains(self):

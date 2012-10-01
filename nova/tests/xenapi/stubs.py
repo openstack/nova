@@ -18,7 +18,6 @@
 import contextlib
 import pickle
 import random
-import sys
 
 from nova.openstack.common import jsonutils
 from nova import test
@@ -355,16 +354,6 @@ class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
 
-        self.orig_XenAPI = sys.modules.get('XenAPI')
-        sys.modules['XenAPI'] = fake
+        self.stub_module('XenAPI', fake)
 
         fake.reset()
-
-    def tearDown(self):
-        if self.orig_XenAPI is not None:
-            sys.modules['XenAPI'] = self.orig_XenAPI
-            self.orig_XenAPI = None
-        else:
-            sys.modules.pop('XenAPI')
-
-        super(XenAPITestBase, self).tearDown()
