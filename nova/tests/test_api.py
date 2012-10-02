@@ -448,7 +448,7 @@ class ApiEc2TestCase(test.TestCase):
         # Invalid Cidr for ICMP type
         _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.444.0/4')
         # Invalid protocol
-        _assert('An unknown error has occurred', 'xyz', 1, 14, '0.0.0.0/0')
+        _assert('Invalid IP protocol', 'xyz', 1, 14, '0.0.0.0/0')
         # Invalid port
         _assert('An unknown error has occurred', 'tcp', " ", "81", '0.0.0.0/0')
         # Invalid icmp port
