@@ -1113,7 +1113,6 @@ class AggregatesSampleJsonTest(ServersSampleBase):
     def test_add_host(self):
         aggregate_id = self.test_aggregate_create()
         subs = {
-            "action": "add_host",
             "host_name": self.compute.host,
         }
         response = self._do_post('os-aggregates/%s/action' % aggregate_id,
@@ -1125,7 +1124,6 @@ class AggregatesSampleJsonTest(ServersSampleBase):
     def test_remove_host(self):
         self.test_add_host()
         subs = {
-            "action": "add_host",
             "host_name": self.compute.host,
         }
         response = self._do_post('os-aggregates/1/action',
