@@ -81,8 +81,7 @@ def get_device_name_for_instance(context, instance, device):
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
     # NOTE(vish): remove this when xenapi is setting default_root_device
-    if (FLAGS.connection_type == 'xenapi' or
-        FLAGS.compute_driver.endswith('xenapi.XenAPIDriver')):
+    if FLAGS.compute_driver.endswith('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
@@ -97,8 +96,7 @@ def get_device_name_for_instance(context, instance, device):
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
-    if (FLAGS.connection_type == 'xenapi' or
-        FLAGS.compute_driver.endswith('xenapi.XenAPIDriver')):
+    if FLAGS.compute_driver.endswith('xenapi.XenAPIDriver'):
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
         if instance_type['ephemeral_gb']:

@@ -144,13 +144,6 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
         'libvirt.LibvirtDriver': 'LibvirtDriver'
         }
 
-    # NOTE(sdague): remove after Folsom release when connection_type
-    # is removed
-    old_drivers = {
-        'libvirt': 'LibvirtDriver',
-        'fake': 'FakeDriver'
-        }
-
     def test_load_new_drivers(self):
         for cls, driver in self.new_drivers.iteritems():
             self.flags(compute_driver=cls)
@@ -163,28 +156,6 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
 
             self.assertEqual(cm.driver.__class__.__name__, driver,
                              "Could't load driver %s" % cls)
-
-    # NOTE(sdague): remove after Folsom release when connection_type
-    # is removed
-    def test_load_old_drivers(self):
-        # we explicitly use the old default
-        self.flags(compute_driver='nova.virt.connection.get_connection')
-        for cls, driver in self.old_drivers.iteritems():
-            self.flags(connection_type=cls)
-            # NOTE(sdague) the try block is to make it easier to debug a
-            # failure by knowing which driver broke
-            try:
-                cm = ComputeManager()
-            except Exception as e:
-                self.fail("Couldn't load connection %s - %s" % (cls, e))
-
-            self.assertEqual(cm.driver.__class__.__name__, driver,
-                             "Could't load connection %s" % cls)
-
-    def test_fail_to_load_old_drivers(self):
-        self.flags(compute_driver='nova.virt.connection.get_connection')
-        self.flags(connection_type='56kmodem')
-        self.assertRaises(exception.VirtDriverNotFound, ComputeManager)
 
     def test_fail_to_load_new_drivers(self):
         self.flags(compute_driver='nova.virt.amiga')

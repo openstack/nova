@@ -98,8 +98,9 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
 
         # This driver leverages Xen storage manager, and hence requires
         # hypervisor to be Xen
-        if FLAGS.connection_type != 'xenapi':
-            msg = _('XenSMDriver requires xenapi connection')
+        if not FLAGS.compute_driver.endswith('XenAPIDriver'):
+            msg = (_('XenSMDriver requires xenapi connection, using %s') %
+                   FLAGS.compute_driver)
             raise exception.VolumeBackendAPIException(data=msg)
 
         url = FLAGS.xenapi_connection_url

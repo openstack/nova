@@ -49,7 +49,7 @@ class XenSMTestCase(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.flags(connection_type='xenapi',
+        self.flags(compute_driver='xenapi.XenAPIDriver',
                    xenapi_connection_url='http://test_url',
                    xenapi_connection_username='test_user',
                    xenapi_connection_password='test_pass')

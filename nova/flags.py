@@ -74,10 +74,6 @@ def _get_my_ip():
 
 
 core_opts = [
-    cfg.StrOpt('connection_type',
-               default=None,
-               help='Deprecated (use compute_driver instead): Virtualization '
-                    'api connection type : libvirt, xenapi, or fake'),
     cfg.StrOpt('sql_connection',
                default='sqlite:///$state_path/$sqlite_db',
                help='The SQLAlchemy connection string used to connect to the '
