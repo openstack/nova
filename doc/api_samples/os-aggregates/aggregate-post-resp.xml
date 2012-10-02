@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<aggregate>
+  <name>name</name>
+  <availability_zone>nova</availability_zone>
+  <deleted>False</deleted>
+  <created_at>2012-10-01 18:50:35.506667</created_at>
+  <updated_at>None</updated_at>
+  <deleted_at>None</deleted_at>
+  <id>1</id>
+</aggregate>
