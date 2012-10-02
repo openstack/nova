@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2012-10-01 00:02+0000\n"
+"POT-Creation-Date: 2012-10-02 00:03+0000\n"
 "PO-Revision-Date: 2012-05-07 06:51+0000\n"
 "Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
@@ -2644,13 +2644,13 @@ msgid "No more floating ips available."
 msgstr "没有更多的浮动ip。"
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:226
-#: nova/api/openstack/compute/contrib/floating_ips.py:278
+#: nova/api/openstack/compute/contrib/floating_ips.py:281
 #: nova/api/openstack/compute/contrib/security_groups.py:416
 msgid "Missing parameter dict"
 msgstr "缺少参数 dict"
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:229
-#: nova/api/openstack/compute/contrib/floating_ips.py:281
+#: nova/api/openstack/compute/contrib/floating_ips.py:284
 msgid "Address not specified"
 msgstr "地址没有指定"
 
@@ -2673,6 +2673,12 @@ msgid "l3driver call to add floating ip failed"
 msgstr ""
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:263
+#: nova/api/openstack/compute/contrib/floating_ips.py:292
+#, fuzzy
+msgid "floating ip not found"
+msgstr "没有找到floating_ip"
+
+#: nova/api/openstack/compute/contrib/floating_ips.py:266
 msgid "Error. Unable to associate floating ip"
 msgstr ""
 
@@ -5239,12 +5245,12 @@ msgstr "给定数据：%s"
 msgid "Result data: %s"
 msgstr "结果数据：%s"
 
-#: nova/tests/test_xenapi.py:710
+#: nova/tests/test_xenapi.py:686
 #, python-format
 msgid "Creating files in %s to simulate guest agent"
 msgstr "在%s 创建文件模拟客户代理"
 
-#: nova/tests/test_xenapi.py:721
+#: nova/tests/test_xenapi.py:697
 #, python-format
 msgid "Removing simulated guest agent files in %s"
 msgstr "移除在 %s 的模拟的客户代理文件"
@@ -7563,19 +7569,19 @@ msgstr "正在获取镜像 %s 的大小"
 msgid "Got image size of %(size)s for the image %(image)s"
 msgstr "获得大小为 %(size)s 的镜像目的为了 %(image)s"
 
-#: nova/virt/xenapi/agent.py:73 nova/virt/xenapi/vmops.py:1431
+#: nova/virt/xenapi/agent.py:73 nova/virt/xenapi/vmops.py:1414
 #, fuzzy, python-format
 msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
 msgstr "超时：调用 %(method)s 超时。虚拟机id=%(instance_uuid)s; args=%(args)r"
 
-#: nova/virt/xenapi/agent.py:77 nova/virt/xenapi/vmops.py:1435
+#: nova/virt/xenapi/agent.py:77 nova/virt/xenapi/vmops.py:1418
 #, fuzzy, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. "
 "args=%(args)r"
 msgstr "没有执行：代理不支持 %(method)s 的调用。虚拟机id=%(instance_uuid)s; args=%(args)r"
 
-#: nova/virt/xenapi/agent.py:82 nova/virt/xenapi/vmops.py:1440
+#: nova/virt/xenapi/agent.py:82 nova/virt/xenapi/vmops.py:1423
 #, fuzzy, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "对 %(method)s 的调用返回错误：%(e)s。"
@@ -7925,517 +7931,517 @@ msgid ""
 "this system was found to be of type %(sr_type)s. Ignoring the cow flag."
 msgstr "只能在ext类型的缺省本地存储库支持快速克隆。这个系统的存储库类型为 %(sr_type)s。忽略此 cow 标记。"
 
-#: nova/virt/xenapi/vm_utils.py:912
+#: nova/virt/xenapi/vm_utils.py:893
 #, python-format
 msgid "Unrecognized cache_images value '%s', defaulting to True"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:946
+#: nova/virt/xenapi/vm_utils.py:927
 #, fuzzy, python-format
 msgid "Fetched VDIs of type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"
 msgstr "xapi 'download_vhd' 返回“%(vdi_type)s”类型的VDI，其UUID为 “%(vdi_uuid)s”"
 
-#: nova/virt/xenapi/vm_utils.py:958
+#: nova/virt/xenapi/vm_utils.py:939
 #, python-format
 msgid ""
 "download_vhd %(image_id)s, attempt %(attempt_num)d/%(max_attempts)d, "
 "params: %(params)s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:971
+#: nova/virt/xenapi/vm_utils.py:952
 #, python-format
 msgid "download_vhd failed: %r"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:995
+#: nova/virt/xenapi/vm_utils.py:976
 #, fuzzy, python-format
 msgid "Asking xapi to fetch vhd image %(image_id)s"
 msgstr "请求 xapi 获取 vhd 镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:1040
+#: nova/virt/xenapi/vm_utils.py:1021
 #, python-format
 msgid "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 msgstr "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1056
+#: nova/virt/xenapi/vm_utils.py:1037
 #, python-format
 msgid "image_size_bytes=%(size_bytes)d, allowed_size_bytes=%(allowed_size_bytes)d"
 msgstr "image_size_bytes=%(size_bytes)d，allowed_size_bytes=%(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1060
+#: nova/virt/xenapi/vm_utils.py:1041
 #, python-format
 msgid ""
 "Image size %(size_bytes)d exceeded instance_type allowed size "
 "%(allowed_size_bytes)d"
 msgstr "镜像大小 %(size_bytes)d 超过instance_type所允许的小大 %(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:1082
+#: nova/virt/xenapi/vm_utils.py:1063
 #, fuzzy, python-format
 msgid "Fetching image %(image_id)s, type %(image_type_str)s"
 msgstr "获取镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:1095
+#: nova/virt/xenapi/vm_utils.py:1076
 #, fuzzy, python-format
 msgid "Size for image %(image_id)s: %(virtual_size)d"
 msgstr "镜像 %(image)s 的大小：%(virtual_size)d"
 
-#: nova/virt/xenapi/vm_utils.py:1104
+#: nova/virt/xenapi/vm_utils.py:1085
 #, python-format
 msgid ""
 "Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d "
 "bytes"
 msgstr "内核/内存盘镜像太大：%(vdi_size)d 字节，最大 %(max_size)d 字节"
 
-#: nova/virt/xenapi/vm_utils.py:1123
+#: nova/virt/xenapi/vm_utils.py:1104
 #, python-format
 msgid "Copying VDI %s to /boot/guest on dom0"
 msgstr "将VDI %s 复制到dom0的/boot/guest下"
 
-#: nova/virt/xenapi/vm_utils.py:1137
+#: nova/virt/xenapi/vm_utils.py:1118
 #, python-format
 msgid "Kernel/Ramdisk VDI %s destroyed"
 msgstr "内核/内存盘 VDI %s 已销毁"
 
-#: nova/virt/xenapi/vm_utils.py:1146
+#: nova/virt/xenapi/vm_utils.py:1127
 #, fuzzy
 msgid "Failed to fetch glance image"
 msgstr "实例 %s：获取Glance镜像失败"
 
-#: nova/virt/xenapi/vm_utils.py:1184
+#: nova/virt/xenapi/vm_utils.py:1165
 #, python-format
 msgid "Detected %(image_type_str)s format for image %(image_ref)s"
 msgstr "检测到 %(image_type_str)s 格式，目标是镜像 %(image_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:1205
+#: nova/virt/xenapi/vm_utils.py:1186
 #, python-format
 msgid "Looking up vdi %s for PV kernel"
 msgstr "为PV内核查询vdi %s"
 
-#: nova/virt/xenapi/vm_utils.py:1223
+#: nova/virt/xenapi/vm_utils.py:1204
 #, python-format
 msgid "Unknown image format %(disk_image_type)s"
 msgstr "未知的镜像格式 %(disk_image_type)s"
 
-#: nova/virt/xenapi/vm_utils.py:1254
+#: nova/virt/xenapi/vm_utils.py:1235
 #, python-format
 msgid "VDI %s is still available"
 msgstr "VDI %s 依然可用"
 
-#: nova/virt/xenapi/vm_utils.py:1350
+#: nova/virt/xenapi/vm_utils.py:1331
 #, python-format
 msgid "Unable to parse rrd of %(vm_uuid)s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1377
+#: nova/virt/xenapi/vm_utils.py:1358
 #, python-format
 msgid "Re-scanning SR %s"
 msgstr "重新扫描存储库 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1405
+#: nova/virt/xenapi/vm_utils.py:1386
 #, python-format
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "标记sr_matching_filter '%s' 没有遵循格式要求"
 
-#: nova/virt/xenapi/vm_utils.py:1423
+#: nova/virt/xenapi/vm_utils.py:1404
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances "
 "on. Please check your configuration and/or configure the flag "
 "'sr_matching_filter'"
 msgstr "XenAPI无法找到安装客户实例的存储库。请检查你的配置或者配置标记'sr_matching_filter'"
 
-#: nova/virt/xenapi/vm_utils.py:1436
+#: nova/virt/xenapi/vm_utils.py:1417
 msgid "Cannot find SR of content-type ISO"
 msgstr "无法找到content-type ISO的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1444
+#: nova/virt/xenapi/vm_utils.py:1425
 #, python-format
 msgid "ISO: looking at SR %(sr_rec)s"
 msgstr "ISO：正在查看存储库 %(sr_rec)s"
 
-#: nova/virt/xenapi/vm_utils.py:1446
+#: nova/virt/xenapi/vm_utils.py:1427
 msgid "ISO: not iso content"
 msgstr "ISO：非iso内容"
 
-#: nova/virt/xenapi/vm_utils.py:1449
+#: nova/virt/xenapi/vm_utils.py:1430
 msgid "ISO: iso content_type, no 'i18n-key' key"
 msgstr "ISO：iso content_type，没有 'i18n-key' 键"
 
-#: nova/virt/xenapi/vm_utils.py:1452
+#: nova/virt/xenapi/vm_utils.py:1433
 msgid "ISO: iso content_type, i18n-key value not 'local-storage-iso'"
 msgstr "ISO：iso content_type，i18n-key的值不是 'local-storage-iso'"
 
-#: nova/virt/xenapi/vm_utils.py:1456
+#: nova/virt/xenapi/vm_utils.py:1437
 msgid "ISO: SR MATCHing our criteria"
 msgstr "ISO: 存储库符合标准"
 
-#: nova/virt/xenapi/vm_utils.py:1458
+#: nova/virt/xenapi/vm_utils.py:1439
 msgid "ISO: ISO, looking to see if it is host local"
 msgstr "ISO: ISO, 正在查看是否是本地的主机"
 
-#: nova/virt/xenapi/vm_utils.py:1461
+#: nova/virt/xenapi/vm_utils.py:1442
 #, python-format
 msgid "ISO: PBD %(pbd_ref)s disappeared"
 msgstr "ISO: PBD %(pbd_ref)s 消失了"
 
-#: nova/virt/xenapi/vm_utils.py:1464
+#: nova/virt/xenapi/vm_utils.py:1445
 #, python-format
 msgid "ISO: PBD matching, want %(pbd_rec)s, have %(host)s"
 msgstr "ISO: PBD匹配, 想要 %(pbd_rec)s, 目前有 %(host)s"
 
-#: nova/virt/xenapi/vm_utils.py:1467
+#: nova/virt/xenapi/vm_utils.py:1448
 msgid "ISO: SR with local PBD"
 msgstr "ISO：含有本地PBD的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1489
+#: nova/virt/xenapi/vm_utils.py:1470
 #, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: "
 "%(server)s."
 msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1505
+#: nova/virt/xenapi/vm_utils.py:1486
 #, python-format
 msgid "Unable to obtain RRD XML updates with server details: %(server)s."
 msgstr "无法获取包含服务器详细情况的RRD XML更新：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1559
+#: nova/virt/xenapi/vm_utils.py:1540
 #, python-format
 msgid "Invalid statistics data from Xenserver: %s"
 msgstr "来自Xenserver无效的统计数据：%s"
 
-#: nova/virt/xenapi/vm_utils.py:1619
+#: nova/virt/xenapi/vm_utils.py:1600
 #, fuzzy, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_uuid)s"
 msgstr "VHD %(vdi_uuid)s 有父 %(parent_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:1706
+#: nova/virt/xenapi/vm_utils.py:1687
 #, python-format
 msgid ""
 "Parent %(parent_uuid)s doesn't match original parent "
 "%(original_parent_uuid)s, waiting for coalesce..."
 msgstr "父标识 %(parent_uuid)s 和原先的父标识 %(original_parent_uuid)s 不匹配，正在等待合并..."
 
-#: nova/virt/xenapi/vm_utils.py:1716
+#: nova/virt/xenapi/vm_utils.py:1697
 #, python-format
 msgid "VHD coalesce attempts exceeded (%(max_attempts)d), giving up..."
 msgstr "VHD coalesce 将要超过(%(max_attempts)d)，放弃中..."
 
-#: nova/virt/xenapi/vm_utils.py:1751
+#: nova/virt/xenapi/vm_utils.py:1732
 #, python-format
 msgid "Timeout waiting for device %s to be created"
 msgstr "等待设备 %s 创建超时"
 
-#: nova/virt/xenapi/vm_utils.py:1771
+#: nova/virt/xenapi/vm_utils.py:1752
 #, python-format
 msgid "Disconnecting stale VDI %s from compute domU"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1784
+#: nova/virt/xenapi/vm_utils.py:1765
 #, python-format
 msgid "Plugging VBD %s ... "
 msgstr "插入VBD %s... "
 
-#: nova/virt/xenapi/vm_utils.py:1787
+#: nova/virt/xenapi/vm_utils.py:1768
 #, python-format
 msgid "Plugging VBD %s done."
 msgstr "插入VBD %s 完成。"
 
-#: nova/virt/xenapi/vm_utils.py:1789
+#: nova/virt/xenapi/vm_utils.py:1770
 #, python-format
 msgid "VBD %(vbd_ref)s plugged as %(orig_dev)s"
 msgstr "VBD %(vbd_ref)s 作为 %(orig_dev)s 插入"
 
-#: nova/virt/xenapi/vm_utils.py:1792
+#: nova/virt/xenapi/vm_utils.py:1773
 #, python-format
 msgid "VBD %(vbd_ref)s plugged into wrong dev, remapping to %(dev)s"
 msgstr "VBD %(vbd_ref)s 插入错误的设备，重新映射为 %(dev)s"
 
-#: nova/virt/xenapi/vm_utils.py:1797
+#: nova/virt/xenapi/vm_utils.py:1778
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
 msgstr "正在销毁VDI为 %s 的 VBD "
 
-#: nova/virt/xenapi/vm_utils.py:1805
+#: nova/virt/xenapi/vm_utils.py:1786
 #, python-format
 msgid "Destroying VBD for VDI %s done."
 msgstr "已经销毁VDI为 %s 的 VBD"
 
-#: nova/virt/xenapi/vm_utils.py:1818
+#: nova/virt/xenapi/vm_utils.py:1799
 #, python-format
 msgid "Running pygrub against %s"
 msgstr "对 %s 运行pygrub"
 
-#: nova/virt/xenapi/vm_utils.py:1825
+#: nova/virt/xenapi/vm_utils.py:1806
 #, python-format
 msgid "Found Xen kernel %s"
 msgstr "找到Xen内核 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1827
+#: nova/virt/xenapi/vm_utils.py:1808
 msgid "No Xen kernel found.  Booting HVM."
 msgstr "没有找到Xen内核。正在启动HVM。"
 
-#: nova/virt/xenapi/vm_utils.py:1840
+#: nova/virt/xenapi/vm_utils.py:1821
 msgid "Partitions:"
 msgstr "分区："
 
-#: nova/virt/xenapi/vm_utils.py:1846
+#: nova/virt/xenapi/vm_utils.py:1827
 #, python-format
 msgid "  %(num)s: %(ptype)s %(size)d sectors"
 msgstr "  %(num)s: %(ptype)s %(size)d sectors"
 
-#: nova/virt/xenapi/vm_utils.py:1871
+#: nova/virt/xenapi/vm_utils.py:1852
 #, python-format
 msgid ""
 "Writing partition table %(primary_first)d %(primary_last)d to "
 "%(dev_path)s..."
 msgstr "将分区表 %(primary_first)d %(primary_last)d 写入到 %(dev_path)s..."
 
-#: nova/virt/xenapi/vm_utils.py:1884
+#: nova/virt/xenapi/vm_utils.py:1865
 #, python-format
 msgid "Writing partition table %s done."
 msgstr "完成写入分区表 %s 。"
 
-#: nova/virt/xenapi/vm_utils.py:1938
+#: nova/virt/xenapi/vm_utils.py:1919
 #, python-format
 msgid ""
 "Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
 "virtual_size=%(virtual_size)d block_size=%(block_size)d"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1970
+#: nova/virt/xenapi/vm_utils.py:1951
 #, python-format
 msgid ""
 "Finished sparse_copy in %(duration).2f secs, %(compression_pct).2f%% "
 "reduction in size"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:2020
+#: nova/virt/xenapi/vm_utils.py:2001
 msgid ""
 "XenServer tools installed in this image are capable of network injection."
 "  Networking files will not bemanipulated"
 msgstr "安装在该镜像的XenServer工具可以进行网络注入。网络文件不会被操作。"
 
-#: nova/virt/xenapi/vm_utils.py:2028
+#: nova/virt/xenapi/vm_utils.py:2009
 msgid ""
 "XenServer tools are present in this image but are not capable of network "
 "injection"
 msgstr "该镜像有XenServer工具，但是不能进行网络注入"
 
-#: nova/virt/xenapi/vm_utils.py:2032
+#: nova/virt/xenapi/vm_utils.py:2013
 msgid "XenServer tools are not installed in this image"
 msgstr "没有在该镜像上安装XenServer工具"
 
-#: nova/virt/xenapi/vm_utils.py:2048
+#: nova/virt/xenapi/vm_utils.py:2029
 msgid "Manipulating interface files directly"
 msgstr "直接操作接口文件"
 
-#: nova/virt/xenapi/vm_utils.py:2057
+#: nova/virt/xenapi/vm_utils.py:2038
 #, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr "挂载文件系统失败(期望的是非Linux实例)：%s"
 
-#: nova/virt/xenapi/vm_utils.py:2169
+#: nova/virt/xenapi/vm_utils.py:2150
 msgid "This domU must be running on the host specified by xenapi_connection_url"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:130 nova/virt/xenapi/vmops.py:637
+#: nova/virt/xenapi/vmops.py:126 nova/virt/xenapi/vmops.py:620
 #, fuzzy, python-format
 msgid "Updating progress to %(progress)d"
 msgstr "将实例 '%(instance_uuid)s' 的进度更新到 %(progress)d"
 
-#: nova/virt/xenapi/vmops.py:212
+#: nova/virt/xenapi/vmops.py:208
 #, fuzzy
 msgid "Starting instance"
 msgstr "正在启动虚拟机"
 
-#: nova/virt/xenapi/vmops.py:285
+#: nova/virt/xenapi/vmops.py:281
 msgid "Removing kernel/ramdisk files from dom0"
 msgstr "从 dom0 中移除内核/内存盘文件"
 
-#: nova/virt/xenapi/vmops.py:345
+#: nova/virt/xenapi/vmops.py:341
 #, fuzzy, python-format
 msgid "Block device information present: %s"
 msgstr "block_device_mapping %s"
 
-#: nova/virt/xenapi/vmops.py:368
+#: nova/virt/xenapi/vmops.py:364
 #, fuzzy
 msgid "Failed to spawn, rolling back"
 msgstr "在数据库更新卷失败"
 
-#: nova/virt/xenapi/vmops.py:431
+#: nova/virt/xenapi/vmops.py:428
 msgid "Detected ISO image type, creating blank VM for install"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:448
+#: nova/virt/xenapi/vmops.py:445
 #, fuzzy
 msgid "Auto configuring disk, attempting to resize partition..."
 msgstr "正在自动配置实例 %(instance_uuid)s 的磁盘，尝试调整分区大小..."
 
-#: nova/virt/xenapi/vmops.py:487
+#: nova/virt/xenapi/vmops.py:470
 #, fuzzy
 msgid "Starting VM"
 msgstr "重启xvp"
 
-#: nova/virt/xenapi/vmops.py:494
+#: nova/virt/xenapi/vmops.py:477
 #, python-format
 msgid ""
 "Latest agent build for %(hypervisor)s/%(os)s/%(architecture)s is "
 "%(version)s"
 msgstr "%(hypervisor)s/%(os)s/%(architecture)s 最新的agent build 是 %(version)s 版本"
 
-#: nova/virt/xenapi/vmops.py:497
+#: nova/virt/xenapi/vmops.py:480
 #, python-format
 msgid "No agent build found for %(hypervisor)s/%(os)s/%(architecture)s"
 msgstr "没有找到 %(hypervisor)s/%(os)s/%(architecture)s 的代理创建"
 
-#: nova/virt/xenapi/vmops.py:504
+#: nova/virt/xenapi/vmops.py:487
 msgid "Waiting for instance state to become running"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:518
+#: nova/virt/xenapi/vmops.py:501
 #, python-format
 msgid "Instance agent version: %s"
 msgstr "实例代理版本：%s"
 
-#: nova/virt/xenapi/vmops.py:548
+#: nova/virt/xenapi/vmops.py:531
 msgid "Setting VCPU weight"
 msgstr "设置VCPU 权重"
 
-#: nova/virt/xenapi/vmops.py:556
+#: nova/virt/xenapi/vmops.py:539
 #, fuzzy, python-format
 msgid "Could not find VM with name %s"
 msgstr "找不到VDI ref"
 
-#: nova/virt/xenapi/vmops.py:606
+#: nova/virt/xenapi/vmops.py:589
 #, fuzzy
 msgid "Finished snapshot and upload for VM"
 msgstr "快照完毕并为虚拟机 %s 上传"
 
-#: nova/virt/xenapi/vmops.py:610
+#: nova/virt/xenapi/vmops.py:593
 #, python-format
 msgid "Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:618
+#: nova/virt/xenapi/vmops.py:601
 msgid "Failed to transfer vhd to new host"
 msgstr "将 vhd 转移到新主机失败"
 
-#: nova/virt/xenapi/vmops.py:654
+#: nova/virt/xenapi/vmops.py:637
 #, fuzzy, python-format
 msgid "Resizing down VDI %(vdi_uuid)s from %(old_gb)dGB to %(new_gb)dGB"
 msgstr "将 VDI %(cow_uuid)s 由 %(old_gb)dGB 调小到  %(new_gb)dGB"
 
-#: nova/virt/xenapi/vmops.py:778
+#: nova/virt/xenapi/vmops.py:761
 #, python-format
 msgid "Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to %(new_gb)dGB"
 msgstr "将 VDI %(vdi_uuid)s 由 %(old_gb)dGB 调大到  %(new_gb)dGB"
 
-#: nova/virt/xenapi/vmops.py:783
+#: nova/virt/xenapi/vmops.py:766
 #, fuzzy
 msgid "Resize complete"
 msgstr "调整实例 %s 的大小完毕"
 
-#: nova/virt/xenapi/vmops.py:827
+#: nova/virt/xenapi/vmops.py:810
 msgid "Starting halted instance found during reboot"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:910
+#: nova/virt/xenapi/vmops.py:893
 #, fuzzy
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "无法为VDI %s 找到VBD"
 
-#: nova/virt/xenapi/vmops.py:937
+#: nova/virt/xenapi/vmops.py:920
 #, fuzzy, python-format
 msgid "Destroying VDIs for Instance %(instance_uuid)s"
 msgstr "没有为实例 %(instance_id)s 找到卷。"
 
-#: nova/virt/xenapi/vmops.py:965
+#: nova/virt/xenapi/vmops.py:948
 #, fuzzy
 msgid "Using RAW or VHD, skipping kernel and ramdisk deletion"
 msgstr "实例 %(instance_uuid)s 使用RAW或者VHD，跳过内核和内存盘的删除"
 
-#: nova/virt/xenapi/vmops.py:972
+#: nova/virt/xenapi/vmops.py:955
 msgid "instance has a kernel or ramdisk but not both"
 msgstr "实例拥有内核或者内存盘，但不是二者均有"
 
-#: nova/virt/xenapi/vmops.py:979
+#: nova/virt/xenapi/vmops.py:962
 msgid "kernel/ramdisk files removed"
 msgstr "内核/内存盘文件移除了"
 
-#: nova/virt/xenapi/vmops.py:1005
+#: nova/virt/xenapi/vmops.py:988
 #, fuzzy
 msgid "Destroying VM"
 msgstr "重启xvp"
 
-#: nova/virt/xenapi/vmops.py:1031
+#: nova/virt/xenapi/vmops.py:1014
 msgid "VM is not present, skipping destroy..."
 msgstr "虚拟机不存在，跳过销毁..."
 
-#: nova/virt/xenapi/vmops.py:1082
+#: nova/virt/xenapi/vmops.py:1065
 #, python-format
 msgid "Instance is already in Rescue Mode: %s"
 msgstr "实例已处于救援模式：%s"
 
-#: nova/virt/xenapi/vmops.py:1117
+#: nova/virt/xenapi/vmops.py:1100
 #, fuzzy
 msgid "VM is not present, skipping power off..."
 msgstr "虚拟机不存在，跳过销毁..."
 
-#: nova/virt/xenapi/vmops.py:1153
+#: nova/virt/xenapi/vmops.py:1136
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr "找到%(instance_count)d个超过%(timeout)d秒悬挂的重启"
 
-#: nova/virt/xenapi/vmops.py:1157
+#: nova/virt/xenapi/vmops.py:1140
 #, fuzzy
 msgid "Automatically hard rebooting"
 msgstr "自动冷重启 %d"
 
-#: nova/virt/xenapi/vmops.py:1256
+#: nova/virt/xenapi/vmops.py:1239
 msgid "Fetching VM ref while BUILDING failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1339
+#: nova/virt/xenapi/vmops.py:1322
 #, fuzzy
 msgid "Injecting network info to xenstore"
 msgstr "为虚拟机注入网络信息到xs：|%s|"
 
-#: nova/virt/xenapi/vmops.py:1358
+#: nova/virt/xenapi/vmops.py:1341
 #, fuzzy
 msgid "Creating vifs"
 msgstr "正在创建镜像"
 
-#: nova/virt/xenapi/vmops.py:1367
+#: nova/virt/xenapi/vmops.py:1350
 #, fuzzy, python-format
 msgid "Creating VIF for network %(network_ref)s"
 msgstr "正在为虚拟机 %(vm_ref)s，网络 %(network_ref)s 创建VIF。"
 
-#: nova/virt/xenapi/vmops.py:1370
+#: nova/virt/xenapi/vmops.py:1353
 #, fuzzy, python-format
 msgid "Created VIF %(vif_ref)s, network %(network_ref)s"
 msgstr "正在为虚拟机 %(vm_ref)s，网络 %(network_ref)s 创建VIF。"
 
-#: nova/virt/xenapi/vmops.py:1394
+#: nova/virt/xenapi/vmops.py:1377
 #, fuzzy
 msgid "Injecting hostname to xenstore"
 msgstr "为虚拟机注入hostname到xs：|%s|"
 
-#: nova/virt/xenapi/vmops.py:1490
+#: nova/virt/xenapi/vmops.py:1473
 #, python-format
 msgid ""
 "Destination host:%(hostname)s must be in the same aggregate as the source"
 " server"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1522
+#: nova/virt/xenapi/vmops.py:1505
 msgid "Migrate Receive failed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1570
+#: nova/virt/xenapi/vmops.py:1553
 msgid "VM.assert_can_migratefailed"
 msgstr ""
 
-#: nova/virt/xenapi/vmops.py:1606
+#: nova/virt/xenapi/vmops.py:1589
 #, fuzzy
 msgid "Migrate Send failed"
 msgstr "创建失败"
