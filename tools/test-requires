@@ -2,7 +2,6 @@
 distribute>=0.6.24
 
 coverage
-python-ldap
 mox==0.5.3
 nose
 openstack.nose_plugin>=0.7
