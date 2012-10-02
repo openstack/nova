@@ -26,6 +26,7 @@ import nova.image.glance
 from nova.openstack.common.log import logging
 from nova import service
 from nova import test  # For the flags
+from nova.tests import fake_crypto
 import nova.tests.image.fake
 from nova.tests.integrated.api import client
 from nova import utils
@@ -66,12 +67,14 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(**f)
         self.flags(verbose=True)
 
+        self.stub_module('crypto', fake_crypto)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.flags(compute_scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
 
         # set up services
         self.compute = self.start_service('compute')
+        self.scheduler = self.start_service('cert')
         self.volume = self.start_service('volume')
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
