@@ -142,21 +142,21 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if not isinstance(result, list):
                 raise NoMatch(
                         _('Result: %(result)s is not a list.') % locals())
-            # NOTE(maurosr): sort the list of dicts by their __tag__ element
-            # when using xml. This will avoid some fails in keypairs api sample
-            # which order in different way when using a private key itself or
-            # its regular expression, and after all doesn't interfere with
-            # other tests.
-            # Besides that, there are some cases like Aggregates extension
-            # where we got a list of strings. For those cases key will be None
-            # (python's default) and the elements will be compared directly.
-            # Should we define a criteria when ordering json? Doesn't seems
-            # necessary so far.
-            key = (lambda k: k.get('__tag__', k) if isinstance(k, dict)
-                                                 else None)
-            for ex_obj, res_obj in zip(sorted(expected, key=key),
-                                       sorted(result, key=key)):
-                res = self._compare_result(subs, ex_obj, res_obj)
+            if len(expected) != len(result):
+                raise NoMatch(
+                        _('Length mismatch: %(result)s\n%(expected)s.')
+                        % locals())
+            for res_obj in result:
+                for ex_obj in expected:
+                    try:
+                        res = self._compare_result(subs, ex_obj, res_obj)
+                        break
+                    except NoMatch:
+                        pass
+                else:
+                    raise NoMatch(
+                            _('Result: %(res_obj)s not in %(expected)s.')
+                            % locals())
                 matched_value = res or matched_value
 
         elif isinstance(expected, basestring) and '%' in expected:

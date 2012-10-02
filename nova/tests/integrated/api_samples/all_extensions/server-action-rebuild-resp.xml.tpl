@@ -8,7 +8,7 @@
         hostId="%(hostid)s" progress="0"
         status="ACTIVE" adminPass="%(password)s"
         created="%(timestamp)s"
-	updated="%(timestamp)s"
+        updated="%(timestamp)s"
         accessIPv4="%(ip)s"
         accessIPv6="%(ip6)s"
         OS-DCF:diskConfig="AUTO">
@@ -16,16 +16,10 @@
       <atom:link
           rel="bookmark"
           href="%(host)s/openstack/images/%(uuid)s"/>
-      <atom:link
-          rel="self"
-          href="%(host)s/openstack/images/%(uuid)s"/>
   </image>
   <flavor id="1">
       <atom:link
           rel="bookmark"
-          href="%(host)s/openstack/flavors/1"/>
-      <atom:link
-          rel="self"
           href="%(host)s/openstack/flavors/1"/>
   </flavor>
   <metadata>
