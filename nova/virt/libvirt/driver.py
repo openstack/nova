@@ -742,6 +742,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if lxc_container_target:
             disk.bind(lxc_host_volume, lxc_container_target, instance_name)
+            s = os.stat(lxc_host_volume)
+            cgroup_info = "b %s:%s rwm\n" % (os.major(s.st_rdev),
+                                             os.minor(s.st_rdev))
+            cgroups_path = ("/sys/fs/cgroup/devices/libvirt/lxc/"
+                            "%s/devices.allow" % instance_name)
+            utils.execute('tee', cgroups_path,
+                          process_input=cgroup_info, run_as_root=True)
 
     @exception.wrap_exception()
     def _detach_lxc_volume(self, xml, virt_dom, instance_name):

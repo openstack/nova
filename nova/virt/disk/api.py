@@ -157,13 +157,6 @@ def bind(src, target, instance_name):
         utils.execute('touch', target, run_as_root=True)
         utils.execute('mount', '-o', 'bind', src, target,
                 run_as_root=True)
-        s = os.stat(src)
-        cgroup_info = "b %s:%s rwm\n" % (os.major(s.st_rdev),
-                                         os.minor(s.st_rdev))
-        cgroups_path = ("/sys/fs/cgroup/devices/libvirt/lxc/"
-                        "%s/devices.allow" % instance_name)
-        utils.execute('tee', cgroups_path,
-                      process_input=cgroup_info, run_as_root=True)
 
 
 def unbind(target):
