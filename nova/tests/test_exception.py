@@ -30,7 +30,6 @@ class EC2APIErrorTestCase(test.TestCase):
         self.assertEqual(err.msg, 'fake error')
         # with 'code' arg
         err = exception.EC2APIError('fake error', 'blah code')
-        self.assertEqual(err.__str__(), 'blah code: fake error')
         self.assertEqual(err.code, 'blah code')
         self.assertEqual(err.msg, 'fake error')
 
