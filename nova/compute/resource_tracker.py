@@ -379,8 +379,7 @@ class ResourceTracker(object):
         self._purge_expired_claims()
 
         # Grab all instances assigned to this host:
-        filters = {'host': self.host, 'deleted': False}
-        instances = db.instance_get_all_by_filters(context, filters)
+        instances = db.instance_get_all_by_host(context, self.host)
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(resources, instances)
