@@ -308,7 +308,6 @@ global_opts = [
                help='time period to generate instance usages for.  '
                     'Time period must be hour, day, month or year'),
     cfg.IntOpt('bandwidth_poll_interval',
-               deprecated_name='bandwith_poll_interval',
                default=600,
                help='interval to pull bandwidth usage info'),
     cfg.BoolOpt('start_guests_on_host_boot',
