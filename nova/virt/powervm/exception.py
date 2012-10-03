@@ -41,6 +41,11 @@ class PowerVMLPARAttributeNotFound(exception.NovaException):
     pass
 
 
+class PowerVMLPAROperationTimeout(exception.NovaException):
+    message = _("Operation '%(operation)s' on "
+                "LPAR '%(instance_name)s' timed out")
+
+
 class PowerVMImageCreationFailed(exception.NovaException):
     message = _("Image creation failed on PowerVM")
 
