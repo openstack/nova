@@ -215,6 +215,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
 
+        self.flags(use_local=True, group='conductor')
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')

@@ -19,6 +19,11 @@
             "host_name": "%(host_name)s",
             "service": "scheduler",
             "zone": "nova"
+        },
+        {
+	    "host_name": "%(host_name)s",
+	    "service": "conductor",
+	    "zone": "nova"
         }
     ]
 }

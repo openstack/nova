@@ -131,6 +131,9 @@ class CloudTestCase(test.TestCase):
         self.cloud = cloud.CloudController()
         self.flags(scheduler_driver='nova.scheduler.chance.ChanceScheduler')
 
+        # Short-circuit the conductor service
+        self.flags(use_local=True, group='conductor')
+
         # set up services
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')

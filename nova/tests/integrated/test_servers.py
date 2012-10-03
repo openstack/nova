@@ -29,6 +29,10 @@ LOG = logging.getLogger(__name__)
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
+    def setUp(self):
+        super(ServersTest, self).setUp()
+        self.conductor = self.start_service(
+            'conductor', manager='nova.conductor.manager.ConductorManager')
 
     def _wait_for_state_change(self, server, from_status):
         for i in xrange(0, 50):

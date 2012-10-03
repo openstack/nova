@@ -4,4 +4,5 @@
   <host host_name="%(host_name)s" service="cert"/>
   <host host_name="%(host_name)s" service="network"/>
   <host host_name="%(host_name)s" service="scheduler"/>
+  <host host_name="%(host_name)s" service="conductor"/>
 </hosts>

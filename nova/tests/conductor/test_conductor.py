@@ -22,6 +22,7 @@ from nova.conductor import manager as conductor_manager
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
 from nova import notifications
 from nova import test
 
@@ -131,3 +132,30 @@ class ConductorImportTest(test.TestCase):
         self.flags(use_local=False, group='conductor')
         self.assertTrue(isinstance(conductor.API(),
                                    conductor_api.API))
+
+
+class ConductorPolicyTest(test.TestCase):
+    def test_all_allowed_keys(self):
+
+        def fake_db_instance_update(self, *args, **kwargs):
+            return None, None
+        self.stubs.Set(db, 'instance_update_and_get_original',
+                       fake_db_instance_update)
+
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        conductor = conductor_api.LocalAPI()
+        updates = {}
+        for key in conductor_manager.allowed_updates:
+            updates[key] = 'foo'
+        conductor.instance_update(ctxt, 'fake-instance', **updates)
+
+    def test_allowed_keys_are_real(self):
+        instance = models.Instance()
+        keys = list(conductor_manager.allowed_updates)
+
+        # NOTE(danms): expected_task_state is a parameter that gets
+        # passed to the db layer, but is not actually an instance attribute
+        del keys[keys.index('expected_task_state')]
+
+        for key in keys:
+            self.assertTrue(hasattr(instance, key))
