@@ -58,6 +58,23 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     _conn = property(_get_connection)
 
     @staticmethod
+    def nova_no_nd_reflection_filter():
+        """
+        This filter protects false positives on IPv6 Duplicate Address
+        Detection(DAD).
+        """
+        return '''<filter name='nova-no-nd-reflection' chain='ipv6'>
+                  <!-- no nd reflection -->
+                  <!-- drop if destination mac is v6 mcast mac addr and
+                       we sent it. -->
+
+                  <rule action='drop' direction='in'>
+                      <mac dstmacaddr='33:33:00:00:00:00'
+                           dstmacmask='ff:ff:00:00:00:00' srcmacaddr='$MAC'/>
+                  </rule>
+                  </filter>'''
+
+    @staticmethod
     def nova_dhcp_filter():
         """The standard allow-dhcp-server filter is an <ip> one, so it uses
            ebtables to allow traffic through. Without a corresponding rule in
@@ -122,15 +139,15 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         if self.static_filters_configured:
             return
 
-        self._define_filter(self._filter_container('nova-base',
-                                                   ['no-mac-spoofing',
-                                                    'no-ip-spoofing',
-                                                    'no-arp-spoofing',
-                                                    'allow-dhcp-server']))
-        self._define_filter(self._filter_container('nova-nodhcp',
-                                                   ['no-mac-spoofing',
-                                                    'no-ip-spoofing',
-                                                    'no-arp-spoofing']))
+        filter_set = ['no-mac-spoofing',
+                      'no-ip-spoofing',
+                      'no-arp-spoofing']
+        if FLAGS.use_ipv6:
+            self._define_filter(self.nova_no_nd_reflection_filter)
+            filter_set.append('nova-no-nd-reflection')
+        self._define_filter(self._filter_container('nova-nodhcp', filter_set))
+        filter_set.append('allow-dhcp-server')
+        self._define_filter(self._filter_container('nova-base', filter_set))
         self._define_filter(self._filter_container('nova-vpn',
                                                    ['allow-dhcp-server']))
         self._define_filter(self.nova_dhcp_filter)
