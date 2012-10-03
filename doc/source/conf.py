@@ -154,7 +154,9 @@ man_pages = [
     ('man/nova-scheduler', 'nova-scheduler', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-xvpvncproxy', 'nova-xvpvncproxy', u'Cloud controller fabric',
-     [u'OpenStack'], 1)
+     [u'OpenStack'], 1),
+    ('man/nova-conductor', 'nova-conductor', u'Cloud controller fabric',
+     [u'OpenStack'], 1),
 ]
 
 # -- Options for HTML output --------------------------------------------------
