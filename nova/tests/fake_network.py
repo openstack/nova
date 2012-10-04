@@ -21,6 +21,7 @@ import nova.context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.network import api as network_api
 from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
@@ -362,7 +363,6 @@ def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
                                          ips_per_vif=1,
                                          floating_ips_per_fixed_ip=0,
                                          spectacular=False):
-    import nova.network
 
     def get_instance_nw_info(self, context, instance):
         return fake_get_instance_nw_info(stubs, num_networks=num_networks,
@@ -372,7 +372,7 @@ def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
 
     if func is None:
         func = get_instance_nw_info
-    stubs.Set(nova.network.API, 'get_instance_nw_info', func)
+    stubs.Set(network_api.API, 'get_instance_nw_info', func)
 
 
 _real_functions = {}

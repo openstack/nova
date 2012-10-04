@@ -41,6 +41,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.network import api as network_api
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -196,9 +197,9 @@ class ComputeTestCase(BaseTestCase):
                                                           spectacular=True)
 
         super(ComputeTestCase, self).setUp()
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
-        self.stubs.Set(nova.network.API, 'allocate_for_instance',
+        self.stubs.Set(network_api.API, 'allocate_for_instance',
                        fake_get_nw_info)
         self.compute_api = compute.API()
 
@@ -1191,7 +1192,7 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(nova.network.API, 'add_fixed_ip_to_instance',
+        self.stubs.Set(network_api.API, 'add_fixed_ip_to_instance',
                        dummy)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'inject_network_info', dummy)
@@ -1212,7 +1213,7 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(nova.network.API, 'remove_fixed_ip_from_instance',
+        self.stubs.Set(network_api.API, 'remove_fixed_ip_from_instance',
                        dummy)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'inject_network_info', dummy)
@@ -2664,7 +2665,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                           spectacular=True)
 
         super(ComputeAPITestCase, self).setUp()
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
         self.security_group_api = compute.api.SecurityGroupAPI()
         self.compute_api = compute.API(

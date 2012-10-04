@@ -25,6 +25,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.network import api as network_api
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
@@ -194,7 +195,7 @@ class UsageInfoTestCase(test.TestCase):
                                                           spectacular=True)
 
         super(UsageInfoTestCase, self).setUp()
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+        self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
