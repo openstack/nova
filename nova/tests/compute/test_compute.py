@@ -3532,6 +3532,27 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_snapshot_image_metadata_inheritance(self):
+        # Ensure image snapshots inherit metadata from the base image
+        self.flags(non_inheritable_image_properties=['spam'])
+
+        def fake_instance_system_metadata_get(context, uuid):
+            return dict(image_a=1, image_b=2, image_c='c', d='d', spam='spam')
+
+        self.stubs.Set(db, 'instance_system_metadata_get',
+                       fake_instance_system_metadata_get)
+
+        instance = self._create_fake_instance()
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                          {'extra_param': 'value1'})
+
+        properties = image['properties']
+        self.assertEqual(properties['a'], 1)
+        self.assertEqual(properties['b'], 2)
+        self.assertEqual(properties['c'], 'c')
+        self.assertEqual(properties['d'], 'd')
+        self.assertFalse('spam' in properties)
+
     def test_backup(self):
         """Can't backup an instance which is already being backed up."""
         instance = self._create_fake_instance()

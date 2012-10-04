@@ -1233,6 +1233,22 @@ class API(base.Base):
                 sent_meta['min_disk'] = min_disk
 
         properties.update(extra_properties or {})
+
+        # Now inherit image properties from the base image
+        prefix = 'image_'
+        for key, value in system_meta.items():
+            # Trim off the image_ prefix
+            if key.startswith(prefix):
+                key = key[len(prefix):]
+
+            # Skip properties that are non-inheritable
+            if key in FLAGS.non_inheritable_image_properties:
+                continue
+
+            # By using setdefault, we ensure that the properties set
+            # up above will not be overwritten by inherited values
+            properties.setdefault(key, value)
+
         sent_meta['properties'] = properties
 
         recv_meta = self.image_service.create(context, sent_meta)
