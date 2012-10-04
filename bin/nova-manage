@@ -74,7 +74,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova.api.ec2 import ec2utils
-from nova.compat import flagfile
 from nova.compute import instance_types
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -780,40 +779,6 @@ class VolumeCommands(object):
 
     @args('--volume', dest='volume_id', metavar='<volume id>',
             help='Volume ID')
-    def delete(self, volume_id):
-        """WARNING: This method is deprecated and will be removed.
-        Delete a volume, bypassing the check that it
-        must be available."""
-
-        print(_("\"nova-manage volume delete\" is deprecated; use"
-                " the os-reset_status os-admin-actions extension instead."))
-        if 'cinder' in FLAGS.volume_api_class:
-            print(_("\"nova-manage volume delete\" only valid "
-                    "when using nova-volume service"))
-            sys.exit(1)
-
-        ctxt = context.get_admin_context()
-        volume = db.volume_get(ctxt, param2id(volume_id))
-        host = volume['host']
-
-        if not host:
-            print "Volume not yet assigned to host."
-            print "Deleting volume from database and skipping rpc."
-            db.volume_destroy(ctxt, volume_id)
-            return
-
-        if volume['status'] == 'in-use':
-            print "Volume is in-use."
-            print "Detach volume from instance and then try again."
-            return
-
-        rpc.cast(ctxt,
-                 rpc.queue_get_for(ctxt, FLAGS.volume_topic, host),
-                 {"method": "delete_volume",
-                  "args": {"volume_id": volume['id']}})
-
-    @args('--volume', dest='volume_id', metavar='<volume id>',
-            help='Volume ID')
     def reattach(self, volume_id):
         """Re-attach a volume that has previously been attached
         to an instance.  Typically called after a compute host
@@ -1168,34 +1133,6 @@ class AgentBuildCommands(object):
                                'md5hash': md5hash})
 
 
-class ConfigCommands(object):
-    """Class for exposing the flags defined by flag_file(s)."""
-
-    def __init__(self):
-        pass
-
-    def list(self):
-        for key, value in FLAGS.iteritems():
-            if value is not None:
-                print '%s = %s' % (key, value)
-
-    @args('--infile', dest='infile', metavar='<path>',
-          help='old-style flagfile to convert to config')
-    @args('--outfile', dest='outfile', metavar='<path>',
-          help='path for output file. Writes config'
-               'to stdout if not specified.')
-    def convert(self, infile, outfile=None):
-        """Converts a flagfile and prints results to stdout."""
-        arg = '--flagfile=%s' % infile
-        with flagfile.handle_flagfiles_managed([arg]) as newargs:
-            with open(newargs[0].split('=')[1]) as configfile:
-                config = configfile.read()
-            if outfile:
-                with open(outfile, 'w') as configfile:
-                    configfile.write(config)
-            else:
-                print config,
-
 
 class GetLogCommands(object):
     """Get logging information"""
@@ -1249,7 +1186,6 @@ class GetLogCommands(object):
 CATEGORIES = [
     ('account', AccountCommands),
     ('agent', AgentBuildCommands),
-    ('config', ConfigCommands),
     ('db', DbCommands),
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
