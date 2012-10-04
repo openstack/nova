@@ -401,12 +401,6 @@ global_opts = [
                help='The strategy to use for auth: noauth or keystone.'),
     cfg.ListOpt('non_inheritable_image_properties',
                 default=['cache_in_nova',
-                         'instance_uuid',
-                         'user_id',
-                         'image_type',
-                         'backup_type',
-                         'min_ram',
-                         'min_disk',
                          'bittorrent'],
                 help='These are image properties which a snapshot should not'
                      ' inherit from an instance'),

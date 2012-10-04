@@ -2296,9 +2296,6 @@ class VmUtilsTestCase(test.TestCase):
     """Unit tests for xenapi utils."""
 
     def test_upload_image(self):
-        """Ensure image properties include instance system metadata
-           as well as few local settings."""
-
         def fake_instance_system_metadata_get(context, uuid):
             return dict(image_a=1, image_b=2, image_c='c', d='d')
 
@@ -2337,8 +2334,8 @@ class VmUtilsTestCase(test.TestCase):
         vm_utils.upload_image(ctx, session, instance, "vmi uuids", "image id")
 
         actual = self.kwargs['properties']
-        expected = dict(a=1, b=2, c='c', d='d',
-                        auto_disk_config='auto disk config',
+        # Inheritance happens in another place, now
+        expected = dict(auto_disk_config='auto disk config',
                         os_type='os type')
         self.assertEquals(expected, actual)
 
