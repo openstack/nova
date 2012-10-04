@@ -14,19 +14,23 @@
 #    under the License.
 
 import base64
+import datetime
 import os
 import re
+import urllib
 import uuid
 
 from lxml import etree
 
 from nova.cloudpipe.pipelib import CloudPipe
+from nova.compute import api
 from nova import context
 from nova import flags
 from nova.network.manager import NetworkManager
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
@@ -1222,3 +1226,46 @@ class MultipleCreateJsonTest(ServersSampleBase):
 
 class MultipleCreateXmlTest(MultipleCreateJsonTest):
     ctype = 'xml'
+
+
+class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.simple_tenant_usage."
+                      "Simple_tenant_usage")
+
+    def setUp(self):
+        """setUp method for simple tenant usage"""
+        super(SimpleTenantUsageSampleJsonTest, self).setUp()
+        self._post_server()
+        timeutils.set_time_override(timeutils.utcnow() +
+                                    datetime.timedelta(hours=1))
+        self.query = {
+            'start': str(timeutils.utcnow() - datetime.timedelta(hours=1)),
+            'end': str(timeutils.utcnow())
+        }
+
+    def tearDown(self):
+        """tearDown method for simple tenant usage"""
+        super(SimpleTenantUsageSampleJsonTest, self).tearDown()
+        timeutils.clear_time_override()
+
+    def test_get_tenants_usage(self):
+        """Get api sample to get all tenants usage request"""
+        response = self._do_get('os-simple-tenant-usage?%s' % (
+                                                urllib.urlencode(self.query)))
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('simple-tenant-usage-get', subs, response)
+
+    def test_get_tenant_usage_details(self):
+        """Get api sample to get specific tenant usage request"""
+        tenant_id = 'openstack'
+        response = self._do_get('os-simple-tenant-usage/%s?%s' % (tenant_id,
+                                                urllib.urlencode(self.query)))
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('simple-tenant-usage-get-specific', subs,
+                              response)
+
+
+class SimpleTenantUsageSampleXmlTest(SimpleTenantUsageSampleJsonTest):
+    ctype = "xml"
