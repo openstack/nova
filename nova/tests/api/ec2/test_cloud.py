@@ -2060,12 +2060,14 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(vol['mountpoint'], mountpoint)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
+        self.assertNotEqual(vol['attach_time'], None)
 
     def _assert_volume_detached(self, vol):
         self.assertEqual(vol['instance_uuid'], None)
         self.assertEqual(vol['mountpoint'], None)
         self.assertEqual(vol['status'], "available")
         self.assertEqual(vol['attach_status'], "detached")
+        self.assertEqual(vol['attach_time'], None)
 
     def test_stop_start_with_volume(self):
         """Make sure run instance with block device mapping works"""
