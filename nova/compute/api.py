@@ -1211,6 +1211,11 @@ class API(base.Base):
             'user_id': str(context.user_id),
             'image_type': image_type,
         }
+        sent_meta = {
+            'name': name,
+            'is_public': False,
+            'properties': properties,
+        }
 
         # Persist base image ref as a Glance image property
         system_meta = self.db.instance_system_metadata_get(
@@ -1218,8 +1223,6 @@ class API(base.Base):
         base_image_ref = system_meta.get('image_base_image_ref')
         if base_image_ref:
             properties['base_image_ref'] = base_image_ref
-
-        sent_meta = {'name': name, 'is_public': False}
 
         if image_type == 'backup':
             properties['backup_type'] = backup_type
@@ -1248,8 +1251,6 @@ class API(base.Base):
             # By using setdefault, we ensure that the properties set
             # up above will not be overwritten by inherited values
             properties.setdefault(key, value)
-
-        sent_meta['properties'] = properties
 
         recv_meta = self.image_service.create(context, sent_meta)
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
