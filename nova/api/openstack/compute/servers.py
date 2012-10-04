@@ -66,6 +66,7 @@ def make_server(elem, detailed=False):
         elem.set('accessIPv6')
         elem.set('status')
         elem.set('progress')
+        elem.set('reservation_id')
 
         # Attach image node
         image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
@@ -889,7 +890,13 @@ class Controller(wsgi.Controller):
         # Let the caller deal with unhandled exceptions.
 
         # If the caller wanted a reservation_id, return it
-        if ret_resv_id:
+
+        # NOTE(treinish): XML serialization will not work without a root
+        # selector of 'server' however JSON return is not expecting a server
+        # field/object
+        if ret_resv_id and (req.get_content_type() == 'application/xml'):
+            return {'server': {'reservation_id': resv_id}}
+        elif ret_resv_id:
             return {'reservation_id': resv_id}
 
         req.cache_db_instances(instances)
