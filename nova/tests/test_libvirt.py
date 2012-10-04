@@ -3892,11 +3892,21 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_shutil_rmtree(target):
             pass
 
+        def fake_undefine_domain(instance):
+            pass
+
+        def fake_unplug_vifs(instance, network_info):
+            pass
+
         def fake_unfilter_instance(instance, network_info):
             pass
 
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
         self.stubs.Set(shutil, 'rmtree', fake_shutil_rmtree)
+        self.stubs.Set(self.libvirtconnection, '_undefine_domain',
+                       fake_undefine_domain)
+        self.stubs.Set(self.libvirtconnection, 'unplug_vifs',
+                       fake_unplug_vifs)
         self.stubs.Set(self.libvirtconnection.firewall_driver,
                        'unfilter_instance', fake_unfilter_instance)
 
