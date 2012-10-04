@@ -25,7 +25,7 @@ from nova import test
 from nova.compute import power_state
 from nova.openstack.common import log as logging
 from nova.virt import images
-
+from nova.virt.powervm import blockdev as powervm_blockdev
 from nova.virt.powervm import driver as powervm_driver
 from nova.virt.powervm import exception
 from nova.virt.powervm import lpar
@@ -73,20 +73,6 @@ class FakeIVMOperator(object):
     def remove_disk(self, disk_name):
         pass
 
-    def create_logical_volume(self, size):
-        return 'lvfake01'
-
-    def remove_logical_volume(self, lv_name):
-        pass
-
-    def copy_file_to_device(self, sourcePath, device):
-        pass
-
-    def copy_image_file(self, sourcePath, remotePath):
-        finalPath = '/home/images/rhel62.raw.7e358754160433febd6f3318b7c9e335'
-        size = 4294967296
-        return finalPath, size
-
     def run_cfg_dev(self, device_name):
         pass
 
@@ -108,6 +94,26 @@ class FakeIVMOperator(object):
         return 'fake-powervm'
 
 
+class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
+
+    def __init__(self):
+        pass
+
+    def _create_logical_volume(self, size):
+        return 'lvfake01'
+
+    def _remove_logical_volume(self, lv_name):
+        pass
+
+    def _copy_file_to_device(self, sourcePath, device, decrompress=True):
+        pass
+
+    def _copy_image_file(self, sourcePath, remotePath, decompress=False):
+        finalPath = '/home/images/rhel62.raw.7e358754160433febd6f3318b7c9e335'
+        size = 4294967296
+        return finalPath, size
+
+
 def fake_get_powervm_operator():
     return FakeIVMOperator()
 
@@ -119,6 +125,8 @@ class PowerVMDriverTestCase(test.TestCase):
         super(PowerVMDriverTestCase, self).setUp()
         self.stubs.Set(operator, 'get_powervm_operator',
                        fake_get_powervm_operator)
+        self.stubs.Set(operator, 'get_powervm_disk_adapter',
+                       lambda: FakeBlockAdapter())
         self.powervm_connection = powervm_driver.PowerVMDriver(None)
         self.instance = self._create_instance()
 
@@ -161,8 +169,8 @@ class PowerVMDriverTestCase(test.TestCase):
         self.flags(powervm_img_local_path='/images/')
         self.stubs.Set(images, 'fetch_to_raw', lambda *x, **y: None)
         self.stubs.Set(
-            self.powervm_connection._powervm._operator,
-            'copy_image_file',
+            self.powervm_connection._powervm._disk_adapter,
+            'create_volume_from_image',
             lambda *x, **y: raise_(exception.PowerVMImageCreationFailed()))
         self.stubs.Set(
             self.powervm_connection._powervm, '_cleanup',
