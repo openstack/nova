@@ -406,7 +406,8 @@ global_opts = [
                          'image_type',
                          'backup_type',
                          'min_ram',
-                         'min_disk'],
+                         'min_disk',
+                         'bittorrent'],
                 help='These are image properties which a snapshot should not'
                      ' inherit from an instance'),
     cfg.BoolOpt('defer_iptables_apply',
