@@ -460,7 +460,7 @@ class CloudController(object):
                 r['groups'] += [{'groupName': source_group.name,
                                  'userId': source_group.project_id}]
                 if rule.protocol:
-                    r['ipProtocol'] = rule.protocol
+                    r['ipProtocol'] = rule.protocol.lower()
                     r['fromPort'] = rule.from_port
                     r['toPort'] = rule.to_port
                     g['ipPermissions'] += [dict(r)]
@@ -562,6 +562,14 @@ class CloudController(object):
             err = _("%s Not enough parameters to build a valid rule")
             raise exception.EC2APIError(err % rulesvalues)
 
+    def _validate_security_group_protocol(self, values):
+        validprotocols = ['tcp', 'udp', 'icmp', '6', '17', '1']
+        if 'ip_protocol' in values and \
+            values['ip_protocol'] not in validprotocols:
+            protocol = values['ip_protocol']
+            err = _("Invalid IP protocol %(protocol)s.") % locals()
+            raise exception.EC2APIError(message=err, code="400")
+
     def revoke_security_group_ingress(self, context, group_name=None,
                                       group_id=None, **kwargs):
         self._validate_group_identifier(group_name, group_id)
@@ -605,6 +613,7 @@ class CloudController(object):
         prevalues = kwargs.get('ip_permissions', [kwargs])
         postvalues = []
         for values in prevalues:
+            self._validate_security_group_protocol(values)
             rulesvalues = self._rule_args_to_dict(context, values)
             self._validate_rulevalues(rulesvalues)
             for values_for_rule in rulesvalues:
