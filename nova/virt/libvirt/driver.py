@@ -1899,8 +1899,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         devices = []
         for dom_id in self.list_instance_ids():
-            domain = self._conn.lookupByID(dom_id)
             try:
+                domain = self._conn.lookupByID(dom_id)
                 doc = etree.fromstring(domain.XMLDesc(0))
             except Exception:
                 continue
