@@ -1848,7 +1848,7 @@ class API(base.Base):
         #             compute, the bdm will be created here and we will
         #             have to make sure that they are assigned atomically.
         device = self.compute_rpcapi.reserve_block_device_name(
-            context, device=device, instance=instance)
+            context, device=device, instance=instance, volume_id=volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume)

@@ -130,6 +130,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.1 - Adds orig_sys_metadata to rebuild_instance()
         2.2 - Adds slave_info parameter to add_aggregate_host() and
               remove_aggregate_host()
+        2.3 - Adds volume_id to reserve_block_device_name()
     '''
 
     #
@@ -458,11 +459,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         topic = _compute_topic(self.topic, ctxt, host, None)
         return self.call(ctxt, self.make_msg('get_host_uptime'), topic)
 
-    def reserve_block_device_name(self, ctxt, instance, device):
+    def reserve_block_device_name(self, ctxt, instance, device, volume_id):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('reserve_block_device_name',
-                instance=instance_p, device=device),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, device=device, volume_id=volume_id),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.3')
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):
