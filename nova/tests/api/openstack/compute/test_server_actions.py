@@ -462,6 +462,7 @@ class ServerActionsControllerTest(test.TestCase):
         context = req.environ['nova.context']
         update(context, mox.IgnoreArg(),
                 image_ref=self._image_href,
+                kernel_id="", ramdisk_id="",
                 task_state=task_states.REBUILDING,
                 expected_task_state=None,
                 progress=0, **attributes).AndReturn(
@@ -469,6 +470,74 @@ class ServerActionsControllerTest(test.TestCase):
         self.mox.ReplayAll()
 
         self.controller._action_rebuild(req, FAKE_UUID, body)
+
+    def test_rebuild_when_kernel_not_exists(self):
+
+        def return_image_meta(*args, **kwargs):
+            image_meta_table = {
+                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
+                '155d900f-4e14-4e4c-a73d-069cbf4541e6':
+                     {'id': 3, 'status': 'active', 'container_format': 'raw',
+                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+            }
+            image_id = args[2]
+            try:
+                image_meta = image_meta_table[str(image_id)]
+            except KeyError:
+                raise exception.ImageNotFound(image_id=image_id)
+
+            return image_meta
+
+        self.stubs.Set(nova.tests.image.fake._FakeImageService,
+                            'show', return_image_meta)
+        body = {
+            "rebuild": {
+                "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            },
+        }
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
+
+    def test_rebuild_proper_kernel_ram(self):
+        instance_meta = {'kernel_id': None, 'ramdisk_id': None}
+
+        def fake_show(*args, **kwargs):
+            instance_meta['kernel_id'] = kwargs.get('kernel_id')
+            instance_meta['ramdisk_id'] = kwargs.get('ramdisk_id')
+            inst = fakes.stub_instance(INSTANCE_IDS[FAKE_UUID],
+                                       host='fake_host')
+            return inst
+
+        def return_image_meta(*args, **kwargs):
+            image_meta_table = {
+                '1': {'id': 1, 'status': 'active', 'container_format': 'aki'},
+                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
+                '155d900f-4e14-4e4c-a73d-069cbf4541e6':
+                     {'id': 3, 'status': 'active', 'container_format': 'raw',
+                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+            }
+            image_id = args[2]
+            try:
+                image_meta = image_meta_table[str(image_id)]
+            except KeyError:
+                raise exception.ImageNotFound(image_id=image_id)
+
+            return image_meta
+
+        self.stubs.Set(nova.tests.image.fake._FakeImageService,
+                            'show', return_image_meta)
+        self.stubs.Set(nova.compute.API, 'update', fake_show)
+        body = {
+            "rebuild": {
+                "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            },
+        }
+        req = fakes.HTTPRequest.blank(self.url)
+        self.controller._action_rebuild(req, FAKE_UUID, body).obj
+        self.assertEqual(instance_meta['kernel_id'], 1)
+        self.assertEqual(instance_meta['ramdisk_id'], 2)
 
     def test_resize_server(self):
 
