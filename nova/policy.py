@@ -82,7 +82,7 @@ def enforce(context, action, target):
            for object creation this should be a dictionary representing the
            location of the object e.g. ``{'project_id': context.project_id}``
 
-       :raises nova.exception.PolicyNotAllowed: if verification fails.
+       :raises nova.exception.PolicyNotAuthorized: if verification fails.
 
     """
     init()
