@@ -557,38 +557,50 @@ def snapshot_attached_here(session, instance, vm_ref, label):
     vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
     original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
 
-    template_vm_ref, template_vdi_uuid = _create_snapshot(
-            session, instance, vm_ref, label)
-
     try:
+        vdi_snapshot_recs = _vdi_snapshot_vm_base(session, instance, vm_ref)
         sr_ref = vm_vdi_rec["SR"]
         parent_uuid, base_uuid = _wait_for_vhd_coalesce(
                 session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
-        vdi_uuids = [vdi_rec['uuid'] for vdi_rec in
-                     _walk_vdi_chain(session, template_vdi_uuid)]
+        vdi_uuids = []
+        for snapshot in vdi_snapshot_recs:
+            vdi_uuids += [vdi_rec['uuid'] for vdi_rec in
+                         _walk_vdi_chain(session, snapshot['uuid'])]
 
         yield vdi_uuids
     finally:
-        _destroy_snapshot(session, instance, template_vm_ref)
+        _destroy_snapshots(session, instance, vdi_snapshot_recs)
 
 
-def _create_snapshot(session, instance, vm_ref, label):
-    template_vm_ref = session.call_xenapi('VM.snapshot', vm_ref, label)
-    template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
-    template_vdi_uuid = template_vdi_rec["uuid"]
+def _vdi_snapshot_vm_base(session, instance, vm_ref):
+    """Make a snapshot of every non-cinder VDI and return a list
+    of the new vdi records.
+    """
+    new_vdis = []
+    try:
+        vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
+        for vbd_ref in vbd_refs:
+            oc = session.call_xenapi("VBD.get_other_config", vbd_ref)
+            if 'osvol' not in oc:
+                # This volume is not a nova/cinder volume
+                vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
+                snapshot_ref = session.call_xenapi("VDI.snapshot", vdi_ref,
+                                                   {})
+                new_vdis.append(session.call_xenapi("VDI.get_record",
+                                                    snapshot_ref))
 
-    LOG.debug(_("Created snapshot %(template_vdi_uuid)s with label"
-                " '%(label)s'"), locals(), instance=instance)
+    except session.XenAPI.Failure:
+        LOG.exception(_("Failed to snapshot VDI"), instance=instance)
+        raise
+    finally:
+        return new_vdis
 
-    return template_vm_ref, template_vdi_uuid
 
-
-def _destroy_snapshot(session, instance, vm_ref):
-    vdi_refs = lookup_vm_vdis(session, vm_ref)
+def _destroy_snapshots(session, instance, vdi_snapshot_recs):
+    vdi_refs = [session.call_xenapi("VDI.get_by_uuid", vdi_rec['uuid'])
+                 for vdi_rec in vdi_snapshot_recs]
     safe_destroy_vdis(session, vdi_refs)
-
-    destroy_vm(session, instance, vm_ref)
 
 
 def get_sr_path(session):

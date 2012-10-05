@@ -787,8 +787,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             if str(bdm['volume_id']) == str(volume_id):
                 return bdm
 
-    def _get_instance_volume_block_device_info(self, context, instance_uuid):
-        bdms = self._get_instance_volume_bdms(context, instance_uuid)
+    def _get_instance_volume_block_device_info(self, context, instance_uuid,
+                                               bdms=None):
+        if bdms is None:
+            bdms = self._get_instance_volume_bdms(context, instance_uuid)
         block_device_mapping = []
         for bdm in bdms:
             try:
@@ -847,7 +849,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(vish) get bdms before destroying the instance
         bdms = self._get_instance_volume_bdms(context, instance['uuid'])
         block_device_info = self._get_instance_volume_block_device_info(
-            context, instance['uuid'])
+            context, instance['uuid'], bdms=bdms)
         self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
         for bdm in bdms:
@@ -1439,6 +1441,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self.driver.destroy(instance, self._legacy_nw_info(network_info),
                                 block_device_info)
+            # Terminate volume connections.
+            bdms = self._get_instance_volume_bdms(context, instance['uuid'])
+            if bdms:
+                connector = self.driver.get_volume_connector(instance)
+                for bdm in bdms:
+                    volume = self.volume_api.get(context, bdm['volume_id'])
+                    self.volume_api.terminate_connection(context, volume,
+                            connector)
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration_ref['id'], migration_ref['source_compute'],
                     reservations)
@@ -1466,8 +1476,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             old_instance_type = migration_ref['old_instance_type_id']
             instance_type = instance_types.get_instance_type(old_instance_type)
 
+            bdms = self._get_instance_volume_bdms(context, instance['uuid'])
             block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance['uuid'])
+                    context, instance['uuid'])
+            if bdms:
+                connector = self.driver.get_volume_connector(instance)
+                for bdm in bdms:
+                    volume = self.volume_api.get(context, bdm['volume_id'])
+                    self.volume_api.initialize_connection(context, volume,
+                                                          connector)
 
             self.driver.finish_revert_migration(instance,
                                        self._legacy_nw_info(network_info),
@@ -1592,6 +1609,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance_type_ref, self._legacy_nw_info(network_info),
                     block_device_info)
 
+            # Terminate volume connections.
+            bdms = self._get_instance_volume_bdms(context, instance['uuid'])
+            if bdms:
+                connector = self.driver.get_volume_connector(instance)
+                for bdm in bdms:
+                    volume = self.volume_api.get(context, bdm['volume_id'])
+                    self.volume_api.terminate_connection(context, volume,
+                            connector)
+
             self.db.migration_update(context,
                                      migration_id,
                                      {'status': 'post-migrating'})
@@ -1639,8 +1665,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
+        bdms = self._get_instance_volume_bdms(context, instance['uuid'])
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance['uuid'])
+                            context, instance['uuid'], bdms=bdms)
+
+        if bdms:
+            connector = self.driver.get_volume_connector(instance)
+            for bdm in bdms:
+                volume = self.volume_api.get(context, bdm['volume_id'])
+                self.volume_api.initialize_connection(context, volume,
+                                                      connector)
 
         self.driver.finish_migration(context, migration_ref, instance,
                                      disk_info,
