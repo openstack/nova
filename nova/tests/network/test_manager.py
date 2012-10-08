@@ -827,6 +827,14 @@ class VlanNetworkTestCase(test.TestCase):
         def fake7(*args, **kwargs):
             self.local = True
 
+        def fake8(*args, **kwargs):
+            return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
+                    'fixed_ip_id': 1,
+                    'auto_assigned': True,
+                    'project_id': ctxt.project_id}
+
         self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
 
         # raises because floating_ip is not associated to a fixed_ip
@@ -853,6 +861,13 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network, '_disassociate_floating_ip', fake7)
         self.network.disassociate_floating_ip(ctxt, mox.IgnoreArg())
         self.assertTrue(self.local)
+
+        # raises because auto_assigned floating IP cannot be disassociated
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake8)
+        self.assertRaises(exception.CannotDisassociateAutoAssignedFloatingIP,
+                          self.network.disassociate_floating_ip,
+                          ctxt,
+                          mox.IgnoreArg())
 
     def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
         self.mox.StubOutWithMock(db, 'network_get')
