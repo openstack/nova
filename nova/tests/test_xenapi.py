@@ -34,7 +34,6 @@ from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_network
