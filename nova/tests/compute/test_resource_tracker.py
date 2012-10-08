@@ -22,6 +22,7 @@ import uuid
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
@@ -30,14 +31,6 @@ from nova import test
 from nova.virt import driver
 
 LOG = logging.getLogger(__name__)
-
-
-class FakeContext(object):
-    def __init__(self, is_admin=False):
-        self.is_admin = is_admin
-
-    def elevated(self):
-        return FakeContext(is_admin=True)
 
 
 class UnsupportedVirtDriver(driver.ComputeDriver):
@@ -81,11 +74,13 @@ class BaseTestCase(test.TestCase):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
 
-        self.context = FakeContext()
+        self.context = context.RequestContext('fake', 'fake')
 
-        self._instances = []
+        self._instances = {}
         self.stubs.Set(db, 'instance_get_all_by_host',
-                       lambda c, h: self._instances)
+                       lambda c, h: self._instances.values())
+        self.stubs.Set(db, 'instance_update_and_get_original',
+                       self._fake_instance_update_and_get_original)
 
     def _create_compute_node(self, values=None):
         compute = {
@@ -122,8 +117,10 @@ class BaseTestCase(test.TestCase):
         return service
 
     def _fake_instance(self, *args, **kwargs):
+
+        instance_uuid = str(uuid.uuid1())
         instance = {
-            'uuid': str(uuid.uuid1()),
+            'uuid': instance_uuid,
             'vm_state': vm_states.BUILDING,
             'task_state': None,
             'memory_mb': 2,
@@ -136,8 +133,16 @@ class BaseTestCase(test.TestCase):
         }
         instance.update(kwargs)
 
-        self._instances.append(instance)
+        self._instances[instance_uuid] = instance
         return instance
+
+    def _fake_instance_update_and_get_original(self, context, instance_uuid,
+            values):
+        instance = self._instances[instance_uuid]
+        instance.update(values)
+        # the test doesn't care what the original instance values are, it's
+        # only used in the subsequent notification:
+        return (instance, instance)
 
     def _tracker(self, unsupported=False):
         host = "fakehost"
@@ -168,7 +173,8 @@ class UnsupportedDriverTestCase(BaseTestCase):
 
     def testDisabledClaim(self):
         # basic claim:
-        claim = self.tracker.begin_resource_claim(self.context, 1, 1)
+        instance = self._fake_instance()
+        claim = self.tracker.begin_resource_claim(self.context, instance)
         self.assertEqual(None, claim)
 
     def testDisabledInstanceClaim(self):
@@ -200,7 +206,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
 class MissingServiceTestCase(BaseTestCase):
     def setUp(self):
         super(MissingServiceTestCase, self).setUp()
-        self.context = FakeContext(is_admin=True)
+        self.context = context.get_admin_context()
         self.tracker = self._tracker()
 
     def testMissingService(self):

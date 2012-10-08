@@ -23,6 +23,7 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova import flags
+from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -152,7 +153,17 @@ class ResourceTracker(object):
                   failed.
         """
         if self.disabled:
+            # compute_driver doesn't support resource tracking, just
+            # set the 'host' field and continue the build:
+            instance_ref = self._set_instance_host(context,
+                                                   instance_ref['uuid'])
             return
+
+        # sanity check:
+        if instance_ref['host']:
+            LOG.warning(_("Host field should be not be set on the instance "
+                          "until resources have been claimed."),
+                          instance=instance_ref)
 
         if not limits:
             limits = {}
@@ -184,6 +195,8 @@ class ResourceTracker(object):
         if not self._can_claim_cpu(vcpus, vcpu_limit):
             return
 
+        instance_ref = self._set_instance_host(context, instance_ref['uuid'])
+
         # keep track of this claim until we know whether the compute operation
         # was successful/completed:
         claim = Claim(instance_ref, timeout)
@@ -195,6 +208,17 @@ class ResourceTracker(object):
         # persist changes to the compute node:
         self._update(context, self.compute_node)
         return claim
+
+    def _set_instance_host(self, context, instance_uuid):
+        """Tag the instance as belonging to this host.  This should be done
+        while the COMPUTE_RESOURCES_SEMPAHORE is being held so the resource
+        claim will not be lost if the audit process starts.
+        """
+        values = {'host': self.host, 'launched_on': self.host}
+        (old_ref, instance_ref) = db.instance_update_and_get_original(context,
+                instance_uuid, values)
+        notifications.send_update(context, old_ref, instance_ref)
+        return instance_ref
 
     def _can_claim_memory(self, memory_mb, memory_mb_limit):
         """Test if memory needed for a claim can be safely allocated"""
