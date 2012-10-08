@@ -409,6 +409,11 @@ global_opts = [
                 help='Whether to batch up the application of IPTables rules'
                      ' during a host restart and apply all at the end of the'
                      ' init phase'),
+    cfg.StrOpt('compute_driver',
+               help='Driver to use for controlling virtualization. Options '
+                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
+                   'fake.FakeDriver, baremetal.BareMetalDriver, '
+                   'vmwareapi.VMWareESXDriver'),
 ]
 
 FLAGS.register_opts(global_opts)

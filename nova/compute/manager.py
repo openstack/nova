@@ -84,11 +84,6 @@ compute_opts = [
                help="Where cached images are stored under $instances_path."
                     "This is NOT the full path - just a folder name."
                     "For per-compute-host cached images, set to _base_$my_ip"),
-    cfg.StrOpt('compute_driver',
-               help='Driver to use for controlling virtualization. Options '
-                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
-                   'fake.FakeDriver, baremetal.BareMetalDriver, '
-                   'vmwareapi.VMWareESXDriver'),
     cfg.StrOpt('console_host',
                default=socket.getfqdn(),
                help='Console proxy host to use to connect '
