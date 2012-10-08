@@ -15,7 +15,6 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
-import contextlib
 import pickle
 import random
 import sys
@@ -34,9 +33,9 @@ def stubout_firewall_driver(stubs, conn):
     def fake_none(self, *args):
         return
 
-    vmops = conn._vmops
-    stubs.Set(vmops.firewall_driver, 'prepare_instance_filter', fake_none)
-    stubs.Set(vmops.firewall_driver, 'instance_filter_exists', fake_none)
+    _vmops = conn._vmops
+    stubs.Set(_vmops.firewall_driver, 'prepare_instance_filter', fake_none)
+    stubs.Set(_vmops.firewall_driver, 'instance_filter_exists', fake_none)
 
 
 def stubout_instance_snapshot(stubs):
@@ -203,16 +202,9 @@ class FakeSessionForVMTests(fake.SessionBase):
         vm_rec = self.VM_start(_1, vm_ref, _2, _3)
         vm_rec['resident_on'] = host_ref
 
-    def VM_snapshot(self, session_ref, vm_ref, label):
-        status = "Running"
-        template_vm_ref = fake.create_vm(label, status, is_a_template=True,
-            is_control_domain=False)
-
+    def VDI_snapshot(self, session_ref, vm_ref, _1):
         sr_ref = "fakesr"
-        template_vdi_ref = fake.create_vdi(label, sr_ref, read_only=True)
-
-        template_vbd_ref = fake.create_vbd(template_vm_ref, template_vdi_ref)
-        return template_vm_ref
+        return fake.create_vdi('fakelabel', sr_ref, read_only=True)
 
     def SR_scan(self, session_ref, sr_ref):
         pass
@@ -320,23 +312,24 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 
 
 def stub_out_migration_methods(stubs):
-    @contextlib.contextmanager
-    def fake_snapshot_attached_here(session, instance, vm_ref, label):
-        yield ['bar', 'foo']
+    fakesr = fake.create_sr()
 
     def fake_move_disks(self, instance, disk_info):
-        vdi_ref = fake.create_vdi(instance['name'], 'fake')
+        vdi_ref = fake.create_vdi(instance['name'], fakesr)
         vdi_rec = fake.get_record('VDI', vdi_ref)
         vdi_rec['other_config']['nova_disk_type'] = 'root'
         return {'uuid': vdi_rec['uuid'], 'ref': vdi_ref}
 
     def fake_get_vdi(session, vm_ref):
-        vdi_ref = fake.create_vdi('derp', 'herp')
+        vdi_ref_parent = fake.create_vdi('derp-parent', fakesr)
+        vdi_rec_parent = fake.get_record('VDI', vdi_ref_parent)
+        vdi_ref = fake.create_vdi('derp', fakesr,
+                sm_config={'vhd-parent': vdi_rec_parent['uuid']})
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-        return vdi_ref, {'uuid': vdi_rec['uuid'], }
+        return vdi_ref, vdi_rec
 
     def fake_sr(session, *args):
-        pass
+        return fakesr
 
     def fake_get_sr_path(*args):
         return "fake"
@@ -350,8 +343,6 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vm_utils, 'move_disks', fake_move_disks)
     stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
-    stubs.Set(vm_utils, '_scan_sr', fake_sr)
-    stubs.Set(vm_utils, 'snapshot_attached_here', fake_snapshot_attached_here)
     stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
