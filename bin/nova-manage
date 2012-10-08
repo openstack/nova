@@ -54,10 +54,7 @@
   CLI interface for nova management.
 """
 
-import ast
-import errno
 import gettext
-import math
 import netaddr
 import optparse
 import os
@@ -1131,7 +1128,6 @@ class AgentBuildCommands(object):
                               {'version': version,
                                'url': url,
                                'md5hash': md5hash})
-
 
 
 class GetLogCommands(object):
