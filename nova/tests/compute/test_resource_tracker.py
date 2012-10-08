@@ -485,44 +485,14 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(0, self.compute["local_gb_used"])
         self.assertEqual(6, self.compute["free_disk_gb"])
 
-    def testExpiredClaims(self):
-        """Test that old claims get cleaned up automatically if not finished
-        or aborted explicitly.
-        """
+    def testClaimsPurge(self):
+        """Test that claims get get purged when the audit process runs"""
+
         instance = self._fake_instance(memory_mb=2, root_gb=2, ephemeral_gb=0)
         claim = self.tracker.begin_resource_claim(self.context, instance)
-        claim.expire_ts = timeutils.utcnow_ts() - 1
-        self.assertTrue(claim.is_expired())
 
-        # and an unexpired claim
-        instance2 = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=0)
-        claim2 = self.tracker.begin_resource_claim(self.context, instance2)
-
-        self.assertEqual(2, len(self.tracker.claims))
-        self.assertEqual(2 + 1, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(2 + 1, self.tracker.compute_node['local_gb_used'])
-
-        # expired claims get expunged when audit runs:
         self.tracker.update_available_resource(self.context)
-
-        self.assertEqual(1, len(self.tracker.claims))
-        self.assertEqual(2, len(self.tracker.tracked_instances))
-
-        # the expired claim's instance is assumed to still exist, so the
-        # resources should be counted:
-        self.assertEqual(2 + 1, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(2 + 1, self.tracker.compute_node['local_gb_used'])
-
-        # this abort should do nothing because the claim was purged due to
-        # expiration:
-        self.tracker.abort_resource_claim(self.context, claim)
-
-        # call finish on claim2:
-        self.tracker.finish_resource_claim(claim2)
-
-        # should have usage from both instances:
-        self.assertEqual(1 + 2, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(1 + 2, self.tracker.compute_node['local_gb_used'])
+        self.assertEqual({}, self.tracker.claims)
 
     def testInstanceClaim(self):
         instance = self._fake_instance(memory_mb=1, root_gb=0, ephemeral_gb=2)
