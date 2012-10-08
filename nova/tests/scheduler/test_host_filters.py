@@ -1292,5 +1292,19 @@ class HostFiltersTestCase(test.TestCase):
         filt_cls = self.class_map['IoOpsFilter']()
         host = fakes.FakeHostState('host1', 'compute',
                                    {'num_io_ops': 8})
+
+    def test_filter_num_instances_passes(self):
+        self.flags(max_instances_per_host=5)
+        filt_cls = self.class_map['NumInstancesFilter']()
+        host = fakes.FakeHostState('host1', 'compute',
+                                   {'num_instances': 4})
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_filter_num_instances_fails(self):
+        self.flags(max_instances_per_host=5)
+        filt_cls = self.class_map['NumInstancesFilter']()
+        host = fakes.FakeHostState('host1', 'compute',
+                                   {'num_instances': 5})
         filter_properties = {}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
