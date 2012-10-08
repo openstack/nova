@@ -101,13 +101,13 @@ def cast_to_volume_host(context, host, method, **kwargs):
     LOG.debug(_("Casted '%(method)s' to volume '%(host)s'") % locals())
 
 
-def instance_update_db(context, instance_uuid, host):
-    '''Set the host and scheduled_at fields of an Instance.
+def instance_update_db(context, instance_uuid):
+    '''Clear the host and set the scheduled_at field of an Instance.
 
     :returns: An Instance with the updated fields set properly.
     '''
     now = timeutils.utcnow()
-    values = {'host': host, 'scheduled_at': now}
+    values = {'host': None, 'scheduled_at': now}
     return db.instance_update(context, instance_uuid, values)
 
 
@@ -116,7 +116,7 @@ def cast_to_compute_host(context, host, method, **kwargs):
 
     instance_uuid = kwargs.get('instance_uuid', None)
     if instance_uuid:
-        instance_update_db(context, instance_uuid, host)
+        instance_update_db(context, instance_uuid)
 
     rpc.cast(context,
              rpc.queue_get_for(context, 'compute', host),
