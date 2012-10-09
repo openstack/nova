@@ -295,11 +295,11 @@ class PowerVMOperator(object):
             raise exception.PowerVMLPARInstanceCleanupFailed(
                                                   instance_name=instance_name)
 
-    def power_off(self, instance_name):
-        self._operator.stop(instance_name)
+    def power_off(self, instance_name, timeout=30):
+        self._operator.stop_lpar(instance_name, timeout)
 
     def power_on(self, instance_name):
-        self._operator.start(instance_name)
+        self._operator.start_lpar(instance_name)
 
 
 class BaseOperator(object):
@@ -360,14 +360,31 @@ class BaseOperator(object):
         self.run_command(self.command.chsysstate('-r lpar -o on -n %s'
                                                  % instance_name))
 
-    def stop_lpar(self, instance_name):
+    def stop_lpar(self, instance_name, timeout=30):
         """Stop a running LPAR.
 
         :param instance_name: LPAR instance name
+        :param timeout: value in seconds for specifying
+                        how long to wait for the LPAR to stop
         """
-        cmd = self.command.chsysstate('-r lpar -o shutdown --immed -n %s'
-                                      % instance_name)
+        cmd = self.command.chsysstate('-r lpar -o shutdown --immed -n %s' %
+                                      instance_name)
         self.run_command(cmd)
+
+        # poll instance until stopped or raise exception
+        lpar_obj = self.get_lpar(instance_name)
+        wait_inc = 1  # seconds to wait between status polling
+        start_time = time.time()
+        while lpar_obj['state'] != 'Not Activated':
+            curr_time = time.time()
+            # wait up to (timeout) seconds for shutdown
+            if (curr_time - start_time) > timeout:
+                raise exception.PowerVMLPAROperationTimeout(
+                        operation='stop_lpar',
+                        instance_name=instance_name)
+
+            time.sleep(wait_inc)
+            lpar_obj = self.get_lpar(instance_name)
 
     def remove_lpar(self, instance_name):
         """Removes a LPAR.
