@@ -175,7 +175,8 @@ class VolumeOps(object):
         dev_number = volume_utils.mountpoint_to_number(mountpoint)
         try:
             vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
-                                          dev_number, bootable=False)
+                                          dev_number, bootable=False,
+                                          osvol=True)
         except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)
@@ -184,10 +185,6 @@ class VolumeOps(object):
 
         try:
             self._session.call_xenapi("VBD.plug", vbd_ref)
-            # set osvol=True in other-config to indicate this is an
-            # attached nova (or cinder) volume
-            self._session.call_xenapi("VBD.add_to_other_config",
-                                      vbd_ref, 'osvol', "True")
         except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)

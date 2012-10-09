@@ -269,7 +269,8 @@ class VMOps(object):
                                       image_meta, block_device_info)
 
             def undo_create_disks():
-                vdi_refs = [vdi['ref'] for vdi in vdis.values()]
+                vdi_refs = [vdi['ref'] for vdi in vdis.values()
+                        if not vdi.get('osvol')]
                 vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
             undo_mgr.undo_with(undo_create_disks)
@@ -465,7 +466,8 @@ class VMOps(object):
                                              instance_type['root_gb'])
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
-                                DEVICE_ROOT, bootable=True)
+                                DEVICE_ROOT, bootable=True,
+                                osvol=root_vdi.get('osvol'))
 
         # Attach (optional) swap disk
         swap_mb = instance_type['swap']

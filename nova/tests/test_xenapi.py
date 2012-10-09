@@ -358,7 +358,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
         def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
-                           vbd_type='disk', read_only=False, bootable=False):
+                           vbd_type='disk', read_only=False, bootable=False,
+                           osvol=False):
             vbd_rec = {'VM': vm_ref,
                'VDI': vdi_ref,
                'userdevice': 'fake',
@@ -1331,7 +1332,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.context = context.RequestContext(self.user_id, self.project_id)
 
         def fake_create_vbd(session, vm_ref, vdi_ref, userdevice,
-                            vbd_type='disk', read_only=False, bootable=True):
+                            vbd_type='disk', read_only=False, bootable=True,
+                            osvol=False):
             pass
 
         self.stubs.Set(vm_utils, 'create_vbd', fake_create_vbd)
@@ -1423,7 +1425,8 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.context = context.RequestContext(self.user_id, self.project_id)
 
         def fake_create_vbd(session, vm_ref, vdi_ref, userdevice,
-                            vbd_type='disk', read_only=False, bootable=True):
+                            vbd_type='disk', read_only=False, bootable=True,
+                            osvol=False):
             pass
 
         self.stubs.Set(vm_utils, 'create_vbd', fake_create_vbd)

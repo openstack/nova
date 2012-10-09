@@ -353,7 +353,7 @@ def destroy_vbd(session, vbd_ref):
 
 
 def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
-               read_only=False, bootable=False):
+               read_only=False, bootable=False, osvol=False):
     """Create a VBD record and returns its reference."""
     vbd_rec = {}
     vbd_rec['VM'] = vm_ref
@@ -373,6 +373,11 @@ def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
     vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
     LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
                 ' VDI %(vdi_ref)s.'), locals())
+    if osvol:
+        # set osvol=True in other-config to indicate this is an
+        # attached nova (or cinder) volume
+        session.call_xenapi("VBD.add_to_other_config",
+                                  vbd_ref, 'osvol', "True")
     return vbd_ref
 
 
@@ -428,7 +433,7 @@ def get_vdis_for_boot_from_vol(session, instance, dev_params):
     if sr_ref:
         session.call_xenapi("SR.scan", sr_ref)
         return {'root': dict(uuid=dev_params['vdi_uuid'],
-                                file=None)}
+                file=None, osvol=True)}
     return vdis
 
 
