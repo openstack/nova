@@ -367,3 +367,8 @@ class ProjectCommandsTestCase(test.TestCase):
         sys.stdout = sys.__stdout__
         result = output.getvalue()
         self.assertEquals(('volumes: unlimited' in result), True)
+
+    def test_quota_update_invalid_key(self):
+        self.assertRaises(SystemExit,
+                          self.commands.quota, 'admin', 'volumes1', '10'
+                          )
