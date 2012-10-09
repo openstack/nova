@@ -68,7 +68,7 @@ class ChanceScheduler(driver.Scheduler):
                 host = self._schedule(context, 'compute', request_spec,
                                       filter_properties)
                 updated_instance = driver.instance_update_db(context,
-                        instance_uuid, host)
+                        instance_uuid)
                 self.compute_rpcapi.run_instance(context,
                         instance=updated_instance, host=host,
                         requested_networks=requested_networks,

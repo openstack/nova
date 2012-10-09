@@ -488,10 +488,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 limits = filter_properties.get('limits', {})
                 with self.resource_tracker.resource_claim(context, instance,
                         limits):
-                    # Resources are available to build this instance here,
-                    # mark it as belonging to this host:
-                    self._instance_update(context, instance['uuid'],
-                            host=self.host, launched_on=self.host)
 
                     block_device_info = self._prep_block_device(context,
                             instance)

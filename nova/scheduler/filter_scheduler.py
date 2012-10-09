@@ -142,8 +142,7 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
-        updated_instance = driver.instance_update_db(context,
-                instance_uuid, weighted_host.host_state.host)
+        updated_instance = driver.instance_update_db(context, instance_uuid)
 
         self.compute_rpcapi.run_instance(context, instance=updated_instance,
                 host=weighted_host.host_state.host,
