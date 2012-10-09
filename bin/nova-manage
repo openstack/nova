@@ -225,13 +225,17 @@ class ProjectCommands(object):
     def quota(self, project_id, key=None, value=None):
         """Set or display quotas for project"""
         ctxt = context.get_admin_context()
-        if key:
+        project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
+        if key and key in project_quota:
             if value.lower() == 'unlimited':
                 value = -1
             try:
                 db.quota_update(ctxt, project_id, key, value)
             except exception.ProjectQuotaNotFound:
                 db.quota_create(ctxt, project_id, key, value)
+        else:
+            print "error: Invalid key %s supplied for update" % key
+            sys.exit(2)
         project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
             if value['limit'] < 0 or value['limit'] is None:
