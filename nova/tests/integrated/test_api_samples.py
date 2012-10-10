@@ -1169,6 +1169,22 @@ class CertificatesSamplesJsonTest(ApiSampleTestBase):
 
 
 class CertificatesSamplesXmlTest(CertificatesSamplesJsonTest):
+    ctype = 'xml'
+
+
+class UsedLimitsSamplesJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.used_limits."
+                      "Used_limits")
+
+    def test_get_used_limits(self):
+        """Get api sample to used limits"""
+        response = self._do_get('limits')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('usedlimits-get-resp', subs, response)
+
+
+class UsedLimitsSamplesXmlTest(UsedLimitsSamplesJsonTest):
     ctype = "xml"
 
 
