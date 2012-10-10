@@ -58,19 +58,25 @@ from nova.scheduler import filters
 LOG = logging.getLogger(__name__)
 
 trusted_opts = [
-    cfg.StrOpt('server',
+    cfg.StrOpt('attestation_server',
+               # deprecated in Grizzly
+               deprecated_name='server',
                default=None,
                help='attestation server http'),
-    cfg.StrOpt('server_ca_file',
+    cfg.StrOpt('attestation_server_ca_file',
+               deprecated_name='server_ca_file',
                default=None,
                help='attestation server Cert file for Identity verification'),
-    cfg.StrOpt('port',
+    cfg.StrOpt('attestation_port',
+               deprecated_name='port',
                default='8443',
                help='attestation server port'),
-    cfg.StrOpt('api_url',
+    cfg.StrOpt('attestation_api_url',
+               deprecated_name='api_url',
                default='/OpenAttestationWebServices/V1.0',
                help='attestation web API URL'),
-    cfg.StrOpt('auth_blob',
+    cfg.StrOpt('attestation_auth_blob',
+               deprecated_name='auth_blob',
                default=None,
                help='attestation authorization blob - must change'),
 ]
@@ -118,13 +124,13 @@ class AttestationService(httplib.HTTPSConnection):
     # Provide access wrapper to attestation server to get integrity report.
 
     def __init__(self):
-        self.api_url = FLAGS.trusted_computing.api_url
-        self.host = FLAGS.trusted_computing.server
-        self.port = FLAGS.trusted_computing.port
-        self.auth_blob = FLAGS.trusted_computing.auth_blob
+        self.api_url = FLAGS.trusted_computing.attestation_api_url
+        self.host = FLAGS.trusted_computing.attestation_server
+        self.port = FLAGS.trusted_computing.attestation_port
+        self.auth_blob = FLAGS.trusted_computing.attestation_auth_blob
         self.key_file = None
         self.cert_file = None
-        self.ca_file = FLAGS.trusted_computing.server_ca_file
+        self.ca_file = FLAGS.trusted_computing.attestation_server_ca_file
         self.request_count = 100
 
     def _do_request(self, method, action_url, body, headers):
