@@ -26,6 +26,7 @@ from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova import utils
+from nova.virt.libvirt import config as libvirt_config
 
 
 HOST = "testhost"
@@ -51,15 +52,14 @@ class FakeVIFDriver(object):
     def setattr(self, key, val):
         self.__setattr__(key, val)
 
-    def plug(self, instance, network, mapping):
-        return {
-            'id': 'fake',
-            'bridge_name': 'fake',
-            'mac_address': 'fake',
-            'ip_address': 'fake',
-            'dhcp_server': 'fake',
-            'extra_params': 'fake',
-        }
+    def plug(self, instance, vif):
+        conf = libvirt_config.LibvirtConfigGuestInterface()
+
+        for attr, val in conf.__dict__.iteritems():
+            if val is None:
+                setattr(conf, attr, 'fake')
+
+        return conf
 
 
 class FakeModel(dict):

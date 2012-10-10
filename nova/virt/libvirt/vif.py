@@ -52,7 +52,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
     """VIF driver for Linux bridge."""
 
     def _get_configurations(self, instance, network, mapping):
-        """Get a dictionary of VIF configurations for bridge type."""
+        """Get VIF configurations for bridge type."""
 
         mac_id = mapping['mac'].replace(':', '')
 

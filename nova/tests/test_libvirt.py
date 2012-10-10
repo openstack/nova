@@ -1985,18 +1985,44 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_spawn_with_network_info(self):
         # Preparing mocks
-        def fake_none(self, instance):
+        def fake_none(*args, **kwargs):
             return
+
+        def fake_getLibVersion():
+            return 9007
+
+        def fake_getCapabilities():
+            return """
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <model>Penryn</model>
+                      <vendor>Intel</vendor>
+                      <topology sockets='1' cores='2' threads='1'/>
+                      <feature name='xtpr'/>
+                    </cpu>
+                </host>
+            </capabilities>
+            """
 
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self.stubs, 1)
-        self.create_fake_libvirt_mock()
+        self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
+                                      getCapabilities=fake_getCapabilities)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance = db.instance_create(self.context, instance_ref)
+
+        # Mock out the get_info method of the LibvirtDriver so that the polling
+        # in the spawn method of the LibvirtDriver returns immediately
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, 'get_info')
+        libvirt_driver.LibvirtDriver.get_info(instance
+            ).AndReturn({'state': power_state.RUNNING})
 
         # Start test
         self.mox.ReplayAll()
@@ -2007,15 +2033,12 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn.firewall_driver,
                        'prepare_instance_filter',
                        fake_none)
+        self.stubs.Set(imagebackend.Image,
+                       'cache',
+                       fake_none)
 
-        try:
-            conn.spawn(self.context, instance, None, [], 'herp',
+        conn.spawn(self.context, instance, None, [], 'herp',
                        network_info=network_info)
-        except Exception, e:
-            # assert that no exception is raised due to sha1 receiving an int
-            self.assertEqual(-1, unicode(e).find('must be string or buffer'
-                                                 ', not int'))
-            self.assertNotIn('Unexpected method call', unicode(e))
 
         path = os.path.join(FLAGS.instances_path, instance.name)
         if os.path.isdir(path):
