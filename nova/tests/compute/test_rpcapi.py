@@ -228,7 +228,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_reserve_block_device_name(self):
         self._test_compute_api('reserve_block_device_name', 'call',
-                instance=self.fake_instance, device='device')
+                instance=self.fake_instance, device='device', volume_id='id',
+                version='2.3')
 
     def refresh_provider_fw_rules(self):
         self._test_compute_api('refresh_provider_fw_rules', 'cast',

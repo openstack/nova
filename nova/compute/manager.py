@@ -210,7 +210,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.2'
+    RPC_API_VERSION = '2.3'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1957,7 +1957,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def reserve_block_device_name(self, context, instance, device):
+    def reserve_block_device_name(self, context, instance, device, volume_id):
 
         @utils.synchronized(instance['uuid'])
         def do_reserve():
@@ -1966,6 +1966,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                 device)
             # NOTE(vish): create bdm here to avoid race condition
             values = {'instance_uuid': instance['uuid'],
+                      'volume_id': volume_id,
                       'device_name': result}
             self.db.block_device_mapping_create(context, values)
             return result
