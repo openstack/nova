@@ -41,7 +41,7 @@ class SmokeTestCase(unittest.TestCase):
         while(True):
             try:
                 client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.WarningPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 client.connect(ip, username='root', pkey=key, timeout=5)
                 return client
             except (paramiko.AuthenticationException, paramiko.SSHException):
