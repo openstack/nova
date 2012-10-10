@@ -224,6 +224,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                   '-[0-9a-f]{4}-[0-9a-f]{12})',
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
+            'reservation_id': 'r-[0-9a-zA-Z]{8}',
             'private_key': '-----BEGIN RSA PRIVATE KEY-----'
                            '[a-zA-Z0-9\n/+=]*'
                            '-----END RSA PRIVATE KEY-----',
@@ -1169,3 +1170,39 @@ class CertificatesSamplesJsonTest(ApiSampleTestBase):
 
 class CertificatesSamplesXmlTest(CertificatesSamplesJsonTest):
     ctype = "xml"
+
+
+class MultipleCreateJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.multiple_create."
+                      "Multiple_create")
+
+    def test_multiple_create(self):
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'host': self._get_host(),
+            'min_count': "2",
+            'max_count': "3"
+        }
+        response = self._do_post('servers', 'multiple-create-post-req', subs)
+        self.assertEqual(response.status, 202)
+        subs.update(self._get_regexes())
+        return self._verify_response('multiple-create-post-resp',
+                                      subs, response)
+
+    def test_multiple_create_without_reservation_id(self):
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'host': self._get_host(),
+            'min_count': "2",
+            'max_count': "3"
+        }
+        response = self._do_post('servers', 'multiple-create-no-resv-post-req',
+                                  subs)
+        self.assertEqual(response.status, 202)
+        subs.update(self._get_regexes())
+        return self._verify_response('multiple-create-no-resv-post-resp',
+                                      subs, response)
+
+
+class MultipleCreateXmlTest(MultipleCreateJsonTest):
+    ctype = 'xml'
