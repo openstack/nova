@@ -196,6 +196,30 @@ class TestQuantumv2(test.TestCase):
                                   'gateway_ip': '10.0.2.1',
                                   'dns_nameservers': ['8.8.2.1', '8.8.2.2']})
 
+        self.fip_pool = {'id': '4fdbfd74-eaf8-4884-90d9-00bd6f10c2d3',
+                         'name': 'ext_net',
+                         'router:external': True,
+                         'tenant_id': 'admin_tenantid'}
+        self.fip_pool_nova = {'id': '435e20c3-d9f1-4f1b-bee5-4611a1dd07db',
+                              'name': 'nova',
+                              'router:external': True,
+                              'tenant_id': 'admin_tenantid'}
+        self.fip_unassociated = {'tenant_id': 'my_tenantid',
+                                 'id': 'fip_id1',
+                                 'floating_ip_address': '172.24.4.227',
+                                 'floating_network_id': self.fip_pool['id'],
+                                 'port_id': None,
+                                 'fixed_ip_address': None,
+                                 'router_id': None}
+        fixed_ip_address = self.port_data2[1]['fixed_ips'][0]['ip_address']
+        self.fip_associated = {'tenant_id': 'my_tenantid',
+                               'id': 'fip_id2',
+                               'floating_ip_address': '172.24.4.228',
+                               'floating_network_id': self.fip_pool['id'],
+                               'port_id': self.port_data2[1]['id'],
+                               'fixed_ip_address': fixed_ip_address,
+                               'router_id': 'router_id1'}
+
     def tearDown(self):
         try:
             self.mox.UnsetStubs()
@@ -618,3 +642,262 @@ class TestQuantumv2(test.TestCase):
         # specify only first and last network
         req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
         self._get_available_networks(prv_nets, pub_nets, req_ids)
+
+    def test_get_floating_ip_pools(self):
+        api = quantumapi.API()
+        search_opts = {'router:external': True}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
+        self.mox.ReplayAll()
+        pools = api.get_floating_ip_pools(self.context)
+        expected = [{'name': self.fip_pool['name']},
+                    {'name': self.fip_pool_nova['name']}]
+        self.assertEqual(expected, pools)
+
+    def _get_expected_fip_model(self, fip_data, idx=0):
+        expected = {'id': fip_data['id'],
+                    'address': fip_data['floating_ip_address'],
+                    'pool': self.fip_pool['name'],
+                    'project_id': fip_data['tenant_id'],
+                    'fixed_ip_id': fip_data['port_id'],
+                    'fixed_ip':
+                        {'address': fip_data['fixed_ip_address']},
+                    'instance': ({'uuid': self.port_data2[idx]['device_id']}
+                                 if fip_data['port_id']
+                                 else None)}
+        return expected
+
+    def _test_get_floating_ip(self, fip_data, idx=0, by_address=False):
+        api = quantumapi.API()
+        fip_id = fip_data['id']
+        net_id = fip_data['floating_network_id']
+        address = fip_data['floating_ip_address']
+        if by_address:
+            self.moxed_client.list_floatingips(floating_ip_address=address).\
+                AndReturn({'floatingips': [fip_data]})
+        else:
+            self.moxed_client.show_floatingip(fip_id).\
+                AndReturn({'floatingip': fip_data})
+        self.moxed_client.show_network(net_id).\
+            AndReturn({'network': self.fip_pool})
+        if fip_data['port_id']:
+            self.moxed_client.show_port(fip_data['port_id']).\
+                AndReturn({'port': self.port_data2[idx]})
+        self.mox.ReplayAll()
+
+        expected = self._get_expected_fip_model(fip_data, idx)
+
+        if by_address:
+            fip = api.get_floating_ip_by_address(self.context, address)
+        else:
+            fip = api.get_floating_ip(self.context, fip_id)
+        self.assertEqual(expected, fip)
+
+    def test_get_floating_ip_unassociated(self):
+        self._test_get_floating_ip(self.fip_unassociated, idx=0)
+
+    def test_get_floating_ip_associated(self):
+        self._test_get_floating_ip(self.fip_associated, idx=1)
+
+    def test_get_floating_ip_by_address(self):
+        self._test_get_floating_ip(self.fip_unassociated, idx=0,
+                                   by_address=True)
+
+    def test_get_floating_ip_by_address_associated(self):
+        self._test_get_floating_ip(self.fip_associated, idx=1,
+                                   by_address=True)
+
+    def test_get_floating_ip_by_address_not_found(self):
+        api = quantumapi.API()
+        address = self.fip_unassociated['floating_ip_address']
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': []})
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+                          api.get_floating_ip_by_address,
+                          self.context, address)
+
+    def test_get_floating_ip_by_address_multiple_found(self):
+        api = quantumapi.API()
+        address = self.fip_unassociated['floating_ip_address']
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_unassociated] * 2})
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FloatingIpMultipleFoundForAddress,
+                          api.get_floating_ip_by_address,
+                          self.context, address)
+
+    def test_get_floating_ips_by_project(self):
+        api = quantumapi.API()
+        project_id = self.context.project_id
+        self.moxed_client.list_floatingips(tenant_id=project_id).\
+            AndReturn({'floatingips': [self.fip_unassociated,
+                                       self.fip_associated]})
+        search_opts = {'router:external': True}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
+        self.moxed_client.list_ports(tenant_id=project_id).\
+                AndReturn({'ports': self.port_data2})
+        self.mox.ReplayAll()
+
+        expected = [self._get_expected_fip_model(self.fip_unassociated),
+                    self._get_expected_fip_model(self.fip_associated, idx=1)]
+        fips = api.get_floating_ips_by_project(self.context)
+        self.assertEqual(expected, fips)
+
+    def _test_get_instance_id_by_floating_address(self, fip_data,
+                                                  associated=False):
+        api = quantumapi.API()
+        address = fip_data['floating_ip_address']
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+                AndReturn({'floatingips': [fip_data]})
+        if associated:
+            self.moxed_client.show_port(fip_data['port_id']).\
+                AndReturn({'port': self.port_data2[1]})
+        self.mox.ReplayAll()
+
+        if associated:
+            expected = self.port_data2[1]['device_id']
+        else:
+            expected = None
+        fip = api.get_instance_id_by_floating_address(self.context, address)
+        self.assertEqual(expected, fip)
+
+    def test_get_instance_id_by_floating_address(self):
+        self._test_get_instance_id_by_floating_address(self.fip_unassociated)
+
+    def test_get_instance_id_by_floating_address_associated(self):
+        self._test_get_instance_id_by_floating_address(self.fip_associated,
+                                                       associated=True)
+
+    def test_allocate_floating_ip(self):
+        api = quantumapi.API()
+        pool_name = self.fip_pool['name']
+        pool_id = self.fip_pool['id']
+        search_opts = {'router:external': True,
+                       'fields': 'id',
+                       'name': pool_name}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool]})
+        self.moxed_client.create_floatingip(
+            {'floatingip': {'floating_network_id': pool_id}}).\
+            AndReturn({'floatingip': self.fip_unassociated})
+        self.mox.ReplayAll()
+        fip = api.allocate_floating_ip(self.context, 'ext_net')
+        self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
+
+    def test_allocate_floating_ip_with_pool_id(self):
+        api = quantumapi.API()
+        pool_name = self.fip_pool['name']
+        pool_id = self.fip_pool['id']
+        search_opts = {'router:external': True,
+                       'fields': 'id',
+                       'id': pool_id}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool]})
+        self.moxed_client.create_floatingip(
+            {'floatingip': {'floating_network_id': pool_id}}).\
+            AndReturn({'floatingip': self.fip_unassociated})
+        self.mox.ReplayAll()
+        fip = api.allocate_floating_ip(self.context, pool_id)
+        self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
+
+    def test_allocate_floating_ip_with_default_pool(self):
+        api = quantumapi.API()
+        pool_name = self.fip_pool_nova['name']
+        pool_id = self.fip_pool_nova['id']
+        search_opts = {'router:external': True,
+                       'fields': 'id',
+                       'name': pool_name}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool_nova]})
+        self.moxed_client.create_floatingip(
+            {'floatingip': {'floating_network_id': pool_id}}).\
+            AndReturn({'floatingip': self.fip_unassociated})
+        self.mox.ReplayAll()
+        fip = api.allocate_floating_ip(self.context)
+        self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
+
+    def test_release_floating_ip(self):
+        api = quantumapi.API()
+        address = self.fip_unassociated['floating_ip_address']
+        fip_id = self.fip_unassociated['id']
+
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_unassociated]})
+        self.moxed_client.delete_floatingip(fip_id)
+        self.mox.ReplayAll()
+        api.release_floating_ip(self.context, address)
+
+    def test_release_floating_ip_associated(self):
+        api = quantumapi.API()
+        address = self.fip_associated['floating_ip_address']
+        fip_id = self.fip_associated['id']
+
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_associated]})
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FloatingIpAssociated,
+                          api.release_floating_ip, self.context, address)
+
+    def _setup_mock_for_refresh_cache(self, api):
+        nw_info = self.mox.CreateMock(model.NetworkInfo)
+        nw_info.json()
+        self.mox.StubOutWithMock(api, '_get_instance_nw_info')
+        api._get_instance_nw_info(mox.IgnoreArg(), self.instance).\
+            AndReturn(nw_info)
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
+        api.db.instance_info_cache_update(mox.IgnoreArg(),
+                                          self.instance['uuid'],
+                                          mox.IgnoreArg())
+
+    def test_associate_floating_ip(self):
+        api = quantumapi.API()
+        address = self.fip_associated['floating_ip_address']
+        fixed_address = self.fip_associated['fixed_ip_address']
+        fip_id = self.fip_associated['id']
+
+        search_opts = {'device_owner': 'compute:nova',
+                       'device_id': self.instance['uuid']}
+        self.moxed_client.list_ports(**search_opts).\
+            AndReturn({'ports': [self.port_data2[1]]})
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_associated]})
+        self.moxed_client.update_floatingip(
+            fip_id, {'floatingip': {'port_id': self.fip_associated['port_id'],
+                                    'fixed_ip_address': fixed_address}})
+        self._setup_mock_for_refresh_cache(api)
+
+        self.mox.ReplayAll()
+        api.associate_floating_ip(self.context, self.instance,
+                                  address, fixed_address)
+
+    def test_associate_floating_ip_not_found_fixed_ip(self):
+        api = quantumapi.API()
+        address = self.fip_associated['floating_ip_address']
+        fixed_address = self.fip_associated['fixed_ip_address']
+        fip_id = self.fip_associated['id']
+
+        search_opts = {'device_owner': 'compute:nova',
+                       'device_id': self.instance['uuid']}
+        self.moxed_client.list_ports(**search_opts).\
+            AndReturn({'ports': [self.port_data2[0]]})
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          api.associate_floating_ip, self.context,
+                          self.instance, address, fixed_address)
+
+    def test_disassociate_floating_ip(self):
+        api = quantumapi.API()
+        address = self.fip_associated['floating_ip_address']
+        fip_id = self.fip_associated['id']
+
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_associated]})
+        self.moxed_client.update_floatingip(
+            fip_id, {'floatingip': {'port_id': None}})
+        self._setup_mock_for_refresh_cache(api)
+
+        self.mox.ReplayAll()
+        api.disassociate_floating_ip(self.context, self.instance, address)
