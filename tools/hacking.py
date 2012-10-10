@@ -137,7 +137,7 @@ def nova_except_format(logical_line):
     N201
     """
     if logical_line.startswith("except:"):
-        return 6, "NOVA N201: no 'except:' at least use 'except Exception:'"
+        yield 6, "NOVA N201: no 'except:' at least use 'except Exception:'"
 
 
 def nova_except_format_assert(logical_line):
@@ -148,7 +148,7 @@ def nova_except_format_assert(logical_line):
     N202
     """
     if logical_line.startswith("self.assertRaises(Exception"):
-        return 1, "NOVA N202: assertRaises Exception too broad"
+        yield 1, "NOVA N202: assertRaises Exception too broad"
 
 
 def nova_one_import_per_line(logical_line):
@@ -166,7 +166,7 @@ def nova_one_import_per_line(logical_line):
     if (pos > -1 and (parts[0] == "import" or
                       parts[0] == "from" and parts[2] == "import") and
         not is_import_exception(parts[1])):
-        return pos, "NOVA N301: one import per line"
+        yield pos, "NOVA N301: one import per line"
 
 _missingImport = set([])
 
@@ -241,7 +241,9 @@ def nova_import_module_only(logical_line):
             (len(split_line) == 2 or
             (len(split_line) == 4 and split_line[2] == "as"))):
         mod = split_line[1]
-        return importModuleCheck(mod)
+        rval = importModuleCheck(mod)
+        if rval != None:
+            yield rval
 
     # TODO(jogo) handle "from x import *"
 
@@ -398,7 +400,7 @@ def nova_localization_strings(logical_line, tokens):
         map(gen.send, tokens)
         gen.close()
     except LocalizationError as e:
-        return e.args
+        yield e.args
 
 #TODO(jogo) Dict and list objects
 

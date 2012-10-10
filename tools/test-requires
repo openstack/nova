@@ -6,7 +6,7 @@ mox==0.5.3
 nose
 openstack.nose_plugin>=0.7
 nosehtmloutput
-pep8==1.1
+pep8==1.2
 pylint==0.25.2
 sphinx>=1.1.2
 feedparser
