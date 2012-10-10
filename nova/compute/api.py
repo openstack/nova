@@ -1405,6 +1405,12 @@ class API(base.Base):
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
             raise exception.InstanceTypeDiskTooSmall()
 
+        (image_service, image_id) = glance.get_remote_image_service(context,
+                                                                 image_href)
+        image = image_service.show(context, image_id)
+        kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
+                context, None, None, image, image_service)
+
         def _reset_image_metadata():
             """
             Remove old image properties that we're storing as instance
@@ -1438,7 +1444,9 @@ class API(base.Base):
                                expected_task_state=None,
                                # Unfortunately we need to set image_ref early,
                                # so API users can see it.
-                               image_ref=image_href, progress=0, **kwargs)
+                               image_ref=image_href, kernel_id=kernel_id or "",
+                               ramdisk_id=ramdisk_id or "",
+                               progress=0, **kwargs)
 
         # On a rebuild, since we're potentially changing images, we need to
         # wipe out the old image properties that we're storing as instance
