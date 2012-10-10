@@ -124,22 +124,12 @@ def cast_to_compute_host(context, host, method, **kwargs):
     LOG.debug(_("Casted '%(method)s' to compute '%(host)s'") % locals())
 
 
-def cast_to_network_host(context, host, method, **kwargs):
-    """Cast request to a network host queue"""
-
-    rpc.cast(context,
-             rpc.queue_get_for(context, 'network', host),
-             {"method": method, "args": kwargs})
-    LOG.debug(_("Casted '%(method)s' to network '%(host)s'") % locals())
-
-
 def cast_to_host(context, topic, host, method, **kwargs):
     """Generic cast to host"""
 
     topic_mapping = {
             "compute": cast_to_compute_host,
-            "volume": cast_to_volume_host,
-            'network': cast_to_network_host}
+            "volume": cast_to_volume_host}
 
     func = topic_mapping.get(topic)
     if func:

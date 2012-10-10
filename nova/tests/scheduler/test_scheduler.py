@@ -740,24 +740,6 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         driver.cast_to_compute_host(self.context, host, method,
                 **fake_kwargs)
 
-    def test_cast_to_network_host(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-        queue = 'fake_queue'
-
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        rpc.queue_get_for(self.context, 'network', host).AndReturn(queue)
-        rpc.cast(self.context, queue,
-                {'method': method,
-                 'args': fake_kwargs})
-
-        self.mox.ReplayAll()
-        driver.cast_to_network_host(self.context, host, method,
-                **fake_kwargs)
-
     def test_cast_to_host_compute_topic(self):
         host = 'fake_host1'
         method = 'fake_method'
@@ -782,19 +764,6 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, 'volume', host, method,
-                **fake_kwargs)
-
-    def test_cast_to_host_network_topic(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-
-        self.mox.StubOutWithMock(driver, 'cast_to_network_host')
-        driver.cast_to_network_host(self.context, host, method,
-                **fake_kwargs)
-
-        self.mox.ReplayAll()
-        driver.cast_to_host(self.context, 'network', host, method,
                 **fake_kwargs)
 
     def test_cast_to_host_unknown_topic(self):
