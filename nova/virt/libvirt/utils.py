@@ -411,6 +411,14 @@ def find_disk(virt_dom):
     return disk_path
 
 
+def get_disk_type(path):
+    """Retrieve disk type (raw, qcow2, lvm) for given file"""
+    if path.startswith('/dev'):
+        return 'lvm'
+
+    return images.qemu_img_info(path)['file format']
+
+
 def get_fs_info(path):
     """Get free/used/total space info for a filesystem
 
