@@ -67,14 +67,6 @@ def add_regexp_listener(dbapi_con, con_record):
     dbapi_con.create_function('regexp', 2, regexp)
 
 
-def enforce_foreign_keys_listener(dbapi_conn, connection_rec):
-    """Tell SQLite to enforce foreign keys.
-
-    Requires SQLite version >= 3.6.19.
-    """
-    dbapi_conn.execute("PRAGMA foreign_keys = ON")
-
-
 def greenthread_yield(dbapi_con, con_record):
     """
     Ensure other greenthreads get a chance to execute by forcing a context
@@ -150,8 +142,6 @@ def get_engine():
                 sqlalchemy.event.listen(_ENGINE, 'connect',
                                         synchronous_switch_listener)
             sqlalchemy.event.listen(_ENGINE, 'connect', add_regexp_listener)
-            sqlalchemy.event.listen(_ENGINE, 'connect',
-                                    enforce_foreign_keys_listener)
 
         if (FLAGS.sql_connection_trace and
                 _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
