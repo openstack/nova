@@ -151,6 +151,8 @@ class DbApiTestCase(test.TestCase):
                           db.network_delete_safe, ctxt, network['id'])
         db.fixed_ip_update(ctxt, address2, {'allocated': False})
         network = db.network_delete_safe(ctxt, network['id'])
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
+                          db.fixed_ip_get_by_address, ctxt, address1)
         ctxt = ctxt.elevated(read_deleted='yes')
         fixed_ip = db.fixed_ip_get_by_address(ctxt, address1)
         self.assertTrue(fixed_ip['deleted'])
