@@ -18,7 +18,7 @@ import mox
 import webob
 
 from nova.api.openstack.compute.contrib import server_start_stop
-from nova import compute
+from nova.compute import api as compute_api
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -34,9 +34,9 @@ class ServerStartStopTest(test.TestCase):
         self.controller = server_start_stop.ServerStartStopActionController()
 
     def test_start(self):
-        self.stubs.Set(compute.API, 'get', fake_compute_api_get)
-        self.mox.StubOutWithMock(compute.API, 'start')
-        compute.API.start(mox.IgnoreArg(), mox.IgnoreArg())
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.mox.StubOutWithMock(compute_api.API, 'start')
+        compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
@@ -44,9 +44,9 @@ class ServerStartStopTest(test.TestCase):
         self.controller._start_server(req, 'test_inst', body)
 
     def test_stop(self):
-        self.stubs.Set(compute.API, 'get', fake_compute_api_get)
-        self.mox.StubOutWithMock(compute.API, 'stop')
-        compute.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.mox.StubOutWithMock(compute_api.API, 'stop')
+        compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')

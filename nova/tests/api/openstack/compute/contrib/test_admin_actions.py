@@ -16,9 +16,9 @@ import datetime
 
 import webob
 
-from nova.api.openstack import compute as compute_api
+from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import admin_actions
-from nova import compute
+from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import context
 from nova import exception
@@ -87,10 +87,10 @@ class AdminActionsTest(test.TestCase):
 
     def setUp(self):
         super(AdminActionsTest, self).setUp()
-        self.stubs.Set(compute.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.UUID = utils.gen_uuid()
         for _method in self._methods:
-            self.stubs.Set(compute.API, _method, fake_compute_api)
+            self.stubs.Set(compute_api.API, _method, fake_compute_api)
         self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
                        'live_migration',
                        fake_scheduler_api_live_migration)
@@ -110,7 +110,7 @@ class AdminActionsTest(test.TestCase):
         app = fakes.wsgi_app()
 
         for _action, _method in self._actions_that_check_state:
-            self.stubs.Set(compute.API, _method,
+            self.stubs.Set(compute_api.API, _method,
                 fake_compute_api_raises_invalid_state)
 
             req = webob.Request.blank('/v2/fake/servers/%s/action' %
@@ -144,7 +144,7 @@ class AdminActionsTest(test.TestCase):
                         task_state, expected_task_state):
             return None
 
-        self.stubs.Set(compute.API, 'update', fake_update)
+        self.stubs.Set(compute_api.API, 'update', fake_update)
 
         res = req.get_response(app)
         self.assertEqual(res.status_int, 202)
@@ -174,9 +174,9 @@ class CreateBackupTests(test.TestCase):
     def setUp(self):
         super(CreateBackupTests, self).setUp()
 
-        self.stubs.Set(compute.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
-        self.app = compute_api.APIRouter()
+        self.app = compute.APIRouter()
         self.uuid = utils.gen_uuid()
 
     def _get_request(self, body):
@@ -289,7 +289,7 @@ class CreateBackupTests(test.TestCase):
             },
         }
 
-        self.stubs.Set(compute.API, 'backup',
+        self.stubs.Set(compute_api.API, 'backup',
                 fake_compute_api_raises_invalid_state)
 
         request = self._get_request(body)
@@ -313,8 +313,8 @@ class ResetStateTests(test.TestCase):
         def fake_update(inst, context, instance, **kwargs):
             self.kwargs = kwargs
 
-        self.stubs.Set(compute.API, 'get', fake_get)
-        self.stubs.Set(compute.API, 'update', fake_update)
+        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stubs.Set(compute_api.API, 'update', fake_update)
         self.admin_api = admin_actions.AdminActionsController()
 
         url = '/fake/servers/%s/action' % self.uuid
