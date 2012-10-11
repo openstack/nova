@@ -30,6 +30,7 @@ from nova.api.ec2 import inst_state
 from nova.api import validator
 from nova import block_device
 from nova import compute
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import vm_states
 from nova import db
@@ -187,7 +188,7 @@ class CloudController(object):
         self.compute_api = compute.API(network_api=self.network_api,
                                    volume_api=self.volume_api,
                                    security_group_api=self.security_group_api)
-        self.keypair_api = compute.api.KeypairAPI()
+        self.keypair_api = compute_api.KeypairAPI()
 
     def __str__(self):
         return 'CloudController'
@@ -1580,7 +1581,7 @@ class CloudController(object):
         return {'imageId': ec2_id}
 
 
-class CloudSecurityGroupAPI(compute.api.SecurityGroupAPI):
+class CloudSecurityGroupAPI(compute_api.SecurityGroupAPI):
     @staticmethod
     def raise_invalid_property(msg):
         raise exception.InvalidParameterValue(err=msg)

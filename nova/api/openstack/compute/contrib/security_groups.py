@@ -26,6 +26,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova import flags
@@ -558,7 +559,7 @@ class Security_groups(extensions.ExtensionDescriptor):
         return resources
 
 
-class NativeSecurityGroupAPI(compute.api.SecurityGroupAPI):
+class NativeSecurityGroupAPI(compute_api.SecurityGroupAPI):
     @staticmethod
     def raise_invalid_property(msg):
         raise exc.HTTPBadRequest(explanation=msg)
