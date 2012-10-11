@@ -3142,11 +3142,23 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
         self.mox.StubOutWithMock(self.fw,
+                                 'instance_rules')
+        self.mox.StubOutWithMock(self.fw,
                                  'add_filters_for_instance',
                                  use_mock_anything=True)
+
+        self.fw.instance_rules(instance_ref,
+                               mox.IgnoreArg()).AndReturn((None, None))
+        self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
+                                         mox.IgnoreArg())
+        self.fw.instance_rules(instance_ref,
+                               mox.IgnoreArg()).AndReturn((None, None))
+        self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
+                                         mox.IgnoreArg())
+        self.mox.ReplayAll()
+
         self.fw.prepare_instance_filter(instance_ref, mox.IgnoreArg())
         self.fw.instances[instance_ref['id']] = instance_ref
-        self.mox.ReplayAll()
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_unfilter_instance_undefines_nwfilter(self):
