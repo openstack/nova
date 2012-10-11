@@ -66,7 +66,7 @@ class RootwrapTestCase(test.TestCase):
     @test.skip_if(not os.path.exists("/proc/%d" % os.getpid()),
                   "Test requires /proc filesystem (procfs)")
     def test_KillFilter(self):
-        p = subprocess.Popen(["/bin/sleep", "5"])
+        p = subprocess.Popen(["sleep", "5"])
         f = filters.KillFilter("root", "/bin/sleep", "-9", "-HUP")
         f2 = filters.KillFilter("root", "/usr/bin/sleep", "-9", "-HUP")
         usercmd = ['kill', '-ALRM', p.pid]
