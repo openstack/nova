@@ -77,7 +77,7 @@ class FlavorextradataTest(test.TestCase):
         url = '/v2/fake/flavors/1'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
         body = jsonutils.loads(res.body)
         self._verify_flavor_response(body['flavor'], expected['flavor'])
 
@@ -104,7 +104,7 @@ class FlavorextradataTest(test.TestCase):
         url = '/v2/fake/flavors/detail'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
         body = jsonutils.loads(res.body)
         for i, flavor in enumerate(body['flavors']):
             self._verify_flavor_response(flavor, expected[i])

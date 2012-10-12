@@ -103,6 +103,10 @@ class BootFromVolumeTest(test.TestCase):
         super(BootFromVolumeTest, self).setUp()
         self.stubs.Set(compute_api.API, 'create', fake_compute_api_create)
         fakes.stub_out_nw_api(self.stubs)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Volumes'])
 
     def test_create_root_volume(self):
         body = dict(server=dict(
@@ -121,7 +125,8 @@ class BootFromVolumeTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(
+            init_only=('os-volumes_boot', 'servers')))
         self.assertEqual(res.status_int, 202)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -146,8 +151,13 @@ class VolumeApiTest(test.TestCase):
         self.stubs.Set(volume_api.API, "delete", fakes.stub_volume_delete)
         self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get)
         self.stubs.Set(volume_api.API, "get_all", fakes.stub_volume_get_all)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Volumes'])
 
         self.context = context.get_admin_context()
+        self.app = fakes.wsgi_app(init_only=('os-volumes',))
 
     def test_volume_create(self):
         self.stubs.Set(volume_api.API, "create", fakes.stub_volume_create)
@@ -161,7 +171,7 @@ class VolumeApiTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
 
         self.assertEqual(resp.status_int, 200)
 
@@ -178,30 +188,30 @@ class VolumeApiTest(test.TestCase):
 
     def test_volume_index(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_detail(self):
         req = webob.Request.blank('/v2/fake/os-volumes/detail')
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show(self):
         req = webob.Request.blank('/v2/fake/os-volumes/123')
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
         self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
 
     def test_volume_delete(self):
         req = webob.Request.blank('/v2/fake/os-volumes/123')
         req.method = 'DELETE'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
@@ -209,7 +219,7 @@ class VolumeApiTest(test.TestCase):
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
 
 

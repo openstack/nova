@@ -31,13 +31,17 @@ class ConfigDriveTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Config_drive'])
 
     def test_show(self):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/servers/1')
         req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(fakes.wsgi_app())
+        response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertTrue('config_drive' in res_dict['server'])
@@ -46,7 +50,7 @@ class ConfigDriveTest(test.TestCase):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('servers,')))
         server_dicts = jsonutils.loads(res.body)['servers']
         for server_dict in server_dicts:
             self.asserTrue('config_drive' in server_dict)

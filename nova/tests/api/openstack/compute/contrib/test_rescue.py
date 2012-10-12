@@ -43,6 +43,11 @@ class RescueTest(test.TestCase):
         self.stubs.Set(compute.api.API, "get", fake_compute_get)
         self.stubs.Set(compute.api.API, "rescue", rescue)
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Rescue'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
@@ -51,7 +56,7 @@ class RescueTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual("AABBCC112233", resp_json['adminPass'])
@@ -63,7 +68,7 @@ class RescueTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual(FLAGS.password_length, len(resp_json['adminPass']))
@@ -80,7 +85,7 @@ class RescueTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 409)
 
     def test_unrescue(self):
@@ -90,7 +95,7 @@ class RescueTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
 
     def test_unrescue_of_active_instance(self):
@@ -105,5 +110,5 @@ class RescueTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 409)

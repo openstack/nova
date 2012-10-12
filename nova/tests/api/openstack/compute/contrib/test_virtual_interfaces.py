@@ -47,11 +47,16 @@ class ServerVirtualInterfaceTest(test.TestCase):
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_vifs_by_instance",
                        get_vifs_by_instance)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Virtual_interfaces'])
 
     def test_get_virtual_interfaces_list(self):
         url = '/v2/fake/servers/abcd/os-virtual-interfaces'
         req = webob.Request.blank(url)
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(
+            init_only=('os-virtual-interfaces',)))
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
         response = {'virtual_interfaces': [

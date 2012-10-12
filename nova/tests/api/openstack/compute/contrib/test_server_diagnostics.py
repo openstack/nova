@@ -43,12 +43,15 @@ class ServerDiagnosticsTest(test.TestCase):
 
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
-        self.flags(verbose=True)
+        self.flags(verbose=True,
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Server_diagnostics'])
         self.stubs.Set(compute_api.API, 'get_diagnostics',
                        fake_get_diagnostics)
         self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
-        self.router = compute.APIRouter()
+        self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
 
     def test_get_diagnostics(self):
         req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % UUID)

@@ -52,6 +52,11 @@ class FixedIpTest(test.TestCase):
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.stubs.Set(compute.api.API, 'get', compute_api_get)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Multinic'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
@@ -63,7 +68,7 @@ class FixedIpTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
@@ -77,7 +82,7 @@ class FixedIpTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 422)
         self.assertEqual(last_add_fixed_ip, (None, None))
 
@@ -91,7 +96,7 @@ class FixedIpTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(last_remove_fixed_ip, (UUID, '10.10.10.1'))
 
@@ -105,6 +110,6 @@ class FixedIpTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 422)
         self.assertEqual(last_remove_fixed_ip, (None, None))

@@ -147,6 +147,10 @@ class FloatingIpTest(test.TestCase):
                        get_instance_by_floating_ip_addr)
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
                        stub_nw_info(self.stubs))
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Floating_ips'])
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
@@ -207,7 +211,7 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/9876')
         req.method = 'DELETE'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('os-floating-ips',)))
         self.assertEqual(res.status_int, 404)
         expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
                                          'for id 9876", "code": 404}}')
@@ -230,7 +234,7 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/9876')
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('os-floating-ips',)))
         self.assertEqual(res.status_int, 404)
         expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
                         'for id 9876", "code": 404}}')
@@ -340,7 +344,7 @@ class FloatingIpTest(test.TestCase):
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         res_dict = jsonutils.loads(resp.body)
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(res_dict['itemNotFound']['message'],
