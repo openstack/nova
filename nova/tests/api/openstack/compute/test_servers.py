@@ -2047,6 +2047,29 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_bdm_delete_on_termination(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'device_name': 'foo1', 'delete_on_termination': 1},
+               {'device_name': 'foo2', 'delete_on_termination': True},
+               {'device_name': 'foo3', 'delete_on_termination': 'invalid'},
+               {'device_name': 'foo4', 'delete_on_termination': 0},
+               {'device_name': 'foo5', 'delete_on_termination': False}]
+        expected_dbm = [
+            {'device_name': 'foo1', 'delete_on_termination': True},
+            {'device_name': 'foo2', 'delete_on_termination': True},
+            {'device_name': 'foo3', 'delete_on_termination': False},
+            {'device_name': 'foo4', 'delete_on_termination': False},
+            {'device_name': 'foo5', 'delete_on_termination': False}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], expected_dbm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_user_data_enabled(self):
         self.ext_mgr.extensions = {'os-user-data': 'fake'}
         user_data = 'fake'
