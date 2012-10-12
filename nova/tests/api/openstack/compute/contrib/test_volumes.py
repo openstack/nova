@@ -20,15 +20,16 @@ import webob
 
 import nova
 from nova.api.openstack.compute.contrib import volumes
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
-import nova.db
+from nova import db
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import volume
+from nova.volume import api as volume_api
 from webob import exc
 
 
@@ -100,7 +101,7 @@ class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
         super(BootFromVolumeTest, self).setUp()
-        self.stubs.Set(nova.compute.API, 'create', fake_compute_api_create)
+        self.stubs.Set(compute_api.API, 'create', fake_compute_api_create)
         fakes.stub_out_nw_api(self.stubs)
 
     def test_create_root_volume(self):
@@ -140,16 +141,16 @@ class VolumeApiTest(test.TestCase):
         super(VolumeApiTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(nova.db, 'volume_get', return_volume)
+        self.stubs.Set(db, 'volume_get', return_volume)
 
-        self.stubs.Set(volume.api.API, "delete", fakes.stub_volume_delete)
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
-        self.stubs.Set(volume.api.API, "get_all", fakes.stub_volume_get_all)
+        self.stubs.Set(volume_api.API, "delete", fakes.stub_volume_delete)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get)
+        self.stubs.Set(volume_api.API, "get_all", fakes.stub_volume_get_all)
 
         self.context = context.get_admin_context()
 
     def test_volume_create(self):
-        self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)
+        self.stubs.Set(volume_api.API, "create", fakes.stub_volume_create)
 
         vol = {"size": 100,
                "display_name": "Volume Test Name",
@@ -191,7 +192,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         resp = req.get_response(fakes.wsgi_app())
@@ -204,7 +205,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'
@@ -215,10 +216,10 @@ class VolumeApiTest(test.TestCase):
 class VolumeAttachTests(test.TestCase):
     def setUp(self):
         super(VolumeAttachTests, self).setUp()
-        self.stubs.Set(nova.compute.API,
+        self.stubs.Set(compute_api.API,
                        'get_instance_bdms',
                        fake_get_instance_bdms)
-        self.stubs.Set(nova.compute.API, 'get', fake_get_instance)
+        self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.context = context.get_admin_context()
         self.expected_show = {'volumeAttachment':
             {'device': '/dev/fake0',
@@ -239,7 +240,9 @@ class VolumeAttachTests(test.TestCase):
         self.assertEqual(self.expected_show, result)
 
     def test_delete(self):
-        self.stubs.Set(nova.compute.API, 'detach_volume', fake_detach_volume)
+        self.stubs.Set(compute_api.API,
+                       'detach_volume',
+                       fake_detach_volume)
         attachments = volumes.VolumeAttachmentController()
         req = webob.Request.blank('/v2/fake/os-volumes/delete')
         req.method = 'POST'
@@ -251,7 +254,9 @@ class VolumeAttachTests(test.TestCase):
         self.assertEqual('202 Accepted', result.status)
 
     def test_delete_vol_not_found(self):
-        self.stubs.Set(nova.compute.API, 'detach_volume', fake_detach_volume)
+        self.stubs.Set(compute_api.API,
+                       'detach_volume',
+                       fake_detach_volume)
         attachments = volumes.VolumeAttachmentController()
         req = webob.Request.blank('/v2/fake/os-volumes/delete')
         req.method = 'POST'
@@ -266,7 +271,9 @@ class VolumeAttachTests(test.TestCase):
                           FAKE_UUID_C)
 
     def test_attach_volume(self):
-        self.stubs.Set(nova.compute.API, 'attach_volume', fake_attach_volume)
+        self.stubs.Set(compute_api.API,
+                       'attach_volume',
+                       fake_attach_volume)
         attachments = volumes.VolumeAttachmentController()
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}

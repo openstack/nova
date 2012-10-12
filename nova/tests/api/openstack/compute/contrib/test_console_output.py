@@ -15,7 +15,7 @@
 
 import webob
 
-from nova import compute
+from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -47,9 +47,9 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
     def setUp(self):
         super(ConsoleOutputExtensionTest, self).setUp()
-        self.stubs.Set(compute.API, 'get_console_output',
+        self.stubs.Set(compute_api.API, 'get_console_output',
                        fake_get_console_output)
-        self.stubs.Set(compute.API, 'get', fake_get)
+        self.stubs.Set(compute_api.API, 'get', fake_get)
 
     def test_get_text_console_instance_action(self):
         body = {'os-getConsoleOutput': {}}
@@ -96,7 +96,7 @@ class ConsoleOutputExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_get_text_console_no_instance(self):
-        self.stubs.Set(compute.API, 'get', fake_get_not_found)
+        self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
@@ -107,7 +107,9 @@ class ConsoleOutputExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_text_console_no_instance_on_get_output(self):
-        self.stubs.Set(compute.API, 'get_console_output', fake_get_not_found)
+        self.stubs.Set(compute_api.API,
+                       'get_console_output',
+                       fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"

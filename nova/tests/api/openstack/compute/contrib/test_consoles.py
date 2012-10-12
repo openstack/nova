@@ -15,7 +15,7 @@
 
 import webob
 
-from nova import compute
+from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -51,9 +51,9 @@ class ConsolesExtensionTest(test.TestCase):
 
     def setUp(self):
         super(ConsolesExtensionTest, self).setUp()
-        self.stubs.Set(compute.API, 'get_vnc_console',
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console)
-        self.stubs.Set(compute.API, 'get', fake_get)
+        self.stubs.Set(compute_api.API, 'get', fake_get)
 
     def test_get_vnc_console(self):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
@@ -69,7 +69,7 @@ class ConsolesExtensionTest(test.TestCase):
             {u'console': {u'url': u'http://fake', u'type': u'novnc'}})
 
     def test_get_vnc_console_not_ready(self):
-        self.stubs.Set(compute.API, 'get_vnc_console',
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_not_ready)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
@@ -82,7 +82,7 @@ class ConsolesExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 409)
 
     def test_get_vnc_console_no_type(self):
-        self.stubs.Set(compute.API, 'get_vnc_console',
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_invalid_type)
         body = {'os-getVNCConsole': {}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
@@ -94,7 +94,7 @@ class ConsolesExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_get_vnc_console_no_instance(self):
-        self.stubs.Set(compute.API, 'get', fake_get_not_found)
+        self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
@@ -105,7 +105,7 @@ class ConsolesExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_vnc_console_no_instance_on_console_get(self):
-        self.stubs.Set(compute.API, 'get_vnc_console',
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
@@ -118,7 +118,7 @@ class ConsolesExtensionTest(test.TestCase):
 
     def test_get_vnc_console_invalid_type(self):
         body = {'os-getVNCConsole': {'type': 'invalid'}}
-        self.stubs.Set(compute.API, 'get_vnc_console',
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_invalid_type)
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"

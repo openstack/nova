@@ -19,15 +19,17 @@ import mox
 import webob
 
 from nova.api.openstack.compute import servers
+from nova.compute import api as compute_api
 from nova.compute import task_states
 from nova.compute import vm_states
-import nova.db
+from nova import db
 from nova import exception
 from nova import flags
+from nova.image import glance
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
-import nova.tests.image.fake
+from nova.tests.image import fake
 from nova import utils
 
 
@@ -60,17 +62,17 @@ class ServerActionsControllerTest(test.TestCase):
     def setUp(self):
         super(ServerActionsControllerTest, self).setUp()
 
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+        self.stubs.Set(db, 'instance_get_by_uuid',
                        fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                                host='fake_host'))
-        self.stubs.Set(nova.db, 'instance_update_and_get_original',
+        self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update)
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
-        nova.tests.image.fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = importutils.import_object(service_class)
         self.sent_to_glance = {}
@@ -85,7 +87,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_server_change_password(self):
         mock_method = MockSetAdminPassword()
-        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
 
         req = fakes.HTTPRequest.blank(self.url)
@@ -100,7 +102,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.flags(enable_instance_password=False)
 
         mock_method = MockSetAdminPassword()
-        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
 
         req = fakes.HTTPRequest.blank(self.url)
@@ -126,7 +128,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_server_change_password_empty_string(self):
         mock_method = MockSetAdminPassword()
-        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': ''}}
 
         req = fakes.HTTPRequest.blank(self.url)
@@ -167,7 +169,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_reboot_not_found(self):
-        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+        self.stubs.Set(db, 'instance_get_by_uuid',
                        return_server_not_found)
 
         body = dict(reboot=dict(type="HARD"))
@@ -182,7 +184,7 @@ class ServerActionsControllerTest(test.TestCase):
         def fake_reboot(*args, **kwargs):
             raise exception.InstanceInvalidState
 
-        self.stubs.Set(nova.compute.api.API, 'reboot', fake_reboot)
+        self.stubs.Set(compute_api.API, 'reboot', fake_reboot)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
@@ -192,7 +194,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
         body = {
@@ -217,9 +219,9 @@ class ServerActionsControllerTest(test.TestCase):
         def rebuild(self2, context, instance, image_href, *args, **kwargs):
             info['image_href_in_call'] = image_href
 
-        self.stubs.Set(nova.db, 'instance_get',
+        self.stubs.Set(db, 'instance_get',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        self.stubs.Set(nova.compute.API, 'rebuild', rebuild)
+        self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -240,9 +242,9 @@ class ServerActionsControllerTest(test.TestCase):
         def rebuild(self2, context, instance, image_href, *args, **kwargs):
             info['image_href_in_call'] = image_href
 
-        self.stubs.Set(nova.db, 'instance_get',
+        self.stubs.Set(db, 'instance_get',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        self.stubs.Set(nova.compute.API, 'rebuild', rebuild)
+        self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -264,7 +266,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
         body = {
@@ -292,7 +294,7 @@ class ServerActionsControllerTest(test.TestCase):
         def fake_rebuild(*args, **kwargs):
             raise exception.InstanceInvalidState
 
-        self.stubs.Set(nova.compute.api.API, 'rebuild', fake_rebuild)
+        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
@@ -304,7 +306,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         return_server = fakes.fake_instance_get(metadata=metadata,
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -378,7 +380,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_admin_pass(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -400,7 +402,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -418,7 +420,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', server_not_found)
+        self.stubs.Set(db, 'instance_get_by_uuid', server_not_found)
 
         body = {
             "rebuild": {
@@ -457,7 +459,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         update = self.mox.CreateMockAnything()
-        self.stubs.Set(nova.compute.API, 'update', update)
+        self.stubs.Set(compute_api.API, 'update', update)
         req = fakes.HTTPRequest.blank(self.url)
         context = req.environ['nova.context']
         update(context, mox.IgnoreArg(),
@@ -488,8 +490,7 @@ class ServerActionsControllerTest(test.TestCase):
 
             return image_meta
 
-        self.stubs.Set(nova.tests.image.fake._FakeImageService,
-                            'show', return_image_meta)
+        self.stubs.Set(fake._FakeImageService, 'show', return_image_meta)
         body = {
             "rebuild": {
                 "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
@@ -526,9 +527,8 @@ class ServerActionsControllerTest(test.TestCase):
 
             return image_meta
 
-        self.stubs.Set(nova.tests.image.fake._FakeImageService,
-                            'show', return_image_meta)
-        self.stubs.Set(nova.compute.API, 'update', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show', return_image_meta)
+        self.stubs.Set(compute_api.API, 'update', fake_show)
         body = {
             "rebuild": {
                 "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
@@ -548,7 +548,7 @@ class ServerActionsControllerTest(test.TestCase):
         def resize_mock(*args):
             self.resize_called = True
 
-        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+        self.stubs.Set(compute_api.API, 'resize', resize_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
         body = self.controller._action_resize(req, FAKE_UUID, body)
@@ -577,7 +577,7 @@ class ServerActionsControllerTest(test.TestCase):
         def fake_resize(*args, **kwargs):
             raise exception.InstanceInvalidState
 
-        self.stubs.Set(nova.compute.api.API, 'resize', fake_resize)
+        self.stubs.Set(compute_api.API, 'resize', fake_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
@@ -592,7 +592,7 @@ class ServerActionsControllerTest(test.TestCase):
         def cr_mock(*args):
             self.confirm_resize_called = True
 
-        self.stubs.Set(nova.compute.api.API, 'confirm_resize', cr_mock)
+        self.stubs.Set(compute_api.API, 'confirm_resize', cr_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
         body = self.controller._action_confirm_resize(req, FAKE_UUID, body)
@@ -606,7 +606,7 @@ class ServerActionsControllerTest(test.TestCase):
             raise exception.MigrationNotFoundByStatus(instance_id=1,
                                                       status='finished')
 
-        self.stubs.Set(nova.compute.api.API,
+        self.stubs.Set(compute_api.API,
                        'confirm_resize',
                        confirm_resize_mock)
 
@@ -621,7 +621,7 @@ class ServerActionsControllerTest(test.TestCase):
         def fake_confirm_resize(*args, **kwargs):
             raise exception.InstanceInvalidState
 
-        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
+        self.stubs.Set(compute_api.API, 'confirm_resize',
                 fake_confirm_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
@@ -636,7 +636,7 @@ class ServerActionsControllerTest(test.TestCase):
             raise exception.MigrationNotFoundByStatus(instance_id=1,
                                                       status='finished')
 
-        self.stubs.Set(nova.compute.api.API,
+        self.stubs.Set(compute_api.API,
                        'revert_resize',
                        revert_resize_mock)
 
@@ -653,7 +653,7 @@ class ServerActionsControllerTest(test.TestCase):
         def revert_mock(*args):
             self.revert_resize_called = True
 
-        self.stubs.Set(nova.compute.api.API, 'revert_resize', revert_mock)
+        self.stubs.Set(compute_api.API, 'revert_resize', revert_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
         body = self.controller._action_revert_resize(req, FAKE_UUID, body)
@@ -666,7 +666,7 @@ class ServerActionsControllerTest(test.TestCase):
         def fake_revert_resize(*args, **kwargs):
             raise exception.InstanceInvalidState
 
-        self.stubs.Set(nova.compute.api.API, 'revert_resize',
+        self.stubs.Set(compute_api.API, 'revert_resize',
                 fake_revert_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
@@ -697,7 +697,7 @@ class ServerActionsControllerTest(test.TestCase):
         if extra_properties:
             body['createImage']['metadata'] = extra_properties
 
-        image_service = nova.image.glance.get_default_image_service()
+        image_service = glance.get_default_image_service()
 
         bdm = [dict(volume_id=_fake_id('a'),
                     volume_size=1,
@@ -732,13 +732,13 @@ class ServerActionsControllerTest(test.TestCase):
 
             return [BDM()]
 
-        self.stubs.Set(nova.db, 'block_device_mapping_get_all_by_instance',
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
 
         instance = fakes.fake_instance_get(image_ref=original_image['id'],
                                            vm_state=vm_states.ACTIVE,
                                            root_device_name='/dev/vda')
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', instance)
+        self.stubs.Set(db, 'instance_get_by_uuid', instance)
 
         volume = dict(id=_fake_id('a'),
                       size=1,
@@ -858,7 +858,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_create_image_raises_conflict_on_invalid_state(self):
         def snapshot(*args, **kwargs):
             raise exception.InstanceInvalidState
-        self.stubs.Set(nova.compute.API, 'snapshot', snapshot)
+        self.stubs.Set(compute_api.API, 'snapshot', snapshot)
 
         body = {
             "createImage": {
@@ -876,7 +876,7 @@ class ServerActionsControllerTest(test.TestCase):
             return {"name": "foo",
                     "uuid": FAKE_UUID,
                     "locked": True}
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_locked)
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_locked)
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,

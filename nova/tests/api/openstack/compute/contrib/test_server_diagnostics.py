@@ -20,11 +20,10 @@ from lxml import etree
 from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
-import nova.compute
+from nova.compute import api as compute_api
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
-import nova.utils
 
 
 UUID = 'abc'
@@ -45,9 +44,9 @@ class ServerDiagnosticsTest(test.TestCase):
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
         self.flags(verbose=True)
-        self.stubs.Set(nova.compute.API, 'get_diagnostics',
+        self.stubs.Set(compute_api.API, 'get_diagnostics',
                        fake_get_diagnostics)
-        self.stubs.Set(nova.compute.API, 'get', fake_instance_get)
+        self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
         self.router = compute.APIRouter()
 
