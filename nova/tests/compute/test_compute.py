@@ -1859,8 +1859,8 @@ class ComputeTestCase(BaseTestCase):
                                      migration_id=migration_ref['id'],
                                      image={})
         inst = db.instance_get_by_uuid(self.context, new_instance['uuid'])
-        # NOTE(vish): removed check of dest_compute because it doesn't
-        #             happen until finish_resize in folsom
+        self.assertEqual(migration_ref['dest_compute'], inst['host'])
+
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst))
 
@@ -1921,6 +1921,15 @@ class ComputeTestCase(BaseTestCase):
         self.compute.revert_resize(context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
+
+        def fake_setup_networks_on_host(cls, ctxt, instance, host):
+            self.assertEqual(host, migration_ref['source_compute'])
+            inst = db.instance_get_by_uuid(ctxt, instance['uuid'])
+            self.assertEqual(host, inst['host'])
+
+        self.stubs.Set(network_api.API, 'setup_networks_on_host',
+                       fake_setup_networks_on_host)
+
         self.compute.finish_revert_resize(context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
