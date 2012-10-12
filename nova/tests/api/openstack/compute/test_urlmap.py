@@ -38,7 +38,7 @@ class UrlmapTest(test.TestCase):
         """Test URL path specifying v1.1 returns v2 content."""
         req = webob.Request.blank('/v1.1/')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -49,7 +49,7 @@ class UrlmapTest(test.TestCase):
         req = webob.Request.blank('/')
         req.content_type = "application/json;version=1.1"
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -59,7 +59,7 @@ class UrlmapTest(test.TestCase):
         """Test Accept header specifying v1.1 returns v2 content."""
         req = webob.Request.blank('/')
         req.accept = "application/json;version=1.1"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -69,7 +69,7 @@ class UrlmapTest(test.TestCase):
         """Test URL path specifying v2 returns v2 content."""
         req = webob.Request.blank('/v2/')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -80,7 +80,7 @@ class UrlmapTest(test.TestCase):
         req = webob.Request.blank('/')
         req.content_type = "application/json;version=2"
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -90,7 +90,7 @@ class UrlmapTest(test.TestCase):
         """Test Accept header specifying v2 returns v2 content."""
         req = webob.Request.blank('/')
         req.accept = "application/json;version=2"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -101,7 +101,7 @@ class UrlmapTest(test.TestCase):
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175.json'
         req = webob.Request.blank(url)
         req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('images',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
@@ -113,7 +113,7 @@ class UrlmapTest(test.TestCase):
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175'
         req = webob.Request.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('images',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
