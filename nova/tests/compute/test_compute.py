@@ -218,7 +218,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        did_it_add_fault)
 
-        @nova.compute.manager.wrap_instance_fault
+        @compute_manager.wrap_instance_fault
         def failer(self2, context, instance):
             raise NotImplementedError()
 
@@ -238,7 +238,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        did_it_add_fault)
 
-        @nova.compute.manager.wrap_instance_fault
+        @compute_manager.wrap_instance_fault
         def failer(self2, context, instance_uuid):
             raise exception.InstanceNotFound()
 
@@ -2679,7 +2679,7 @@ class ComputeAPITestCase(BaseTestCase):
         super(ComputeAPITestCase, self).setUp()
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
-        self.security_group_api = compute.api.SecurityGroupAPI()
+        self.security_group_api = compute_api.SecurityGroupAPI()
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
         self.fake_image = {
@@ -4928,7 +4928,7 @@ class ComputePolicyTestCase(BaseTestCase):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
         nova.policy.enforce(self.context, 'compute:reboot', {})
         self.mox.ReplayAll()
-        nova.compute.api.check_policy(self.context, 'reboot', {})
+        compute_api.check_policy(self.context, 'reboot', {})
 
     def test_wrapped_method(self):
         instance = self._create_fake_instance(params={'host': None})

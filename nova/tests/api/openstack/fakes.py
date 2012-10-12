@@ -32,6 +32,7 @@ from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import volume
 from nova.api.openstack import wsgi as os_wsgi
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import vm_states
 from nova import context
@@ -160,7 +161,7 @@ def stub_out_compute_api_snapshot(stubs):
         return dict(id='123', status='ACTIVE', name=name,
                     properties=extra_properties)
 
-    stubs.Set(nova.compute.API, 'snapshot', snapshot)
+    stubs.Set(compute_api.API, 'snapshot', snapshot)
 
 
 class stub_out_compute_api_backup(object):
@@ -168,7 +169,7 @@ class stub_out_compute_api_backup(object):
     def __init__(self, stubs):
         self.stubs = stubs
         self.extra_props_last_call = None
-        stubs.Set(nova.compute.API, 'backup', self.backup)
+        stubs.Set(compute_api.API, 'backup', self.backup)
 
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
