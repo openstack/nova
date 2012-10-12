@@ -1202,6 +1202,11 @@ class API(base.Base):
         self.db.instance_test_and_set(
                 context, instance_uuid, 'task_state', [None], task_state)
 
+        # NOTE(sirp): `instance_test_and_set` only sets the task-state in the
+        # DB, but we also need to set it on the current instance so that the
+        # correct value is passed down to the compute manager.
+        instance['task_state'] = task_state
+
         notifications.send_update_with_states(context, instance, old_vm_state,
                 instance["vm_state"], old_task_state, instance["task_state"],
                 service="api", verify_states=True)
