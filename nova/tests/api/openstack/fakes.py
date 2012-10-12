@@ -78,9 +78,9 @@ def fake_wsgi(self, req):
 
 
 def wsgi_app(inner_app_v2=None, fake_auth_context=None,
-        use_no_auth=False, ext_mgr=None):
+        use_no_auth=False, ext_mgr=None, init_only=None):
     if not inner_app_v2:
-        inner_app_v2 = compute.APIRouter(ext_mgr)
+        inner_app_v2 = compute.APIRouter(ext_mgr, init_only)
 
     if use_no_auth:
         api_v2 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
