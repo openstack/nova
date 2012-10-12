@@ -5010,7 +5010,9 @@ class ComputePolicyTestCase(BaseTestCase):
         nova.policy.reset()
 
     def _set_rules(self, rules):
-        common_policy.set_brain(common_policy.HttpBrain(rules))
+        common_policy.set_rules(common_policy.Rules(
+                dict((k, common_policy.parse_rule(v))
+                     for k, v in rules.items())))
 
     def test_actions_are_prefixed(self):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
