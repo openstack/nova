@@ -1508,6 +1508,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             if cidr_v6:
                 fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
                 prefixlen_v6 = 128 - subnet_bits
+                # smallest subnet in IPv6 ethernet network is /64
+                if prefixlen_v6 > 64:
+                    prefixlen_v6 = 64
                 subnets_v6 = fixed_net_v6.subnet(prefixlen_v6,
                                                  count=num_networks)
             if cidr:
