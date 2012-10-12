@@ -1469,6 +1469,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
+            instance = self._instance_update(context,
+                                        instance['uuid'],
+                                        host=migration_ref['source_compute'])
+            self.network_api.setup_networks_on_host(context, instance,
+                                            migration_ref['source_compute'])
+
             old_instance_type = migration_ref['old_instance_type_id']
             instance_type = instance_types.get_instance_type(old_instance_type)
 
@@ -1491,7 +1497,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   instance['uuid'],
                                   memory_mb=instance_type['memory_mb'],
-                                  host=migration_ref['source_compute'],
                                   vcpus=instance_type['vcpus'],
                                   root_gb=instance_type['root_gb'],
                                   ephemeral_gb=instance_type['ephemeral_gb'],
@@ -1619,6 +1624,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      {'status': 'post-migrating'})
 
             self._instance_update(context, instance['uuid'],
+                                  host=migration_ref['dest_compute'],
                                   task_state=task_states.RESIZE_MIGRATED,
                                   expected_task_state=task_states.
                                       RESIZE_MIGRATING)
@@ -1681,7 +1687,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance = self._instance_update(context,
                                          instance['uuid'],
                                          vm_state=vm_states.RESIZED,
-                                         host=migration_ref['dest_compute'],
                                          launched_at=timeutils.utcnow(),
                                          task_state=None,
                                          expected_task_state=task_states.
