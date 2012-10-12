@@ -1196,6 +1196,9 @@ class CloudController(object):
         except exception.FloatingIpNotAssociated:
             msg = _('Floating ip is not associated.')
             raise exception.EC2APIError(msg)
+        except exception.CannotDisassociateAutoAssignedFloatingIP:
+            msg = _('Cannot disassociate auto assigned floating ip')
+            raise exception.EC2APIError(msg)
 
         return {'return': "true"}
 

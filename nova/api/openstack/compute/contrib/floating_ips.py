@@ -96,6 +96,9 @@ def disassociate_floating_ip(self, context, instance, address):
     except exception.FloatingIpNotAssociated:
         msg = _('Floating ip is not associated')
         raise webob.exc.HTTPBadRequest(explanation=msg)
+    except exception.CannotDisassociateAutoAssignedFloatingIP:
+        msg = _('Cannot disassociate auto assigned floating ip')
+        raise webob.exc.HTTPForbidden(explanation=msg)
 
 
 class FloatingIPController(object):

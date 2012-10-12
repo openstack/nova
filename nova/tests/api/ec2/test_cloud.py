@@ -286,6 +286,28 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst['uuid'])
         db.floating_ip_destroy(self.context, address)
 
+    def test_disassociate_auto_assigned_address(self):
+        """Verifies disassociating auto assigned floating IP
+        raises an exception
+        """
+        address = "10.10.10.10"
+
+        def fake_get(*args, **kwargs):
+            pass
+
+        def fake_disassociate_floating_ip(*args, **kwargs):
+            raise exception.CannotDisassociateAutoAssignedFloatingIP()
+
+        self.stubs.Set(network_api.API, 'get_instance_id_by_floating_address',
+                       lambda *args: 1)
+        self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
+        self.stubs.Set(network_api.API, 'disassociate_floating_ip',
+                                    fake_disassociate_floating_ip)
+
+        self.assertRaises(exception.EC2APIError,
+                          self.cloud.disassociate_address,
+                          self.context, public_ip=address)
+
     def test_describe_security_groups(self):
         """Makes sure describe_security_groups works and filters results."""
         sec = db.security_group_create(self.context,
