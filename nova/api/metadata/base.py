@@ -163,7 +163,8 @@ class InstanceMetadata():
         if version not in VERSIONS:
             raise InvalidMetadataVersion(version)
 
-        hostname = "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain)
+        hostname = self._get_hostname()
+
         floating_ips = self.ip_info['floating_ips']
         floating_ip = floating_ips and floating_ips[0] or ''
 
@@ -290,8 +291,7 @@ class InstanceMetadata():
                 self.instance['key_name']: self.instance['key_data']
             }
 
-        metadata['hostname'] = "%s.%s" % (self.instance['hostname'],
-                                          FLAGS.dhcp_domain)
+        metadata['hostname'] = self._get_hostname()
 
         metadata['name'] = self.instance['display_name']
         metadata['launch_index'] = self.instance['launch_index']
@@ -305,6 +305,11 @@ class InstanceMetadata():
 
     def _check_version(self, required, requested):
         return VERSIONS.index(requested) >= VERSIONS.index(required)
+
+    def _get_hostname(self):
+        return "%s%s%s" % (self.instance['hostname'],
+                           '.' if FLAGS.dhcp_domain else '',
+                           FLAGS.dhcp_domain)
 
     def lookup(self, path):
         if path == "" or path[0] != "/":
