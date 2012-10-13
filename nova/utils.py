@@ -31,6 +31,7 @@ import random
 import re
 import shlex
 import shutil
+import signal
 import socket
 import struct
 import sys
@@ -112,6 +113,12 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         return server_sess
 
 
+def _subprocess_setup():
+    # Python installs a SIGPIPE handler by default. This is usually not what
+    # non-Python subprocesses expect.
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+
 def execute(*cmd, **kwargs):
     """Helper method to execute command with optional retry.
 
@@ -180,6 +187,7 @@ def execute(*cmd, **kwargs):
                                    stdout=_PIPE,
                                    stderr=_PIPE,
                                    close_fds=True,
+                                   preexec_fn=_subprocess_setup,
                                    shell=shell)
             result = None
             if process_input is not None:
