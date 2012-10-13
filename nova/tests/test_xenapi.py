@@ -1172,11 +1172,25 @@ class XenAPIImageTypeTestCase(test.TestCase):
             vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL),
             vm_utils.ImageType.KERNEL_STR)
 
-    def test_from_string(self):
-        """Can convert from string to type id."""
+    def _assert_role(self, expected_role, image_type_id):
         self.assertEquals(
-            vm_utils.ImageType.from_string(vm_utils.ImageType.KERNEL_STR),
-            vm_utils.ImageType.KERNEL)
+            expected_role,
+            vm_utils.ImageType.get_role(image_type_id))
+
+    def test_get_image_role_kernel(self):
+        self._assert_role('kernel', vm_utils.ImageType.KERNEL)
+
+    def test_get_image_role_ramdisk(self):
+        self._assert_role('ramdisk', vm_utils.ImageType.RAMDISK)
+
+    def test_get_image_role_disk(self):
+        self._assert_role('root', vm_utils.ImageType.DISK)
+
+    def test_get_image_role_disk_raw(self):
+        self._assert_role('root', vm_utils.ImageType.DISK_RAW)
+
+    def test_get_image_role_disk_vhd(self):
+        self._assert_role('root', vm_utils.ImageType.DISK_VHD)
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
