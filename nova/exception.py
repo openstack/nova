@@ -164,10 +164,7 @@ class EC2APIError(NovaException):
     def __init__(self, message=None, code=None):
         self.msg = message
         self.code = code
-        if code:
-            outstr = '%s: %s' % (code, message)
-        else:
-            outstr = '%s' % message
+        outstr = '%s' % message
         super(EC2APIError, self).__init__(outstr)
 
 
