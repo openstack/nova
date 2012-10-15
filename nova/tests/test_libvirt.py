@@ -299,6 +299,38 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver.disconnect_volume(connection_info, mount_device)
         connection_info = vol_driver.terminate_connection(vol, self.connr)
 
+    def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
+        vol_driver = volume_driver.RBDDriver()
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
+        user = 'foo'
+        secret_type = 'ceph'
+        connection_info['data']['auth_enabled'] = True
+        connection_info['data']['auth_username'] = user
+        connection_info['data']['secret_type'] = secret_type
+        connection_info['data']['secret_uuid'] = uuid
+
+        flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
+        flags_user = 'bar'
+        self.flags(rbd_user=flags_user,
+                   rbd_secret_uuid=flags_uuid)
+
+        mount_device = "vde"
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
+        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+        self.assertEqual(tree.find('./auth').get('username'), flags_user)
+        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
+        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, self.connr)
+
     def test_libvirt_rbd_driver_auth_disabled(self):
         vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
@@ -321,6 +353,40 @@ class LibvirtVolumeTestCase(test.TestCase):
         rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth'), None)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, self.connr)
+
+    def test_libvirt_rbd_driver_auth_disabled_flags_override(self):
+        vol_driver = volume_driver.RBDDriver()
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
+        name = 'volume-00000001'
+        vol = {'id': 1, 'name': name}
+        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
+        user = 'foo'
+        secret_type = 'ceph'
+        connection_info['data']['auth_enabled'] = False
+        connection_info['data']['auth_username'] = user
+        connection_info['data']['secret_type'] = secret_type
+        connection_info['data']['secret_uuid'] = uuid
+
+        # NOTE: Supplying the rbd_secret_uuid will enable authentication
+        # locally in nova-compute even if not enabled in nova-volume/cinder
+        flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
+        flags_user = 'bar'
+        self.flags(rbd_user=flags_user,
+                   rbd_secret_uuid=flags_uuid)
+
+        mount_device = "vde"
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
+        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        self.assertEqual(tree.find('./source').get('name'), rbd_name)
+        self.assertEqual(tree.find('./auth').get('username'), flags_user)
+        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
+        self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
         connection_info = vol_driver.terminate_connection(vol, self.connr)
 
