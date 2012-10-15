@@ -29,6 +29,7 @@ import time
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -55,8 +56,9 @@ imagecache_opts = [
                 help='Write a checksum for files in _base to disk'),
     ]
 
-flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('base_dir_name', 'nova.compute.manager')
+CONF = config.CONF
+CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF.import_opt('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 FLAGS.register_opts(imagecache_opts)
 

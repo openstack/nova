@@ -28,6 +28,7 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -55,8 +56,9 @@ scheduler_driver_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(scheduler_driver_opts)
 
-flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
+CONF = config.CONF
+CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 
 
 def handle_schedule_error(context, ex, instance_uuid, request_spec):

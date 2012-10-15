@@ -16,16 +16,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
-flags.DECLARE('scheduler_driver', 'nova.scheduler.manager')
-flags.DECLARE('fake_network', 'nova.network.manager')
-flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
-flags.DECLARE('network_size', 'nova.network.manager')
-flags.DECLARE('num_networks', 'nova.network.manager')
-flags.DECLARE('policy_file', 'nova.policy')
+CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
+CONF.import_opt('fake_network', 'nova.network.manager')
+CONF.import_opt('iscsi_num_targets', 'nova.volume.driver')
+CONF.import_opt('network_size', 'nova.network.manager')
+CONF.import_opt('num_networks', 'nova.network.manager')
+CONF.import_opt('policy_file', 'nova.policy')
 
 
 def set_defaults(conf):

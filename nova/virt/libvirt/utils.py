@@ -25,6 +25,8 @@ import os
 import re
 
 from lxml import etree
+
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -45,8 +47,9 @@ util_opts = [
                     'non-standard locations')
     ]
 
-flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('base_dir_name', 'nova.compute.manager')
+CONF = config.CONF
+CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF.import_opt('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 FLAGS.register_opts(util_opts)
 

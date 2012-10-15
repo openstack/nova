@@ -36,17 +36,6 @@ from nova.openstack.common import cfg
 FLAGS = cfg.CONF
 
 
-class UnrecognizedFlag(Exception):
-    pass
-
-
-def DECLARE(name, module_string, flag_values=FLAGS):
-    if module_string not in sys.modules:
-        __import__(module_string, globals(), locals())
-    if name not in flag_values:
-        raise UnrecognizedFlag('%s not defined by %s' % (name, module_string))
-
-
 def _get_my_ip():
     """
     Returns the actual ip of the local machine.

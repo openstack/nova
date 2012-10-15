@@ -24,6 +24,7 @@ import os
 
 from nova.api.ec2 import ec2utils
 from nova import block_device
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -41,8 +42,9 @@ metadata_opts = [
     ]
 
 FLAGS = flags.FLAGS
-flags.DECLARE('dhcp_domain', 'nova.network.manager')
 FLAGS.register_opts(metadata_opts)
+CONF = config.CONF
+CONF.import_opt('dhcp_domain', 'nova.network.manager')
 
 
 VERSIONS = [

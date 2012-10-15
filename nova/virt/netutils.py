@@ -23,12 +23,13 @@
 
 import netaddr
 
+from nova import config
 from nova import flags
 
 
 FLAGS = flags.FLAGS
-
-flags.DECLARE('injected_network_template', 'nova.virt.disk.api')
+CONF = config.CONF
+CONF.import_opt('injected_network_template', 'nova.virt.disk.api')
 
 Template = None
 

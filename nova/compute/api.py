@@ -35,6 +35,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
@@ -58,7 +59,8 @@ from nova import volume
 LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
-flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
+CONF = config.CONF
+CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
 
 MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS

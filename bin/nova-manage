@@ -90,14 +90,16 @@ from nova import utils
 from nova import version
 
 FLAGS = flags.FLAGS
-flags.DECLARE('flat_network_bridge', 'nova.network.manager')
-flags.DECLARE('num_networks', 'nova.network.manager')
-flags.DECLARE('multi_host', 'nova.network.manager')
-flags.DECLARE('network_size', 'nova.network.manager')
-flags.DECLARE('vlan_start', 'nova.network.manager')
-flags.DECLARE('vpn_start', 'nova.network.manager')
-flags.DECLARE('default_floating_pool', 'nova.network.manager')
-flags.DECLARE('public_interface', 'nova.network.linux_net')
+
+CONF = config.CONF
+CONF.import_opt('flat_network_bridge', 'nova.network.manager')
+CONF.import_opt('num_networks', 'nova.network.manager')
+CONF.import_opt('multi_host', 'nova.network.manager')
+CONF.import_opt('network_size', 'nova.network.manager')
+CONF.import_opt('vlan_start', 'nova.network.manager')
+CONF.import_opt('vpn_start', 'nova.network.manager')
+CONF.import_opt('default_floating_pool', 'nova.network.manager')
+CONF.import_opt('public_interface', 'nova.network.linux_net')
 
 QUOTAS = quota.QUOTAS
 
