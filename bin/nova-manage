@@ -230,7 +230,9 @@ class ProjectCommands(object):
             except exception.ProjectQuotaNotFound:
                 db.quota_create(ctxt, project_id, key, value)
         else:
-            print "error: Invalid key %s supplied for update" % key
+            print _('%(key)s is not a valid quota key. Valid options are: '
+                    '%(options)s.') % {'key': key,
+                                       'options': ', '.join(project_quota)}
             sys.exit(2)
         project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
@@ -268,7 +270,7 @@ class FixedIpCommands(object):
             else:
                 fixed_ips = db.fixed_ip_get_all_by_instance_host(ctxt, host)
         except exception.NotFound as ex:
-            print "error: %s" % ex
+            print _("error: %s") % ex
             sys.exit(2)
 
         instances = db.instance_get_all(context.get_admin_context())
@@ -342,7 +344,7 @@ class FixedIpCommands(object):
             db.fixed_ip_update(ctxt, fixed_ip['address'],
                                 {'reserved': reserved})
         except exception.NotFound as ex:
-            print "error: %s" % ex
+            print _("error: %s") % ex
             sys.exit(2)
 
 
@@ -648,7 +650,7 @@ class ServiceCommands(object):
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
-            print "Unable to find service"
+            print _("Unable to find service")
             return
         db.service_update(ctxt, svc['id'], {'disabled': False})
 
@@ -660,7 +662,7 @@ class ServiceCommands(object):
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
-            print "Unable to find service"
+            print _("Unable to find service")
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
@@ -794,7 +796,7 @@ class VolumeCommands(object):
         volume = db.volume_get(ctxt, param2id(volume_id))
 
         if not volume['instance_id']:
-            print "volume is not attached to an instance"
+            print _("volume is not attached to an instance")
             return
         instance = db.instance_get(ctxt, volume['instance_id'])
         rpcapi = compute_rpcapi.ComputeAPI()
@@ -838,21 +840,22 @@ class InstanceTypeCommands(object):
                                   ephemeral_gb, flavorid, swap, rxtx_factor,
                                   is_public)
         except exception.InvalidInput, e:
-            print "Must supply valid parameters to create instance_type"
+            print _("Must supply valid parameters to create instance_type")
             print e
             sys.exit(1)
         except exception.InstanceTypeExists:
-            print "Instance Type exists."
-            print "Please ensure instance_type name and flavorid are unique."
-            print "Currently defined instance_type names and flavorids:"
+            print _("Instance Type exists.")
+            print _("Please ensure instance_type name and flavorid are "
+                    "unique.")
+            print _("Currently defined instance_type names and flavorids:")
             print
             self.list()
             sys.exit(2)
         except Exception:
-            print "Unknown error"
+            print _("Unknown error")
             sys.exit(3)
         else:
-            print "%s created" % name
+            print _("%s created") % name
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
@@ -861,15 +864,15 @@ class InstanceTypeCommands(object):
         try:
             instance_types.destroy(name)
         except exception.InstanceTypeNotFound:
-            print "Valid instance type name is required"
+            print _("Valid instance type name is required")
             sys.exit(1)
         except exception.DBError, e:
-            print "DB Error: %s" % e
+            print _("DB Error: %s") % e
             sys.exit(2)
         except Exception:
             sys.exit(3)
         else:
-            print "%s deleted" % name
+            print _("%s deleted") % name
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
@@ -910,7 +913,7 @@ class InstanceTypeCommands(object):
                             inst_type["flavorid"],
                             ext_spec)
             print _("Key %(key)s set to %(value)s on instance"
-                            " type %(name)s") % locals()
+                    " type %(name)s") % locals()
         except exception.DBError, e:
             _db_error(e)
 
@@ -950,7 +953,7 @@ class StorageManagerCommands(object):
             else:
                 flavors = db.sm_flavor_get(ctxt, flavor)
         except exception.NotFound as ex:
-            print "error: %s" % ex
+            print _('error: %s') % ex
             sys.exit(2)
 
         print "%-18s\t%-20s\t%s" % (_('id'),
@@ -993,7 +996,7 @@ class StorageManagerCommands(object):
                 backends = db.sm_backend_conf_get(ctxt, backend_conf_id)
 
         except exception.NotFound as ex:
-            print "error: %s" % ex
+            print _('error: %s') % ex
             sys.exit(2)
 
         print "%-5s\t%-10s\t%-40s\t%-10s\t%s" % (_('id'),
@@ -1022,9 +1025,11 @@ class StorageManagerCommands(object):
                 _db_error(e)
 
             if backend:
-                print 'Backend config found. Would you like to recreate this?'
-                print '(WARNING:Recreating will destroy all VDIs on backend!!)'
-                c = raw_input('Proceed? (y/n) ')
+                print _('Backend config found. Would you like to recreate '
+                        'this?')
+                print _('(WARNING:Recreating will destroy all VDIs on '
+                        'backend!!)')
+                c = raw_input(_('Proceed? (y/n) '))
                 if c == 'y' or c == 'Y':
                     try:
                         db.sm_backend_conf_update(ctxt, backend['id'],
@@ -1034,23 +1039,25 @@ class StorageManagerCommands(object):
                 return
 
             else:
-                print 'Backend config not found. Would you like to create it?'
-                print '(WARNING: Creating will destroy all data on backend!!!)'
-                c = raw_input('Proceed? (y/n) ')
+                print _('Backend config not found. Would you like to create '
+                        'it?')
+                print _('(WARNING: Creating will destroy all data on '
+                        'backend!!!)')
+                c = raw_input(_('Proceed? (y/n) '))
                 if c != 'y' and c != 'Y':
                     return
 
-        print '(WARNING: Creating will destroy all data on backend!!!)'
-        c = raw_input('Proceed? (y/n) ')
+        print _('(WARNING: Creating will destroy all data on backend!!!)')
+        c = raw_input(_('Proceed? (y/n) '))
         if c == 'y' or c == 'Y':
             if flavor_label is None:
-                print "error: backend needs to be associated with flavor"
+                print _('error: backend needs to be associated with flavor')
                 sys.exit(2)
 
             try:
                 flavors = db.sm_flavor_get_by_label(ctxt, flavor_label)
             except exception.NotFound as ex:
-                print "error: %s" % ex
+                print _('error: %s') % ex
                 sys.exit(2)
 
             config_params = "".join(['%s=%s ' %
@@ -1113,7 +1120,7 @@ class AgentBuildCommands(object):
             if hypervisor and key != hypervisor:
                 continue
 
-            print "Hypervisor: %s" % key
+            print _('Hypervisor: %s') % key
             print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
             for agent_build in buildlist:
                 print fmt % (agent_build.os, agent_build.architecture,
@@ -1153,9 +1160,9 @@ class GetLogCommands(object):
                         if print_name == 0:
                             print log_file + ":-"
                             print_name = 1
-                        print "Line %d : %s" % (len(lines) - index, line)
+                        print _('Line %d : %s') % (len(lines) - index, line)
         if error_found == 0:
-            print "No errors in logfiles!"
+            print _('No errors in logfiles!')
 
     def syslog(self, num_entries=10):
         """Get <num_entries> of the nova syslog events"""
@@ -1167,11 +1174,11 @@ class GetLogCommands(object):
         elif os.path.exists('/var/log/messages'):
             log_file = '/var/log/messages'
         else:
-            print "Unable to find system log file!"
+            print _('Unable to find system log file!')
             sys.exit(1)
         lines = [line.strip() for line in open(log_file, "r")]
         lines.reverse()
-        print "Last %s nova syslog entries:-" % (entries)
+        print _('Last %s nova syslog entries:-') % (entries)
         for line in lines:
             if line.find("nova") > 0:
                 count += 1
@@ -1180,7 +1187,7 @@ class GetLogCommands(object):
                 break
 
         if count == 0:
-            print "No nova entries in syslog!"
+            print _('No nova entries in syslog!')
 
 
 CATEGORIES = [
@@ -1214,12 +1221,12 @@ def lazy_match(name, key_value_tuples):
         if k.lower().find(name.lower()) == 0:
             result.append((k, v))
     if len(result) == 0:
-        print "%s does not match any options:" % name
+        print _('%s does not match any options:') % name
         for k, _v in key_value_tuples:
             print "\t%s" % k
         sys.exit(2)
     if len(result) > 1:
-        print "%s matched multiple options:" % name
+        print _('%s matched multiple options:') % name
         for k, _v in result:
             print "\t%s" % k
         sys.exit(2)
