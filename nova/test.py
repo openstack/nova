@@ -32,6 +32,7 @@ import nose.plugins.skip
 import stubout
 import testtools
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -68,7 +69,7 @@ class TestCase(testtools.TestCase):
         super(TestCase, self).setUp()
 
         fake_flags.set_defaults(FLAGS)
-        flags.parse_args([], default_config_files=[])
+        config.parse_args([], default_config_files=[])
 
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system

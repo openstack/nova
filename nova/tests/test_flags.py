@@ -17,6 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova import test
@@ -44,7 +45,7 @@ class FlagsTestCase(test.TestCase):
         self.assert_('runtime_answer' not in FLAGS)
 
         argv = ['flags_test', 'extra_arg', '--runtime_answer=60']
-        args = flags.parse_args(argv, default_config_files=[])
+        args = config.parse_args(argv, default_config_files=[])
         self.assertEqual(len(args), 3)
         self.assertEqual(argv, args)
 
@@ -60,7 +61,7 @@ class FlagsTestCase(test.TestCase):
                                           default='val',
                                           help='desc'))
         argv = ['flags_test', '--duplicate_answer=60', 'extra_arg']
-        args = flags.parse_args(argv, default_config_files=[])
+        args = config.parse_args(argv, default_config_files=[])
 
         self.assert_('duplicate_answer' not in FLAGS)
         self.assert_(FLAGS.duplicate_answer_long, 60)
@@ -68,7 +69,7 @@ class FlagsTestCase(test.TestCase):
         FLAGS.clear()
         FLAGS.register_cli_opt(cfg.IntOpt('duplicate_answer',
                                           default=60, help='desc'))
-        args = flags.parse_args(argv, default_config_files=[])
+        args = config.parse_args(argv, default_config_files=[])
         self.assertEqual(FLAGS.duplicate_answer, 60)
         self.assertEqual(FLAGS.duplicate_answer_long, 'val')
 

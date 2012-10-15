@@ -28,6 +28,7 @@ import sys
 
 import websockify
 
+from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import flags
@@ -133,7 +134,7 @@ if __name__ == '__main__':
         parser.error("SSL only and %s not found" % FLAGS.cert)
 
     # Setup flags
-    flags.parse_args(sys.argv)
+    config.parse_args(sys.argv)
 
     # Check to see if novnc html/js/css files are present
     if not os.path.exists(FLAGS.web):
