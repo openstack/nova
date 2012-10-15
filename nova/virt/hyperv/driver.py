@@ -161,9 +161,9 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.power_on(instance)
 
     def live_migration(self, context, instance_ref, dest, post_method,
-        recover_method, block_migration=False):
+        recover_method, block_migration=False, migrate_data=None):
         self._livemigrationops.live_migration(context, instance_ref, dest,
-            post_method, recover_method, block_migration)
+            post_method, recover_method, block_migration, migrate_data)
 
     def compare_cpu(self, cpu_info):
         return self._livemigrationops.compare_cpu(cpu_info)
