@@ -163,6 +163,8 @@ class API(object):
             if v['id'] == str(volume_id):
                 return v
 
+        raise exception.VolumeNotFound(volume_id=volume_id)
+
     def get_all(self, context):
         return self.volume_list
 

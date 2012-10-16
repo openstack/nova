@@ -911,11 +911,14 @@ class API(base.Base):
             services = self.db.service_get_all_compute_by_host(
                     context.elevated(), instance['host'])
             is_up = False
+            bdms = self.db.block_device_mapping_get_all_by_instance(
+                context, instance["uuid"])
             #Note(jogo): db allows for multiple compute services per host
             for service in services:
                 if utils.service_is_up(service):
                     is_up = True
-                    self.compute_rpcapi.terminate_instance(context, instance)
+                    self.compute_rpcapi.terminate_instance(context, instance,
+                                                           bdms)
                     break
             if is_up == False:
                 # If compute node isn't up, just delete from DB

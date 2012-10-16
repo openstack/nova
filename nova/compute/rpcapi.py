@@ -131,6 +131,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.2 - Adds slave_info parameter to add_aggregate_host() and
               remove_aggregate_host()
         2.3 - Adds volume_id to reserve_block_device_name()
+        2.4 - Add bdms to terminate_instance
     '''
 
     #
@@ -494,11 +495,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def terminate_instance(self, ctxt, instance):
+    def terminate_instance(self, ctxt, instance, bdms):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('terminate_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, bdms=bdms),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.4')
 
     def unpause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
