@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2012-10-15 00:03+0000\n"
+"POT-Creation-Date: 2012-10-16 00:02+0000\n"
 "PO-Revision-Date: 2011-08-23 11:22+0000\n"
 "Last-Translator: Thierry Carrez <thierry.carrez+lp@gmail.com>\n"
 "Language-Team: \n"
@@ -5311,12 +5311,12 @@ msgstr "VBD %s の削除に失敗しました。"
 msgid "Failed to get info for disk %s"
 msgstr "ip %s に対するメタデータの取得に失敗しました。"
 
-#: nova/tests/integrated/test_api_samples.py:134
+#: nova/tests/integrated/test_api_samples.py:138
 #, python-format
 msgid "Result: %(result)s is not a dict."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:138
+#: nova/tests/integrated/test_api_samples.py:142
 #, python-format
 msgid ""
 "Key mismatch:\n"
@@ -5324,25 +5324,25 @@ msgid ""
 "%(res_keys)s"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:146
+#: nova/tests/integrated/test_api_samples.py:150
 #, python-format
 msgid "Result: %(result)s is not a list."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:149
+#: nova/tests/integrated/test_api_samples.py:153
 #, python-format
 msgid ""
 "Length mismatch: %(result)s\n"
 "%(expected)s."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:160
+#: nova/tests/integrated/test_api_samples.py:164
 #, python-format
 msgid "Result: %(res_obj)s not in %(expected)s."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:177
-#: nova/tests/integrated/test_api_samples.py:190
+#: nova/tests/integrated/test_api_samples.py:181
+#: nova/tests/integrated/test_api_samples.py:194
 #, python-format
 msgid ""
 "Values do not match:\n"
@@ -9903,25 +9903,4 @@ msgid ""
 "Got error trying to delete target %(target)s, assuming it is already "
 "gone: %(exc)s"
 msgstr ""
-
-#~ msgid ""
-#~ "Can't find claim %s.  It may have"
-#~ " been 'finished' twice, or it has "
-#~ "already timed out."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Claim %s not found.  It either "
-#~ "timed out or was already explicitly "
-#~ "finished/aborted"
-#~ msgstr ""
-
-#~ msgid "Expiring resource claim %s"
-#~ msgstr ""
-
-#~ msgid "Casted '%(method)s' to network '%(host)s'"
-#~ msgstr ""
-
-#~ msgid "Failed to snapshot VDI"
-#~ msgstr "ip %s に対するメタデータの取得に失敗しました。"
 

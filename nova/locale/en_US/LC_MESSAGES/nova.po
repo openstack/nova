@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
-"POT-Creation-Date: 2012-10-15 00:03+0000\n"
+"POT-Creation-Date: 2012-10-16 00:02+0000\n"
 "PO-Revision-Date: 2012-09-13 10:30+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -5451,12 +5451,12 @@ msgstr "Failed to destroy vm %s"
 msgid "Failed to get info for disk %s"
 msgstr "Failed to get info for disk %s"
 
-#: nova/tests/integrated/test_api_samples.py:134
+#: nova/tests/integrated/test_api_samples.py:138
 #, python-format
 msgid "Result: %(result)s is not a dict."
 msgstr "Result: %(result)s is not a dict."
 
-#: nova/tests/integrated/test_api_samples.py:138
+#: nova/tests/integrated/test_api_samples.py:142
 #, python-format
 msgid ""
 "Key mismatch:\n"
@@ -5467,25 +5467,25 @@ msgstr ""
 "%(ex_keys)s\n"
 "%(res_keys)s"
 
-#: nova/tests/integrated/test_api_samples.py:146
+#: nova/tests/integrated/test_api_samples.py:150
 #, python-format
 msgid "Result: %(result)s is not a list."
 msgstr "Result: %(result)s is not a list."
 
-#: nova/tests/integrated/test_api_samples.py:149
+#: nova/tests/integrated/test_api_samples.py:153
 #, python-format
 msgid ""
 "Length mismatch: %(result)s\n"
 "%(expected)s."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:160
+#: nova/tests/integrated/test_api_samples.py:164
 #, fuzzy, python-format
 msgid "Result: %(res_obj)s not in %(expected)s."
 msgstr "Result: %(result)s is not a dict."
 
-#: nova/tests/integrated/test_api_samples.py:177
-#: nova/tests/integrated/test_api_samples.py:190
+#: nova/tests/integrated/test_api_samples.py:181
+#: nova/tests/integrated/test_api_samples.py:194
 #, python-format
 msgid ""
 "Values do not match:\n"
@@ -10287,31 +10287,4 @@ msgid ""
 msgstr ""
 "Got error trying to delete target %(target)s, assuming it is already "
 "gone: %(exc)s"
-
-#~ msgid ""
-#~ "Can't find claim %s.  It may have"
-#~ " been 'finished' twice, or it has "
-#~ "already timed out."
-#~ msgstr ""
-#~ "Can't find claim %d.  It may have"
-#~ " been 'finished' twice, or it has "
-#~ "already timed out."
-
-#~ msgid ""
-#~ "Claim %s not found.  It either "
-#~ "timed out or was already explicitly "
-#~ "finished/aborted"
-#~ msgstr ""
-#~ "Claim %d not found.  It either "
-#~ "timed out or was already explicitly "
-#~ "finished/aborted"
-
-#~ msgid "Expiring resource claim %s"
-#~ msgstr "Expiring resource claim %d"
-
-#~ msgid "Casted '%(method)s' to network '%(host)s'"
-#~ msgstr "Casted '%(method)s' to network '%(host)s'"
-
-#~ msgid "Failed to snapshot VDI"
-#~ msgstr "Failed to delete vdi"
 
