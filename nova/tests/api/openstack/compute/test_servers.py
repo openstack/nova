@@ -962,6 +962,30 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::0123')
 
+    def test_update_server_invalid_xml_raises_lookup(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/xml'
+        #xml request which raises LookupError
+        req.body = """<?xml version="1.0" encoding="TF-8"?>
+            <metadata
+            xmlns="http://docs.openstack.org/compute/api/v1.1"
+            key="Label"></meta>"""
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_update_server_invalid_xml_raises_expat(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/xml'
+        #xml request which raises ExpatError
+        req.body = """<?xml version="1.0" encoding="UTF-8"?>
+            <metadata
+            xmlns="http://docs.openstack.org/compute/api/v1.1"
+            key="Label"></meta>"""
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_update_server_name(self):
         self.stubs.Set(db, 'instance_get',
                 fakes.fake_instance_get(name='server_test'))
