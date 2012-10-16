@@ -216,8 +216,13 @@ class ComputeRpcAPITestCase(test.TestCase):
                 reservations=list('fake_res'))
 
     def test_reboot_instance(self):
+        self.maxDiff = None
         self._test_compute_api('reboot_instance', 'cast',
-                instance=self.fake_instance, reboot_type='type')
+                instance=self.fake_instance,
+                block_device_info={},
+                network_info={},
+                reboot_type='type',
+                version='2.5')
 
     def test_rebuild_instance(self):
         self._test_compute_api('rebuild_instance', 'cast',
