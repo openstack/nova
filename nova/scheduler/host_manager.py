@@ -337,7 +337,7 @@ class HostManager(object):
         with the instance (in case the InstanceType changed since the
         instance was created)."""
 
-        if topic != 'compute':
+        if topic != FLAGS.compute_topic:
             raise NotImplementedError(_(
                 "host_manager only implemented for 'compute'"))
 

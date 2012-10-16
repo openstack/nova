@@ -39,8 +39,9 @@ from nova import service
 
 if __name__ == "__main__":
     flags.parse_args(sys.argv)
+    FLAGS = flags.FLAGS
     logging.setup("nova")
-
-    server = service.Service.create(binary='nova-consoleauth')
+    server = service.Service.create(binary='nova-consoleauth',
+                                    topic=FLAGS.consoleauth_topic)
     service.serve(server)
     service.wait()

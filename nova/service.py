@@ -479,7 +479,8 @@ class Service(object):
         if not topic:
             topic = binary.rpartition('nova-')[2]
         if not manager:
-            manager = FLAGS.get('%s_manager' % topic, None)
+            manager = FLAGS.get('%s_manager' %
+                                binary.rpartition('nova-')[2], None)
         if report_interval is None:
             report_interval = FLAGS.report_interval
         if periodic_interval is None:

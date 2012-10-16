@@ -43,8 +43,10 @@ from nova import utils
 
 if __name__ == '__main__':
     flags.parse_args(sys.argv)
+    FLAGS = flags.FLAGS
     logging.setup("nova")
     utils.monkey_patch()
-    server = service.Service.create(binary='nova-scheduler')
+    server = service.Service.create(binary='nova-scheduler',
+                                    topic=FLAGS.scheduler_topic)
     service.serve(server)
     service.wait()

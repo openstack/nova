@@ -96,7 +96,7 @@ def cast_to_volume_host(context, host, method, **kwargs):
         db.volume_update(context, volume_id,
                 {'host': host, 'scheduled_at': now})
     rpc.cast(context,
-             rpc.queue_get_for(context, 'volume', host),
+             rpc.queue_get_for(context, FLAGS.volume_topic, host),
              {"method": method, "args": kwargs})
     LOG.debug(_("Casted '%(method)s' to volume '%(host)s'") % locals())
 
@@ -119,7 +119,7 @@ def cast_to_compute_host(context, host, method, **kwargs):
         instance_update_db(context, instance_uuid)
 
     rpc.cast(context,
-             rpc.queue_get_for(context, 'compute', host),
+             rpc.queue_get_for(context, FLAGS.compute_topic, host),
              {"method": method, "args": kwargs})
     LOG.debug(_("Casted '%(method)s' to compute '%(host)s'") % locals())
 
@@ -128,8 +128,8 @@ def cast_to_host(context, topic, host, method, **kwargs):
     """Generic cast to host"""
 
     topic_mapping = {
-            "compute": cast_to_compute_host,
-            "volume": cast_to_volume_host}
+            FLAGS.compute_topic: cast_to_compute_host,
+            FLAGS.volume_topic: cast_to_volume_host}
 
     func = topic_mapping.get(topic)
     if func:
