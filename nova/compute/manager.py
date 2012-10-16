@@ -482,13 +482,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "create.start",
                     extra_usage_info=extra_usage_info)
-            network_info = self._allocate_network(context, instance,
-                                                  requested_networks)
+            network_info = None
             try:
                 limits = filter_properties.get('limits', {})
                 with self.resource_tracker.resource_claim(context, instance,
                         limits):
 
+                    network_info = self._allocate_network(context, instance,
+                            requested_networks)
                     block_device_info = self._prep_block_device(context,
                             instance)
                     instance = self._spawn(context, instance, image_meta,
@@ -533,7 +534,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self._deallocate_network(context, instance)
         except Exception:
-            # do not attempt retry if network de-allocation occurs:
+            # do not attempt retry if network de-allocation failed:
             _log_original_error()
             raise
 
