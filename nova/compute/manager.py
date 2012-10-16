@@ -1213,8 +1213,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             images = []
             marker = None
             while True:
-                batch = image_service.detail(context, filters=filters,
-                        marker=marker, sort_key='created_at', sort_dir='desc')
+                if marker is not None:
+                    batch = image_service.detail(context, filters=filters,
+                            marker=marker, sort_key='created_at',
+                            sort_dir='desc')
+                else:
+                    batch = image_service.detail(context, filters=filters,
+                            sort_key='created_at', sort_dir='desc')
                 if not batch:
                     break
                 images += batch
