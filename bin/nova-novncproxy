@@ -28,6 +28,7 @@ import sys
 
 import websockify
 
+from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import flags
 from nova.openstack.common import cfg
@@ -84,9 +85,8 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         cookie.load(self.headers.getheader('cookie'))
         token = cookie['token'].value
         ctxt = context.get_admin_context()
-        connect_info = rpc.call(ctxt, 'consoleauth',
-                                {'method': 'check_token',
-                                 'args': {'token': token}})
+        rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
+        connect_info = rpcapi.check_token(ctxt, token=token)
 
         if not connect_info:
             LOG.audit("Invalid Token: %s", token)
