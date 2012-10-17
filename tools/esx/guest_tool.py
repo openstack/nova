@@ -350,7 +350,7 @@ def _set_ubuntu_networking(network_details=None):
             interface_file.write('\naddress %s\n' % ip_address)
         logging.debug(_("Successfully configured NIC %(device)d with "
                         "NIC info %(detail)s"), {'device': device,
-                                                 'detail': network_detail))
+                                                 'detail': network_detail})
     interface_file.close()
 
     if all_dns_servers:
