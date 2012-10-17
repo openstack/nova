@@ -194,6 +194,12 @@ def wrap_instance_fault(function):
         except exception.InstanceNotFound:
             raise
         except Exception, e:
+            # NOTE(gtt): If argument 'instance' is in args rather than kwargs,
+            # we will get a KeyError exception which will cover up the real
+            # exception. So, we update kwargs with the values from args first.
+            # then, we can get 'instance' from kwargs easily.
+            kwargs.update(dict(zip(function.func_code.co_varnames[2:], args)))
+
             with excutils.save_and_reraise_exception():
                 compute_utils.add_instance_fault_from_exc(context,
                         kwargs['instance']['uuid'], e, sys.exc_info())

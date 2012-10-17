@@ -227,6 +227,26 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(called['fault_added'])
 
+    def test_wrap_instance_fault_instance_in_args(self):
+        inst = {"uuid": "fake_uuid"}
+
+        called = {'fault_added': False}
+
+        def did_it_add_fault(*args):
+            called['fault_added'] = True
+
+        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
+                       did_it_add_fault)
+
+        @compute_manager.wrap_instance_fault
+        def failer(self2, context, instance):
+            raise NotImplementedError()
+
+        self.assertRaises(NotImplementedError, failer,
+                          self.compute, self.context, inst)
+
+        self.assertTrue(called['fault_added'])
+
     def test_wrap_instance_fault_no_instance(self):
         inst_uuid = "fake_uuid"
 
