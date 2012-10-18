@@ -2732,14 +2732,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)
 
-    def update_host_status(self):
-        """Retrieve status info from libvirt.
-
-        Query libvirt to get the state of the compute node, such
-        as memory and disk usage.
-        """
-        return self.host_state.update_status()
-
     def get_host_stats(self, refresh=False):
         """Return the current state of the host.
 

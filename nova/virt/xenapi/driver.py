@@ -554,11 +554,6 @@ class XenAPIDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         return self._vmops.refresh_provider_fw_rules()
 
-    def update_host_status(self):
-        """Update the status info of the host, and return those values
-            to the calling program."""
-        return self.host_state.update_status()
-
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""

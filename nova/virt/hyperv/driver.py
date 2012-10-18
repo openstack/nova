@@ -123,10 +123,6 @@ class HyperVDriver(driver.ComputeDriver):
     def get_available_resource(self):
         return self._vmops.get_available_resource()
 
-    def update_host_status(self):
-        """See xenapi_conn.py implementation."""
-        pass
-
     def get_host_stats(self, refresh=False):
         """See xenapi_conn.py implementation."""
         return {}

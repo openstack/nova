@@ -692,11 +692,6 @@ class BareMetalDriver(driver.ComputeDriver):
         """See comments of same method in firewall_driver."""
         pass
 
-    def update_host_status(self):
-        """Update the status info of the host, and return those values
-            to the calling program."""
-        return self.HostState.update_status()
-
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""

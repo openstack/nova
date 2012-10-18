@@ -586,10 +586,6 @@ class ComputeDriver(object):
         """Unplug VIFs from networks."""
         raise NotImplementedError()
 
-    def update_host_status(self):
-        """Refresh host stats"""
-        raise NotImplementedError()
-
     def get_host_stats(self, refresh=False):
         """Return currently known host stats"""
         raise NotImplementedError()
