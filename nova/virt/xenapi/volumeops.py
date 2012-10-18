@@ -118,29 +118,29 @@ class VolumeOps(object):
         if driver_type not in ['iscsi', 'xensm']:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
-        data = connection_info['data']
-        if 'name_label' not in data:
-            label = 'tempSR-%s' % data['volume_id']
+        connection_data = connection_info['data']
+        if 'name_label' not in connection_data:
+            label = 'tempSR-%s' % connection_data['volume_id']
         else:
-            label = data['name_label']
-            del data['name_label']
+            label = connection_data['name_label']
+            del connection_data['name_label']
 
-        if 'name_description' not in data:
+        if 'name_description' not in connection_data:
             desc = 'Disk-for:%s' % instance_name
         else:
-            desc = data['name_description']
+            desc = connection_data['name_description']
 
         LOG.debug(connection_info)
         sr_params = {}
-        if u'sr_uuid' not in data:
-            sr_params = volume_utils.parse_volume_info(connection_info,
+        if u'sr_uuid' not in connection_data:
+            sr_params = volume_utils.parse_volume_info(connection_data,
                                                        mountpoint)
             uuid = "FA15E-D15C-" + str(sr_params['id'])
             sr_params['sr_type'] = 'iscsi'
         else:
-            uuid = data['sr_uuid']
-            for k in data['introduce_sr_keys']:
-                sr_params[k] = data[k]
+            uuid = connection_data['sr_uuid']
+            for k in connection_data['introduce_sr_keys']:
+                sr_params[k] = connection_data[k]
 
         sr_params['name_description'] = desc
 
@@ -155,10 +155,10 @@ class VolumeOps(object):
 
         vdi_uuid = None
         target_lun = None
-        if 'vdi_uuid' in data:
-            vdi_uuid = data['vdi_uuid']
-        elif 'target_lun' in data:
-            target_lun = data['target_lun']
+        if 'vdi_uuid' in connection_data:
+            vdi_uuid = connection_data['vdi_uuid']
+        elif 'target_lun' in connection_data:
+            target_lun = connection_data['target_lun']
         else:
             vdi_uuid = None
 
