@@ -61,6 +61,7 @@ from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
@@ -191,22 +192,12 @@ class RPCAllocateFixedIP(object):
                 host = network['host']
             # NOTE(vish): if there is no network host, set one
             if host is None:
-                host = rpc.call(context, FLAGS.network_topic,
-                                {'method': 'set_network_host',
-                                 'args': {'network_ref':
-                                 jsonutils.to_primitive(network)}})
+                host = self.network_rpcapi.set_network_host(context, network)
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
-                args = {}
-                args['instance_id'] = instance_id
-                args['network_id'] = network['id']
-                args['address'] = address
-                args['vpn'] = vpn
-
-                green_pool.spawn_n(rpc.call, context, topic,
-                                   {'method': '_rpc_allocate_fixed_ip',
-                                    'args': args})
+                green_pool.spawn_n(self.network_rpcapi._rpc_allocate_fixed_ip,
+                        context, instance_id, network['id'], address, vpn,
+                        host)
             else:
                 # i am the correct host, run here
                 self.allocate_fixed_ip(context, instance_id, network,
@@ -235,12 +226,7 @@ class RPCAllocateFixedIP(object):
             host = network['host']
         if host != self.host:
             # need to call deallocate_fixed_ip on correct network host
-            topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
-            args = {'address': address,
-                    'host': host}
-            rpc.call(context, topic,
-                     {'method': 'deallocate_fixed_ip',
-                      'args': args})
+            self.network_rpcapi.deallocate_fixed_ip(context, address, host)
         else:
             # i am the correct host, run here
             super(RPCAllocateFixedIP, self).deallocate_fixed_ip(context,
@@ -534,12 +520,8 @@ class FloatingIP(object):
                                         fixed_address, interface)
         else:
             # send to correct host
-            rpc.call(context,
-                     rpc.queue_get_for(context, FLAGS.network_topic, host),
-                     {'method': '_associate_floating_ip',
-                      'args': {'floating_address': floating_address,
-                               'fixed_address': fixed_address,
-                               'interface': interface}})
+            self.network_rpcapi._associate_floating_ip(context,
+                    floating_address, fixed_address, interface, host)
 
         return orig_instance_uuid
 
@@ -607,11 +589,8 @@ class FloatingIP(object):
             self._disassociate_floating_ip(context, address, interface)
         else:
             # send to correct host
-            rpc.call(context,
-                     rpc.queue_get_for(context, FLAGS.network_topic, host),
-                     {'method': '_disassociate_floating_ip',
-                      'args': {'address': address,
-                               'interface': interface}})
+            self.network_rpcapi._disassociate_floating_ip(context, address,
+                    interface, host)
 
     def _disassociate_floating_ip(self, context, address, interface):
         """Performs db and driver calls to disassociate floating ip"""
@@ -770,6 +749,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
+    RPC_API_VERSION = '1.0'
+
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
 
@@ -793,6 +774,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.floating_dns_manager = importutils.import_object(
                 FLAGS.floating_ip_dns_manager)
         self.network_api = network_api.API()
+        self.network_rpcapi = network_rpcapi.NetworkAPI()
         self.security_group_api = compute_api.SecurityGroupAPI()
         self.compute_api = compute_api.API(
                                    security_group_api=self.security_group_api)
@@ -1657,12 +1639,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                 call_func(context, network)
             else:
                 # i'm not the right host, run call on correct host
-                topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
-                args = {'network_id': network['id'], 'teardown': teardown}
-                # NOTE(tr3buchet): the call is just to wait for completion
-                green_pool.spawn_n(rpc.call, context, topic,
-                                   {'method': 'rpc_setup_network_on_host',
-                                    'args': args})
+                green_pool.spawn_n(
+                        self.network_rpcapi.rpc_setup_network_on_host, context,
+                        network['id'], teardown, host)
 
         # wait for all of the setups (if any) to finish
         green_pool.waitall()

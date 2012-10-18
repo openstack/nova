@@ -23,6 +23,7 @@ import inspect
 from nova.db import base
 from nova import flags
 from nova.network import model as network_model
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 
@@ -83,96 +84,58 @@ def update_instance_cache_with_nw_info(api, context, instance,
 class API(base.Base):
     """API for interacting with the network manager."""
 
+    def __init__(self, **kwargs):
+        self.network_rpcapi = network_rpcapi.NetworkAPI()
+        super(API, self).__init__(**kwargs)
+
     def get_all(self, context):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_all_networks'})
+        return self.network_rpcapi.get_all_networks(context)
 
     def get(self, context, network_uuid):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_network',
-                         'args': {'network_uuid': network_uuid}})
+        return self.network_rpcapi.get_network(context, network_uuid)
 
     def create(self, context, **kwargs):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'create_networks',
-                         'args': kwargs})
+        return self.network_rpcapi.create_networks(context, **kwargs)
 
     def delete(self, context, network_uuid):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'delete_network',
-                         'args': {'fixed_range': None,
-                                  'uuid': network_uuid}})
+        return self.network_rpcapi.delete_network(context, network_uuid, None)
 
     def disassociate(self, context, network_uuid):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'disassociate_network',
-                         'args': {'network_uuid': network_uuid}})
+        return self.network_rpcapi.disassociate_network(context, network_uuid)
 
     def get_fixed_ip(self, context, id):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_fixed_ip',
-                         'args': {'id': id}})
+        return self.network_rpcapi.get_fixed_ip(context, id)
 
     def get_fixed_ip_by_address(self, context, address):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_fixed_ip_by_address',
-                         'args': {'address': address}})
+        return self.network_rpcapi.get_fixed_ip_by_address(context, address)
 
     def get_floating_ip(self, context, id):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_floating_ip',
-                         'args': {'id': id}})
+        return self.network_rpcapi.get_floating_ip(context, id)
 
     def get_floating_ip_pools(self, context):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_floating_pools'})
+        return self.network_rpcapi.get_floating_pools(context)
 
     def get_floating_ip_by_address(self, context, address):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_floating_ip_by_address',
-                         'args': {'address': address}})
+        return self.network_rpcapi.get_floating_ip_by_address(context, address)
 
     def get_floating_ips_by_project(self, context):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_floating_ips_by_project'})
+        return self.network_rpcapi.get_floating_ips_by_project(context)
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_floating_ips_by_fixed_address',
-                         'args': {'fixed_address': fixed_address}})
+        return self.network_rpcapi.get_floating_ips_by_fixed_address(context,
+                fixed_address)
 
     def get_instance_id_by_floating_address(self, context, address):
         # NOTE(tr3buchet): i hate this
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_instance_id_by_floating_address',
-                         'args': {'address': address}})
+        return self.network_rpcapi.get_instance_id_by_floating_address(context,
+                address)
 
     def get_vifs_by_instance(self, context, instance):
-        # NOTE(vish): When the db calls are converted to store network
-        #             data by instance_uuid, this should pass uuid instead.
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_vifs_by_instance',
-                         'args': {'instance_id': instance['id']}})
+        return self.network_rpcapi.get_vifs_by_instance(context,
+                instance['id'])
 
     def get_vif_by_mac_address(self, context, mac_address):
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_vif_by_mac_address',
-                         'args': {'mac_address': mac_address}})
+        return self.network_rpcapi.get_vif_by_mac_address(context, mac_address)
 
     def allocate_floating_ip(self, context, pool=None):
         """Adds a floating ip to a project from a pool. (allocates)"""
@@ -180,21 +143,14 @@ class API(base.Base):
         #             when we allocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
         #             at some point.
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'allocate_floating_ip',
-                         'args': {'project_id': context.project_id,
-                                  'pool': pool,
-                                  'auto_assigned': False}})
+        return self.network_rpcapi.allocate_floating_ip(context,
+                context.project_id, pool, False)
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Removes floating ip with address from a project. (deallocates)"""
-        rpc.call(context,
-                 FLAGS.network_topic,
-                 {'method': 'deallocate_floating_ip',
-                  'args': {'address': address,
-                           'affect_auto_assigned': affect_auto_assigned}})
+        return self.network_rpcapi.deallocate_floating_ip(context, address,
+                affect_auto_assigned)
 
     @refresh_cache
     def associate_floating_ip(self, context, instance,
@@ -204,12 +160,8 @@ class API(base.Base):
 
         ensures floating ip is allocated to the project in context
         """
-        orig_instance_uuid = rpc.call(context,
-                 FLAGS.network_topic,
-                 {'method': 'associate_floating_ip',
-                  'args': {'floating_address': floating_address,
-                           'fixed_address': fixed_address,
-                           'affect_auto_assigned': affect_auto_assigned}})
+        orig_instance_uuid = self.network_rpcapi.associate_floating_ip(context,
+                floating_address, fixed_address, affect_auto_assigned)
 
         if orig_instance_uuid:
             msg_dict = dict(address=floating_address,
@@ -226,48 +178,43 @@ class API(base.Base):
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from fixed ip it is associated with."""
-        rpc.call(context,
-                 FLAGS.network_topic,
-                 {'method': 'disassociate_floating_ip',
-                  'args': {'address': address}})
+        self.network_rpcapi.disassociate_floating_ip(context, address,
+                affect_auto_assigned)
 
     @refresh_cache
-    def allocate_for_instance(self, context, instance, **kwargs):
+    def allocate_for_instance(self, context, instance, vpn,
+                              requested_networks):
         """Allocates all network structures for an instance.
 
         :returns: network info as from get_instance_nw_info() below
         """
-        args = kwargs
+        args = {}
+        args['vpn'] = vpn
+        args['requested_networks'] = requested_networks
         args['instance_id'] = instance['id']
         args['instance_uuid'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
-
-        nw_info = rpc.call(context, FLAGS.network_topic,
-                           {'method': 'allocate_for_instance',
-                             'args': args})
+        nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
         return network_model.NetworkInfo.hydrate(nw_info)
 
-    def deallocate_for_instance(self, context, instance, **kwargs):
+    def deallocate_for_instance(self, context, instance):
         """Deallocates all network structures related to instance."""
-        args = kwargs
+
+        args = {}
         args['instance_id'] = instance['id']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
-        rpc.call(context, FLAGS.network_topic,
-                 {'method': 'deallocate_for_instance',
-                  'args': args})
+        self.network_rpcapi.deallocate_for_instance(context, **args)
 
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance['id'],
                 'host': instance['host'],
                 'network_id': network_id}
-        rpc.call(context, FLAGS.network_topic,
-                 {'method': 'add_fixed_ip_to_instance',
-                  'args': args})
+        self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
 
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
@@ -275,16 +222,12 @@ class API(base.Base):
         args = {'instance_id': instance['uuid'],
                 'host': instance['host'],
                 'address': address}
-        rpc.call(context, FLAGS.network_topic,
-                 {'method': 'remove_fixed_ip_from_instance',
-                  'args': args})
+        self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
-        rpc.call(context, FLAGS.network_topic,
-                 {'method': 'add_network_to_project',
-                  'args': {'project_id': project_id,
-                           'network_uuid': network_uuid}})
+        self.network_rpcapi.add_network_to_project(context, project_id,
+                network_uuid)
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance):
@@ -298,9 +241,7 @@ class API(base.Base):
                 'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}
-        nw_info = rpc.call(context, FLAGS.network_topic,
-                           {'method': 'get_instance_nw_info',
-                            'args': args})
+        nw_info = self.network_rpcapi.get_instance_nw_info(context, **args)
 
         return network_model.NetworkInfo.hydrate(nw_info)
 
@@ -308,27 +249,21 @@ class API(base.Base):
         """validate the networks passed at the time of creating
         the server
         """
-        args = {'networks': requested_networks}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'validate_networks',
-                         'args': args})
+        return self.network_rpcapi.validate_networks(context,
+                                                     requested_networks)
 
     def get_instance_uuids_by_ip_filter(self, context, filters):
         """Returns a list of dicts in the form of
         {'instance_uuid': uuid, 'ip': ip} that matched the ip_filter
         """
-        args = {'filters': filters}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'get_instance_uuids_by_ip_filter',
-                         'args': args})
+        return self.network_rpcapi.get_instance_uuids_by_ip_filter(context,
+                                                                   filters)
 
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
         These can be used to create DNS entries for floating ips.
         """
-        return rpc.call(context,
-                        FLAGS.network_topic,
-                        {'method': 'get_dns_domains'})
+        return self.network_rpcapi.get_dns_domains(context)
 
     def add_dns_entry(self, context, address, name, dns_type, domain):
         """Create specified DNS entry for address"""
@@ -336,60 +271,43 @@ class API(base.Base):
                 'name': name,
                 'dns_type': dns_type,
                 'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'add_dns_entry',
-                         'args': args})
+        return self.network_rpcapi.add_dns_entry(context, **args)
 
     def modify_dns_entry(self, context, name, address, domain):
         """Create specified DNS entry for address"""
         args = {'address': address,
                 'name': name,
                 'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'modify_dns_entry',
-                         'args': args})
+        return self.network_rpcapi.modify_dns_entry(context, **args)
 
     def delete_dns_entry(self, context, name, domain):
         """Delete the specified dns entry."""
         args = {'name': name, 'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'delete_dns_entry',
-                         'args': args})
+        return self.network_rpcapi.delete_dns_entry(context, **args)
 
     def delete_dns_domain(self, context, domain):
         """Delete the specified dns domain."""
-        args = {'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'delete_dns_domain',
-                         'args': args})
+        return self.network_rpcapi.delete_dns_domain(context, domain=domain)
 
     def get_dns_entries_by_address(self, context, address, domain):
         """Get entries for address and domain"""
         args = {'address': address, 'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'get_dns_entries_by_address',
-                         'args': args})
+        return self.network_rpcapi.get_dns_entries_by_address(context, **args)
 
     def get_dns_entries_by_name(self, context, name, domain):
         """Get entries for name and domain"""
         args = {'name': name, 'domain': domain}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'get_dns_entries_by_name',
-                         'args': args})
+        return self.network_rpcapi.get_dns_entries_by_name(context, **args)
 
     def create_private_dns_domain(self, context, domain, availability_zone):
         """Create a private DNS domain with nova availability zone."""
         args = {'domain': domain, 'av_zone': availability_zone}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'create_private_dns_domain',
-                         'args': args})
+        return self.network_rpcapi.create_private_dns_domain(context, **args)
 
     def create_public_dns_domain(self, context, domain, project=None):
-        """Create a private DNS domain with optional nova project."""
+        """Create a public DNS domain with optional nova project."""
         args = {'domain': domain, 'project': project}
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'create_public_dns_domain',
-                         'args': args})
+        return self.network_rpcapi.create_public_dns_domain(context, **args)
 
     def setup_networks_on_host(self, context, instance, host=None,
                                                         teardown=False):
@@ -402,8 +320,4 @@ class API(base.Base):
         args = {'instance_id': instance['id'],
                 'host': host,
                 'teardown': teardown}
-
-        # NOTE(tr3buchet): the call is just to wait for completion
-        rpc.call(context, FLAGS.network_topic,
-                 {'method': 'setup_networks_on_host',
-                  'args': args})
+        self.network_rpcapi.setup_networks_on_host(context, **args)

@@ -39,6 +39,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova.network import linux_net
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -57,10 +58,8 @@ def add_lease(mac, ip_address):
         network_manager.lease_fixed_ip(context.get_admin_context(),
                                        ip_address)
     else:
-        rpc.cast(context.get_admin_context(),
-                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
-                 {"method": "lease_fixed_ip",
-                  "args": {"address": ip_address}})
+        api = network_rpcapi.NetworkAPI()
+        api.lease_fixed_ip(context.get_admin_context(), ip_address, FLAGS.host)
 
 
 def old_lease(mac, ip_address):
@@ -79,10 +78,9 @@ def del_lease(mac, ip_address):
         network_manager.release_fixed_ip(context.get_admin_context(),
                                          ip_address)
     else:
-        rpc.cast(context.get_admin_context(),
-                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
-                 {"method": "release_fixed_ip",
-                  "args": {"address": ip_address}})
+        api = network_rpcapi.NetworkAPI()
+        api.release_fixed_ip(context.get_admin_context(), ip_address,
+                             FLAGS.host)
 
 
 def init_leases(network_id):
