@@ -193,7 +193,7 @@ class XenAPIDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mount_device = vol['mount_device'].rpartition("/")[2]
-            self._volumeops.attach_volume(connection_info,
+            self.attach_volume(connection_info,
                     instance['name'], mount_device)
 
     def finish_migration(self, context, migration, instance, disk_info,
@@ -207,7 +207,7 @@ class XenAPIDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mount_device = vol['mount_device'].rpartition("/")[2]
-            self._volumeops.attach_volume(connection_info,
+            self.attach_volume(connection_info,
                     instance['name'], mount_device)
 
     def snapshot(self, context, instance, image_id):
