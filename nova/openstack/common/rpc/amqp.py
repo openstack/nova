@@ -34,6 +34,7 @@ from eventlet import greenpool
 from eventlet import pools
 from eventlet import semaphore
 
+from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import local
@@ -416,3 +417,10 @@ def notify(conf, context, topic, msg, connection_pool):
 def cleanup(connection_pool):
     if connection_pool:
         connection_pool.empty()
+
+
+def get_control_exchange(conf):
+    try:
+        return conf.control_exchange
+    except cfg.NoSuchOptError:
+        return 'openstack'
