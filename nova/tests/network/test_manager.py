@@ -427,7 +427,8 @@ class VlanNetworkTestCase(test.TestCase):
                               'virtual_interface_get_by_instance_and_network')
 
         db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'uuid': '42'})
+                        mox.IgnoreArg()).AndReturn({'uuid': '42',
+                                                    'display_name': HOST})
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
@@ -442,7 +443,7 @@ class VlanNetworkTestCase(test.TestCase):
 
         network = dict(networks[0])
         network['vpn_private_address'] = '192.168.0.2'
-        self.network.allocate_fixed_ip(None, 0, network, vpn=True)
+        self.network.allocate_fixed_ip(self.context, 0, network, vpn=True)
 
     def test_vpn_allocate_fixed_ip_no_network_id(self):
         network = dict(networks[0])
@@ -466,7 +467,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get')
 
         db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'uuid': FAKEUUID})
+                    mox.IgnoreArg()).AndReturn({'display_name': HOST,
+                                                'uuid': FAKEUUID})
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
@@ -877,7 +879,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
 
         db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'uuid': FAKEUUID})
+                        mox.IgnoreArg()).AndReturn({'uuid': FAKEUUID,
+                                                    'display_name': HOST})
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
