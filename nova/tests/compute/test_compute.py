@@ -568,6 +568,25 @@ class ComputeTestCase(BaseTestCase):
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
 
+    def test_run_instance_dealloc_network_instance_not_found(self):
+        """ spawn network deallocate test.
+
+        Make sure that when an instance is not found during spawn
+        that the network is deallocated"""
+        instance = self._create_instance()
+
+        def fake(*args, **kwargs):
+            raise exception.InstanceNotFound()
+
+        self.stubs.Set(self.compute.driver, 'spawn', fake)
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.compute._deallocate_network(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.InstanceNotFound,
+                          self.compute.run_instance,
+                          self.context, instance=instance)
+
     def test_can_terminate_on_error_state(self):
         """Make sure that the instance can be terminated in ERROR state"""
         elevated = context.get_admin_context()
