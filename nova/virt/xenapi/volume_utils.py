@@ -275,7 +275,15 @@ def purge_sr(session, sr_ref):
     forget_sr(session, sr_rec['uuid'])
 
 
-def parse_volume_info(connection_data, mountpoint):
+def get_device_number(mountpoint):
+    device_number = mountpoint_to_number(mountpoint)
+    if device_number < 0:
+        raise StorageError(_('Unable to obtain target information'
+                ' %(mountpoint)s') % locals())
+    return device_number
+
+
+def parse_volume_info(connection_data):
     """
     Parse device_path and mountpoint as they can be used by XenAPI.
     In particular, the mountpoint (e.g. /dev/sdc) must be translated
@@ -288,7 +296,6 @@ def parse_volume_info(connection_data, mountpoint):
     db in the iscsi_target table with the necessary info and modify
     the iscsi driver to set them.
     """
-    device_number = mountpoint_to_number(mountpoint)
     volume_id = connection_data['volume_id']
     target_portal = connection_data['target_portal']
     target_host = _get_target_host(target_portal)
@@ -296,12 +303,11 @@ def parse_volume_info(connection_data, mountpoint):
     target_iqn = connection_data['target_iqn']
     LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
               volume_id, target_host, target_port, target_iqn)
-    if (device_number < 0 or
-        volume_id is None or
+    if (volume_id is None or
         target_host is None or
         target_iqn is None):
         raise StorageError(_('Unable to obtain target information'
-                ' %(connection_data)s, %(mountpoint)s') % locals())
+                ' %(connection_data)s') % locals())
     volume_info = {}
     volume_info['id'] = volume_id
     volume_info['target'] = target_host

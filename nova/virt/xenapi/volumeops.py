@@ -119,6 +119,8 @@ class VolumeOps(object):
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
         connection_data = connection_info['data']
+        dev_number = volume_utils.get_device_number(mountpoint)
+
         if 'name_label' not in connection_data:
             label = 'tempSR-%s' % connection_data['volume_id']
         else:
@@ -133,8 +135,7 @@ class VolumeOps(object):
         LOG.debug(connection_info)
         sr_params = {}
         if u'sr_uuid' not in connection_data:
-            sr_params = volume_utils.parse_volume_info(connection_data,
-                                                       mountpoint)
+            sr_params = volume_utils.parse_volume_info(connection_data)
             uuid = "FA15E-D15C-" + str(sr_params['id'])
             sr_params['sr_type'] = 'iscsi'
         else:
@@ -172,7 +173,6 @@ class VolumeOps(object):
             raise Exception(_('Unable to create VDI on SR %(sr_ref)s for'
                     ' instance %(instance_name)s') % locals())
 
-        dev_number = volume_utils.mountpoint_to_number(mountpoint)
         try:
             vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
                                           dev_number, bootable=False)
