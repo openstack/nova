@@ -64,6 +64,10 @@ On Ubuntu::
 
   sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev
 
+On Ubuntu Precise (12.04) you may also need to add the following packages::
+
+  sudo apt-get install build-dep python-mysqldb
+
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
   sudo yum install python-devel openssl-devel python-pip git
