@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2012-10-16 00:02+0000\n"
+"POT-Creation-Date: 2012-10-21 00:02+0000\n"
 "PO-Revision-Date: 2012-05-17 20:04+0000\n"
 "Last-Translator: Zbyněk Schwarz <Unknown>\n"
 "Language-Team: Czech <cs@li.org>\n"
@@ -168,7 +168,7 @@ msgid "Volume %(volume_id)s is still attached, detach volume first."
 msgstr "Svazek %(volume_id)s není k ničemu připojen"
 
 #: nova/exception.py:239 nova/api/ec2/cloud.py:389 nova/api/ec2/cloud.py:414
-#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2158
+#: nova/api/openstack/compute/contrib/keypairs.py:98 nova/compute/api.py:2190
 msgid "Keypair data is invalid"
 msgstr "Data páru klíčů jsou neplatná"
 
@@ -1936,7 +1936,7 @@ msgstr "Nelze získat metadata pro ip: %s"
 msgid "Caught error: %s"
 msgstr "Zachycena chyba: %s"
 
-#: nova/api/openstack/__init__.py:60 nova/api/openstack/wsgi.py:968
+#: nova/api/openstack/__init__.py:60 nova/api/openstack/wsgi.py:977
 #, python-format
 msgid "%(url)s returned with HTTP %(status)d"
 msgstr "%(url)s vrácena s HTTP %(status)d"
@@ -2130,12 +2130,17 @@ msgstr "V požadavku nezadán Content-Type"
 msgid "Empty body provided in request"
 msgstr "V požadavku zadáno prázdné tělo"
 
-#: nova/api/openstack/wsgi.py:898
+#: nova/api/openstack/wsgi.py:888
+#, fuzzy
+msgid "Invalid XML in request body"
+msgstr "Neplatné tělo požadavku"
+
+#: nova/api/openstack/wsgi.py:907
 #, python-format
 msgid "There is no such action: %s"
 msgstr "Žádná taková činnost: %s"
 
-#: nova/api/openstack/wsgi.py:901 nova/api/openstack/wsgi.py:914
+#: nova/api/openstack/wsgi.py:910 nova/api/openstack/wsgi.py:923
 #: nova/api/openstack/compute/server_metadata.py:58
 #: nova/api/openstack/compute/server_metadata.py:76
 #: nova/api/openstack/compute/server_metadata.py:101
@@ -2144,15 +2149,15 @@ msgstr "Žádná taková činnost: %s"
 msgid "Malformed request body"
 msgstr "Poškozené tělo požadavku"
 
-#: nova/api/openstack/wsgi.py:911
+#: nova/api/openstack/wsgi.py:920
 msgid "Unsupported Content-Type"
 msgstr "Nepodporovaný Content-Type"
 
-#: nova/api/openstack/wsgi.py:923
+#: nova/api/openstack/wsgi.py:932
 msgid "Malformed request url"
 msgstr "Poškozená url požadavku"
 
-#: nova/api/openstack/wsgi.py:971
+#: nova/api/openstack/wsgi.py:980
 #, python-format
 msgid "%(url)s returned a fault: %(e)s"
 msgstr "%(url)s vrátilo chybu: %(e)s"
@@ -3085,47 +3090,47 @@ msgstr "Pokus o jemné smazání %s"
 msgid "No host for instance, deleting immediately"
 msgstr "Žádný hostitel pro instnaci %s, okamžitě smazána"
 
-#: nova/compute/api.py:922
+#: nova/compute/api.py:925
 #, fuzzy
 msgid "host for instance is down, deleting from database"
 msgstr "Žádný hostitel pro instnaci %s, okamžitě smazána"
 
-#: nova/compute/api.py:943
+#: nova/compute/api.py:946
 #, fuzzy
 msgid "Going to try to terminate instance"
 msgstr "Pokus o ukončení %s"
 
-#: nova/compute/api.py:983
+#: nova/compute/api.py:986
 #, fuzzy
 msgid "Going to try to stop instance"
 msgstr "Pokus o zastavení %s"
 
-#: nova/compute/api.py:997
+#: nova/compute/api.py:1000
 #, fuzzy
 msgid "Going to try to start instance"
 msgstr "Pokus o spuštění %s"
 
-#: nova/compute/api.py:1061 nova/volume/api.py:264
+#: nova/compute/api.py:1064 nova/volume/api.py:264
 #: nova/volume/volume_types.py:64
 #, python-format
 msgid "Searching by: %s"
 msgstr "Hledání podle: %s"
 
-#: nova/compute/api.py:1196
+#: nova/compute/api.py:1199
 #, python-format
 msgid "Image type not recognized %s"
 msgstr "Nerozpoznaný typ obrazu %s"
 
-#: nova/compute/api.py:1305
+#: nova/compute/api.py:1308
 #, fuzzy, python-format
 msgid "snapshot for %s"
 msgstr "Spouštění snímku ve VM %s"
 
-#: nova/compute/api.py:1598
+#: nova/compute/api.py:1630
 msgid "flavor_id is None. Assuming migration."
 msgstr "flavor_id je None. Předpokládán přesun."
 
-#: nova/compute/api.py:1607
+#: nova/compute/api.py:1639
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
@@ -3134,47 +3139,47 @@ msgstr ""
 "Stará instance typu %(current_instance_type_name)s, nová instance typu "
 "%(new_instance_type_name)s"
 
-#: nova/compute/api.py:1649
+#: nova/compute/api.py:1681
 #, fuzzy, python-format
 msgid "%(overs)s quota exceeded for %(pid)s, tried to resize instance. %(msg)s"
 msgstr "Překročena kvóta pro %(pid)s, pokus o spuštění %(min_count)s instancí"
 
-#: nova/compute/api.py:1821
+#: nova/compute/api.py:1853
 msgid "Locking"
 msgstr ""
 
-#: nova/compute/api.py:1829
+#: nova/compute/api.py:1861
 msgid "Unlocking"
 msgstr ""
 
-#: nova/compute/api.py:1897
+#: nova/compute/api.py:1929
 msgid "Volume must be attached in order to detach."
 msgstr ""
 
-#: nova/compute/api.py:1982
+#: nova/compute/api.py:2014
 #, fuzzy, python-format
 msgid "Going to try to live migrate instance to %s"
 msgstr "Pokus o ukončení %s"
 
-#: nova/compute/api.py:2131
+#: nova/compute/api.py:2163
 msgid "Keypair name contains unsafe characters"
 msgstr ""
 
-#: nova/compute/api.py:2135
+#: nova/compute/api.py:2167
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr "Dvojice klíčů musí být dlouhá 1 až 255 znaků."
 
-#: nova/compute/api.py:2236
+#: nova/compute/api.py:2268
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr "Bezpečnostní skupina %s není řetězec nebo unicode"
 
-#: nova/compute/api.py:2239
+#: nova/compute/api.py:2271
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr "Bezpečnostní skupina %s nemůže být prázdná."
 
-#: nova/compute/api.py:2247
+#: nova/compute/api.py:2279
 #, fuzzy, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
@@ -3183,55 +3188,55 @@ msgstr ""
 "Hodnota (%s) parametru GroupName je neplatná. Délka překračuje maximum "
 "255 znaků."
 
-#: nova/compute/api.py:2253
+#: nova/compute/api.py:2285
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr "Bezpečnostní skupina %s by neměla být větší než 255 znaků."
 
-#: nova/compute/api.py:2273
+#: nova/compute/api.py:2305
 msgid "Quota exceeded, too many security groups."
 msgstr ""
 
-#: nova/compute/api.py:2276
+#: nova/compute/api.py:2308
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Vytvořit bezpečnostní skupinu %s"
 
-#: nova/compute/api.py:2283
+#: nova/compute/api.py:2315
 #, python-format
 msgid "Security group %s already exists"
 msgstr "Bezpečnostní skupina %s již existuje"
 
-#: nova/compute/api.py:2348
+#: nova/compute/api.py:2380
 #, fuzzy
 msgid "Security group is still in use"
 msgstr "Id bezpečnostní skupiny by mělo být celé číslo"
 
-#: nova/compute/api.py:2356
+#: nova/compute/api.py:2388
 msgid "Failed to update usages deallocating security group"
 msgstr ""
 
-#: nova/compute/api.py:2359
+#: nova/compute/api.py:2391
 #, python-format
 msgid "Delete security group %s"
 msgstr "Smazat bezpečnostní skupinu %s"
 
-#: nova/compute/api.py:2616
+#: nova/compute/api.py:2648
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "Pravidlo (%s) nenalezeno"
 
-#: nova/compute/api.py:2625
+#: nova/compute/api.py:2657
 #, fuzzy
 msgid "Quota exceeded, too many security group rules."
 msgstr "Přidávání pravidla bezpečnostní skupiny: %r"
 
-#: nova/compute/api.py:2628
+#: nova/compute/api.py:2660
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr "Povolit přístup bezpečnostní skupiny %s"
 
-#: nova/compute/api.py:2639
+#: nova/compute/api.py:2671
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr "Zrušit přístup bezpečnostní skupiny %s"
@@ -3258,78 +3263,78 @@ msgstr "Instance typu %s není nalezena ke smazání"
 msgid "Possibly task preempted."
 msgstr ""
 
-#: nova/compute/manager.py:222
+#: nova/compute/manager.py:228
 #, fuzzy, python-format
 msgid "Loading compute driver '%s'"
 msgstr "Zaznamování ovladače svazku: %s"
 
-#: nova/compute/manager.py:228
+#: nova/compute/manager.py:234
 #, python-format
 msgid "Unable to load the virtualization driver: %s"
 msgstr "Nelze načíst ovladač virtualizace: %s"
 
-#: nova/compute/manager.py:263
+#: nova/compute/manager.py:269
 msgid "Instance has been destroyed from under us while trying to set it to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:291
+#: nova/compute/manager.py:297
 #, python-format
 msgid "Current state is %(drv_state)s, state in DB is %(db_state)s."
 msgstr "Současný stav je %(drv_state)s, stav v DB je %(db_state)s."
 
-#: nova/compute/manager.py:305
+#: nova/compute/manager.py:311
 msgid "Rebooting instance after nova-compute restart."
 msgstr "Restartování instance po restartu nova-compute."
 
-#: nova/compute/manager.py:319
+#: nova/compute/manager.py:325
 #, fuzzy
 msgid "Hypervisor driver does not support resume guests"
 msgstr "Ovladač hypervizoru nepodporuje pravidla firewallu"
 
-#: nova/compute/manager.py:329
+#: nova/compute/manager.py:335
 msgid "Hypervisor driver does not support firewall rules"
 msgstr "Ovladač hypervizoru nepodporuje pravidla firewallu"
 
-#: nova/compute/manager.py:338
+#: nova/compute/manager.py:344
 msgid "Checking state"
 msgstr "Kontrola stavu"
 
-#: nova/compute/manager.py:411
+#: nova/compute/manager.py:417
 #, python-format
 msgid "Setting up bdm %s"
 msgstr "Nastavování bdm %s"
 
-#: nova/compute/manager.py:529
+#: nova/compute/manager.py:536
 #, fuzzy, python-format
 msgid "Build error: %s"
 msgstr "Chyba DB: %s"
 
-#: nova/compute/manager.py:546
+#: nova/compute/manager.py:553
 msgid "Error trying to reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:563
+#: nova/compute/manager.py:570
 msgid "Retry info not present, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:568
+#: nova/compute/manager.py:575
 msgid "No request spec, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:574
+#: nova/compute/manager.py:581
 #, python-format
 msgid "Re-scheduling instance: attempt %d"
 msgstr ""
 
-#: nova/compute/manager.py:599
+#: nova/compute/manager.py:606
 msgid "Instance build timed out. Set to error state."
 msgstr ""
 
-#: nova/compute/manager.py:630
+#: nova/compute/manager.py:637
 msgid "Instance has already been created"
 msgstr "Instance již byla vytvořena"
 
-#: nova/compute/manager.py:673
+#: nova/compute/manager.py:680
 #, python-format
 msgid ""
 "image_id=%(image_id)s, image_size_bytes=%(size_bytes)d, "
@@ -3338,7 +3343,7 @@ msgstr ""
 "ID obrázku=%(image_id)s, velkost obrázku v bajtech=%(size_bytes)d, "
 "povoleno bajtů=%(allowed_size_bytes)d"
 
-#: nova/compute/manager.py:679
+#: nova/compute/manager.py:686
 #, python-format
 msgid ""
 "Image '%(image_id)s' size %(size_bytes)d exceeded instance_type allowed "
@@ -3347,73 +3352,73 @@ msgstr ""
 "Velikost %(size_bytes)d obrázku '%(image_id)s' překročila povolenou "
 "velkost %(allowed_size_bytes)d pro typ instance"
 
-#: nova/compute/manager.py:689
+#: nova/compute/manager.py:696
 msgid "Starting instance..."
 msgstr "Spouštění instance..."
 
-#: nova/compute/manager.py:710
+#: nova/compute/manager.py:717
 msgid "Instance failed network setup"
 msgstr "Instance selhala v nastavení sítě"
 
-#: nova/compute/manager.py:714
+#: nova/compute/manager.py:721
 #, python-format
 msgid "Instance network_info: |%s|"
 msgstr "Informace o síti instance: |%s|"
 
-#: nova/compute/manager.py:727
+#: nova/compute/manager.py:734
 msgid "Instance failed block device setup"
 msgstr "Instance selhala nastavení blokového zařízení"
 
-#: nova/compute/manager.py:745
+#: nova/compute/manager.py:752
 msgid "Instance failed to spawn"
 msgstr "Instance nemohla být spuštěna"
 
-#: nova/compute/manager.py:769
+#: nova/compute/manager.py:776
 msgid "Deallocating network for instance"
 msgstr "Navrácení sítě pro instnac"
 
-#: nova/compute/manager.py:831
+#: nova/compute/manager.py:848
 #, python-format
 msgid "%(action_str)s instance"
 msgstr "%(action_str)s nstance"
 
-#: nova/compute/manager.py:862
+#: nova/compute/manager.py:879
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
 msgstr "Ignorování DiskNenalezen: %s"
 
-#: nova/compute/manager.py:865
+#: nova/compute/manager.py:882
 #, fuzzy, python-format
 msgid "Ignoring VolumeNotFound: %s"
 msgstr "Ignorování DiskNenalezen: %s"
 
-#: nova/compute/manager.py:874
+#: nova/compute/manager.py:889
 #, python-format
 msgid "terminating bdm %s"
 msgstr "ukončování bdm %s"
 
-#: nova/compute/manager.py:898
+#: nova/compute/manager.py:913
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:930 nova/compute/manager.py:1721
-#: nova/compute/manager.py:2890
+#: nova/compute/manager.py:948 nova/compute/manager.py:1745
+#: nova/compute/manager.py:2919
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr "%s. Nastavování stavu vm instance na ERROR"
 
-#: nova/compute/manager.py:1012
+#: nova/compute/manager.py:1030
 #, fuzzy
 msgid "Rebuilding instance"
 msgstr "Znovu sestavování instance %s"
 
-#: nova/compute/manager.py:1088
+#: nova/compute/manager.py:1109
 #, fuzzy
 msgid "Rebooting instance"
 msgstr "Restartování instance %s"
 
-#: nova/compute/manager.py:1100
+#: nova/compute/manager.py:1129
 #, fuzzy, python-format
 msgid ""
 "trying to reboot a non-running instance: (state: %(state)s expected: "
@@ -3422,17 +3427,17 @@ msgstr ""
 "pokus o restartování nespuštěné instance: %(instance_uuid)s (stav: "
 "%(state)s očekáváno: %(running)s)"
 
-#: nova/compute/manager.py:1114
+#: nova/compute/manager.py:1138
 #, fuzzy, python-format
 msgid "Cannot reboot instance: %(exc)s"
 msgstr "Nelze znovu sestavit instanci [%(instance_uuid)s]: %(exc)s"
 
-#: nova/compute/manager.py:1151
+#: nova/compute/manager.py:1175
 #, fuzzy
 msgid "instance snapshotting"
 msgstr "instance %s: pořizování snímku"
 
-#: nova/compute/manager.py:1157
+#: nova/compute/manager.py:1181
 #, fuzzy, python-format
 msgid ""
 "trying to snapshot a non-running instance: (state: %(state)s expected: "
@@ -3441,46 +3446,46 @@ msgstr ""
 "pokus o vytvoření snímku z nespuštěné instance: %(instance_uuid)s (stav: "
 "%(state)s očekáváno: %(running)s)"
 
-#: nova/compute/manager.py:1222
+#: nova/compute/manager.py:1246
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
 msgstr "Nalezeno %(num_images)d obrazů (střídání: %(rotation)d)"
 
-#: nova/compute/manager.py:1228
+#: nova/compute/manager.py:1252
 #, python-format
 msgid "Rotating out %d backups"
 msgstr "Střídání %d záloh"
 
-#: nova/compute/manager.py:1233
+#: nova/compute/manager.py:1257
 #, python-format
 msgid "Deleting image %s"
 msgstr "Mazání obrazu %s"
 
-#: nova/compute/manager.py:1264
+#: nova/compute/manager.py:1288
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
 msgstr "Nelze nastavit heslo správce. Instance %s není spuštěna"
 
-#: nova/compute/manager.py:1271
+#: nova/compute/manager.py:1295
 #, fuzzy
 msgid "Root password set"
 msgstr "Instance %s: Nastavení hesla root"
 
-#: nova/compute/manager.py:1281
+#: nova/compute/manager.py:1305
 msgid "set_admin_password is not implemented by this driver."
 msgstr "set_admin_password není tímto ovladačem zavedeno"
 
-#: nova/compute/manager.py:1297
+#: nova/compute/manager.py:1321
 #, fuzzy, python-format
 msgid "set_admin_password failed: %s"
 msgstr "set_admin_password není tímto ovladačem zavedeno"
 
-#: nova/compute/manager.py:1305
+#: nova/compute/manager.py:1329
 #, fuzzy
 msgid "error setting admin password"
 msgstr "Chyba při nastavování hesla správce"
 
-#: nova/compute/manager.py:1320
+#: nova/compute/manager.py:1344
 #, fuzzy, python-format
 msgid ""
 "trying to inject a file into a non-running (state: "
@@ -3489,136 +3494,136 @@ msgstr ""
 "pokus o vsunutí souboru do nespuštěné instance: %(instance_uuid)s (stav: "
 "%(current_power_state)s očekáváno: %(expected_state)s)"
 
-#: nova/compute/manager.py:1324
+#: nova/compute/manager.py:1348
 #, fuzzy, python-format
 msgid "injecting file to %(path)s"
 msgstr "Vkládání cesty souboru: '%s'"
 
-#: nova/compute/manager.py:1337
+#: nova/compute/manager.py:1361
 msgid "Rescuing"
 msgstr ""
 
-#: nova/compute/manager.py:1364
+#: nova/compute/manager.py:1388
 #, fuzzy
 msgid "Unrescuing"
 msgstr "instance %s: rušení záchrany"
 
-#: nova/compute/manager.py:1385
+#: nova/compute/manager.py:1409
 #, python-format
 msgid "Changing instance metadata according to %(diff)r"
 msgstr ""
 
-#: nova/compute/manager.py:1549
+#: nova/compute/manager.py:1573
 msgid "destination same as source!"
 msgstr "cíl stejný jako zdroj!"
 
-#: nova/compute/manager.py:1567
+#: nova/compute/manager.py:1591
 msgid "Migrating"
 msgstr ""
 
-#: nova/compute/manager.py:1774
+#: nova/compute/manager.py:1798
 #, fuzzy
 msgid "Pausing"
 msgstr "Aktualizování!"
 
-#: nova/compute/manager.py:1791
+#: nova/compute/manager.py:1815
 msgid "Unpausing"
 msgstr ""
 
-#: nova/compute/manager.py:1829
+#: nova/compute/manager.py:1853
 #, fuzzy
 msgid "Retrieving diagnostics"
 msgstr "instance %s: získávání diagnostik"
 
-#: nova/compute/manager.py:1859
+#: nova/compute/manager.py:1883
 msgid "Resuming"
 msgstr ""
 
-#: nova/compute/manager.py:1875
+#: nova/compute/manager.py:1899
 #, fuzzy
 msgid "Reset network"
 msgstr "Reset sítě"
 
-#: nova/compute/manager.py:1880
+#: nova/compute/manager.py:1904
 #, fuzzy
 msgid "Inject network info"
 msgstr "instance %s: vkládání informací o síti"
 
-#: nova/compute/manager.py:1883
+#: nova/compute/manager.py:1907
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr "network_info vkládá: |%s|"
 
-#: nova/compute/manager.py:1900
+#: nova/compute/manager.py:1924
 #, fuzzy
 msgid "Get console output"
 msgstr "Získat výstup konzole pro instanci %s"
 
-#: nova/compute/manager.py:1925
+#: nova/compute/manager.py:1949
 #, fuzzy
 msgid "Getting vnc console"
 msgstr "instance %s: získávání konzole vnc"
 
-#: nova/compute/manager.py:1953
+#: nova/compute/manager.py:1977
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr "Zavádění pomocí svazku %(volume_id)s ve %(mountpoint)s"
 
-#: nova/compute/manager.py:1996
+#: nova/compute/manager.py:2020
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "Připojování svazku %(volume_id)s do %(mountpoint)s"
 
-#: nova/compute/manager.py:2005
+#: nova/compute/manager.py:2029
 #, fuzzy, python-format
 msgid ""
 "Failed to connect to volume %(volume_id)s while attaching at "
 "%(mountpoint)s"
 msgstr "Zavádění pomocí svazku %(volume_id)s ve %(mountpoint)s"
 
-#: nova/compute/manager.py:2020
+#: nova/compute/manager.py:2044
 #, fuzzy, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr "Připojování svazku %(volume_id)s do %(mountpoint)s"
 
-#: nova/compute/manager.py:2049
+#: nova/compute/manager.py:2073
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Odpojování svazku %(volume_id)s z bodu připojení %(mp)s"
 
-#: nova/compute/manager.py:2053
+#: nova/compute/manager.py:2077
 #, fuzzy
 msgid "Detaching volume from unknown instance"
 msgstr "Odpojování svazku z neznámé instance %s"
 
-#: nova/compute/manager.py:2066
+#: nova/compute/manager.py:2090
 #, fuzzy, python-format
 msgid "Faild to detach volume %(volume_id)s from %(mp)s"
 msgstr "Připojování svazku %(volume_id)s do %(mountpoint)s"
 
-#: nova/compute/manager.py:2159
+#: nova/compute/manager.py:2183
 msgid "Instance has no volume."
 msgstr "Instance nemá svazek."
 
-#: nova/compute/manager.py:2212
+#: nova/compute/manager.py:2236
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr "Přesun před spuštěním selhal na %(dest)s"
 
-#: nova/compute/manager.py:2238
+#: nova/compute/manager.py:2262
 #, fuzzy
 msgid "_post_live_migration() is started.."
 msgstr "zahájen přesun po spuštění."
 
-#: nova/compute/manager.py:2267
+#: nova/compute/manager.py:2291
 msgid "No floating_ip found"
 msgstr "Nenalezeny žádné plovoucí ip"
 
-#: nova/compute/manager.py:2275
+#: nova/compute/manager.py:2299
 msgid "No floating_ip found."
 msgstr "Nenalezeny žádné plovoucí ip."
 
-#: nova/compute/manager.py:2277
+#: nova/compute/manager.py:2301
 #, python-format
 msgid ""
 "Live migration: Unexpected error: cannot inherit floating ip.\n"
@@ -3627,12 +3632,12 @@ msgstr ""
 "Přesun za provozu: Neočekávaná chyba: nelze zdědit plovoucí ip.\n"
 "%(e)s"
 
-#: nova/compute/manager.py:2303
+#: nova/compute/manager.py:2327
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr "Přesun instance do %(dest)s úspěšně dokončen."
 
-#: nova/compute/manager.py:2305
+#: nova/compute/manager.py:2329
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -3640,16 +3645,16 @@ msgstr ""
 "Můžete vidět tuto chybu \"libvirt: QEMU error: Domain not found: no "
 "domain with matching name.\" Tuto chybu můžete bezpečně ignorovat."
 
-#: nova/compute/manager.py:2319
+#: nova/compute/manager.py:2343
 #, fuzzy
 msgid "Post operation of migration started"
 msgstr "Spuštěna operace po migraci"
 
-#: nova/compute/manager.py:2450
+#: nova/compute/manager.py:2474
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:2476
+#: nova/compute/manager.py:2500
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
@@ -3658,59 +3663,59 @@ msgstr ""
 "Nalezeno %(migration_count)d nepotvrzených přesunů starších než "
 "%(confirm_window)d vteřin"
 
-#: nova/compute/manager.py:2481
+#: nova/compute/manager.py:2505
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:2490
+#: nova/compute/manager.py:2514
 #, fuzzy, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr "Vypínání VM pro instanci %(instance_uuid)s"
 
-#: nova/compute/manager.py:2497
+#: nova/compute/manager.py:2521
 #, fuzzy, python-format
 msgid "Instance %(instance_uuid)s not found"
 msgstr "Instance %(instance_id)s nenalezena"
 
-#: nova/compute/manager.py:2501
+#: nova/compute/manager.py:2525
 #, fuzzy
 msgid "In ERROR state"
 msgstr "Uzel je v neznámém chybovém stavu."
 
-#: nova/compute/manager.py:2508
+#: nova/compute/manager.py:2532
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, notRESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:2516
+#: nova/compute/manager.py:2540
 #, python-format
 msgid "Error auto-confirming resize: %(e)s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:2533
+#: nova/compute/manager.py:2557
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:2551
+#: nova/compute/manager.py:2575
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:2574
+#: nova/compute/manager.py:2598
 msgid "Updating bandwidth usage cache"
 msgstr "Aktualizace mezipaměti využití šířky pásma"
 
-#: nova/compute/manager.py:2639
+#: nova/compute/manager.py:2663
 msgid "Updating host status"
 msgstr "Aktualizace stavu hostitele"
 
-#: nova/compute/manager.py:2665
+#: nova/compute/manager.py:2689
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
@@ -3719,48 +3724,48 @@ msgstr ""
 "Nalezeno %(num_db_instances)s v databázi a %(num_vm_instances)s na "
 "hypervizoru."
 
-#: nova/compute/manager.py:2671 nova/compute/manager.py:2709
+#: nova/compute/manager.py:2695 nova/compute/manager.py:2733
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:2696
+#: nova/compute/manager.py:2720
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:2733
+#: nova/compute/manager.py:2757
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:2745 nova/compute/manager.py:2756
-#: nova/compute/manager.py:2770
+#: nova/compute/manager.py:2769 nova/compute/manager.py:2780
+#: nova/compute/manager.py:2794
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:2750
+#: nova/compute/manager.py:2774
 msgid "Instance is paused or suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:2763
+#: nova/compute/manager.py:2787
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:2779
+#: nova/compute/manager.py:2803
 #, fuzzy
 msgid "Instance is not (soft-)deleted."
 msgstr "Instance není zapnuta"
 
-#: nova/compute/manager.py:2787
+#: nova/compute/manager.py:2811
 msgid "FLAGS.reclaim_instance_interval <= 0, skipping..."
 msgstr "FLAGS.reclaim_instance_interval <= 0, překskování..."
 
-#: nova/compute/manager.py:2798
+#: nova/compute/manager.py:2824
 msgid "Reclaiming deleted instance"
 msgstr "Znovu získávání smazané instance"
 
-#: nova/compute/manager.py:2844
+#: nova/compute/manager.py:2873
 #, fuzzy, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
@@ -3769,7 +3774,7 @@ msgstr ""
 "Zjištěna instance se jmenovkou '%(name_label)s', která je označena jako "
 "SMAZÁNA, ale stále je přítomna na hostiteli."
 
-#: nova/compute/manager.py:2851
+#: nova/compute/manager.py:2880
 #, fuzzy, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
@@ -3778,7 +3783,7 @@ msgstr ""
 "Ničení instance se jmenovkou '%(name_label)s', která je označena jako "
 "SMAZÁNA, ale stále je přítomna na hostiteli."
 
-#: nova/compute/manager.py:2858
+#: nova/compute/manager.py:2887
 #, python-format
 msgid "Unrecognized value '%(action)s' for FLAGS.running_deleted_instance_action"
 msgstr ""
@@ -4213,21 +4218,21 @@ msgstr "Špatná předpona pro to_global_ipv6: %s"
 msgid "Bad project_id for to_global_ipv6: %s"
 msgstr "Špatné id projektu pro to_global_ipv6: %s"
 
-#: nova/network/api.py:52
+#: nova/network/api.py:53
 msgid "instance is a required argument to use @refresh_cache"
 msgstr ""
 
-#: nova/network/api.py:79
+#: nova/network/api.py:80
 #, fuzzy, python-format
 msgid "args: %s"
 msgstr "Parametry: %s"
 
-#: nova/network/api.py:80
+#: nova/network/api.py:81
 #, fuzzy, python-format
 msgid "kwargs: %s"
 msgstr "Parametry: %s"
 
-#: nova/network/api.py:217
+#: nova/network/api.py:169
 #, fuzzy, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "Přidělit adresu %(public_ip)s k instanci %(instance_id)s"
@@ -4324,46 +4329,46 @@ msgstr "Nelze při odpojení vif instance '%s'"
 msgid "Unplugged gateway interface '%s'"
 msgstr ""
 
-#: nova/network/manager.py:290
+#: nova/network/manager.py:276
 #, fuzzy, python-format
 msgid "Fixed ip %(fixed_ip_id)s not found"
 msgstr "Certifikát %(certificate_id)s nenalezen."
 
-#: nova/network/manager.py:299 nova/network/manager.py:562
+#: nova/network/manager.py:285 nova/network/manager.py:544
 #, python-format
 msgid "Interface %(interface)s not found"
 msgstr "Rozhraní %(interface)s nenalezeno"
 
-#: nova/network/manager.py:314
+#: nova/network/manager.py:300
 #, python-format
 msgid "floating IP allocation for instance |%s|"
 msgstr "Přidělení plovoucí IP pro |%s|"
 
-#: nova/network/manager.py:378
+#: nova/network/manager.py:364
 #, fuzzy
 msgid "Floating IP is not associated. Ignore."
 msgstr "Plovoucí ip %(address)s není přidružena."
 
-#: nova/network/manager.py:396
+#: nova/network/manager.py:382
 #, python-format
 msgid "Address |%(address)s| is not allocated"
 msgstr "Adresa |%(address)s| není přidělena"
 
-#: nova/network/manager.py:400
+#: nova/network/manager.py:386
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "Adresa |%(address)s| není přidělena pro Váš projekt |%(project)s|"
 
-#: nova/network/manager.py:421
+#: nova/network/manager.py:407
 #, fuzzy, python-format
 msgid "Quota exceeded for %(pid)s, tried to allocate floating IP"
 msgstr "Pro %s překročena kvóta, pokus o přidělení adresy"
 
-#: nova/network/manager.py:482
+#: nova/network/manager.py:468
 msgid "Failed to update usages deallocating floating IP"
 msgstr ""
 
-#: nova/network/manager.py:691
+#: nova/network/manager.py:670
 #, python-format
 msgid ""
 "Database inconsistency: DNS domain |%s| is registered in the Nova db but "
@@ -4373,41 +4378,41 @@ msgstr ""
 "Nesoulad databáze: Doména DNS |%s| je registrována v Nova db, ale není "
 "viditelná plovoucímu ovladači DNS ani instančnímu. Bude ignorována."
 
-#: nova/network/manager.py:737
+#: nova/network/manager.py:716
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing zone to |%(av_zone)s|."
 msgstr "Doména |%(domain)s| již existuje, změna zóny na |%(av_zone)s|."
 
-#: nova/network/manager.py:747
+#: nova/network/manager.py:726
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "Doména |%(domain)s| již existuje, změna projektu na |%(project)s|."
 
-#: nova/network/manager.py:858
+#: nova/network/manager.py:840
 #, python-format
 msgid "Disassociated %s stale fixed ip(s)"
 msgstr "%s odloučených zastaralých ip"
 
-#: nova/network/manager.py:862
+#: nova/network/manager.py:844
 msgid "setting network host"
 msgstr "nastavování hostitele sítě"
 
-#: nova/network/manager.py:976
+#: nova/network/manager.py:958
 #, fuzzy
 msgid "network allocations"
 msgstr "přidělování sítě pro instanci %s"
 
-#: nova/network/manager.py:981
+#: nova/network/manager.py:963
 #, fuzzy, python-format
 msgid "networks retrieved for instance: |%(networks)s|"
 msgstr "sítě získané pro instanci |%(instance_id)s|: |%(networks)s|"
 
-#: nova/network/manager.py:1011
+#: nova/network/manager.py:993
 #, fuzzy
 msgid "network deallocation for instance"
 msgstr "oddělení sítě pro instanci |%s|"
 
-#: nova/network/manager.py:1234
+#: nova/network/manager.py:1216
 #, fuzzy, python-format
 msgid ""
 "instance-dns-zone is |%(domain)s|, which is in availability zone "
@@ -4418,69 +4423,69 @@ msgstr ""
 " Instance |%(instance)s| je v zóně |%(zone2)s|. Nebude vytvořen žádný "
 "záznam DNS."
 
-#: nova/network/manager.py:1313
+#: nova/network/manager.py:1295
 #, python-format
 msgid "Unable to release %s because vif doesn't exist."
 msgstr ""
 
-#: nova/network/manager.py:1334
+#: nova/network/manager.py:1316
 #, python-format
 msgid "Leased IP |%(address)s|"
 msgstr "Vypůjčená IP |%(address)s|"
 
-#: nova/network/manager.py:1338
+#: nova/network/manager.py:1320
 #, python-format
 msgid "IP %s leased that is not associated"
 msgstr "Vypůjčená IP %s není přidělena"
 
-#: nova/network/manager.py:1346
+#: nova/network/manager.py:1328
 #, python-format
 msgid "IP |%s| leased that isn't allocated"
 msgstr "Vypůjčena IP |%s|, která není přidělena"
 
-#: nova/network/manager.py:1351
+#: nova/network/manager.py:1333
 #, python-format
 msgid "Released IP |%(address)s|"
 msgstr "Uvolněna IP |%(address)s|"
 
-#: nova/network/manager.py:1355
+#: nova/network/manager.py:1337
 #, python-format
 msgid "IP %s released that is not associated"
 msgstr "Uvolněna IP %s, která není přidělena"
 
-#: nova/network/manager.py:1358
+#: nova/network/manager.py:1340
 #, python-format
 msgid "IP %s released that was not leased"
 msgstr "Uvolněna IP %s, která nebyla vypůjčena"
 
-#: nova/network/manager.py:1377
+#: nova/network/manager.py:1359
 #, fuzzy, python-format
 msgid "%s must be an integer"
 msgstr "parametr offset musí být celé číslo"
 
-#: nova/network/manager.py:1401
+#: nova/network/manager.py:1383
 msgid "Maximum allowed length for 'label' is 255."
 msgstr ""
 
-#: nova/network/manager.py:1421
+#: nova/network/manager.py:1403
 #, python-format
 msgid ""
 "Subnet(s) too large, defaulting to /%s.  To override, specify "
 "network_size flag."
 msgstr ""
 
-#: nova/network/manager.py:1499
+#: nova/network/manager.py:1481
 msgid "cidr already in use"
 msgstr "cidr je již používáno"
 
-#: nova/network/manager.py:1502
+#: nova/network/manager.py:1484
 #, python-format
 msgid "requested cidr (%(cidr)s) conflicts with existing supernet (%(super)s)"
 msgstr ""
 "požadovaný cidr (%(cidr)s) je v konfliktu s existující supersítí "
 "(%(super)s)"
 
-#: nova/network/manager.py:1513
+#: nova/network/manager.py:1495
 #, python-format
 msgid ""
 "requested cidr (%(cidr)s) conflicts with existing smaller cidr "
@@ -4489,22 +4494,22 @@ msgstr ""
 "požadovaný cidr (%(cidr)s) je v konfliktu s existujícím menším cidr "
 "(%(smaller)s)"
 
-#: nova/network/manager.py:1572
+#: nova/network/manager.py:1554
 msgid "Network already exists!"
 msgstr "Síť již existuje!"
 
-#: nova/network/manager.py:1592
+#: nova/network/manager.py:1574
 #, python-format
 msgid "Network must be disassociated from project %s before delete"
 msgstr "Síť musí být odloučena od projektu %s před smazáním"
 
-#: nova/network/manager.py:2041
+#: nova/network/manager.py:2020
 msgid ""
 "The sum between the number of networks and the vlan start cannot be "
 "greater than 4094"
 msgstr "Suma mezi počtem sítí a spuštění vlan nemůže být větší než 4094"
 
-#: nova/network/manager.py:2048
+#: nova/network/manager.py:2027
 #, python-format
 msgid ""
 "The network range is not big enough to fit %(num_networks)s. Network size"
@@ -5227,17 +5232,17 @@ msgstr "Předstíraný příkaz způsobil výjimku %s"
 msgid "Reply to faked command is stdout='%(stdout)s' stderr='%(stderr)s'"
 msgstr "Odpověď na předstíraný příkaz je stdout='%(stdout)s' stderr='%(stderr)s'"
 
-#: nova/tests/fake_volume.py:175 nova/volume/api.py:90 nova/volume/api.py:318
+#: nova/tests/fake_volume.py:177 nova/volume/api.py:90 nova/volume/api.py:318
 #: nova/volume/cinder.py:159
 msgid "status must be available"
 msgstr "stav musí být dostupný"
 
-#: nova/tests/fake_volume.py:178 nova/volume/api.py:321
+#: nova/tests/fake_volume.py:180 nova/volume/api.py:321
 #: nova/volume/cinder.py:162
 msgid "already attached"
 msgstr "již připojeno"
 
-#: nova/tests/fake_volume.py:183 nova/volume/api.py:328
+#: nova/tests/fake_volume.py:185 nova/volume/api.py:328
 #: nova/volume/cinder.py:168
 msgid "already detached"
 msgstr "již odpojeno"
@@ -5361,18 +5366,18 @@ msgstr ""
 msgid "unexpected role header"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:2896
+#: nova/tests/api/openstack/compute/test_servers.py:2920
 #, fuzzy
 msgid ""
 "Quota exceeded for instances: Requested 1, but already used 10 of 10 "
 "instances"
 msgstr "Překročena kvóta pro %(pid)s, pokus o spuštění %(min_count)s instancí"
 
-#: nova/tests/api/openstack/compute/test_servers.py:2901
+#: nova/tests/api/openstack/compute/test_servers.py:2925
 msgid "Quota exceeded for ram: Requested 4096, but already used 8192 of 10240 ram"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:2906
+#: nova/tests/api/openstack/compute/test_servers.py:2930
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
@@ -5427,28 +5432,28 @@ msgstr "zobrazení_test_snímku: resp=%s"
 msgid "test_snapshot_detail: resp_dict=%s"
 msgstr "test_snímek_podrobnosti: resp_dict=%s"
 
-#: nova/tests/compute/test_compute.py:587
-#: nova/tests/compute/test_compute.py:605
-#: nova/tests/compute/test_compute.py:638
-#: nova/tests/compute/test_compute.py:663
-#: nova/tests/compute/test_compute.py:2265
+#: nova/tests/compute/test_compute.py:607
+#: nova/tests/compute/test_compute.py:625
+#: nova/tests/compute/test_compute.py:658
+#: nova/tests/compute/test_compute.py:683
+#: nova/tests/compute/test_compute.py:2306
 #, python-format
 msgid "Running instances: %s"
 msgstr "Spouštění instancí: %s"
 
-#: nova/tests/compute/test_compute.py:593
-#: nova/tests/compute/test_compute.py:628
-#: nova/tests/compute/test_compute.py:651
-#: nova/tests/compute/test_compute.py:681
+#: nova/tests/compute/test_compute.py:613
+#: nova/tests/compute/test_compute.py:648
+#: nova/tests/compute/test_compute.py:671
+#: nova/tests/compute/test_compute.py:701
 #, python-format
 msgid "After terminating instances: %s"
 msgstr "Po ukončení instancí: %s"
 
-#: nova/tests/compute/test_compute.py:1003
+#: nova/tests/compute/test_compute.py:1041
 msgid "Internal error"
 msgstr "Vnitřní chyba"
 
-#: nova/tests/compute/test_compute.py:2276
+#: nova/tests/compute/test_compute.py:2317
 #, python-format
 msgid "After force-killing instances: %s"
 msgstr "Po vynuceném ukončení instancí: %s"
@@ -5813,11 +5818,11 @@ msgstr ""
 msgid "#### RLK: cpu_arch = %s "
 msgstr "#### RLK: cpu_arch = %s "
 
-#: nova/virt/baremetal/driver.py:703
+#: nova/virt/baremetal/driver.py:698
 msgid "Updating!"
 msgstr "Aktualizování!"
 
-#: nova/virt/baremetal/driver.py:730 nova/virt/libvirt/driver.py:3031
+#: nova/virt/baremetal/driver.py:725 nova/virt/libvirt/driver.py:3023
 #: nova/virt/xenapi/host.py:148
 msgid "Updating host stats"
 msgstr "Aktualizace statistik hostitele"
@@ -5974,33 +5979,33 @@ msgstr "chyba qemu-nbd: %s"
 msgid "nbd device %s did not show up"
 msgstr "zařízení nbd %s se nezobrazilo"
 
-#: nova/virt/hyperv/driver.py:193 nova/virt/hyperv/driver.py:196
+#: nova/virt/hyperv/driver.py:189 nova/virt/hyperv/driver.py:192
 msgid "plug_vifs called"
 msgstr ""
 
-#: nova/virt/hyperv/driver.py:199
+#: nova/virt/hyperv/driver.py:195
 msgid "ensure_filtering_rules_for_instance called"
 msgstr ""
 
-#: nova/virt/hyperv/driver.py:204
+#: nova/virt/hyperv/driver.py:200
 msgid "unfilter_instance called"
 msgstr ""
 
-#: nova/virt/hyperv/driver.py:208
+#: nova/virt/hyperv/driver.py:204
 msgid "confirm_migration called"
 msgstr ""
 
-#: nova/virt/hyperv/driver.py:213
+#: nova/virt/hyperv/driver.py:209
 #, fuzzy
 msgid "finish_revert_migration called"
 msgstr "Instance %s: Spuštění dokočení vrácení přesunu"
 
-#: nova/virt/hyperv/driver.py:219
+#: nova/virt/hyperv/driver.py:215
 #, fuzzy
 msgid "finish_migration called"
 msgstr "Instance %s: Spouštění dokončení přesunu"
 
-#: nova/virt/hyperv/driver.py:222
+#: nova/virt/hyperv/driver.py:218
 #, fuzzy
 msgid "get_console_output called"
 msgstr "Získat výstup konzole pro instanci %s"
@@ -6827,22 +6832,22 @@ msgstr "přeskakování %(path)s protože vypadá jako svazek"
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2787
+#: nova/virt/libvirt/driver.py:2779
 #, fuzzy
 msgid "Starting migrate_disk_and_power_off"
 msgstr "Instance %s: Spouštění přesunu disku a vypnutí"
 
-#: nova/virt/libvirt/driver.py:2846
+#: nova/virt/libvirt/driver.py:2838
 #, fuzzy
 msgid "Instance running successfully."
 msgstr "Instance %s úspěšně běží."
 
-#: nova/virt/libvirt/driver.py:2853
+#: nova/virt/libvirt/driver.py:2845
 #, fuzzy
 msgid "Starting finish_migration"
 msgstr "Instance %s: Spouštění dokončení přesunu"
 
-#: nova/virt/libvirt/driver.py:2904
+#: nova/virt/libvirt/driver.py:2896
 #, fuzzy
 msgid "Starting finish_revert_migration"
 msgstr "Instance %s: Spuštění dokočení vrácení přesunu"
@@ -7836,19 +7841,19 @@ msgstr ""
 msgid "Could not determine key: %s"
 msgstr "Nelze dešifrovat soukromý klíč: %s"
 
-#: nova/virt/xenapi/driver.py:577
+#: nova/virt/xenapi/driver.py:572
 msgid "Host startup on XenServer is not supported."
 msgstr "Spuštění hostitele na XenServer není podporováno."
 
-#: nova/virt/xenapi/driver.py:629
+#: nova/virt/xenapi/driver.py:624
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr "Nelze se přihlásit do XenAPI (je disk Dom0 plný?)"
 
-#: nova/virt/xenapi/driver.py:667
+#: nova/virt/xenapi/driver.py:662
 msgid "Host is member of a pool, but DB says otherwise"
 msgstr ""
 
-#: nova/virt/xenapi/driver.py:751 nova/virt/xenapi/driver.py:765
+#: nova/virt/xenapi/driver.py:746 nova/virt/xenapi/driver.py:760
 #, python-format
 msgid "Got exception: %s"
 msgstr "Obdržena výjimka: %s"
