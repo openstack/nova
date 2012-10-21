@@ -460,12 +460,14 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         if self.net_type == "ethernet":
             if self.script is not None:
                 dev.append(etree.Element("script", path=self.script))
-            dev.append(etree.Element("target", dev=self.target_dev))
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
                                      mode="private"))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
+
+        if self.target_dev is not None:
+            dev.append(etree.Element("target", dev=self.target_dev))
 
         if self.vporttype is not None:
             vport = etree.Element("virtualport", type=self.vporttype)

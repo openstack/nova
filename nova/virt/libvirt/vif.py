@@ -276,6 +276,9 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
 class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
     """VIF driver for Linux Bridge when running Quantum."""
 
+    def get_bridge_name(self, network_id):
+        return ("brq" + network_id)[:LINUX_DEV_LEN]
+
     def get_dev_name(self, iface_id):
         return ("tap" + iface_id)[:LINUX_DEV_LEN]
 
@@ -284,28 +287,20 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
 
-        if CONF.libvirt_type != 'xen':
-            linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
+        bridge = self.get_bridge_name(network['id'])
+        linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(bridge, None,
+                                                           filtering=False)
 
         conf = vconfig.LibvirtConfigGuestInterface()
-
-        if CONF.libvirt_use_virtio_for_bridges:
-            conf.model = 'virtio'
-        conf.net_type = "ethernet"
         conf.target_dev = dev
-        if CONF.libvirt_type != 'xen':
-            conf.script = ""
+        conf.net_type = "bridge"
         conf.mac_addr = mapping['mac']
+        conf.source_dev = bridge
+        if CONF.libvirt_use_virtio_for_bridges:
+            conf.model = "virtio"
 
         return conf
 
     def unplug(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
-        network, mapping = vif
-        dev = self.get_dev_name(mapping['vif_uuid'])
-        try:
-            if CONF.libvirt_type != 'xen':
-                utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
-        except exception.ProcessExecutionError:
-            LOG.warning(_("Failed while unplugging vif"), instance=instance)
-            raise
+        """No action needed.  Libvirt takes care of cleanup"""
+        pass

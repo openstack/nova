@@ -483,6 +483,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj.source_dev = "br0"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
+        obj.target_dev = "tap12345678"
         obj.filtername = "clean-traffic"
         obj.filterparams.append({"key": "IP", "value": "192.168.122.1"})
 
@@ -492,6 +493,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <source bridge="br0"/>
+              <target dev="tap12345678"/>
               <filterref filter="clean-traffic">
                 <parameter name="IP" value="192.168.122.1"/>
               </filterref>
@@ -503,6 +505,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj.source_dev = "br0"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
+        obj.target_dev = "tap12345678"
         obj.vporttype = "openvswitch"
         obj.vportparams.append({"key": "instanceid", "value": "foobar"})
 
@@ -512,6 +515,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <source bridge="br0"/>
+              <target dev="tap12345678"/>
               <virtualport type="openvswitch">
                 <parameters instanceid="foobar"/>
               </virtualport>
@@ -522,6 +526,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj.net_type = "direct"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
+        obj.target_dev = "tap12345678"
         obj.source_dev = "eth0"
         obj.vporttype = "802.1Qbh"
 
@@ -531,6 +536,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <source mode="private" dev="eth0"/>
+              <target dev="tap12345678"/>
               <virtualport type="802.1Qbh"/>
             </interface>""")
 

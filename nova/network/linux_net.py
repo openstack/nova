@@ -1146,11 +1146,14 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @classmethod
     @lockutils.synchronized('ensure_bridge', 'nova-', external=True)
-    def ensure_bridge(_self, bridge, interface, net_attrs=None, gateway=True):
+    def ensure_bridge(_self, bridge, interface, net_attrs=None, gateway=True,
+                      filtering=True):
         """Create a bridge unless it already exists.
 
         :param interface: the interface to create the bridge on.
         :param net_attrs: dictionary with  attributes used to create bridge.
+        :param gateway: whether or not the bridge is a gateway.
+        :param filtering: whether or not to create filters on the bridge.
 
         If net_attrs is set, it will add the net_attrs['gateway'] to the bridge
         using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
@@ -1161,7 +1164,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         """
         if not _device_exists(bridge):
-            LOG.debug(_('Starting Bridge interface for %s'), interface)
+            LOG.debug(_('Starting Bridge %s'), bridge)
             _execute('brctl', 'addbr', bridge, run_as_root=True)
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
@@ -1173,6 +1176,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
 
         if interface:
+            msg = _('Adding interface %(interface)s to bridge %(bridge)s')
+            LOG.debug(msg % locals())
             out, err = _execute('brctl', 'addif', bridge, interface,
                                 check_exit_code=False, run_as_root=True)
 
@@ -1207,18 +1212,19 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 msg = _('Failed to add interface: %s') % err
                 raise exception.NovaException(msg)
 
-        # Don't forward traffic unless we were told to be a gateway
-        ipv4_filter = iptables_manager.ipv4['filter']
-        if gateway:
-            ipv4_filter.add_rule('FORWARD',
-                                 '--in-interface %s -j ACCEPT' % bridge)
-            ipv4_filter.add_rule('FORWARD',
-                                 '--out-interface %s -j ACCEPT' % bridge)
-        else:
-            ipv4_filter.add_rule('FORWARD',
-                                 '--in-interface %s -j DROP' % bridge)
-            ipv4_filter.add_rule('FORWARD',
-                                 '--out-interface %s -j DROP' % bridge)
+        if filtering:
+            # Don't forward traffic unless we were told to be a gateway
+            ipv4_filter = iptables_manager.ipv4['filter']
+            if gateway:
+                ipv4_filter.add_rule('FORWARD',
+                                     '--in-interface %s -j ACCEPT' % bridge)
+                ipv4_filter.add_rule('FORWARD',
+                                     '--out-interface %s -j ACCEPT' % bridge)
+            else:
+                ipv4_filter.add_rule('FORWARD',
+                                     '--in-interface %s -j DROP' % bridge)
+                ipv4_filter.add_rule('FORWARD',
+                                     '--out-interface %s -j DROP' % bridge)
 
 
 # plugs interfaces using Open vSwitch
