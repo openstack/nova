@@ -922,6 +922,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_destroy(context, instance_uuid)
         system_meta = self.db.instance_system_metadata_get(context,
             instance_uuid)
+
+        # ensure block device mappings are not leaked
+        for bdm in bdms:
+            self.db.block_device_mapping_destroy(context, bdm['id'])
+
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
