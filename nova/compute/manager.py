@@ -2078,7 +2078,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Detach volume %(volume_id)s from mountpoint %(mp)s'),
                   locals(), context=context, instance=instance)
 
-        if instance['name'] not in self.driver.list_instances():
+        if not self.driver.instance_exists(instance['name']):
             LOG.warn(_('Detaching volume from unknown instance'),
                      context=context, instance=instance)
         connection_info = jsonutils.loads(bdm['connection_info'])
