@@ -46,6 +46,10 @@ class FakeInstance(object):
 
 
 class FakeDriver(driver.ComputeDriver):
+    capabilities = {
+        "has_imagecache": True,
+        }
+
     """Fake hypervisor driver"""
 
     def __init__(self, read_only=False):

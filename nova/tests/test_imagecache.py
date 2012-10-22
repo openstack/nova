@@ -25,9 +25,11 @@ import time
 
 from nova import test
 
+from nova.compute import manager as compute_manager
 from nova.compute import vm_states
 from nova import db
 from nova import flags
+from nova.openstack.common import importutils
 from nova.openstack.common import log
 from nova import utils
 from nova.virt.libvirt import imagecache
@@ -144,30 +146,29 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertFalse(unexpected in image_cache_manager.originals)
 
     def test_list_running_instances(self):
-        self.stubs.Set(db, 'instance_get_all',
-                       lambda x: [{'image_ref': '1',
-                                   'host': FLAGS.host,
-                                   'name': 'inst-1',
-                                   'uuid': '123',
-                                   'vm_state': '',
-                                   'task_state': ''},
-                                  {'image_ref': '2',
-                                   'host': FLAGS.host,
-                                   'name': 'inst-2',
-                                   'uuid': '456',
-                                   'vm_state': '',
-                                   'task_state': ''},
-                                  {'image_ref': '2',
-                                   'host': 'remotehost',
-                                   'name': 'inst-3',
-                                   'uuid': '789',
-                                   'vm_state': '',
-                                   'task_state': ''}])
+        all_instances = [{'image_ref': '1',
+                          'host': FLAGS.host,
+                          'name': 'inst-1',
+                          'uuid': '123',
+                          'vm_state': '',
+                          'task_state': ''},
+                         {'image_ref': '2',
+                          'host': FLAGS.host,
+                          'name': 'inst-2',
+                          'uuid': '456',
+                          'vm_state': '',
+                          'task_state': ''},
+                         {'image_ref': '2',
+                          'host': 'remotehost',
+                          'name': 'inst-3',
+                          'uuid': '789',
+                          'vm_state': '',
+                          'task_state': ''}]
 
         image_cache_manager = imagecache.ImageCacheManager()
 
         # The argument here should be a context, but it's mocked out
-        image_cache_manager._list_running_instances(None)
+        image_cache_manager._list_running_instances(None, all_instances)
 
         self.assertEqual(len(image_cache_manager.used_images), 2)
         self.assertTrue(image_cache_manager.used_images['1'] ==
@@ -180,16 +181,15 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertEqual(image_cache_manager.image_popularity['2'], 2)
 
     def test_list_resizing_instances(self):
-        self.stubs.Set(db, 'instance_get_all',
-                       lambda x: [{'image_ref': '1',
-                                   'host': FLAGS.host,
-                                   'name': 'inst-1',
-                                   'uuid': '123',
-                                   'vm_state': vm_states.RESIZED,
-                                   'task_state': None}])
+        all_instances = [{'image_ref': '1',
+                          'host': FLAGS.host,
+                          'name': 'inst-1',
+                          'uuid': '123',
+                          'vm_state': vm_states.RESIZED,
+                          'task_state': None}]
 
         image_cache_manager = imagecache.ImageCacheManager()
-        image_cache_manager._list_running_instances(None)
+        image_cache_manager._list_running_instances(None, all_instances)
 
         self.assertEqual(len(image_cache_manager.used_images), 1)
         self.assertTrue(image_cache_manager.used_images['1'] ==
@@ -764,19 +764,18 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(os.path, 'isfile', lambda x: isfile(x))
 
         # Fake the database call which lists running instances
-        self.stubs.Set(db, 'instance_get_all',
-                       lambda x: [{'image_ref': '1',
-                                   'host': FLAGS.host,
-                                   'name': 'instance-1',
-                                   'uuid': '123',
-                                   'vm_state': '',
-                                   'task_state': ''},
-                                  {'image_ref': '1',
-                                   'host': FLAGS.host,
-                                   'name': 'instance-2',
-                                   'uuid': '456',
-                                   'vm_state': '',
-                                   'task_state': ''}])
+        all_instances = [{'image_ref': '1',
+                          'host': FLAGS.host,
+                          'name': 'instance-1',
+                          'uuid': '123',
+                          'vm_state': '',
+                          'task_state': ''},
+                         {'image_ref': '1',
+                          'host': FLAGS.host,
+                          'name': 'instance-2',
+                          'uuid': '456',
+                          'vm_state': '',
+                          'task_state': ''}]
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -819,7 +818,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         # And finally we can make the call we're actually testing...
         # The argument here should be a context, but it is mocked out
-        image_cache_manager.verify_base_images(None)
+        image_cache_manager.verify_base_images(None, all_instances)
 
         # Verify
         active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1)]
@@ -837,7 +836,7 @@ class ImageCacheManagerTestCase(test.TestCase):
     def test_verify_base_images_no_base(self):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
         image_cache_manager = imagecache.ImageCacheManager()
-        image_cache_manager.verify_base_images(None)
+        image_cache_manager.verify_base_images(None, [])
 
     def test_is_valid_info_file(self):
         hashed = 'e97222e91fc4241f49a7f520d1dcf446751129b3'
@@ -865,19 +864,18 @@ class ImageCacheManagerTestCase(test.TestCase):
             os.mkdir(os.path.join(tmpdir, '_base'))
 
             # Fake the database call which lists running instances
-            self.stubs.Set(db, 'instance_get_all',
-                           lambda x: [{'image_ref': '1',
-                                       'host': FLAGS.host,
-                                       'name': 'instance-1',
-                                       'uuid': '123',
-                                       'vm_state': '',
-                                       'task_state': ''},
-                                      {'image_ref': '1',
-                                       'host': FLAGS.host,
-                                       'name': 'instance-2',
-                                       'uuid': '456',
-                                       'vm_state': '',
-                                       'task_state': ''}])
+            all_instances = [{'image_ref': '1',
+                              'host': FLAGS.host,
+                              'name': 'instance-1',
+                              'uuid': '123',
+                              'vm_state': '',
+                              'task_state': ''},
+                             {'image_ref': '1',
+                              'host': FLAGS.host,
+                              'name': 'instance-2',
+                              'uuid': '456',
+                              'vm_state': '',
+                              'task_state': ''}]
 
             def touch(filename):
                 f = open(filename, 'w')
@@ -894,7 +892,30 @@ class ImageCacheManagerTestCase(test.TestCase):
             os.utime(base_filename + '.info', (old, old))
 
             image_cache_manager = imagecache.ImageCacheManager()
-            image_cache_manager.verify_base_images(None)
+            image_cache_manager.verify_base_images(None, all_instances)
 
             self.assertTrue(os.path.exists(base_filename))
             self.assertTrue(os.path.exists(base_filename + '.info'))
+
+    def test_compute_manager(self):
+        was = {'called': False}
+
+        def fake_get_all(context):
+            was['called'] = True
+            return [{'image_ref': '1',
+                     'host': FLAGS.host,
+                     'name': 'instance-1',
+                     'uuid': '123',
+                     'vm_state': '',
+                     'task_state': ''},
+                    {'image_ref': '1',
+                     'host': FLAGS.host,
+                     'name': 'instance-2',
+                     'uuid': '456',
+                     'vm_state': '',
+                     'task_state': ''}]
+
+        self.stubs.Set(db, 'instance_get_all', fake_get_all)
+        compute = importutils.import_object(FLAGS.compute_manager)
+        compute._run_image_cache_manager_pass(None)
+        self.assertTrue(was['called'])
