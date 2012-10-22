@@ -1,0 +1,5 @@
+{
+    "os-resetState": {
+        "state": "active"
+    }
+}

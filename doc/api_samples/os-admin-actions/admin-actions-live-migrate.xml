@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+    <os-migrateLive>
+        <host>6217bf142bb3491995f966af999f9f23</host>
+        <block_migration>false</block_migration>
+        <disk_over_commit>false</disk_over_commit>
+    </os-migrateLive>
