@@ -52,6 +52,7 @@ cloudpipe_opts = [
                help=_('Netmask to push into openvpn config')),
     ]
 
+flags.DECLARE('cnt_vpn_clients', 'nova.network.manager')
 FLAGS = flags.FLAGS
 FLAGS.register_opts(cloudpipe_opts)
 
