@@ -100,7 +100,7 @@ function run_tests {
     fi
   else
     tests_run=$(awk '/^Ran/ {print $2}' nosetests.log)
-    if [ "$tests_run" -eq 0 ];
+    if [ -z "$tests_run" ] || [ "$tests_run" -eq 0 ];
     then
         echo "ERROR: Zero tests ran, something is wrong!"
         echo "This is usually caused by a parse error in some python"
