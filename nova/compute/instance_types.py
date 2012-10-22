@@ -35,7 +35,7 @@ LOG = logging.getLogger(__name__)
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
 
 
-def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid=None,
+def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
            swap=None, rxtx_factor=None, is_public=True):
     """Creates instance types."""
 
@@ -45,6 +45,8 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid=None,
         swap = 0
     if rxtx_factor is None:
         rxtx_factor = 1
+    if ephemeral_gb is None:
+        ephemeral_gb = 0
 
     kwargs = {
         'memory_mb': memory,

@@ -56,6 +56,30 @@ class InstanceTypeTestCase(test.TestCase):
         """return first instance type name"""
         return instance_types.get_all_types().keys()[0]
 
+    def test_instance_type_create(self):
+        """Ensure instance types can be created"""
+        name = 'Instance create test'
+        flavor_id = '512'
+
+        original_list = instance_types.get_all_types()
+
+        # create new type and make sure values stick
+        inst_type = instance_types.create(name, 256, 1, 120,
+                                          flavorid=flavor_id)
+        self.assertEqual(inst_type['flavorid'], flavor_id)
+        self.assertEqual(inst_type['name'], name)
+        self.assertEqual(inst_type['memory_mb'], 256)
+        self.assertEqual(inst_type['vcpus'], 1)
+        self.assertEqual(inst_type['root_gb'], 120)
+        self.assertEqual(inst_type['ephemeral_gb'], 0)
+        self.assertEqual(inst_type['swap'], 0)
+        self.assertEqual(inst_type['rxtx_factor'], 1)
+
+        # make sure new type shows up in list
+        new_list = instance_types.get_all_types()
+        self.assertNotEqual(len(original_list), len(new_list),
+                            'instance type was not created')
+
     def test_instance_type_create_then_delete(self):
         """Ensure instance types can be created"""
         name = 'Small Flavor'
