@@ -87,10 +87,19 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         conf.target_bus = "virtio"
         conf.serial = connection_info.get('serial')
         netdisk_properties = connection_info['data']
-        if netdisk_properties.get('auth_enabled'):
-            conf.auth_username = netdisk_properties['auth_username']
+        auth_enabled = netdisk_properties.get('auth_enabled')
+        if (conf.source_protocol == 'rbd' and
+            FLAGS.rbd_secret_uuid):
+            conf.auth_secret_uuid = FLAGS.rbd_secret_uuid
+            auth_enabled = True  # Force authentication locally
+            if FLAGS.rbd_user:
+                conf.auth_username = FLAGS.rbd_user
+        if auth_enabled:
+            conf.auth_username = (conf.auth_username or
+                                  netdisk_properties['auth_username'])
             conf.auth_secret_type = netdisk_properties['secret_type']
-            conf.auth_secret_uuid = netdisk_properties['secret_uuid']
+            conf.auth_secret_uuid = (conf.auth_secret_uuid or
+                                     netdisk_properties['secret_uuid'])
         return conf
 
 
