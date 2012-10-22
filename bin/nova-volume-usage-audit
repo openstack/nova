@@ -67,16 +67,16 @@ if __name__ == '__main__':
     flags.FLAGS(sys.argv)
     logging.setup("nova")
     begin, end = utils.last_completed_audit_period()
-    print "Starting volume usage audit"
-    print "Creating usages for %s until %s" % (str(begin), str(end))
+    print _("Starting volume usage audit")
+    print _("Creating usages for %s until %s") % (str(begin), str(end))
     volumes = db.volume_get_active_by_window(admin_context,
                                              begin,
                                              end)
-    print "Found %d volumes" % len(volumes)
+    print _("Found %d volumes") % len(volumes)
     for volume_ref in volumes:
         try:
             volume_utils.notify_usage_exists(
                     admin_context, volume_ref)
         except Exception, e:
             print traceback.format_exc(e)
-    print "Volume usage audit completed"
+    print _("Volume usage audit completed")
