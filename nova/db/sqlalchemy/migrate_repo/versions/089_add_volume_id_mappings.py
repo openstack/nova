@@ -82,7 +82,7 @@ def upgrade(migrate_engine):
 
     if migrate_engine.name == "mysql":
         migrate_engine.execute("ALTER TABLE volume_id_mappings Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE snapshot_id_mappings "\
+        migrate_engine.execute("ALTER TABLE snapshot_id_mappings "
                 "Engine=InnoDB")
 
     volumes = Table('volumes', meta, autoload=True)

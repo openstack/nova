@@ -30,7 +30,7 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
 
-    instance_list = list(instances.select().\
+    instance_list = list(instances.select().
                         where(instances.c.deleted == True).execute())
     for table_name in TABLES:
         table = Table(table_name, meta, autoload=True)
@@ -55,7 +55,7 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
 
-    instance_list = list(instances.select().\
+    instance_list = list(instances.select().
                         where(instances.c.deleted == True).execute())
     for table_name in TABLES:
         table = Table(table_name, meta, autoload=True)

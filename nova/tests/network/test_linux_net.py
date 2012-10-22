@@ -222,7 +222,7 @@ class LinuxNetworkTestCase(test.TestCase):
                                               is_admin=True)
 
         def get_vifs(_context, instance_uuid):
-            return [vif for vif in vifs if vif['instance_uuid'] == \
+            return [vif for vif in vifs if vif['instance_uuid'] ==
                         instance_uuid]
 
         def get_instance(_context, instance_id):
