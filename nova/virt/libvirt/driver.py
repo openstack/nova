@@ -830,8 +830,11 @@ class LibvirtDriver(driver.ComputeDriver):
         (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
         state = LIBVIRT_POWER_STATE[state]
 
-        if state == power_state.RUNNING:
-            virt_dom.managedSave(0)
+        # NOTE(dkang): managedSave does not work for LXC
+        if FLAGS.libvirt_type != 'lxc':
+            if state == power_state.RUNNING:
+                virt_dom.managedSave(0)
+
         # Make the snapshot
         libvirt_utils.create_snapshot(disk_path, snapshot_name)
 
@@ -846,8 +849,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                                image_format)
             finally:
                 libvirt_utils.delete_snapshot(disk_path, snapshot_name)
-                if state == power_state.RUNNING:
-                    self._create_domain(domain=virt_dom)
+                # NOTE(dkang): because previous managedSave is not called
+                #              for LXC, _create_domain must not be called.
+                if FLAGS.libvirt_type != 'lxc':
+                    if state == power_state.RUNNING:
+                        self._create_domain(domain=virt_dom)
 
             # Upload that image to the image service
             with libvirt_utils.file_open(out_path) as image_file:
