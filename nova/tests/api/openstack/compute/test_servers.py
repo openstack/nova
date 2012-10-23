@@ -40,6 +40,7 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
 from nova.network import manager
+from nova.network import quantumv2
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
@@ -135,6 +136,11 @@ class Base64ValidationTest(test.TestCase):
         self.assertEqual(result, None)
 
 
+class QuantumV2Subclass(quantumv2.api.API):
+    """Used to ensure that API handles subclasses properly."""
+    pass
+
+
 class ServersControllerTest(test.TestCase):
 
     def setUp(self):
@@ -174,6 +180,52 @@ class ServersControllerTest(test.TestCase):
         requested_networks = [{'uuid': uuid}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertTrue((uuid, None) in res)
+
+    def test_requested_networks_quantumv2_enabled_with_port(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'port': port}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEquals(res, [(None, None, port)])
+
+    def test_requested_networks_quantumv2_enabled_with_network(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        requested_networks = [{'uuid': network}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEquals(res, [(network, None, None)])
+
+    def test_requested_networks_quantumv2_enabled_with_network_and_port(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network, 'port': port}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEquals(res, [(None, None, port)])
+
+    def test_requested_networks_quantumv2_disabled_with_port(self):
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'port': port}]
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller._get_requested_networks,
+            requested_networks)
+
+    def test_requested_networks_api_enabled_with_v2_subclass(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network, 'port': port}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEquals(res, [(None, None, port)])
+
+    def test_requested_networks_quantumv2_subclass_with_port(self):
+        cls = 'nova.tests.api.openstack.compute.test_servers.QuantumV2Subclass'
+        self.flags(network_api_class=cls)
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'port': port}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEquals(res, [(None, None, port)])
 
     def test_get_server_by_uuid(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
