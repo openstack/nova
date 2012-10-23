@@ -28,7 +28,9 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -344,7 +346,7 @@ class IptablesManager(object):
 
         self._apply()
 
-    @utils.synchronized('iptables', external=True)
+    @lockutils.synchronized('iptables', 'nova-', external=True)
     def _apply(self):
         """Apply the current in-memory set of iptables rules.
 
@@ -791,7 +793,7 @@ def kill_dhcp(dev):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
-@utils.synchronized('dnsmasq_start')
+@lockutils.synchronized('dnsmasq_start', 'nova-')
 def restart_dhcp(context, dev, network_ref):
     """(Re)starts a dnsmasq server for a given network.
 
@@ -858,7 +860,7 @@ def restart_dhcp(context, dev, network_ref):
     _add_dnsmasq_accept_rules(dev)
 
 
-@utils.synchronized('radvd_start')
+@lockutils.synchronized('radvd_start', 'nova-')
 def update_ra(context, dev, network_ref):
     conffile = _ra_file(dev, 'conf')
     conf_str = """
@@ -957,7 +959,7 @@ def _device_exists(device):
 
 def _dhcp_file(dev, kind):
     """Return path to a pid, leases or conf file for a bridge/device."""
-    utils.ensure_tree(FLAGS.networks_path)
+    fileutils.ensure_tree(FLAGS.networks_path)
     return os.path.abspath('%s/nova-%s.%s' % (FLAGS.networks_path,
                                               dev,
                                               kind))
@@ -965,7 +967,7 @@ def _dhcp_file(dev, kind):
 
 def _ra_file(dev, kind):
     """Return path to a pid or conf file for a bridge/device."""
-    utils.ensure_tree(FLAGS.networks_path)
+    fileutils.ensure_tree(FLAGS.networks_path)
     return os.path.abspath('%s/nova-ra-%s.%s' % (FLAGS.networks_path,
                                               dev,
                                               kind))
@@ -1116,7 +1118,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return interface
 
     @classmethod
-    @utils.synchronized('ensure_vlan', external=True)
+    @lockutils.synchronized('ensure_vlan', 'nova-', external=True)
     def ensure_vlan(_self, vlan_num, bridge_interface, mac_address=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
@@ -1141,7 +1143,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         return interface
 
     @classmethod
-    @utils.synchronized('ensure_bridge', external=True)
+    @lockutils.synchronized('ensure_bridge', 'nova-', external=True)
     def ensure_bridge(_self, bridge, interface, net_attrs=None, gateway=True):
         """Create a bridge unless it already exists.
 

@@ -23,6 +23,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova.network import linux_net
+from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
@@ -236,18 +237,18 @@ class LinuxNetworkTestCase(test.TestCase):
         self.flags(use_single_default_gateway=True)
 
         self.mox.StubOutWithMock(self.driver, 'write_to_file')
-        self.mox.StubOutWithMock(utils, 'ensure_tree')
+        self.mox.StubOutWithMock(fileutils, 'ensure_tree')
         self.mox.StubOutWithMock(os, 'chmod')
 
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
         os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
         os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
 
@@ -259,18 +260,18 @@ class LinuxNetworkTestCase(test.TestCase):
         self.flags(use_single_default_gateway=True)
 
         self.mox.StubOutWithMock(self.driver, 'write_to_file')
-        self.mox.StubOutWithMock(utils, 'ensure_tree')
+        self.mox.StubOutWithMock(fileutils, 'ensure_tree')
         self.mox.StubOutWithMock(os, 'chmod')
 
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
-        utils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
+        fileutils.ensure_tree(mox.IgnoreArg())
         os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
         os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
 

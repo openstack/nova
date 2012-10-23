@@ -22,6 +22,8 @@ import os
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
+from nova.openstack.common import fileutils
+from nova.openstack.common import lockutils
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt.libvirt import config
@@ -112,7 +114,8 @@ class Image(object):
         :filename: Name of the file in the image directory
         :size: Size of created image in bytes (optional)
         """
-        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
+        @lockutils.synchronized(filename, 'nova-', external=True,
+                                lock_path=self.lock_path)
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
@@ -120,7 +123,7 @@ class Image(object):
         if not os.path.exists(self.path):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
-                utils.ensure_tree(base_dir)
+                fileutils.ensure_tree(base_dir)
             base = os.path.join(base_dir, filename)
 
             self.create_image(call_if_not_exists, base, size,
@@ -143,7 +146,8 @@ class Raw(Image):
                                          instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base, external=True, lock_path=self.lock_path)
+        @lockutils.synchronized(base, 'nova-', external=True,
+                                lock_path=self.lock_path)
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
@@ -170,7 +174,8 @@ class Qcow2(Image):
                                          instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base, external=True, lock_path=self.lock_path)
+        @lockutils.synchronized(base, 'nova-', external=True,
+                                lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
             qcow2_base = base
             if size:
@@ -216,7 +221,8 @@ class Lvm(Image):
         self.sparse = FLAGS.libvirt_sparse_logical_volumes
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        @utils.synchronized(base, external=True, lock_path=self.lock_path)
+        @lockutils.synchronized(base, 'nova-', external=True,
+                                lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             resize = size > base_size

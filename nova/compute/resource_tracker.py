@@ -27,6 +27,7 @@ from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -121,7 +122,7 @@ class ResourceTracker(object):
         claim = self.begin_resource_claim(context, instance_ref, limits)
         return ResourceContextManager(context, claim, self)
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def begin_resource_claim(self, context, instance_ref, limits=None):
         """Indicate that some resources are needed for an upcoming compute
         instance build operation.
@@ -293,7 +294,7 @@ class ResourceTracker(object):
 
         return can_claim_cpu
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def finish_resource_claim(self, claim):
         """Indicate that the compute operation that previously claimed the
         resources identified by 'claim' has now completed and the resources
@@ -308,7 +309,7 @@ class ResourceTracker(object):
         if self.claims.pop(claim.claim_id, None):
             LOG.debug(_("Finishing claim: %s") % claim)
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def abort_resource_claim(self, context, claim):
         """Indicate that the operation that claimed the resources identified by
         'claim_id' has either failed or been aborted and the resources are no
@@ -328,7 +329,7 @@ class ResourceTracker(object):
             self._update_usage_from_instance(self.compute_node, claim.instance)
             self._update(context, self.compute_node)
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def update_usage(self, context, instance):
         """Update the resource usage and stats after a change in an
         instance
@@ -347,7 +348,7 @@ class ResourceTracker(object):
     def disabled(self):
         return self.compute_node is None
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def update_available_resource(self, context):
         """Override in-memory calculations of compute node resource usage based
         on data audited from the hypervisor layer.

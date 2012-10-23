@@ -24,6 +24,7 @@ import tempfile
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import version
@@ -66,7 +67,7 @@ class ConfigDriveBuilder(object):
     def _add_file(self, path, data):
         filepath = os.path.join(self.tempdir, path)
         dirname = os.path.dirname(filepath)
-        utils.ensure_tree(dirname)
+        fileutils.ensure_tree(dirname)
         with open(filepath, 'w') as f:
             f.write(data)
 

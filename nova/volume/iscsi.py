@@ -24,6 +24,7 @@ import os
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -109,7 +110,7 @@ class TgtAdm(TargetAdmin):
         # Note(jdg) tid and lun aren't used by TgtAdm but remain for
         # compatibility
 
-        utils.ensure_tree(FLAGS.volumes_dir)
+        fileutils.ensure_tree(FLAGS.volumes_dir)
 
         vol_id = name.split(':')[1]
         volume_conf = """

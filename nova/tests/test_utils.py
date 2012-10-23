@@ -543,35 +543,6 @@ class MonkeyPatchTestCase(test.TestCase):
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
 
 
-class TestFileLocks(test.TestCase):
-    def test_concurrent_green_lock_succeeds(self):
-        """Verify spawn_n greenthreads with two locks run concurrently."""
-        self.completed = False
-        with utils.tempdir() as tmpdir:
-
-            def locka(wait):
-                a = utils.InterProcessLock(os.path.join(tmpdir, 'a'))
-                with a:
-                    wait.wait()
-                self.completed = True
-
-            def lockb(wait):
-                b = utils.InterProcessLock(os.path.join(tmpdir, 'b'))
-                with b:
-                    wait.wait()
-
-            wait1 = eventlet.event.Event()
-            wait2 = eventlet.event.Event()
-            pool = greenpool.GreenPool()
-            pool.spawn_n(locka, wait1)
-            pool.spawn_n(lockb, wait2)
-            wait2.send()
-            eventlet.sleep(0)
-            wait1.send()
-            pool.waitall()
-        self.assertTrue(self.completed)
-
-
 class AuditPeriodTest(test.TestCase):
 
     def setUp(self):
@@ -778,11 +749,3 @@ class MkfsTestCase(test.TestCase):
 
         utils.mkfs('ext4', '/my/block/dev')
         utils.mkfs('swap', '/my/swap/block/dev')
-
-
-class EnsureTree(test.TestCase):
-    def test_ensure_tree(self):
-        with utils.tempdir() as tmpdir:
-            testdir = '%s/foo/bar/baz' % (tmpdir,)
-            utils.ensure_tree(testdir)
-            self.assertTrue(os.path.isdir(testdir))

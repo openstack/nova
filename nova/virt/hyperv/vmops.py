@@ -27,8 +27,8 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova import utils
 from nova.virt.hyperv import baseops
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
@@ -595,7 +595,7 @@ class VMOps(baseops.BaseOps):
 
         If cow is True, it will make a CoW image instead of a copy.
         """
-        @utils.synchronized(fname)
+        @lockutils.synchronized(fname, 'nova-')
         def call_if_not_exists(path, fn, *args, **kwargs):
                 if not os.path.exists(path):
                     fn(target=path, *args, **kwargs)

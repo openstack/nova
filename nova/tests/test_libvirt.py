@@ -37,6 +37,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -448,7 +449,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         # use for tests. So, create the path here so utils.synchronized()
         # won't delete it out from under one of the threads.
         self.lock_path = os.path.join(FLAGS.instances_path, 'locks')
-        utils.ensure_tree(self.lock_path)
+        fileutils.ensure_tree(self.lock_path)
 
         def fake_exists(fname):
             basedir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)

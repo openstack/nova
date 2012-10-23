@@ -46,6 +46,7 @@ import webob
 
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova import utils
 from nova import wsgi
 
@@ -93,7 +94,7 @@ class S3Application(wsgi.Router):
         mapper.connect('/{bucket_name}/',
                 controller=lambda *a, **kw: BucketHandler(self)(*a, **kw))
         self.directory = os.path.abspath(root_directory)
-        utils.ensure_tree(self.directory)
+        fileutils.ensure_tree(self.directory)
         self.bucket_depth = bucket_depth
         super(S3Application, self).__init__(mapper)
 
@@ -285,7 +286,7 @@ class BucketHandler(BaseRequestHandler):
             os.path.exists(path)):
             self.set_status(403)
             return
-        utils.ensure_tree(path)
+        fileutils.ensure_tree(path)
         self.finish()
 
     def delete(self, bucket_name):
@@ -334,7 +335,7 @@ class ObjectHandler(BaseRequestHandler):
             self.set_status(403)
             return
         directory = os.path.dirname(path)
-        utils.ensure_tree(directory)
+        fileutils.ensure_tree(directory)
         object_file = open(path, "w")
         object_file.write(self.request.body)
         object_file.close()

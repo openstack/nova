@@ -28,6 +28,7 @@ from lxml import etree
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -523,7 +524,7 @@ def write_stored_info(target, field=None, value=None):
         return
 
     info_file = get_info_filename(target)
-    utils.ensure_tree(os.path.dirname(info_file))
+    fileutils.ensure_tree(os.path.dirname(info_file))
 
     d = read_stored_info(info_file)
     d[field] = value
