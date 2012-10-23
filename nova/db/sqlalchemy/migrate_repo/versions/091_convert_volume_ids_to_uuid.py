@@ -14,8 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-from migrate import ForeignKeyConstraint
+from migrate import ForeignKeyConstraint, NotSupportedError
 from sqlalchemy import MetaData, select, Table
 
 from nova.openstack.common import log as logging
@@ -54,11 +53,11 @@ def upgrade(migrate_engine):
                                         name=fkey_name)
             try:
                 fkey.drop()
-            except Exception:
-                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
-                    pass
-                else:
-                    raise
+            except NotSupportedError:
+                # NOTE(sirp): sqlite doesn't support ALTER TABLE DROP
+                # CONSTRAINT and sqlalchemy-migrate doesn't yet have a
+                # work-around using temp tables.
+                pass
 
     volume_list = list(volumes.select().execute())
     for v in volume_list:
@@ -111,14 +110,8 @@ def upgrade(migrate_engine):
         if fkeys:
             fkey = ForeignKeyConstraint(columns=[column],
                                         refcolumns=[volumes.c.id])
-            try:
-                fkey.create()
-                LOG.info('Created foreign key %s' % fkey_name)
-            except Exception:
-                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
-                    pass
-                else:
-                    raise
+            fkey.create()
+            LOG.info('Created foreign key %s' % fkey_name)
 
 
 def downgrade(migrate_engine):
@@ -151,11 +144,11 @@ def downgrade(migrate_engine):
                                         name=fkey_name)
             try:
                 fkey.drop()
-            except Exception:
-                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
-                    pass
-                else:
-                    raise
+            except NotSupportedError:
+                # NOTE(sirp): sqlite doesn't support ALTER TABLE DROP
+                # CONSTRAINT and sqlalchemy-migrate doesn't yet have a
+                # work-around using temp tables.
+                pass
 
     volume_list = list(volumes.select().execute())
     for v in volume_list:
@@ -208,11 +201,5 @@ def downgrade(migrate_engine):
         if fkeys:
             fkey = ForeignKeyConstraint(columns=[column],
                                         refcolumns=[volumes.c.id])
-            try:
-                fkey.create()
-                LOG.info('Created foreign key %s' % fkey_name)
-            except Exception:
-                if migrate_engine.url.get_dialect().name.startswith('sqlite'):
-                    pass
-                else:
-                    raise
+            fkey.create()
+            LOG.info('Created foreign key %s' % fkey_name)
