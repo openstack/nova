@@ -56,10 +56,10 @@ class PolicyFileTestCase(test.TestCase):
 
             action = "example:test"
             with open(tmpfilename, "w") as policyfile:
-                policyfile.write("""{"example:test": []}""")
+                policyfile.write("""{"example:test": ""}""")
             policy.enforce(self.context, action, self.target)
             with open(tmpfilename, "w") as policyfile:
-                policyfile.write("""{"example:test": ["false:false"]}""")
+                policyfile.write("""{"example:test": "!"}""")
             # NOTE(vish): reset stored policy cache so we don't have to
             # sleep(1)
             policy._POLICY_CACHE = {}
@@ -74,19 +74,21 @@ class PolicyTestCase(test.TestCase):
         # NOTE(vish): preload rules to circumvent reloading from file
         policy.init()
         rules = {
-            "true": [],
-            "example:allowed": [],
-            "example:denied": [["false:false"]],
-            "example:get_http": [["http:http://www.example.com"]],
-            "example:my_file": [["role:compute_admin"],
-                                ["project_id:%(project_id)s"]],
-            "example:early_and_fail": [["false:false", "rule:true"]],
-            "example:early_or_success": [["rule:true"], ["false:false"]],
-            "example:lowercase_admin": [["role:admin"], ["role:sysadmin"]],
-            "example:uppercase_admin": [["role:ADMIN"], ["role:sysadmin"]],
+            "true": '@',
+            "example:allowed": '@',
+            "example:denied": "!",
+            "example:get_http": "http://www.example.com",
+            "example:my_file": "role:compute_admin or "
+                               "project_id:%(project_id)s",
+            "example:early_and_fail": "! and @",
+            "example:early_or_success": "@ or !",
+            "example:lowercase_admin": "role:admin or role:sysadmin",
+            "example:uppercase_admin": "role:ADMIN or role:sysadmin",
         }
         # NOTE(vish): then overload underlying brain
-        common_policy.set_brain(common_policy.HttpBrain(rules))
+        common_policy.set_rules(common_policy.Rules(
+                dict((k, common_policy.parse_rule(v))
+                     for k, v in rules.items())))
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
 
@@ -104,9 +106,15 @@ class PolicyTestCase(test.TestCase):
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, self.target)
 
+    def test_enforce_bad_action_noraise(self):
+        action = "example:denied"
+        result = policy.enforce(self.context, action, self.target, False)
+        self.assertEqual(result, False)
+
     def test_enforce_good_action(self):
         action = "example:allowed"
-        policy.enforce(self.context, action, self.target)
+        result = policy.enforce(self.context, action, self.target)
+        self.assertEqual(result, True)
 
     def test_enforce_http_true(self):
 
@@ -116,7 +124,7 @@ class PolicyTestCase(test.TestCase):
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
-        self.assertEqual(result, None)
+        self.assertEqual(result, True)
 
     def test_enforce_http_false(self):
 
@@ -151,8 +159,8 @@ class PolicyTestCase(test.TestCase):
         # NOTE(dprince) we mix case in the Admin role here to ensure
         # case is ignored
         admin_context = context.RequestContext('admin',
-                                                'fake',
-                                                roles=['AdMiN'])
+                                               'fake',
+                                               roles=['AdMiN'])
         policy.enforce(admin_context, lowercase_action, self.target)
         policy.enforce(admin_context, uppercase_action, self.target)
 
@@ -165,17 +173,19 @@ class DefaultPolicyTestCase(test.TestCase):
         policy.init()
 
         self.rules = {
-            "default": [],
-            "example:exist": [["false:false"]]
+            "default": '',
+            "example:exist": "!",
         }
 
-        self._set_brain('default')
+        self._set_rules('default')
 
         self.context = context.RequestContext('fake', 'fake')
 
-    def _set_brain(self, default_rule):
-        brain = common_policy.HttpBrain(self.rules, default_rule)
-        common_policy.set_brain(brain)
+    def _set_rules(self, default_rule):
+        rules = common_policy.Rules(
+            dict((k, common_policy.parse_rule(v))
+                 for k, v in self.rules.items()), default_rule)
+        common_policy.set_rules(rules)
 
     def tearDown(self):
         super(DefaultPolicyTestCase, self).tearDown()
@@ -189,6 +199,34 @@ class DefaultPolicyTestCase(test.TestCase):
         policy.enforce(self.context, "example:noexist", {})
 
     def test_default_not_found(self):
-        self._set_brain("default_noexist")
+        self._set_rules("default_noexist")
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                 self.context, "example:noexist", {})
+
+
+class IsAdminCheckTestCase(test.TestCase):
+    def test_init_true(self):
+        check = policy.IsAdminCheck('is_admin', 'True')
+
+        self.assertEqual(check.kind, 'is_admin')
+        self.assertEqual(check.match, 'True')
+        self.assertEqual(check.expected, True)
+
+    def test_init_false(self):
+        check = policy.IsAdminCheck('is_admin', 'nottrue')
+
+        self.assertEqual(check.kind, 'is_admin')
+        self.assertEqual(check.match, 'False')
+        self.assertEqual(check.expected, False)
+
+    def test_call_true(self):
+        check = policy.IsAdminCheck('is_admin', 'True')
+
+        self.assertEqual(check('target', dict(is_admin=True)), True)
+        self.assertEqual(check('target', dict(is_admin=False)), False)
+
+    def test_call_false(self):
+        check = policy.IsAdminCheck('is_admin', 'False')
+
+        self.assertEqual(check('target', dict(is_admin=True)), False)
+        self.assertEqual(check('target', dict(is_admin=False)), True)

@@ -200,9 +200,11 @@ class SimpleTenantUsageTest(test.TestCase):
 
         rules = {
             "compute_extension:simple_tenant_usage:show":
-                [["role:admin"], ["project_id:%(project_id)s"]]
+                common_policy.parse_rule([
+                    ["role:admin"], ["project_id:%(project_id)s"]
+                    ])
         }
-        common_policy.set_brain(common_policy.HttpBrain(rules))
+        common_policy.set_rules(common_policy.Rules(rules))
 
         try:
             res = req.get_response(fakes.wsgi_app(
