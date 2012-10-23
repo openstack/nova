@@ -39,7 +39,6 @@ BASE = declarative_base()
 
 class NovaBase(object):
     """Base class for Nova Models."""
-    __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     created_at = Column(DateTime, default=timeutils.utcnow)
     updated_at = Column(DateTime, onupdate=timeutils.utcnow)
@@ -568,8 +567,7 @@ class BlockDeviceMapping(BASE, NovaBase):
 class IscsiTarget(BASE, NovaBase):
     """Represents an iscsi target for a given host"""
     __tablename__ = 'iscsi_targets'
-    __table_args__ = (schema.UniqueConstraint("target_num", "host"),
-                      {'mysql_engine': 'InnoDB'})
+    __table_args__ = (schema.UniqueConstraint("target_num", "host"), )
     id = Column(Integer, primary_key=True)
     target_num = Column(Integer)
     host = Column(String(255))
@@ -686,8 +684,7 @@ class Network(BASE, NovaBase):
     """Represents a network."""
     __tablename__ = 'networks'
     __table_args__ = (schema.UniqueConstraint("vpn_public_address",
-                                              "vpn_public_port"),
-                      {'mysql_engine': 'InnoDB'})
+                                              "vpn_public_port"), )
     id = Column(Integer, primary_key=True)
     label = Column(String(255))
 
