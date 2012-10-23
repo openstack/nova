@@ -63,7 +63,6 @@ FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
     admin_context = context.get_admin_context()
-    utils.default_cfgfile()
     flags.FLAGS(sys.argv)
     logging.setup("nova")
     begin, end = utils.last_completed_audit_period()
