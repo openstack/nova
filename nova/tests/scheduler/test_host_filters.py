@@ -556,14 +556,14 @@ class HostFiltersTestCase(test.TestCase):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['DiskFilter']()
         self.flags(disk_allocation_ratio=1.0)
-        filter_properties = {'instance_type': {'root_gb': 2,
+        filter_properties = {'instance_type': {'root_gb': 11,
                                                'ephemeral_gb': 1}}
         capabilities = {'enabled': True}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
                  'capabilities': capabilities, 'service': service})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_disk_filter_oversubscribe(self):
         self._stub_service_is_up(True)
