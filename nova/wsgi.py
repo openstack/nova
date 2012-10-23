@@ -32,10 +32,21 @@ import webob.exc
 
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
-
+wsgi_opts = [
+    cfg.StrOpt('wsgi_log_format',
+            default='%(client_ip)s "%(request_line)s" status: %(status_code)s'
+                    ' len: %(body_length)s time: %(wall_seconds).7f',
+            help='A python format string that is used as the template to '
+                 'generate log lines. The following values can be formatted '
+                 'into it: client_ip, date_time, request_line, status_code, '
+                 'body_length, wall_seconds.')
+    ]
 FLAGS = flags.FLAGS
+FLAGS.register_opts(wsgi_opts)
+
 LOG = logging.getLogger(__name__)
 
 
@@ -83,7 +94,8 @@ class Server(object):
                                       self.app,
                                       protocol=self._protocol,
                                       custom_pool=self._pool,
-                                      log=self._wsgi_logger)
+                                      log=self._wsgi_logger,
+                                      log_format=FLAGS.wsgi_log_format)
 
     def stop(self):
         """Stop this server.
