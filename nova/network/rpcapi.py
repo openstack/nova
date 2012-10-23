@@ -208,14 +208,6 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('setup_networks_on_host',
                 instance_id=instance_id, host=host, teardown=teardown))
 
-    def lease_fixed_ip(self, ctxt, host, address):
-        self.cast(ctxt, self.make_msg('lease_fixed_ip', address=address),
-                topic=rpc.queue_get_for(ctxt, self.topic, host))
-
-    def release_fixed_ip(self, ctxt, host, address):
-        self.cast(ctxt, self.make_msg('release_fixed_ip', address=address),
-                topic=rpc.queue_get_for(ctxt, self.topic, host))
-
     def set_network_host(self, ctxt, network_ref):
         network_ref_p = jsonutils.to_primitive(network_ref)
         return self.call(ctxt, self.make_msg('set_network_host',
