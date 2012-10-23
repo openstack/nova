@@ -32,7 +32,6 @@ from nova import compute
 from nova.compute import instance_types
 from nova import exception
 from nova import flags
-from nova.network.quantumv2 import api as quantum_api
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
@@ -591,10 +590,15 @@ class Controller(wsgi.Controller):
         return injected_files
 
     def _is_quantum_v2(self):
-        return issubclass(
-            importutils.import_class(FLAGS.network_api_class),
-            quantum_api.API
-        )
+        # NOTE(dprince): quantumclient is not a requirement
+        try:
+            from nova.network.quantumv2 import api as quantum_api
+            return issubclass(
+                importutils.import_class(FLAGS.network_api_class),
+                quantum_api.API
+            )
+        except ImportError:
+            return False
 
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
