@@ -26,7 +26,6 @@ from nova import flags
 from nova.openstack.common import log
 from nova import utils
 from nova.virt import configdrive
-from nova.virt.libvirt import utils as virtutils
 
 
 FLAGS = flags.FLAGS
@@ -67,12 +66,12 @@ class ConfigDriveTestCase(test.TestCase):
     def test_create_configdrive_vfat(self):
         imagefile = None
         try:
-            self.mox.StubOutWithMock(virtutils, 'mkfs')
+            self.mox.StubOutWithMock(utils, 'mkfs')
             self.mox.StubOutWithMock(utils, 'execute')
             self.mox.StubOutWithMock(utils, 'trycmd')
 
-            virtutils.mkfs('vfat', mox.IgnoreArg(),
-                           label='config-2').AndReturn(None)
+            utils.mkfs('vfat', mox.IgnoreArg(),
+                       label='config-2').AndReturn(None)
             utils.trycmd('mount', '-o', 'loop', mox.IgnoreArg(),
                          mox.IgnoreArg(),
                          run_as_root=True).AndReturn((None, None))

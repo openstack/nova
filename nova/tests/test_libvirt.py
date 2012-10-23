@@ -3566,15 +3566,6 @@ disk size: 4.4M''', ''))
         finally:
             os.unlink(dst_path)
 
-    def test_mkfs(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F', '/my/block/dev')
-        utils.execute('mkswap', '/my/swap/block/dev')
-        self.mox.ReplayAll()
-
-        libvirt_utils.mkfs('ext4', '/my/block/dev')
-        libvirt_utils.mkfs('swap', '/my/swap/block/dev')
-
     def test_write_to_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
         try:
