@@ -27,7 +27,6 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import version
-from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
 
@@ -95,7 +94,7 @@ class ConfigDriveBuilder(object):
         with open(path, 'w') as f:
             f.truncate(64 * 1024 * 1024)
 
-        virtutils.mkfs('vfat', path, label='config-2')
+        utils.mkfs('vfat', path, label='config-2')
 
         mounted = False
         try:

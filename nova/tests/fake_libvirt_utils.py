@@ -48,10 +48,6 @@ def copy_image(src, dest):
     pass
 
 
-def mkfs(fs, path):
-    pass
-
-
 def resize2fs(path):
     pass
 

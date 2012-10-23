@@ -768,6 +768,18 @@ class DiffDict(test.TestCase):
         self.assertEqual(diff, dict(b=['-']))
 
 
+class MkfsTestCase(test.TestCase):
+
+    def test_mkfs(self):
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs', '-t', 'ext4', '-F', '/my/block/dev')
+        utils.execute('mkswap', '/my/swap/block/dev')
+        self.mox.ReplayAll()
+
+        utils.mkfs('ext4', '/my/block/dev')
+        utils.mkfs('swap', '/my/swap/block/dev')
+
+
 class EnsureTree(test.TestCase):
     def test_ensure_tree(self):
         with utils.tempdir() as tmpdir:

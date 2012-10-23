@@ -279,27 +279,6 @@ def copy_image(src, dest, host=None):
             execute('rsync', '--sparse', '--compress', src, dest)
 
 
-def mkfs(fs, path, label=None):
-    """Format a file or block device
-
-    :param fs: Filesystem type (examples include 'swap', 'ext3', 'ext4'
-               'btrfs', etc.)
-    :param path: Path to file or block device to format
-    :param label: Volume label to use
-    """
-    if fs == 'swap':
-        execute('mkswap', path)
-    else:
-        args = ['mkfs', '-t', fs]
-        #add -F to force no interactive excute on non-block device.
-        if fs in ['ext3', 'ext4']:
-            args.extend(['-F'])
-        if label:
-            args.extend(['-n', label])
-        args.append(path)
-        execute(*args)
-
-
 def write_to_file(path, contents, umask=None):
     """Write the given contents to a file
 

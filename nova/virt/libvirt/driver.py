@@ -1218,7 +1218,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_image('raw', target,
                                    '%d%c' % (local_size, unit))
         if fs_format:
-            libvirt_utils.mkfs(fs_format, target, label)
+            utils.mkfs(fs_format, target, label)
 
     def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type):
         self._create_local(target, ephemeral_size)
@@ -1228,7 +1228,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_swap(target, swap_mb):
         """Create a swap file of specified size"""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
-        libvirt_utils.mkfs('swap', target)
+        utils.mkfs('swap', target)
 
     @staticmethod
     def _get_console_log_path(instance_name):
