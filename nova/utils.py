@@ -499,7 +499,6 @@ class LazyPluggable(object):
                 fromlist = backend
 
             self.__backend = __import__(name, None, None, fromlist)
-            LOG.debug(_('backend %s'), self.__backend)
         return self.__backend
 
     def __getattr__(self, key):
