@@ -417,8 +417,14 @@ def find_disk(virt_dom):
     May be file or device"""
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
-    source = domain.find('devices/disk/source')
-    disk_path = source.get('file') or source.get('dev')
+    if FLAGS.libvirt_type == 'lxc':
+        source = domain.find('devices/filesystem/source')
+        disk_path = source.get('dir')
+        disk_path = disk_path[0:disk_path.rfind('rootfs')]
+        disk_path = os.path.join(disk_path, 'disk')
+    else:
+        source = domain.find('devices/disk/source')
+        disk_path = source.get('file') or source.get('dev')
 
     if not disk_path:
         raise RuntimeError(_("Can't retrieve root device path "
