@@ -1744,7 +1744,7 @@ class ComputeTestCase(BaseTestCase):
                                                 instance['uuid'],
                                                 'pre-migrating')
         self.compute.resize_instance(context, instance=instance,
-                                     migration_id=migration_ref['id'],
+                                     migration=migration_ref,
                                      image={})
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
@@ -1870,7 +1870,7 @@ class ComputeTestCase(BaseTestCase):
         #verify
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           context, instance=instance,
-                          migration_id=migration_ref['id'], image={},
+                          migration=migration_ref, image={},
                           reservations=reservations)
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
@@ -1894,7 +1894,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(context, instance=instance,
-                                     migration_id=migration_ref['id'],
+                                     migration=migration_ref,
                                      image={})
         inst = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(migration_ref['dest_compute'], inst['host'])
@@ -1940,7 +1940,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(context, instance=instance,
-                                     migration_id=migration_ref['id'],
+                                     migration=migration_ref,
                                      image={})
         self.compute.finish_resize(context,
                     migration_id=int(migration_ref['id']), disk_info={},
@@ -2029,7 +2029,7 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.RESIZE_PREP})
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           context, instance=inst_ref,
-                          migration_id=migration_ref['id'], image={},
+                          migration=migration_ref, image={},
                           reservations=reservations)
         inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)

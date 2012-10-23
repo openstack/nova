@@ -216,7 +216,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.5'
+    RPC_API_VERSION = '2.6'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1619,7 +1619,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             LOG.audit(_('Migrating'), context=context, instance=instance)
             self.compute_rpcapi.resize_instance(context, instance,
-                    migration_ref['id'], image, reservations)
+                    migration_ref, image, reservations)
 
             extra_usage_info = dict(
                     new_instance_type=instance_type['name'],
@@ -1632,20 +1632,21 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def resize_instance(self, context, instance,
-                        migration_id, image, reservations=None):
+    def resize_instance(self, context, instance, image,
+                        reservations=None, migration=None, migration_id=None):
         """Starts the migration of a running instance to another host."""
         context = context.elevated()
-        migration_ref = self.db.migration_get(context, migration_id)
+        if not migration:
+            migration = self.db.migration_get(context, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             instance_type_ref = self.db.instance_type_get(context,
-                    migration_ref.new_instance_type_id)
+                    migration['new_instance_type_id'])
 
             network_info = self._get_instance_nw_info(context, instance)
 
             self.db.migration_update(context,
-                                     migration_id,
+                                     migration['id'],
                                      {'status': 'migrating'})
 
             self._instance_update(context, instance['uuid'],
@@ -1659,7 +1660,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 context, instance['uuid'])
 
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance, migration_ref['dest_host'],
+                    context, instance, migration['dest_host'],
                     instance_type_ref, self._legacy_nw_info(network_info),
                     block_device_info)
 
@@ -1672,23 +1673,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self.volume_api.terminate_connection(context, volume,
                             connector)
 
-            if migration_ref['dest_compute'] != \
-                                    migration_ref['source_compute']:
+            if migration['dest_compute'] != migration['source_compute']:
                 self.network_api.migrate_instance_start(context, instance,
                                                            self.host)
 
             self.db.migration_update(context,
-                                     migration_id,
+                                     migration['id'],
                                      {'status': 'post-migrating'})
 
             self._instance_update(context, instance['uuid'],
-                                  host=migration_ref['dest_compute'],
+                                  host=migration['dest_compute'],
                                   task_state=task_states.RESIZE_MIGRATED,
                                   expected_task_state=task_states.
                                       RESIZE_MIGRATING)
 
-            self.compute_rpcapi.finish_resize(context, instance, migration_id,
-                image, disk_info, migration_ref['dest_compute'], reservations)
+            self.compute_rpcapi.finish_resize(context, instance,
+                    migration['id'], image, disk_info,
+                    migration['dest_compute'], reservations)
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
