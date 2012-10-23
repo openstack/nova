@@ -88,6 +88,10 @@ class ComputeDriver(object):
 
     """
 
+    capabilities = {
+        "has_imagecache": False,
+        }
+
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
         including catching up with currently running VM's on the given host."""
