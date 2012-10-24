@@ -176,18 +176,22 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         return db.volume_create(self.context, vol)
 
     @staticmethod
-    def _make_info():
+    def _make_connection_data():
+        return {
+            'volume_id': 1,
+            'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
+            'target_portal': '127.0.0.1:3260,fake',
+            'target_lun': None,
+            'auth_method': 'CHAP',
+            'auth_username': 'username',
+            'auth_password': 'password',
+        }
+
+    @classmethod
+    def _make_connection_info(cls):
         return {
             'driver_volume_type': 'iscsi',
-            'data': {
-                'volume_id': 1,
-                'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
-                'target_portal': '127.0.0.1:3260,fake',
-                'target_lun': None,
-                'auth_method': 'CHAP',
-                'auth_method': 'fake',
-                'auth_method': 'fake',
-            }
+            'data': cls._make_connection_data()
         }
 
     def test_mountpoint_to_number(self):
@@ -212,17 +216,18 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
                     '%s yielded %s, not %s' % (input, actual, expected))
 
     def test_parse_volume_info_raise_exception(self):
-        """This shows how to test helper classes' methods."""
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
-        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        vol = self._create_volume()
-        # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
                           volume_utils.parse_volume_info,
-                          self._make_info(),
+                          self._make_connection_data(),
                           'dev/sd'
                           )
-        db.volume_destroy(context.get_admin_context(), vol['id'])
+
+    def test_parse_volume_info_parsing_auth_details(self):
+        result = volume_utils.parse_volume_info(
+            self._make_connection_data(), '/dev/sda')
+
+        self.assertEquals('username', result['chapuser'])
+        self.assertEquals('password', result['chappassword'])
 
     def test_attach_volume(self):
         """This shows how to test Ops classes' methods."""
@@ -231,7 +236,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
-        result = conn.attach_volume(self._make_info(),
+        result = conn.attach_volume(self._make_connection_info(),
                                     instance.name, '/dev/sdc')
 
         # check that the VM has a VBD attached to it
