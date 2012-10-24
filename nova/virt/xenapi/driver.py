@@ -91,13 +91,6 @@ xenapi_opts = [
                default=5,
                help='Max number of times to poll for VHD to coalesce. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('xenapi_agent_path',
-               default='usr/sbin/xe-update-networking',
-               help='Specifies the path in which the xenapi guest agent '
-                    'should be located. If the agent is present, network '
-                    'configuration is not injected into the image. '
-                    'Used if compute_driver=xenapi.XenAPIDriver and '
-                    ' flat_injected=True'),
     cfg.StrOpt('xenapi_sr_base_path',
                default='/var/run/sr-mount',
                help='Base path to the storage repository'),

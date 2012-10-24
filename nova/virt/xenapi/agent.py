@@ -42,6 +42,13 @@ xenapi_agent_opts = [
                default=60,
                help='number of seconds to wait for agent reply '
                     'to resetnetwork request'),
+    cfg.StrOpt('xenapi_agent_path',
+               default='usr/sbin/xe-update-networking',
+               help='Specifies the path in which the xenapi guest agent '
+                    'should be located. If the agent is present, network '
+                    'configuration is not injected into the image. '
+                    'Used if compute_driver=xenapi.XenAPIDriver and '
+                    ' flat_injected=True'),
 ]
 
 FLAGS = flags.FLAGS
@@ -223,6 +230,36 @@ def resetnetwork(session, instance, vm_ref):
         return None
 
     return resp['message']
+
+
+def find_guest_agent(base_dir):
+    """
+    tries to locate a guest agent at the path
+    specificed by agent_rel_path
+    """
+    agent_rel_path = FLAGS.xenapi_agent_path
+    agent_path = os.path.join(base_dir, agent_rel_path)
+    if os.path.isfile(agent_path):
+        # The presence of the guest agent
+        # file indicates that this instance can
+        # reconfigure the network from xenstore data,
+        # so manipulation of files in /etc is not
+        # required
+        LOG.info(_('XenServer tools installed in this '
+                   'image are capable of network injection.  '
+                   'Networking files will not be'
+                   'manipulated'))
+        return True
+    xe_daemon_filename = os.path.join(base_dir,
+        'usr', 'sbin', 'xe-daemon')
+    if os.path.isfile(xe_daemon_filename):
+        LOG.info(_('XenServer tools are present '
+                   'in this image but are not capable '
+                   'of network injection'))
+    else:
+        LOG.info(_('XenServer tools are not '
+                   'installed in this image'))
+    return False
 
 
 class SimpleDH(object):
