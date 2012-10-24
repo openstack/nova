@@ -2998,7 +2998,5 @@ class ComputeManager(manager.SchedulerDependentManager):
         if FLAGS.image_cache_manager_interval == 0:
             return
 
-        try:
-            self.driver.manage_image_cache(context)
-        except NotImplementedError:
-            pass
+        all_instances = self.db.instance_get_all(context)
+        self.driver.manage_image_cache(context, all_instances)

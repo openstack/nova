@@ -29,7 +29,6 @@ import time
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -127,14 +126,13 @@ class ImageCacheManager(object):
                                                                 ent))):
                 self._store_image(base_dir, ent, original=False)
 
-    def _list_running_instances(self, context):
+    def _list_running_instances(self, context, all_instances):
         """List running instances (on all compute nodes)."""
         self.used_images = {}
         self.image_popularity = {}
         self.instance_names = set()
 
-        instances = db.instance_get_all(context)
-        for instance in instances:
+        for instance in all_instances:
             self.instance_names.add(instance['name'])
 
             resize_states = [task_states.RESIZE_PREP,
@@ -357,7 +355,7 @@ class ImageCacheManager(object):
                     virtutils.chown(base_file, os.getuid())
                     os.utime(base_file, None)
 
-    def verify_base_images(self, context):
+    def verify_base_images(self, context, all_instances):
         """Verify that base images are in a reasonable state."""
 
         # NOTE(mikal): The new scheme for base images is as follows -- an
@@ -379,7 +377,7 @@ class ImageCacheManager(object):
 
         LOG.debug(_('Verify base images'))
         self._list_base_images(base_dir)
-        self._list_running_instances(context)
+        self._list_running_instances(context, all_instances)
 
         # Determine what images are on disk because they're in use
         for img in self.used_images:

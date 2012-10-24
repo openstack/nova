@@ -2753,9 +2753,9 @@ class LibvirtDriver(driver.ComputeDriver):
         out, err = utils.execute('env', 'LANG=C', 'uptime')
         return out
 
-    def manage_image_cache(self, context):
+    def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
-        self.image_cache_manager.verify_base_images(context)
+        self.image_cache_manager.verify_base_images(context, all_instances)
 
     def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize):
         """Used only for cleanup in case migrate_disk_and_power_off fails"""

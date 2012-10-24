@@ -169,7 +169,7 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         return False
 
-    def manage_image_cache(self, context):
+    def manage_image_cache(self, context, all_instances):
         """
         Manage the driver's local image cache.
 
