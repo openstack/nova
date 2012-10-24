@@ -30,7 +30,6 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
-from nova.api.openstack import volume
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.compute import instance_types

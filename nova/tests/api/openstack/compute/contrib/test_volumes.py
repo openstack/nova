@@ -18,7 +18,6 @@ import datetime
 from lxml import etree
 import webob
 
-import nova
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
 from nova.compute import instance_types
@@ -29,7 +28,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova.volume import api as volume_api
+from nova.volume import cinder
 from webob import exc
 
 
@@ -148,9 +147,9 @@ class VolumeApiTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(db, 'volume_get', return_volume)
 
-        self.stubs.Set(volume_api.API, "delete", fakes.stub_volume_delete)
-        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get)
-        self.stubs.Set(volume_api.API, "get_all", fakes.stub_volume_get_all)
+        self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, "get_all", fakes.stub_volume_get_all)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -160,7 +159,7 @@ class VolumeApiTest(test.TestCase):
         self.app = fakes.wsgi_app(init_only=('os-volumes',))
 
     def test_volume_create(self):
-        self.stubs.Set(volume_api.API, "create", fakes.stub_volume_create)
+        self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)
 
         vol = {"size": 100,
                "display_name": "Volume Test Name",
@@ -202,7 +201,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
-        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         resp = req.get_response(self.app)
@@ -215,7 +214,7 @@ class VolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
-        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'

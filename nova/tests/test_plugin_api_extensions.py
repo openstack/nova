@@ -72,7 +72,6 @@ class APITestCase(test.TestCase):
 
         # Marking out the default extension paths makes this test MUCH faster.
         self.flags(osapi_compute_extension=[])
-        self.flags(osapi_volume_extension=[])
 
         found = False
         mgr = computeextensions.ExtensionManager()

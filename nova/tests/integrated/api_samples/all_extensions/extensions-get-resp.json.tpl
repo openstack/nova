@@ -329,14 +329,6 @@
             "updated": "%(timestamp)s"
         },
         {
-            "alias": "os-volume-types",
-            "description": "%(text)s",
-            "links": [],
-            "name": "VolumeTypes",
-            "namespace": "http://docs.openstack.org/compute/ext/volume_types/api/v1.1",
-            "updated": "%(timestamp)s"
-        },
-        {
             "alias": "os-volumes",
             "description": "%(text)s",
             "links": [],

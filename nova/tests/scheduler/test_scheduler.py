@@ -175,18 +175,6 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.run_instance(self.context, request_spec,
                 None, None, None, None, {})
 
-    def test_create_volume_no_valid_host_puts_volume_in_error(self):
-        self._mox_schedule_method_helper('schedule_create_volume')
-        self.mox.StubOutWithMock(db, 'volume_update')
-
-        self.manager.driver.schedule_create_volume(self.context, '1', '2',
-                None).AndRaise(exception.NoValidHost(reason=''))
-        db.volume_update(self.context, '1', {'status': 'error'})
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.NoValidHost, self.manager.create_volume,
-                          self.context, '1', '2')
-
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         fake_instance_uuid = 'fake-instance-id'
         inst = {"vm_state": "", "task_state": ""}
@@ -305,13 +293,10 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual(result, ['host2'])
 
     def _live_migration_instance(self):
-        volume1 = {'id': 31338}
-        volume2 = {'id': 31339}
         return {'id': 31337,
                 'uuid': 'fake_uuid',
                 'name': 'fake-instance',
                 'host': 'fake_host1',
-                'volumes': [volume1, volume2],
                 'power_state': power_state.RUNNING,
                 'memory_mb': 1024,
                 'root_gb': 1024,
@@ -656,48 +641,6 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         super(SchedulerDriverModuleTestCase, self).setUp()
         self.context = context.RequestContext('fake_user', 'fake_project')
 
-    def test_cast_to_volume_host_update_db_with_volume_id(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'volume_id': 31337,
-                       'extra_arg': 'meow'}
-        queue = 'fake_queue'
-
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
-        self.mox.StubOutWithMock(db, 'volume_update')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        timeutils.utcnow().AndReturn('fake-now')
-        db.volume_update(self.context, 31337,
-                {'host': host, 'scheduled_at': 'fake-now'})
-        rpc.queue_get_for(self.context, 'volume', host).AndReturn(queue)
-        rpc.cast(self.context, queue,
-                {'method': method,
-                 'args': fake_kwargs})
-
-        self.mox.ReplayAll()
-        driver.cast_to_volume_host(self.context, host, method,
-                **fake_kwargs)
-
-    def test_cast_to_volume_host_update_db_without_volume_id(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-        queue = 'fake_queue'
-
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        rpc.queue_get_for(self.context, 'volume', host).AndReturn(queue)
-        rpc.cast(self.context, queue,
-                {'method': method,
-                 'args': fake_kwargs})
-
-        self.mox.ReplayAll()
-        driver.cast_to_volume_host(self.context, host, method,
-                **fake_kwargs)
-
     def test_cast_to_compute_host_update_db_with_instance_uuid(self):
         host = 'fake_host1'
         method = 'fake_method'
@@ -751,19 +694,6 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         driver.cast_to_host(self.context, 'compute', host, method,
-                **fake_kwargs)
-
-    def test_cast_to_host_volume_topic(self):
-        host = 'fake_host1'
-        method = 'fake_method'
-        fake_kwargs = {'extra_arg': 'meow'}
-
-        self.mox.StubOutWithMock(driver, 'cast_to_volume_host')
-        driver.cast_to_volume_host(self.context, host, method,
-                **fake_kwargs)
-
-        self.mox.ReplayAll()
-        driver.cast_to_host(self.context, 'volume', host, method,
                 **fake_kwargs)
 
     def test_cast_to_host_unknown_topic(self):

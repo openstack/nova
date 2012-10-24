@@ -87,20 +87,6 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
                     'scheduler.run_instance', notifier.ERROR, payload)
 
 
-def cast_to_volume_host(context, host, method, **kwargs):
-    """Cast request to a volume host queue"""
-
-    volume_id = kwargs.get('volume_id', None)
-    if volume_id is not None:
-        now = timeutils.utcnow()
-        db.volume_update(context, volume_id,
-                {'host': host, 'scheduled_at': now})
-    rpc.cast(context,
-             rpc.queue_get_for(context, FLAGS.volume_topic, host),
-             {"method": method, "args": kwargs})
-    LOG.debug(_("Casted '%(method)s' to volume '%(host)s'") % locals())
-
-
 def instance_update_db(context, instance_uuid):
     '''Clear the host and set the scheduled_at field of an Instance.
 
@@ -127,13 +113,11 @@ def cast_to_compute_host(context, host, method, **kwargs):
 def cast_to_host(context, topic, host, method, **kwargs):
     """Generic cast to host"""
 
-    topic_mapping = {
-            FLAGS.compute_topic: cast_to_compute_host,
-            FLAGS.volume_topic: cast_to_volume_host}
+    topic_mapping = {FLAGS.compute_topic: cast_to_compute_host}
 
     func = topic_mapping.get(topic)
     if func:
-        func(context, host, method, **kwargs)
+        cast_to_compute_host(context, host, method, **kwargs)
     else:
         rpc.cast(context,
                  rpc.queue_get_for(context, topic, host),

@@ -123,9 +123,6 @@
   <extension alias="os-virtual-interfaces" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1" name="VirtualInterfaces">
     <description>%(text)s</description>
   </extension>
-  <extension alias="os-volume-types" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/volume_types/api/v1.1" name="VolumeTypes">
-    <description>%(text)s</description>
-  </extension>
   <extension alias="os-volumes" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>%(text)s</description>
   </extension>

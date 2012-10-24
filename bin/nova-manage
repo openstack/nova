@@ -777,33 +777,6 @@ class VersionCommands(object):
         self.list()
 
 
-class VolumeCommands(object):
-    """Methods for dealing with a cloud in an odd state"""
-
-    @args('--volume', dest='volume_id', metavar='<volume id>',
-            help='Volume ID')
-    def reattach(self, volume_id):
-        """Re-attach a volume that has previously been attached
-        to an instance.  Typically called after a compute host
-        has been rebooted."""
-
-        if 'cinder' in FLAGS.volume_api_class:
-            print(_("\"nova-manage volume reattach\" only valid "
-                    "when using nova-volume service"))
-            sys.exit(1)
-
-        ctxt = context.get_admin_context()
-        volume = db.volume_get(ctxt, param2id(volume_id))
-
-        if not volume['instance_id']:
-            print _("volume is not attached to an instance")
-            return
-        instance = db.instance_get(ctxt, volume['instance_id'])
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.attach_volume(ctxt, instance, volume['id'],
-                             volume['mountpoint'])
-
-
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
@@ -1207,7 +1180,6 @@ CATEGORIES = [
     ('sm', StorageManagerCommands),
     ('version', VersionCommands),
     ('vm', VmCommands),
-    ('volume', VolumeCommands),
     ('vpn', VpnCommands),
 ]
 

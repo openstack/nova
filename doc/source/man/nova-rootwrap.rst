@@ -30,8 +30,8 @@ You also need to let the nova user run nova-rootwrap as root in sudoers:
 nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap /etc/nova/rootwrap.conf *
 
 To make allowed commands node-specific, your packaging should only
-install {compute,network,volume}.filters respectively on compute, network
-and volume nodes (i.e. nova-api nodes should not have any of those files
+install {compute,network}.filters respectively on compute and network
+nodes (i.e. nova-api nodes should not have any of those files
 installed).
 
 

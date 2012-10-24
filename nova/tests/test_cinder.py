@@ -118,9 +118,6 @@ class CinderTestCase(test.TestCase):
         self.fake_client_factory = FakeClientFactory()
         self.stubs.Set(cinder.cinder_client, "Client",
                        self.fake_client_factory)
-        self.flags(
-            volume_api_class='nova.volume.cinder.API',
-        )
         self.api = cinder.API()
         catalog = [{
             "type": "volume",

@@ -18,7 +18,6 @@
 #    under the License.
 
 import copy
-import shutil
 import tempfile
 
 from nova.api.ec2 import cloud
@@ -85,8 +84,7 @@ class CinderCloudTestCase(test.TestCase):
         super(CinderCloudTestCase, self).setUp()
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   volume_api_class='nova.tests.fake_volume.API',
-                   volumes_dir=vol_tmpdir)
+                   volume_api_class='nova.tests.fake_volume.API')
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -123,7 +121,6 @@ class CinderCloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
-        self.volume = self.start_service('volume')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -143,10 +140,6 @@ class CinderCloudTestCase(test.TestCase):
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
     def tearDown(self):
-        try:
-            shutil.rmtree(FLAGS.volumes_dir)
-        except OSError, e:
-            pass
         self.volume_api.reset_fake_api(self.context)
         super(CinderCloudTestCase, self).tearDown()
         fake.FakeImageService_reset()
@@ -312,7 +305,7 @@ class CinderCloudTestCase(test.TestCase):
                     kwargs = {'name': 'bdmtest-volume',
                               'description': 'bdm test volume description',
                               'status': 'available',
-                              'host': self.volume.host,
+                              'host': 'fake',
                               'size': 1,
                               'attach_status': 'detached',
                               'volume_id': values['id']}
@@ -642,13 +635,12 @@ class CinderCloudTestCase(test.TestCase):
         kwargs = {'name': 'test-volume',
                   'description': 'test volume description',
                   'status': 'available',
-                  'host': self.volume.host,
+                  'host': 'fake',
                   'size': 1,
                   'attach_status': 'detached'}
         if volume_id:
             kwargs['volume_id'] = volume_id
         return self.volume_api.create_with_kwargs(self.context, **kwargs)
-        #return db.volume_create(self.context, kwargs)
 
     def _assert_volume_attached(self, vol, instance_uuid, mountpoint):
         self.assertEqual(vol['instance_uuid'], instance_uuid)

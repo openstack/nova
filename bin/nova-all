@@ -70,8 +70,8 @@ if __name__ == '__main__':
         except (Exception, SystemExit):
             LOG.exception(_('Failed to load %s') % mod.__name__)
 
-    for binary in ['nova-compute', 'nova-volume',
-                   'nova-network', 'nova-scheduler', 'nova-cert']:
+    for binary in ['nova-compute', 'nova-network', 'nova-scheduler',
+                   'nova-cert']:
         try:
             launcher.launch_server(service.Service.create(binary=binary))
         except (Exception, SystemExit):

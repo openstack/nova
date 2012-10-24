@@ -27,21 +27,21 @@ class fake_volume():
     instance_uuid = '4a3cd441-b9c2-11e1-afa6-0800200c9a66'
 
     def __init__(self, size, name,
-                 description, id, snapshot,
+                 description, volume_id, snapshot,
                  volume_type, metadata,
                  availability_zone):
         snapshot_id = None
         if snapshot is not None:
             snapshot_id = snapshot['id']
-        if id is None:
-            id = str(utils.gen_uuid())
+        if volume_id is None:
+            volume_id = str(utils.gen_uuid())
         self.vol = {
             'created_at': timeutils.utcnow(),
             'deleted_at': None,
             'updated_at': timeutils.utcnow(),
             'uuid': 'WTF',
             'deleted': False,
-            'id': id,
+            'id': volume_id,
             'user_id': self.user_uuid,
             'project_id': 'fake-project-id',
             'snapshot_id': snapshot_id,
@@ -133,14 +133,17 @@ class API(object):
         return v.vol
 
     def create_with_kwargs(self, context, **kwargs):
+        volume_id = kwargs.get('volume_id', None)
+        print volume_id
         v = fake_volume(kwargs['size'],
                         kwargs['name'],
                         kwargs['description'],
-                        str(kwargs.get('volume_id', None)),
+                        str(volume_id),
                         None,
                         None,
                         None,
                         None)
+        print v.vol['id']
         if kwargs.get('status', None) is not None:
             v.vol['status'] = kwargs['status']
         if kwargs['host'] is not None:
@@ -175,6 +178,7 @@ class API(object):
     def check_attach(self, context, volume):
         if volume['status'] != 'available':
             msg = _("status must be available")
+            msg = "%s" % volume
             raise exception.InvalidVolume(reason=msg)
         if volume['attach_status'] == 'attached':
             msg = _("already attached")

@@ -25,7 +25,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import volume
+from nova.volume import cinder
 
 FLAGS = flags.FLAGS
 
@@ -92,14 +92,16 @@ class SnapshotApiTest(test.TestCase):
         super(SnapshotApiTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(volume.api.API, "create_snapshot", stub_snapshot_create)
-        self.stubs.Set(volume.api.API, "create_snapshot_force",
+        self.stubs.Set(cinder.API, "create_snapshot",
+                       stub_snapshot_create)
+        self.stubs.Set(cinder.API, "create_snapshot_force",
             stub_snapshot_create)
-        self.stubs.Set(volume.api.API, "delete_snapshot", stub_snapshot_delete)
-        self.stubs.Set(volume.api.API, "get_snapshot", stub_snapshot_get)
-        self.stubs.Set(volume.api.API, "get_all_snapshots",
+        self.stubs.Set(cinder.API, "delete_snapshot",
+                       stub_snapshot_delete)
+        self.stubs.Set(cinder.API, "get_snapshot", stub_snapshot_get)
+        self.stubs.Set(cinder.API, "get_all_snapshots",
             stub_snapshot_get_all)
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],

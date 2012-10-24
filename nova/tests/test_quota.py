@@ -127,27 +127,6 @@ class QuotaIntegrationTestCase(test.TestCase):
                                             image_href=image_uuid)
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_too_many_volumes(self):
-        volume_ids = []
-        for i in range(FLAGS.quota_volumes):
-            volume_id = self._create_volume()
-            volume_ids.append(volume_id)
-        self.assertRaises(exception.QuotaError,
-                          volume.API().create,
-                          self.context, 10, '', '', None)
-        for volume_id in volume_ids:
-            db.volume_destroy(self.context, volume_id)
-
-    def test_too_many_gigabytes(self):
-        volume_ids = []
-        volume_id = self._create_volume(size=20)
-        volume_ids.append(volume_id)
-        self.assertRaises(exception.QuotaError,
-                          volume.API().create,
-                          self.context, 10, '', '', None)
-        for volume_id in volume_ids:
-            db.volume_destroy(self.context, volume_id)
-
     def test_too_many_addresses(self):
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
@@ -720,8 +699,6 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.flags(quota_instances=10,
                    quota_cores=20,
                    quota_ram=50 * 1024,
-                   quota_volumes=10,
-                   quota_gigabytes=1000,
                    quota_floating_ips=10,
                    quota_metadata_items=128,
                    quota_injected_files=5,

@@ -26,7 +26,6 @@ flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('policy_file', 'nova.policy')
-flags.DECLARE('volume_driver', 'nova.volume.manager')
 
 
 def set_defaults(conf):
@@ -44,7 +43,6 @@ def set_defaults(conf):
     conf.set_default('sqlite_synchronous', False)
     conf.set_default('use_ipv6', True)
     conf.set_default('verbose', True)
-    conf.set_default('volume_driver', 'nova.volume.driver.FakeISCSIDriver')
     conf.set_default('api_paste_config', '$state_path/etc/nova/api-paste.ini')
     conf.set_default('rpc_response_timeout', 5)
     conf.set_default('rpc_cast_timeout', 5)

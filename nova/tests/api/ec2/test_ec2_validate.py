@@ -50,7 +50,6 @@ class EC2ValidateTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')
-        self.volume = self.start_service('volume')
         self.image_service = fake.FakeImageService()
 
         self.user_id = 'fake'
