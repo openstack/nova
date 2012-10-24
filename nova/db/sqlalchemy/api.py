@@ -1151,6 +1151,29 @@ def fixed_ip_get_by_address(context, address, session=None):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_by_address_detailed(context, address, session=None):
+    # This method returns a tuple of (models.FixedIp, models.Network,
+    # models.Instance).
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FixedIp, models.Network, models.Instance).\
+        filter_by(address=address).\
+        outerjoin((models.Network,
+                   models.Network.id ==
+                   models.FixedIp.network_id)).\
+        outerjoin((models.Instance,
+                   models.Instance.uuid ==
+                   models.FixedIp.instance_uuid)).\
+        first()
+
+    if not result:
+        raise exception.FixedIpNotFoundForAddress(address=address)
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):

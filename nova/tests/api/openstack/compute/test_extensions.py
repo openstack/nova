@@ -167,6 +167,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "DiskConfig",
             "ExtendedStatus",
             "ExtendedServerAttributes",
+            "FixedIPs",
             "FlavorAccess",
             "FlavorDisabled",
             "FlavorExtraSpecs",
