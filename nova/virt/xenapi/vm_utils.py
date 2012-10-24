@@ -47,6 +47,7 @@ from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import driver
+from nova.virt.xenapi import agent
 from nova.virt.xenapi import volume_utils
 
 
@@ -2041,35 +2042,6 @@ def _mount_filesystem(dev_path, dir):
     return err
 
 
-def _find_guest_agent(base_dir, agent_rel_path):
-    """
-    tries to locate a guest agent at the path
-    specificed by agent_rel_path
-    """
-    agent_path = os.path.join(base_dir, agent_rel_path)
-    if os.path.isfile(agent_path):
-        # The presence of the guest agent
-        # file indicates that this instance can
-        # reconfigure the network from xenstore data,
-        # so manipulation of files in /etc is not
-        # required
-        LOG.info(_('XenServer tools installed in this '
-                   'image are capable of network injection.  '
-                   'Networking files will not be'
-                   'manipulated'))
-        return True
-    xe_daemon_filename = os.path.join(base_dir,
-        'usr', 'sbin', 'xe-daemon')
-    if os.path.isfile(xe_daemon_filename):
-        LOG.info(_('XenServer tools are present '
-                   'in this image but are not capable '
-                   'of network injection'))
-    else:
-        LOG.info(_('XenServer tools are not '
-                   'installed in this image'))
-    return False
-
-
 def _mounted_processing(device, key, net, metadata):
     """Callback which runs with the image VDI attached"""
     # NB: Partition 1 hardcoded
@@ -2080,7 +2052,7 @@ def _mounted_processing(device, key, net, metadata):
         if not err:
             try:
                 # This try block ensures that the umount occurs
-                if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
+                if not agent.find_guest_agent(tmpdir):
                     LOG.info(_('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we
