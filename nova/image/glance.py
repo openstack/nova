@@ -177,7 +177,7 @@ class GlanceImageService(object):
         accepted_params = ('filters', 'marker', 'limit',
                            'sort_key', 'sort_dir')
         for param in accepted_params:
-            if param in params:
+            if params.get(param):
                 _params[param] = params.get(param)
 
         # ensure filters is a dict
