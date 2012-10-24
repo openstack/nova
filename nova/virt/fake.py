@@ -277,6 +277,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
+                                           src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
         return

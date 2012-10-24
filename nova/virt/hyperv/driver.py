@@ -175,6 +175,7 @@ class HyperVDriver(driver.ComputeDriver):
             instance_ref, network_info, block_migration)
 
     def check_can_live_migrate_destination(self, ctxt, instance,
+        src_compute_info, dst_compute_info,
         block_migration, disk_over_commit):
         pass
 

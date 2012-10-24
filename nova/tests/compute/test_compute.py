@@ -2095,7 +2095,10 @@ class ComputeTestCase(BaseTestCase):
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
+        compute_info = {"compute": "info"}
 
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_compute_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -2104,10 +2107,16 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_destination_cleanup')
 
         dest_check_data = {"test": "data"}
+        self.compute._get_compute_info(
+            self.context, inst_ref['host']).AndReturn(compute_info)
+        self.compute._get_compute_info(
+            self.context, FLAGS.host).AndReturn(compute_info)
         self.compute.driver.check_can_live_migrate_destination(self.context,
-                inst_ref, True, False).AndReturn(dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(
-                self.context, inst_ref, dest_check_data)
+                inst_ref,
+                compute_info, compute_info,
+                True, False).AndReturn(dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(self.context,
+                inst_ref, dest_check_data)
         self.compute.driver.check_can_live_migrate_destination_cleanup(
                 self.context, dest_check_data)
 
@@ -2122,13 +2131,21 @@ class ComputeTestCase(BaseTestCase):
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
+        compute_info = {"compute": "info"}
 
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_compute_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
 
-        self.compute.driver.check_can_live_migrate_destination(
-                self.context, inst_ref, True, False).AndRaise(
-                        exception.Invalid())
+        self.compute._get_compute_info(
+            self.context, inst_ref['host']).AndReturn(compute_info)
+        self.compute._get_compute_info(
+            self.context, FLAGS.host).AndReturn(compute_info)
+        self.compute.driver.check_can_live_migrate_destination(self.context,
+                inst_ref,
+                compute_info, compute_info,
+                True, False).AndRaise(exception.Invalid())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.Invalid,
@@ -2142,7 +2159,10 @@ class ComputeTestCase(BaseTestCase):
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
+        compute_info = {"compute": "info"}
 
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_compute_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -2151,12 +2171,16 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_destination_cleanup')
 
         dest_check_data = {"test": "data"}
-        self.compute.driver.check_can_live_migrate_destination(
-                self.context, inst_ref, True, False).AndReturn(
-                        dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(
-                self.context, inst_ref, dest_check_data).AndRaise(
-                        exception.Invalid())
+        self.compute._get_compute_info(
+            self.context, inst_ref['host']).AndReturn(compute_info)
+        self.compute._get_compute_info(
+            self.context, FLAGS.host).AndReturn(compute_info)
+        self.compute.driver.check_can_live_migrate_destination(self.context,
+                inst_ref,
+                compute_info, compute_info,
+                True, False).AndReturn(dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(self.context,
+                inst_ref, dest_check_data).AndRaise(exception.Invalid())
         self.compute.driver.check_can_live_migrate_destination_cleanup(
                 self.context, dest_check_data)
 

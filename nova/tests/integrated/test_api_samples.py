@@ -25,6 +25,7 @@ from lxml import etree
 from nova.cloudpipe.pipelib import CloudPipe
 from nova.compute import api
 from nova import context
+from nova import db
 from nova import flags
 from nova.network.manager import NetworkManager
 from nova.openstack.common import importutils
@@ -1394,11 +1395,35 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
     def test_post_live_migrate_server(self):
         """Get api samples to server live migrate request"""
+        def fake_live_migration_src_check(self, context, instance_ref):
+            """Skip live migration scheduler checks"""
+            return
+
         def fake_live_migration_dest_check(self, context, instance_ref, dest):
             """Skip live migration scheduler checks"""
             return
+
+        def fake_live_migration_common(self, context, instance_ref, dest):
+            """Skip live migration scheduler checks"""
+            return
+        self.stubs.Set(driver.Scheduler, '_live_migration_src_check',
+                       fake_live_migration_src_check)
         self.stubs.Set(driver.Scheduler, '_live_migration_dest_check',
                        fake_live_migration_dest_check)
+        self.stubs.Set(driver.Scheduler, '_live_migration_common_check',
+                       fake_live_migration_common)
+
+        def fake_get_compute(context, host):
+            service = dict(host=host,
+                           binary='nova-compute',
+                           topic='compute',
+                           report_count=1,
+                           updated_at='foo',
+                           hypervisor_type='bar',
+                           hypervisor_version='1',
+                           disabled=False)
+            return [{'compute_node': [service]}]
+        self.stubs.Set(db, "service_get_all_compute_by_host", fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-live-migrate',

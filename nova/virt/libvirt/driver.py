@@ -2227,6 +2227,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return dic
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
+                                           src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
         """Check if it is possible to execute live migration.
@@ -2241,14 +2242,13 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         disk_available_mb = None
         if block_migration:
-            disk_available_gb = self._get_compute_info(ctxt,
-                                    FLAGS.host)['disk_available_least']
+            disk_available_gb = dst_compute_info['disk_available_least']
             disk_available_mb = \
                     (disk_available_gb * 1024) - FLAGS.reserved_host_disk_mb
 
         # Compare CPU
         src = instance_ref['host']
-        source_cpu_info = self._get_compute_info(ctxt, src)['cpu_info']
+        source_cpu_info = src_compute_info['cpu_info']
         self._compare_cpu(source_cpu_info)
 
         # Create file on storage, to be checked on source host
@@ -2300,11 +2300,6 @@ class LibvirtDriver(driver.ComputeDriver):
             reason = _("Live migration can not be used "
                        "without shared storage.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
-
-    def _get_compute_info(self, context, host):
-        """Get compute host's information specified by key"""
-        compute_node_ref = db.service_get_all_compute_by_host(context, host)
-        return compute_node_ref[0]['compute_node'][0]
 
     def _assert_dest_node_has_enough_disk(self, context, instance_ref,
                                              available_mb, disk_over_commit):

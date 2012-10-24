@@ -2398,7 +2398,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                         }
                     }
         result = self.conn.check_can_live_migrate_destination(self.context,
-                              {'host': 'host'}, True, False)
+                              {'host': 'host'},
+                              {}, {},
+                              True, False)
         self.assertEqual(expected, result)
 
     def test_check_can_live_migrate_destination_block_migration_fails(self):
@@ -2407,7 +2409,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         self.conn = xenapi_conn.XenAPIDriver(False)
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_destination,
-                          self.context, {'host': 'host'}, True, False)
+                          self.context, {'host': 'host'},
+                          {}, {},
+                          True, False)
 
     def test_check_can_live_migrate_source_with_block_migrate(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)

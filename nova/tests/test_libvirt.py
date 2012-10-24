@@ -1908,25 +1908,23 @@ class LibvirtConnTestCase(test.TestCase):
         dest = "fake_host_2"
         src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(False)
+        compute_info = {'disk_available_least': 400,
+                        'cpu_info': 'asdf',
+                        }
+        filename = "file"
 
-        self.mox.StubOutWithMock(conn, '_get_compute_info')
         self.mox.StubOutWithMock(conn, '_create_shared_storage_test_file')
         self.mox.StubOutWithMock(conn, '_compare_cpu')
 
-        conn._get_compute_info(self.context, FLAGS.host).AndReturn(
-                                              {'disk_available_least': 400})
         # _check_cpu_match
-        conn._get_compute_info(self.context,
-                               src).AndReturn({'cpu_info': "asdf"})
         conn._compare_cpu("asdf")
 
         # mounted_on_same_shared_storage
-        filename = "file"
         conn._create_shared_storage_test_file().AndReturn(filename)
 
         self.mox.ReplayAll()
         return_value = conn.check_can_live_migrate_destination(self.context,
-                                instance_ref, True)
+                instance_ref, compute_info, compute_info, True)
         self.assertDictMatch(return_value,
                              {"filename": "file",
                               'disk_available_mb': 409600,
@@ -1938,23 +1936,21 @@ class LibvirtConnTestCase(test.TestCase):
         dest = "fake_host_2"
         src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(False)
+        compute_info = {'cpu_info': 'asdf'}
+        filename = "file"
 
-        self.mox.StubOutWithMock(conn, '_get_compute_info')
         self.mox.StubOutWithMock(conn, '_create_shared_storage_test_file')
         self.mox.StubOutWithMock(conn, '_compare_cpu')
 
         # _check_cpu_match
-        conn._get_compute_info(self.context,
-                               src).AndReturn({'cpu_info': "asdf"})
         conn._compare_cpu("asdf")
 
         # mounted_on_same_shared_storage
-        filename = "file"
         conn._create_shared_storage_test_file().AndReturn(filename)
 
         self.mox.ReplayAll()
         return_value = conn.check_can_live_migrate_destination(self.context,
-                                instance_ref, False)
+                instance_ref, compute_info, compute_info, False)
         self.assertDictMatch(return_value,
                             {"filename": "file",
                              "block_migration": False,
@@ -1966,18 +1962,17 @@ class LibvirtConnTestCase(test.TestCase):
         dest = "fake_host_2"
         src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(False)
+        compute_info = {'cpu_info': 'asdf'}
 
-        self.mox.StubOutWithMock(conn, '_get_compute_info')
         self.mox.StubOutWithMock(conn, '_compare_cpu')
 
-        conn._get_compute_info(self.context, src).AndReturn(
-                {'cpu_info': "asdf"})
         conn._compare_cpu("asdf").AndRaise(exception.InvalidCPUInfo)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidCPUInfo,
                           conn.check_can_live_migrate_destination,
-                          self.context, instance_ref, False)
+                          self.context, instance_ref,
+                          compute_info, compute_info, False)
 
     def test_check_can_live_migrate_dest_cleanup_works_correctly(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
