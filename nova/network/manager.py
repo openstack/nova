@@ -2037,6 +2037,17 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         values = {'allocated': True,
                   'virtual_interface_id': vif['id']}
         self.db.fixed_ip_update(context, address, values)
+
+        if self._validate_instance_zone_for_dns_domain(context, instance):
+            name = instance['display_name']
+            uuid = instance['uuid']
+            self.instance_dns_manager.create_entry(name, address,
+                                                   "A",
+                                                   self.instance_dns_domain)
+            self.instance_dns_manager.create_entry(uuid, address,
+                                                   "A",
+                                                   self.instance_dns_domain)
+
         self._setup_network_on_host(context, network)
         return address
 
