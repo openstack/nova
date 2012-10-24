@@ -38,6 +38,12 @@ configdrive_opts = [
                default=tempfile.tempdir,
                help=('Where to put temporary files associated with '
                      'config drive creation')),
+    # force_config_drive is a string option, to allow for future behaviors
+    #  (e.g. use config_drive based on image properties)
+    cfg.StrOpt('force_config_drive',
+               default=None,
+               help='Set to force injection to take place on a config drive '
+                    '(if set, valid options are: always)'),
     ]
 
 FLAGS = flags.FLAGS
@@ -142,3 +148,11 @@ class ConfigDriveBuilder(object):
             shutil.rmtree(self.tempdir)
         except OSError, e:
             LOG.error(_('Could not remove tmpdir: %s'), str(e))
+
+
+def required_by(instance):
+    return instance.get('config_drive') or FLAGS.force_config_drive
+
+
+def enabled_for(instance):
+    return required_by(instance) or instance.get('config_drive_id')
