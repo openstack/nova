@@ -860,6 +860,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InvalidMetadataSize as error:
+            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error))
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1203,6 +1205,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InvalidMetadataSize as error:
+            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error))
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
