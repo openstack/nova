@@ -29,15 +29,18 @@ from nova import test
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 HOST_LIST = [
-        {"host_name": "host_c1", "service": "compute"},
-        {"host_name": "host_c2", "service": "compute"},
-        {"host_name": "host_v1", "service": "volume"},
-        {"host_name": "host_v2", "service": "volume"}]
+        {"host_name": "host_c1", "service": "compute", "zone": "nova"},
+        {"host_name": "host_c2", "service": "compute", "zone": "nonova"},
+        {"host_name": "host_v1", "service": "volume", "zone": "nova"},
+        {"host_name": "host_v2", "service": "volume", "zone": "nonova"}]
+HOST_LIST_NOVA_ZONE = [
+        {"host_name": "host_c1", "service": "compute", "zone": "nova"},
+        {"host_name": "host_v1", "service": "volume", "zone": "nova"}]
 SERVICES_LIST = [
-        {"host": "host_c1", "topic": "compute"},
-        {"host": "host_c2", "topic": "compute"},
-        {"host": "host_v1", "topic": "volume"},
-        {"host": "host_v2", "topic": "volume"}]
+        {"host": "host_c1", "topic": "compute", "availability_zone": "nova"},
+        {"host": "host_c2", "topic": "compute", "availability_zone": "nonova"},
+        {"host": "host_v1", "topic": "volume", "availability_zone": "nova"},
+        {"host": "host_v2", "topic": "volume", "availability_zone": "nonova"}]
 
 
 def stub_service_get_all(self, req):
@@ -97,6 +100,12 @@ def _create_instance_dict(**kwargs):
 
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
+    GET = {}
+
+
+class FakeRequestWithNovaZone(object):
+    environ = {"nova.context": context.get_admin_context()}
+    GET = {"zone": "nova"}
 
 
 class HostTestCase(test.TestCase):
@@ -129,6 +138,11 @@ class HostTestCase(test.TestCase):
         expected = [host for host in HOST_LIST
                 if host["service"] == "compute"]
         self.assertEqual(compute_hosts, expected)
+
+    def test_list_hosts_with_zone(self):
+        req = FakeRequestWithNovaZone()
+        hosts = os_hosts._list_hosts(req)
+        self.assertEqual(hosts, HOST_LIST_NOVA_ZONE)
 
     def test_disable_host(self):
         self._test_host_update('host_c1', 'status', 'disable', 'disabled')

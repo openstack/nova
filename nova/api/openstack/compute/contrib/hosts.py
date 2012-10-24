@@ -98,13 +98,18 @@ def _list_hosts(req, service=None):
     """
     context = req.environ['nova.context']
     services = db.service_get_all(context, False)
-
+    zone = ''
+    if 'zone' in req.GET:
+        zone = req.GET['zone']
+    if zone:
+        services = [s for s in services if s['availability_zone'] == zone]
     hosts = []
     for host in services:
-        hosts.append({"host_name": host['host'], 'service': host['topic']})
+        hosts.append({"host_name": host['host'], 'service': host['topic'],
+                      'zone': host['availability_zone']})
     if service:
         hosts = [host for host in hosts
-                if host["service"] == service]
+                 if host["service"] == service]
     return hosts
 
 
