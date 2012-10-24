@@ -2970,6 +2970,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 
+        if not self.driver.capabilities["has_imagecache"]:
+            return
         if FLAGS.image_cache_manager_interval == 0:
             return
 

@@ -258,6 +258,10 @@ def _get_eph_disk(ephemeral):
 
 class LibvirtDriver(driver.ComputeDriver):
 
+    capabilities = {
+        "has_imagecache": True,
+        }
+
     def __init__(self, read_only=False):
         super(LibvirtDriver, self).__init__()
 
