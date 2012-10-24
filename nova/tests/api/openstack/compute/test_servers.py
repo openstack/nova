@@ -809,9 +809,10 @@ class ServersControllerTest(test.TestCase):
 
     def test_get_servers_invalid_status(self):
         """Test getting servers by invalid status"""
-        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=unknown',
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=baloney',
                                       use_admin_context=False)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 0)
 
     def test_get_servers_deleted_status_as_user(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?status=deleted',

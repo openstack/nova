@@ -483,8 +483,7 @@ class Controller(wsgi.Controller):
         if status is not None:
             state = common.vm_state_from_status(status)
             if state is None:
-                msg = _('Invalid server status: %(status)s') % locals()
-                raise exc.HTTPBadRequest(explanation=msg)
+                return {'servers': []}
             search_opts['vm_state'] = state
 
         if 'changes-since' in search_opts:
