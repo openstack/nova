@@ -1313,7 +1313,7 @@ class ServersControllerTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
             self.controller._action_rebuild, req, FAKE_UUID, body)
 
     def test_rebuild_instance_with_metadata_value_too_long(self):
@@ -1347,7 +1347,7 @@ class ServersControllerTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
             self.controller._action_rebuild, req, FAKE_UUID, body)
 
     def test_rebuild_instance_fails_when_min_ram_too_small(self):
@@ -2541,7 +2541,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.create, req, body)
 
     def test_create_instance_metadata_value_too_long(self):
@@ -2565,7 +2565,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.create, req, body)
 
     def test_create_instance_metadata_key_blank(self):

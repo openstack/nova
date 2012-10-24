@@ -129,6 +129,9 @@ class Controller(object):
         except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
 
+        except exception.InvalidMetadataSize as error:
+            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error))
+
         except exception.QuotaError as error:
             raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error),
                                                 headers={'Retry-After': 0})

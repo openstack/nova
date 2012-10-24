@@ -263,6 +263,10 @@ class InvalidMetadata(Invalid):
     message = _("Invalid metadata") + ": %(reason)s"
 
 
+class InvalidMetadataSize(Invalid):
+    message = _("Invalid metadata size") + ": %(reason)s"
+
+
 class InvalidPortRange(Invalid):
     message = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
