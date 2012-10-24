@@ -1269,3 +1269,20 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
 
 class SimpleTenantUsageSampleXmlTest(SimpleTenantUsageSampleJsonTest):
     ctype = "xml"
+
+
+class ServerDiagnosticsSamplesJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.server_diagnostics."
+                      "Server_diagnostics")
+
+    def test_server_diagnostics_get(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s/diagnostics' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('server-diagnostics-get-resp', subs,
+                                     response)
+
+
+class ServerDiagnosticsSamplesXmlTest(ServerDiagnosticsSamplesJsonTest):
+    ctype = "xml"
