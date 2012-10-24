@@ -617,6 +617,9 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
+        bdms = db.block_device_mapping_get_all_by_instance(self.context,
+                                                           instance['uuid'])
+        self.assertEqual(len(bdms), 0)
 
     def test_terminate_no_network(self):
         # This is as reported in LP bug 1008875
