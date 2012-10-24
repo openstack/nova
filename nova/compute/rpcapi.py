@@ -135,6 +135,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.5 - Add block device and network info to reboot_instance
         2.6 - Remove migration_id, add migration to resize_instance
         2.7 - Remove migration_id, add migration to confirm_resize
+        2.8 - Remove migration_id, add migration to finish_resize
     '''
 
     #
@@ -223,13 +224,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, volume_id=volume_id),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def finish_resize(self, ctxt, instance, migration_id, image, disk_info,
+    def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
         instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
         self.cast(ctxt, self.make_msg('finish_resize',
-                instance=instance_p, migration_id=migration_id,
+                instance=instance_p, migration=migration_p,
                 image=image, disk_info=disk_info, reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='2.8')
 
     def finish_revert_resize(self, ctxt, instance, migration_id, host,
                              reservations=None):
