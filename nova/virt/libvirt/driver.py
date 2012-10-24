@@ -646,7 +646,13 @@ class LibvirtDriver(driver.ComputeDriver):
             self._conn.defineXML(domxml)
         else:
             try:
-                flags = (libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+                # NOTE(vish): We can always affect config because our
+                #             domains are persistent, but we should only
+                #             affect live if the domain is running.
+                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+                if state == power_state.RUNNING:
+                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
                 virt_dom.attachDeviceFlags(conf.to_xml(), flags)
             except Exception, ex:
                 if isinstance(ex, libvirt.libvirtError):
@@ -704,7 +710,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
                 self._conn.defineXML(domxml)
             else:
-                flags = (libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+                # NOTE(vish): We can always affect config because our
+                #             domains are persistent, but we should only
+                #             affect live if the domain is running.
+                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+                if state == power_state.RUNNING:
+                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
                 virt_dom.detachDeviceFlags(xml, flags)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
