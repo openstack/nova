@@ -339,6 +339,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             if FLAGS.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
 
+        self._report_driver_status(context)
+        self._publish_service_capabilities(context)
+
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
         LOG.debug(_('Checking state'), instance=instance)
