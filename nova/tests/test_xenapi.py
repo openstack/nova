@@ -215,19 +215,18 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
             self.assertEqual(actual, expected,
                     '%s yielded %s, not %s' % (input, actual, expected))
 
-    def test_parse_volume_info_raise_exception(self):
-        self.assertRaises(volume_utils.StorageError,
-                          volume_utils.parse_volume_info,
-                          self._make_connection_data(),
-                          'dev/sd'
-                          )
-
     def test_parse_volume_info_parsing_auth_details(self):
         result = volume_utils.parse_volume_info(
-            self._make_connection_data(), '/dev/sda')
+            self._make_connection_data())
 
         self.assertEquals('username', result['chapuser'])
         self.assertEquals('password', result['chappassword'])
+
+    def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
+        self.assertRaises(
+            volume_utils.StorageError,
+            volume_utils.get_device_number,
+            'dev/sd')
 
     def test_attach_volume(self):
         """This shows how to test Ops classes' methods."""
