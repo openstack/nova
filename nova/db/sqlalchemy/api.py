@@ -1146,7 +1146,7 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
                      join((models.Network,
                            models.Network.id == models.FixedIp.network_id)).\
                      join((models.Instance,
-                           models.Instance.uuid == \
+                           models.Instance.uuid ==
                                models.FixedIp.instance_uuid)).\
                      filter(host_filter).\
                      all()
@@ -4393,7 +4393,7 @@ def _instance_type_extra_specs_get_query(context, flavor_id,
               subquery()
     return model_query(context, models.InstanceTypeExtraSpecs,
                        session=session, read_deleted="no").\
-                       filter(models.InstanceTypeExtraSpecs.\
+                       filter(models.InstanceTypeExtraSpecs.
                               instance_type_id.in_(t))
 
 

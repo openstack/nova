@@ -97,7 +97,7 @@ class IptablesManagerTestCase(test.TestCase):
         table.remove_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
         self.assertTrue('[0:0] -A %s-FORWARD '
-                        '-s 1.2.3.4/5 -j DROP' % self.binary_name \
+                        '-s 1.2.3.4/5 -j DROP' % self.binary_name
                         not in new_lines)
 
     def test_nat_rules(self):
