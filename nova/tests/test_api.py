@@ -431,7 +431,7 @@ class ApiEc2TestCase(test.TestCase):
                 group.authorize(*args)
             except boto_exc.EC2ResponseError as e:
                 self.assertEqual(e.status, 400, 'Expected status to be 400')
-                self.assertIn(message, e.error_message, e.error_message)
+                self.assertIn(message, e.error_message)
             else:
                 raise self.failureException, 'EC2ResponseError not raised'
 

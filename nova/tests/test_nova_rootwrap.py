@@ -63,9 +63,9 @@ class RootwrapTestCase(test.TestCase):
         self.assertEqual(env.get('FLAGFILE'), 'A')
         self.assertEqual(env.get('NETWORK_ID'), 'foobar')
 
-    @test.skip_if(not os.path.exists("/proc/%d" % os.getpid()),
-                  "Test requires /proc filesystem (procfs)")
     def test_KillFilter(self):
+        if not os.path.exists("/proc/%d" % os.getpid()):
+            self.skipTest("Test requires /proc filesystem (procfs)")
         p = subprocess.Popen(["cat"], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
