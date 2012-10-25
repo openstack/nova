@@ -86,8 +86,10 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
     remote protocol.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(SanISCSIDriver, self).__init__(*args, **kwargs)
+    def __init__(self, execute=None, *args, **kwargs):
+        if execute is None:
+            execute = self._execute
+        super(SanISCSIDriver, self).__init__(execute, *args, **kwargs)
         self.run_local = FLAGS.san_is_local
 
     def _build_iscsi_target_name(self, volume):
@@ -119,7 +121,7 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
         if self.run_local:
             return utils.execute(*cmd, **kwargs)
         else:
-            check_exit_code = kwargs.pop('check_exit_code', None)
+            check_exit_code = kwargs.pop('check_exit_code', True)
             command = ' '.join(cmd)
             return self._run_ssh(command, check_exit_code)
 
