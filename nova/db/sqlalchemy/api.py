@@ -51,15 +51,6 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-def is_admin_context(context):
-    """Indicates if the request context is an administrator."""
-    if not context:
-        warnings.warn(_('Use of empty request context is deprecated'),
-                      DeprecationWarning)
-        raise Exception('die')
-    return context.is_admin
-
-
 def is_user_context(context):
     """Indicates if the request context is a normal user."""
     if not context:
@@ -106,7 +97,8 @@ def require_admin_context(f):
     """
 
     def wrapper(*args, **kwargs):
-        if not is_admin_context(args[0]):
+        context = args[0]
+        if not context.is_admin:
             raise exception.AdminRequired()
         return f(*args, **kwargs)
     return wrapper
@@ -124,7 +116,8 @@ def require_context(f):
     """
 
     def wrapper(*args, **kwargs):
-        if not is_admin_context(args[0]) and not is_user_context(args[0]):
+        context = args[0]
+        if not context.is_admin and not is_user_context(context):
             raise exception.NotAuthorized()
         return f(*args, **kwargs)
     return wrapper
