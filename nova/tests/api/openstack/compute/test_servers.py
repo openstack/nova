@@ -40,7 +40,7 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
 from nova.network import manager
-from nova.network import quantumv2
+from nova.network.quantumv2 import api as quantum_api
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
@@ -136,7 +136,7 @@ class Base64ValidationTest(test.TestCase):
         self.assertEqual(result, None)
 
 
-class QuantumV2Subclass(quantumv2.api.API):
+class QuantumV2Subclass(quantum_api.API):
     """Used to ensure that API handles subclasses properly."""
     pass
 
