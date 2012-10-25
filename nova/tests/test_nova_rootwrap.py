@@ -66,9 +66,11 @@ class RootwrapTestCase(test.TestCase):
     @test.skip_if(not os.path.exists("/proc/%d" % os.getpid()),
                   "Test requires /proc filesystem (procfs)")
     def test_KillFilter(self):
-        p = subprocess.Popen(["sleep", "5"])
-        f = filters.KillFilter("root", "/bin/sleep", "-9", "-HUP")
-        f2 = filters.KillFilter("root", "/usr/bin/sleep", "-9", "-HUP")
+        p = subprocess.Popen(["cat"], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        f = filters.KillFilter("root", "/bin/cat", "-9", "-HUP")
+        f2 = filters.KillFilter("root", "/usr/bin/cat", "-9", "-HUP")
         usercmd = ['kill', '-ALRM', p.pid]
         # Incorrect signal should fail
         self.assertFalse(f.match(usercmd) or f2.match(usercmd))
@@ -79,8 +81,8 @@ class RootwrapTestCase(test.TestCase):
         usercmd = ['kill', '-9', p.pid]
         self.assertTrue(f.match(usercmd) or f2.match(usercmd))
 
-        f = filters.KillFilter("root", "/bin/sleep")
-        f2 = filters.KillFilter("root", "/usr/bin/sleep")
+        f = filters.KillFilter("root", "/bin/cat")
+        f2 = filters.KillFilter("root", "/usr/bin/cat")
         usercmd = ['kill', os.getpid()]
         # Our own PID does not match /bin/sleep, so it should fail
         self.assertFalse(f.match(usercmd) or f2.match(usercmd))
