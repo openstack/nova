@@ -1286,3 +1286,24 @@ class ServerDiagnosticsSamplesJsonTest(ServersSampleBase):
 
 class ServerDiagnosticsSamplesXmlTest(ServerDiagnosticsSamplesJsonTest):
     ctype = "xml"
+
+
+class AvailabilityZoneJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.availability_zone."
+                      "Availability_zone")
+
+    def test_create_availability_zone(self):
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'host': self._get_host(),
+            "availability_zone": "nova"
+        }
+        response = self._do_post('servers', 'availability-zone-post-req', subs)
+        self.assertEqual(response.status, 202)
+        subs.update(self._get_regexes())
+        return self._verify_response('availability-zone-post-resp',
+                                      subs, response)
+
+
+class AvailabilityZoneXmlTest(AvailabilityZoneJsonTest):
+    ctype = 'xml'
