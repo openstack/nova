@@ -75,6 +75,7 @@ class _FakeDriverBackendTestCase(test.TestCase):
         nova.virt.libvirt.driver.imagebackend = fake_imagebackend
         nova.virt.libvirt.driver.libvirt = fakelibvirt
         nova.virt.libvirt.driver.libvirt_utils = fake_libvirt_utils
+        nova.virt.libvirt.snapshots.libvirt_utils = fake_libvirt_utils
         nova.virt.libvirt.firewall.libvirt = fakelibvirt
 
         self.flags(rescue_image_id="2",
