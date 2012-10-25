@@ -136,6 +136,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.6 - Remove migration_id, add migration to resize_instance
         2.7 - Remove migration_id, add migration to confirm_resize
         2.8 - Remove migration_id, add migration to finish_resize
+        2.9 - Add publish_service_capabilities()
     '''
 
     #
@@ -528,6 +529,9 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('unrescue_instance',
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def publish_service_capabilities(self, ctxt):
+        self.fanout_cast(ctxt, self.make_msg('publish_service_capabilities'))
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):

@@ -217,7 +217,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.8'
+    RPC_API_VERSION = '2.9'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -345,7 +345,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver.filter_defer_apply_off()
 
         self._report_driver_status(context)
-        self._publish_service_capabilities(context)
+        self.publish_service_capabilities(context)
 
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
