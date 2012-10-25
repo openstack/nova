@@ -329,7 +329,7 @@ class Scheduler(object):
 
         mem_inst = instance_ref['memory_mb']
         avail = avail - used
-        if avail <= mem_inst:
+        if not mem_inst or avail <= mem_inst:
             instance_uuid = instance_ref['uuid']
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "

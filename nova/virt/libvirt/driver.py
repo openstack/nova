@@ -2319,7 +2319,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # if disk_over_commit is True,
         #  otherwise virtual disk size < available disk size.
 
-        available = available_mb * (1024 ** 2)
+        available = 0
+        if available_mb:
+            available = available_mb * (1024 ** 2)
 
         ret = self.get_instance_disk_info(instance_ref['name'])
         disk_infos = jsonutils.loads(ret)
