@@ -165,6 +165,11 @@ global_opts = [
                       'nova.api.openstack.compute.contrib.standard_extensions'
                       ],
                     help='osapi compute extension to load'),
+    cfg.StrOpt('osapi_compute_unique_server_name_scope',
+               default='',
+               help='When set, compute API will consider duplicate hostnames '
+                    'invalid within the specified scope, regardless of case. '
+                    'Should be empty, "project" or "global".'),
     cfg.StrOpt('osapi_path',
                default='/v1.1/',
                help='the path prefix used to call the openstack api server'),

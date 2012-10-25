@@ -1351,6 +1351,34 @@ def _metadata_refs(metadata_dict, meta_class):
     return metadata_refs
 
 
+def _validate_unique_server_name(context, session, name):
+    if not CONF.osapi_compute_unique_server_name_scope:
+        return
+
+    search_opts = {'deleted': False}
+    if CONF.osapi_compute_unique_server_name_scope == 'project':
+        search_opts['project_id'] = context.project_id
+        instance_list = instance_get_all_by_filters(context, search_opts,
+                                                    'created_at', 'desc',
+                                                    session=session)
+    elif CONF.osapi_compute_unique_server_name_scope == 'global':
+        instance_list = instance_get_all_by_filters(context.elevated(),
+                                                    search_opts,
+                                                    'created_at', 'desc',
+                                                    session=session)
+    else:
+        msg = _('Unknown osapi_compute_unique_server_name_scope value: %s'
+                ' Flag must be empty, "global" or'
+                ' "project"') % CONF.osapi_compute_unique_server_name_scope
+        LOG.warn(msg)
+        return
+
+    lowername = name.lower()
+    for instance in instance_list:
+        if instance['hostname'].lower() == lowername:
+            raise exception.InstanceExists(name=instance['hostname'])
+
+
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
@@ -1390,6 +1418,8 @@ def instance_create(context, values):
 
     session = get_session()
     with session.begin():
+        if 'hostname' in values:
+            _validate_unique_server_name(context, session, values['hostname'])
         instance_ref.security_groups = _get_sec_group_models(session,
                 security_groups)
         instance_ref.save(session=session)
@@ -1501,14 +1531,16 @@ def instance_get_all(context, columns_to_join=None):
 
 @require_context
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None):
+                                limit=None, marker=None, session=None):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise"""
 
     sort_fn = {'desc': desc, 'asc': asc}
 
-    session = get_session()
+    if not session:
+        session = get_session()
+
     query_prefix = session.query(models.Instance).\
             options(joinedload('info_cache')).\
             options(joinedload('security_groups')).\
@@ -1828,6 +1860,12 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
             if actual_state not in expected:
                 raise exception.UnexpectedTaskStateError(actual=actual_state,
                                                          expected=expected)
+
+        if ("hostname" in values and
+            values["hostname"].lower() != instance_ref["hostname"].lower()):
+                _validate_unique_server_name(context,
+                                             session,
+                                             values['hostname'])
 
         if copy_old_instance:
             old_instance_ref = copy.copy(instance_ref)
