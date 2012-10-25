@@ -232,6 +232,10 @@ class AdminActionsController(wsgi.Controller):
         except ValueError:
             msg = _("createBackup attribute 'rotation' must be an integer")
             raise exc.HTTPBadRequest(explanation=msg)
+        if rotation < 0:
+            msg = _("createBackup attribute 'rotation' must be greater "
+                    "than or equal to zero")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         props = {}
         metadata = entity.get('metadata', {})
@@ -254,12 +258,14 @@ class AdminActionsController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'createBackup')
 
-        # build location of newly-created image entity
-        image_id = str(image['id'])
-        image_ref = os.path.join(req.application_url, 'images', image_id)
-
         resp = webob.Response(status_int=202)
-        resp.headers['Location'] = image_ref
+
+        # build location of newly-created image entity if rotation is not zero
+        if rotation > 0:
+            image_id = str(image['id'])
+            image_ref = os.path.join(req.application_url, 'images', image_id)
+            resp.headers['Location'] = image_ref
+
         return resp
 
     @wsgi.action('os-migrateLive')
