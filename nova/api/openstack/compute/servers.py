@@ -431,6 +431,7 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
+        self.quantum_attempted = False
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -591,14 +592,19 @@ class Controller(wsgi.Controller):
 
     def _is_quantum_v2(self):
         # NOTE(dprince): quantumclient is not a requirement
+        if self.quantum_attempted:
+            return self.have_quantum
+
         try:
+            self.quantum_attempted = True
             from nova.network.quantumv2 import api as quantum_api
-            return issubclass(
+            self.have_quantum = issubclass(
                 importutils.import_class(FLAGS.network_api_class),
-                quantum_api.API
-            )
+                quantum_api.API)
         except ImportError:
-            return False
+            self.have_quantum = False
+
+        return self.have_quantum
 
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
