@@ -269,11 +269,11 @@ class API(base.Base):
             if len(k) > 255:
                 msg = _("Metadata property key greater than 255 characters")
                 LOG.warn(msg)
-                raise exception.InvalidMetadata(reason=msg)
+                raise exception.InvalidMetadataSize(reason=msg)
             if len(v) > 255:
                 msg = _("Metadata property value greater than 255 characters")
                 LOG.warn(msg)
-                raise exception.InvalidMetadata(reason=msg)
+                raise exception.InvalidMetadataSize(reason=msg)
 
     def _check_requested_networks(self, context, requested_networks):
         """ Check if the networks requested belongs to the project
