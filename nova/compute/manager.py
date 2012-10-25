@@ -1131,8 +1131,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_device_info is None:
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance['uuid'])
+        # NOTE(danms): remove this when RPC API < 2.5 compatibility
+        # is no longer needed
         if network_info is None:
             network_info = self._get_instance_nw_info(context, instance)
+        else:
+            network_info = network_model.NetworkInfo.hydrate(network_info)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
