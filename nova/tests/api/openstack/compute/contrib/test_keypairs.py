@@ -66,10 +66,15 @@ class KeypairsTest(test.TestCase):
                        db_key_pair_create)
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_destroy)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Keypairs'])
+        self.app = fakes.wsgi_app(init_only=('os-keypairs',))
 
     def test_keypair_list(self):
         req = webob.Request.blank('/v2/fake/os-keypairs')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
         response = {'keypairs': [{'keypair': fake_keypair('FAKE')}]}
@@ -81,7 +86,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
@@ -93,7 +98,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
     def test_keypair_create_with_invalid_name(self):
@@ -106,7 +111,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
     def test_keypair_create_with_non_alphanumeric_name(self):
@@ -119,7 +124,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
 
@@ -143,7 +148,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         # FIXME(ja): sholud we check that public_key was sent to create?
         res_dict = jsonutils.loads(res.body)
@@ -176,7 +181,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 413)
 
     def test_keypair_create_quota_limit(self):
@@ -196,7 +201,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 413)
 
     def test_keypair_create_duplicate(self):
@@ -206,7 +211,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
 
     def test_keypair_import_bad_key(self):
@@ -221,14 +226,14 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
     def test_keypair_delete(self):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'DELETE'
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 202)
 
     def test_keypair_delete_not_found(self):
@@ -239,7 +244,7 @@ class KeypairsTest(test.TestCase):
         self.stubs.Set(db, "key_pair_get",
                        db_key_pair_get_not_found)
         req = webob.Request.blank('/v2/fake/os-keypairs/WHAT')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
     def test_keypair_show(self):
@@ -252,7 +257,7 @@ class KeypairsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 200)
         self.assertEqual('foo', res_dict['keypair']['name'])
@@ -269,7 +274,7 @@ class KeypairsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
     def test_show_server(self):
@@ -277,7 +282,7 @@ class KeypairsTest(test.TestCase):
                         fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/servers/1')
         req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(fakes.wsgi_app())
+        response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertTrue('key_name' in res_dict['server'])
@@ -287,7 +292,7 @@ class KeypairsTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                         fakes.fake_instance_get_all_by_filters())
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         server_dicts = jsonutils.loads(res.body)['servers']
         self.assertEquals(len(server_dicts), 5)
 
@@ -301,7 +306,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
         self.assertEqual(res_dict['badRequest']['message'],

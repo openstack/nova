@@ -85,8 +85,14 @@ class FlavorManageTest(test.TestCase):
                        fake_get_instance_type_by_flavor_id)
         self.stubs.Set(instance_types, "destroy", fake_destroy)
         self.stubs.Set(instance_types, "create", fake_create)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
+                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
 
         self.controller = flavormanage.FlavorManageController()
+        self.app = fakes.wsgi_app(init_only=('flavors',))
 
     def test_delete(self):
         req = fakes.HTTPRequest.blank('/v2/123/flavors/1234')
@@ -117,7 +123,7 @@ class FlavorManageTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(expected)
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
@@ -156,7 +162,7 @@ class FlavorManageTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(flavor)
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
@@ -180,7 +186,7 @@ class FlavorManageTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(expected)
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
@@ -210,5 +216,5 @@ class FlavorManageTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(expected)
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)

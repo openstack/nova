@@ -94,9 +94,13 @@ class AdminActionsTest(test.TestCase):
         self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
                        'live_migration',
                        fake_scheduler_api_live_migration)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Admin_actions'])
 
     def test_admin_api_actions(self):
-        app = fakes.wsgi_app()
+        app = fakes.wsgi_app(init_only=('servers',))
         for _action in self._actions:
             req = webob.Request.blank('/v2/fake/servers/%s/action' %
                     self.UUID)
@@ -107,7 +111,7 @@ class AdminActionsTest(test.TestCase):
             self.assertEqual(res.status_int, 202)
 
     def test_admin_api_actions_raise_conflict_on_invalid_state(self):
-        app = fakes.wsgi_app()
+        app = fakes.wsgi_app(init_only=('servers',))
 
         for _action, _method in self._actions_that_check_state:
             self.stubs.Set(compute_api.API, _method,
@@ -128,7 +132,7 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
@@ -154,7 +158,7 @@ class AdminActionsTest(test.TestCase):
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps({
@@ -176,7 +180,7 @@ class CreateBackupTests(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
-        self.app = compute.APIRouter()
+        self.app = compute.APIRouter(init_only=('servers',))
         self.uuid = utils.gen_uuid()
 
     def _get_request(self, body):

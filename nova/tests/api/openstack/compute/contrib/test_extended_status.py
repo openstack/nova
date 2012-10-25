@@ -56,11 +56,15 @@ class ExtendedStatusTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Extended_status'])
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         return res
 
     def _get_server(self, body):

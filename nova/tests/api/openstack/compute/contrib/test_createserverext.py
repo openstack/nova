@@ -99,6 +99,16 @@ class CreateserverextTest(test.TestCase):
                      'progress': 0}], resv_id)
 
         self.stubs.Set(compute_api.API, 'create', create)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Createserverext', 'User_data',
+                'Security_groups', 'Networks'])
+
+    def _make_stub_method(self, canned_return):
+        def stub_method(*args, **kwargs):
+            return canned_return
+        return stub_method
 
     def _create_security_group_request_dict(self, security_groups):
         server = {}
@@ -182,19 +192,22 @@ class CreateserverextTest(test.TestCase):
     def _create_instance_with_networks_json(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         return request, response, self.networks
 
     def _create_instance_with_user_data_json(self, networks):
         body_dict = self._create_user_data_request_dict(networks)
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         return request, response, self.user_data
 
     def _create_instance_with_networks_xml(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_xml(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         return request, response, self.networks
 
     def test_create_instance_with_no_networks(self):
@@ -249,7 +262,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         del body_dict['server']['networks'][0]['uuid']
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         self.assertEquals(response.status_int, 400)
         self.assertEquals(self.networks, None)
 
@@ -258,7 +272,8 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_xml(body_dict)
         uuid = ' uuid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"'
         request.body = request.body.replace(uuid, '')
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         self.assertEquals(response.status_int, 400)
         self.assertEquals(self.networks, None)
 
@@ -299,7 +314,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         del body_dict['server']['networks'][0]['fixed_ip']
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         self.assertEquals(response.status_int, 202)
         self.assertEquals(self.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
@@ -308,7 +324,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         request = self._get_create_request_xml(body_dict)
         request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         self.assertEquals(response.status_int, 202)
         self.assertEquals(self.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
@@ -343,7 +360,8 @@ class CreateserverextTest(test.TestCase):
                        return_instance_add_security_group)
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app())
+        response = request.get_response(fakes.wsgi_app(
+            init_only=('servers', 'os-create-server-ext')))
         self.assertEquals(response.status_int, 202)
         self.assertEquals(self.security_group, security_groups)
 
@@ -351,7 +369,8 @@ class CreateserverextTest(test.TestCase):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(fakes.wsgi_app())
+        response = req.get_response(fakes.wsgi_app(
+            init_only=('os-create-server-ext', 'servers')))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         expected_security_group = [{"name": "test"}]
@@ -362,7 +381,8 @@ class CreateserverextTest(test.TestCase):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Accept'] = 'application/xml'
-        response = req.get_response(fakes.wsgi_app())
+        response = req.get_response(fakes.wsgi_app(
+            init_only=('os-create-server-ext', 'servers')))
         self.assertEquals(response.status_int, 200)
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]

@@ -93,6 +93,10 @@ class SimpleTenantUsageTest(test.TestCase):
         self.alt_user_context = context.RequestContext('fakeadmin_0',
                                                       'faketenant_1',
                                                        is_admin=False)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Simple_tenant_usage'])
 
     def _test_verify_index(self, start, stop):
         req = webob.Request.blank(
@@ -102,7 +106,8 @@ class SimpleTenantUsageTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+                               fake_auth_context=self.admin_context,
+                               init_only=('os-simple-tenant-usage',)))
 
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
@@ -141,7 +146,8 @@ class SimpleTenantUsageTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context))
+                               fake_auth_context=self.admin_context,
+                               init_only=('os-simple-tenant-usage',)))
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
         return res_dict['tenant_usages']
@@ -174,7 +180,8 @@ class SimpleTenantUsageTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context))
+                               fake_auth_context=self.user_context,
+                               init_only=('os-simple-tenant-usage',)))
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
 
@@ -208,7 +215,8 @@ class SimpleTenantUsageTest(test.TestCase):
 
         try:
             res = req.get_response(fakes.wsgi_app(
-                                   fake_auth_context=self.alt_user_context))
+                                   fake_auth_context=self.alt_user_context,
+                                   init_only=('os-simple-tenant-usage',)))
             self.assertEqual(res.status_int, 403)
         finally:
             policy.reset()

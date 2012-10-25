@@ -100,8 +100,13 @@ class SnapshotApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "get_all_snapshots",
             stub_snapshot_get_all)
         self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Volumes'])
 
         self.context = context.get_admin_context()
+        self.app = fakes.wsgi_app(init_only=('os-snapshots',))
 
     def test_snapshot_create(self):
         global _last_param
@@ -117,7 +122,7 @@ class SnapshotApiTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         LOG.debug(_("test_snapshot_create: param=%s"), _last_param)
         self.assertEqual(resp.status_int, 200)
 
@@ -148,7 +153,7 @@ class SnapshotApiTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         LOG.debug(_("test_snapshot_create_force: param=%s"), _last_param)
         self.assertEqual(resp.status_int, 200)
 
@@ -174,7 +179,7 @@ class SnapshotApiTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         LOG.debug(_("test_snapshot_create_force: param=%s"), _last_param)
         self.assertEqual(resp.status_int, 400)
 
@@ -186,7 +191,7 @@ class SnapshotApiTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'DELETE'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(str(_last_param['id']), str(snapshot_id))
 
@@ -198,7 +203,7 @@ class SnapshotApiTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'DELETE'
 
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(str(_last_param['snapshot_id']), str(snapshot_id))
 
@@ -209,7 +214,7 @@ class SnapshotApiTest(test.TestCase):
         snapshot_id = 123
         req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'GET'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
 
         LOG.debug(_("test_snapshot_show: resp=%s"), resp)
         self.assertEqual(resp.status_int, 200)
@@ -226,14 +231,14 @@ class SnapshotApiTest(test.TestCase):
         snapshot_id = 234
         req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'GET'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(str(_last_param['snapshot_id']), str(snapshot_id))
 
     def test_snapshot_detail(self):
         req = webob.Request.blank('/v2/fake/os-snapshots/detail')
         req.method = 'GET'
-        resp = req.get_response(fakes.wsgi_app())
+        resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
         resp_dict = jsonutils.loads(resp.body)

@@ -45,7 +45,10 @@ class DiskConfigTestCase(test.TestCase):
 
     def setUp(self):
         super(DiskConfigTestCase, self).setUp()
-        self.flags(verbose=True)
+        self.flags(verbose=True,
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Disk_config'])
         nova.tests.image.fake.stub_out_image_service(self.stubs)
 
         fakes.stub_out_nw_api(self.stubs)
@@ -125,7 +128,7 @@ class DiskConfigTestCase(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_create', fake_instance_create)
 
-        self.app = compute.APIRouter()
+        self.app = compute.APIRouter(init_only=('servers', 'images'))
 
     def tearDown(self):
         super(DiskConfigTestCase, self).tearDown()

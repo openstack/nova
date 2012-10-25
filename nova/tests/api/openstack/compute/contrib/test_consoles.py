@@ -54,6 +54,11 @@ class ConsolesExtensionTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console)
         self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Consoles'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
 
     def test_get_vnc_console(self):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
@@ -62,7 +67,7 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         output = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(output,
@@ -77,7 +82,7 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         output = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 409)
 
@@ -90,7 +95,7 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
     def test_get_vnc_console_no_instance(self):
@@ -101,7 +106,7 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
     def test_get_vnc_console_no_instance_on_console_get(self):
@@ -113,7 +118,7 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
     def test_get_vnc_console_invalid_type(self):
@@ -125,5 +130,5 @@ class ConsolesExtensionTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)

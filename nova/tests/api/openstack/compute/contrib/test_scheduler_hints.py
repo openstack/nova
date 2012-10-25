@@ -31,7 +31,11 @@ class SchedulerHintsTestCase(test.TestCase):
     def setUp(self):
         super(SchedulerHintsTestCase, self).setUp()
         self.fake_instance = fakes.stub_instance(1, uuid=UUID)
-        self.app = compute.APIRouter()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Scheduler_hints'])
+        self.app = compute.APIRouter(init_only=('servers',))
 
     def test_create_server_without_hints(self):
 
