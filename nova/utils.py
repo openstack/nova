@@ -47,7 +47,6 @@ from eventlet import greenthread
 from eventlet import semaphore
 import netaddr
 
-from nova.common import deprecated
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -136,8 +135,7 @@ def execute(*cmd, **kwargs):
                                before retrying.
     :param attempts:           How many times to retry cmd.
     :param run_as_root:        True | False. Defaults to False. If set to True,
-                               the command is prefixed by the command specified
-                               in the root_helper FLAG.
+                               the command is run with rootwrap.
 
     :raises exception.NovaException: on receiving unknown arguments
     :raises exception.ProcessExecutionError:
@@ -163,18 +161,8 @@ def execute(*cmd, **kwargs):
                                         'to utils.execute: %r') % kwargs)
 
     if run_as_root:
+        cmd = ['sudo', 'nova-rootwrap', FLAGS.rootwrap_config] + list(cmd)
 
-        if FLAGS.rootwrap_config is None or FLAGS.root_helper != 'sudo':
-            deprecated.warn(_('The root_helper option (which lets you specify '
-                              'a root wrapper different from nova-rootwrap, '
-                              'and defaults to using sudo) is now deprecated. '
-                              'You should use the rootwrap_config option '
-                              'instead.'))
-
-        if (FLAGS.rootwrap_config is not None):
-            cmd = ['sudo', 'nova-rootwrap', FLAGS.rootwrap_config] + list(cmd)
-        else:
-            cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
