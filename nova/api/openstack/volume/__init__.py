@@ -39,26 +39,30 @@ class APIRouter(nova.api.openstack.APIRouter):
     """
     ExtensionManager = extensions.ExtensionManager
 
-    def _setup_routes(self, mapper, ext_mgr):
-        self.resources['versions'] = versions.create_resource()
-        mapper.connect("versions", "/",
-                    controller=self.resources['versions'],
-                    action='show')
+    def _setup_routes(self, mapper, ext_mgr, init_only):
+        if init_only is None or 'versions' in init_only:
+            self.resources['versions'] = versions.create_resource()
+            mapper.connect("versions", "/",
+                        controller=self.resources['versions'],
+                        action='show')
 
         mapper.redirect("", "/")
 
-        self.resources['volumes'] = volumes.create_resource(ext_mgr)
-        mapper.resource("volume", "volumes",
-                        controller=self.resources['volumes'],
-                        collection={'detail': 'GET'},
-                        member={'action': 'POST'})
+        if init_only is None or 'volumes' in init_only:
+            self.resources['volumes'] = volumes.create_resource(ext_mgr)
+            mapper.resource("volume", "volumes",
+                            controller=self.resources['volumes'],
+                            collection={'detail': 'GET'},
+                            member={'action': 'POST'})
 
-        self.resources['types'] = types.create_resource()
-        mapper.resource("type", "types",
-                        controller=self.resources['types'])
+        if init_only is None or 'types' in init_only:
+            self.resources['types'] = types.create_resource()
+            mapper.resource("type", "types",
+                            controller=self.resources['types'])
 
-        self.resources['snapshots'] = snapshots.create_resource(ext_mgr)
-        mapper.resource("snapshot", "snapshots",
-                        controller=self.resources['snapshots'],
-                        collection={'detail': 'GET'},
-                        member={'action': 'POST'})
+        if init_only is None or 'snapshots' in init_only:
+            self.resources['snapshots'] = snapshots.create_resource(ext_mgr)
+            mapper.resource("snapshot", "snapshots",
+                            controller=self.resources['snapshots'],
+                            collection={'detail': 'GET'},
+                            member={'action': 'POST'})

@@ -118,7 +118,7 @@ class APIRouter(base_wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
         return cls()
 
-    def __init__(self, ext_mgr=None):
+    def __init__(self, ext_mgr=None, init_only=None):
         if ext_mgr is None:
             if self.ExtensionManager:
                 ext_mgr = self.ExtensionManager()
@@ -127,15 +127,18 @@ class APIRouter(base_wsgi.Router):
 
         mapper = ProjectMapper()
         self.resources = {}
-        self._setup_routes(mapper, ext_mgr)
-        self._setup_ext_routes(mapper, ext_mgr)
+        self._setup_routes(mapper, ext_mgr, init_only)
+        self._setup_ext_routes(mapper, ext_mgr, init_only)
         self._setup_extensions(ext_mgr)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_ext_routes(self, mapper, ext_mgr):
+    def _setup_ext_routes(self, mapper, ext_mgr, init_only):
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                       resource.collection)
+
+            if init_only is not None and resource.collection not in init_only:
+                continue
 
             inherits = None
             if resource.inherits:
