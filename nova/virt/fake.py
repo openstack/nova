@@ -272,6 +272,19 @@ class FakeDriver(driver.ComputeDriver):
                        migrate_data=None):
         return
 
+    def check_can_live_migrate_destination_cleanup(self, ctxt,
+                                                   dest_check_data):
+        return
+
+    def check_can_live_migrate_destination(self, ctxt, instance_ref,
+                                           block_migration=False,
+                                           disk_over_commit=False):
+        return
+
+    def check_can_live_migrate_source(self, ctxt, instance_ref,
+                                      dest_check_data):
+        return
+
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None):
