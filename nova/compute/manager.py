@@ -225,6 +225,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
 
+        if not compute_driver:
+            LOG.error(_("Compute driver option required, but not specified"))
+            sys.exit(1)
+
         LOG.info(_("Loading compute driver '%s'") % compute_driver)
         try:
             self.driver = utils.check_isinstance(
