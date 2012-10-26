@@ -32,6 +32,7 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 from nova import utils
 
 
@@ -112,7 +113,7 @@ class ImagesControllerTest(test.TestCase):
             },
         }
 
-        self.assertDictMatch(expected_image, actual_image)
+        self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
     def test_get_image_with_custom_prefix(self):
         self.flags(osapi_compute_link_prefix='https://zoo.com:42',
@@ -166,7 +167,7 @@ class ImagesControllerTest(test.TestCase):
                 }],
             },
         }
-        self.assertDictMatch(expected_image, actual_image)
+        self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
     def test_get_image_404(self):
         fake_req = fakes.HTTPRequest.blank('/v2/fake/images/unknown')
@@ -461,7 +462,7 @@ class ImagesControllerTest(test.TestCase):
         },
         ]
 
-        self.assertDictListMatch(expected, response_list)
+        self.assertThat(expected, matchers.DictListMatches(response_list))
 
     def test_get_image_details_with_limit(self):
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail?limit=2')
@@ -537,13 +538,14 @@ class ImagesControllerTest(test.TestCase):
             }],
         }]
 
-        self.assertDictListMatch(expected, response_list)
+        self.assertThat(expected, matchers.DictListMatches(response_list))
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
         self.assertEqual('/v2/fake/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
 
-        self.assertDictMatch({'limit': ['2'], 'marker': ['124']}, params)
+        self.assertThat({'limit': ['2'], 'marker': ['124']},
+                        matchers.DictMatches(params))
 
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()

@@ -33,6 +33,7 @@ from nova.openstack.common import rpc
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
+from nova.tests import matchers
 from nova import volume
 
 
@@ -434,18 +435,18 @@ class CinderCloudTestCase(test.TestCase):
         result = {}
         self.cloud._format_instance_bdm(self.context, inst1['uuid'],
                                         '/dev/sdb1', result)
-        self.assertSubDictMatch(
+        self.assertThat(
             {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
-            result)
+            matchers.IsSubDictOf(result))
         self._assertEqualBlockDeviceMapping(
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
         result = {}
         self.cloud._format_instance_bdm(self.context, inst2['uuid'],
                                         '/dev/sdc1', result)
-        self.assertSubDictMatch(
+        self.assertThat(
             {'rootDeviceType': self._expected_instance_bdm2['rootDeviceType']},
-            result)
+            matchers.IsSubDictOf(result))
 
         self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
 
@@ -465,7 +466,7 @@ class CinderCloudTestCase(test.TestCase):
             found = False
             for y in result:
                 if x['deviceName'] == y['deviceName']:
-                    self.assertSubDictMatch(x, y)
+                    self.assertThat(x, matchers.IsSubDictOf(y))
                     found = True
                     break
             self.assertTrue(found)
@@ -477,23 +478,18 @@ class CinderCloudTestCase(test.TestCase):
         (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
 
         result = self._assertInstance(inst1['id'])
-        self.assertSubDictMatch(self._expected_instance_bdm1, result)
+        self.assertThat(
+            self._expected_instance_bdm1,
+            matchers.IsSubDictOf(result))
         self._assertEqualBlockDeviceMapping(
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
         result = self._assertInstance(inst2['id'])
-        self.assertSubDictMatch(self._expected_instance_bdm2, result)
+        self.assertThat(
+            self._expected_instance_bdm2,
+            matchers.IsSubDictOf(result))
 
         self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
-
-    def assertDictListUnorderedMatch(self, L1, L2, key):
-        self.assertEqual(len(L1), len(L2))
-        for d1 in L1:
-            self.assertTrue(key in d1)
-            for d2 in L2:
-                self.assertTrue(key in d2)
-                if d1[key] == d2[key]:
-                    self.assertDictMatch(d1, d2)
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
         mappings1 = [

@@ -32,6 +32,7 @@ import nova.policy
 from nova import test
 from nova.tests import fake_ldap
 from nova.tests import fake_network
+from nova.tests import matchers
 from nova import utils
 
 
@@ -168,7 +169,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'bridge_interface': None,
                      'vlan': None}
 
-            self.assertDictMatch(nw, check)
+            self.assertThat(nw, matchers.DictMatches(check))
 
             check = {'broadcast': '192.168.%d.255' % nid,
                      'dhcp_server': '192.168.1.1',
@@ -184,13 +185,13 @@ class FlatNetworkTestCase(test.TestCase):
                         '00000000-0000-0000-0000-00000000000000%02d' % nid,
                      'should_create_vlan': False,
                      'should_create_bridge': False}
-            self.assertDictMatch(info, check)
+            self.assertThat(info, matchers.DictMatches(check))
 
             check = [{'enabled': 'DONTCARE',
                       'ip': '2001:db8:0:1::%x' % nid,
                       'netmask': 64,
                       'gateway': 'fe80::def'}]
-            self.assertDictListMatch(info['ip6s'], check)
+            self.assertThat(info['ip6s'], matchers.DictListMatches(check))
 
             num_fixed_ips = len(info['ips'])
             check = [{'enabled': 'DONTCARE',
@@ -198,7 +199,7 @@ class FlatNetworkTestCase(test.TestCase):
                       'netmask': '255.255.255.0',
                       'gateway': '192.168.%d.1' % nid}
                       for ip_num in xrange(1, num_fixed_ips + 1)]
-            self.assertDictListMatch(info['ips'], check)
+            self.assertThat(info['ips'], matchers.DictListMatches(check))
 
     def test_validate_networks(self):
         self.mox.StubOutWithMock(db, 'network_get')

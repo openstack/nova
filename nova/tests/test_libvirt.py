@@ -45,6 +45,7 @@ from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.tests import fake_network
 import nova.tests.image.fake
+from nova.tests import matchers
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import driver
@@ -630,7 +631,7 @@ class LibvirtConnTestCase(test.TestCase):
             'id': 'fake'
         }
         result = conn.get_volume_connector(volume)
-        self.assertDictMatch(expected, result)
+        self.assertThat(expected, matchers.DictMatches(result))
 
     def test_get_guest_config(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1923,11 +1924,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         return_value = conn.check_can_live_migrate_destination(self.context,
                 instance_ref, compute_info, compute_info, True)
-        self.assertDictMatch(return_value,
-                             {"filename": "file",
-                              'disk_available_mb': 409600,
-                              "disk_over_commit": False,
-                              "block_migration": True})
+        self.assertThat({"filename": "file",
+                         'disk_available_mb': 409600,
+                         "disk_over_commit": False,
+                         "block_migration": True},
+                        matchers.DictMatches(return_value))
 
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1949,11 +1950,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         return_value = conn.check_can_live_migrate_destination(self.context,
                 instance_ref, compute_info, compute_info, False)
-        self.assertDictMatch(return_value,
-                            {"filename": "file",
-                             "block_migration": False,
-                             "disk_over_commit": False,
-                             "disk_available_mb": None})
+        self.assertThat({"filename": "file",
+                         "block_migration": False,
+                         "disk_over_commit": False,
+                         "disk_available_mb": None},
+                        matchers.DictMatches(return_value))
 
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(self):
         instance_ref = db.instance_create(self.context, self.test_instance)

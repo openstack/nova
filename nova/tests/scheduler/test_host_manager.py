@@ -24,6 +24,7 @@ from nova import exception
 from nova.openstack.common import timeutils
 from nova.scheduler import host_manager
 from nova import test
+from nova.tests import matchers
 from nova.tests.scheduler import fakes
 
 
@@ -92,7 +93,7 @@ class HostManagerTestCase(test.TestCase):
 
     def test_update_service_capabilities(self):
         service_states = self.host_manager.service_states
-        self.assertDictMatch(service_states, {})
+        self.assertEqual(len(service_states.keys()), 0)
         self.mox.StubOutWithMock(timeutils, 'utcnow')
         timeutils.utcnow().AndReturn(31337)
         timeutils.utcnow().AndReturn(31339)
@@ -116,11 +117,11 @@ class HostManagerTestCase(test.TestCase):
 
         expected = {('host1', 'node1'): host1_compute_capabs,
                     ('host2', 'node2'): host2_compute_capabs}
-        self.assertDictMatch(service_states, expected)
+        self.assertThat(service_states, matchers.DictMatches(expected))
 
     def test_update_service_capabilities_node_key(self):
         service_states = self.host_manager.service_states
-        self.assertDictMatch(service_states, {})
+        self.assertThat(service_states, matchers.DictMatches({}))
 
         host1_cap = {'hypervisor_hostname': 'host1-hvhn'}
         host2_cap = {}
@@ -135,7 +136,7 @@ class HostManagerTestCase(test.TestCase):
         host2_cap['timestamp'] = 31338
         expected = {('host1', 'host1-hvhn'): host1_cap,
                     ('host2', None): host2_cap}
-        self.assertDictMatch(service_states, expected)
+        self.assertThat(service_states, matchers.DictMatches(expected))
 
     def test_get_all_host_states(self):
 

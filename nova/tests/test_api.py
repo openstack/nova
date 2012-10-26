@@ -41,6 +41,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
+from nova.tests import matchers
 
 
 FLAGS = flags.FLAGS
@@ -163,7 +164,7 @@ class Ec2utilsTestCase(test.TestCase):
                   'virtual_name': 'ephemeral0'}}}
         out_dict = ec2utils.dict_from_dotted_str(in_str)
 
-        self.assertDictMatch(out_dict, expected_dict)
+        self.assertThat(out_dict, matchers.DictMatches(expected_dict))
 
     def test_properties_root_defice_name(self):
         mappings = [{"device": "/dev/sda1", "virtual": "root"}]
@@ -209,8 +210,8 @@ class Ec2utilsTestCase(test.TestCase):
              'device': '/dev/sdc1'},
             {'virtual': 'ephemeral1',
              'device': '/dev/sdc1'}]
-        self.assertDictListMatch(block_device.mappings_prepend_dev(mappings),
-                                 expected_result)
+        self.assertThat(block_device.mappings_prepend_dev(mappings),
+                        matchers.DictListMatches(expected_result))
 
 
 class ApiEc2TestCase(test.TestCase):

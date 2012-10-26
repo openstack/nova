@@ -41,6 +41,7 @@ from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_network
 from nova.tests import fake_utils
 import nova.tests.image.fake as fake_image
+from nova.tests import matchers
 from nova.tests.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent
@@ -359,7 +360,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         }
         instance = self._create_instance()
         expected = self.conn.get_diagnostics(instance)
-        self.assertDictMatch(fake_diagnostics, expected)
+        self.assertThat(fake_diagnostics, matchers.DictMatches(expected))
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
         def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
@@ -2090,7 +2091,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
         result = db.aggregate_get(self.context, aggregate.id)
         self.assertTrue(fake_init_pool.called)
-        self.assertDictMatch(self.fake_metadata, result.metadetails)
+        self.assertThat(self.fake_metadata,
+                        matchers.DictMatches(result.metadetails))
 
     def test_join_slave(self):
         """Ensure join_slave gets called when the request gets to master."""
@@ -2168,8 +2170,9 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn._pool.remove_from_aggregate(self.context, aggregate, "host")
         result = db.aggregate_get(self.context, aggregate.id)
         self.assertTrue(fake_clear_pool.called)
-        self.assertDictMatch({pool_states.POOL_FLAG: 'XenAPI',
-                pool_states.KEY: pool_states.ACTIVE}, result.metadetails)
+        self.assertThat({pool_states.POOL_FLAG: 'XenAPI',
+                pool_states.KEY: pool_states.ACTIVE},
+                matchers.DictMatches(result.metadetails))
 
     def test_remote_master_non_empty_pool(self):
         """Ensure AggregateError is raised if removing the master."""

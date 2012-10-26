@@ -26,6 +26,7 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 from nova import utils
 
 
@@ -346,7 +347,8 @@ class VersionsTest(test.TestCase):
             },
         ], }
 
-        self.assertDictMatch(expected, jsonutils.loads(res.body))
+        self.assertThat(jsonutils.loads(res.body),
+                        matchers.DictMatches(expected))
 
     def test_multi_choice_image_xml(self):
         req = webob.Request.blank('/images/1')
@@ -416,7 +418,8 @@ class VersionsTest(test.TestCase):
             },
         ], }
 
-        self.assertDictMatch(expected, jsonutils.loads(res.body))
+        self.assertThat(jsonutils.loads(res.body),
+                        matchers.DictMatches(expected))
 
 
 class VersionsViewBuilderTests(test.TestCase):

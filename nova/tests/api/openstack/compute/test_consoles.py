@@ -30,6 +30,7 @@ from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 from nova import utils
 
 
@@ -167,7 +168,7 @@ class ConsolesControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         res_dict = self.controller.show(req, self.uuid, '20')
-        self.assertDictMatch(res_dict, expected)
+        self.assertThat(res_dict, matchers.DictMatches(expected))
 
     def test_show_console_unknown_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
@@ -211,7 +212,7 @@ class ConsolesControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
-        self.assertDictMatch(res_dict, expected)
+        self.assertThat(res_dict, matchers.DictMatches(expected))
 
     def test_delete_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):

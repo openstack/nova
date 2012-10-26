@@ -28,6 +28,7 @@ from nova.image import glance
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
+from nova.tests import matchers
 
 
 class NullWriter(object):
@@ -155,10 +156,10 @@ class TestGlanceImageService(test.TestCase):
             'properties': {'instance_id': '42', 'user_id': 'fake'},
             'owner': None,
         }
-        self.assertDictMatch(image_meta, expected)
+        self.assertThat(image_meta, matchers.DictMatches(expected))
 
         image_metas = self.service.detail(self.context)
-        self.assertDictMatch(image_metas[0], expected)
+        self.assertThat(image_metas[0], matchers.DictMatches(expected))
 
     def test_create_without_instance_id(self):
         """
@@ -188,7 +189,7 @@ class TestGlanceImageService(test.TestCase):
             'owner': None,
         }
         actual = self.service.show(self.context, image_id)
-        self.assertDictMatch(actual, expected)
+        self.assertThat(actual, matchers.DictMatches(expected))
 
     def test_create(self):
         fixture = self._make_fixture(name='test image')
@@ -259,7 +260,7 @@ class TestGlanceImageService(test.TestCase):
                 'owner': None,
             }
 
-            self.assertDictMatch(meta, expected)
+            self.assertThat(meta, matchers.DictMatches(expected))
             i = i + 1
 
     def test_detail_limit(self):
@@ -315,7 +316,7 @@ class TestGlanceImageService(test.TestCase):
                 'deleted': None,
                 'owner': None,
             }
-            self.assertDictMatch(meta, expected)
+            self.assertThat(meta, matchers.DictMatches(expected))
             i = i + 1
 
     def test_detail_invalid_marker(self):

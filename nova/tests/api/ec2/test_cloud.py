@@ -43,6 +43,7 @@ from nova.openstack.common import rpc
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
+from nova.tests import matchers
 from nova import utils
 from nova.virt import fake as fake_virt
 from nova import volume
@@ -963,7 +964,7 @@ class CloudTestCase(test.TestCase):
             for d2 in L2:
                 self.assertTrue(key in d2)
                 if d1[key] == d2[key]:
-                    self.assertDictMatch(d1, d2)
+                    self.assertThat(d1, matchers.DictMatches(d2))
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
         mappings1 = [
@@ -1283,17 +1284,17 @@ class CloudTestCase(test.TestCase):
                     'imageType': 'machine',
                     'description': None}
         result = self.cloud._format_image(image)
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
         image['properties']['image_location'] = None
         expected['imageLocation'] = 'None (name)'
         result = self.cloud._format_image(image)
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
         image['name'] = None
         image['properties']['image_location'] = 'location'
         expected['imageLocation'] = 'location'
         expected['name'] = 'location'
         result = self.cloud._format_image(image)
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
 
     def test_deregister_image(self):
         deregister_image = self.cloud.deregister_image

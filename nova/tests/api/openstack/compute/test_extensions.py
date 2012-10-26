@@ -29,6 +29,7 @@ from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 
 
 FLAGS = flags.FLAGS
@@ -347,7 +348,7 @@ class ResourceExtensionTest(ExtensionTestCase):
                 "code": 400
             }
         }
-        self.assertDictMatch(expected, body)
+        self.assertThat(expected, matchers.DictMatches(body))
 
     def test_non_exist_resource(self):
         res_ext = base_extensions.ResourceExtension('tweedles',
@@ -365,7 +366,7 @@ class ResourceExtensionTest(ExtensionTestCase):
                 "code": 404
             }
         }
-        self.assertDictMatch(expected, body)
+        self.assertThat(expected, matchers.DictMatches(body))
 
 
 class InvalidExtension(object):
@@ -430,7 +431,7 @@ class ActionExtensionTest(ExtensionTestCase):
                 "code": 400
             }
         }
-        self.assertDictMatch(expected, body)
+        self.assertThat(expected, matchers.DictMatches(body))
 
     def test_non_exist_action(self):
         body = dict(blah=dict(name="test"))
@@ -451,7 +452,7 @@ class ActionExtensionTest(ExtensionTestCase):
                 "code": 400
             }
         }
-        self.assertDictMatch(expected, body)
+        self.assertThat(expected, matchers.DictMatches(body))
 
 
 class RequestExtensionTest(ExtensionTestCase):
