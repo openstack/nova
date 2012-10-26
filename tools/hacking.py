@@ -105,7 +105,7 @@ def import_normalize(line):
     # convert "from x import y" to "import x.y"
     # handle "from x import y as z" to "import x.y as z"
     split_line = line.split()
-    if (line.startswith("from ") and "," not in line and
+    if ("import" in line and line.startswith("from ") and "," not in line and
            split_line[2] == "import" and split_line[3] != "*" and
            split_line[1] != "__future__" and
            (len(split_line) == 4 or
