@@ -342,6 +342,27 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def pre_live_migration(self, ctxt, instance_ref,
+                           block_device_info, network_info):
+        """Prepare an instance for live migration
+
+        :param ctxt: security context
+        :param instance_ref: instance object that will be migrated
+        :param block_device_info: instance block device information
+        :param network_info: instance network information
+        """
+        raise NotImplementedError()
+
+    def pre_block_migration(self, ctxt, instance_ref, disk_info):
+        """Prepare a block device for migration
+
+        :param ctxt: security context
+        :param instance_ref: instance object that will have its disk migrated
+        :param disk_info: information about disk to be migrated (as returned
+                          from get_instance_disk_info())
+        """
+        raise NotImplementedError()
+
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False,
                        migrate_data=None):
@@ -361,6 +382,18 @@ class ComputeDriver(object):
         :params block_migration: if true, migrate VM disk.
         :params migrate_data: implementation specific params.
 
+        """
+        raise NotImplementedError()
+
+    def post_live_migration_at_destination(self, ctxt, instance_ref,
+                                           network_info,
+                                           block_migration=False):
+        """Post operation of live migration at destination host.
+
+        :param ctxt: security context
+        :param instance_ref: instance object that is migrated
+        :param network_info: instance network information
+        :param block_migration: if true, post operation of block_migration.
         """
         raise NotImplementedError()
 
