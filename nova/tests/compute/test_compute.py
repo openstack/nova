@@ -609,12 +609,14 @@ class ComputeTestCase(BaseTestCase):
 
     def test_can_terminate_on_error_state(self):
         """Make sure that the instance can be terminated in ERROR state"""
-        elevated = context.get_admin_context()
         #check failed to schedule --> terminate
         instance = self._create_instance(params={'vm_state': vm_states.ERROR})
         self.compute.terminate_instance(self.context, instance=instance)
         self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
-                          elevated, instance['uuid'])
+                          self.context, instance['uuid'])
+        # Double check it's not there for admins, either.
+        self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                          self.context.elevated(), instance['uuid'])
 
     def test_run_terminate(self):
         """Make sure it is possible to  run and terminate instance"""
@@ -736,8 +738,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance['deleted_at'], None)
         terminate = timeutils.utcnow()
         self.compute.terminate_instance(self.context, instance=instance)
-        context = self.context.elevated(read_deleted="only")
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        with utils.temporary_mutation(self.context, read_deleted='only'):
+            instance = db.instance_get_by_uuid(self.context,
+                    instance['uuid'])
         self.assert_(instance['launched_at'] < terminate)
         self.assert_(instance['deleted_at'] > terminate)
 
@@ -1526,7 +1529,7 @@ class ComputeTestCase(BaseTestCase):
 
         raised = False
         try:
-            ret_val = func(self.context, instance=instance, **kwargs)
+            func(self.context, instance=instance, **kwargs)
         except test.TestingException:
             raised = True
         finally:
@@ -1678,7 +1681,7 @@ class ComputeTestCase(BaseTestCase):
 
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context.elevated(),
+        self.compute.rebuild_instance(self.context,
                                       jsonutils.to_primitive(instance),
                                       image_ref, new_image_ref,
                                       injected_files=[],
@@ -2030,7 +2033,6 @@ class ComputeTestCase(BaseTestCase):
 
     def test_check_can_live_migrate_source_works_correctly(self):
         """Confirm check_can_live_migrate_source works on positive path"""
-        context = self.context.elevated()
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
@@ -2041,17 +2043,16 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_source')
 
         dest_check_data = {"test": "data"}
-        self.compute.driver.check_can_live_migrate_source(context,
+        self.compute.driver.check_can_live_migrate_source(self.context,
                                                           inst_ref,
                                                           dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_source(context,
+        self.compute.check_can_live_migrate_source(self.context,
                 dest_check_data=dest_check_data, instance=inst_ref)
 
     def test_check_can_live_migrate_destination_works_correctly(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
-        context = self.context.elevated()
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
@@ -2065,21 +2066,20 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_destination_cleanup')
 
         dest_check_data = {"test": "data"}
-        self.compute.driver.check_can_live_migrate_destination(context,
+        self.compute.driver.check_can_live_migrate_destination(self.context,
                 inst_ref, True, False).AndReturn(dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(context,
-                inst_ref, dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(
+                self.context, inst_ref, dest_check_data)
         self.compute.driver.check_can_live_migrate_destination_cleanup(
-                context, dest_check_data)
+                self.context, dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_destination(context,
+        self.compute.check_can_live_migrate_destination(self.context,
                 block_migration=True, disk_over_commit=False,
                 instance=inst_ref)
 
     def test_check_can_live_migrate_destination_fails_dest_check(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
-        context = self.context.elevated()
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
@@ -2088,18 +2088,18 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
 
-        self.compute.driver.check_can_live_migrate_destination(context,
-                inst_ref, True, False).AndRaise(exception.Invalid())
+        self.compute.driver.check_can_live_migrate_destination(
+                self.context, inst_ref, True, False).AndRaise(
+                        exception.Invalid())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.Invalid,
                           self.compute.check_can_live_migrate_destination,
-                          context, block_migration=True,
+                          self.context, block_migration=True,
                           disk_over_commit=False, instance=inst_ref)
 
     def test_check_can_live_migrate_destination_fails_source(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
-        context = self.context.elevated()
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
@@ -2113,29 +2113,30 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_destination_cleanup')
 
         dest_check_data = {"test": "data"}
-        self.compute.driver.check_can_live_migrate_destination(context,
-                inst_ref, True, False).AndReturn(dest_check_data)
-        self.compute.compute_rpcapi.check_can_live_migrate_source(context,
-                inst_ref, dest_check_data).AndRaise(exception.Invalid())
+        self.compute.driver.check_can_live_migrate_destination(
+                self.context, inst_ref, True, False).AndReturn(
+                        dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(
+                self.context, inst_ref, dest_check_data).AndRaise(
+                        exception.Invalid())
         self.compute.driver.check_can_live_migrate_destination_cleanup(
-                context, dest_check_data)
+                self.context, dest_check_data)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.Invalid,
                           self.compute.check_can_live_migrate_destination,
-                          context, block_migration=True,
+                          self.context, block_migration=True,
                           disk_over_commit=False, instance=inst_ref)
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         """Confirm raising exception if instance doesn't have fixed_ip."""
         # creating instance testdata
-        context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         inst_id = instance["id"]
 
         self.mox.ReplayAll()
         self.assertRaises(exception.FixedIpNotFoundForInstance,
-                          self.compute.pre_live_migration, context,
+                          self.compute.pre_live_migration, self.context,
                           instance=instance)
 
     def test_pre_live_migration_works_correctly(self):
@@ -3875,6 +3876,20 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get(self):
         """Test get instance"""
+        exp_instance = self._create_fake_instance()
+        expected = dict(exp_instance.iteritems())
+        expected['name'] = exp_instance['name']
+
+        def fake_db_get(_context, _instance_uuid):
+            return exp_instance
+
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
+
+        instance = self.compute_api.get(self.context, exp_instance['uuid'])
+        self.assertEquals(expected, instance)
+
+    def test_get_with_admin_context(self):
+        """Test get instance"""
         c = context.get_admin_context()
         exp_instance = self._create_fake_instance()
         expected = dict(exp_instance.iteritems())
@@ -3890,17 +3905,16 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get_with_integer_id(self):
         """Test get instance with an integer id"""
-        c = context.get_admin_context()
         exp_instance = self._create_fake_instance()
         expected = dict(exp_instance.iteritems())
         expected['name'] = exp_instance['name']
 
-        def fake_db_get(context, instance_id):
+        def fake_db_get(_context, _instance_id):
             return exp_instance
 
         self.stubs.Set(db, 'instance_get', fake_db_get)
 
-        instance = self.compute_api.get(c, exp_instance['id'])
+        instance = self.compute_api.get(self.context, exp_instance['id'])
         self.assertEquals(expected, instance)
 
     def test_get_all_by_name_regexp(self):
@@ -4896,8 +4910,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         self.api.delete_aggregate(self.context, aggr['id'])
-        expected = db.aggregate_get(self.context.elevated(read_deleted='yes'),
-                                    aggr['id'])
+        db.aggregate_get(self.context.elevated(read_deleted='yes'),
+                         aggr['id'])
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr['id'])
 
