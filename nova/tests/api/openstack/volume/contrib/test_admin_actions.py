@@ -10,7 +10,7 @@ from nova.tests.api.openstack import fakes
 
 def app():
     # no auth, just let environ['nova.context'] pass through
-    api = fakes.volume.APIRouter()
+    api = fakes.volume.APIRouter(init_only=('volumes', 'snapshots'))
     mapper = fakes.urlmap.URLMap()
     mapper['/v1'] = api
     return mapper

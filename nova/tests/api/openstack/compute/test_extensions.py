@@ -199,7 +199,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.ext_list.sort()
 
     def test_list_extensions_json(self):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('extensions',))
         request = webob.Request.blank("/fake/extensions")
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
@@ -236,7 +236,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             self.assertEqual(output['extension']['alias'], ext['alias'])
 
     def test_get_extension_json(self):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('extensions',))
         request = webob.Request.blank("/fake/extensions/FOXNSOX")
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
@@ -251,13 +251,13 @@ class ExtensionControllerTest(ExtensionTestCase):
                 "links": []})
 
     def test_get_non_existing_extension_json(self):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('extensions',))
         request = webob.Request.blank("/fake/extensions/4")
         response = request.get_response(app)
         self.assertEqual(404, response.status_int)
 
     def test_list_extensions_xml(self):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
         request = webob.Request.blank("/fake/extensions")
         request.accept = "application/xml"
         response = request.get_response(app)
@@ -282,7 +282,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         xmlutil.validate_schema(root, 'extensions')
 
     def test_get_extension_xml(self):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
         request = webob.Request.blank("/fake/extensions/FOXNSOX")
         request.accept = "application/xml"
         response = request.get_response(app)
@@ -398,7 +398,7 @@ class ExtensionManagerTest(ExtensionTestCase):
 class ActionExtensionTest(ExtensionTestCase):
 
     def _send_server_action_request(self, url, body):
-        app = compute.APIRouter()
+        app = compute.APIRouter(init_only=('servers',))
         request = webob.Request.blank(url)
         request.method = 'POST'
         request.content_type = 'application/json'
@@ -478,7 +478,7 @@ class RequestExtensionTest(ExtensionTestCase):
 
     def test_get_resources_with_mgr(self):
 
-        app = fakes.wsgi_app()
+        app = fakes.wsgi_app(init_only=('flavors',))
         request = webob.Request.blank("/v2/fake/flavors/1?chewing=newblue")
         request.environ['api.version'] = '2'
         response = request.get_response(app)
