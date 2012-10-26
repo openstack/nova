@@ -1783,9 +1783,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._finish_resize(context, instance, migration_ref,
                                 disk_info, image)
             self._quota_commit(context, reservations)
-        except Exception, error:
-            self._quota_rollback(context, reservations)
+        except Exception as error:
             with excutils.save_and_reraise_exception():
+                try:
+                    self._quota_rollback(context, reservations)
+                except Exception as qr_error:
+                    reason = _("Failed to rollback quota for failed "
+                            "finish_resize: %(qr_error)s")
+                    LOG.exception(reason % locals(), instance=instance)
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
                           instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
