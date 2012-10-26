@@ -1616,7 +1616,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
         self.compute.finish_resize(context,
-                migration_id=int(migration_ref['id']),
+                migration=jsonutils.to_primitive(migration_ref),
                 disk_info={}, image={}, instance=instance,
                 reservations=reservations)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -1646,7 +1646,8 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
         self.assertRaises(test.TestingException, self.compute.finish_resize,
-                          context, migration_id=int(migration_ref['id']),
+                          context,
+                          migration=jsonutils.to_primitive(migration_ref),
                           disk_info={}, image={}, instance=instance,
                           reservations=reservations)
 
@@ -1750,8 +1751,8 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
 
         self.compute.finish_resize(context,
-                migration_id=int(migration_ref['id']), disk_info={}, image={},
-                instance=instance)
+                migration=jsonutils.to_primitive(migration_ref),
+                disk_info={}, image={}, instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -1943,8 +1944,8 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration_ref,
                                      image={})
         self.compute.finish_resize(context,
-                    migration_id=int(migration_ref['id']), disk_info={},
-                    image={}, instance=instance)
+                    migration=jsonutils.to_primitive(migration_ref),
+                    disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
         inst_ref = db.instance_get_by_uuid(context, instance['uuid'])

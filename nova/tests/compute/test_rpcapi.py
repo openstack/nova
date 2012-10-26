@@ -137,9 +137,9 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_finish_resize(self):
         self._test_compute_api('finish_resize', 'cast',
-                instance=self.fake_instance, migration_id='id',
+                instance=self.fake_instance, migration={'id': 'foo'},
                 image='image', disk_info='disk_info', host='host',
-                reservations=list('fake_res'))
+                reservations=list('fake_res'), version='2.8')
 
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
