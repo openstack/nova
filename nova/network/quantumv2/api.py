@@ -16,6 +16,7 @@
 #
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+from nova.compute import api as compute_api
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -62,7 +63,7 @@ NET_EXTERNAL = 'router:external'
 class API(base.Base):
     """API for interacting with the quantum 2.x API."""
 
-    security_group_api = None
+    security_group_api = compute_api.SecurityGroupAPI()
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
@@ -156,6 +157,7 @@ class API(base.Base):
                                             'exception': ex})
 
         self.trigger_security_group_members_refresh(context, instance)
+        self.trigger_instance_add_security_group_refresh(context, instance)
 
         return self.get_instance_nw_info(context, instance, networks=nets)
 
@@ -173,6 +175,7 @@ class API(base.Base):
                 LOG.exception(_("Failed to delete quantum port %(portid)s ")
                               % {'portid': port['id']})
         self.trigger_security_group_members_refresh(context, instance)
+        self.trigger_instance_remove_security_group_refresh(context, instance)
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None):
@@ -251,12 +254,23 @@ class API(base.Base):
         ip = ip.replace('\\.', '.')
         return self._get_instance_uuids_by_ip(context, ip)
 
-    def trigger_security_group_members_refresh(self, context, instance_ref):
+    def trigger_instance_add_security_group_refresh(self, context,
+                                                    instance_ref):
+        admin_context = context.elevated()
+        for group in instance_ref['security_groups']:
+            self.security_group_api.trigger_handler(
+                'instance_add_security_group', context, instance_ref,
+                 group['name'])
 
-        # used to avoid circular import
-        if not self.security_group_api:
-            from nova.compute import api as compute_api
-            self.security_group_api = compute_api.SecurityGroupAPI()
+    def trigger_instance_remove_security_group_refresh(self, context,
+                                                       instance_ref):
+        admin_context = context.elevated()
+        for group in instance_ref['security_groups']:
+            self.security_group_api.trigger_handler(
+                'instance_remove_security_group', context, instance_ref,
+                 group['name'])
+
+    def trigger_security_group_members_refresh(self, context, instance_ref):
 
         admin_context = context.elevated()
         group_ids = [group['id'] for group in instance_ref['security_groups']]
