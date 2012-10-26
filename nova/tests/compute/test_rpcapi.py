@@ -123,13 +123,13 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
-                instance=self.fake_instance, migration_id='id', host='host',
-                reservations=list('fake_res'))
+                instance=self.fake_instance, migration={'id': 'foo'},
+                host='host', reservations=list('fake_res'), version='2.7')
 
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
-                instance=self.fake_instance, migration_id='id', host='host',
-                reservations=list('fake_res'))
+                instance=self.fake_instance, migration={'id': 'foo'},
+                host='host', reservations=list('fake_res'), version='2.7')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',

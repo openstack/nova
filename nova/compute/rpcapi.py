@@ -134,6 +134,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.4 - Add bdms to terminate_instance
         2.5 - Add block device and network info to reboot_instance
         2.6 - Remove migration_id, add migration to resize_instance
+        2.7 - Remove migration_id, add migration to confirm_resize
     '''
 
     #
@@ -205,14 +206,16 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                            dest_check_data=dest_check_data),
                   topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def confirm_resize(self, ctxt, instance, migration_id, host,
+    def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
         rpc_method = self.cast if cast else self.call
         instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
         return rpc_method(ctxt, self.make_msg('confirm_resize',
-                instance=instance_p, migration_id=migration_id,
+                instance=instance_p, migration=migration_p,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance))
+                topic=_compute_topic(self.topic, ctxt, host, instance),
+                version='2.7')
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)

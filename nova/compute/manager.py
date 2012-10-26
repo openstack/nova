@@ -217,7 +217,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.6'
+    RPC_API_VERSION = '2.7'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1436,10 +1436,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def confirm_resize(self, context, migration_id, instance,
-                       reservations=None):
+    def confirm_resize(self, context, instance, reservations=None,
+                       migration=None, migration_id=None):
         """Destroys the source instance."""
-        migration_ref = self.db.migration_get(context, migration_id)
+        if not migration:
+            migration = self.db.migration_get(context, migration_id)
 
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
@@ -1448,10 +1449,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    reservations):
             # NOTE(tr3buchet): tear down networks on source host
             self.network_api.setup_networks_on_host(context, instance,
-                               migration_ref['source_compute'], teardown=True)
+                               migration['source_compute'], teardown=True)
 
             network_info = self._get_instance_nw_info(context, instance)
-            self.driver.confirm_migration(migration_ref, instance,
+            self.driver.confirm_migration(migration, instance,
                                           self._legacy_nw_info(network_info))
 
             self._notify_about_instance_usage(
