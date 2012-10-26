@@ -82,7 +82,7 @@ class InstanceUsageAuditLogController(object):
         # We do this this way to include disabled compute services,
         # which can have instances on them. (mdragon)
         services = [svc for svc in db.service_get_all(context)
-                    if svc['topic'] == 'compute']
+                    if svc['topic'] == FLAGS.compute_topic]
         hosts = set(serv['host'] for serv in services)
         seen_hosts = set()
         done_hosts = set()

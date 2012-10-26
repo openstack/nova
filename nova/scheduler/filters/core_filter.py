@@ -37,7 +37,7 @@ class CoreFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         """Return True if host has sufficient CPU cores."""
         instance_type = filter_properties.get('instance_type')
-        if host_state.topic != 'compute' or not instance_type:
+        if host_state.topic != FLAGS.compute_topic or not instance_type:
             return True
 
         if not host_state.vcpus_total:
