@@ -1603,19 +1603,18 @@ class ComputeTestCase(BaseTestCase):
 
         reservations = self._ensure_quota_reservations_committed()
 
-        context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_type = instance_types.get_default_instance_type()
         db.instance_update(self.context, instance["uuid"],
                           {"task_state": task_states.RESIZE_PREP})
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={})
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                instance['uuid'], 'pre-migrating')
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
-        self.compute.finish_resize(context,
+        self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 disk_info={}, image={}, instance=instance,
                 reservations=reservations)
@@ -1634,24 +1633,23 @@ class ComputeTestCase(BaseTestCase):
 
         reservations = self._ensure_quota_reservations_rolledback()
 
-        context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_type = instance_types.get_default_instance_type()
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={}, reservations=reservations)
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                instance['uuid'], 'pre-migrating')
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
 
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
         self.assertRaises(test.TestingException, self.compute.finish_resize,
-                          context,
+                          self.context,
                           migration=jsonutils.to_primitive(migration_ref),
                           disk_info={}, image={}, instance=instance,
                           reservations=reservations)
 
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
@@ -1728,7 +1726,6 @@ class ComputeTestCase(BaseTestCase):
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        context = self.context.elevated()
         old_type_id = instance_types.get_instance_type_by_name(
                                                 'm1.tiny')['id']
         new_type = instance_types.get_instance_type_by_name('m1.small')
@@ -1739,18 +1736,16 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_PREP})
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                 instance_type=new_type, image={})
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                                                instance['uuid'],
-                                                'pre-migrating')
-        self.compute.resize_instance(context, instance=instance,
-                                     migration=migration_ref,
-                                     image={})
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
+        self.compute.resize_instance(self.context, instance=instance,
+                migration=migration_ref, image={})
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
-        self.compute.finish_resize(context,
+        self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 disk_info={}, image={}, instance=instance)
 
@@ -1774,7 +1769,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['launched_at'], str(cur_time))
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance_notification(self):
@@ -1783,7 +1778,6 @@ class ComputeTestCase(BaseTestCase):
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance=instance)
         timeutils.set_time_override(cur_time)
@@ -1791,9 +1785,9 @@ class ComputeTestCase(BaseTestCase):
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
         instance_type = instance_types.get_default_instance_type()
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                 instance_type=instance_type, image={})
-        db.migration_get_by_instance_and_status(context,
+        db.migration_get_by_instance_and_status(self.context.elevated(),
                                                 instance['uuid'],
                                                 'pre-migrating')
 
@@ -1820,14 +1814,13 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_prep_resize_instance_migration_error(self):
         """Ensure prep_resize raise a migration error"""
         self.flags(host="foo", allow_resize_to_same_host=False)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        context = self.context.elevated()
 
         reservations = self._ensure_quota_reservations_rolledback()
 
@@ -1838,10 +1831,10 @@ class ComputeTestCase(BaseTestCase):
         instance_type = instance_types.get_default_instance_type()
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                          context, instance=new_instance,
+                          self.context, instance=new_instance,
                           instance_type=instance_type, image={},
                           reservations=reservations)
-        self.compute.terminate_instance(context, instance=new_instance)
+        self.compute.terminate_instance(self.context, instance=new_instance)
 
     def test_resize_instance_driver_error(self):
         """Ensure instance status set to Error on resize error"""
@@ -1854,53 +1847,51 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_type = instance_types.get_default_instance_type()
-        context = self.context.elevated()
 
         reservations = self._ensure_quota_reservations_rolledback()
 
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type, image={},
                                  reservations=reservations)
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                instance['uuid'], 'pre-migrating')
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
 
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.RESIZE_PREP})
         #verify
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, instance=instance,
+                          self.context, instance=instance,
                           migration=migration_ref, image={},
                           reservations=reservations)
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_type = instance_types.get_default_instance_type()
-        context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {'host': 'foo'})
-        self.compute.prep_resize(context, instance=instance,
+        self.compute.prep_resize(self.context, instance=instance,
                 instance_type=instance_type, image={})
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                instance['uuid'], 'pre-migrating')
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.RESIZE_PREP})
-        self.compute.resize_instance(context, instance=instance,
+        self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration_ref,
                                      image={})
-        inst = db.instance_get_by_uuid(context, instance['uuid'])
+        inst = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(migration_ref['dest_compute'], inst['host'])
 
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
     def test_finish_revert_resize(self):
@@ -1913,43 +1904,44 @@ class ComputeTestCase(BaseTestCase):
 
         reservations = self._ensure_quota_reservations_committed()
 
-        context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
 
         self.compute.run_instance(self.context, instance=instance)
 
         # Confirm the instance size before the resize starts
-        inst_ref = db.instance_get_by_uuid(context, instance['uuid'])
-        instance_type_ref = db.instance_type_get(context,
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance_type_ref = db.instance_type_get(self.context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
         new_inst_ref = db.instance_update(self.context, instance['uuid'],
                                           {'host': 'foo'})
 
-        new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
-        self.compute.prep_resize(context,
+        new_instance_type_ref = db.instance_type_get_by_flavor_id(
+                self.context, 3)
+        self.compute.prep_resize(self.context,
                 instance=jsonutils.to_primitive(new_inst_ref),
                 instance_type=jsonutils.to_primitive(new_instance_type_ref),
                 image={}, reservations=reservations)
 
-        migration_ref = db.migration_get_by_instance_and_status(context,
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(),
                 inst_ref['uuid'], 'pre-migrating')
 
         instance = jsonutils.to_primitive(inst_ref)
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_PREP})
-        self.compute.resize_instance(context, instance=instance,
+        self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration_ref,
                                      image={})
-        self.compute.finish_resize(context,
+        self.compute.finish_resize(self.context,
                     migration=jsonutils.to_primitive(migration_ref),
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
-        inst_ref = db.instance_get_by_uuid(context, instance['uuid'])
-        instance_type_ref = db.instance_type_get(context,
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance_type_ref = db.instance_type_get(self.context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
@@ -1957,7 +1949,7 @@ class ComputeTestCase(BaseTestCase):
         rpcinst = jsonutils.to_primitive(inst_ref)
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_REVERTING})
-        self.compute.revert_resize(context,
+        self.compute.revert_resize(self.context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
 
@@ -1969,21 +1961,21 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(network_api.API, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
-        self.compute.finish_revert_resize(context,
+        self.compute.finish_revert_resize(self.context,
                 migration_id=migration_ref['id'], instance=rpcinst,
                 reservations=reservations)
 
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
         self.assertEqual(instance['task_state'], None)
 
-        inst_ref = db.instance_get_by_uuid(context, instance['uuid'])
-        instance_type_ref = db.instance_type_get(context,
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance_type_ref = db.instance_type_get(self.context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
         self.assertEqual(inst_ref['host'], migration_ref['source_compute'])
 
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst_ref))
 
     def test_get_by_flavor_id(self):
@@ -2017,24 +2009,23 @@ class ComputeTestCase(BaseTestCase):
 
         inst_ref = jsonutils.to_primitive(self._create_fake_instance())
         instance_type = instance_types.get_default_instance_type()
-        context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance=inst_ref)
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, instance=inst_ref,
+        self.compute.prep_resize(self.context, instance=inst_ref,
                                  instance_type=instance_type,
                                  image={}, reservations=reservations)
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                inst_ref['uuid'], 'pre-migrating')
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), inst_ref['uuid'], 'pre-migrating')
         db.instance_update(self.context, inst_ref['uuid'],
                            {"task_state": task_states.RESIZE_PREP})
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, instance=inst_ref,
+                          self.context, instance=inst_ref,
                           migration=migration_ref, image={},
                           reservations=reservations)
-        inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
+        inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst_ref))
 
     def test_check_can_live_migrate_source_works_correctly(self):
@@ -3731,13 +3722,12 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_resize_confirm_through_api(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        context = self.context.elevated()
         self.compute.run_instance(self.context, instance=instance)
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute_api.resize(context, instance, '4')
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.compute_api.resize(self.context, instance, '4')
 
         # create a fake migration record (manager does this)
-        db.migration_create(context,
+        db.migration_create(self.context.elevated(),
                 {'instance_uuid': instance['uuid'],
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
@@ -3745,20 +3735,19 @@ class ComputeAPITestCase(BaseTestCase):
                                       {'task_state': None,
                                        'vm_state': vm_states.RESIZED})
 
-        self.compute_api.confirm_resize(context, instance)
-        self.compute.terminate_instance(context,
+        self.compute_api.confirm_resize(self.context, instance)
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
     def test_resize_revert_through_api(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        context = self.context.elevated()
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.run_instance(self.context, instance=instance)
 
-        self.compute_api.resize(context, instance, '4')
+        self.compute_api.resize(self.context, instance, '4')
 
         # create a fake migration record (manager does this)
-        db.migration_create(context,
+        db.migration_create(self.context.elevated(),
                 {'instance_uuid': instance['uuid'],
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
@@ -3766,54 +3755,51 @@ class ComputeAPITestCase(BaseTestCase):
                                       {'task_state': None,
                                        'vm_state': vm_states.RESIZED})
 
-        self.compute_api.revert_resize(context, instance)
+        self.compute_api.revert_resize(self.context, instance)
 
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.RESIZED)
         self.assertEqual(instance['task_state'], task_states.RESIZE_REVERTING)
 
-        self.compute.terminate_instance(context,
+        self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(instance))
 
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
         instance = self._create_fake_instance()
-        context = self.context.elevated()
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.NotFound, self.compute_api.resize,
-                context, instance, 200)
+                self.context, instance, 200)
 
-        self.compute.terminate_instance(context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_same_flavor_fails(self):
         """Ensure invalid flavors raise"""
-        context = self.context.elevated()
         instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
 
         self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.CannotResizeToSameFlavor,
-                          self.compute_api.resize, context, instance, 1)
+                          self.compute_api.resize, self.context, instance, 1)
 
-        self.compute.terminate_instance(context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_migrate(self):
-        context = self.context.elevated()
         instance = self._create_fake_instance()
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
         # Migrate simply calls resize() without a flavor_id.
-        self.compute_api.resize(context, instance, None)
-        self.compute.terminate_instance(context, instance=instance)
+        self.compute_api.resize(self.context, instance, None)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_request_spec(self):
-        def _fake_cast(context, topic, msg):
+        def _fake_cast(_context, _topic, msg):
             request_spec = msg['args']['request_spec']
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
@@ -3833,9 +3819,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(rpc, 'cast', _fake_cast)
 
-        context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         orig_instance_type = instance['instance_type']
         self.compute.run_instance(self.context, instance=instance)
@@ -3850,12 +3835,12 @@ class ComputeAPITestCase(BaseTestCase):
         # different host
         self.flags(host='host3')
         try:
-            self.compute_api.resize(context, instance, None)
+            self.compute_api.resize(self.context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance=instance)
+            self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_request_spec_noavoid(self):
-        def _fake_cast(context, topic, msg):
+        def _fake_cast(_context, topic, msg):
             request_spec = msg['args']['request_spec']
             filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
@@ -3870,9 +3855,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(rpc, 'cast', _fake_cast)
         self.flags(allow_resize_to_same_host=True)
 
-        context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
@@ -3885,9 +3869,9 @@ class ComputeAPITestCase(BaseTestCase):
                 dict(host='host2', progress=10))
         # different host
         try:
-            self.compute_api.resize(context, instance, None)
+            self.compute_api.resize(self.context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance=instance)
+            self.compute.terminate_instance(self.context, instance=instance)
 
     def test_get(self):
         """Test get instance"""

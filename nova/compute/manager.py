@@ -1440,7 +1440,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                        migration=None, migration_id=None):
         """Destroys the source instance."""
         if not migration:
-            migration = self.db.migration_get(context, migration_id)
+            migration = self.db.migration_get(context.elevated(),
+                    migration_id)
 
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
@@ -1472,8 +1473,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         source machine.
 
         """
-        context = context.elevated()
-        migration_ref = self.db.migration_get(context, migration_id)
+        migration_ref = self.db.migration_get(context.elevated(),
+                migration_id)
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
@@ -1520,7 +1521,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         in the database.
 
         """
-        migration_ref = self.db.migration_get(context, migration_id)
+        elevated = context.elevated()
+        migration_ref = self.db.migration_get(elevated, migration_id)
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
@@ -1572,7 +1574,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   expected_task_state=task_states.
                                       RESIZE_REVERTING)
 
-            self.db.migration_update(context, migration_id,
+            self.db.migration_update(elevated, migration_id,
                     {'status': 'reverted'})
 
             self._notify_about_instance_usage(
@@ -1600,7 +1602,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         Possibly changes the RAM and disk size in the process.
 
         """
-        context = context.elevated()
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             compute_utils.notify_usage_exists(
@@ -1620,7 +1621,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             old_instance_type = instance_types.get_instance_type(
                     old_instance_type_id)
 
-            migration_ref = self.db.migration_create(context,
+            migration_ref = self.db.migration_create(context.elevated(),
                     {'instance_uuid': instance['uuid'],
                      'source_compute': instance['host'],
                      'dest_compute': self.host,
@@ -1647,9 +1648,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     def resize_instance(self, context, instance, image,
                         reservations=None, migration=None, migration_id=None):
         """Starts the migration of a running instance to another host."""
-        context = context.elevated()
+        elevated = context.elevated()
         if not migration:
-            migration = self.db.migration_get(context, migration_id)
+            migration = self.db.migration_get(elevated, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             instance_type_ref = self.db.instance_type_get(context,
@@ -1657,7 +1658,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             network_info = self._get_instance_nw_info(context, instance)
 
-            self.db.migration_update(context,
+            self.db.migration_update(elevated,
                                      migration['id'],
                                      {'status': 'migrating'})
 
@@ -1689,7 +1690,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.network_api.migrate_instance_start(context, instance,
                                                            self.host)
 
-            migration = self.db.migration_update(context,
+            migration = self.db.migration_update(elevated,
                                                  migration['id'],
                                                  {'status': 'post-migrating'})
 
@@ -1767,7 +1768,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          expected_task_state=task_states.
                                              RESIZE_FINISH)
 
-        self.db.migration_update(context, migration['id'],
+        self.db.migration_update(context.elevated(), migration['id'],
                                  {'status': 'finished'})
 
         self._notify_about_instance_usage(
@@ -1786,7 +1787,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.db.migration_get(context, migration_id)
+            migration = self.db.migration_get(context.elevated(),
+                    migration_id)
         try:
             self._finish_resize(context, instance, migration,
                                 disk_info, image)

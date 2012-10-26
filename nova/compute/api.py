@@ -1504,8 +1504,8 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
-        context = context.elevated()
-        migration_ref = self.db.migration_get_by_instance_and_status(context,
+        elevated = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(elevated,
                 instance['uuid'], 'finished')
 
         # reverse quota reservation for increased resource usage
@@ -1520,7 +1520,7 @@ class API(base.Base):
                 instance=instance, migration_id=migration_ref['id'],
                 host=migration_ref['dest_compute'], reservations=reservations)
 
-        self.db.migration_update(context, migration_ref['id'],
+        self.db.migration_update(elevated, migration_ref['id'],
                                  {'status': 'reverted'})
 
     @wrap_check_policy
@@ -1528,8 +1528,8 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
-        context = context.elevated()
-        migration_ref = self.db.migration_get_by_instance_and_status(context,
+        elevated = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(elevated,
                 instance['uuid'], 'finished')
 
         # reserve quota only for any decrease in resource usage
@@ -1545,7 +1545,7 @@ class API(base.Base):
                 host=migration_ref['source_compute'],
                 reservations=reservations)
 
-        self.db.migration_update(context, migration_ref['id'],
+        self.db.migration_update(elevated, migration_ref['id'],
                 {'status': 'confirmed'})
 
     @staticmethod
