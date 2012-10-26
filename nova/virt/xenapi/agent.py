@@ -115,121 +115,128 @@ def _get_agent_version(session, instance, vm_ref):
     return resp['message'].replace('\\r\\n', '')
 
 
-def get_agent_version(session, instance, vm_ref):
-    """Get the version of the agent running on the VM instance."""
+class XenAPIBasedAgent(object):
+    def __init__(self, session, instance, vm_ref):
+        self.session = session
+        self.instance = instance
+        self.vm_ref = vm_ref
 
-    LOG.debug(_('Querying agent version'), instance=instance)
+    def get_agent_version(self):
+        """Get the version of the agent running on the VM instance."""
 
-    # The agent can be slow to start for a variety of reasons. On Windows,
-    # it will generally perform a setup process on first boot that can
-    # take a couple of minutes and then reboot. On Linux, the system can
-    # also take a while to boot. So we need to be more patient than
-    # normal as well as watch for domid changes
+        LOG.debug(_('Querying agent version'), instance=self.instance)
 
-    expiration = time.time() + FLAGS.agent_version_timeout
-    while time.time() < expiration:
-        ret = _get_agent_version(session, instance, vm_ref)
-        if ret:
-            return ret
+        # The agent can be slow to start for a variety of reasons. On Windows,
+        # it will generally perform a setup process on first boot that can
+        # take a couple of minutes and then reboot. On Linux, the system can
+        # also take a while to boot. So we need to be more patient than
+        # normal as well as watch for domid changes
 
-    LOG.info(_('Reached maximum time attempting to query agent version'),
-             instance=instance)
+        expiration = time.time() + FLAGS.agent_version_timeout
+        while time.time() < expiration:
+            ret = _get_agent_version(self.session, self.instance, self.vm_ref)
+            if ret:
+                return ret
 
-    return None
+        LOG.info(_('Reached maximum time attempting to query agent version'),
+                 instance=self.instance)
 
-
-def agent_update(session, instance, vm_ref, agent_build):
-    """Update agent on the VM instance."""
-
-    LOG.info(_('Updating agent to %s'), agent_build['version'],
-             instance=instance)
-
-    # Send the encrypted password
-    args = {'url': agent_build['url'], 'md5sum': agent_build['md5hash']}
-    resp = _call_agent(session, instance, vm_ref, 'agentupdate', args)
-    if resp['returncode'] != '0':
-        LOG.error(_('Failed to update agent: %(resp)r'), locals(),
-                  instance=instance)
-        return None
-    return resp['message']
-
-
-def set_admin_password(session, instance, vm_ref, new_pass):
-    """Set the root/admin password on the VM instance.
-
-    This is done via an agent running on the VM. Communication between nova
-    and the agent is done via writing xenstore records. Since communication
-    is done over the XenAPI RPC calls, we need to encrypt the password.
-    We're using a simple Diffie-Hellman class instead of a more advanced
-    library (such as M2Crypto) for compatibility with the agent code.
-    """
-    LOG.debug(_('Setting admin password'), instance=instance)
-
-    dh = SimpleDH()
-
-    # Exchange keys
-    args = {'pub': str(dh.get_public())}
-    resp = _call_agent(session, instance, vm_ref, 'key_init', args)
-
-    # Successful return code from key_init is 'D0'
-    if resp['returncode'] != 'D0':
-        msg = _('Failed to exchange keys: %(resp)r') % locals()
-        LOG.error(msg, instance=instance)
-        raise Exception(msg)
-
-    # Some old versions of the Windows agent have a trailing \\r\\n
-    # (ie CRLF escaped) for some reason. Strip that off.
-    agent_pub = int(resp['message'].replace('\\r\\n', ''))
-    dh.compute_shared(agent_pub)
-
-    # Some old versions of Linux and Windows agent expect trailing \n
-    # on password to work correctly.
-    enc_pass = dh.encrypt(new_pass + '\n')
-
-    # Send the encrypted password
-    args = {'enc_pass': enc_pass}
-    resp = _call_agent(session, instance, vm_ref, 'password', args)
-
-    # Successful return code from password is '0'
-    if resp['returncode'] != '0':
-        msg = _('Failed to update password: %(resp)r') % locals()
-        LOG.error(msg, instance=instance)
-        raise Exception(msg)
-
-    return resp['message']
-
-
-def inject_file(session, instance, vm_ref, path, contents):
-    LOG.debug(_('Injecting file path: %r'), path, instance=instance)
-
-    # Files/paths must be base64-encoded for transmission to agent
-    b64_path = base64.b64encode(path)
-    b64_contents = base64.b64encode(contents)
-
-    args = {'b64_path': b64_path, 'b64_contents': b64_contents}
-
-    # If the agent doesn't support file injection, a NotImplementedError
-    # will be raised with the appropriate message.
-    resp = _call_agent(session, instance, vm_ref, 'inject_file', args)
-    if resp['returncode'] != '0':
-        LOG.error(_('Failed to inject file: %(resp)r'), locals(),
-                  instance=instance)
         return None
 
-    return resp['message']
+    def agent_update(self, agent_build):
+        """Update agent on the VM instance."""
 
+        LOG.info(_('Updating agent to %s'), agent_build['version'],
+                 instance=self.instance)
 
-def resetnetwork(session, instance, vm_ref):
-    LOG.debug(_('Resetting network'), instance=instance)
+        # Send the encrypted password
+        args = {'url': agent_build['url'], 'md5sum': agent_build['md5hash']}
+        resp = _call_agent(
+            self.session, self.instance, self.vm_ref, 'agentupdate', args)
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to update agent: %(resp)r'), locals(),
+                      instance=self.instance)
+            return None
+        return resp['message']
 
-    resp = _call_agent(session, instance, vm_ref, 'resetnetwork',
-                       timeout=FLAGS.agent_resetnetwork_timeout)
-    if resp['returncode'] != '0':
-        LOG.error(_('Failed to reset network: %(resp)r'), locals(),
-                  instance=instance)
-        return None
+    def set_admin_password(self, new_pass):
+        """Set the root/admin password on the VM instance.
 
-    return resp['message']
+        This is done via an agent running on the VM. Communication between nova
+        and the agent is done via writing xenstore records. Since communication
+        is done over the XenAPI RPC calls, we need to encrypt the password.
+        We're using a simple Diffie-Hellman class instead of a more advanced
+        library (such as M2Crypto) for compatibility with the agent code.
+        """
+        LOG.debug(_('Setting admin password'), instance=self.instance)
+
+        dh = SimpleDH()
+
+        # Exchange keys
+        args = {'pub': str(dh.get_public())}
+        resp = _call_agent(
+            self.session, self.instance, self.vm_ref, 'key_init', args)
+
+        # Successful return code from key_init is 'D0'
+        if resp['returncode'] != 'D0':
+            msg = _('Failed to exchange keys: %(resp)r') % locals()
+            LOG.error(msg, instance=self.instance)
+            raise Exception(msg)
+
+        # Some old versions of the Windows agent have a trailing \\r\\n
+        # (ie CRLF escaped) for some reason. Strip that off.
+        agent_pub = int(resp['message'].replace('\\r\\n', ''))
+        dh.compute_shared(agent_pub)
+
+        # Some old versions of Linux and Windows agent expect trailing \n
+        # on password to work correctly.
+        enc_pass = dh.encrypt(new_pass + '\n')
+
+        # Send the encrypted password
+        args = {'enc_pass': enc_pass}
+        resp = _call_agent(
+            self.session, self.instance, self.vm_ref, 'password', args)
+
+        # Successful return code from password is '0'
+        if resp['returncode'] != '0':
+            msg = _('Failed to update password: %(resp)r') % locals()
+            LOG.error(msg, instance=self.instance)
+            raise Exception(msg)
+
+        return resp['message']
+
+    def inject_file(self, path, contents):
+        LOG.debug(_('Injecting file path: %r'), path, instance=self.instance)
+
+        # Files/paths must be base64-encoded for transmission to agent
+        b64_path = base64.b64encode(path)
+        b64_contents = base64.b64encode(contents)
+
+        args = {'b64_path': b64_path, 'b64_contents': b64_contents}
+
+        # If the agent doesn't support file injection, a NotImplementedError
+        # will be raised with the appropriate message.
+        resp = _call_agent(
+            self.session, self.instance, self.vm_ref, 'inject_file', args)
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to inject file: %(resp)r'), locals(),
+                      instance=self.instance)
+            return None
+
+        return resp['message']
+
+    def resetnetwork(self):
+        LOG.debug(_('Resetting network'), instance=self.instance)
+
+        resp = _call_agent(
+            self.session, self.instance, self.vm_ref, 'resetnetwork',
+            timeout=FLAGS.agent_resetnetwork_timeout)
+        if resp['returncode'] != '0':
+            LOG.error(_('Failed to reset network: %(resp)r'), locals(),
+                      instance=self.instance)
+            return None
+
+        return resp['message']
 
 
 def find_guest_agent(base_dir):

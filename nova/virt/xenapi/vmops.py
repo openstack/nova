@@ -42,7 +42,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import firewall
-from nova.virt.xenapi import agent
+from nova.virt.xenapi import agent as xapi_agent
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
@@ -155,6 +155,9 @@ class VMOps(object):
         vif_impl = importutils.import_class(FLAGS.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
+
+    def _get_agent(self, instance, vm_ref):
+        return xapi_agent.XenAPIBasedAgent(self._session, instance, vm_ref)
 
     def list_instances(self):
         """List VM instances."""
@@ -514,14 +517,15 @@ class VMOps(object):
 
         # Update agent, if necessary
         # This also waits until the agent starts
-        version = agent.get_agent_version(self._session, instance, vm_ref)
+        agent = self._get_agent(instance, vm_ref)
+        version = agent.get_agent_version()
         if version:
             LOG.info(_('Instance agent version: %s'), version,
                      instance=instance)
 
         if (version and agent_build and
             cmp_version(version, agent_build['version']) < 0):
-            agent.agent_update(self._session, instance, vm_ref, agent_build)
+            agent.agent_update(agent_build)
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
@@ -531,16 +535,14 @@ class VMOps(object):
         if injected_files:
             # Inject any files, if specified
             for path, contents in injected_files:
-                agent.inject_file(self._session, instance, vm_ref,
-                                  path, contents)
+                agent.inject_file(path, contents)
 
         # Set admin password, if necessary
         if admin_password and not no_agent:
-            agent.set_admin_password(self._session, instance, vm_ref,
-                                     admin_password)
+            agent.set_admin_password(admin_password)
 
         # Reset network config
-        agent.resetnetwork(self._session, instance, vm_ref)
+        agent.resetnetwork()
 
         # Set VCPU weight
         inst_type = db.instance_type_get(ctx, instance['instance_type_id'])
@@ -834,12 +836,14 @@ class VMOps(object):
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        agent.set_admin_password(self._session, instance, vm_ref, new_pass)
+        agent = self._get_agent(instance, vm_ref)
+        agent.set_admin_password(new_pass)
 
     def inject_file(self, instance, path, contents):
         """Write a file to the VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        agent.inject_file(self._session, instance, vm_ref, path, contents)
+        agent = self._get_agent(instance, vm_ref)
+        agent.inject_file(path, contents)
 
     @staticmethod
     def _sanitize_xenstore_key(key):
@@ -1384,7 +1388,8 @@ class VMOps(object):
     def reset_network(self, instance):
         """Calls resetnetwork method in agent."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        agent.resetnetwork(self._session, instance, vm_ref)
+        agent = self._get_agent(instance, vm_ref)
+        agent.resetnetwork()
 
     def inject_hostname(self, instance, vm_ref, hostname):
         """Inject the hostname of the instance into the xenstore."""
