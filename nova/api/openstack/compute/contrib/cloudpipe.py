@@ -25,6 +25,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import network
+from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -69,7 +70,7 @@ class CloudpipeController(object):
         # NOTE(vish): One of the drawbacks of doing this in the api is
         #             the keys will only be on the api node that launched
         #             the cloudpipe.
-        utils.ensure_tree(FLAGS.keys_path)
+        fileutils.ensure_tree(FLAGS.keys_path)
 
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes"""

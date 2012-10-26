@@ -24,7 +24,6 @@ from eventlet import greenthread
 
 from nova import exception
 from nova import test
-from nova import utils
 
 
 class ExceptionTestCase(test.TestCase):
@@ -63,96 +62,3 @@ class ProjectTestCase(test.TestCase):
         helpful_msg = (_("The following migrations are missing a downgrade:"
                          "\n\t%s") % '\n\t'.join(sorted(missing_downgrade)))
         self.assert_(not missing_downgrade, helpful_msg)
-
-
-class LockTestCase(test.TestCase):
-    def test_synchronized_wrapped_function_metadata(self):
-        @utils.synchronized('whatever')
-        def foo():
-            """Bar"""
-            pass
-        self.assertEquals(foo.__doc__, 'Bar', "Wrapped function's docstring "
-                                              "got lost")
-        self.assertEquals(foo.__name__, 'foo', "Wrapped function's name "
-                                               "got mangled")
-
-    def test_synchronized_internally(self):
-        """We can lock across multiple green threads"""
-        saved_sem_num = len(utils._semaphores)
-        seen_threads = list()
-
-        @utils.synchronized('testlock2', external=False)
-        def f(id):
-            for x in range(10):
-                seen_threads.append(id)
-                greenthread.sleep(0)
-
-        threads = []
-        pool = greenpool.GreenPool(10)
-        for i in range(10):
-            threads.append(pool.spawn(f, i))
-
-        for thread in threads:
-            thread.wait()
-
-        self.assertEquals(len(seen_threads), 100)
-        # Looking at the seen threads, split it into chunks of 10, and verify
-        # that the last 9 match the first in each chunk.
-        for i in range(10):
-            for j in range(9):
-                self.assertEquals(seen_threads[i * 10],
-                                  seen_threads[i * 10 + 1 + j])
-
-        self.assertEqual(saved_sem_num, len(utils._semaphores),
-                         "Semaphore leak detected")
-
-    def test_nested_external_works(self):
-        """We can nest external syncs"""
-        with utils.tempdir() as tempdir:
-            self.flags(lock_path=tempdir)
-            sentinel = object()
-
-            @utils.synchronized('testlock1', external=True)
-            def outer_lock():
-
-                @utils.synchronized('testlock2', external=True)
-                def inner_lock():
-                    return sentinel
-                return inner_lock()
-
-            self.assertEqual(sentinel, outer_lock())
-
-    def test_synchronized_externally(self):
-        """We can lock across multiple processes"""
-        with utils.tempdir() as tempdir:
-            self.flags(lock_path=tempdir)
-            rpipe1, wpipe1 = os.pipe()
-            rpipe2, wpipe2 = os.pipe()
-
-            @utils.synchronized('testlock1', external=True)
-            def f(rpipe, wpipe):
-                try:
-                    os.write(wpipe, "foo")
-                except OSError, e:
-                    self.assertEquals(e.errno, errno.EPIPE)
-                    return
-
-                rfds, _wfds, _efds = select.select([rpipe], [], [], 1)
-                self.assertEquals(len(rfds), 0, "The other process, which was"
-                                                " supposed to be locked, "
-                                                "wrote on its end of the "
-                                                "pipe")
-                os.close(rpipe)
-
-            pid = os.fork()
-            if pid > 0:
-                os.close(wpipe1)
-                os.close(rpipe2)
-
-                f(rpipe1, wpipe2)
-            else:
-                os.close(rpipe1)
-                os.close(wpipe2)
-
-                f(rpipe2, wpipe1)
-                os._exit(0)

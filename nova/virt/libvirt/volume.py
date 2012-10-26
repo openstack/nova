@@ -22,6 +22,7 @@ import time
 
 from nova import exception
 from nova import flags
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import config
@@ -123,7 +124,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
                          '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command, **kwargs)
 
-    @utils.synchronized('connect_volume')
+    @lockutils.synchronized('connect_volume', 'nova-')
     def connect_volume(self, connection_info, mount_device):
         """Attach the volume to instance_name"""
         iscsi_properties = connection_info['data']
@@ -193,7 +194,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         sup = super(LibvirtISCSIVolumeDriver, self)
         return sup.connect_volume(connection_info, mount_device)
 
-    @utils.synchronized('connect_volume')
+    @lockutils.synchronized('connect_volume', 'nova-')
     def disconnect_volume(self, connection_info, mount_device):
         """Detach the volume from instance_name"""
         sup = super(LibvirtISCSIVolumeDriver, self)

@@ -12,7 +12,7 @@ view, each OpenStack service runs in a single thread.
 
 The use of green threads reduces the likelihood of race conditions, but does
 not completely eliminate them. In some cases, you may need to use the
-``@utils.synchronized(...)`` decorator to avoid races.
+``@lockutils.synchronized(...)`` decorator to avoid races.
 
 In addition, since there is only one operating system thread, a call that
 blocks that main thread will block the entire process.

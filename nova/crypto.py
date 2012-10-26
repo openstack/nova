@@ -33,6 +33,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -112,7 +113,7 @@ def ensure_ca_filesystem():
                                          'genrootca.sh')
 
         start = os.getcwd()
-        utils.ensure_tree(ca_dir)
+        fileutils.ensure_tree(ca_dir)
         os.chdir(ca_dir)
         utils.execute("sh", genrootca_sh_path)
         os.chdir(start)
@@ -301,7 +302,7 @@ def _sign_csr(csr_text, ca_folder):
         start = os.getcwd()
 
         # Change working dir to CA
-        utils.ensure_tree(ca_folder)
+        fileutils.ensure_tree(ca_folder)
         os.chdir(ca_folder)
         utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
                       './openssl.cnf', '-infiles', inbound)

@@ -66,6 +66,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
@@ -854,7 +855,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     def _import_ipam_lib(self, ipam_lib):
         self.ipam = importutils.import_module(ipam_lib).get_ipam_lib(self)
 
-    @utils.synchronized('get_dhcp')
+    @lockutils.synchronized('get_dhcp', 'nova-')
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
         # NOTE(vish): this is for compatibility

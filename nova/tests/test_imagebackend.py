@@ -18,6 +18,7 @@
 import os
 
 from nova import flags
+from nova.openstack.common import fileutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
@@ -56,8 +57,8 @@ class _ImageTestCase(test.TestCase):
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.utils, 'ensure_tree')
-        imagebackend.utils.ensure_tree(self.TEMPLATE_DIR)
+        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
+        imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -83,7 +84,7 @@ class _ImageTestCase(test.TestCase):
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.utils, 'ensure_tree')
+        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -117,7 +118,8 @@ class RawTestCase(_ImageTestCase):
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.utils.synchronized, '__call__')
+        self.mox.StubOutWithMock(imagebackend.lockutils.synchronized,
+                                 '__call__')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
         self.mox.StubOutWithMock(imagebackend.disk, 'extend')
         return fn
@@ -167,7 +169,8 @@ class Qcow2TestCase(_ImageTestCase):
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.utils.synchronized, '__call__')
+        self.mox.StubOutWithMock(imagebackend.lockutils.synchronized,
+                                 '__call__')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'create_cow_image')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')

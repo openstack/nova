@@ -24,8 +24,8 @@ from nova import network
 from nova.network import linux_net
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova import utils
 from nova.virt import netutils
 
 
@@ -430,7 +430,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.do_refresh_instance_rules(instance)
         self.iptables.apply()
 
-    @utils.synchronized('iptables', external=True)
+    @lockutils.synchronized('iptables', 'nova-', external=True)
     def _inner_do_refresh_rules(self, instance, ipv4_rules,
                                                ipv6_rules):
         self.remove_filters_for_instance(instance)
@@ -453,7 +453,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self._do_refresh_provider_fw_rules()
         self.iptables.apply()
 
-    @utils.synchronized('iptables', external=True)
+    @lockutils.synchronized('iptables', 'nova-', external=True)
     def _do_refresh_provider_fw_rules(self):
         """Internal, synchronized version of refresh_provider_fw_rules."""
         self._purge_provider_fw_rules()
