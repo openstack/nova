@@ -160,7 +160,7 @@ def execute(*cmd, **kwargs):
         raise exception.NovaException(_('Got unknown keyword args '
                                         'to utils.execute: %r') % kwargs)
 
-    if run_as_root:
+    if run_as_root and os.geteuid() != 0:
         cmd = ['sudo', 'nova-rootwrap', FLAGS.rootwrap_config] + list(cmd)
 
     cmd = map(str, cmd)
