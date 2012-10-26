@@ -3030,6 +3030,57 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         }
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_alternate_namespace_prefix(self):
+        serial_request = """
+<ns2:server xmlns:ns2="http://docs.openstack.org/compute/api/v2"
+        name="new-server-test"
+        imageRef="1"
+        flavorRef="2">
+        <ns2:metadata><ns2:meta key="hello">world</ns2:meta></ns2:metadata>
+        </ns2:server>
+        """
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "server": {
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                'metadata': {"hello": "world"},
+                },
+            }
+        self.assertEquals(request['body'], expected)
+
+    def test_request_with_scheduler_hints_and_alternate_namespace_prefix(self):
+        serial_request = """
+<ns2:server xmlns:ns2="http://docs.openstack.org/compute/api/v2"
+     name="new-server-test"
+     imageRef="1"
+     flavorRef="2">
+     <ns2:metadata><ns2:meta key="hello">world</ns2:meta></ns2:metadata>
+     <os:scheduler_hints
+     xmlns:os="http://docs.openstack.org/compute/ext/scheduler-hints/api/v2">
+             <hypervisor>xen</hypervisor>
+             <near>eb999657-dd6b-464e-8713-95c532ac3b18</near>
+     </os:scheduler_hints>
+     </ns2:server>
+        """
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "server": {
+                'OS-SCH-HNT:scheduler_hints': {
+                    'hypervisor': ['xen'],
+                    'near': ['eb999657-dd6b-464e-8713-95c532ac3b18']
+                },
+                "name": "new-server-test",
+                "imageRef": "1",
+                "flavorRef": "2",
+                "metadata": {
+                    "hello": "world"
+                }
+            }
+        }
+        self.assertEquals(request['body'], expected)
+
     def test_access_ipv4(self):
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v2"
