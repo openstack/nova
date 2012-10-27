@@ -1519,7 +1519,7 @@ def _build_instance_get(context, session=None):
             options(joinedload('instance_type'))
 
 
-@require_admin_context
+@require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups',
@@ -1527,6 +1527,12 @@ def instance_get_all(context, columns_to_join=None):
     query = model_query(context, models.Instance)
     for column in columns_to_join:
         query = query.options(joinedload(column))
+    if not context.is_admin:
+        # If we're not admin context, add appropriate filter..
+        if context.project_id:
+            query = query.filter_by(project_id=context.project_id)
+        else:
+            query = query.filter_by(user_id=context.user_id)
     return query.all()
 
 
