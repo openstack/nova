@@ -42,6 +42,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.network import api as network_api
+from nova.network import model as network_model
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -57,6 +58,7 @@ from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db.fakes import FakeModel
 from nova.tests import fake_network
+from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova import utils
 import nova.volume
@@ -932,7 +934,7 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
-        fake_net_info = {'bar': 'baz'}
+        fake_net_info = []
         fake_block_dev_info = {'foo': 'bar'}
         self._stub_out_reboot(fake_net_info, fake_block_dev_info)
         self.compute.reboot_instance(self.context, instance=instance,
@@ -955,7 +957,7 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
-        fake_net_info = {'bar': 'baz'}
+        fake_net_info = []
         fake_block_dev_info = {'foo': 'bar'}
         self._stub_out_reboot(fake_net_info, fake_block_dev_info)
         self.compute.reboot_instance(self.context, instance=instance,
@@ -969,6 +971,42 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
+
+    def test_reboot_nwinfo(self):
+        """Ensure instance network info is rehydrated in reboot"""
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {'task_state': task_states.REBOOTING_HARD})
+
+        result = {'was_instance': []}
+
+        # NOTE(danms): Beware the dragons ahead:
+        # Since the _legacy_nw_info() method in manager runs inside a
+        # try..except block, we can't assert from here. Further, this
+        # will be run more than once during the operation we're about
+        # to fire off, which means we need to make sure that it doesn't
+        # fail any of the times it is run. Hence the obscurity below.
+        def fake_legacy_nw_info(network_info):
+            result['was_instance'].append(
+                isinstance(network_info, network_model.NetworkInfo))
+        self.stubs.Set(self.compute, '_legacy_nw_info', fake_legacy_nw_info)
+
+        fake_net_info = network_model.NetworkInfo([
+                fake_network_cache_model.new_vif(),
+                fake_network_cache_model.new_vif(
+                    {'address': 'bb:bb:bb:bb:bb:bb'})])
+        fake_net_info_p = jsonutils.to_primitive(fake_net_info)
+        fake_block_dev_info = {'foo': 'bar'}
+        self.compute.reboot_instance(self.context, instance=instance,
+                                     network_info=fake_net_info_p,
+                                     block_device_info=fake_block_dev_info,
+                                     reboot_type="SOFT")
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
+        self.assertFalse(False in result['was_instance'])
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
