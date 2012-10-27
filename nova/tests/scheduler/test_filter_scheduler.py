@@ -105,7 +105,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                           "foo", {}, {})
 
     def test_scheduler_includes_launch_index(self):
-        ctxt = "fake-context"
+        fake_context = context.RequestContext('user', 'project')
         fake_kwargs = {'fake_kwarg1': 'fake_value1',
                        'fake_kwarg2': 'fake_value2'}
         instance_opts = {'fake_opt1': 'meow'}
@@ -125,32 +125,27 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 return False
             return _check_launch_index
 
-        class ContextFake(object):
-            def elevated(self):
-                return ctxt
-        context_fake = ContextFake()
-
         self.mox.StubOutWithMock(self.driver, '_schedule')
         self.mox.StubOutWithMock(self.driver, '_provision_resource')
 
-        self.driver._schedule(context_fake, 'compute',
+        self.driver._schedule(fake_context, 'compute',
                               request_spec, {}, ['fake-uuid1', 'fake-uuid2']
                               ).AndReturn(['host1', 'host2'])
         # instance 1
         self.driver._provision_resource(
-            ctxt, 'host1',
+            fake_context, 'host1',
             mox.Func(_has_launch_index(0)), {},
             None, None, None, None,
             instance_uuid='fake-uuid1').AndReturn(instance1)
         # instance 2
         self.driver._provision_resource(
-            ctxt, 'host2',
+            fake_context, 'host2',
             mox.Func(_has_launch_index(1)), {},
             None, None, None, None,
             instance_uuid='fake-uuid2').AndReturn(instance2)
         self.mox.ReplayAll()
 
-        self.driver.schedule_run_instance(context_fake, request_spec,
+        self.driver.schedule_run_instance(fake_context, request_spec,
                 None, None, None, None, {})
 
     def test_schedule_happy_day(self):
