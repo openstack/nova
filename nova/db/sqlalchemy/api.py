@@ -838,11 +838,17 @@ def floating_ip_destroy(context, address):
 def floating_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context,
-                                                     address,
-                                                     session=session)
-        fixed_ip_ref = fixed_ip_get(context,
-                                    floating_ip_ref['fixed_ip_id'])
+        floating_ip_ref = model_query(context,
+                                      models.FloatingIp,
+                                      session=session).\
+                            filter_by(address=address).\
+                            first()
+        if not floating_ip_ref:
+            raise exception.FloatingIpNotFoundForAddress(address=address)
+
+        fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
+                            filter_by(id=floating_ip_ref['fixed_ip_id']).\
+                            first()
         if fixed_ip_ref:
             fixed_ip_address = fixed_ip_ref['address']
         else:
@@ -1157,8 +1163,8 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 
 
 @require_context
-def fixed_ip_get(context, id, session=None):
-    result = model_query(context, models.FixedIp, session=session).\
+def fixed_ip_get(context, id):
+    result = model_query(context, models.FixedIp).\
                      filter_by(id=id).\
                      first()
     if not result:
@@ -1168,8 +1174,7 @@ def fixed_ip_get(context, id, session=None):
     # results?
     if is_user_context(context) and result['instance_uuid'] is not None:
         instance = instance_get_by_uuid(context.elevated(read_deleted='yes'),
-                                        result['instance_uuid'],
-                                        session)
+                                        result['instance_uuid'])
         authorize_project_context(context, instance.project_id)
 
     return result
