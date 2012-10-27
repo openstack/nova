@@ -250,7 +250,7 @@ def nova_import_module_only(logical_line):
 #TODO(jogo): import template: N305
 
 
-def nova_import_alphabetical(physical_line, line_number, lines):
+def nova_import_alphabetical(logical_line, line_number, lines):
     """Check for imports in alphabetical order.
 
     nova HACKING guide recommendation for imports:
@@ -259,7 +259,7 @@ def nova_import_alphabetical(physical_line, line_number, lines):
     """
     # handle import x
     # use .lower since capitalization shouldn't dictate order
-    split_line = import_normalize(physical_line.strip()).lower().split()
+    split_line = import_normalize(logical_line.strip()).lower().split()
     split_previous = import_normalize(lines[line_number - 2]
             ).strip().lower().split()
     # with or without "as y"
@@ -267,7 +267,7 @@ def nova_import_alphabetical(physical_line, line_number, lines):
     if (len(split_line) in length and len(split_previous) in length and
         split_line[0] == "import" and split_previous[0] == "import"):
         if split_line[1] < split_previous[1]:
-            return (0, "NOVA N306: imports not in alphabetical order (%s, %s)"
+            yield (0, "NOVA N306: imports not in alphabetical order (%s, %s)"
                 % (split_previous[1], split_line[1]))
 
 
