@@ -23,12 +23,10 @@ inline callbacks.
 
 """
 
-import functools
 import sys
 import uuid
 
 import mox
-import nose.plugins.skip
 import stubout
 import testtools
 
