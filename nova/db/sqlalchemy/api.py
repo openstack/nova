@@ -770,9 +770,9 @@ def floating_ip_create(context, values, session=None):
     # check uniqueness for not deleted addresses
     if not floating_ip_ref.deleted:
         try:
-            floating_ip = floating_ip_get_by_address(context,
-                                                     floating_ip_ref.address,
-                                                     session)
+            floating_ip = _floating_ip_get_by_address(context,
+                                                      floating_ip_ref.address,
+                                                      session)
         except exception.FloatingIpNotFoundForAddress:
             pass
         else:
@@ -799,9 +799,9 @@ def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
     with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context,
-                                                     floating_address,
-                                                     session=session)
+        floating_ip_ref = _floating_ip_get_by_address(context,
+                                                      floating_address,
+                                                      session=session)
         fixed_ip_ref = fixed_ip_get_by_address(context,
                                                fixed_address,
                                                session=session)
@@ -812,25 +812,18 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 
 @require_context
 def floating_ip_deallocate(context, address):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context,
-                                                     address,
-                                                     session=session)
-        floating_ip_ref['project_id'] = None
-        floating_ip_ref['host'] = None
-        floating_ip_ref['auto_assigned'] = False
-        floating_ip_ref.save(session=session)
+    model_query(context, models.FloatingIp).\
+            filter_by(address=address).\
+            update({'project_id': None,
+                    'host': None,
+                    'auto_assigned': False})
 
 
 @require_context
 def floating_ip_destroy(context, address):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context,
-                                                     address,
-                                                     session=session)
-        floating_ip_ref.delete(session=session)
+    model_query(context, models.FloatingIp).\
+            filter_by(address=address).\
+            delete()
 
 
 @require_context
@@ -860,13 +853,9 @@ def floating_ip_disassociate(context, address):
 
 @require_context
 def floating_ip_set_auto_assigned(context, address):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context,
-                                                     address,
-                                                     session=session)
-        floating_ip_ref.auto_assigned = True
-        floating_ip_ref.save(session=session)
+    model_query(context, models.FloatingIp).\
+            filter_by(address=address).\
+            update({'auto_assigned': True})
 
 
 def _floating_ip_get_all(context, session=None):
@@ -903,7 +892,12 @@ def floating_ip_get_all_by_project(context, project_id):
 
 
 @require_context
-def floating_ip_get_by_address(context, address, session=None):
+def floating_ip_get_by_address(context, address):
+    return _floating_ip_get_by_address(context, address)
+
+
+@require_context
+def _floating_ip_get_by_address(context, address, session=None):
     result = model_query(context, models.FloatingIp, session=session).\
                 filter_by(address=address).\
                 first()
@@ -920,16 +914,14 @@ def floating_ip_get_by_address(context, address, session=None):
 
 
 @require_context
-def floating_ip_get_by_fixed_address(context, fixed_address, session=None):
-    if not session:
-        session = get_session()
-
-    fixed_ip = fixed_ip_get_by_address(context, fixed_address, session)
-    fixed_ip_id = fixed_ip['id']
-
-    return model_query(context, models.FloatingIp, session=session).\
-                   filter_by(fixed_ip_id=fixed_ip_id).\
-                   all()
+def floating_ip_get_by_fixed_address(context, fixed_address):
+    subq = model_query(context, models.FixedIp.id).\
+            filter_by(address=fixed_address).\
+            limit(1).\
+            subquery()
+    return model_query(context, models.FloatingIp).\
+            filter_by(fixed_ip_id=subq.as_scalar()).\
+            all()
 
     # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
 
@@ -948,7 +940,9 @@ def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
 def floating_ip_update(context, address, values):
     session = get_session()
     with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context, address, session)
+        floating_ip_ref = _floating_ip_get_by_address(context,
+                                                      address,
+                                                      session)
         for (key, value) in values.iteritems():
             floating_ip_ref[key] = value
         floating_ip_ref.save(session=session)
