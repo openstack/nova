@@ -1897,7 +1897,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       mount_device)
 
         self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        #self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         domain = self._create_domain(xml)
         self.firewall_driver.apply_instance_filter(instance, network_info)
@@ -2421,7 +2421,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not time_module:
             time_module = greenthread
 
-        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
+        #self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
         self.firewall_driver.prepare_instance_filter(instance_ref,
                 network_info)
 
