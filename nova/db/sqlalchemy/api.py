@@ -480,7 +480,11 @@ def service_update(context, service_id, values):
 
 ###################
 
-def compute_node_get(context, compute_id, session=None):
+def compute_node_get(context, compute_id):
+    return _compute_node_get(context, compute_id)
+
+
+def _compute_node_get(context, compute_id, session=None):
     result = model_query(context, models.ComputeNode, session=session).\
             filter_by(id=compute_id).\
             options(joinedload('service')).\
@@ -494,8 +498,8 @@ def compute_node_get(context, compute_id, session=None):
 
 
 @require_admin_context
-def compute_node_get_all(context, session=None):
-    return model_query(context, models.ComputeNode, session=session).\
+def compute_node_get_all(context):
+    return model_query(context, models.ComputeNode).\
             options(joinedload('service')).\
             options(joinedload('stats')).\
             all()
@@ -523,18 +527,14 @@ def _prep_stats_dict(values):
 
 
 @require_admin_context
-def compute_node_create(context, values, session=None):
+def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data."""
     _prep_stats_dict(values)
 
-    if not session:
-        session = get_session()
-
-    with session.begin(subtransactions=True):
-        compute_node_ref = models.ComputeNode()
-        session.add(compute_node_ref)
-        compute_node_ref.update(values)
+    compute_node_ref = models.ComputeNode()
+    compute_node_ref.update(values)
+    compute_node_ref.save()
     return compute_node_ref
 
 
@@ -581,20 +581,19 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
     session = get_session()
     with session.begin(subtransactions=True):
         _update_stats(context, stats, compute_id, session, prune_stats)
-        compute_ref = compute_node_get(context, compute_id, session=session)
+        compute_ref = _compute_node_get(context, compute_id, session=session)
         compute_ref.update(values)
     return compute_ref
 
 
 def compute_node_get_by_host(context, host):
     """Get all capacity entries for the given host."""
-    session = get_session()
-    with session.begin():
-        node = session.query(models.ComputeNode).\
-                             join('service').\
-                             filter(models.Service.host == host).\
-                             filter_by(deleted=False)
-        return node.first()
+    result = model_query(context, models.ComputeNode).\
+            join('service').\
+            filter(models.Service.host == host).\
+            filter_by(deleted=False).\
+            first()
+    return result
 
 
 def compute_node_statistics(context):
