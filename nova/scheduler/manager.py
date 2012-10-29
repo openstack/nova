@@ -23,6 +23,7 @@ Scheduler Service
 
 import sys
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import db
@@ -258,3 +259,6 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
+
+    def request_service_capabilities(self, context):
+        compute_rpcapi.ComputeAPI().publish_service_capabilities(context)

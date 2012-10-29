@@ -417,6 +417,9 @@ class Service(object):
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
+        if 'nova-scheduler' == self.binary:
+            self.manager.request_service_capabilities(ctxt)
+
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval,
