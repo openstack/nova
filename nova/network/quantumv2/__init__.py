@@ -1,3 +1,5 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
 # Copyright 2012 OpenStack LLC.
 # All Rights Reserved
 #
@@ -12,8 +14,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-#
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from nova import exception
 from nova import flags
@@ -44,15 +44,14 @@ def _get_auth_token():
 
 def get_client(context):
     token = context.auth_token
-    if not token:
-        if FLAGS.quantum_auth_strategy:
-            token = _get_auth_token()
+    if not token and FLAGS.quantum_auth_strategy:
+        token = _get_auth_token()
+    params = {
+        'endpoint_url': FLAGS.quantum_url,
+        'timeout': FLAGS.quantum_url_timeout,
+    }
     if token:
-        my_client = clientv20.Client(
-            endpoint_url=FLAGS.quantum_url,
-            token=token, timeout=FLAGS.quantum_url_timeout)
+        params['token'] = token
     else:
-        my_client = clientv20.Client(
-            endpoint_url=FLAGS.quantum_url,
-            auth_strategy=None, timeout=FLAGS.quantum_url_timeout)
-    return my_client
+        params['auth_strategy'] = None
+    return clientv20.Client(**params)
