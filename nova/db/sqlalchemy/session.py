@@ -16,7 +16,149 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Session Handling for SQLAlchemy backend."""
+"""Session Handling for SQLAlchemy backend.
+
+Recommended ways to use sessions within this framework:
+
+* Don't use them explicitly; this is like running with AUTOCOMMIT=1.
+  model_query() will implicitly use a session when called without one
+  supplied. This is the ideal situation because it will allow queries
+  to be automatically retried if the database connection is interrupted.
+
+    Note: Automatic retry will be enabled in a future patch.
+
+  It is generally fine to issue several queries in a row like this. Even though
+  they may be run in separate transactions and/or separate sessions, each one
+  will see the data from the prior calls. If needed, undo- or rollback-like
+  functionality should be handled at a logical level. For an example, look at
+  the code around quotas and reservation_rollback().
+
+  Examples:
+
+    def get_foo(context, foo):
+        return model_query(context, models.Foo).\
+                filter_by(foo=foo).\
+                first()
+
+    def update_foo(context, id, newfoo):
+        model_query(context, models.Foo).\
+                filter_by(id=id).\
+                update({'foo': newfoo})
+
+    def create_foo(context, values):
+        foo_ref = models.Foo()
+        foo_ref.update(values)
+        foo_ref.save()
+        return foo_ref
+
+
+* Within the scope of a single method, keeping all the reads and writes within
+  the context managed by a single session. In this way, the session's __exit__
+  handler will take care of calling flush() and commit() for you.
+  If using this approach, you should not explicitly call flush() or commit().
+  Any error within the context of the session will cause the session to emit
+  a ROLLBACK. If the connection is dropped before this is possible, the
+  database will implicitly rollback the transaction.
+
+     Note: statements in the session scope will not be automatically retried.
+
+  If you create models within the session, they need to be added, but you
+  do not need to call model.save()
+
+    def create_many_foo(context, foos):
+        session = get_session()
+        with session.begin():
+            for foo in foos:
+                foo_ref = models.Foo()
+                foo_ref.update(foo)
+                session.add(foo_ref)
+
+    def update_bar(context, foo_id, newbar):
+        session = get_session()
+        with session.begin():
+            foo_ref = model_query(context, models.Foo, session).\
+                        filter_by(id=foo_id).\
+                        first()
+            model_query(context, models.Bar, session).\
+                        filter_by(id=foo_ref['bar_id']).\
+                        update({'bar': newbar})
+
+  Note: update_bar is a trivially simple example of using "with session.begin".
+  Whereas create_many_foo is a good example of when a transaction is needed,
+  it is always best to use as few queries as possible. The two queries in
+  update_bar can be better expressed using a single query which avoids
+  the need for an explicit transaction. It can be expressed like so:
+
+    def update_bar(context, foo_id, newbar):
+        subq = model_query(context, models.Foo.id).\
+                filter_by(id=foo_id).\
+                limit(1).\
+                subquery()
+        model_query(context, models.Bar).\
+                filter_by(id=subq.as_scalar()).\
+                update({'bar': newbar})
+
+  For reference, this emits approximagely the following SQL statement:
+
+    UPDATE bar SET bar = ${newbar}
+        WHERE id=(SELECT bar_id FROM foo WHERE id = ${foo_id} LIMIT 1);
+
+* Passing an active session between methods. Sessions should only be passed
+  to private methods. The private method must use a subtransaction; otherwise
+  SQLAlchemy will throw an error when you call session.begin() on an existing
+  transaction. Public methods should not accept a session parameter and should
+  not be involved in sessions within the caller's scope.
+
+  Note that this incurs more overhead in SQLAlchemy than the above means
+  due to nesting transactions, and it is not possible to implicitly retry
+  failed database operations when using this approach.
+
+  This also makes code somewhat more difficult to read and debug, because a
+  single database transaction spans more than one method. Error handling
+  becomes less clear in this situation. When this is needed for code clarity,
+  it should be clearly documented.
+
+    def myfunc(foo):
+        session = get_session()
+        with session.begin():
+            # do some database things
+            bar = _private_func(foo, session)
+        return bar
+
+    def _private_func(foo, session=None):
+        if not session:
+            session = get_session()
+        with session.begin(subtransaction=True):
+            # do some other database things
+        return bar
+
+
+There are some things which it is best to avoid:
+
+* Don't keep a transaction open any longer than necessary.
+
+  This means that your "with session.begin()" block should be as short
+  as possible, while still containing all the related calls for that
+  transaction.
+
+* Avoid "with_lockmode('UPDATE')" when possible.
+
+  In MySQL/InnoDB, when a "SELECT ... FOR UPDATE" query does not match
+  any rows, it will take a gap-lock. This is a form of write-lock on the
+  "gap" where no rows exist, and prevents any other writes to that space.
+  This can effectively prevent any INSERT into a table by locking the gap
+  at the end of the index. Similar problems will occur if the SELECT FOR UPDATE
+  has an overly broad WHERE clause, or doesn't properly use an index.
+
+  One idea proposed at ODS Fall '12 was to use a normal SELECT to test the
+  number of rows matching a query, and if only one row is returned,
+  then issue the SELECT FOR UPDATE.
+
+  The better long-term solution is to use INSERT .. ON DUPLICATE KEY UPDATE.
+  However, this can not be done until the "deleted" columns are removed and
+  proper UNIQUE constraints are added to the tables.
+
+"""
 
 import re
 import time
