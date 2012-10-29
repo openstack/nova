@@ -107,10 +107,9 @@ class VolumeOps(object):
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance"""
-        # Before we start, check that the VM exists
-        vm_ref = vm_utils.lookup(self._session, instance_name)
-        if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_name)
+
+        vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
+
         # NOTE: No Resource Pool concept so far
         LOG.debug(_("Attach_volume: %(connection_info)s, %(instance_name)s,"
                 " %(mountpoint)s") % locals())
@@ -196,10 +195,9 @@ class VolumeOps(object):
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
-        # Before we start, check that the VM exists
-        vm_ref = vm_utils.lookup(self._session, instance_name)
-        if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_name)
+
+        vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
+
         # Detach VBD from VM
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s")
                 % locals())
