@@ -179,9 +179,6 @@ class ExtensionManager(object):
     example extension implementation.
 
     """
-    def is_loaded(self, alias):
-        return alias in self.extensions
-
     def sorted_extensions(self):
         if self.sorted_ext_list is None:
             self.sorted_ext_list = sorted(self.extensions.iteritems())
