@@ -61,7 +61,7 @@ from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova import utils
-import nova.volume
+from nova.volume import cinder
 
 
 QUOTAS = quota.QUOTAS
@@ -657,9 +657,9 @@ class ComputeTestCase(BaseTestCase):
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
 
-        self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
-        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
-        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
+        self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
 
         self.compute_api.attach_volume(self.context, instance, 1,
@@ -2222,10 +2222,15 @@ class ComputeTestCase(BaseTestCase):
         topic = rpc.queue_get_for(c, FLAGS.compute_topic, instance['host'])
 
         # creating volume testdata
-        volume_id = db.volume_create(c, {'size': 1})['id']
+        volume_id = 'fake'
         values = {'instance_uuid': inst_uuid, 'device_name': '/dev/vdc',
                   'delete_on_termination': False, 'volume_id': volume_id}
         db.block_device_mapping_create(c, values)
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
 
         # creating mocks
         self.mox.StubOutWithMock(rpc, 'call')
@@ -2272,7 +2277,6 @@ class ComputeTestCase(BaseTestCase):
         for bdms in db.block_device_mapping_get_all_by_instance(
             c, inst_uuid):
             db.block_device_mapping_destroy(c, bdms['id'])
-        db.volume_destroy(c, volume_id)
         db.instance_destroy(c, inst_uuid)
 
     def test_live_migration_works_correctly(self):
@@ -2321,7 +2325,6 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(c, inst_uuid,
                            {'task_state': task_states.MIGRATING,
                             'power_state': power_state.PAUSED})
-        v_ref = db.volume_create(c, {'size': 1, 'instance_id': inst_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
                                           'instance_uuid': inst_ref['uuid']})
         fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
@@ -2356,7 +2359,6 @@ class ComputeTestCase(BaseTestCase):
 
         # cleanup
         db.instance_destroy(c, inst_uuid)
-        db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)
 
     def test_run_kill_vm(self):
@@ -3406,8 +3408,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
-        volume_id = db.volume_create(context.get_admin_context(),
-                                     {'size': 1})['id']
+        volume_id = 'fake'
         volume = {'instance_uuid': instance['uuid'],
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
@@ -3432,8 +3433,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
-        volume_id = db.volume_create(context.get_admin_context(),
-                                     {'size': 1})['id']
+        volume_id = 'fake'
         volume = {'instance_uuid': instance['uuid'],
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
@@ -4616,9 +4616,9 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_attach_volume(self, context, **kwargs):
             called['fake_rpc_attach_volume'] = True
 
-        self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
-        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
-        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
+        self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
@@ -4647,9 +4647,9 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_attach_volume(self, context, **kwargs):
             called['fake_rpc_attach_volume'] = True
 
-        self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
-        self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
-        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
+        self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
@@ -4659,35 +4659,33 @@ class ComputeAPITestCase(BaseTestCase):
         admin = context.get_admin_context()
         instance = self._create_fake_instance()
 
-        # Create a volume and attach it to our instance
-        volume_id = db.volume_create(admin, {'size': 1})['id']
+        volume_id = 'fake'
         values = {'instance_uuid': instance['uuid'],
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
                   'volume_id': volume_id,
                   }
         db.block_device_mapping_create(admin, values)
-        db.volume_attached(admin, volume_id, instance["uuid"],
-                           "/dev/vdc")
+
+        def fake_volume_get(self, context, volume):
+            return {'id': volume_id}
+        self.stubs.Set(cinder.API, "get", fake_volume_get)
 
         # Stub out and record whether it gets detached
         result = {"detached": False}
 
         def fake_detach(self, context, volume):
             result["detached"] = volume["id"] == volume_id
-        self.stubs.Set(nova.volume.api.API, "detach", fake_detach)
+        self.stubs.Set(cinder.API, "detach", fake_detach)
+
+        def fake_terminate_connection(self, context, volume, connector):
+            return {}
+        self.stubs.Set(cinder.API, "terminate_connection",
+                       fake_terminate_connection)
 
         # Kill the instance and check that it was detached
         self.compute.terminate_instance(admin, instance=instance)
         self.assertTrue(result["detached"])
-
-    def test_inject_network_info(self):
-        instance = self._create_fake_instance()
-        self.compute_api.attach_volume(self.context, instance, 1, device=None)
-        self.assertTrue(called.get('fake_check_attach'))
-        self.assertTrue(called.get('fake_reserve_volume'))
-        self.assertTrue(called.get('fake_reserve_volume'))
-        self.assertTrue(called.get('fake_rpc_attach_volume'))
 
     def test_inject_network_info(self):
         instance = self._create_fake_instance(params={'host': FLAGS.host})

@@ -75,7 +75,6 @@ class _IntegratedTestBase(test.TestCase):
         # set up services
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('cert')
-        self.volume = self.start_service('volume')
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
 
@@ -101,13 +100,11 @@ class _IntegratedTestBase(test.TestCase):
         # Ensure tests only listen on localhost
         f['ec2_listen'] = '127.0.0.1'
         f['osapi_compute_listen'] = '127.0.0.1'
-        f['osapi_volume_listen'] = '127.0.0.1'
         f['metadata_listen'] = '127.0.0.1'
 
         # Auto-assign ports to allow concurrent tests
         f['ec2_listen_port'] = 0
         f['osapi_compute_listen_port'] = 0
-        f['osapi_volume_listen_port'] = 0
         f['metadata_listen_port'] = 0
 
         f['fake_network'] = True

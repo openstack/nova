@@ -29,7 +29,6 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import volume
-from nova.volume import volume_types
 
 
 LOG = logging.getLogger(__name__)
@@ -227,12 +226,6 @@ class VolumeController(wsgi.Controller):
         vol = body['volume']
 
         vol_type = vol.get('volume_type', None)
-        if vol_type:
-            try:
-                vol_type = volume_types.get_volume_type_by_name(context,
-                                                                vol_type)
-            except exception.NotFound:
-                raise exc.HTTPNotFound()
 
         metadata = vol.get('metadata', None)
 

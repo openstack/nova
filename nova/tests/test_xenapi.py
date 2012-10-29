@@ -170,7 +170,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         vol['user_id'] = 'fake'
         vol['project_id'] = 'fake'
         vol['host'] = 'localhost'
-        vol['availability_zone'] = FLAGS.storage_availability_zone
+        vol['availability_zone'] = FLAGS.node_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
         return db.volume_create(self.context, vol)

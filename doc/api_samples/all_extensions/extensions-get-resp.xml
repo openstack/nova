@@ -137,9 +137,6 @@
   <extension alias="os-virtual-interfaces" updated="2011-08-17T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1" name="VirtualInterfaces">
     <description>Virtual interface support</description>
   </extension>
-  <extension alias="os-volume-types" updated="2011-08-24T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/volume_types/api/v1.1" name="VolumeTypes">
-    <description>Volume types support</description>
-  </extension>
   <extension alias="os-volumes" updated="2011-03-25T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>Volumes support</description>
   </extension>

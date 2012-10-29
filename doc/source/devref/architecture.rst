@@ -33,8 +33,8 @@ Below you will find a helpful explanation of the different components.
                   [ Auth Manager ] ---
                           |           \- ( DB )
                           |
-                          |       [ scheduler ] - [ volume ]  - ( iSCSI )
-                          |                /
+                          |
+                          |
   [ Web Dashboard ] -> [ api ] -- < AMQP > ------ [ network ] - ( Flat/Vlan )
                           |                \
                        < HTTP >   [ scheduler ] - [ compute ] - ( libvirt/xen )
@@ -46,7 +46,6 @@ Below you will find a helpful explanation of the different components.
 * api: component that receives http requests, converts commands and communicates with other components via the queue or http (in the case of objectstore)
 * Auth Manager: component responsible for users/projects/and roles.  Can backend to DB or LDAP.  This is not a separate binary, but rather a python class that is used by most components in the system.
 * objectstore: http server that replicates s3 api and allows storage and retrieval of images
-* scheduler: decides which host gets each vm and volume
-* volume: manages dynamically attachable block devices.
+* scheduler: decides which host gets each vm
 * network: manages ip forwarding, bridges, and vlans
 * compute: manages communication with hypervisor and virtual machines.

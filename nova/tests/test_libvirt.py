@@ -155,7 +155,6 @@ class LibvirtVolumeTestCase(test.TestCase):
         }
 
     def test_libvirt_volume_driver_serial(self):
-        vol_driver = volume_driver.VolumeDriver()
         libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}

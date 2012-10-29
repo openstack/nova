@@ -22,7 +22,6 @@ import copy
 import datetime
 import functools
 import os
-import shutil
 import string
 import tempfile
 
@@ -46,7 +45,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import utils
 from nova.virt import fake as fake_virt
-from nova.volume import iscsi
+from nova import volume
 
 
 LOG = logging.getLogger(__name__)
@@ -97,10 +96,8 @@ class CloudTestCase(test.TestCase):
         super(CloudTestCase, self).setUp()
         vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
+                   volume_api_class='nova.tests.fake_volume.API',
                    volumes_dir=vol_tmpdir)
-        self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
-        self.stubs.Set(iscsi.TgtAdm, 'remove_iscsi_target',
-                       self.fake_remove_iscsi_target)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -137,13 +134,13 @@ class CloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
-        self.volume = self.start_service('volume')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
+        self.volume_api = volume.API()
 
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
@@ -156,10 +153,7 @@ class CloudTestCase(test.TestCase):
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
     def tearDown(self):
-        try:
-            shutil.rmtree(FLAGS.volumes_dir)
-        except OSError, e:
-            pass
+        self.volume_api.reset_fake_api(self.context)
         super(CloudTestCase, self).tearDown()
         fake.FakeImageService_reset()
 
@@ -681,63 +675,6 @@ class CloudTestCase(test.TestCase):
 
         self.cloud.delete_security_group(self.context, 'testgrp')
 
-    def test_describe_volumes(self):
-        """Makes sure describe_volumes works and filters results."""
-        vol1 = db.volume_create(self.context, {'project_id': self.project_id})
-        vol2 = db.volume_create(self.context, {'project_id': self.project_id})
-        result = self.cloud.describe_volumes(self.context)
-        self.assertEqual(len(result['volumeSet']), 2)
-        volume_id = ec2utils.id_to_ec2_vol_id(vol2['id'])
-        result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[volume_id])
-        self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(
-                ec2utils.ec2_vol_id_to_uuid(
-                    result['volumeSet'][0]['volumeId']),
-                vol2['id'])
-        db.volume_destroy(self.context, vol1['id'])
-        db.volume_destroy(self.context, vol2['id'])
-
-    def test_create_volume_in_availability_zone(self):
-        """Makes sure create_volume works when we specify an availability
-        zone
-        """
-        availability_zone = 'zone1:host1'
-
-        result = self.cloud.create_volume(self.context,
-                                          size=1,
-                                          availability_zone=availability_zone)
-        volume_id = result['volumeId']
-        availabilityZone = result['availabilityZone']
-        self.assertEqual(availabilityZone, availability_zone)
-        result = self.cloud.describe_volumes(self.context)
-        self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(result['volumeSet'][0]['volumeId'], volume_id)
-        self.assertEqual(result['volumeSet'][0]['availabilityZone'],
-                         availabilityZone)
-
-        db.volume_destroy(self.context, ec2utils.ec2_vol_id_to_uuid(volume_id))
-
-    def test_create_volume_from_snapshot(self):
-        """Makes sure create_volume works when we specify a snapshot."""
-        vol = db.volume_create(self.context, {'size': 1,
-                                              'project_id': self.project_id})
-        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
-                                                 'volume_size': vol['size'],
-                                                 'status': "available"})
-        snapshot_id = ec2utils.id_to_ec2_snap_id(snap['id'])
-
-        result = self.cloud.create_volume(self.context,
-                                          snapshot_id=snapshot_id)
-        volume_id = result['volumeId']
-        result = self.cloud.describe_volumes(self.context)
-        self.assertEqual(len(result['volumeSet']), 2)
-        self.assertEqual(result['volumeSet'][1]['volumeId'], volume_id)
-
-        db.volume_destroy(self.context, ec2utils.ec2_vol_id_to_uuid(volume_id))
-        db.snapshot_destroy(self.context, snap['id'])
-        db.volume_destroy(self.context, vol['id'])
-
     def test_describe_availability_zones(self):
         """Makes sure describe_availability_zones works and filters results."""
         service1 = db.service_create(self.context, {'host': 'host1_zones',
@@ -772,62 +709,9 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_availability_zones(admin_ctxt,
                                                         zone_name='verbose')
 
-        self.assertEqual(len(result['availabilityZoneInfo']), 15)
+        self.assertEqual(len(result['availabilityZoneInfo']), 13)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
-
-    def test_describe_snapshots(self):
-        """Makes sure describe_snapshots works and filters results."""
-        vol = db.volume_create(self.context, {})
-        snap1 = db.snapshot_create(self.context,
-                {'volume_id': vol['id'], 'project_id': self.project_id})
-        snap2 = db.snapshot_create(self.context,
-                {'volume_id': vol['id'], 'project_id': self.project_id})
-        result = self.cloud.describe_snapshots(self.context)
-        self.assertEqual(len(result['snapshotSet']), 2)
-        snapshot_id = ec2utils.id_to_ec2_snap_id(snap2['id'])
-        result = self.cloud.describe_snapshots(self.context,
-                                               snapshot_id=[snapshot_id])
-        self.assertEqual(len(result['snapshotSet']), 1)
-        self.assertEqual(
-            ec2utils.ec2_snap_id_to_uuid(
-                result['snapshotSet'][0]['snapshotId']),
-            snap2['id'])
-        db.snapshot_destroy(self.context, snap1['id'])
-        db.snapshot_destroy(self.context, snap2['id'])
-        db.volume_destroy(self.context, vol['id'])
-
-    def test_create_snapshot(self):
-        """Makes sure create_snapshot works."""
-        vol = db.volume_create(self.context,
-                {'status': "available", 'size': 0})
-        volume_id = ec2utils.id_to_ec2_vol_id(vol['id'])
-
-        result = self.cloud.create_snapshot(self.context,
-                                            volume_id=volume_id)
-        snapshot_id = result['snapshotId']
-        result = self.cloud.describe_snapshots(self.context)
-        self.assertEqual(len(result['snapshotSet']), 1)
-        self.assertEqual(result['snapshotSet'][0]['snapshotId'], snapshot_id)
-
-        db.snapshot_destroy(self.context, ec2utils.ec2_id_to_id(snapshot_id))
-        db.volume_destroy(self.context, vol['id'])
-
-    def test_delete_snapshot(self):
-        """Makes sure delete_snapshot works."""
-        vol = db.volume_create(self.context,
-                {'status': "available", 'size': 0})
-        snap = db.snapshot_create(self.context,
-                {'volume_id': vol['id'],
-                 'status': "available",
-                 'volume_size': 0})
-        snapshot_id = ec2utils.id_to_ec2_snap_id(snap['id'])
-
-        result = self.cloud.delete_snapshot(self.context,
-                                            snapshot_id=snapshot_id)
-        self.assertTrue(result)
-
-        db.volume_destroy(self.context, vol['id'])
 
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
@@ -1035,189 +919,6 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
 
-    def _block_device_mapping_create(self, instance_uuid, mappings):
-        volumes = []
-        for bdm in mappings:
-            db.block_device_mapping_create(self.context, bdm)
-            if 'volume_id' in bdm:
-                values = {'id': bdm['volume_id']}
-                for bdm_key, vol_key in [('snapshot_id', 'snapshot_id'),
-                                         ('snapshot_size', 'volume_size'),
-                                         ('delete_on_termination',
-                                          'delete_on_termination')]:
-                    if bdm_key in bdm:
-                        values[vol_key] = bdm[bdm_key]
-                vol = db.volume_create(self.context, values)
-                db.volume_attached(self.context, vol['id'],
-                                   instance_uuid, bdm['device_name'])
-                volumes.append(vol)
-        return volumes
-
-    def _setUpBlockDeviceMapping(self):
-        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        inst1 = db.instance_create(self.context,
-                                  {'image_ref': image_uuid,
-                                   'instance_type_id': 1,
-                                   'root_device_name': '/dev/sdb1'})
-        inst2 = db.instance_create(self.context,
-                                  {'image_ref': image_uuid,
-                                   'instance_type_id': 1,
-                                   'root_device_name': '/dev/sdc1'})
-
-        instance_id = inst1['id']
-        instance_uuid = inst1['uuid']
-        mappings0 = [
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb1',
-             'snapshot_id': '1',
-             'volume_id': '2'},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb2',
-             'volume_id': '3',
-             'volume_size': 1},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb3',
-             'delete_on_termination': True,
-             'snapshot_id': '4',
-             'volume_id': '5'},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb4',
-             'delete_on_termination': False,
-             'snapshot_id': '6',
-             'volume_id': '7'},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb5',
-             'snapshot_id': '8',
-             'volume_id': '9',
-             'volume_size': 0},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb6',
-             'snapshot_id': '10',
-             'volume_id': '11',
-             'volume_size': 1},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb7',
-             'no_device': True},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb8',
-             'virtual_name': 'swap'},
-            {'instance_uuid': instance_uuid,
-             'device_name': '/dev/sdb9',
-             'virtual_name': 'ephemeral3'}]
-
-        volumes = self._block_device_mapping_create(instance_uuid, mappings0)
-        return (inst1, inst2, volumes)
-
-    def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
-        for vol in volumes:
-            db.volume_destroy(self.context, vol['id'])
-        for uuid in (inst1['uuid'], inst2['uuid']):
-            for bdm in db.block_device_mapping_get_all_by_instance(
-                self.context, uuid):
-                db.block_device_mapping_destroy(self.context, bdm['id'])
-        db.instance_destroy(self.context, inst2['uuid'])
-        db.instance_destroy(self.context, inst1['uuid'])
-
-    _expected_instance_bdm1 = {
-        'instanceId': 'i-00000001',
-        'rootDeviceName': '/dev/sdb1',
-        'rootDeviceType': 'ebs'}
-
-    _expected_block_device_mapping0 = [
-        {'deviceName': '/dev/sdb1',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': False,
-                 'volumeId': '2',
-                 }},
-        {'deviceName': '/dev/sdb2',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': False,
-                 'volumeId': '3',
-                 }},
-        {'deviceName': '/dev/sdb3',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': True,
-                 'volumeId': '5',
-                 }},
-        {'deviceName': '/dev/sdb4',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': False,
-                 'volumeId': '7',
-                 }},
-        {'deviceName': '/dev/sdb5',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': False,
-                 'volumeId': '9',
-                 }},
-        {'deviceName': '/dev/sdb6',
-         'ebs': {'status': 'in-use',
-                 'deleteOnTermination': False,
-                 'volumeId': '11', }}]
-        # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
-
-    _expected_instance_bdm2 = {
-        'instanceId': 'i-00000002',
-        'rootDeviceName': '/dev/sdc1',
-        'rootDeviceType': 'instance-store'}
-
-    def test_format_instance_bdm(self):
-        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
-
-        result = {}
-        self.cloud._format_instance_bdm(self.context, inst1['uuid'],
-                                        '/dev/sdb1', result)
-        self.assertSubDictMatch(
-            {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
-            result)
-        self._assertEqualBlockDeviceMapping(
-            self._expected_block_device_mapping0, result['blockDeviceMapping'])
-
-        result = {}
-        self.cloud._format_instance_bdm(self.context, inst2['uuid'],
-                                        '/dev/sdc1', result)
-        self.assertSubDictMatch(
-            {'rootDeviceType': self._expected_instance_bdm2['rootDeviceType']},
-            result)
-
-        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
-
-    def _assertInstance(self, instance_id):
-        ec2_instance_id = ec2utils.id_to_ec2_inst_id(instance_id)
-        result = self.cloud.describe_instances(self.context,
-                                               instance_id=[ec2_instance_id])
-        result = result['reservationSet'][0]
-        self.assertEqual(len(result['instancesSet']), 1)
-        result = result['instancesSet'][0]
-        self.assertEqual(result['instanceId'], ec2_instance_id)
-        return result
-
-    def _assertEqualBlockDeviceMapping(self, expected, result):
-        self.assertEqual(len(expected), len(result))
-        for x in expected:
-            found = False
-            for y in result:
-                if x['deviceName'] == y['deviceName']:
-                    self.assertSubDictMatch(x, y)
-                    found = True
-                    break
-            self.assertTrue(found)
-
-    def test_describe_instances_bdm(self):
-        """Make sure describe_instances works with root_device_name and
-        block device mappings
-        """
-        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
-
-        result = self._assertInstance(inst1['uuid'])
-        self.assertSubDictMatch(self._expected_instance_bdm1, result)
-        self._assertEqualBlockDeviceMapping(
-            self._expected_block_device_mapping0, result['blockDeviceMapping'])
-
-        result = self._assertInstance(inst2['uuid'])
-        self.assertSubDictMatch(self._expected_instance_bdm2, result)
-
-        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
-
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
 
@@ -1281,13 +982,17 @@ class CloudTestCase(test.TestCase):
             {'device': 'sdc3', 'virtual': 'swap'},
             {'device': 'sdc4', 'virtual': 'swap'}]
         block_device_mapping1 = [
-            {'device_name': '/dev/sdb1', 'snapshot_id': 01234567},
-            {'device_name': '/dev/sdb2', 'volume_id': 01234567},
+            {'device_name': '/dev/sdb1',
+             'snapshot_id': 'ccec42a2-c220-4806-b762-6b12fbb592e3'},
+            {'device_name': '/dev/sdb2',
+             'volume_id': 'ccec42a2-c220-4806-b762-6b12fbb592e4'},
             {'device_name': '/dev/sdb3', 'virtual_name': 'ephemeral5'},
             {'device_name': '/dev/sdb4', 'no_device': True},
 
-            {'device_name': '/dev/sdc1', 'snapshot_id': 12345678},
-            {'device_name': '/dev/sdc2', 'volume_id': 12345678},
+            {'device_name': '/dev/sdc1',
+             'snapshot_id': 'ccec42a2-c220-4806-b762-6b12fbb592e5'},
+            {'device_name': '/dev/sdc2',
+             'volume_id': 'ccec42a2-c220-4806-b762-6b12fbb592e6'},
             {'device_name': '/dev/sdc3', 'virtual_name': 'ephemeral6'},
             {'device_name': '/dev/sdc4', 'no_device': True}]
         image1 = {
@@ -1305,7 +1010,7 @@ class CloudTestCase(test.TestCase):
 
         mappings2 = [{'device': '/dev/sda1', 'virtual': 'root'}]
         block_device_mapping2 = [{'device_name': '/dev/sdb1',
-                                  'snapshot_id': 01234567}]
+                'snapshot_id': 'ccec42a2-c220-4806-b762-6b12fbb592e7'}]
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             'name': 'fake_name',
@@ -1338,11 +1043,7 @@ class CloudTestCase(test.TestCase):
                     vol = self._volume_create(bdm['volume_id'])
                     volumes.append(vol['id'])
                 if 'snapshot_id' in bdm:
-                    snap = db.snapshot_create(self.context,
-                                              {'id': bdm['snapshot_id'],
-                                               'volume_id': 01234567,
-                                               'status': "available",
-                                               'volume_size': 1})
+                    snap = self._snapshot_create(bdm['snapshot_id'])
                     snapshots.append(snap['id'])
         return (volumes, snapshots)
 
@@ -1364,24 +1065,24 @@ class CloudTestCase(test.TestCase):
     _expected_bdms1 = [
         {'deviceName': '/dev/sdb0', 'virtualName': 'ephemeral0'},
         {'deviceName': '/dev/sdb1', 'ebs': {'snapshotId':
-                                            'snap-00053977'}},
+                                            'snap-00000001'}},
         {'deviceName': '/dev/sdb2', 'ebs': {'snapshotId':
-                                            'vol-00053977'}},
+                                            'vol-00000001'}},
         {'deviceName': '/dev/sdb3', 'virtualName': 'ephemeral5'},
         # {'deviceName': '/dev/sdb4', 'noDevice': True},
 
         {'deviceName': '/dev/sdc0', 'virtualName': 'swap'},
         {'deviceName': '/dev/sdc1', 'ebs': {'snapshotId':
-                                            'snap-00bc614e'}},
+                                            'snap-00000002'}},
         {'deviceName': '/dev/sdc2', 'ebs': {'snapshotId':
-                                            'vol-00bc614e'}},
+                                            'vol-00000002'}},
         {'deviceName': '/dev/sdc3', 'virtualName': 'ephemeral6'},
         # {'deviceName': '/dev/sdc4', 'noDevice': True}
         ]
 
     _expected_root_device_name2 = '/dev/sdb1'
     _expected_bdms2 = [{'deviceName': '/dev/sdb1',
-                       'ebs': {'snapshotId': 'snap-00053977'}}]
+                       'ebs': {'snapshotId': 'snap-00000003'}}]
 
     # NOTE(yamahata):
     # InstanceBlockDeviceMappingItemType
@@ -2066,227 +1767,29 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(result)
 
     def _volume_create(self, volume_id=None):
-        location = '10.0.2.15:3260'
-        iqn = 'iqn.2010-10.org.openstack:%s' % volume_id
-        kwargs = {'status': 'available',
-                  'host': self.volume.host,
+        kwargs = {'name': 'test-volume',
+                  'description': 'test volume description',
+                  'status': 'available',
+                  'host': 'fake',
                   'size': 1,
-                  'provider_location': '1 %s,fake %s' % (location, iqn),
-                  'attach_status': 'detached', }
+                  'attach_status': 'detached'}
         if volume_id:
-            kwargs['id'] = volume_id
-        return db.volume_create(self.context, kwargs)
+            kwargs['volume_id'] = volume_id
+        return self.volume_api.create_with_kwargs(self.context, **kwargs)
 
-    def _assert_volume_attached(self, vol, instance_uuid, mountpoint):
-        self.assertEqual(vol['instance_uuid'], instance_uuid)
-        self.assertEqual(vol['mountpoint'], mountpoint)
-        self.assertEqual(vol['status'], "in-use")
-        self.assertEqual(vol['attach_status'], "attached")
-        self.assertNotEqual(vol['attach_time'], None)
-
-    def _assert_volume_detached(self, vol):
-        self.assertEqual(vol['instance_uuid'], None)
-        self.assertEqual(vol['mountpoint'], None)
-        self.assertEqual(vol['status'], "available")
-        self.assertEqual(vol['attach_status'], "detached")
-        self.assertEqual(vol['attach_time'], None)
-
-    def test_stop_start_with_volume(self):
-        """Make sure run instance with block device mapping works"""
-
-        # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
-
-        vol1 = self._volume_create()
-        vol2 = self._volume_create()
-        kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
-                  'max_count': 1,
-                  'block_device_mapping': [{'device_name': '/dev/vdb',
-                                            'volume_id': vol1['id'],
-                                            'delete_on_termination': False},
-                                           {'device_name': '/dev/vdc',
-                                            'volume_id': vol2['id'],
-                                            'delete_on_termination': True},
-                                           ]}
-        ec2_instance_id = self._run_instance(**kwargs)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
-
-        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
-        self.assertEqual(len(vols), 2)
-        for vol in vols:
-            self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
-
-        vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
-
-        vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
-
-        result = self.cloud.stop_instances(self.context, [ec2_instance_id])
-        self.assertTrue(result)
-
-        vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
-
-        vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
-
-        self.cloud.start_instances(self.context, [ec2_instance_id])
-        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
-        self.assertEqual(len(vols), 2)
-        for vol in vols:
-            self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
-            self.assertTrue(vol['mountpoint'] == '/dev/vdb' or
-                            vol['mountpoint'] == '/dev/vdc')
-            self.assertEqual(vol['instance_uuid'], instance_uuid)
-            self.assertEqual(vol['status'], "in-use")
-            self.assertEqual(vol['attach_status'], "attached")
-
-        self.cloud.terminate_instances(self.context, [ec2_instance_id])
-
-        admin_ctxt = context.get_admin_context(read_deleted="no")
-        vol = db.volume_get(admin_ctxt, vol1['id'])
-        self.assertFalse(vol['deleted'])
-        db.volume_destroy(self.context, vol1['id'])
-
-        admin_ctxt = context.get_admin_context(read_deleted="only")
-        vol = db.volume_get(admin_ctxt, vol2['id'])
-        self.assertTrue(vol['deleted'])
-
-        self._restart_compute_service()
-
-    def test_stop_with_attached_volume(self):
-        """Make sure attach info is reflected to block device mapping"""
-        # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
-
-        vol1 = self._volume_create()
-        vol2 = self._volume_create()
-        kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
-                  'max_count': 1,
-                  'block_device_mapping': [{'device_name': '/dev/sdb',
-                                            'volume_id': vol1['id'],
-                                            'delete_on_termination': True}]}
-        ec2_instance_id = self._run_instance(**kwargs)
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
-
-        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
-        self.assertEqual(len(vols), 1)
-        for vol in vols:
-            self.assertEqual(vol['id'], vol1['id'])
-            self._assert_volume_attached(vol, instance_uuid, '/dev/sdb')
-
-        vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_detached(vol)
-
-        instance = db.instance_get(self.context, instance_id)
-        self.cloud.compute_api.attach_volume(self.context,
-                                             instance,
-                                             volume_id=vol2['id'],
-                                             device='/dev/vdc')
-        vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/sdc')
-
-        self.cloud.compute_api.detach_volume(self.context,
-                                             volume_id=vol1['id'])
-        vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_detached(vol)
-
-        result = self.cloud.stop_instances(self.context, [ec2_instance_id])
-        self.assertTrue(result)
-
-        vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_uuid, '/dev/sdc')
-
-        self.cloud.start_instances(self.context, [ec2_instance_id])
-        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
-        self.assertEqual(len(vols), 1)
-        for vol in vols:
-            self.assertEqual(vol['id'], vol2['id'])
-            self._assert_volume_attached(vol, instance_uuid, '/dev/sdc')
-
-        vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_detached(vol)
-
-        self.cloud.terminate_instances(self.context, [ec2_instance_id])
-
-        for vol_id in (vol1['id'], vol2['id']):
-            vol = db.volume_get(self.context, vol_id)
-            self.assertEqual(vol['id'], vol_id)
-            self._assert_volume_detached(vol)
-            db.volume_destroy(self.context, vol_id)
-
-        self._restart_compute_service()
+    def _snapshot_create(self, snapshot_id=None):
+        kwargs = {'volume_id': 'ccec42a2-c220-4806-b762-6b12fbb592e4',
+                  'status': "available",
+                  'volume_size': 1}
+        if snapshot_id:
+            kwargs['snap_id'] = snapshot_id
+        return self.volume_api.create_snapshot_with_kwargs(self.context,
+                                                           **kwargs)
 
     def _create_snapshot(self, ec2_volume_id):
         result = self.cloud.create_snapshot(self.context,
                                             volume_id=ec2_volume_id)
         return result['snapshotId']
-
-    def test_run_with_snapshot(self):
-        """Makes sure run/stop/start instance with snapshot works."""
-        vol = self._volume_create()
-        ec2_volume_id = ec2utils.id_to_ec2_vol_id(vol['id'])
-
-        ec2_snapshot1_id = self._create_snapshot(ec2_volume_id)
-        snapshot1_id = ec2utils.ec2_snap_id_to_uuid(ec2_snapshot1_id)
-        ec2_snapshot2_id = self._create_snapshot(ec2_volume_id)
-        snapshot2_id = ec2utils.ec2_snap_id_to_uuid(ec2_snapshot2_id)
-
-        kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
-                  'max_count': 1,
-                  'block_device_mapping': [{'device_name': '/dev/vdb',
-                                            'snapshot_id': snapshot1_id,
-                                            'delete_on_termination': False, },
-                                           {'device_name': '/dev/vdc',
-                                            'snapshot_id': snapshot2_id,
-                                            'delete_on_termination': True}]}
-        ec2_instance_id = self._run_instance(**kwargs)
-        instance_id = ec2utils.ec2_vol_id_to_uuid(ec2_instance_id)
-        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
-                                                         ec2_instance_id)
-
-        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
-        self.assertEqual(len(vols), 2)
-        vol1_id = None
-        vol2_id = None
-        for vol in vols:
-            snapshot_id = vol['snapshot_id']
-            if snapshot_id == snapshot1_id:
-                vol1_id = vol['id']
-                mountpoint = '/dev/vdb'
-            elif snapshot_id == snapshot2_id:
-                vol2_id = vol['id']
-                mountpoint = '/dev/vdc'
-            else:
-                self.fail()
-
-            self._assert_volume_attached(vol, instance_uuid, mountpoint)
-
-        self.assertTrue(vol1_id)
-        self.assertTrue(vol2_id)
-
-        self.cloud.terminate_instances(self.context, [ec2_instance_id])
-
-        admin_ctxt = context.get_admin_context(read_deleted="no")
-        vol = db.volume_get(admin_ctxt, vol1_id)
-        self._assert_volume_detached(vol)
-        self.assertFalse(vol['deleted'])
-        db.volume_destroy(self.context, vol1_id)
-
-        admin_ctxt = context.get_admin_context(read_deleted="only")
-        vol = db.volume_get(admin_ctxt, vol2_id)
-        self.assertTrue(vol['deleted'])
-
-        for snapshot_id in (ec2_snapshot1_id, ec2_snapshot2_id):
-            self.cloud.delete_snapshot(self.context, snapshot_id)
 
     def _do_test_create_image(self, no_reboot):
         """Make sure that CreateImage works"""
@@ -2363,7 +1866,7 @@ class CloudTestCase(test.TestCase):
         self.assertEquals(bdm.get('deviceName'), 'sda1')
         self.assertTrue('ebs' in bdm)
         self.assertEquals(bdm['ebs'].get('snapshotId'),
-                          'snap-%08x' % snapshots[0])
+                          ec2utils.id_to_ec2_snap_id(snapshots[0]))
         self.assertEquals(created_image.get('kernelId'), 'aki-00000001')
         self.assertEquals(created_image.get('ramdiskId'), 'ari-00000002')
         self.assertEquals(created_image.get('rootDeviceType'), 'ebs')
@@ -2371,11 +1874,6 @@ class CloudTestCase(test.TestCase):
         self.assertNotEqual(virt_driver.get('powered_off'), no_reboot)
 
         self.cloud.terminate_instances(self.context, [ec2_instance_id])
-        for vol in volumes:
-            db.volume_destroy(self.context, vol)
-        for snap in snapshots:
-            db.snapshot_destroy(self.context, snap)
-        # TODO(yamahata): clean up snapshot created by CreateImage.
 
         self._restart_compute_service()
 

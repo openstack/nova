@@ -88,15 +88,6 @@ service_opts = [
     cfg.IntOpt('metadata_workers',
                default=None,
                help='Number of workers for metadata service'),
-    cfg.StrOpt('osapi_volume_listen',
-               default="0.0.0.0",
-               help='IP address for OpenStack Volume API to listen'),
-    cfg.IntOpt('osapi_volume_listen_port',
-               default=8776,
-               help='port for os volume api to listen'),
-    cfg.IntOpt('osapi_volume_workers',
-               default=None,
-               help='Number of workers for OpenStack Volume API service'),
     ]
 
 FLAGS = flags.FLAGS
