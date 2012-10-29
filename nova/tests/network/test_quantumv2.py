@@ -226,6 +226,7 @@ class TestQuantumv2(test.TestCase):
             self.mox.VerifyAll()
         finally:
             FLAGS.reset()
+        super(TestQuantumv2, self).tearDown()
 
     def _verify_nw_info(self, nw_inf, index=0):
         id_suffix = index + 1

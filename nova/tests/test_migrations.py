@@ -217,11 +217,12 @@ class TestMigrations(test.TestCase):
         if _is_mysql_avail(user="openstack_cifail"):
             self.fail("Shouldn't have connected")
 
-    @test.skip_unless(_have_mysql(), "mysql not available")
     def test_mysql_innodb(self):
         """
         Test that table creation on mysql only builds InnoDB tables
         """
+        if not _have_mysql():
+            self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automaticaly in tearDown so no need to clean it up here.
         connect_string = _mysql_get_connect_string()

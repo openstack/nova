@@ -31,7 +31,7 @@ class FakeImageServiceTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
     def tearDown(self):
-        super(FakeImageServiceTestCase, self).setUp()
+        super(FakeImageServiceTestCase, self).tearDown()
         nova.tests.image.fake.FakeImageService_reset()
 
     def test_detail(self):

@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #
 
+import platform
+
 import nova.context
 import nova.db
 import nova.flags
@@ -95,3 +97,7 @@ def get_test_network_info(count=1):
                            {'ip': fake_ip_2},
                            {'ip': fake_ip_3}]
     return [(network, mapping) for x in xrange(0, count)]
+
+
+def is_osx():
+    return platform.mac_ver()[0] != ''

@@ -25,12 +25,12 @@ inline callbacks.
 
 import functools
 import sys
-import unittest
 import uuid
 
 import mox
 import nose.plugins.skip
 import stubout
+import testtools
 
 from nova import flags
 from nova.openstack.common import cfg
@@ -56,68 +56,11 @@ FLAGS.register_opts(test_opts)
 LOG = logging.getLogger(__name__)
 
 
-class skip_test(object):
-    """Decorator that skips a test."""
-    # TODO(tr3buchet): remember forever what comstud did here
-    def __init__(self, msg):
-        self.message = msg
-
-    def __call__(self, func):
-        @functools.wraps(func)
-        def _skipper(*args, **kw):
-            """Wrapped skipper function."""
-            raise nose.SkipTest(self.message)
-        return _skipper
-
-
-class skip_if(object):
-    """Decorator that skips a test if condition is true."""
-    def __init__(self, condition, msg):
-        self.condition = condition
-        self.message = msg
-
-    def __call__(self, func):
-        @functools.wraps(func)
-        def _skipper(*args, **kw):
-            """Wrapped skipper function."""
-            if self.condition:
-                raise nose.SkipTest(self.message)
-            func(*args, **kw)
-        return _skipper
-
-
-class skip_unless(object):
-    """Decorator that skips a test if condition is not true."""
-    def __init__(self, condition, msg):
-        self.condition = condition
-        self.message = msg
-
-    def __call__(self, func):
-        @functools.wraps(func)
-        def _skipper(*args, **kw):
-            """Wrapped skipper function."""
-            if not self.condition:
-                raise nose.SkipTest(self.message)
-            func(*args, **kw)
-        return _skipper
-
-
-def skip_if_fake(func):
-    """Decorator that skips a test if running in fake mode."""
-    def _skipper(*args, **kw):
-        """Wrapped skipper function."""
-        if FLAGS.fake_tests:
-            raise unittest.SkipTest('Test cannot be run in fake mode')
-        else:
-            return func(*args, **kw)
-    return _skipper
-
-
 class TestingException(Exception):
     pass
 
 
-class TestCase(unittest.TestCase):
+class TestCase(testtools.TestCase):
     """Test case base class for all unit tests."""
 
     def setUp(self):
@@ -272,7 +215,8 @@ class TestCase(unittest.TestCase):
 
     def assertSubDictMatch(self, sub_dict, super_dict):
         """Assert a sub_dict is subset of super_dict."""
-        self.assertTrue(set(sub_dict.keys()).issubset(set(super_dict.keys())))
+        self.assertEqual(True,
+                         set(sub_dict.keys()).issubset(set(super_dict.keys())))
         for k, sub_value in sub_dict.items():
             super_value = super_dict[k]
             if isinstance(sub_value, dict):
@@ -281,30 +225,3 @@ class TestCase(unittest.TestCase):
                 continue
             else:
                 self.assertEqual(sub_value, super_value)
-
-    def assertIn(self, a, b, *args, **kwargs):
-        """Python < v2.7 compatibility.  Assert 'a' in 'b'"""
-        try:
-            f = super(TestCase, self).assertIn
-        except AttributeError:
-            self.assertTrue(a in b, *args, **kwargs)
-        else:
-            f(a, b, *args, **kwargs)
-
-    def assertNotIn(self, a, b, *args, **kwargs):
-        """Python < v2.7 compatibility.  Assert 'a' NOT in 'b'"""
-        try:
-            f = super(TestCase, self).assertNotIn
-        except AttributeError:
-            self.assertFalse(a in b, *args, **kwargs)
-        else:
-            f(a, b, *args, **kwargs)
-
-    def assertIsInstance(self, a, b, *args, **kwargs):
-        """Python < v2.7 compatibility.  Assert 'a' is Instance of 'b'"""
-        try:
-            f = super(TestCase, self).assertIsInstance
-        except AttributeError:
-            self.assertTrue(isinstance(a, b), *args, **kwargs)
-        else:
-            f(a, b, *args, **kwargs)
