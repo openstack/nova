@@ -31,6 +31,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging
 from nova.openstack.common import timeutils
+from nova.scheduler import driver
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
@@ -1306,4 +1307,110 @@ class AvailabilityZoneJsonTest(ServersSampleBase):
 
 
 class AvailabilityZoneXmlTest(AvailabilityZoneJsonTest):
+    ctype = "xml"
+
+
+class AdminActionsSamplesJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.admin_actions."
+                      "Admin_actions")
+
+    def setUp(self):
+        """setUp Method for AdminActions api samples extension
+        This method creates the server that will be used in each tests"""
+        super(AdminActionsSamplesJsonTest, self).setUp()
+        self.uuid = self._post_server()
+
+    def test_post_pause(self):
+        """Get api samples to pause server request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-pause', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_unpause(self):
+        """Get api samples to unpause server request"""
+        self.test_post_pause()
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-unpause', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_suspend(self):
+        """Get api samples to suspend server request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-suspend', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_resume(self):
+        """Get api samples to server resume request"""
+        self.test_post_suspend()
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-resume', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_migrate(self):
+        """Get api samples to migrate server request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-migrate', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_reset_network(self):
+        """Get api samples to reset server network request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-reset-network', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_inject_network_info(self):
+        """Get api samples to inject network info request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-inject-network-info', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_lock_server(self):
+        """Get api samples to lock server request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-lock-server', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_unlock_server(self):
+        """Get api samples to unlock server request"""
+        self.test_post_lock_server()
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-unlock-server', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_backup_server(self):
+        """Get api samples to backup server request"""
+        def image_details(self, context, **kwargs):
+            """This stub is specifically used on the backup action."""
+            # NOTE(maurosr): I've added this simple stub cause backup action
+            # was trapped in infinite loop during fetch image phase since the
+            # fake Image Service always returns the same set of images
+            return None
+
+        self.stubs.Set(fake._FakeImageService, 'detail', image_details)
+
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-backup-server', {})
+        self.assertEqual(response.status, 202)
+
+    def test_post_live_migrate_server(self):
+        """Get api samples to server live migrate request"""
+        def fake_live_migration_dest_check(self, context, instance_ref, dest):
+            """Skip live migration scheduler checks"""
+            return
+        self.stubs.Set(driver.Scheduler, '_live_migration_dest_check',
+                       fake_live_migration_dest_check)
+
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-live-migrate',
+                                 {'hostname': self.compute.host})
+        self.assertEqual(response.status, 202)
+
+    def test_post_reset_state(self):
+        """get api samples to server reset state request"""
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'admin-actions-reset-server-state', {})
+        self.assertEqual(response.status, 202)
+
+
+class AdminActionsSamplesXmlTest(AdminActionsSamplesJsonTest):
     ctype = 'xml'
