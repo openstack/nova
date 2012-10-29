@@ -189,5 +189,5 @@ class APIRouter(base_wsgi.Router):
             resource.register_actions(controller)
             resource.register_extensions(controller)
 
-    def _setup_routes(self, mapper, ext_mgr):
-        raise NotImplementedError
+    def _setup_routes(self, mapper, ext_mgr, init_only):
+        raise NotImplementedError()
