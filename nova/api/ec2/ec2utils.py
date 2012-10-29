@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova import utils
 
 
@@ -174,6 +175,39 @@ def ec2_vol_id_to_uuid(ec2_id):
     # NOTE(jgriffith) first strip prefix to get just the numeric
     int_id = ec2_id_to_id(ec2_id)
     return get_volume_uuid_from_int_id(ctxt, int_id)
+
+
+def is_ec2_timestamp_expired(request, expires=None):
+    """Checks the timestamp or expiry time included in a EC2 request
+    and returns true if the request is expired
+    """
+    query_time = None
+    timestamp = request.get('Timestamp')
+    expiry_time = request.get('Expires')
+    try:
+        if timestamp and expiry_time:
+            msg = _("Request must include either Timestamp or Expires,"
+                    " but cannot contain both")
+            LOG.error(msg)
+            raise exception.InvalidRequest(msg)
+        elif expiry_time:
+            query_time = timeutils.parse_strtime(expiry_time,
+                                        "%Y-%m-%dT%H:%M:%SZ")
+            return timeutils.is_older_than(query_time, -1)
+        elif timestamp:
+            query_time = timeutils.parse_strtime(timestamp,
+                                        "%Y-%m-%dT%H:%M:%SZ")
+
+            # Check if the difference between the timestamp in the request
+            # and the time on our servers is larger than 5 minutes, the
+            # request is too old (or too new).
+            if query_time and expires:
+                return timeutils.is_older_than(query_time, expires) or \
+                       timeutils.is_newer_than(query_time, expires)
+        return False
+    except ValueError:
+        LOG.audit(_("Timestamp is invalid."))
+        return True
 
 
 def get_int_id_from_instance_uuid(context, instance_uuid):

@@ -66,6 +66,9 @@ ec2_opts = [
                 default=True,
                 help='Validate security group names'
                      ' according to EC2 specification'),
+    cfg.IntOpt('ec2_timestamp_expiry',
+               default=300,
+               help='Time in seconds before ec2 timestamp expires'),
     ]
 
 FLAGS = flags.FLAGS
@@ -311,6 +314,13 @@ class Requestify(wsgi.Middleware):
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
         try:
+            expired = ec2utils.is_ec2_timestamp_expired(req.params,
+                            expires=FLAGS.ec2_timestamp_expiry)
+            if expired:
+                msg = _("Timestamp failed validation.")
+                LOG.exception(msg)
+                raise webob.exc.HTTPForbidden(detail=msg)
+
             # Raise KeyError if omitted
             action = req.params['Action']
             # Fix bug lp:720157 for older (version 1) clients
@@ -324,6 +334,8 @@ class Requestify(wsgi.Middleware):
                 args.pop(non_arg)
         except KeyError, e:
             raise webob.exc.HTTPBadRequest()
+        except exception.InvalidRequest as err:
+            raise webob.exc.HTTPBadRequest(explanation=unicode(err))
 
         LOG.debug(_('action: %s'), action)
         for key, value in args.items():
