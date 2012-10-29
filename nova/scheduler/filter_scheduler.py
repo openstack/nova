@@ -59,7 +59,6 @@ class FilterScheduler(driver.Scheduler):
 
         Returns a list of the instances created.
         """
-        elevated = context.elevated()
         instance_uuids = request_spec.get('instance_uuids')
         num_instances = len(instance_uuids)
         LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
@@ -86,7 +85,7 @@ class FilterScheduler(driver.Scheduler):
                 except IndexError:
                     raise exception.NoValidHost(reason="")
 
-                self._provision_resource(elevated, weighted_host,
+                self._provision_resource(context, weighted_host,
                                          request_spec,
                                          filter_properties,
                                          requested_networks,
