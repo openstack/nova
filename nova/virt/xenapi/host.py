@@ -101,7 +101,7 @@ class Host(object):
                     (old_ref, new_ref) = db.instance_update_and_get_original(
                                 ctxt,
                                 instance['uuid'],
-                                {'hosts': host,
+                                {'host': host,
                                  'vm_state': vm_states.ACTIVE})
                     notifications.send_update(ctxt, old_ref, new_ref)
 
