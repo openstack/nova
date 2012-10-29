@@ -309,7 +309,12 @@ class VolumeManager(manager.SchedulerDependentManager):
                                       volume_id,
                                       {'status': 'error_detaching'})
 
-        self.db.volume_detached(context, volume_id)
+        self.db.volume_detached(context.elevated(), volume_id)
+
+        # Check for https://bugs.launchpad.net/nova/+bug/1065702
+        volume_ref = self.db.volume_get(context, volume_id)
+        if volume_ref['name'] not in volume_ref['provider_location']:
+            self.driver.ensure_export(context, volume_ref)
 
     def _copy_image_to_volume(self, context, volume, image_id):
         """Downloads Glance image to the specified volume. """

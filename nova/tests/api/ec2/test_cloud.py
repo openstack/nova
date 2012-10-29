@@ -101,6 +101,8 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(iscsi.TgtAdm, '_get_target', self.fake_get_target)
         self.stubs.Set(iscsi.TgtAdm, 'remove_iscsi_target',
                        self.fake_remove_iscsi_target)
+        self.stubs.Set(iscsi.TgtAdm, 'create_iscsi_target',
+                       self.fake_create_iscsi_target)
 
         def fake_show(meh, context, id):
             return {'id': id,
@@ -166,6 +168,9 @@ class CloudTestCase(test.TestCase):
         return 1
 
     def fake_remove_iscsi_target(obj, tid, lun, vol_id, **kwargs):
+        pass
+
+    def fake_create_iscsi_target(obj, name, tid, lun, path, **kwargs):
         pass
 
     def _stub_instance_get_with_fixed_ips(self, func_name):
@@ -1203,8 +1208,8 @@ class CloudTestCase(test.TestCase):
                      'name': 'fake_name',
                      'container_format': 'ami',
                      'properties': {
-                        'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
-                        'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
@@ -2036,15 +2041,24 @@ class CloudTestCase(test.TestCase):
 
     def _volume_create(self, volume_id=None):
         location = '10.0.2.15:3260'
-        iqn = 'iqn.2010-10.org.openstack:%s' % volume_id
+        iqn = 'iqn.2010-10.org.openstack:volume-%s' % volume_id
         kwargs = {'status': 'available',
                   'host': self.volume.host,
                   'size': 1,
                   'provider_location': '1 %s,fake %s' % (location, iqn),
                   'attach_status': 'detached', }
+
         if volume_id:
             kwargs['id'] = volume_id
-        return db.volume_create(self.context, kwargs)
+
+        volume_ref = db.volume_create(self.context, kwargs)
+        if volume_id is None:
+            model_update = {}
+            model_update['provider_location'] =\
+                volume_ref['provider_location'].replace('volume-None',
+                                                        volume_ref['name'])
+            db.volume_update(self.context, volume_ref['id'], model_update)
+        return volume_ref
 
     def _assert_volume_attached(self, vol, instance_uuid, mountpoint):
         self.assertEqual(vol['instance_uuid'], instance_uuid)
@@ -2066,6 +2080,7 @@ class CloudTestCase(test.TestCase):
 
         vol1 = self._volume_create()
         vol2 = self._volume_create()
+
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1,
@@ -2132,6 +2147,7 @@ class CloudTestCase(test.TestCase):
 
         vol1 = self._volume_create()
         vol2 = self._volume_create()
+
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1,

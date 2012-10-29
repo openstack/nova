@@ -34,3 +34,4 @@ dmsetup_usr: CommandFilter, /usr/sbin/dmsetup, root
 
 #nova/volume/.py: utils.temporary_chown(path, 0), ...
 chown: CommandFilter, /bin/chown, root
+ln: CommandFilter, /bin/ln, root

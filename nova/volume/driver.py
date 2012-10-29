@@ -21,6 +21,7 @@ Drivers for volumes.
 """
 
 import os
+import re
 import tempfile
 import time
 import urllib
@@ -327,14 +328,72 @@ class ISCSIDriver(VolumeDriver):
         else:
             iscsi_target = 1  # dummy value when using TgtAdm
 
-        iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
-        volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
+        # Check for https://bugs.launchpad.net/nova/+bug/1065702
+        old_name = None
+        volume_name = volume['name']
+        if (volume['provider_location'] is not None and
+            volume['name'] not in volume['provider_location']):
+
+            msg = _('Detected inconsistency in provider_location id')
+            LOG.debug(msg)
+            old_name = self._fix_id_migration(context, volume)
+            if 'in-use' in volume['status']:
+                volume_name = old_name
+                old_name = None
+
+        iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume_name)
+        volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume_name)
 
         # NOTE(jdg): For TgtAdm case iscsi_name is the ONLY param we need
         # should clean this all up at some point in the future
         self.tgtadm.create_iscsi_target(iscsi_name, iscsi_target,
                                         0, volume_path,
-                                        check_exit_code=False)
+                                        check_exit_code=False,
+                                        old_name=old_name)
+
+    def _fix_id_migration(self, context, volume):
+        """Fix provider_location and dev files to address bug 1065702.
+
+        For volumes that the provider_location has NOT been updated
+        and are not currently in-use we'll create a new iscsi target
+        and remove the persist file.
+
+        If the volume is in-use, we'll just stick with the old name
+        and when detach is called we'll feed back into ensure_export
+        again if necessary and fix things up then.
+
+        Details at: https://bugs.launchpad.net/nova/+bug/1065702
+        """
+
+        model_update = {}
+        pattern = re.compile(r":|\s")
+        fields = pattern.split(volume['provider_location'])
+        old_name = fields[3]
+
+        volume['provider_location'] = \
+            volume['provider_location'].replace(old_name, volume['name'])
+        model_update['provider_location'] = volume['provider_location']
+
+        self.db.volume_update(context, volume['id'], model_update)
+
+        start = os.getcwd()
+        os.chdir('/dev/%s' % FLAGS.volume_group)
+
+        try:
+            (out, err) = self._execute('readlink', old_name)
+        except exception.ProcessExecutionError:
+            link_path = '/dev/%s/%s' % (FLAGS.volume_group, old_name)
+            LOG.debug(_('Symbolic link %s not found') % link_path)
+            os.chdir(start)
+            return
+
+        rel_path = out.rstrip()
+        self._execute('ln',
+                      '-s',
+                      rel_path, volume['name'],
+                      run_as_root=True)
+        os.chdir(start)
+        return old_name
 
     def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore."""
@@ -354,7 +413,6 @@ class ISCSIDriver(VolumeDriver):
 
     def create_export(self, context, volume):
         """Creates an export for a logical volume."""
-        #BOOKMARK(jdg)
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
