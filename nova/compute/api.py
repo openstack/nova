@@ -280,7 +280,7 @@ class API(base.Base):
             and the fixed IP address for each network provided is within
             same the network block
         """
-        if requested_networks is None:
+        if not requested_networks:
             return
 
         self.network_api.validate_networks(context, requested_networks)
