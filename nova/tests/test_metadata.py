@@ -83,18 +83,23 @@ def fake_InstanceMetadata(stubs, inst_data, address=None,
 
 
 def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
-                 fake_get_metadata=None, headers=None):
+                 fake_get_metadata=None, headers=None,
+                 fake_get_metadata_by_instance_id=None):
 
-    def get_metadata(address):
+    def get_metadata_by_remote_address(address):
         return mdinst
 
     app = handler.MetadataRequestHandler()
 
     if fake_get_metadata is None:
-        fake_get_metadata = get_metadata
+        fake_get_metadata = get_metadata_by_remote_address
 
     if stubs:
-        stubs.Set(app, 'get_metadata', fake_get_metadata)
+        stubs.Set(app, 'get_metadata_by_remote_address', fake_get_metadata)
+
+        if fake_get_metadata_by_instance_id:
+            stubs.Set(app, 'get_metadata_by_instance_id',
+                      fake_get_metadata_by_instance_id)
 
     request = webob.Request.blank(relpath)
     request.remote_addr = address
@@ -404,4 +409,63 @@ class MetadataHandlerTestCase(test.TestCase):
                                 address="168.168.168.1",
                                 fake_get_metadata=fake_get_metadata,
                                 headers=None)
+        self.assertEqual(response.status_int, 500)
+
+    def test_user_data_with_quantum_instance_id(self):
+        expected_instance_id = 'a-b-c-d'
+
+        def fake_get_metadata(instance_id, remote_address):
+            if instance_id == expected_instance_id:
+                return self.mdinst
+            else:
+                # raise the exception to aid with 500 response code test
+                raise Exception("Expected instance_id of %s, got %s" %
+                                (expected_instance_id, instance_id))
+
+        signed = ('d98d0dd53b026a24df2c06b464ffa5da'
+                  'db922ae41af7bd3ecc3cae75aef65771')
+
+        # try a request with service disabled
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            headers={'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': signed})
+        self.assertEqual(response.status_int, 200)
+
+        # now enable the service
+
+        self.flags(service_quantum_metadata_proxy=True)
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': signed})
+
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.body,
+                         base64.b64decode(self.instance['user_data']))
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': ''})
+
+        self.assertEqual(response.status_int, 403)
+
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Instance-ID': 'z-z-z-z',
+                     'X-Instance-ID-Signature': '81f42e3fc77ba3a3e8d83142746e0'
+                                                '8387b96cbc5bd2474665192d2ec28'
+                                                '8ffb67'})
         self.assertEqual(response.status_int, 500)
