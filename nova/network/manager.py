@@ -526,7 +526,8 @@ class FloatingIP(object):
         if host == self.host:
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
-                                        fixed_address, interface)
+                                        fixed_address, interface,
+                                        fixed_ip['instance_uuid'])
         else:
             # send to correct host
             self.network_rpcapi._associate_floating_ip(context,
@@ -535,7 +536,7 @@ class FloatingIP(object):
         return orig_instance_uuid
 
     def _associate_floating_ip(self, context, floating_address, fixed_address,
-                               interface):
+                               interface, instance_uuid):
         """Performs db and driver calls to associate floating ip & fixed ip"""
         # associate floating ip
         self.db.floating_ip_fixed_ip_associate(context,
@@ -552,7 +553,9 @@ class FloatingIP(object):
             if "Cannot find device" in str(e):
                 LOG.error(_('Interface %(interface)s not found'), locals())
                 raise exception.NoFloatingIpInterface(interface=interface)
+
         payload = dict(project_id=context.project_id,
+                       instance_id=instance_uuid,
                        floating_ip=floating_address)
         notifier.notify(context,
                         notifier.publisher_id("network"),
@@ -605,13 +608,15 @@ class FloatingIP(object):
 
         if host == self.host:
             # i'm the correct host
-            self._disassociate_floating_ip(context, address, interface)
+            self._disassociate_floating_ip(context, address, interface,
+                                           fixed_ip['instance_uuid'])
         else:
             # send to correct host
             self.network_rpcapi._disassociate_floating_ip(context, address,
                     interface, host)
 
-    def _disassociate_floating_ip(self, context, address, interface):
+    def _disassociate_floating_ip(self, context, address, interface,
+                                  instance_uuid):
         """Performs db and driver calls to disassociate floating ip"""
         # disassociate floating ip
         fixed_address = self.db.floating_ip_disassociate(context, address)
@@ -619,7 +624,9 @@ class FloatingIP(object):
         if interface:
             # go go driver time
             self.l3driver.remove_floating_ip(address, fixed_address, interface)
-        payload = dict(project_id=context.project_id, floating_ip=address)
+        payload = dict(project_id=context.project_id,
+                       instance_id=instance_uuid,
+                       floating_ip=address)
         notifier.notify(context,
                         notifier.publisher_id("network"),
                         'network.floating_ip.disassociate',
