@@ -36,14 +36,6 @@ class FakeComputeScheduler(driver.Scheduler):
         pass
 
 
-class FakeVolumeScheduler(driver.Scheduler):
-    is_fake_volume = True
-
-    def __init__(self):
-        super(FakeVolumeScheduler, self).__init__()
-        self.is_update_caps_called = False
-
-
 class FakeDefaultScheduler(driver.Scheduler):
     is_fake_default = True
 
@@ -61,18 +53,15 @@ class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
         super(MultiDriverTestCase, self).setUp()
         base_name = 'nova.tests.scheduler.test_multi_scheduler.%s'
         compute_cls_name = base_name % 'FakeComputeScheduler'
-        volume_cls_name = base_name % 'FakeVolumeScheduler'
         default_cls_name = base_name % 'FakeDefaultScheduler'
         self.flags(compute_scheduler_driver=compute_cls_name,
-                volume_scheduler_driver=volume_cls_name,
                 default_scheduler_driver=default_cls_name)
         self._manager = multi.MultiScheduler()
 
     def test_drivers_inited(self):
         mgr = self._manager
-        self.assertEqual(len(mgr.drivers), 3)
+        self.assertEqual(len(mgr.drivers), 2)
         self.assertTrue(mgr.drivers['compute'].is_fake_compute)
-        self.assertTrue(mgr.drivers['volume'].is_fake_volume)
         self.assertTrue(mgr.drivers['default'].is_fake_default)
 
     def test_update_service_capabilities(self):
@@ -84,10 +73,8 @@ class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
                        'update_service_capabilities',
                        fake_update_service_capabilities)
         self.assertFalse(mgr.drivers['compute'].is_update_caps_called)
-        self.assertFalse(mgr.drivers['volume'].is_update_caps_called)
         mgr.update_service_capabilities('foo_svc', 'foo_host', 'foo_caps')
         self.assertTrue(mgr.drivers['compute'].is_update_caps_called)
-        self.assertTrue(mgr.drivers['volume'].is_update_caps_called)
 
 
 class SimpleSchedulerTestCase(MultiDriverTestCase):
@@ -99,10 +86,8 @@ class SimpleSchedulerTestCase(MultiDriverTestCase):
         super(SimpleSchedulerTestCase, self).setUp()
         base_name = 'nova.tests.scheduler.test_multi_scheduler.%s'
         compute_cls_name = base_name % 'FakeComputeScheduler'
-        volume_cls_name = 'nova.scheduler.simple.SimpleScheduler'
         default_cls_name = base_name % 'FakeDefaultScheduler'
         self.flags(compute_scheduler_driver=compute_cls_name,
-                volume_scheduler_driver=volume_cls_name,
                 default_scheduler_driver=default_cls_name)
         self._manager = multi.MultiScheduler()
 
@@ -117,11 +102,9 @@ class SimpleSchedulerTestCase(MultiDriverTestCase):
         self.assertFalse(mgr.drivers['compute'].is_update_caps_called)
         mgr.update_service_capabilities('foo_svc', 'foo_host', 'foo_caps')
         self.assertTrue(mgr.drivers['compute'].is_update_caps_called)
-        self.assertTrue(mgr.drivers['volume'].is_update_caps_called)
 
     def test_drivers_inited(self):
         mgr = self._manager
-        self.assertEqual(len(mgr.drivers), 3)
+        self.assertEqual(len(mgr.drivers), 2)
         self.assertTrue(mgr.drivers['compute'].is_fake_compute)
-        self.assertTrue(mgr.drivers['volume'] is not None)
         self.assertTrue(mgr.drivers['default'].is_fake_default)

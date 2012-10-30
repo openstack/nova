@@ -48,16 +48,6 @@ The :mod:`nova.scheduler.chance` Driver
     :show-inheritance:
 
 
-The :mod:`nova.scheduler.simple` Driver
----------------------------------------
-
-.. automodule:: nova.scheduler.simple
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 Tests
 -----
 
