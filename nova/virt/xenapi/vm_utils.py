@@ -862,7 +862,8 @@ def destroy_kernel_ramdisk(session, kernel, ramdisk):
         args['kernel-file'] = kernel
     if ramdisk:
         args['ramdisk-file'] = ramdisk
-    session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
+    if args:
+        session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
 
 def _create_cached_image(context, session, instance, name_label,

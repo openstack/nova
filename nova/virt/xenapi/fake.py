@@ -221,6 +221,7 @@ def after_VM_create(vm_ref, vm_rec):
     vm_rec.setdefault('memory_dynamic_max', str(8 * 1024 * 1024 * 1024))
     vm_rec.setdefault('VCPUs_max', str(4))
     vm_rec.setdefault('VBDs', [])
+    vm_rec.setdefault('resident_on', '')
 
 
 def create_pbd(config, host_ref, sr_ref, attached):

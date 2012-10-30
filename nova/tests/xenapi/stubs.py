@@ -138,9 +138,16 @@ def stubout_create_vm(stubs):
     """Simulates a failure in create_vm."""
 
     def f(*args):
-        raise fake.Failure("Test Exception raised by " +
-                           "fake create_vm")
+        raise fake.Failure("Test Exception raised by fake create_vm")
     stubs.Set(vm_utils, 'create_vm', f)
+
+
+def stubout_attach_disks(stubs):
+    """Simulates a failure in _attach_disks."""
+
+    def f(*args):
+        raise fake.Failure("Test Exception raised by fake _attach_disks")
+    stubs.Set(vmops.VMOps, '_attach_disks', f)
 
 
 def _make_fake_vdi():
