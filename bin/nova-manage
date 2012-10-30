@@ -805,8 +805,8 @@ class InstanceTypeCommands(object):
             help='rxtx_factor')
     @args('--is_public', dest="is_public", metavar='<is_public>',
             help='Make flavor accessible to the public')
-    def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
-               swap=0, rxtx_factor=1, is_public=True):
+    def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
+               flavorid=None, swap=0, rxtx_factor=1, is_public=True):
         """Creates instance types / flavors"""
         try:
             instance_types.create(name, memory, vcpus, root_gb,
@@ -1133,7 +1133,8 @@ class GetLogCommands(object):
                         if print_name == 0:
                             print log_file + ":-"
                             print_name = 1
-                        print _('Line %d : %s') % (len(lines) - index, line)
+                        linenum = len(lines) - index
+                        print _('Line %(linenum)d : %(line)s') % locals()
         if error_found == 0:
             print _('No errors in logfiles!')
 
