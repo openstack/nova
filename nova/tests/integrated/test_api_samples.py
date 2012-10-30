@@ -22,6 +22,8 @@ import uuid
 
 from lxml import etree
 
+# Import extensions to pull in osapi_compute_extension CONF option used below.
+from nova.api.openstack.compute import extensions
 from nova.cloudpipe.pipelib import CloudPipe
 from nova.compute import api
 from nova import context

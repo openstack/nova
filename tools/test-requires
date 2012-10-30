@@ -2,14 +2,14 @@
 distribute>=0.6.24
 
 coverage
-fixtures
+discover
+feedparser
+fixtures>=0.3.10
 mox==0.5.3
-nose
-testtools
-openstack.nose_plugin>=0.7
-nosehtmloutput
+MySQL-python
 pep8==1.3.3
 pylint==0.25.2
+python-subunit
 sphinx>=1.1.2
-feedparser
-MySQL-python
+testrepository>=0.0.8
+testtools>=0.9.22

@@ -191,6 +191,15 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
 
+        if (os.environ.get('OS_STDOUT_NOCAPTURE') != 'True' and
+                os.environ.get('OS_STDOUT_NOCAPTURE') != '1'):
+            stdout = self.useFixture(fixtures.DetailStream('stdout')).stream
+            self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
+        if (os.environ.get('OS_STDERR_NOCAPTURE') != 'True' and
+                os.environ.get('OS_STDERR_NOCAPTURE') != '1'):
+            stderr = self.useFixture(fixtures.DetailStream('stderr')).stream
+            self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
+
         self.log_fixture = self.useFixture(fixtures.FakeLogger('nova'))
         self.useFixture(conf_fixture.ConfFixture(CONF))
 

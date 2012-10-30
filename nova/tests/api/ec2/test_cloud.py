@@ -25,6 +25,8 @@ import os
 import string
 import tempfile
 
+import fixtures
+
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
@@ -101,6 +103,7 @@ class CloudTestCase(test.TestCase):
         super(CloudTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API')
+        self.useFixture(fixtures.FakeLogger('boto'))
 
         def fake_show(meh, context, id):
             return {'id': id,

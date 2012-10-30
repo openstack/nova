@@ -21,6 +21,8 @@ import mox
 import os
 import tempfile
 
+import fixtures
+
 from nova import context
 import nova.db.api
 from nova import exception
@@ -83,6 +85,7 @@ class TestS3ImageService(test.TestCase):
     def setUp(self):
         super(TestS3ImageService, self).setUp()
         self.context = context.RequestContext(None, None)
+        self.useFixture(fixtures.FakeLogger('boto'))
 
         # set up one fixture to test shows, should have id '1'
         nova.db.api.s3_image_create(self.context,

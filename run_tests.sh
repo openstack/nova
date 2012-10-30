@@ -11,14 +11,11 @@ function usage {
   echo "  -s, --no-site-packages   Isolate the virtualenv from the global Python environment"
   echo "  -r, --recreate-db        Recreate the test database (deprecated, as this is now the default)."
   echo "  -n, --no-recreate-db     Don't recreate the test database."
-  echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run PEP8 and HACKING compliance check"
   echo "  -P, --no-pep8            Don't run static code checks"
   echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
-  echo "  -v, --verbose            Display nosetests in the console"
-  echo "  -d, --debug              Enable pdb's prompt to be displayed during tests. This will run nosetests with --pdb option"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
@@ -39,10 +36,8 @@ function process_option {
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
     -c|--coverage) coverage=1;;
-    -d|--debug) debug=1;;
-    -v|--verbose) verbose=1;;
-    -*) noseopts="$noseopts $1";;
-    *) noseargs="$noseargs $1"
+    -*) testropts="$testropts $1";;
+    *) testrargs="$testrargs $1"
   esac
 }
 
@@ -53,81 +48,61 @@ never_venv=0
 force=0
 no_site_packages=0
 installvenvopts=
-noseargs=
-noseopts=
+testrargs=
+testropts=
 wrapper=""
 just_pep8=0
 no_pep8=0
 coverage=0
 recreate_db=1
-verbose=0
-debug=0
 
-export NOSE_WITH_OPENSTACK=1
-export NOSE_OPENSTACK_COLOR=1
-export NOSE_OPENSTACK_RED=0.05
-export NOSE_OPENSTACK_YELLOW=0.025
-export NOSE_OPENSTACK_SHOW_ELAPSED=1
-export NOSE_OPENSTACK_STDOUT=1
-
-export LANG=en_US.UTF-8
-export LANGUAGE=en_US:en
-export LC_ALL=C
+LANG=en_US.UTF-8
+LANGUAGE=en_US:en
+LC_ALL=C
+OS_STDOUT_NOCAPTURE=False
+OS_STDERR_NOCAPTURE=False
 
 for arg in "$@"; do
   process_option $arg
 done
 
-# If enabled, tell nose to collect coverage data
-if [ $coverage -eq 1 ]; then
-    noseopts="$noseopts --with-coverage --cover-package=nova"
-fi
-
 if [ $no_site_packages -eq 1 ]; then
   installvenvopts="--no-site-packages"
 fi
 
+function init_testr {
+  if [ ! -d .testrepository ]; then
+    ${wrapper} testr init
+  fi
+}
+
 function run_tests {
   # Cleanup *pyc
   ${wrapper} find . -type f -name "*.pyc" -delete
-  if [ "$debug" -eq 0 ];
-  then
-    # Just run the test suites in current environment
-    if [ "$verbose" -eq 1 ];
-    then
-       ${wrapper} $NOSETESTS 2>&1 | tee nosetests.log
-    else
-       ${wrapper} $NOSETESTS | tee nosetests.log
-    fi
 
-    # If we get some short import error right away, print the error log directly
-    RESULT=$?
-    if [ "$RESULT" -ne "0" ];
-    then
-      ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
-      if [ "$ERRSIZE" -lt "40" ];
-      then
-          cat run_tests.log
-      fi
-    else
-      tests_run=$(awk '/^Ran/ {print $2}' nosetests.log)
-      if [ -z "$tests_run" ] || [ "$tests_run" -eq 0 ];
-      then
-          echo "ERROR: Zero tests ran, something is wrong!"
-          echo "This is usually caused by a parse error in some python"
-          echo "file or a failure to set up the environment (i.e. during"
-          echo "temporary database preparation). Running nosetests directly"
-          echo "may offer more clues."
-          return 1
-      fi
-    fi
-  else
-    ${wrapper} $NOSETESTS --pdb
-    RESULT=$?
+  if [ $coverage -eq 1 ]; then
+    # Do not test test_coverage_ext when gathering coverage.
+    TESTRTESTS="$TESTRTESTS ^(?!.*test_coverage_ext).*$"
+    export PYTHON="${wrapper} coverage run --source nova --parallel-mode"
   fi
+  # Just run the test suites in current environment
+  set +e
+  echo "Running \`${wrapper} $TESTRTESTS\`"
+  ${wrapper} $TESTRTESTS
+  RESULT=$?
+  set -e
+
+  copy_subunit_log
+
   return $RESULT
 }
 
+function copy_subunit_log {
+  LOGNAME=`cat .testrepository/next-stream`
+  LOGNAME=$(($LOGNAME - 1))
+  LOGNAME=".testrepository/${LOGNAME}"
+  cp $LOGNAME subunit.log
+}
 
 function run_pep8 {
   echo "Running PEP8 and HACKING compliance check..."
@@ -155,7 +130,7 @@ function run_pep8 {
 }
 
 
-NOSETESTS="nosetests $noseopts $noseargs"
+TESTRTESTS="testr run --parallel $testropts $testrargs"
 
 if [ $never_venv -eq 0 ]
 then
@@ -197,13 +172,14 @@ if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
 fi
 
+init_testr
 run_tests
 
 # NOTE(sirp): we only want to run pep8 when we're running the full-test suite,
 # not when we're running tests individually. To handle this, we need to
-# distinguish between options (noseopts), which begin with a '-', and
-# arguments (noseargs).
-if [ -z "$noseargs" ]; then
+# distinguish between options (testropts), which begin with a '-', and
+# arguments (testrargs).
+if [ -z "$testrargs" ]; then
   if [ $no_pep8 -eq 0 ]; then
     run_pep8
   fi
@@ -212,5 +188,6 @@ fi
 if [ $coverage -eq 1 ]; then
     echo "Generating coverage report in covhtml/"
     # Don't compute coverage for common code, which is tested elsewhere
+    ${wrapper} coverage combine
     ${wrapper} coverage html --include='nova/*' --omit='nova/openstack/common/*' -d covhtml -i
 fi
