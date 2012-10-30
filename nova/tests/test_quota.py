@@ -304,6 +304,9 @@ class FakeDriver(object):
     def rollback(self, context, reservations):
         self.called.append(('rollback', context, reservations))
 
+    def usage_reset(self, context, resources):
+        self.called.append(('usage_reset', context, resources))
+
     def destroy_all_by_project(self, context, project_id):
         self.called.append(('destroy_all_by_project', context, project_id))
 
@@ -662,6 +665,16 @@ class QuotaEngineTestCase(test.TestCase):
 
         self.assertEqual(driver.called, [
                 ('rollback', context, ['resv-01', 'resv-02', 'resv-03']),
+                ])
+
+    def test_usage_reset(self):
+        context = FakeContext(None, None)
+        driver = FakeDriver()
+        quota_obj = self._make_quota_obj(driver)
+        quota_obj.usage_reset(context, ['res1', 'res2', 'res3'])
+
+        self.assertEqual(driver.called, [
+                ('usage_reset', context, ['res1', 'res2', 'res3']),
                 ])
 
     def test_destroy_all_by_project(self):
@@ -1361,6 +1374,35 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ('quota_reserve', expire, 0, 86400),
                 ])
         self.assertEqual(result, ['resv-1', 'resv-2', 'resv-3'])
+
+    def test_usage_reset(self):
+        calls = []
+
+        def fake_quota_usage_update(context, project_id, resource, **kwargs):
+            calls.append(('quota_usage_update', context, project_id,
+                          resource, kwargs))
+            if resource == 'nonexist':
+                raise exception.QuotaUsageNotFound()
+        self.stubs.Set(db, 'quota_usage_update', fake_quota_usage_update)
+
+        ctx = FakeContext('test_project', 'test_class')
+        resources = ['res1', 'res2', 'nonexist', 'res4']
+        self.driver.usage_reset(ctx, resources)
+
+        # Make sure we had some calls
+        self.assertEqual(len(calls), len(resources))
+
+        # Extract the elevated context that was used and do some
+        # sanity checks
+        elevated = calls[0][1]
+        self.assertEqual(elevated.project_id, ctx.project_id)
+        self.assertEqual(elevated.quota_class, ctx.quota_class)
+        self.assertEqual(elevated.is_admin, True)
+
+        # Now check that all the expected calls were made
+        exemplar = [('quota_usage_update', elevated, 'test_project',
+                     res, dict(in_use=-1)) for res in resources]
+        self.assertEqual(calls, exemplar)
 
 
 class FakeSession(object):

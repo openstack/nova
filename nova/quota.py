@@ -357,6 +357,35 @@ class DbQuotaDriver(object):
 
         db.reservation_rollback(context, reservations)
 
+    def usage_reset(self, context, resources):
+        """
+        Reset the usage records for a particular user on a list of
+        resources.  This will force that user's usage records to be
+        refreshed the next time a reservation is made.
+
+        Note: this does not affect the currently outstanding
+        reservations the user has; those reservations must be
+        committed or rolled back (or expired).
+
+        :param context: The request context, for access checks.
+        :param resources: A list of the resource names for which the
+                          usage must be reset.
+        """
+
+        # We need an elevated context for the calls to
+        # quota_usage_update()
+        elevated = context.elevated()
+
+        for resource in resources:
+            try:
+                # Reset the usage to -1, which will force it to be
+                # refreshed
+                db.quota_usage_update(elevated, context.project_id,
+                                      resource, in_use=-1)
+            except exception.QuotaUsageNotFound:
+                # That means it'll be refreshed anyway
+                pass
+
     def destroy_all_by_project(self, context, project_id):
         """
         Destroy all quotas, usages, and reservations associated with a
@@ -733,6 +762,23 @@ class QuotaEngine(object):
             # logged, however, because this is less than optimal.
             LOG.exception(_("Failed to roll back reservations "
                             "%(reservations)s") % locals())
+
+    def usage_reset(self, context, resources):
+        """
+        Reset the usage records for a particular user on a list of
+        resources.  This will force that user's usage records to be
+        refreshed the next time a reservation is made.
+
+        Note: this does not affect the currently outstanding
+        reservations the user has; those reservations must be
+        committed or rolled back (or expired).
+
+        :param context: The request context, for access checks.
+        :param resources: A list of the resource names for which the
+                          usage must be reset.
+        """
+
+        self._driver.usage_reset(context, resources)
 
     def destroy_all_by_project(self, context, project_id):
         """
