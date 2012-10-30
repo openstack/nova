@@ -1497,14 +1497,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self.driver.destroy(instance, self._legacy_nw_info(network_info),
                                 block_device_info)
-            # Terminate volume connections.
-            bdms = self._get_instance_volume_bdms(context, instance['uuid'])
-            if bdms:
-                connector = self.driver.get_volume_connector(instance)
-                for bdm in bdms:
-                    volume = self.volume_api.get(context, bdm['volume_id'])
-                    self.volume_api.terminate_connection(context, volume,
-                            connector)
+
+            self._terminate_volume_connections(context, instance)
+
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration_ref['id'], migration_ref['source_compute'],
                     reservations)
@@ -1676,14 +1671,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance_type_ref, self._legacy_nw_info(network_info),
                     block_device_info)
 
-            # Terminate volume connections.
-            bdms = self._get_instance_volume_bdms(context, instance['uuid'])
-            if bdms:
-                connector = self.driver.get_volume_connector(instance)
-                for bdm in bdms:
-                    volume = self.volume_api.get(context, bdm['volume_id'])
-                    self.volume_api.terminate_connection(context, volume,
-                            connector)
+            self._terminate_volume_connections(context, instance)
 
             if migration['dest_compute'] != migration['source_compute']:
                 self.network_api.migrate_instance_start(context, instance,
@@ -1705,6 +1693,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
+
+    def _terminate_volume_connections(self, context, instance):
+        bdms = self._get_instance_volume_bdms(context, instance['uuid'])
+        if bdms:
+            connector = self.driver.get_volume_connector(instance)
+            for bdm in bdms:
+                volume = self.volume_api.get(context, bdm['volume_id'])
+                self.volume_api.terminate_connection(context, volume,
+                        connector)
 
     def _finish_resize(self, context, instance, migration, disk_info,
                        image):
