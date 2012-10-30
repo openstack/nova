@@ -73,19 +73,21 @@ class DnsmasqFilter(CommandFilter):
     """Specific filter for the dnsmasq call (which includes env)"""
 
     def match(self, userargs):
-        if (userargs[0].startswith("FLAGFILE=") and
-            userargs[1].startswith("NETWORK_ID=") and
-            userargs[2] == "dnsmasq"):
+        if (userargs[0] == 'env' and
+            userargs[1].startswith('FLAGFILE=') and
+            userargs[2].startswith('NETWORK_ID=') and
+            userargs[3] == 'dnsmasq'):
             return True
         return False
 
     def get_command(self, userargs):
-        return [self.exec_path] + userargs[3:]
+        dnsmasq_pos = userargs.index('dnsmasq')
+        return [self.exec_path] + userargs[dnsmasq_pos + 1:]
 
     def get_environment(self, userargs):
         env = os.environ.copy()
-        env['FLAGFILE'] = userargs[0].split('=')[-1]
-        env['NETWORK_ID'] = userargs[1].split('=')[-1]
+        env['FLAGFILE'] = userargs[1].split('=')[-1]
+        env['NETWORK_ID'] = userargs[2].split('=')[-1]
         return env
 
 

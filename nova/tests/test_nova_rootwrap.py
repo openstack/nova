@@ -55,7 +55,7 @@ class RootwrapTestCase(test.TestCase):
         self.assertTrue(filtermatch is None)
 
     def test_DnsmasqFilter(self):
-        usercmd = ['FLAGFILE=A', 'NETWORK_ID=foobar', 'dnsmasq', 'foo']
+        usercmd = ['env', 'FLAGFILE=A', 'NETWORK_ID=foobar', 'dnsmasq', 'foo']
         f = filters.DnsmasqFilter("/usr/bin/dnsmasq", "root")
         self.assertTrue(f.match(usercmd))
         self.assertEqual(f.get_command(usercmd), ['/usr/bin/dnsmasq', 'foo'])
