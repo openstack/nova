@@ -663,8 +663,13 @@ class FloatingIP(object):
         return False if floating_ip.get('fixed_ip_id') else True
 
     @wrap_check_policy
-    def migrate_instance_start(self, context, instance_uuid,
-                               floating_addresses):
+    def migrate_instance_start(self, context, instance_uuid, rxtx_factor,
+                               project_id, source, dest, floating_addresses):
+        # We only care if floating_addresses are provided and we're
+        # switching hosts
+        if not floating_addresses or source == dest:
+            return
+
         LOG.info(_("Starting migration network for instance"
                    " %(instance_uuid)s"), locals())
         for address in floating_addresses:
@@ -691,8 +696,13 @@ class FloatingIP(object):
                                        {'host': None})
 
     @wrap_check_policy
-    def migrate_instance_finish(self, context, instance_uuid,
-                                floating_addresses, host):
+    def migrate_instance_finish(self, context, instance_uuid, rxtx_factor,
+                                project_id, source, dest, floating_addresses):
+        # We only care if floating_addresses are provided and we're
+        # switching hosts
+        if not floating_addresses or source == dest:
+            return
+
         LOG.info(_("Finishing migration network for instance"
                    " %(instance_uuid)s"), locals())
 
@@ -708,7 +718,7 @@ class FloatingIP(object):
 
             self.db.floating_ip_update(context,
                                        floating_ip['address'],
-                                       {'host': host})
+                                       {'host': dest})
 
             interface = FLAGS.public_interface or floating_ip['interface']
             fixed_ip = self.db.fixed_ip_get(context,
@@ -1943,6 +1953,14 @@ class FlatManager(NetworkManager):
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address"""
         return []
+
+    def migrate_instance_start(self, context, instance_uuid, rxtx_factor,
+                               project_id, source, dest, floating_addresses):
+        pass
+
+    def migrate_instance_finish(self, context, instance_uuid, rxtx_factor,
+                                project_id, source, dest, floating_addresses):
+        pass
 
 
 class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):

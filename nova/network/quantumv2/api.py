@@ -508,13 +508,15 @@ class API(base.Base):
         fip = self._get_floating_ip_by_address(client, address)
         client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
-    def migrate_instance_start(self, context, instance, host):
+    def migrate_instance_start(self, context, instance_uuid, rxtx_factor,
+                               project_id, source, dest, floating_addresses):
         """Start to migrate the network of an instance"""
         # NOTE(wenjianhn): just pass to make migrate instance doesn't
         # raise for now.
         pass
 
-    def migrate_instance_finish(self, context, instance, dest):
+    def migrate_instance_finish(self, context, instance_uuid, rxtx_factor,
+                                project_id, source, dest, floating_addresses):
         """Finish migrating the network of an instance"""
         # NOTE(wenjianhn): just pass to make migrate instance doesn't
         # raise for now.

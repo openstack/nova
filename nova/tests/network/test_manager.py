@@ -1667,7 +1667,9 @@ class FloatingIPTestCase(test.TestCase):
         self.mox.ReplayAll()
         floating_ip_addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
         self.network.migrate_instance_start(self.context, FAKEUUID,
-                                               floating_ip_addresses)
+                                            3, self.project_id,
+                                            'fake_source', 'fake_dest',
+                                            floating_ip_addresses)
 
         self.assertEqual(called['count'], 2)
 
@@ -1703,8 +1705,9 @@ class FloatingIPTestCase(test.TestCase):
         self.mox.ReplayAll()
         floating_ip_addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
         self.network.migrate_instance_finish(self.context, FAKEUUID,
-                                               floating_ip_addresses,
-                                               'fake_dest')
+                                             3, self.project_id,
+                                             'fake_source', 'fake_dest',
+                                             floating_ip_addresses)
 
         self.assertEqual(called['count'], 2)
 

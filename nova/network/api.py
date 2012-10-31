@@ -21,6 +21,7 @@ import functools
 import inspect
 
 from nova.db import base
+from nova import exception
 from nova import flags
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
@@ -324,8 +325,11 @@ class API(base.Base):
         self.network_rpcapi.setup_networks_on_host(context, **args)
 
     def _is_multi_host(self, context, instance):
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance['uuid'])
-
+        try:
+            fixed_ips = self.db.fixed_ip_get_by_instance(context,
+                                                         instance['uuid'])
+        except exception.FixedIpNotFoundForInstance:
+            return False
         network = self.db.network_get(context, fixed_ips[0]['network_id'],
                                       project_only=True)
         return network['multi_host']
@@ -335,22 +339,36 @@ class API(base.Base):
                                                             instance['uuid'])
         return [floating_ip['address'] for floating_ip in floating_ips]
 
-    def migrate_instance_start(self, context, instance, host):
+    def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance"""
-        if self._is_multi_host(context, instance):
-            addresses = self._get_floating_ip_addresses(context, instance)
-            if addresses:
-                self.network_rpcapi.migrate_instance_start(context,
-                                                           instance['uuid'],
-                                                           addresses,
-                                                           host)
+        args = dict(
+            instance_uuid=instance['uuid'],
+            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            project_id=instance['project_id'],
+            source_compute=migration['source_compute'],
+            dest_compute=migration['dest_compute'],
+            floating_addresses=None,
+        )
 
-    def migrate_instance_finish(self, context, instance, dest):
-        """Finish migrating the network of an instance"""
         if self._is_multi_host(context, instance):
-            addresses = self._get_floating_ip_addresses(context, instance)
-            if addresses:
-                self.network_rpcapi.migrate_instance_finish(context,
-                                                            instance['uuid'],
-                                                            addresses,
-                                                            dest)
+            args['floating_addresses'] = \
+                self._get_floating_ip_addresses(context, instance)
+
+        self.network_rpcapi.migrate_instance_start(context, **args)
+
+    def migrate_instance_finish(self, context, instance, migration):
+        """Finish migrating the network of an instance"""
+        args = dict(
+            instance_uuid=instance['uuid'],
+            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            project_id=instance['project_id'],
+            source_compute=migration['source_compute'],
+            dest_compute=migration['dest_compute'],
+            floating_addresses=None,
+        )
+
+        if self._is_multi_host(context, instance):
+            args['floating_addresses'] = \
+                self._get_floating_ip_addresses(context, instance)
+
+        self.network_rpcapi.migrate_instance_finish(context, **args)
