@@ -772,18 +772,6 @@ def gen_uuid():
     return uuid.uuid4()
 
 
-def is_uuid_like(val):
-    """For our purposes, a UUID is a string in canonical form:
-
-        aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
-    """
-    try:
-        uuid.UUID(val)
-        return True
-    except (TypeError, ValueError, AttributeError):
-        return False
-
-
 def bool_from_str(val):
     """Convert a string representation of a bool into a bool value"""
 

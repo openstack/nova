@@ -30,6 +30,7 @@ import nova
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova import utils
 
@@ -510,7 +511,7 @@ class GenericUtilsTestCase(test.TestCase):
 
 class IsUUIDLikeTestCase(test.TestCase):
     def assertUUIDLike(self, val, expected):
-        result = utils.is_uuid_like(val)
+        result = uuidutils.is_uuid_like(val)
         self.assertEqual(result, expected)
 
     def test_good_uuid(self):

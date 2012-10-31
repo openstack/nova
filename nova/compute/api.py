@@ -48,6 +48,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -1067,7 +1068,7 @@ class API(base.Base):
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
         # NOTE(ameade): we still need to support integer ids for ec2
-        if utils.is_uuid_like(instance_id):
+        if uuidutils.is_uuid_like(instance_id):
             instance = self.db.instance_get_by_uuid(context, instance_id)
         else:
             instance = self.db.instance_get(context, instance_id)

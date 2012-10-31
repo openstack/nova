@@ -35,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import utils
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
@@ -1035,7 +1036,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
     reserved -- should be a boolean value(True or False), exact value will be
     used to filter on the fixed ip address
     """
-    if not utils.is_uuid_like(instance_uuid):
+    if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
     session = get_session()
@@ -1067,7 +1068,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 @require_admin_context
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None):
-    if instance_uuid and not utils.is_uuid_like(instance_uuid):
+    if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
     session = get_session()
@@ -1211,7 +1212,7 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 @require_context
 def fixed_ip_get_by_instance(context, instance_uuid):
-    if not utils.is_uuid_like(instance_uuid):
+    if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
     result = model_query(context, models.FixedIp, read_deleted="no").\
@@ -1463,7 +1464,7 @@ def instance_data_get_for_project(context, project_id, session=None):
 def instance_destroy(context, instance_uuid, constraint=None):
     session = get_session()
     with session.begin():
-        if utils.is_uuid_like(instance_uuid):
+        if uuidutils.is_uuid_like(instance_uuid):
             instance_ref = instance_get_by_uuid(context, instance_uuid,
                     session=session)
         else:
@@ -1783,7 +1784,7 @@ def instance_test_and_set(context, instance_uuid, attr, ok_states,
         query = model_query(context, models.Instance, session=session,
                             project_only=True)
 
-        if utils.is_uuid_like(instance_uuid):
+        if uuidutils.is_uuid_like(instance_uuid):
             query = query.filter_by(uuid=instance_uuid)
         else:
             raise exception.InvalidUUID(instance_uuid)
@@ -1835,7 +1836,7 @@ def instance_update_and_get_original(context, instance_uuid, values):
 def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     session = get_session()
 
-    if not utils.is_uuid_like(instance_uuid):
+    if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
     with session.begin():
@@ -2926,7 +2927,7 @@ def volume_allocate_iscsi_target(context, volume_id, host):
 
 @require_admin_context
 def volume_attached(context, volume_id, instance_uuid, mountpoint):
-    if not utils.is_uuid_like(instance_uuid):
+    if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(instance_uuid)
 
     session = get_session()
