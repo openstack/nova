@@ -2221,3 +2221,10 @@ def move_disks(session, instance, disk_info):
     root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
 
     return {'uuid': root_uuid, 'ref': root_vdi_ref}
+
+
+def vm_ref_or_raise(session, instance_name):
+    vm_ref = lookup(session, instance_name)
+    if vm_ref is None:
+        raise exception.InstanceNotFound(instance_id=instance_name)
+    return vm_ref

@@ -1,9 +1,11 @@
+import mox
 from nova import exception
 from nova.tests.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
+import unittest
 
 
 class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
@@ -81,3 +83,57 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
         self.assertRaises(exception.NovaException,
                           vm_utils.get_vdis_for_boot_from_vol,
                           driver._session, dev_params)
+
+
+class VMRefOrRaiseVMFoundTestCase(unittest.TestCase):
+
+    def test_lookup_call(self):
+        mock = mox.Mox()
+        mock.StubOutWithMock(vm_utils, 'lookup')
+
+        vm_utils.lookup('session', 'somename').AndReturn('ignored')
+
+        mock.ReplayAll()
+        vm_utils.vm_ref_or_raise('session', 'somename')
+        mock.VerifyAll()
+
+    def test_return_value(self):
+        mock = mox.Mox()
+        mock.StubOutWithMock(vm_utils, 'lookup')
+
+        vm_utils.lookup(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn('vmref')
+
+        mock.ReplayAll()
+        self.assertEquals(
+            'vmref', vm_utils.vm_ref_or_raise('session', 'somename'))
+        mock.VerifyAll()
+
+
+class VMRefOrRaiseVMNotFoundTestCase(unittest.TestCase):
+
+    def test_exception_raised(self):
+        mock = mox.Mox()
+        mock.StubOutWithMock(vm_utils, 'lookup')
+
+        vm_utils.lookup('session', 'somename').AndReturn(None)
+
+        mock.ReplayAll()
+        self.assertRaises(
+            exception.InstanceNotFound,
+            lambda: vm_utils.vm_ref_or_raise('session', 'somename')
+        )
+        mock.VerifyAll()
+
+    def test_exception_msg_contains_vm_name(self):
+        mock = mox.Mox()
+        mock.StubOutWithMock(vm_utils, 'lookup')
+
+        vm_utils.lookup('session', 'somename').AndReturn(None)
+
+        mock.ReplayAll()
+        try:
+            vm_utils.vm_ref_or_raise('session', 'somename')
+        except exception.InstanceNotFound as e:
+            self.assertTrue(
+                'somename' in str(e))
+        mock.VerifyAll()
