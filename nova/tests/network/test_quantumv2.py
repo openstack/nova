@@ -351,35 +351,37 @@ class TestQuantumv2(test.TestCase):
                     self.moxed_client.show_port(port_id).AndReturn(
                         {'port': {'id': 'my_portid1',
                          'network_id': 'my_netid1'}})
-                    req_net_ids.append('my_netid1')
                     ports['my_netid1'] = self.port_data1[0]
                     id = 'my_netid1'
                 else:
                     fixed_ips[id] = fixed_ip
                 req_net_ids.append(id)
+            expected_network_order = req_net_ids
+        else:
+            expected_network_order = [n['id'] for n in nets]
         search_ids = [net['id'] for net in nets if net['id'] in req_net_ids]
 
         mox_list_network_params = dict(tenant_id=self.instance['project_id'],
                                        shared=False)
         if search_ids:
-            mox_list_network_params['id'] = search_ids
+            mox_list_network_params['id'] = mox.SameElementsAs(search_ids)
         self.moxed_client.list_networks(
             **mox_list_network_params).AndReturn({'networks': nets})
 
         mox_list_network_params = dict(shared=True)
         if search_ids:
-            mox_list_network_params['id'] = search_ids
+            mox_list_network_params['id'] = mox.SameElementsAs(search_ids)
         self.moxed_client.list_networks(
             **mox_list_network_params).AndReturn({'networks': []})
 
-        for network in nets:
+        for net_id in expected_network_order:
             port_req_body = {
                 'port': {
                     'device_id': self.instance['uuid'],
                     'device_owner': 'compute:nova',
                 },
             }
-            port = ports.get(network['id'], None)
+            port = ports.get(net_id, None)
             if port:
                 port_id = port['id']
                 self.moxed_client.update_port(port_id,
@@ -387,10 +389,10 @@ class TestQuantumv2(test.TestCase):
                                               ).AndReturn(
                                                   {'port': port})
             else:
-                fixed_ip = fixed_ips.get(network['id'])
+                fixed_ip = fixed_ips.get(net_id)
                 if fixed_ip:
                     port_req_body['port']['fixed_ip'] = fixed_ip
-                port_req_body['port']['network_id'] = network['id']
+                port_req_body['port']['network_id'] = net_id
                 port_req_body['port']['admin_state_up'] = True
                 port_req_body['port']['tenant_id'] = \
                     self.instance['project_id']
@@ -410,8 +412,9 @@ class TestQuantumv2(test.TestCase):
 
     def test_allocate_for_instance_with_requested_networks(self):
         # specify only first and last network
-        requested_networks = [(net['id'], None, None)
-                              for net in (self.nets3[0], self.nets3[-1])]
+        requested_networks = [
+            (net['id'], None, None)
+            for net in (self.nets3[1], self.nets3[0], self.nets3[2])]
         self._allocate_for_instance(net_idx=3,
                                     requested_networks=requested_networks)
 
@@ -902,3 +905,33 @@ class TestQuantumv2(test.TestCase):
 
         self.mox.ReplayAll()
         api.disassociate_floating_ip(self.context, self.instance, address)
+
+
+class TestQuantumv2ModuleMethods(test.TestCase):
+    def test_ensure_requested_network_ordering_no_preference(self):
+        l = [1, 2, 3]
+
+        quantumapi._ensure_requested_network_ordering(
+            lambda x: x,
+            l,
+            None)
+
+    def test_ensure_requested_network_ordering_no_preference(self):
+        l = [{'id': 3}, {'id': 1}, {'id': 2}]
+
+        quantumapi._ensure_requested_network_ordering(
+            lambda x: x['id'],
+            l,
+            None)
+
+        self.assertEqual(l, [{'id': 3}, {'id': 1}, {'id': 2}])
+
+    def test_ensure_requested_network_ordering_with_preference(self):
+        l = [{'id': 3}, {'id': 1}, {'id': 2}]
+
+        quantumapi._ensure_requested_network_ordering(
+            lambda x: x['id'],
+            l,
+            [1, 2, 3])
+
+        self.assertEqual(l, [{'id': 1}, {'id': 2}, {'id': 3}])
