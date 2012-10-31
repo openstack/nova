@@ -1241,43 +1241,27 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
-        # NOTE(jk0): Eventually extract this out to the ImageService?
-        def fetch_images():
-            images = []
-            marker = None
-            while True:
-                if marker is not None:
-                    batch = image_service.detail(context, filters=filters,
-                            marker=marker, sort_key='created_at',
-                            sort_dir='desc')
-                else:
-                    batch = image_service.detail(context, filters=filters,
-                            sort_key='created_at', sort_dir='desc')
-                if not batch:
-                    break
-                images += batch
-                marker = batch[-1]['id']
-            return images
-
         image_service = glance.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
                    'property-instance_uuid': instance['uuid']}
 
-        images = fetch_images()
+        images = image_service.detail(context, filters=filters,
+                                      sort_key='created_at', sort_dir='desc')
         num_images = len(images)
-        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)")
-                  % locals(), instance=instance)
+        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"),
+                  locals(), instance=instance)
+
         if num_images > rotation:
             # NOTE(sirp): this deletes all backups that exceed the rotation
             # limit
             excess = len(images) - rotation
-            LOG.debug(_("Rotating out %d backups") % excess,
+            LOG.debug(_("Rotating out %d backups"), excess,
                       instance=instance)
             for i in xrange(excess):
                 image = images.pop()
                 image_id = image['id']
-                LOG.debug(_("Deleting image %s") % image_id,
+                LOG.debug(_("Deleting image %s"), image_id,
                           instance=instance)
                 image_service.delete(context, image_id)
 
