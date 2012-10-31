@@ -831,7 +831,8 @@ def restart_dhcp(context, dev, network_ref):
         else:
             LOG.debug(_('Pid %d is stale, relaunching dnsmasq'), pid)
 
-    cmd = ['FLAGFILE=%s' % FLAGS.dhcpbridge_flagfile,
+    cmd = ['env',
+           'FLAGFILE=%s' % FLAGS.dhcpbridge_flagfile,
            'NETWORK_ID=%s' % str(network_ref['id']),
            'dnsmasq',
            '--strict-order',
