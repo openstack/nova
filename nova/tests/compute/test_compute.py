@@ -3172,6 +3172,32 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_delete_with_down_host(self):
+        self.network_api_called = False
+
+        def dummy(*args, **kwargs):
+            self.network_api_called = True
+            pass
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       dummy)
+
+        #use old time to disable machine
+        old_time = datetime.datetime(2012, 4, 1)
+
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
+        timeutils.set_time_override(old_time)
+        self.compute_api.delete(self.context, instance)
+        timeutils.clear_time_override()
+
+        self.assertEqual(instance['task_state'], None)
+        self.assertTrue(self.network_api_called)
+
+        #local delete, so db should be clean
+        self.assertRaises(exception.InstanceNotFound, db.instance_destroy,
+                self.context,
+                instance['uuid'])
+
     def test_repeated_delete_quota(self):
         in_use = {'instances': 1}
 
