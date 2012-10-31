@@ -30,6 +30,7 @@ from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.virt import driver
+from nova.virt import virtapi
 
 
 LOG = logging.getLogger(__name__)
@@ -52,7 +53,8 @@ class FakeDriver(driver.ComputeDriver):
 
     """Fake hypervisor driver"""
 
-    def __init__(self, read_only=False):
+    def __init__(self, virtapi, read_only=False):
+        super(FakeDriver, self).__init__(virtapi)
         self.instances = {}
         self.host_status = {
           'host_name-description': 'Fake Host',
@@ -329,3 +331,10 @@ class FakeDriver(driver.ComputeDriver):
 
     def get_volume_connector(self, instance):
         return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}
+
+
+class FakeVirtAPI(virtapi.VirtAPI):
+    def instance_update(self, context, instance_uuid, updates):
+        return db.instance_update_and_get_original(context,
+                                                   instance_uuid,
+                                                   updates)

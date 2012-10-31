@@ -100,8 +100,8 @@ class Failure(Exception):
 class VMWareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
-    def __init__(self, read_only=False, scheme="https"):
-        super(VMWareESXDriver, self).__init__()
+    def __init__(self, virtapi, read_only=False, scheme="https"):
+        super(VMWareESXDriver, self).__init__(virtapi)
 
         host_ip = FLAGS.vmwareapi_host_ip
         host_username = FLAGS.vmwareapi_host_username

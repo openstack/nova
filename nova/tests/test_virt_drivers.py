@@ -20,12 +20,14 @@ import sys
 import traceback
 
 from nova.compute.manager import ComputeManager
+from nova import db
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
+from nova.virt import fake
 
 LOG = logging.getLogger(__name__)
 
@@ -171,7 +173,8 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
 class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def setUp(self):
         super(_VirtDriverTestCase, self).setUp()
-        self.connection = importutils.import_object(self.driver_module, '')
+        self.connection = importutils.import_object(self.driver_module,
+                                                    fake.FakeVirtAPI())
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = fake_image.FakeImageService()
 
@@ -507,17 +510,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
 class AbstractDriverTestCase(_VirtDriverTestCase):
     def setUp(self):
-        from nova.virt.driver import ComputeDriver
-
         self.driver_module = "nova.virt.driver.ComputeDriver"
-
-        # TODO(sdague): the abstract driver doesn't have a constructor,
-        # add one now that the loader loads classes directly
-        def __new_init__(self, read_only=False):
-            super(ComputeDriver, self).__init__()
-
-        ComputeDriver.__init__ = __new_init__
-
         super(AbstractDriverTestCase, self).setUp()
 
 

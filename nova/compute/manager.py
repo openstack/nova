@@ -73,6 +73,7 @@ from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
+from nova.virt import virtapi
 from nova import volume
 
 
@@ -209,6 +210,17 @@ def _get_image_meta(context, image_ref):
     return image_service.show(context, image_id)
 
 
+class ComputeVirtAPI(virtapi.VirtAPI):
+    def __init__(self, compute):
+        super(ComputeVirtAPI, self).__init__()
+        self._compute = compute
+
+    def instance_update(self, context, instance_uuid, updates):
+        return self._compute.db.instance_update_and_get_original(context,
+                                                                 instance_uuid,
+                                                                 updates)
+
+
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
@@ -225,10 +237,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_("Compute driver option required, but not specified"))
             sys.exit(1)
 
+        self.virtapi = ComputeVirtAPI(self)
+
         LOG.info(_("Loading compute driver '%s'") % compute_driver)
         try:
             self.driver = utils.check_isinstance(
-                    importutils.import_object_ns('nova.virt', compute_driver),
+                    importutils.import_object_ns('nova.virt', compute_driver,
+                                                 self.virtapi),
                     driver.ComputeDriver)
         except ImportError as e:
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))

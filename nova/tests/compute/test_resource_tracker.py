@@ -42,7 +42,7 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
 
 class FakeVirtDriver(driver.ComputeDriver):
 
-    def __init__(self):
+    def __init__(self, virtapi):
         self.memory_mb = 5
         self.local_gb = 6
         self.vcpus = 1
@@ -148,9 +148,9 @@ class BaseTestCase(test.TestCase):
         host = "fakehost"
 
         if unsupported:
-            driver = UnsupportedVirtDriver()
+            driver = UnsupportedVirtDriver(None)
         else:
-            driver = FakeVirtDriver()
+            driver = FakeVirtDriver(None)
 
         tracker = resource_tracker.ResourceTracker(host, driver)
         return tracker
@@ -293,12 +293,12 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(1, self.tracker.compute_node['current_workload'])
 
     def testFreeRamResourceValue(self):
-        driver = FakeVirtDriver()
+        driver = FakeVirtDriver(None)
         mem_free = driver.memory_mb - driver.memory_mb_used
         self.assertEqual(mem_free, self.tracker.compute_node['free_ram_mb'])
 
     def testFreeDiskResourceValue(self):
-        driver = FakeVirtDriver()
+        driver = FakeVirtDriver(None)
         mem_free = driver.local_gb - driver.local_gb_used
         self.assertEqual(mem_free, self.tracker.compute_node['free_disk_gb'])
 

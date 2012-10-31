@@ -125,8 +125,8 @@ FLAGS.register_opts(xenapi_opts)
 class XenAPIDriver(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform"""
 
-    def __init__(self, read_only=False):
-        super(XenAPIDriver, self).__init__()
+    def __init__(self, virtapi, read_only=False):
+        super(XenAPIDriver, self).__init__(virtapi)
 
         url = FLAGS.xenapi_connection_url
         username = FLAGS.xenapi_connection_username
@@ -141,7 +141,7 @@ class XenAPIDriver(driver.ComputeDriver):
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session)
-        self._vmops = vmops.VMOps(self._session)
+        self._vmops = vmops.VMOps(self._session, self.virtapi)
         self._initiator = None
         self._hypervisor_hostname = None
         self._pool = pool.ResourcePool(self._session)

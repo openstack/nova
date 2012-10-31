@@ -117,7 +117,7 @@ class PowerVMDriverTestCase(test.TestCase):
         super(PowerVMDriverTestCase, self).setUp()
         self.stubs.Set(operator, 'get_powervm_operator',
                        fake_get_powervm_operator)
-        self.powervm_connection = powervm_driver.PowerVMDriver()
+        self.powervm_connection = powervm_driver.PowerVMDriver(None)
         self.instance = self._create_instance()
 
     def _create_instance(self):

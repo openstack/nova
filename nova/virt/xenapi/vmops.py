@@ -93,7 +93,7 @@ def cmp_version(a, b):
     return len(a) - len(b)
 
 
-def make_step_decorator(context, instance):
+def make_step_decorator(context, instance, instance_update):
     """Factory to create a decorator that records instance progress as a series
     of discrete steps.
 
@@ -125,7 +125,7 @@ def make_step_decorator(context, instance):
                          step_info['total'] * 100)
         LOG.debug(_("Updating progress to %(progress)d"), locals(),
                   instance=instance)
-        db.instance_update(context, instance['uuid'], {'progress': progress})
+        instance_update(context, instance['uuid'], {'progress': progress})
 
     def step_decorator(f):
         step_info['total'] += 1
@@ -145,9 +145,10 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
-    def __init__(self, session):
+    def __init__(self, session, virtapi):
         self.compute_api = compute.API()
         self._session = session
+        self._virtapi = virtapi
         self.poll_rescue_last_ran = None
         self.firewall_driver = firewall.load_driver(
             default=DEFAULT_FIREWALL_DRIVER,
@@ -254,7 +255,8 @@ class VMOps(object):
         if name_label is None:
             name_label = instance['name']
 
-        step = make_step_decorator(context, instance)
+        step = make_step_decorator(context, instance,
+                                   self._virtapi.instance_update)
 
         @step
         def determine_disk_image_type_step(undo_mgr):
@@ -454,7 +456,8 @@ class VMOps(object):
 
         if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
-            db.instance_update(context, instance['uuid'], {'vm_mode': mode})
+            self._virtapi.instance_update(context,
+                                          instance['uuid'], {'vm_mode': mode})
 
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file, use_pv_kernel)
@@ -661,7 +664,8 @@ class VMOps(object):
         progress = round(float(step) / total_steps * 100)
         LOG.debug(_("Updating progress to %(progress)d"), locals(),
                   instance=instance)
-        db.instance_update(context, instance['uuid'], {'progress': progress})
+        self._virtapi.instance_update(context, instance['uuid'],
+                                      {'progress': progress})
 
     def _migrate_disk_resizing_down(self, context, instance, dest,
                                     instance_type, vm_ref, sr_path):
