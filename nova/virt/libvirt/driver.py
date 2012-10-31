@@ -683,15 +683,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     if child.get('dev') == device:
                         return etree.tostring(node)
 
-    def _get_domain_xml(self, instance):
+    def _get_domain_xml(self, instance, network_info, block_device_info=None):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
             xml = virt_dom.XMLDesc(0)
         except exception.InstanceNotFound:
-            instance_dir = os.path.join(FLAGS.instances_path,
-                                        instance['name'])
-            xml_path = os.path.join(instance_dir, 'libvirt.xml')
-            xml = libvirt_utils.load_file(xml_path)
+            xml = self.to_xml(instance, network_info,
+                              block_device_info=block_device_info)
         return xml
 
     @exception.wrap_exception()
@@ -941,7 +939,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         if not xml:
-            xml = self._get_domain_xml(instance)
+            xml = self._get_domain_xml(instance, network_info,
+                                       block_device_info)
 
         self._destroy(instance)
         self._create_domain_and_network(xml, instance, network_info,
@@ -1000,7 +999,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted"""
-        xml = self._get_domain_xml(instance)
+        xml = self._get_domain_xml(instance, network_info, block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
@@ -1016,7 +1015,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        unrescue_xml = self._get_domain_xml(instance)
+        unrescue_xml = self._get_domain_xml(instance, network_info)
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
