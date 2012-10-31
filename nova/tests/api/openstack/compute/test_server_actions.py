@@ -722,13 +722,23 @@ class ServerActionsControllerTest(test.TestCase):
                                        virtual_name=None,
                                        volume_size=1,
                                        device_name='vda',
+                                       snapshot_id=1,
                                        delete_on_termination=False)
 
                 def __getattr__(self, name):
-                    return self.values.get(name)
+                    """Properly delegate dotted lookups"""
+                    if name in self.__dict__['values']:
+                        return self.values.get(name)
+                    try:
+                        return self.__dict__[name]
+                    except KeyError:
+                        raise AttributeError
 
                 def __getitem__(self, key):
                     return self.values.get(key)
+
+                def iteritems(self):
+                    return self.values.iteritems()
 
             return [BDM()]
 
