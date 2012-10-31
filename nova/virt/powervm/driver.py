@@ -70,20 +70,7 @@ class PowerVMDriver(driver.ComputeDriver):
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
         including catching up with currently running VM's on the given host."""
-        context = nova_context.get_admin_context()
-        instances = db.instance_get_all_by_host(context, host)
-        powervm_instances = self.list_instances()
-        # Looks for db instances that don't exist on the host side
-        # and cleanup the inconsistencies.
-        for db_instance in instances:
-            task_state = db_instance['task_state']
-            if db_instance['name'] in powervm_instances:
-                continue
-            if task_state in [task_states.DELETING, task_states.SPAWNING]:
-                db.instance_update(context, db_instance['uuid'],
-                                   {'vm_state': vm_states.DELETED,
-                                    'task_state': None})
-                db.instance_destroy(context, db_instance['uuid'])
+        pass
 
     def get_info(self, instance):
         """Get the current status of an instance."""
