@@ -103,6 +103,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
         # Modules in which the mocks are going to be injected
         from nova.virt.hyperv import baseops
+        from nova.virt.hyperv import hostops
         from nova.virt.hyperv import livemigrationops
         from nova.virt.hyperv import snapshotops
         from nova.virt.hyperv import vmops
@@ -112,6 +113,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         modules_to_test = [
             driver_hyperv,
             baseops,
+            hostops,
             vmops,
             vmutils,
             volumeops,
@@ -156,6 +158,14 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         dic = self._conn.get_available_resource()
 
         self.assertEquals(dic['hypervisor_hostname'], platform.node())
+
+    def test_get_host_stats(self):
+        dic = self._conn.get_host_stats(True)
+
+        self.assertEquals(dic['disk_total'],
+            dic['disk_used'] + dic['disk_available'])
+        self.assertEquals(dic['host_memory_total'],
+            dic['host_memory_overhead'] + dic['host_memory_free'])
 
     def test_list_instances(self):
         num_vms = self._hypervutils.get_vm_count()
