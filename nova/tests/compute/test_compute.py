@@ -21,7 +21,6 @@
 import base64
 import copy
 import datetime
-import functools
 import sys
 import time
 
@@ -86,6 +85,10 @@ class FakeSchedulerAPI(object):
 
     def live_migration(self, ctxt, block_migration, disk_over_commit,
             instance, dest):
+        pass
+
+    def prep_resize(self, ctxt, instance, instance_type, image, request_spec,
+            filter_properties, reservations):
         pass
 
 
@@ -5539,28 +5542,36 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
 
 
 class ComputeReschedulingTestCase(BaseTestCase):
-    """Tests related to re-scheduling build requests"""
+    """Tests re-scheduling logic for new build requests"""
 
     def setUp(self):
         super(ComputeReschedulingTestCase, self).setUp()
 
-        self._reschedule = self._reschedule_partial()
+        self.expected_task_state = task_states.SCHEDULING
 
         def fake_update(*args, **kwargs):
             self.updated_task_state = kwargs.get('task_state')
         self.stubs.Set(self.compute, '_instance_update', fake_update)
 
-    def _reschedule_partial(self):
-        uuid = "12-34-56-78-90"
+    def _reschedule(self, request_spec=None, filter_properties=None):
+        if not filter_properties:
+            filter_properties = {}
 
-        requested_networks = None
+        instance_uuid = "12-34-56-78-90"
+
         admin_password = None
         injected_files = None
+        requested_networks = None
         is_first_time = False
 
-        return functools.partial(self.compute._reschedule, self.context, uuid,
-                requested_networks, admin_password, injected_files,
-                is_first_time, request_spec=None, filter_properties={})
+        scheduler_method = self.compute.scheduler_rpcapi.run_instance
+        method_args = (request_spec, admin_password, injected_files,
+                       requested_networks, is_first_time, filter_properties)
+        task_state = task_states.SCHEDULING
+
+        return self.compute._reschedule(self.context, request_spec,
+                filter_properties, instance_uuid, scheduler_method,
+                method_args, self.expected_task_state)
 
     def test_reschedule_no_filter_properties(self):
         """no filter_properties will disable re-scheduling"""
@@ -5584,61 +5595,254 @@ class ComputeReschedulingTestCase(BaseTestCase):
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
             request_spec=request_spec))
         self.assertEqual(1, len(request_spec['instance_uuids']))
-        self.assertEqual(self.updated_task_state, task_states.SCHEDULING)
+        self.assertEqual(self.updated_task_state, self.expected_task_state)
 
 
-class ComputeReschedulingExceptionTestCase(BaseTestCase):
-    """Tests for re-scheduling exception handling logic"""
+class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
+    """Test re-scheduling logic for prep_resize requests"""
 
     def setUp(self):
-        super(ComputeReschedulingExceptionTestCase, self).setUp()
+        super(ComputeReschedulingResizeTestCase, self).setUp()
+        self.expected_task_state = task_states.RESIZE_PREP
 
-        # cause _spawn to raise an exception to test the exception logic:
-        def exploding_spawn(*args, **kwargs):
-            raise test.TestingException()
-        self.stubs.Set(self.compute, '_spawn',
-                exploding_spawn)
+    def _reschedule(self, request_spec=None, filter_properties=None):
+        if not filter_properties:
+            filter_properties = {}
 
-        self.fake_instance = jsonutils.to_primitive(
-                self._create_fake_instance())
-        self.instance_uuid = self.fake_instance['uuid']
+        instance_uuid = "12-34-56-78-90"
 
-    def test_exception_with_rescheduling_disabled(self):
-        """Spawn fails and re-scheduling is disabled."""
-        # this won't be re-scheduled:
-        self.assertRaises(test.TestingException,
-                self.compute._run_instance, self.context,
-                None, {}, None, None, None, None, self.fake_instance)
+        instance = {'uuid': instance_uuid}
+        instance_type = {}
+        image = None
+        reservations = None
 
-    def test_exception_with_rescheduling_enabled(self):
-        """Spawn fails and re-scheduling is enabled.  Original exception
-        should *not* be re-raised.
+        scheduler_method = self.compute.scheduler_rpcapi.prep_resize
+        method_args = (instance, instance_type, image, request_spec,
+                filter_properties, reservations)
+
+        return self.compute._reschedule(self.context, request_spec,
+                filter_properties, instance_uuid, scheduler_method,
+                method_args, self.expected_task_state)
+
+
+class InnerTestingException(Exception):
+    pass
+
+
+class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
+    """Test logic and exception handling around rescheduling or re-raising
+    original exceptions when builds fail.
+    """
+
+    def setUp(self):
+        super(ComputeRescheduleOrReraiseTestCase, self).setUp()
+        self.instance = self._create_fake_instance()
+
+    def test_reschedule_or_reraise_called(self):
+        """Basic sanity check to make sure _reschedule_or_reraise is called
+        when a build fails.
         """
-        # provide the expected status so that this one will be re-scheduled:
-        retry = dict(num_attempts=1)
-        filter_properties = dict(retry=retry)
-        request_spec = dict(num_attempts=1)
-        # Assert that test.TestingException is not raised
-        self.compute._run_instance(self.context, request_spec,
-                                   filter_properties, None, None, None,
-                                   True, self.fake_instance)
+        self.mox.StubOutWithMock(self.compute, '_spawn')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_reraise')
 
-    def test_exception_context_cleared(self):
-        """Test with no rescheduling and an additional exception occurs
-        clearing the original build error's exception context.
+        self.compute._spawn(mox.IgnoreArg(), self.instance, None, None, None,
+                False, None).AndRaise(test.TestingException("BuildError"))
+        self.compute._reschedule_or_reraise(mox.IgnoreArg(), self.instance,
+                None, None, None, False, None, {})
+
+        self.mox.ReplayAll()
+        self.compute._run_instance(self.context, None, {}, None, None, None,
+                False, self.instance)
+
+    def test_deallocate_network_fail(self):
+        """Test de-allocation of network failing before re-scheduling logic
+        can even run.
         """
-        # clears the original exception context:
-        class FleshWoundException(Exception):
-            pass
+        instance_uuid = self.instance['uuid']
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
 
-        def reschedule_explode(*args, **kwargs):
-            raise FleshWoundException()
-        self.stubs.Set(self.compute, '_reschedule', reschedule_explode)
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            exc_info = sys.exc_info()
 
-        # the original exception should now be raised:
-        self.assertRaises(test.TestingException,
-                self.compute._run_instance, self.context,
-                None, {}, None, None, None, None, self.fake_instance)
+            self.compute._deallocate_network(self.context,
+                    self.instance).AndRaise(InnerTestingException("Error"))
+            self.compute._log_original_error(exc_info, instance_uuid)
+
+            self.mox.ReplayAll()
+
+            # should raise the deallocation exception, not the original build
+            # error:
+            self.assertRaises(InnerTestingException,
+                    self.compute._reschedule_or_reraise, self.context,
+                    self.instance, None, None, None, False, None, {})
+
+    def test_reschedule_fail(self):
+        """Test handling of exception from _reschedule"""
+        instance_uuid = self.instance['uuid']
+        method_args = (None, None, None, None, False, {})
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_reschedule')
+
+        self.compute._deallocate_network(self.context,
+                self.instance)
+        self.compute._reschedule(self.context, None, instance_uuid,
+                {}, self.compute.scheduler_rpcapi.run_instance,
+                method_args, task_states.SCHEDULING).AndRaise(
+                        InnerTestingException("Inner"))
+
+        self.mox.ReplayAll()
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            # not re-scheduling, should raise the original build error:
+            self.assertRaises(test.TestingException,
+                    self.compute._reschedule_or_reraise, self.context,
+                    self.instance, None, None, None, False, None, {})
+
+    def test_reschedule_false(self):
+        """Test not-rescheduling, but no nested exception"""
+        instance_uuid = self.instance['uuid']
+        method_args = (None, None, None, None, False, {})
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_reschedule')
+
+        self.compute._deallocate_network(self.context,
+                self.instance)
+        self.compute._reschedule(self.context, None, instance_uuid,
+                {}, self.compute.scheduler_rpcapi.run_instance, method_args,
+                task_states.SCHEDULING).AndReturn(False)
+
+        self.mox.ReplayAll()
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            # re-scheduling is False, the original build error should be
+            # raised here:
+            self.assertRaises(test.TestingException,
+                    self.compute._reschedule_or_reraise, self.context,
+                    self.instance, None, None, None, False, None, {})
+
+    def test_reschedule_true(self):
+        """Test behavior when re-scheduling happens"""
+        instance_uuid = self.instance['uuid']
+        method_args = (None, None, None, None, False, {})
+        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        self.mox.StubOutWithMock(self.compute, '_reschedule')
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            exc_info = sys.exc_info()
+
+            self.compute._deallocate_network(self.context,
+                    self.instance)
+            self.compute._reschedule(self.context, None, instance_uuid,
+                    {}, self.compute.scheduler_rpcapi.run_instance,
+                    method_args, task_states.SCHEDULING).AndReturn(True)
+            self.compute._log_original_error(exc_info, instance_uuid)
+
+            self.mox.ReplayAll()
+
+            # re-scheduling is True, original error is logged, but nothing
+            # is raised:
+            self.compute._reschedule_or_reraise(self.context, self.instance,
+                    None, None, None, False, None, {})
+
+
+class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
+    """Test logic and exception handling around rescheduling prep resize
+    requests
+    """
+    def setUp(self):
+        super(ComputeRescheduleResizeOrReraiseTestCase, self).setUp()
+        self.instance = self._create_fake_instance()
+        self.instance_uuid = self.instance['uuid']
+        self.instance_type = instance_types.get_instance_type_by_name(
+                "m1.tiny")
+
+    def test_reschedule_resize_or_reraise_called(self):
+        """Verify the rescheduling logic gets called when there is an error
+        during prep_resize.
+        """
+        self.mox.StubOutWithMock(self.compute.db, 'migration_create')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_resize_or_reraise')
+
+        self.compute.db.migration_create(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(test.TestingException("Original"))
+
+        self.compute._reschedule_resize_or_reraise(mox.IgnoreArg(), None,
+                self.instance, self.instance_type, None, None, None)
+
+        self.mox.ReplayAll()
+
+        self.compute.prep_resize(self.context, None, self.instance,
+                self.instance_type)
+
+    def test_reschedule_fails_with_exception(self):
+        """Original exception should be raised if the _reschedule method
+        raises another exception
+        """
+        method_args = (None, self.instance, self.instance_type, None, None,
+                None)
+        self.mox.StubOutWithMock(self.compute, "_reschedule")
+
+        self.compute._reschedule(self.context, None, None, self.instance_uuid,
+                self.compute.scheduler_rpcapi.prep_resize, method_args,
+                task_states.RESIZE_PREP).AndRaise(
+                        InnerTestingException("Inner"))
+        self.mox.ReplayAll()
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            self.assertRaises(test.TestingException,
+                    self.compute._reschedule_resize_or_reraise, self.context,
+                    None, self.instance, self.instance_type, None, {}, {})
+
+    def test_reschedule_false(self):
+        """Original exception should be raised if the resize is not
+        rescheduled.
+        """
+        method_args = (None, self.instance, self.instance_type, None, None,
+                None)
+        self.mox.StubOutWithMock(self.compute, "_reschedule")
+
+        self.compute._reschedule(self.context, None, None, self.instance_uuid,
+                self.compute.scheduler_rpcapi.prep_resize, method_args,
+                task_states.RESIZE_PREP).AndReturn(False)
+        self.mox.ReplayAll()
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            self.assertRaises(test.TestingException,
+                    self.compute._reschedule_resize_or_reraise, self.context,
+                    None, self.instance, self.instance_type, None, {}, {})
+
+    def test_reschedule_true(self):
+        """If rescheduled, the original resize exception should be logged"""
+        method_args = (self.instance, self.instance_type, None, {}, {}, None)
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            exc_info = sys.exc_info()
+
+            self.mox.StubOutWithMock(self.compute, "_reschedule")
+            self.mox.StubOutWithMock(self.compute, "_log_original_error")
+            self.compute._reschedule(self.context, {}, {},
+                    self.instance_uuid,
+                    self.compute.scheduler_rpcapi.prep_resize, method_args,
+                    task_states.RESIZE_PREP).AndReturn(True)
+
+            self.compute._log_original_error(exc_info, self.instance_uuid)
+            self.mox.ReplayAll()
+
+            self.compute._reschedule_resize_or_reraise(self.context, None,
+                    self.instance, self.instance_type, None, {}, {})
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):

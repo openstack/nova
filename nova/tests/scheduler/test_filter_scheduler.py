@@ -18,6 +18,7 @@ Tests For Filter Scheduler.
 
 import mox
 
+from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
@@ -310,3 +311,52 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         hosts = filter_properties['retry']['hosts']
         self.assertEqual(1, len(hosts))
         self.assertEqual(host, hosts[0])
+
+    def test_post_select_populate(self):
+        """Test addition of certain filter props after a host is selected"""
+        retry = {'hosts': [], 'num_attempts': 1}
+        filter_properties = {'retry': retry}
+        sched = fakes.FakeFilterScheduler()
+
+        host_state = host_manager.HostState('host', 'compute')
+        host_state.limits['vcpus'] = 5
+        sched._post_select_populate_filter_properties(filter_properties,
+                host_state)
+
+        self.assertEqual('host', filter_properties['retry']['hosts'][0])
+
+        self.assertEqual({'vcpus': 5}, host_state.limits)
+
+    def test_prep_resize_post_populates_retry(self):
+        """Prep resize should add a 'host' entry to the retry dict"""
+        sched = fakes.FakeFilterScheduler()
+
+        image = 'image'
+        instance = db.instance_create(self.context, {})
+
+        instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
+        instance_type = instance_types.get_instance_type_by_name("m1.tiny")
+        request_spec = {'instance_properties': instance_properties,
+                        'instance_type': instance_type}
+        retry = {'hosts': [], 'num_attempts': 1}
+        filter_properties = {'retry': retry}
+        reservations = None
+
+        host = fakes.FakeHostState('host', 'compute', {})
+        weighted_host = least_cost.WeightedHost(1, host)
+        hosts = [weighted_host]
+
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched.compute_rpcapi, 'prep_resize')
+
+        sched._schedule(self.context, 'compute', request_spec,
+                filter_properties, [instance['uuid']]).AndReturn(hosts)
+        sched.compute_rpcapi.prep_resize(self.context, image, instance,
+                instance_type, 'host', reservations, request_spec=request_spec,
+                filter_properties=filter_properties)
+
+        self.mox.ReplayAll()
+        sched.schedule_prep_resize(self.context, image, request_spec,
+                filter_properties, instance, instance_type, reservations)
+
+        self.assertEqual(['host'], filter_properties['retry']['hosts'])

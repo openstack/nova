@@ -121,20 +121,21 @@ class FilterScheduler(driver.Scheduler):
             raise exception.NoValidHost(reason="")
         host = hosts.pop(0)
 
+        self._post_select_populate_filter_properties(filter_properties,
+                host.host_state)
+
+        # context is not serializable
+        filter_properties.pop('context', None)
+
         # Forward off to the host
         self.compute_rpcapi.prep_resize(context, image, instance,
-                instance_type, host.host_state.host, reservations)
+                instance_type, host.host_state.host, reservations,
+                request_spec=request_spec, filter_properties=filter_properties)
 
     def _provision_resource(self, context, weighted_host, request_spec,
             filter_properties, requested_networks, injected_files,
             admin_password, is_first_time, instance_uuid=None):
         """Create the requested resource in this Zone."""
-        # Add a retry entry for the selected compute host:
-        self._add_retry_host(filter_properties, weighted_host.host_state.host)
-
-        self._add_oversubscription_policy(filter_properties,
-                weighted_host.host_state)
-
         payload = dict(request_spec=request_spec,
                        weighted_host=weighted_host.to_dict(),
                        instance_id=instance_uuid)
@@ -144,12 +145,25 @@ class FilterScheduler(driver.Scheduler):
 
         updated_instance = driver.instance_update_db(context, instance_uuid)
 
+        self._post_select_populate_filter_properties(filter_properties,
+                weighted_host.host_state)
+
         self.compute_rpcapi.run_instance(context, instance=updated_instance,
                 host=weighted_host.host_state.host,
                 request_spec=request_spec, filter_properties=filter_properties,
                 requested_networks=requested_networks,
                 injected_files=injected_files,
                 admin_password=admin_password, is_first_time=is_first_time)
+
+    def _post_select_populate_filter_properties(self, filter_properties,
+            host_state):
+        """Add additional information to the filter properties after a host has
+        been selected by the scheduling process.
+        """
+        # Add a retry entry for the selected compute host:
+        self._add_retry_host(filter_properties, host_state.host)
+
+        self._add_oversubscription_policy(filter_properties, host_state)
 
     def _add_retry_host(self, filter_properties, host):
         """Add a retry entry for the selected compute host.  In the event that
