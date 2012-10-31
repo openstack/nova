@@ -177,6 +177,7 @@ class IptablesFirewallDriver(FirewallDriver):
                      'filtered'), instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
+        setup_basic_filtering(instance,network_info)
         # make sure this is legacy nw_info
         network_info = self._handle_network_info_model(network_info)
 

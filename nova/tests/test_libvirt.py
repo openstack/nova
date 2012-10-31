@@ -3429,7 +3429,7 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = self._create_instance_ref()
 
         network_info = _fake_network_info(self.stubs, 1)
-        self.fw.setup_basic_filtering(instance_ref, network_info)
+        #self.fw.setup_basic_filtering(instance_ref, network_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
         original_filter_count = len(fakefilter.filters)
