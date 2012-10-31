@@ -3441,14 +3441,14 @@ class ComputeAPITestCase(BaseTestCase):
                 'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['uuid'])
 
-    def _stub_out_reboot(self, volume_id):
+    def _stub_out_reboot(self, device_name):
         def fake_reboot_instance(rpcapi, context, instance,
                                  block_device_info,
                                  network_info,
                                  reboot_type):
             self.assertEqual(
                 block_device_info['block_device_mapping'][0]['mount_device'],
-                volume_id)
+                device_name)
             self.assertEqual(network_info[0]['network']['bridge'], 'fake_br1')
         self.stubs.Set(nova.compute.rpcapi.ComputeAPI, 'reboot_instance',
                        fake_reboot_instance)
@@ -3462,8 +3462,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         volume_id = 'fake'
+        device_name = '/dev/vdc'
         volume = {'instance_uuid': instance['uuid'],
-                  'device_name': '/dev/vdc',
+                  'device_name': device_name,
                   'delete_on_termination': False,
                   'connection_info': '{"foo": "bar"}',
                   'volume_id': volume_id}
@@ -3473,7 +3474,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "SOFT"
-        self._stub_out_reboot(volume_id)
+        self._stub_out_reboot(device_name)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
@@ -3487,8 +3488,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         volume_id = 'fake'
+        device_name = '/dev/vdc'
         volume = {'instance_uuid': instance['uuid'],
-                  'device_name': '/dev/vdc',
+                  'device_name': device_name,
                   'delete_on_termination': False,
                   'connection_info': '{"foo": "bar"}',
                   'volume_id': volume_id}
@@ -3498,7 +3500,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['task_state'], None)
 
         reboot_type = "HARD"
-        self._stub_out_reboot(volume_id)
+        self._stub_out_reboot(device_name)
         self.compute_api.reboot(self.context, inst_ref, reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])

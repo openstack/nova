@@ -1419,7 +1419,7 @@ class API(base.Base):
                 if cinfo and 'serial' not in cinfo:
                     cinfo['serial'] = bdm['volume_id']
                 bdmap = {'connection_info': cinfo,
-                         'mount_device': bdm['volume_id'],
+                         'mount_device': bdm['device_name'],
                          'delete_on_termination': bdm['delete_on_termination']}
                 block_device_mapping.append(bdmap)
             except TypeError:
