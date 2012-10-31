@@ -47,8 +47,6 @@ class ViewBuilder(object):
             "ram": ["maxTotalRAMSize"],
             "instances": ["maxTotalInstances"],
             "cores": ["maxTotalCores"],
-            "gigabytes": ["maxTotalVolumeGigabytes"],
-            "volumes": ["maxTotalVolumes"],
             "key_pairs": ["maxTotalKeypairs"],
             "floating_ips": ["maxTotalFloatingIps"],
             "metadata_items": ["maxServerMeta", "maxImageMeta"],

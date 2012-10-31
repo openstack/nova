@@ -360,13 +360,13 @@ class ProjectCommandsTestCase(test.TestCase):
         output = StringIO.StringIO()
         sys.stdout = output
         self.commands.quota(project_id='admin',
-                            key='volumes',
+                            key='instances',
                             value='unlimited',
                            )
 
         sys.stdout = sys.__stdout__
         result = output.getvalue()
-        self.assertEquals(('volumes: unlimited' in result), True)
+        self.assertEquals(('instances: unlimited' in result), True)
 
     def test_quota_update_invalid_key(self):
         self.assertRaises(SystemExit,

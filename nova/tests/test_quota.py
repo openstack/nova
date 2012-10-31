@@ -32,7 +32,6 @@ from nova import quota
 from nova.scheduler import driver as scheduler_driver
 from nova import test
 import nova.tests.image.fake
-from nova import volume
 
 
 FLAGS = flags.FLAGS
@@ -45,8 +44,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    quota_instances=2,
                    quota_cores=4,
-                   quota_volumes=2,
-                   quota_gigabytes=20,
                    quota_floating_ips=1,
                    network_manager='nova.network.manager.FlatDHCPManager')
 
@@ -90,14 +87,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         inst['instance_type_id'] = '3'  # m1.large
         inst['vcpus'] = cores
         return db.instance_create(self.context, inst)
-
-    def _create_volume(self, size=10):
-        """Create a test volume"""
-        vol = {}
-        vol['user_id'] = self.user_id
-        vol['project_id'] = self.project_id
-        vol['size'] = size
-        return db.volume_create(self.context, vol)['id']
 
     def test_too_many_instances(self):
         instance_uuids = []
@@ -742,8 +731,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=10,
                 cores=20,
                 ram=50 * 1024,
-                volumes=10,
-                gigabytes=1000,
                 floating_ips=10,
                 metadata_items=128,
                 injected_files=5,
@@ -762,7 +749,6 @@ class DbQuotaDriverTestCase(test.TestCase):
             return dict(
                 instances=5,
                 ram=25 * 1024,
-                gigabytes=500,
                 metadata_items=64,
                 injected_file_content_bytes=5 * 1024,
                 )
@@ -778,8 +764,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=5,
                 cores=20,
                 ram=25 * 1024,
-                volumes=10,
-                gigabytes=500,
                 floating_ips=10,
                 metadata_items=64,
                 injected_files=5,
@@ -799,7 +783,6 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(result, dict(
                 instances=5,
                 ram=25 * 1024,
-                gigabytes=500,
                 metadata_items=64,
                 injected_file_content_bytes=5 * 1024,
                 ))
@@ -810,7 +793,6 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.assertEqual(project_id, 'test_project')
             return dict(
                 cores=10,
-                gigabytes=50,
                 injected_files=2,
                 injected_file_path_bytes=127,
                 )
@@ -822,8 +804,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(in_use=2, reserved=2),
                 cores=dict(in_use=4, reserved=4),
                 ram=dict(in_use=10 * 1024, reserved=0),
-                volumes=dict(in_use=2, reserved=0),
-                gigabytes=dict(in_use=10, reserved=0),
                 floating_ips=dict(in_use=2, reserved=0),
                 metadata_items=dict(in_use=0, reserved=0),
                 injected_files=dict(in_use=0, reserved=0),
@@ -863,17 +843,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     reserved=0,
                     ),
-                volumes=dict(
-                    limit=10,
-                    in_use=2,
-                    reserved=0,
-                    ),
-                gigabytes=dict(
-                    limit=50,
-                    in_use=10,
-                    reserved=0,
-                    ),
-                floating_ips=dict(
+               floating_ips=dict(
                     limit=10,
                     in_use=2,
                     reserved=0,
@@ -941,17 +911,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     reserved=0,
                     ),
-                volumes=dict(
-                    limit=10,
-                    in_use=2,
-                    reserved=0,
-                    ),
-                gigabytes=dict(
-                    limit=50,
-                    in_use=10,
-                    reserved=0,
-                    ),
-                floating_ips=dict(
+               floating_ips=dict(
                     limit=10,
                     in_use=2,
                     reserved=0,
@@ -1020,16 +980,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     reserved=0,
                     ),
-                volumes=dict(
-                    limit=10,
-                    in_use=2,
-                    reserved=0,
-                    ),
-                gigabytes=dict(
-                    limit=50,
-                    in_use=10,
-                    reserved=0,
-                    ),
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
@@ -1089,12 +1039,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=4,
                     reserved=4,
                     ),
-                gigabytes=dict(
-                    limit=50,
-                    in_use=10,
-                    reserved=0,
-                    ),
-                injected_files=dict(
+               injected_files=dict(
                     limit=2,
                     in_use=0,
                     reserved=0,
@@ -1125,12 +1070,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                     ),
                 ram=dict(
                     limit=25 * 1024,
-                    ),
-                volumes=dict(
-                    limit=10,
-                    ),
-                gigabytes=dict(
-                    limit=50,
                     ),
                 floating_ips=dict(
                     limit=10,
@@ -1207,7 +1146,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                                                      'test_class'),
                                          quota.QUOTAS._resources,
                                          ['instances', 'cores', 'ram',
-                                          'volumes', 'gigabytes',
                                           'floating_ips', 'security_groups'],
                                          True)
 
@@ -1216,8 +1154,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=10,
                 cores=20,
                 ram=50 * 1024,
-                volumes=10,
-                gigabytes=1000,
                 floating_ips=10,
                 security_groups=10,
                 ))

@@ -235,7 +235,6 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         """This shows how to test Ops classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
         result = conn.attach_volume(self._make_connection_info(),
@@ -253,7 +252,6 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
         self.assertRaises(exception.VolumeDriverNotFound,

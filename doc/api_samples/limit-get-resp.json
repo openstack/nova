@@ -10,8 +10,6 @@
             "maxTotalInstances": 10,
             "maxTotalKeypairs": 100,
             "maxTotalRAMSize": 51200,
-            "maxTotalVolumeGigabytes": 1000,
-            "maxTotalVolumes": 10,
             "maxSecurityGroups": 10,
             "maxSecurityGroupRules": 20
         },
