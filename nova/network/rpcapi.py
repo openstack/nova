@@ -34,6 +34,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
 
         1.0 - Initial version.
         1.1 - Adds migrate_instance_[start|finish]
+        1.2 - Make migrate_instance_[start|finish] a little more flexible
     '''
 
     #
@@ -264,19 +265,32 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('release_fixed_ip', address=address),
                   topic=rpc.queue_get_for(ctxt, self.topic, host))
 
-    def migrate_instance_start(self, ctxt, instance_uuid,
-                               floating_addresses, host):
-        return self.call(ctxt, self.make_msg('migrate_instance_start',
-                                             instance_uuid=instance_uuid,
-                                    floating_addresses=floating_addresses),
-                         topic=rpc.queue_get_for(ctxt, self.topic, host),
-                         version='1.1')
+    def migrate_instance_start(self, ctxt, instance_uuid, rxtx_factor,
+                               project_id, source_compute, dest_compute,
+                               floating_addresses):
+        return self.call(ctxt, self.make_msg(
+                'migrate_instance_start',
+                instance_uuid=instance_uuid,
+                rxtx_factor=rxtx_factor,
+                project_id=project_id,
+                source=source_compute,
+                dest=dest_compute,
+                floating_addresses=floating_addresses),
+                         topic=rpc.queue_get_for(ctxt, self.topic,
+                                                 dest_compute),
+                         version='1.2')
 
-    def migrate_instance_finish(self, ctxt, instance_uuid,
-                                floating_addresses, dest):
-        return self.call(ctxt, self.make_msg('migrate_instance_finish',
-                                             instance_uuid=instance_uuid,
-                                    floating_addresses=floating_addresses,
-                                             host=dest),
-                         topic=rpc.queue_get_for(ctxt, self.topic, dest),
-                         version='1.1')
+    def migrate_instance_finish(self, ctxt, instance_uuid, rxtx_factor,
+                                project_id, source_compute, dest_compute,
+                                floating_addresses):
+        return self.call(ctxt, self.make_msg(
+                'migrate_instance_finish',
+                instance_uuid=instance_uuid,
+                rxtx_factor=rxtx_factor,
+                project_id=project_id,
+                source=source_compute,
+                dest=dest_compute,
+                floating_addresses=floating_addresses),
+                         topic=rpc.queue_get_for(ctxt, self.topic,
+                                                 dest_compute),
+                         version='1.2')

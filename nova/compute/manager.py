@@ -1486,10 +1486,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
-            if migration_ref['dest_compute'] != \
-                                   migration_ref['source_compute']:
-                self.network_api.migrate_instance_start(context, instance,
-                                                migration_ref['dest_compute'])
+            self.network_api.migrate_instance_start(context, instance,
+                                                    migration_ref)
 
             network_info = self._get_instance_nw_info(context, instance)
             block_device_info = self._get_instance_volume_block_device_info(
@@ -1548,11 +1546,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        self._legacy_nw_info(network_info),
                                        block_device_info)
 
-            if migration_ref['dest_compute'] != \
-                                    migration_ref['source_compute']:
-                self.network_api.migrate_instance_finish(context, instance,
-                                            migration_ref['source_compute'])
-
             # Just roll back the record. There's no need to resize down since
             # the 'old' VM already has the preferred attributes
             self._instance_update(context,
@@ -1563,10 +1556,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   ephemeral_gb=instance_type['ephemeral_gb'],
                                   instance_type_id=instance_type['id'],
                                   launched_at=timeutils.utcnow(),
-                                  vm_state=vm_states.ACTIVE,
-                                  task_state=None,
                                   expected_task_state=task_states.
                                       RESIZE_REVERTING)
+
+            self.network_api.migrate_instance_finish(context, instance,
+                                                     migration_ref)
+
+            self._instance_update(context, instance['uuid'],
+                                  vm_state=vm_states.ACTIVE,
+                                  task_state=None)
 
             self.db.migration_update(elevated, migration_id,
                     {'status': 'reverted'})
@@ -1673,9 +1671,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._terminate_volume_connections(context, instance)
 
-            if migration['dest_compute'] != migration['source_compute']:
-                self.network_api.migrate_instance_start(context, instance,
-                                                           self.host)
+            self.network_api.migrate_instance_start(context, instance,
+                                                    migration)
 
             migration = self.db.migration_update(elevated,
                                                  migration['id'],
@@ -1725,9 +1722,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.setup_networks_on_host(context, instance,
                                                 migration['dest_compute'])
 
-        if migration['dest_compute'] != migration['source_compute']:
-            self.network_api.migrate_instance_finish(context, instance,
-                                                     migration['dest_compute'])
+        self.network_api.migrate_instance_finish(context, instance,
+                                                 migration)
 
         network_info = self._get_instance_nw_info(context, instance)
 
