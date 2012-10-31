@@ -89,6 +89,11 @@ class API(base.Base):
             search_opts['id'] = net_ids
         nets += quantum.list_networks(**search_opts).get('networks', [])
 
+        _ensure_requested_network_ordering(
+            lambda x: x['id'],
+            nets,
+            net_ids)
+
         return nets
 
     def allocate_for_instance(self, context, instance, **kwargs):
@@ -534,6 +539,13 @@ class API(base.Base):
         if not networks:
             networks = self._get_available_networks(context,
                                                     instance['project_id'])
+        else:
+            # ensure ports are in preferred network order
+            _ensure_requested_network_ordering(
+                lambda x: x['network_id'],
+                ports,
+                [n['id'] for n in networks])
+
         nw_info = network_model.NetworkInfo()
         for port in ports:
             network_name = None
@@ -647,3 +659,9 @@ class API(base.Base):
     def create_public_dns_domain(self, context, domain, project=None):
         """Create a private DNS domain with optional nova project."""
         raise NotImplementedError()
+
+
+def _ensure_requested_network_ordering(accessor, unordered, preferred):
+    """Sort a list with respect to the preferred network ordering."""
+    if preferred:
+        unordered.sort(key=lambda i: preferred.index(accessor(i)))
