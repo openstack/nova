@@ -516,6 +516,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         session = xenapi_conn.XenAPISession(url, username, password)
         return session.call_xenapi('VDI.get_all')
 
+    def _list_vms(self):
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        session = xenapi_conn.XenAPISession(url, username, password)
+        return session.call_xenapi('VM.get_all')
+
     def _check_vdis(self, start_list, end_list):
         for vdi_ref in end_list:
             if not vdi_ref in start_list:
@@ -588,30 +595,53 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_fail_cleanup_1(self):
         """Simulates an error while downloading an image.
 
-        Verifies that VDIs created are properly cleaned up.
-
+        Verifies that the VM and VDIs created are properly cleaned up.
         """
         vdi_recs_start = self._list_vdis()
+        start_vms = self._list_vms()
         stubs.stubout_fetch_disk_image(self.stubs, raise_failure=True)
         self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
+        end_vms = self._list_vms()
         self._check_vdis(vdi_recs_start, vdi_recs_end)
+        # No additional VMs should be found.
+        self.assertEqual(start_vms, end_vms)
 
     def test_spawn_fail_cleanup_2(self):
         """Simulates an error while creating VM record.
 
-        It verifies that VDIs created are properly cleaned up.
-
+        Verifies that the VM and VDIs created are properly cleaned up.
         """
         vdi_recs_start = self._list_vdis()
+        start_vms = self._list_vms()
         stubs.stubout_create_vm(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
+        end_vms = self._list_vms()
         self._check_vdis(vdi_recs_start, vdi_recs_end)
+        # No additional VMs should be found.
+        self.assertEqual(start_vms, end_vms)
+
+    def test_spawn_fail_cleanup_3(self):
+        """Simulates an error while attaching disks.
+
+        Verifies that the VM and VDIs created are properly cleaned up.
+        """
+        stubs.stubout_attach_disks(self.stubs)
+        vdi_recs_start = self._list_vdis()
+        start_vms = self._list_vms()
+        self.assertRaises(xenapi_fake.Failure,
+                          self._test_spawn, 1, 2, 3)
+        # No additional VDI should be found.
+        vdi_recs_end = self._list_vdis()
+        end_vms = self._list_vms()
+        self._check_vdis(vdi_recs_start, vdi_recs_end)
+        # No additional VMs should be found.
+        self.assertEqual(start_vms, end_vms)
 
     @stub_vm_utils_with_vdi_attached_here
     def test_spawn_raw_glance(self):
@@ -1362,7 +1392,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
 
         self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
-                                       disk_image_type, vdis)
+                                       vdis, disk_image_type)
 
         self.assertEqual(marker["partition_called"], called)
 
@@ -1448,7 +1478,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
 
         self.called = False
         self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
-                                       disk_image_type, vdis)
+                                       vdis, disk_image_type)
         self.assertTrue(self.called)
 
     def test_generate_swap(self):

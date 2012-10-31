@@ -211,9 +211,10 @@ class VMOps(object):
                         vm_utils.ImageType.RAMDISK)
             ramdisk_file = vdis['ramdisk'].get('file')
 
+        disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vm_ref = self._create_vm(context, instance, instance['name'],
                                  {'root': root_vdi},
-                                 network_info, image_meta, kernel_file,
+                                 disk_image_type, network_info, kernel_file,
                                  ramdisk_file)
         # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
@@ -229,9 +230,8 @@ class VMOps(object):
                                   self._session.get_xenapi_host(),
                                   False, False)
 
-    def _create_disks(self, context, instance, name_label, image_meta,
+    def _create_disks(self, context, instance, name_label, disk_image_type,
                       block_device_info=None):
-        disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vdis = vm_utils.get_vdis_for_instance(context, self._session,
                                           instance, name_label,
                                           instance['image_ref'],
@@ -257,19 +257,13 @@ class VMOps(object):
         step = make_step_decorator(context, instance)
 
         @step
-        def vanity_step(undo_mgr):
-            # NOTE(sirp): _create_disk will potentially take a *very* long
-            # time to complete since it has to fetch the image over the
-            # network and images can be several gigs in size. To avoid
-            # progress remaining at 0% for too long, which will appear to be
-            # an error, we insert a "vanity" step to bump the progress up one
-            # notch above 0.
-            pass
+        def determine_disk_image_type_step(undo_mgr):
+            return vm_utils.determine_disk_image_type(image_meta)
 
         @step
-        def create_disks_step(undo_mgr):
+        def create_disks_step(undo_mgr, disk_image_type):
             vdis = self._create_disks(context, instance, name_label,
-                                      image_meta, block_device_info)
+                                      disk_image_type, block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()
@@ -307,18 +301,21 @@ class VMOps(object):
             return kernel_file, ramdisk_file
 
         @step
-        def create_vm_step(undo_mgr, vdis, kernel_file, ramdisk_file):
-            vm_ref = self._create_vm(context, instance, name_label, vdis,
-                                     network_info, image_meta,
-                                     kernel_file=kernel_file,
-                                     ramdisk_file=ramdisk_file,
-                                     rescue=rescue)
+        def create_vm_record_step(undo_mgr, vdis, disk_image_type,
+                kernel_file, ramdisk_file):
+            vm_ref = self._create_vm_record(context, instance, name_label,
+                    vdis, disk_image_type, kernel_file, ramdisk_file)
 
             def undo_create_vm():
                 self._destroy(instance, vm_ref, network_info)
 
             undo_mgr.undo_with(undo_create_vm)
             return vm_ref
+
+        @step
+        def attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type):
+            self._attach_disks(instance, vm_ref, name_label, vdis,
+                    disk_image_type)
 
         if rescue:
             # NOTE(johannes): Attach root disk to rescue VM now, before
@@ -331,6 +328,15 @@ class VMOps(object):
 
                 vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
                                     DEVICE_RESCUE, bootable=False)
+
+        @step
+        def setup_network_step(undo_mgr, vm_ref, vdis):
+            self._setup_vm_networking(instance, vm_ref, vdis, network_info,
+                    rescue)
+
+        @step
+        def inject_metadata_step(undo_mgr, vm_ref):
+            self.inject_instance_metadata(instance, vm_ref)
 
         @step
         def prepare_security_group_filters_step(undo_mgr):
@@ -365,13 +371,21 @@ class VMOps(object):
 
         undo_mgr = utils.UndoManager()
         try:
+            # NOTE(sirp): The create_disks() step will potentially take a
+            # *very* long time to complete since it has to fetch the image
+            # over the network and images can be several gigs in size. To
+            # avoid progress remaining at 0% for too long, make sure the
+            # first step is something that completes rather quickly.
             bdev_set_default_root(undo_mgr)
-            vanity_step(undo_mgr)
+            disk_image_type = determine_disk_image_type_step(undo_mgr)
 
-            vdis = create_disks_step(undo_mgr)
+            vdis = create_disks_step(undo_mgr, disk_image_type)
             kernel_file, ramdisk_file = create_kernel_ramdisk_step(undo_mgr)
-
-            vm_ref = create_vm_step(undo_mgr, vdis, kernel_file, ramdisk_file)
+            vm_ref = create_vm_record_step(undo_mgr, vdis, disk_image_type,
+                    kernel_file, ramdisk_file)
+            attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type)
+            setup_network_step(undo_mgr, vm_ref, vdis)
+            inject_metadata_step(undo_mgr, vm_ref)
             prepare_security_group_filters_step(undo_mgr)
 
             if rescue:
@@ -384,10 +398,42 @@ class VMOps(object):
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
-    def _create_vm(self, context, instance, name_label, vdis, network_info,
-                   image_meta, kernel_file=None, ramdisk_file=None,
-                   rescue=False):
+    def _create_vm(self, context, instance, name_label, vdis,
+            disk_image_type, network_info, kernel_file=None,
+            ramdisk_file=None, rescue=False):
         """Create VM instance."""
+        vm_ref = self._create_vm_record(context, instance, name_label,
+                vdis, disk_image_type, kernel_file, ramdisk_file)
+        self._attach_disks(instance, vm_ref, name_label, vdis,
+                disk_image_type)
+        self._setup_vm_networking(instance, vm_ref, vdis, network_info,
+                rescue)
+        self.inject_instance_metadata(instance, vm_ref)
+        return vm_ref
+
+    def _setup_vm_networking(self, instance, vm_ref, vdis, network_info,
+            rescue):
+        # Alter the image before VM start for network injection.
+        if FLAGS.flat_injected:
+            vm_utils.preconfigure_instance(self._session, instance,
+                                           vdis['root']['ref'], network_info)
+
+        self._create_vifs(vm_ref, instance, network_info)
+        self.inject_network_info(instance, network_info, vm_ref)
+
+        hostname = instance['hostname']
+        if rescue:
+            hostname = 'RESCUE-%s' % hostname
+        self.inject_hostname(instance, vm_ref, hostname)
+
+    def _create_vm_record(self, context, instance, name_label, vdis,
+            disk_image_type, kernel_file, ramdisk_file):
+        """Create the VM record in Xen, making sure that we do not create
+        a duplicate name-label.  Also do a rough sanity check on memory
+        to try to short-circuit a potential failure later.  (The memory
+        check only accounts for running VMs, so it can miss other builds
+        that are in progress.)
+        """
         vm_ref = vm_utils.lookup(self._session, name_label)
         if vm_ref is not None:
             raise exception.InstanceExists(name=name_label)
@@ -395,8 +441,6 @@ class VMOps(object):
         # Ensure enough free memory is available
         if not vm_utils.ensure_free_mem(self._session, instance):
             raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
-
-        disk_image_type = vm_utils.determine_disk_image_type(image_meta)
 
         mode = vm_mode.get_from_instance(instance)
         if mode == vm_mode.XEN:
@@ -410,36 +454,14 @@ class VMOps(object):
 
         if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
-            db.instance_update(nova_context.get_admin_context(),
-                               instance['uuid'], {'vm_mode': mode})
+            db.instance_update(context, instance['uuid'], {'vm_mode': mode})
 
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file, use_pv_kernel)
-
-        # Add disks to VM
-        self._attach_disks(instance, vm_ref, name_label, disk_image_type,
-                           vdis)
-
-        # Alter the image before VM start for network injection.
-        if FLAGS.flat_injected:
-            vm_utils.preconfigure_instance(self._session, instance,
-                                           vdis['root']['ref'], network_info)
-
-        self._create_vifs(vm_ref, instance, network_info)
-        self.inject_network_info(instance, network_info, vm_ref)
-
-        hostname = instance['hostname']
-        if rescue:
-            hostname = 'RESCUE-%s' % hostname
-
-        self.inject_hostname(instance, vm_ref, hostname)
-
-        self.inject_instance_metadata(instance, vm_ref)
-
         return vm_ref
 
-    def _attach_disks(self, instance, vm_ref, name_label, disk_image_type,
-                      vdis):
+    def _attach_disks(self, instance, vm_ref, name_label, vdis,
+                      disk_image_type):
         ctx = nova_context.get_admin_context()
         instance_type = db.instance_type_get(ctx, instance['instance_type_id'])
 
@@ -938,9 +960,7 @@ class VMOps(object):
 
     def _destroy_vdis(self, instance, vm_ref, block_device_info=None):
         """Destroys all VDIs associated with a VM."""
-        instance_uuid = instance['uuid']
-        LOG.debug(_("Destroying VDIs for Instance %(instance_uuid)s")
-                  % locals())
+        LOG.debug(_("Destroying VDIs"), instance=instance)
 
         vdi_refs = vm_utils.lookup_vm_vdis(self._session, vm_ref)
         if not vdi_refs:
@@ -979,9 +999,9 @@ class VMOps(object):
         # 3. We have both kernel and ramdisk
         (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(self._session,
                                                            vm_ref)
-
-        vm_utils.destroy_kernel_ramdisk(self._session, kernel, ramdisk)
-        LOG.debug(_("kernel/ramdisk files removed"), instance=instance)
+        if kernel or ramdisk:
+            vm_utils.destroy_kernel_ramdisk(self._session, kernel, ramdisk)
+            LOG.debug(_("kernel/ramdisk files removed"), instance=instance)
 
     def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
         """Destroy a rescue instance."""
