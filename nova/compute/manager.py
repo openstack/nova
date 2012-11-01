@@ -2025,7 +2025,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def reserve_block_device_name(self, context, instance, device, volume_id):
+    def reserve_block_device_name(self, context, instance, device,
+                                  volume_id=None):
 
         @lockutils.synchronized(instance['uuid'], 'nova-')
         def do_reserve():
@@ -2034,7 +2035,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                 device)
             # NOTE(vish): create bdm here to avoid race condition
             values = {'instance_uuid': instance['uuid'],
-                      'volume_id': volume_id,
+                      'volume_id': volume_id or 'reserved',
                       'device_name': result}
             self.db.block_device_mapping_create(context, values)
             return result
