@@ -243,6 +243,8 @@ class VolumeController(wsgi.Controller):
         LOG.audit(_("Create volume of %s GB"), size, context=context)
 
         availability_zone = vol.get('availability_zone', None)
+        
+        image_id = vol.get('imageRef',None)
 
         new_volume = self.volume_api.create(context,
                                             size,
@@ -251,7 +253,8 @@ class VolumeController(wsgi.Controller):
                                             snapshot=snapshot,
                                             volume_type=vol_type,
                                             metadata=metadata,
-                                            availability_zone=availability_zone
+                                            availability_zone=availability_zone,
+                                            image_id=image_id
                                            )
 
         # TODO(vish): Instance should be None at db layer instead of
