@@ -209,6 +209,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-services",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Services",
+            "namespace": "http://docs.openstack.org/compute/ext/services/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-hypervisors",
             "description": "%(text)s",
             "links": [],
