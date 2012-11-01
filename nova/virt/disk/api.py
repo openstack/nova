@@ -112,9 +112,7 @@ def get_disk_size(path):
     :returns: Size (in bytes) of the given disk image as it would be seen
               by a virtual machine.
     """
-    size = images.qemu_img_info(path)['virtual size']
-    size = size.split('(')[1].split()[0]
-    return int(size)
+    return images.qemu_img_info(path).virtual_size
 
 
 def extend(image, size):
