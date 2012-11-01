@@ -140,7 +140,7 @@ class XenAPIDriver(driver.ComputeDriver):
         self._session = XenAPISession(url, username, password)
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
-        self._host = host.Host(self._session)
+        self._host = host.Host(self._session, self.virtapi)
         self._vmops = vmops.VMOps(self._session, self.virtapi)
         self._initiator = None
         self._hypervisor_hostname = None
