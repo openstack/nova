@@ -823,50 +823,29 @@ class API(base.Base):
 
         return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
 
-    @wrap_check_policy
-    @check_instance_lock
-    @check_instance_state(vm_state=None, task_state=None)
-    def soft_delete(self, context, instance):
-        """Terminate an instance."""
-        LOG.debug(_('Going to try to soft delete instance'),
-                  instance=instance)
-
+    def _delete(self, context, instance, cb, **instance_attrs):
         if instance['disable_terminate']:
+            LOG.info(_('instance termination disabled'),
+                     instance=instance)
             return
 
-        # NOTE(jerdfelt): The compute daemon handles reclaiming instances
-        # that are in soft delete. If there is no host assigned, there is
-        # no daemon to reclaim, so delete it immediately.
-        if instance['host']:
-            instance = self.update(context, instance,
-                                   task_state=task_states.SOFT_DELETING,
-                                   expected_task_state=None,
-                                   deleted_at=timeutils.utcnow())
-
-            self.compute_rpcapi.soft_delete_instance(context, instance)
-        else:
-            LOG.warning(_('No host for instance, deleting immediately'),
-                        instance=instance)
-            try:
-                self.db.instance_destroy(context, instance['uuid'])
-            except exception.InstanceNotFound:
-                # NOTE(comstud): Race condition.  Instance already gone.
-                pass
-
-    def _delete(self, context, instance):
         host = instance['host']
+        bdms = self.db.block_device_mapping_get_all_by_instance(
+                    context, instance['uuid'])
         reservations = None
         try:
-
-            #Note(maoy): no expected_task_state needs to be set
+            # NOTE(maoy): no expected_task_state needs to be set
+            attrs = {'progress': 0}
+            attrs.update(instance_attrs)
             old, updated = self._update(context,
                                         instance,
-                                        task_state=task_states.DELETING,
-                                        progress=0)
+                                        **attrs)
 
             # Avoid double-counting the quota usage reduction
             # where delete is already in progress
-            if old['task_state'] != task_states.DELETING:
+            if (old['vm_state'] != vm_states.SOFT_DELETED and
+                old['task_state'] not in (task_states.DELETING,
+                                          task_states.SOFT_DELETING)):
                 reservations = QUOTAS.reserve(context,
                                               instances=-1,
                                               cores=-instance['vcpus'],
@@ -876,12 +855,11 @@ class API(base.Base):
                 # Just update database, nothing else we can do
                 constraint = self.db.constraint(host=self.db.equal_any(host))
                 try:
-                    result = self.db.instance_destroy(context,
-                                                      instance['uuid'],
-                                                      constraint)
+                    self.db.instance_destroy(context, instance['uuid'],
+                                             constraint)
                     if reservations:
                         QUOTAS.commit(context, reservations)
-                    return result
+                    return
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
                     instance = self.get(context, instance['uuid'])
@@ -916,9 +894,7 @@ class API(base.Base):
                             reservations=downsize_reservations)
 
             is_up = False
-            bdms = self.db.block_device_mapping_get_all_by_instance(
-                context, instance["uuid"])
-            #Note(jogo): db allows for multiple compute services per host
+            # NOTE(jogo): db allows for multiple compute services per host
             try:
                 services = self.db.service_get_all_compute_by_host(
                         context.elevated(), instance['host'])
@@ -927,8 +903,7 @@ class API(base.Base):
             for service in services:
                 if utils.service_is_up(service):
                     is_up = True
-                    self.compute_rpcapi.terminate_instance(context, instance,
-                                                           bdms)
+                    cb(context, instance, bdms)
                     break
             if not is_up:
                 # If compute node isn't up, just delete from DB
@@ -987,40 +962,69 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=None, task_state=None)
+    def soft_delete(self, context, instance):
+        """Terminate an instance."""
+        LOG.debug(_('Going to try to soft delete instance'),
+                  instance=instance)
+
+        def soft_delete(context, instance, bdms):
+            self.compute_rpcapi.soft_delete_instance(context, instance)
+
+        self._delete(context, instance, soft_delete,
+                     task_state=task_states.SOFT_DELETING,
+                     deleted_at=timeutils.utcnow())
+
+    def _delete_instance(self, context, instance):
+        def terminate(context, instance, bdms):
+            self.compute_rpcapi.terminate_instance(context, instance, bdms)
+
+        self._delete(context, instance, terminate,
+                     task_state=task_states.DELETING)
+
+    @wrap_check_policy
+    @check_instance_lock
+    @check_instance_state(vm_state=None, task_state=None)
     def delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate instance"), instance=instance)
-
-        if instance['disable_terminate']:
-            return
-
-        self._delete(context, instance)
+        self._delete_instance(context, instance)
 
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        if instance['host']:
-            instance = self.update(context, instance,
-                        task_state=task_states.RESTORING,
-                        expected_task_state=None,
-                        deleted_at=None)
-            self.compute_rpcapi.restore_instance(context, instance)
-        else:
-            self.update(context,
-                        instance,
-                        vm_state=vm_states.ACTIVE,
-                        task_state=None,
-                        expected_task_state=None,
-                        deleted_at=None)
+        # Reserve quotas
+        instance_type = instance['instance_type']
+        num_instances, quota_reservations = self._check_num_instances_quota(
+                context, instance_type, 1, 1)
+
+        try:
+            if instance['host']:
+                instance = self.update(context, instance,
+                            task_state=task_states.RESTORING,
+                            expected_task_state=None,
+                            deleted_at=None)
+                self.compute_rpcapi.restore_instance(context, instance)
+            else:
+                self.update(context,
+                            instance,
+                            vm_state=vm_states.ACTIVE,
+                            task_state=None,
+                            expected_task_state=None,
+                            deleted_at=None)
+
+            QUOTAS.commit(context, quota_reservations)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, quota_reservations)
 
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
-        self._delete(context, instance)
+        self._delete_instance(context, instance)
 
     @wrap_check_policy
     @check_instance_lock

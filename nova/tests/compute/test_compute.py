@@ -3229,7 +3229,12 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_delete_soft(self):
-        instance, instance_uuid = self._run_instance()
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
+
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
+        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
 
         self.compute_api.soft_delete(self.context, instance)
 
@@ -3239,14 +3244,36 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_delete_soft_fail(self):
-        instance, instance_uuid = self._run_instance()
-
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
         instance = db.instance_update(self.context, instance_uuid,
                                       {'disable_terminate': True})
+
         self.compute_api.soft_delete(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_delete_soft_rollback(self):
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
+
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
+        nova.quota.QUOTAS.rollback(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        def fail(*args, **kwargs):
+            raise test.TestingException()
+        self.stubs.Set(self.compute_api.compute_rpcapi, 'soft_delete_instance',
+                       fail)
+
+        self.assertRaises(test.TestingException, self.compute_api.soft_delete,
+                          self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.SOFT_DELETING)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -3344,9 +3371,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_restore(self):
         """Ensure instance can be restored from a soft delete"""
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
+        instance, instance_uuid = self._run_instance(params={
+                'host': FLAGS.host})
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute_api.soft_delete(self.context, instance)
@@ -3358,6 +3384,10 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'vm_state': vm_states.SOFT_DELETED,
                                        'task_state': None})
+
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
+        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
 
         self.compute_api.restore(self.context, instance)
 
