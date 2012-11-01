@@ -164,8 +164,47 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             LOG.warn(_("Failed to clean up snapshot file "
                        "%(snapshot_file_path)s") % locals())
 
-    def migrate_volume(self):
-        raise NotImplementedError()
+    def migrate_volume(self, lv_name, src_host, dest, image_path,
+            instance_name=None):
+        """Copy a logical volume to file, compress, and transfer
+
+        :param lv_name: logical volume device name
+        :param dest: destination IP or DNS name
+        :param image_path: path to remote image storage directory
+        :param instance_name: name of instance that is being migrated
+        :returns: file path on destination of image file that was moved
+        """
+        if instance_name:
+            file_name = ''.join([instance_name, '_rsz'])
+        else:
+            file_name = ''.join([lv_name, '_rsz'])
+        file_path = os.path.join(image_path, file_name)
+        self._copy_device_to_file(lv_name, file_path)
+        cmds = 'gzip %s' % file_path
+        self.run_vios_command_as_root(cmds)
+        file_path = file_path + '.gz'
+        # If destination is not same host
+        # transfer file to destination VIOS system
+        if (src_host != dest):
+            with common.vios_to_vios_auth(self.connection_data.host,
+                                          dest,
+                                          self.connection_data) as key_name:
+                cmd = ''.join(['scp -o "StrictHostKeyChecking no"',
+                                ('-i %s' % key_name),
+                                file_path,
+                                '%s@%s:%s' % (self.connection_data.username,
+                                              dest,
+                                              image_path)
+                                ])
+                # do the remote copy
+                self.run_vios_command(cmd)
+
+            # cleanup local file only if transferring to remote system
+            # otherwise keep the file to boot from locally and clean up later
+            cleanup_cmd = 'rm %s' % file_path
+            self.run_vios_command_as_root(cleanup_cmd)
+
+        return file_path
 
     def attach_volume_to_host(self, *args, **kargs):
         pass
