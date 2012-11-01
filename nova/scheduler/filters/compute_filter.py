@@ -28,9 +28,6 @@ class ComputeFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         """Returns True for only active compute nodes"""
-        instance_type = filter_properties.get('instance_type')
-        if not instance_type:
-            return True
         capabilities = host_state.capabilities
         service = host_state.service
 
