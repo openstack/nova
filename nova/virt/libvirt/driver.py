@@ -640,9 +640,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'lxc':
             self._attach_lxc_volume(conf.to_xml(), virt_dom, instance_name)
+            # TODO(danms) once libvirt has support for LXC hotplug,
+            # replace this re-define with use of the
+            # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
+            # attachDevice()
+            domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+            self._conn.defineXML(domxml)
         else:
             try:
-                virt_dom.attachDevice(conf.to_xml())
+                flags = (libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+                virt_dom.attachDeviceFlags(conf.to_xml(), flags)
             except Exception, ex:
                 if isinstance(ex, libvirt.libvirtError):
                     errcode = ex.get_error_code()
@@ -656,13 +663,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     self.volume_driver_method('disconnect_volume',
                                                connection_info,
                                                mount_device)
-
-        # TODO(danms) once libvirt has support for LXC hotplug,
-        # replace this re-define with use of the
-        # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
-        # attachDevice()
-        domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
-        self._conn.defineXML(domxml)
 
     @staticmethod
     def _get_disk_xml(xml, device):
@@ -702,19 +702,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.DiskNotFound(location=mount_device)
             if FLAGS.libvirt_type == 'lxc':
                 self._detach_lxc_volume(xml, virt_dom, instance_name)
+                # TODO(danms) once libvirt has support for LXC hotplug,
+                # replace this re-define with use of the
+                # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
+                # detachDevice()
+                domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+                self._conn.defineXML(domxml)
             else:
-                virt_dom.detachDevice(xml)
+                flags = (libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+                virt_dom.detachDeviceFlags(xml, flags)
         finally:
             self.volume_driver_method('disconnect_volume',
                                       connection_info,
                                       mount_device)
-
-        # TODO(danms) once libvirt has support for LXC hotplug,
-        # replace this re-define with use of the
-        # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
-        # detachDevice()
-        domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
-        self._conn.defineXML(domxml)
 
     @exception.wrap_exception()
     def _attach_lxc_volume(self, xml, virt_dom, instance_name):
