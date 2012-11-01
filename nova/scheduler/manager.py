@@ -26,6 +26,7 @@ import sys
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.context
 from nova import db
 from nova import exception
 from nova import flags
@@ -61,6 +62,13 @@ class SchedulerManager(manager.Manager):
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
+
+    def post_start_hook(self):
+        """After we start up and can receive messages via RPC, tell all
+        compute nodes to send us their capabilities.
+        """
+        ctxt = nova.context.get_admin_context()
+        compute_rpcapi.ComputeAPI().publish_service_capabilities(ctxt)
 
     def update_service_capabilities(self, context, service_name,
                                     host, capabilities):
@@ -259,6 +267,3 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
-
-    def request_service_capabilities(self, context):
-        compute_rpcapi.ComputeAPI().publish_service_capabilities(context)

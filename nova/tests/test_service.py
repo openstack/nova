@@ -21,6 +21,7 @@ Unit Tests for remote procedure calls using queue
 """
 
 import mox
+import sys
 
 
 from nova import context
@@ -109,82 +110,95 @@ class ServiceTestCase(test.TestCase):
 
     def setUp(self):
         super(ServiceTestCase, self).setUp()
+        self.host = 'foo'
+        self.binary = 'nova-fake'
+        self.topic = 'fake'
         self.mox.StubOutWithMock(service, 'db')
 
     def test_create(self):
-        host = 'foo'
-        binary = 'nova-fake'
-        topic = 'fake'
 
         # NOTE(vish): Create was moved out of mox replay to make sure that
         #             the looping calls are created in StartService.
-        app = service.Service.create(host=host, binary=binary, topic=topic)
+        app = service.Service.create(host=self.host, binary=self.binary,
+                topic=self.topic)
 
         self.assert_(app)
 
-    def test_report_state_newly_disconnected(self):
-        host = 'foo'
-        binary = 'bar'
-        topic = 'test'
-        service_create = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
+    def _service_start_mocks(self):
+        service_create = {'host': self.host,
+                          'binary': self.binary,
+                          'topic': self.topic,
                           'report_count': 0,
                           'availability_zone': 'nova'}
-        service_ref = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
+        service_ref = {'host': self.host,
+                          'binary': self.binary,
+                          'topic': self.topic,
                           'report_count': 0,
                           'availability_zone': 'nova',
                           'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
-                                      host,
-                                      binary).AndRaise(exception.NotFound())
+                self.host, self.binary).AndRaise(exception.NotFound())
         service.db.service_create(mox.IgnoreArg(),
-                                  service_create).AndReturn(service_ref)
+                service_create).AndReturn(service_ref)
+        return service_ref
+
+    def test_init_and_start_hooks(self):
+        self.manager_mock = self.mox.CreateMock(FakeManager)
+        self.mox.StubOutWithMock(sys.modules[__name__],
+                'FakeManager', use_mock_anything=True)
+        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
+        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
+        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
+        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
+
+        FakeManager(host=self.host).AndReturn(self.manager_mock)
+
+        # init_host is called before any service record is created
+        self.manager_mock.init_host()
+        self._service_start_mocks()
+        # pre_start_hook is called after service record is created,
+        # but before RPC consumer is created
+        self.manager_mock.pre_start_hook()
+        self.manager_mock.create_rpc_dispatcher()
+        # post_start_hook is called after RPC consumer is created.
+        self.manager_mock.post_start_hook()
+
+        self.mox.ReplayAll()
+
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.test_service.FakeManager')
+        serv.start()
+
+    def test_report_state_newly_disconnected(self):
+        self._service_start_mocks()
+
         service.db.service_get(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndRaise(Exception())
 
         self.mox.ReplayAll()
-        serv = service.Service(host,
-                               binary,
-                               topic,
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
                                'nova.tests.test_service.FakeManager')
         serv.start()
         serv.report_state()
         self.assert_(serv.model_disconnected)
 
     def test_report_state_newly_connected(self):
-        host = 'foo'
-        binary = 'bar'
-        topic = 'test'
-        service_create = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
-                          'report_count': 0,
-                          'availability_zone': 'nova'}
-        service_ref = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
-                          'report_count': 0,
-                          'availability_zone': 'nova',
-                          'id': 1}
+        service_ref = self._service_start_mocks()
 
-        service.db.service_get_by_args(mox.IgnoreArg(),
-                                      host,
-                                      binary).AndRaise(exception.NotFound())
-        service.db.service_create(mox.IgnoreArg(),
-                                  service_create).AndReturn(service_ref)
         service.db.service_get(mox.IgnoreArg(),
                                service_ref['id']).AndReturn(service_ref)
         service.db.service_update(mox.IgnoreArg(), service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
-        serv = service.Service(host,
-                               binary,
-                               topic,
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
                                'nova.tests.test_service.FakeManager')
         serv.start()
         serv.model_disconnected = True

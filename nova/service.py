@@ -397,8 +397,7 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
-        if 'nova-compute' == self.binary:
-            self.manager.update_available_resource(ctxt)
+        self.manager.pre_start_hook()
 
         self.conn = rpc.create_connection(new=True)
         LOG.debug(_("Creating Consumer connection for Service %s") %
@@ -417,8 +416,7 @@ class Service(object):
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
-        if 'nova-scheduler' == self.binary:
-            self.manager.request_service_capabilities(ctxt)
+        self.manager.post_start_hook()
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -612,7 +610,10 @@ class WSGIService(object):
         """
         if self.manager:
             self.manager.init_host()
+            self.manager.pre_start_hook()
         self.server.start()
+        if self.manager:
+            self.manager.post_start_hook()
 
     def stop(self):
         """Stop serving this API.

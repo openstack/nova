@@ -342,6 +342,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._report_driver_status(context)
         self.publish_service_capabilities(context)
 
+    def pre_start_hook(self):
+        """After the service is initialized, but before we fully bring
+        the service up by listening on RPC queues, make sure to update
+        our available resources.
+        """
+        self.update_available_resource(nova.context.get_admin_context())
+
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
         LOG.debug(_('Checking state'), instance=instance)
