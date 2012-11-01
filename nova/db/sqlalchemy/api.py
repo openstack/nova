@@ -3732,6 +3732,53 @@ def instance_type_access_remove(context, flavor_id, project_id):
                                                  project_id=project_id)
 
 
+####################
+
+
+@require_admin_context
+def cell_create(context, values):
+    cell = models.Cell()
+    cell.update(values)
+    cell.save()
+    return cell
+
+
+def _cell_get_by_id_query(context, cell_id, session=None):
+    return model_query(context, models.Cell, session=session).\
+                       filter_by(id=cell_id)
+
+
+@require_admin_context
+def cell_update(context, cell_id, values):
+    cell = cell_get(context, cell_id)
+    cell.update(values)
+    cell.save()
+    return cell
+
+
+@require_admin_context
+def cell_delete(context, cell_id):
+    session = get_session()
+    with session.begin():
+        return _cell_get_by_id_query(context, cell_id, session=session).\
+                delete()
+
+
+@require_admin_context
+def cell_get(context, cell_id):
+    result = _cell_get_by_id_query(context, cell_id).first()
+
+    if not result:
+        raise exception.CellNotFound(cell_id=cell_id)
+
+    return result
+
+
+@require_admin_context
+def cell_get_all(context):
+    return model_query(context, models.Cell, read_deleted="no").all()
+
+
 ########################
 # User-provided metadata
 

@@ -306,6 +306,10 @@ class Instance(BASE, NovaBase):
     # EC2 disable_api_termination
     disable_terminate = Column(Boolean(), default=False, nullable=False)
 
+    # OpenStack compute cell name.  This will only be set at the top of
+    # the cells tree and it'll be a full cell name such as 'api!hop1!hop2'
+    cell_name = Column(String(255))
+
 
 class InstanceInfoCache(BASE, NovaBase):
     """
@@ -819,6 +823,30 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
                  primaryjoin='and_('
                  'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
                  'InstanceTypeExtraSpecs.deleted == False)')
+
+
+class Cell(BASE, NovaBase):
+    """Represents parent and child cells of this cell.  Cells can
+    have multiple parents and children, so there could be any number
+    of entries with is_parent=True or False
+    """
+    __tablename__ = 'cells'
+    id = Column(Integer, primary_key=True)
+    # Name here is the 'short name' of a cell.  For instance: 'child1'
+    name = Column(String(255))
+    api_url = Column(String(255))
+    # FIXME(comstud): username and password refer to the credentials
+    # used for talking with the AMQP server within a particular cell.
+    # This table needs cleanup to support more generic cells
+    # communication (including via 0mq, for instance)
+    username = Column(String(255))
+    password = Column(String(255))
+    weight_offset = Column(Float(), default=0.0)
+    weight_scale = Column(Float(), default=1.0)
+    is_parent = Column(Boolean())
+    rpc_host = Column(String(255))
+    rpc_port = Column(Integer())
+    rpc_virtual_host = Column(String(255))
 
 
 class AggregateHost(BASE, NovaBase):
