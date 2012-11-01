@@ -196,10 +196,26 @@ class VMOps(object):
         if resize_instance:
             self._resize_instance(instance, root_vdi)
 
+        # Check if kernel and ramdisk are external
+        kernel_file = None
+        ramdisk_file = None
+
+        name_label = instance['name']
+        if instance['kernel_id']:
+            vdis = vm_utils.create_kernel_image(context, self._session,
+                        instance, name_label, instance['kernel_id'],
+                        vm_utils.ImageType.KERNEL)
+            kernel_file = vdis['kernel'].get('file')
+        if instance['ramdisk_id']:
+            vdis = vm_utils.create_kernel_image(context, self._session,
+                        instance, name_label, instance['ramdisk_id'],
+                        vm_utils.ImageType.RAMDISK)
+            ramdisk_file = vdis['ramdisk'].get('file')
+
         vm_ref = self._create_vm(context, instance, instance['name'],
                                  {'root': root_vdi},
-                                 network_info, image_meta)
-
+                                 network_info, image_meta, kernel_file,
+                                 ramdisk_file)
         # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
         self._update_instance_progress(context, instance,

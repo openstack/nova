@@ -188,6 +188,13 @@ class XenAPIDriver(driver.ComputeDriver):
         """Finish reverting a resize, powering back on the instance"""
         # NOTE(vish): Xen currently does not use network info.
         self._vmops.finish_revert_migration(instance)
+        block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self._volumeops.attach_volume(connection_info,
+                    instance['name'], mount_device)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
@@ -195,6 +202,13 @@ class XenAPIDriver(driver.ComputeDriver):
         """Completes a resize, turning on the migrated instance"""
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance)
+        block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self._volumeops.attach_volume(connection_info,
+                    instance['name'], mount_device)
 
     def snapshot(self, context, instance, image_id):
         """ Create snapshot from a running VM instance """
@@ -237,8 +251,17 @@ class XenAPIDriver(driver.ComputeDriver):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
         # NOTE(vish): Xen currently does not use network info.
-        return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, instance_type)
+        rv = self._vmops.migrate_disk_and_power_off(context, instance,
+                                                    dest, instance_type)
+        block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+        name_label = self._vmops._get_orig_vm_name_label(instance)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self._volumeops.detach_volume(connection_info,
+                    name_label, mount_device)
+        return rv
 
     def suspend(self, instance):
         """suspend the specified instance"""
