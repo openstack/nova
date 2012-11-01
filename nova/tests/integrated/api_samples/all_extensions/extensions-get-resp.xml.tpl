@@ -33,6 +33,9 @@
   <extension alias="os-agents" name="Agents" namespace="http://docs.openstack.org/compute/ext/agents/api/v2" updated="%(timestamp)s">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-cells" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-certificates" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
     <description>%(text)s</description>
   </extension>

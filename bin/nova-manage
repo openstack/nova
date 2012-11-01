@@ -1056,11 +1056,11 @@ class CellCommands(object):
         ctxt = context.get_admin_context()
         db.cell_create(ctxt, values)
 
-    @args('--cell_id', dest='cell_id', metavar='<cell_id>',
-         help='ID of the cell to delete')
-    def delete(self, cell_id):
+    @args('--cell_name', dest='cell_name', metavar='<cell_name>',
+         help='Name of the cell to delete')
+    def delete(self, cell_name):
         ctxt = context.get_admin_context()
-        db.cell_delete(ctxt, cell_id)
+        db.cell_delete(ctxt, cell_name)
 
     def list(self):
         ctxt = context.get_admin_context()

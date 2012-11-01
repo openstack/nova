@@ -21,9 +21,14 @@
             "zone": "internal"
         },
         {
-	    "host_name": "%(host_name)s",
-	    "service": "conductor",
-	    "zone": "internal"
+            "host_name": "%(host_name)s",
+            "service": "conductor",
+            "zone": "internal"
+        },
+        {
+            "host_name": "%(host_name)s",
+            "service": "cells",
+            "zone": "internal"
         }
     ]
 }

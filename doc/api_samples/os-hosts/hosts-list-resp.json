@@ -24,6 +24,11 @@
             "host_name": "6e48bfe1a3304b7b86154326328750ae",
             "service": "conductor",
             "zone": "internal"
+        },
+        {
+            "host_name": "39f55087a1024d1380755951c945ca69",
+            "service": "cells",
+            "zone": "internal"
         }
     ]
 }

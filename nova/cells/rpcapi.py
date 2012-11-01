@@ -40,6 +40,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -136,3 +137,21 @@ class CellsAPI(rpc_proxy.RpcProxy):
                     'info_cache': iicache}
         self.cast(ctxt, self.make_msg('instance_update_at_top',
                                       instance=instance))
+
+    def get_cell_info_for_neighbors(self, ctxt):
+        """Get information about our neighbor cells from the manager."""
+        if not CONF.cells.enable:
+            return []
+        return self.call(ctxt, self.make_msg('get_cell_info_for_neighbors'),
+                         version='1.1')
+
+    def sync_instances(self, ctxt, project_id=None, updated_since=None,
+            deleted=False):
+        """Ask all cells to sync instance data."""
+        if not CONF.cells.enable:
+            return
+        return self.cast(ctxt, self.make_msg('sync_instances',
+                                             project_id=project_id,
+                                             updated_since=updated_since,
+                                             deleted=deleted),
+                         version='1.1')

@@ -54,6 +54,8 @@ CONF.import_opt('osapi_compute_extension',
 CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('osapi_glance_link_prefix', 'nova.api.openstack.common')
+CONF.import_opt('enable', 'nova.cells.opts', group='cells')
+CONF.import_opt('db_check_interval', 'nova.cells.state', group='cells')
 LOG = logging.getLogger(__name__)
 
 
@@ -2500,3 +2502,63 @@ class QuotaClassesSampleJsonTests(ApiSampleTestBase):
 
 class QuotaClassesSampleXmlTests(QuotaClassesSampleJsonTests):
     ctype = "xml"
+
+
+class CellsSampleJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.cells.Cells"
+
+    def setUp(self):
+        # db_check_interval < 0 makes cells manager always hit the DB
+        self.flags(enable=True, db_check_interval=-1, group='cells')
+        super(CellsSampleJsonTest, self).setUp()
+        self._stub_cells()
+
+    def _stub_cells(self, num_cells=5):
+        self.cells = []
+        self.cells_next_id = 1
+
+        def _fake_cell_get_all(context):
+            return self.cells
+
+        def _fake_cell_get(context, cell_name):
+            for cell in self.cells:
+                if cell['name'] == cell_name:
+                    return cell
+            raise exception.CellNotFound(cell_name=cell_name)
+
+        for x in xrange(num_cells):
+            cell = models.Cell()
+            our_id = self.cells_next_id
+            self.cells_next_id += 1
+            cell.update({'id': our_id,
+                         'name': 'cell%s' % our_id,
+                         'username': 'username%s' % our_id,
+                         'is_parent': our_id % 2 == 0})
+            self.cells.append(cell)
+
+        self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
+        self.stubs.Set(db, 'cell_get', _fake_cell_get)
+
+    def test_cells_empty_list(self):
+        # Override this
+        self._stub_cells(num_cells=0)
+        response = self._do_get('os-cells')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('cells-list-empty-resp', subs, response)
+
+    def test_cells_list(self):
+        response = self._do_get('os-cells')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('cells-list-resp', subs, response)
+
+    def test_cells_get(self):
+        response = self._do_get('os-cells/cell3')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('cells-get-resp', subs, response)
+
+
+class CellsSampleXmlTest(CellsSampleJsonTest):
+    ctype = 'xml'

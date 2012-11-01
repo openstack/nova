@@ -204,3 +204,23 @@ class CellsAPITestCase(test.TestCase):
         expected_args = {'bw_update_info': bw_update_info}
         self._check_result(call_info, 'bw_usage_update_at_top',
                 expected_args)
+
+    def test_get_cell_info_for_neighbors(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.get_cell_info_for_neighbors(
+                self.fake_context)
+        self._check_result(call_info, 'get_cell_info_for_neighbors', {},
+                           version='1.1')
+        self.assertEqual(result, 'fake_response')
+
+    def test_sync_instances(self):
+        call_info = self._stub_rpc_method('cast', None)
+        self.cells_rpcapi.sync_instances(self.fake_context,
+                project_id='fake_project', updated_since='fake_time',
+                deleted=True)
+
+        expected_args = {'project_id': 'fake_project',
+                         'updated_since': 'fake_time',
+                         'deleted': True}
+        self._check_result(call_info, 'sync_instances', expected_args,
+                           version='1.1')

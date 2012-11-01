@@ -14,11 +14,14 @@
 """
 Tests For Cells Messaging module
 """
+import mox
 
 from nova.cells import messaging
+from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.cells import fakes
 
@@ -912,3 +915,46 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         self.src_msg_runner.bw_usage_update_at_top(self.ctxt,
                                                    fake_bw_update_info)
+
+    def test_sync_instances(self):
+        # Reset this, as this is a broadcast down.
+        self._setup_attrs(up=False)
+        project_id = 'fake_project_id'
+        updated_since_raw = 'fake_updated_since_raw'
+        updated_since_parsed = 'fake_updated_since_parsed'
+        deleted = 'fake_deleted'
+
+        instance1 = dict(uuid='fake_uuid1', deleted=False)
+        instance2 = dict(uuid='fake_uuid2', deleted=True)
+        fake_instances = [instance1, instance2]
+
+        self.mox.StubOutWithMock(self.tgt_msg_runner,
+                                 'instance_update_at_top')
+        self.mox.StubOutWithMock(self.tgt_msg_runner,
+                                 'instance_destroy_at_top')
+
+        self.mox.StubOutWithMock(timeutils, 'parse_isotime')
+        self.mox.StubOutWithMock(cells_utils, 'get_instances_to_sync')
+
+        # Middle cell.
+        timeutils.parse_isotime(updated_since_raw).AndReturn(
+                updated_since_parsed)
+        cells_utils.get_instances_to_sync(self.ctxt,
+                updated_since=updated_since_parsed,
+                project_id=project_id,
+                deleted=deleted).AndReturn([])
+
+        # Bottom/Target cell
+        timeutils.parse_isotime(updated_since_raw).AndReturn(
+                updated_since_parsed)
+        cells_utils.get_instances_to_sync(self.ctxt,
+                updated_since=updated_since_parsed,
+                project_id=project_id,
+                deleted=deleted).AndReturn(fake_instances)
+        self.tgt_msg_runner.instance_update_at_top(self.ctxt, instance1)
+        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt, instance2)
+
+        self.mox.ReplayAll()
+
+        self.src_msg_runner.sync_instances(self.ctxt,
+                project_id, updated_since_raw, deleted)

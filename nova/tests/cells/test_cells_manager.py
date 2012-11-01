@@ -38,6 +38,21 @@ class CellsManagerClassTestCase(test.TestCase):
         self.driver = self.cells_manager.driver
         self.ctxt = 'fake_context'
 
+    def _get_fake_responses(self):
+        responses = []
+        expected_responses = []
+        for x in xrange(1, 4):
+            responses.append(messaging.Response('cell%s' % x, x, False))
+            expected_responses.append(('cell%s' % x, x))
+        return expected_responses, responses
+
+    def test_get_cell_info_for_neighbors(self):
+        self.mox.StubOutWithMock(self.cells_manager.state_manager,
+                'get_cell_info_for_neighbors')
+        self.cells_manager.state_manager.get_cell_info_for_neighbors()
+        self.mox.ReplayAll()
+        self.cells_manager.get_cell_info_for_neighbors(self.ctxt)
+
     def test_post_start_hook_child_cell(self):
         self.mox.StubOutWithMock(self.driver, 'start_consumers')
         self.mox.StubOutWithMock(context, 'get_admin_context')
@@ -211,3 +226,14 @@ class CellsManagerClassTestCase(test.TestCase):
         # Now the last 1 and the first 1
         self.assertEqual(call_info['sync_instances'],
                 [instances[-1], instances[0]])
+
+    def test_sync_instances(self):
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'sync_instances')
+        self.msg_runner.sync_instances(self.ctxt, 'fake-project',
+                                       'fake-time', 'fake-deleted')
+        self.mox.ReplayAll()
+        self.cells_manager.sync_instances(self.ctxt,
+                                          project_id='fake-project',
+                                          updated_since='fake-time',
+                                          deleted='fake-deleted')
