@@ -32,10 +32,16 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   image properties contained in the instance.
 * |AvailabilityZoneFilter| - filters hosts by availability zone. It passes
   hosts matching the availability zone specified in the instance properties.
-* |ComputeCapabilityFilter| - checks that the capabilities provided by the
+* |ComputeCapabilitiesFilter| - checks that the capabilities provided by the
   host compute service satisfy any extra specifications associated with the
-  instance type (that have no scope, see |TrustedFilter| for details).  It
-  passes hosts that can create the specified instance type.
+  instance type.  It passes hosts that can create the specified instance type.
+
+  The extra specifications can have a scope at the beginning of the key string
+  of a key/value pair. The scope format is "scope:key" and can be nested,
+  i.e. key_string := scope:key_string. Example like "capabilities:cpu_info:
+  features" is valid scope format. A key string without any ':' is non-scope
+  format. Each filter defines it's valid scope, and not all filters accept
+  non-scope format.
 
   The extra specifications can have an operator at the beginning of the value
   string of a key/value pair. If there is no operator specified, then a
@@ -63,7 +69,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   satisfies any extra specifications associated with the instance type (that
   have no scope).  It passes hosts that can create the specified instance type.
   The extra specifications can have the same operators as
-  |ComputeCapabilityFilter|.
+  |ComputeCapabilitiesFilter|.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
@@ -128,11 +134,14 @@ hypervisor_type=qemu`
 Only hosts that satisfy these requirements will pass the
 |ImagePropertiesFilter|.
 
-|ComputeCapabilitesFilter| checks if the host satisfies any 'extra specs'
-specified on the instance type.  The 'extra specs' can contain key/value pairs,
-and the |ComputeCapabilitiesFilter| will only pass hosts whose capabilities
-satisfy the requested specifications.  All hosts are passed if no 'extra specs'
-are specified.
+|ComputeCapabilitiesFilter| checks if the host satisfies any 'extra specs'
+specified on the instance type.  The 'extra specs' can contain key/value pairs.
+The key for the filter is either non-scope format (i.e. no ':' contained), or
+scope format in capabilities scope (i.e. 'capabilities:xxx:yyy'). One example
+of capabilities scope is "capabilities:cpu_info:features", which will match
+host's cpu features capabilities. The |ComputeCapabilitiesFilter| will only
+pass hosts whose capabilities satisfy the requested specifications.  All hosts
+are passed if no 'extra specs' are specified.
 
 |ComputeFilter| is quite simple and passes any host whose compute service is
 enabled and operational.
@@ -179,9 +188,9 @@ The |RetryFilter| filters hosts that have already been attempted for scheduling.
 It only passes hosts that have not been previously attempted.
 
 The |TrustedFilter| filters hosts based on their trust.  Only passes hosts
-that match the trust requested in the `extra_specs' for the flavor.  The key
-for this filter is `trust:trusted_host', where `trust' is the scope of the
-key and `trusted_host' is the actual key value'.
+that match the trust requested in the `extra_specs' for the flavor. The key
+for this filter must be scope format as `trust:trusted_host', where `trust'
+is the scope of the key and `trusted_host' is the actual key value.
 The value of this pair (`trusted'/`untrusted') must match the
 integrity of a host (obtained from the Attestation service) before it is
 passed by the |TrustedFilter|.
@@ -198,11 +207,11 @@ The default values for these settings in nova.conf are:
 ::
 
     --scheduler_available_filters=nova.scheduler.filters.standard_filters
-    --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilityFilter,ImagePropertiesFilter
+    --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter
 
 With this configuration, all filters in `nova.scheduler.filters`
 would be available, and by default the |RamFilter|, |ComputeFilter|,
-|AvailabilityZoneFilter|, |ComputeCapabilityFilter|, and
+|AvailabilityZoneFilter|, |ComputeCapabilitiesFilter|, and
 |ImagePropertiesFilter| would be used.
 
 If you want to create **your own filter** you just need to inherit from
