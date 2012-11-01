@@ -94,15 +94,8 @@ class HostState(object):
     def __init__(self, host, topic, capabilities=None, service=None):
         self.host = host
         self.topic = topic
+        self.update_capabilities(topic, capabilities, service)
 
-        # Read-only capability dicts
-
-        if capabilities is None:
-            capabilities = {}
-        self.capabilities = ReadOnlyDict(capabilities.get(topic, None))
-        if service is None:
-            service = {}
-        self.service = ReadOnlyDict(service)
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
         self.total_usable_disk_gb = 0
@@ -115,8 +108,22 @@ class HostState(object):
         # Resource oversubscription values for the compute host:
         self.limits = {}
 
+        self.updated = None
+
+    def update_capabilities(self, topic, capabilities=None, service=None):
+        # Read-only capability dicts
+
+        if capabilities is None:
+            capabilities = {}
+        self.capabilities = ReadOnlyDict(capabilities.get(topic, None))
+        if service is None:
+            service = {}
+        self.service = ReadOnlyDict(service)
+
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
+        if self.updated and self.updated > compute['updated_at']:
+            return
         all_ram_mb = compute['memory_mb']
 
         # Assume virtual size is all consumed by instances if use qcow2 disk.
@@ -133,6 +140,7 @@ class HostState(object):
         self.free_disk_mb = free_disk_mb
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
+        self.updated = compute['updated_at']
 
     def consume_from_instance(self, instance):
         """Incrementally update host state from an instance"""
@@ -142,6 +150,7 @@ class HostState(object):
         self.free_ram_mb -= ram_mb
         self.free_disk_mb -= disk_mb
         self.vcpus_used += vcpus
+        self.updated = timeutils.utcnow()
 
     def passes_filters(self, filter_fns, filter_properties):
         """Return whether or not this host passes filters."""
@@ -182,6 +191,7 @@ class HostManager(object):
 
     def __init__(self):
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
+        self.host_state_map = {}
         self.filter_classes = filters.get_filter_classes(
                 FLAGS.scheduler_available_filters)
 
@@ -253,8 +263,6 @@ class HostManager(object):
             raise NotImplementedError(_(
                 "host_manager only implemented for 'compute'"))
 
-        host_state_map = {}
-
         # Get resource usage across the available compute nodes:
         compute_nodes = db.compute_node_get_all(context)
         for compute in compute_nodes:
@@ -264,10 +272,15 @@ class HostManager(object):
                 continue
             host = service['host']
             capabilities = self.service_states.get(host, None)
-            host_state = self.host_state_cls(host, topic,
-                    capabilities=capabilities,
-                    service=dict(service.iteritems()))
+            host_state = self.host_state_map.get(host)
+            if host_state:
+                host_state.update_capabilities(topic, capabilities,
+                                               dict(service.iteritems()))
+            else:
+                host_state = self.host_state_cls(host, topic,
+                        capabilities=capabilities,
+                        service=dict(service.iteritems()))
+                self.host_state_map[host] = host_state
             host_state.update_from_compute_node(compute)
-            host_state_map[host] = host_state
 
-        return host_state_map
+        return self.host_state_map

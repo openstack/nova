@@ -225,7 +225,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0, vcpus=1, disk_available_least=1000,
                 free_disk_mb=1000, free_ram_mb=872, vcpus_used=0,
-                local_gb_used=0))
+                local_gb_used=0, updated_at=None))
         self.assertEquals(872, fn(hostinfo, {}))
 
     def test_max_attempts(self):
