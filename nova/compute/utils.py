@@ -39,8 +39,13 @@ def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
     code = 500
+    message = fault.__class__.__name__
+
     if hasattr(fault, "kwargs"):
         code = fault.kwargs.get('code', 500)
+        # get the message from the exception that was thrown
+        # if that does not exist, use the name of the exception class itself
+        message = fault.kwargs.get('value', message)
 
     details = unicode(fault)
     if exc_info and code == 500:
@@ -50,7 +55,7 @@ def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
     values = {
         'instance_uuid': instance_uuid,
         'code': code,
-        'message': fault.__class__.__name__,
+        'message': unicode(message),
         'details': unicode(details),
     }
     db.instance_fault_create(context, values)
