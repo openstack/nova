@@ -522,7 +522,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = None
             try:
                 limits = filter_properties.get('limits', {})
-                with self.resource_tracker.resource_claim(context, instance,
+                with self.resource_tracker.instance_claim(context, instance,
                         limits):
 
                     network_info = self._allocate_network(context, instance,
