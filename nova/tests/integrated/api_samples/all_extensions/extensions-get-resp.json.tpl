@@ -209,6 +209,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-floating-ips-bulk",
+            "description": "%(text)s",
+            "links": [],
+            "name": "FloatingIpsBulk",
+            "namespace": "http://docs.openstack.org/compute/ext/floating_ips_bulk/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-hosts",
             "description": "%(text)s",
             "links": [],

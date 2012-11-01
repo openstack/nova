@@ -178,6 +178,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "FloatingIps",
             "FloatingIpDns",
             "FloatingIpPools",
+            "FloatingIpsBulk",
             "Fox In Socks",
             "Hosts",
             "Keypairs",

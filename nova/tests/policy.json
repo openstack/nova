@@ -105,6 +105,7 @@
     "compute_extension:floating_ip_dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:floating_ips": "",
+    "compute_extension:floating_ips_bulk": "",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "is_admin:True",
     "compute_extension:hosts": "",
