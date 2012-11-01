@@ -518,8 +518,9 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def terminate_instance(self, ctxt, instance, bdms):
         instance_p = jsonutils.to_primitive(instance)
+        bdms_p = jsonutils.to_primitive(bdms)
         self.cast(ctxt, self.make_msg('terminate_instance',
-                instance=instance_p, bdms=bdms),
+                instance=instance_p, bdms=bdms_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='2.4')
 

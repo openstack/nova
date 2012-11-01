@@ -1825,18 +1825,29 @@ class CloudTestCase(test.TestCase):
             class BDM(object):
                 def __init__(self):
                     self.no_device = None
-                    self.values = dict(snapshot_id=snapshots[0],
+                    self.values = dict(id=1,
+                                       snapshot_id=snapshots[0],
                                        volume_id=volumes[0],
                                        virtual_name=None,
                                        volume_size=1,
                                        device_name='sda1',
-                                       delete_on_termination=False)
+                                       delete_on_termination=False,
+                                       connection_info='{"foo":"bar"}')
 
                 def __getattr__(self, name):
-                    return self.values.get(name)
+                    """Properly delegate dotted lookups"""
+                    if name in self.__dict__['values']:
+                        return self.values.get(name)
+                    try:
+                        return self.__dict__[name]
+                    except KeyError:
+                        raise AttributeError
 
                 def __getitem__(self, key):
                     return self.values.get(key)
+
+                def iteritems(self):
+                    return self.values.iteritems()
 
             return [BDM()]
 
@@ -1913,10 +1924,19 @@ class CloudTestCase(test.TestCase):
                                        delete_on_termination=False)
 
                 def __getattr__(self, name):
-                    return self.values.get(name)
+                    """Properly delegate dotted lookups"""
+                    if name in self.__dict__['values']:
+                        return self.values.get(name)
+                    try:
+                        return self.__dict__[name]
+                    except KeyError:
+                        raise AttributeError
 
                 def __getitem__(self, key):
                     return self.values.get(key)
+
+                def iteritems(self):
+                    return self.values.iteritems()
 
             return [BDM()]
 
