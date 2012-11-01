@@ -1942,6 +1942,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                 device)
             # NOTE(vish): create bdm here to avoid race condition
             values = {'instance_uuid': instance['uuid'],
+                      'volume_id': 'reserved',
                       'device_name': result}
             self.db.block_device_mapping_create(context, values)
             return result
