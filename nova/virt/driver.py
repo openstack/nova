@@ -341,6 +341,14 @@ class ComputeDriver(object):
         """Power on the specified instance"""
         raise NotImplementedError()
 
+    def soft_delete(self, instance):
+        """Soft delete the specified instance."""
+        raise NotImplementedError()
+
+    def restore(self, instance):
+        """Restore the specified instance"""
+        raise NotImplementedError()
+
     def get_available_resource(self):
         """Retrieve resource information.
 

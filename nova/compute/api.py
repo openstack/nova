@@ -837,11 +837,11 @@ class API(base.Base):
         # no daemon to reclaim, so delete it immediately.
         if instance['host']:
             instance = self.update(context, instance,
-                                   task_state=task_states.POWERING_OFF,
+                                   task_state=task_states.SOFT_DELETING,
                                    expected_task_state=None,
                                    deleted_at=timeutils.utcnow())
 
-            self.compute_rpcapi.power_off_instance(context, instance)
+            self.compute_rpcapi.soft_delete_instance(context, instance)
         else:
             LOG.warning(_('No host for instance, deleting immediately'),
                         instance=instance)
@@ -1001,10 +1001,10 @@ class API(base.Base):
         """Restore a previously deleted (but not reclaimed) instance."""
         if instance['host']:
             instance = self.update(context, instance,
-                        task_state=task_states.POWERING_ON,
+                        task_state=task_states.RESTORING,
                         expected_task_state=None,
                         deleted_at=None)
-            self.compute_rpcapi.power_on_instance(context, instance)
+            self.compute_rpcapi.restore_instance(context, instance)
         else:
             self.update(context,
                         instance,
@@ -1030,7 +1030,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to stop instance"), instance=instance)
 
         instance = self.update(context, instance,
-                    task_state=task_states.STOPPING,
+                    task_state=task_states.POWERING_OFF,
                     expected_task_state=None,
                     progress=0)
 
@@ -1044,7 +1044,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to start instance"), instance=instance)
 
         instance = self.update(context, instance,
-                               task_state=task_states.STARTING,
+                               task_state=task_states.POWERING_ON,
                                expected_task_state=None)
 
         # TODO(yamahata): injected_files isn't supported right now.

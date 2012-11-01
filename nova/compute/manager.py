@@ -224,7 +224,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.10'
+    RPC_API_VERSION = '2.11'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -987,48 +987,34 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         do_terminate_instance(instance, bdms)
 
+    # NOTE(johannes): This is probably better named power_off_instance
+    # so it matches the driver method, but because of other issues, we
+    # can't use that name in grizzly.
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
     def stop_instance(self, context, instance):
-        """Stopping an instance on this host.
-
-        Alias for power_off_instance for compatibility"""
-        self.power_off_instance(context, instance=instance,
-                                final_state=vm_states.STOPPED)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @reverts_task_state
-    @wrap_instance_fault
-    def start_instance(self, context, instance):
-        """Starting an instance on this host.
-
-        Alias for power_on_instance for compatibility"""
-        self.power_on_instance(context, instance=instance)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @reverts_task_state
-    @wrap_instance_fault
-    def power_off_instance(self, context, instance,
-                           final_state=vm_states.SOFT_DELETED):
-        """Power off an instance on this host."""
+        """Stopping an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_off.start")
         self.driver.power_off(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance['uuid'],
                               power_state=current_power_state,
-                              vm_state=final_state,
+                              vm_state=vm_states.STOPPED,
                               expected_task_state=(task_states.POWERING_OFF,
                                                    task_states.STOPPING),
                               task_state=None)
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
+    # NOTE(johannes): This is probably better named power_on_instance
+    # so it matches the driver method, but because of other issues, we
+    # can't use that name in grizzly.
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def power_on_instance(self, context, instance):
-        """Power on an instance on this host."""
+    def start_instance(self, context, instance):
+        """Starting an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_on.start")
         self.driver.power_on(instance)
         current_power_state = self._get_power_state(context, instance)
@@ -1040,6 +1026,71 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=(task_states.POWERING_ON,
                                                    task_states.STARTING))
         self._notify_about_instance_usage(context, instance, "power_on.end")
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def soft_delete_instance(self, context, instance):
+        """Soft delete an instance on this host."""
+        self._notify_about_instance_usage(context, instance,
+                                          "soft_delete.start")
+        try:
+            self.driver.soft_delete(instance)
+        except NotImplementedError:
+            # Fallback to just powering off the instance if the hypervisor
+            # doesn't implement the soft_delete method
+            self.driver.power_off(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance['uuid'],
+                              power_state=current_power_state,
+                              vm_state=vm_states.SOFT_DELETED,
+                              expected_task_state=task_states.SOFT_DELETING,
+                              task_state=None)
+        self._notify_about_instance_usage(context, instance, "soft_delete.end")
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def restore_instance(self, context, instance):
+        """Restore a soft-deleted instance on this host."""
+        self._notify_about_instance_usage(context, instance, "restore.start")
+        try:
+            self.driver.restore(instance)
+        except NotImplementedError:
+            # Fallback to just powering on the instance if the hypervisor
+            # doesn't implement the restore method
+            self.driver.power_on(instance)
+        current_power_state = self._get_power_state(context, instance)
+        self._instance_update(context,
+                              instance['uuid'],
+                              power_state=current_power_state,
+                              vm_state=vm_states.ACTIVE,
+                              expected_task_state=task_states.RESTORING,
+                              task_state=None)
+        self._notify_about_instance_usage(context, instance, "restore.end")
+
+    # NOTE(johannes): In the folsom release, power_off_instance was poorly
+    # named. It was the main entry point to soft delete an instance. That
+    # has been changed to soft_delete_instance now, but power_off_instance
+    # will need to stick around for compatibility in grizzly.
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def power_off_instance(self, context, instance):
+        """Power off an instance on this host."""
+        self.soft_delete_instance(context, instance)
+
+    # NOTE(johannes): In the folsom release, power_on_instance was poorly
+    # named. It was the main entry point to restore a soft deleted instance.
+    # That has been changed to restore_instance now, but power_on_instance
+    # will need to stick around for compatibility in grizzly.
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
+    @wrap_instance_fault
+    def power_on_instance(self, context, instance):
+        """Power on an instance on this host."""
+        self.restore_instance(context, instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state

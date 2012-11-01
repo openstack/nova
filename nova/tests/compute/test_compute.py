@@ -754,7 +754,7 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.STOPPING})
+                           {"task_state": task_states.POWERING_OFF})
         self.compute.stop_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -763,10 +763,10 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.STOPPING})
+                           {"task_state": task_states.POWERING_OFF})
         self.compute.stop_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.STARTING})
+                           {"task_state": task_states.POWERING_ON})
         self.compute.start_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -818,7 +818,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_ON})
-        self.compute.power_on_instance(self.context, instance=instance)
+        self.compute.start_instance(self.context, instance=instance)
         self.assertTrue(called['power_on'])
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -837,7 +837,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_OFF})
-        self.compute.power_off_instance(self.context, instance=instance)
+        self.compute.stop_instance(self.context, instance=instance)
         self.assertTrue(called['power_off'])
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -1590,12 +1590,14 @@ class ComputeTestCase(BaseTestCase):
         """ensure that task_state is reverted after a failed operation"""
         actions = [
             ("reboot_instance", task_states.REBOOTING),
-            ("stop_instance", task_states.STOPPING),
-            ("start_instance", task_states.STARTING),
+            ("stop_instance", task_states.POWERING_OFF),
+            ("start_instance", task_states.POWERING_ON),
             ("terminate_instance", task_states.DELETING,
                                    task_states.DELETING),
             ("power_off_instance", task_states.POWERING_OFF),
             ("power_on_instance", task_states.POWERING_ON),
+            ("soft_delete_instance", task_states.SOFT_DELETING),
+            ("restore_instance", task_states.RESTORING),
             ("rebuild_instance", task_states.REBUILDING, None,
                                  {'orig_image_ref': None,
                                   'image_ref': None,
@@ -2411,7 +2413,7 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(task_states.STOPPING, instances[0]['task_state'])
+        self.assertEqual(task_states.POWERING_OFF, instances[0]['task_state'])
 
     def test_add_instance_fault(self):
         exc_info = None
@@ -3091,7 +3093,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.STOPPING})
+                           {"task_state": task_states.POWERING_OFF})
         self.compute.stop_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -3100,7 +3102,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.start(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.STARTING)
+        self.assertEqual(instance['task_state'], task_states.POWERING_ON)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -3115,7 +3117,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.stop(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.STOPPING)
+        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -3147,7 +3149,7 @@ class ComputeAPITestCase(BaseTestCase):
                     None)
 
         start_check_state(instance['uuid'], power_state.NOSTATE,
-                          vm_states.STOPPED, task_states.STARTING)
+                          vm_states.STOPPED, task_states.POWERING_ON)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -3264,7 +3266,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.soft_delete(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+        self.assertEqual(instance['task_state'], task_states.SOFT_DELETING)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -3291,7 +3293,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.soft_delete(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+        self.assertEqual(instance['task_state'], task_states.SOFT_DELETING)
 
         # set the state that the instance gets when soft_delete finishes
         instance = db.instance_update(self.context, instance['uuid'],
@@ -3382,7 +3384,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.soft_delete(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+        self.assertEqual(instance['task_state'], task_states.SOFT_DELETING)
 
         # set the state that the instance gets when soft_delete finishes
         instance = db.instance_update(self.context, instance['uuid'],
@@ -3392,7 +3394,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.restore(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.POWERING_ON)
+        self.assertEqual(instance['task_state'], task_states.RESTORING)
 
         db.instance_destroy(self.context, instance['uuid'])
 

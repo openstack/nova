@@ -204,6 +204,14 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('power_on_instance', 'cast',
                 instance=self.fake_instance)
 
+    def test_soft_delete_instance(self):
+        self._test_compute_api('soft_delete_instance', 'cast',
+                instance=self.fake_instance)
+
+    def test_restore_instance(self):
+        self._test_compute_api('restore_instance', 'cast',
+                instance=self.fake_instance)
+
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance, block_migration='block_migration',

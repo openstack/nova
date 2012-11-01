@@ -138,6 +138,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.8 - Remove migration_id, add migration to finish_resize
         2.9 - Add publish_service_capabilities()
         2.10 - Adds filter_properties and request_spec to prep_resize()
+        2.11 - Adds soft_delete_instance() and restore_instance()
     '''
 
     #
@@ -538,6 +539,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def publish_service_capabilities(self, ctxt):
         self.fanout_cast(ctxt, self.make_msg('publish_service_capabilities'))
+
+    def soft_delete_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('soft_delete_instance',
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def restore_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('restore_instance',
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance))
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):

@@ -289,15 +289,31 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.power_off(instance_ref)
 
     @catch_notimplementederror
-    def test_test_power_on_running(self):
+    def test_power_on_running(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.power_on(instance_ref)
 
     @catch_notimplementederror
-    def test_test_power_on_powered_off(self):
+    def test_power_on_powered_off(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.power_off(instance_ref)
         self.connection.power_on(instance_ref)
+
+    @catch_notimplementederror
+    def test_soft_delete(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.soft_delete(instance_ref)
+
+    @catch_notimplementederror
+    def test_restore_running(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.restore(instance_ref)
+
+    @catch_notimplementederror
+    def test_restore_soft_deleted(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.soft_delete(instance_ref)
+        self.connection.restore(instance_ref)
 
     @catch_notimplementederror
     def test_pause(self):

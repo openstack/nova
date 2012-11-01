@@ -1137,14 +1137,25 @@ class VMOps(object):
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
 
-    def power_off(self, instance):
-        """Power off the specified instance."""
+    def soft_delete(self, instance):
+        """Soft delete the specified instance."""
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
-            vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
         except exception.NotFound:
-            LOG.warning(_("VM is not present, skipping power off..."),
+            LOG.warning(_("VM is not present, skipping soft delete..."),
                         instance=instance)
+        else:
+            vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+
+    def restore(self, instance):
+        """Restore the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        self._start(instance, vm_ref)
+
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
 
     def power_on(self, instance):
         """Power on the specified instance."""

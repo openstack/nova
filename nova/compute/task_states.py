@@ -68,16 +68,18 @@ SUSPENDING = 'suspending'
 # possible task states during resume()
 RESUMING = 'resuming'
 
+# NOTE(johannes): STOPPING and STARTING need to stick around for the
+# grizzly release for compatibility, but can be removed afterwards.
 # possible task states during stop()
 STOPPING = 'stopping'
 
 # possible task states during start()
 STARTING = 'starting'
 
-# possible task states during soft_delete()
+# possible task states during power_off()
 POWERING_OFF = 'powering-off'
 
-# possible task states during restore()
+# possible task states during power_on()
 POWERING_ON = 'powering-on'
 
 # possible task states during rescue()
@@ -96,3 +98,9 @@ MIGRATING = "migrating"
 
 # possible task states during delete()
 DELETING = 'deleting'
+
+# possible task states during soft_delete()
+SOFT_DELETING = 'soft-deleting'
+
+# possible task states during restore()
+RESTORING = 'restoring'

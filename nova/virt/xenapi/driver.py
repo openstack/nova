@@ -282,6 +282,14 @@ class XenAPIDriver(driver.ComputeDriver):
         """Power on the specified instance"""
         self._vmops.power_on(instance)
 
+    def soft_delete(self, instance):
+        """Soft delete the specified instance"""
+        self._vmops.soft_delete(instance)
+
+    def restore(self, instance):
+        """Restore the specified instance"""
+        self._vmops.restore(instance)
+
     def poll_rebooting_instances(self, timeout):
         """Poll for rebooting instances"""
         self._vmops.poll_rebooting_instances(timeout)

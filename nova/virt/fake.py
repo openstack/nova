@@ -144,6 +144,12 @@ class FakeDriver(driver.ComputeDriver):
     def power_on(self, instance):
         pass
 
+    def soft_delete(self, instance):
+        pass
+
+    def restore(self, instance):
+        pass
+
     def pause(self, instance):
         pass
 
