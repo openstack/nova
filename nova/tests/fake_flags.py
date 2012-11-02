@@ -20,7 +20,7 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
-flags.DECLARE('compute_scheduler_driver', 'nova.scheduler.multi')
+flags.DECLARE('scheduler_driver', 'nova.scheduler.manager')
 flags.DECLARE('fake_network', 'nova.network.manager')
 flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
 flags.DECLARE('network_size', 'nova.network.manager')

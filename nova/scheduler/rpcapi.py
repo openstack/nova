@@ -46,6 +46,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.0 - Remove 1.x backwards compat
         2.1 - Add image_id to create_volume()
         2.2 - Remove reservations argument to create_volume()
+        2.3 - Remove create_volume()
     '''
 
     #
@@ -94,13 +95,6 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit, instance=instance_p,
                 dest=dest))
-
-    def create_volume(self, ctxt, volume_id, snapshot_id, image_id):
-        self.cast(ctxt,
-                  self.make_msg('create_volume',
-                                volume_id=volume_id, snapshot_id=snapshot_id,
-                                image_id=image_id),
-                  version='2.2')
 
     def update_service_capabilities(self, ctxt, service_name, host,
             capabilities):

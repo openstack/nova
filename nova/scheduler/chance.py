@@ -92,11 +92,3 @@ class ChanceScheduler(driver.Scheduler):
                               filter_properties)
         self.compute_rpcapi.prep_resize(context, image, instance,
                 instance_type, host, reservations)
-
-    def schedule_create_volume(self, context, volume_id, snapshot_id,
-                               image_id):
-        """Picks a host that is up at random."""
-        host = self._schedule(context, FLAGS.volume_topic, None, {})
-        driver.cast_to_host(context, FLAGS.volume_topic, host, 'create_volume',
-                            volume_id=volume_id, snapshot_id=snapshot_id,
-                            image_id=image_id)

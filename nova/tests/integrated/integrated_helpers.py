@@ -69,7 +69,7 @@ class _IntegratedTestBase(test.TestCase):
 
         self.stub_module('crypto', fake_crypto)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
-        self.flags(compute_scheduler_driver='nova.scheduler.'
+        self.flags(scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
 
         # set up services
