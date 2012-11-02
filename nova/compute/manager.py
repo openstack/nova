@@ -220,6 +220,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                                                                  instance_uuid,
                                                                  updates)
 
+    def instance_get_by_uuid(self, context, instance_uuid):
+        return self._compute.db.instance_get_by_uuid(context, instance_uuid)
+
+    def instance_get_all_by_host(self, context, host):
+        return self._compute.db.instance_get_all_by_host(context, host)
+
 
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""

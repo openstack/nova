@@ -38,8 +38,9 @@ class Host(object):
     """
     Implements host related operations.
     """
-    def __init__(self, session):
+    def __init__(self, session, virtapi):
         self._session = session
+        self._virtapi = virtapi
 
     def host_power_action(self, _host, action):
         """Reboots or shuts down the host."""
@@ -65,7 +66,7 @@ class Host(object):
                     uuid = vm_rec['other_config'].get('nova_uuid')
                     if not uuid:
                         name = vm_rec['name_label']
-                        uuid = _uuid_find(ctxt, host, name)
+                        uuid = _uuid_find(self._virtapi, ctxt, host, name)
                         if not uuid:
                             msg = _('Instance %(name)s running on %(host)s'
                                     ' could not be found in the database:'
@@ -73,11 +74,11 @@ class Host(object):
                                     ' ping migration to a new host')
                             LOG.info(msg % locals())
                             continue
-                    instance = db.instance_get_by_uuid(ctxt, uuid)
+                    instance = self._virtapi.instance_get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
                     dest = _host_find(ctxt, self._session, host, host_ref)
-                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                    (old_ref, new_ref) = self._virtapi.instance_update(
                                     ctxt,
                                     instance['uuid'],
                                     {'host': dest,
@@ -88,7 +89,7 @@ class Host(object):
                                               vm_ref, host_ref, {})
                     migrations_counter = migrations_counter + 1
 
-                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                    (old_ref, new_ref) = self._virtapi.instance_update(
                                 ctxt,
                                 instance['uuid'],
                                 {'vm_state': vm_states.ACTIVE})
@@ -98,7 +99,7 @@ class Host(object):
                 except self._session.XenAPI.Failure:
                     LOG.exception('Unable to migrate VM %(vm_ref)s'
                                   'from %(host)s' % locals())
-                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                    (old_ref, new_ref) = self._virtapi.instance_update(
                                 ctxt,
                                 instance['uuid'],
                                 {'host': host,
@@ -212,9 +213,9 @@ def call_xenhost(session, method, arg_dict):
         return e.details[1]
 
 
-def _uuid_find(context, host, name_label):
+def _uuid_find(virtapi, context, host, name_label):
     """Return instance uuid by name_label."""
-    for i in db.instance_get_all_by_host(context, host):
+    for i in virtapi.instance_get_all_by_host(context, host):
         if i.name == name_label:
             return i['uuid']
     return None

@@ -28,3 +28,17 @@ class VirtAPI(object):
         Returns: orig_instance, new_instance
         """
         raise NotImplementedError()
+
+    def instance_get_by_uuid(self, context, instance_uuid):
+        """Look up an instance by uuid
+        :param context: security context
+        :param instance_uuid: uuid of the instance to be fetched
+        """
+        raise NotImplementedError()
+
+    def instance_get_all_by_host(self, context, host):
+        """Find all instances on a given host
+        :param context: security context
+        :param host: host running instances to be returned
+        """
+        raise NotImplementedError()
