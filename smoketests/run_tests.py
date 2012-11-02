@@ -138,12 +138,12 @@ class _Win32Colorizer(object):
         from win32console import FOREGROUND_INTENSITY
         from win32console import FOREGROUND_RED
         from win32console import GetStdHandle
-        from win32console import STD_OUT_HANDLE
+        from win32console import STD_OUTPUT_HANDLE
 
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream
-        self.screenBuffer = GetStdHandle(STD_OUT_HANDLE)
+        self.screenBuffer = GetStdHandle(STD_OUTPUT_HANDLE)
         self._colors = {
             'normal': red | green | blue,
             'red': red | bold,
@@ -159,7 +159,7 @@ class _Win32Colorizer(object):
         try:
             import win32console
             screenBuffer = win32console.GetStdHandle(
-                win32console.STD_OUT_HANDLE)
+                win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
         import pywintypes
