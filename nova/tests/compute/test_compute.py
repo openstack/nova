@@ -3007,7 +3007,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         def dummy(*args, **kwargs):
             self.network_api_called = True
-            pass
+
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        dummy)
 
@@ -3023,10 +3023,13 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['task_state'], None)
         self.assertTrue(self.network_api_called)
 
-        #local delete, so db should be clean
-        self.assertRaises(exception.InstanceNotFound, db.instance_destroy,
-                self.context,
-                instance['uuid'])
+        # fetch the instance state from db and verify deletion.
+        deleted_context = context.RequestContext('fake', 'fake',
+                                                 read_deleted='yes')
+        instance = db.instance_get_by_uuid(deleted_context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.DELETED)
+        self.assertEqual(instance['task_state'], None)
+        self.assertTrue(instance['deleted'])
 
     def test_repeated_delete_quota(self):
         in_use = {'instances': 1}
