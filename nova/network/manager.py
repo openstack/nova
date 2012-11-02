@@ -589,7 +589,7 @@ class FloatingIP(object):
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip['instance_uuid'])
             service = self.db.service_get_by_host_and_topic(
-                    context, instance['host'], 'network')
+                    context.elevated(), instance['host'], 'network')
             if service and utils.service_is_up(service):
                 host = instance['host']
             else:
