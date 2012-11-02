@@ -29,6 +29,9 @@ COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 class NopClaim(object):
     """For use with compute drivers that do not support resource tracking"""
 
+    def __init__(self, migration=None):
+        self.migration = migration
+
     @property
     def disk_gb(self):
         return 0
@@ -184,3 +187,35 @@ class Claim(NopClaim):
             LOG.info(msg, instance=self.instance)
 
         return can_claim
+
+
+class ResizeClaim(Claim):
+    """Claim used for holding resources for an incoming resize/migration
+    operation.
+    """
+    def __init__(self, instance, instance_type, tracker):
+        super(ResizeClaim, self).__init__(instance, tracker)
+        self.instance_type = instance_type
+        self.migration = None
+
+    @property
+    def disk_gb(self):
+        return (self.instance_type['root_gb'] +
+                self.instance_type['ephemeral_gb'])
+
+    @property
+    def memory_mb(self):
+        return self.instance_type['memory_mb']
+
+    @property
+    def vcpus(self):
+        return self.instance_type['vcpus']
+
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
+    def abort(self):
+        """Compute operation requiring claimed resources has failed or
+        been aborted.
+        """
+        LOG.debug(_("Aborting claim: %s") % self, instance=self.instance)
+        self.tracker.abort_resize_claim(self.instance['uuid'],
+                self.instance_type)

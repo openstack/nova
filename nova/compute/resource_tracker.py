@@ -20,6 +20,8 @@ model.
 """
 
 from nova.compute import claims
+from nova.compute import instance_types
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import config
 from nova import context
@@ -29,6 +31,7 @@ from nova import flags
 from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -62,6 +65,7 @@ class ResourceTracker(object):
         self.compute_node = None
         self.stats = importutils.import_object(CONF.compute_stats_class)
         self.tracked_instances = {}
+        self.tracked_migrations = {}
 
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def instance_claim(self, context, instance_ref, limits=None):
@@ -110,10 +114,69 @@ class ResourceTracker(object):
         else:
             raise exception.ComputeResourcesUnavailable()
 
+    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
+    def resize_claim(self, context, instance_ref, instance_type, limits=None):
+        """Indicate that resources are needed for a resize operation to this
+        compute host.
+        :param context: security context
+        :param instance_ref: instance to reserve resources for
+        :param instance_type: new instance_type being resized to
+        :param limits: Dict of oversubscription limits for memory, disk,
+                       and CPUs.
+        :returns: A Claim ticket representing the reserved resources.  This
+                  should be turned into finalize  a resource claim or free
+                  resources after the compute operation is finished.
+        """
+        if self.disabled:
+            # compute_driver doesn't support resource tracking, just
+            # generate the migration record and continue the resize:
+            migration_ref = self._create_migration(context, instance_ref,
+                    instance_type)
+            return claims.NopClaim(migration=migration_ref)
+
+        claim = claims.ResizeClaim(instance_ref, instance_type, self)
+
+        if claim.test(self.compute_node, limits):
+
+            migration_ref = self._create_migration(context, instance_ref,
+                    instance_type)
+            claim.migration = migration_ref
+
+            # Mark the resources in-use for the resize landing on this
+            # compute host:
+            self._update_usage_from_migration(self.compute_node, migration_ref)
+            self._update(context, self.compute_node)
+
+            return claim
+
+        else:
+            raise exception.ComputeResourcesUnavailable()
+
+    def _create_migration(self, context, instance, instance_type):
+        """Create a migration record for the upcoming resize.  This should
+        be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
+        claim will not be lost if the audit process starts.
+        """
+        # TODO(russellb): no-db-compute: Send the old instance type
+        # info that is needed via rpc so db access isn't required
+        # here.
+        old_instance_type_id = instance['instance_type_id']
+        old_instance_type = instance_types.get_instance_type(
+                old_instance_type_id)
+
+        return db.migration_create(context.elevated(),
+                {'instance_uuid': instance['uuid'],
+                 'source_compute': instance['host'],
+                 'dest_compute': self.host,
+                 'dest_host': self.driver.get_host_ip_addr(),
+                 'old_instance_type_id': old_instance_type['id'],
+                 'new_instance_type_id': instance_type['id'],
+                 'status': 'pre-migrating'})
+
     def _set_instance_host(self, context, instance_uuid):
         """Tag the instance as belonging to this host.  This should be done
-        while the COMPUTE_RESOURCES_SEMPAHORE is being held so the resource
-        claim will not be lost if the audit process starts.
+        while the COMPUTE_RESOURCES_SEMPAHORE is held so the resource claim
+        will not be lost if the audit process starts.
         """
         values = {'host': self.host, 'launched_on': self.host}
         (old_ref, instance_ref) = db.instance_update_and_get_original(context,
@@ -131,6 +194,18 @@ class ResourceTracker(object):
         ctxt = context.get_admin_context()
         self._update(ctxt, self.compute_node)
 
+    def abort_resize_claim(self, instance_uuid, instance_type):
+        """Remove usage for an incoming migration"""
+        if instance_uuid in self.tracked_migrations:
+            migration, itype = self.tracked_migrations.pop(instance_uuid)
+
+            if instance_type['id'] == migration['new_instance_type_id']:
+                self.stats.update_stats_for_migration(itype, sign=-1)
+                self._update_usage(self.compute_node, itype, sign=-1)
+
+                ctxt = context.get_admin_context()
+                self._update(ctxt, self.compute_node)
+
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def update_usage(self, context, instance):
         """Update the resource usage and stats after a change in an
@@ -139,9 +214,10 @@ class ResourceTracker(object):
         if self.disabled:
             return
 
+        uuid = instance['uuid']
+
         # don't update usage for this instance unless it submitted a resource
         # claim first:
-        uuid = instance['uuid']
         if uuid in self.tracked_instances:
             self._update_usage_from_instance(self.compute_node, instance)
             self._update(context.elevated(), self.compute_node)
@@ -159,6 +235,7 @@ class ResourceTracker(object):
         declared a need for resources, but not necessarily retrieved them from
         the hypervisor layer yet.
         """
+        LOG.audit(_("Auditing locally available compute resources"))
         resources = self.driver.get_available_resource(self.nodename)
         if not resources:
             # The virt driver does not support this function
@@ -177,6 +254,12 @@ class ResourceTracker(object):
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(resources, instances)
+
+        # Grab all in-progress migrations:
+        migrations = db.migration_get_in_progress_by_host(context, self.host)
+
+        self._update_usage_from_migrations(resources, migrations)
+
         self._report_final_resource_view(resources)
 
         self._sync_compute_node(context, resources)
@@ -260,6 +343,104 @@ class ResourceTracker(object):
                 self.compute_node['id'], values, prune_stats)
         self.compute_node = dict(compute_node)
 
+    def confirm_resize(self, context, migration, status='confirmed'):
+        """Cleanup usage for a confirmed resize"""
+        elevated = context.elevated()
+        db.migration_update(elevated, migration['id'],
+                            {'status': status})
+        self.update_available_resource(elevated)
+
+    def revert_resize(self, context, migration, status='reverted'):
+        """Cleanup usage for a reverted resize"""
+        self.confirm_resize(context, migration, status)
+
+    def _update_usage(self, resources, usage, sign=1):
+        resources['memory_mb_used'] += sign * usage['memory_mb']
+        resources['local_gb_used'] += sign * usage['root_gb']
+        resources['local_gb_used'] += sign * usage['ephemeral_gb']
+
+        # free ram and disk may be negative, depending on policy:
+        resources['free_ram_mb'] = (resources['memory_mb'] -
+                                    resources['memory_mb_used'])
+        resources['free_disk_gb'] = (resources['local_gb'] -
+                                     resources['local_gb_used'])
+
+        resources['running_vms'] = self.stats.num_instances
+        resources['vcpus_used'] = self.stats.num_vcpus_used
+
+    def _update_usage_from_migration(self, resources, migration):
+        """Update usage for a single migration.  The record may
+        represent an incoming or outbound migration.
+        """
+        uuid = migration['instance_uuid']
+        LOG.audit("Updating from migration %s" % uuid)
+
+        incoming = (migration['dest_compute'] == self.host)
+        outbound = (migration['source_compute'] == self.host)
+        same_host = (incoming and outbound)
+
+        instance = self.tracked_instances.get(uuid, None)
+        itype = None
+
+        if same_host:
+            # same host resize. record usage for whichever instance type the
+            # instance is *not* in:
+            if (instance['instance_type_id'] ==
+                migration['old_instance_type_id']):
+
+                itype = migration['new_instance_type_id']
+            else:
+                # instance record already has new flavor, hold space for a
+                # possible revert to the old instance type:
+                itype = migration['old_instance_type_id']
+
+        elif incoming and not instance:
+            # instance has not yet migrated here:
+            itype = migration['new_instance_type_id']
+
+        elif outbound and not instance:
+            # instance migrated, but record usage for a possible revert:
+            itype = migration['old_instance_type_id']
+
+        if itype:
+            instance_type = instance_types.get_instance_type(itype)
+            self.stats.update_stats_for_migration(instance_type)
+            self._update_usage(resources, instance_type)
+            resources['stats'] = self.stats
+            self.tracked_migrations[uuid] = (migration, instance_type)
+
+    def _update_usage_from_migrations(self, resources, migrations):
+
+        self.tracked_migrations.clear()
+
+        filtered = {}
+
+        # do some defensive filtering against bad migrations records in the
+        # database:
+        for migration in migrations:
+
+            instance = migration['instance']
+
+            if not instance:
+                # migration referencing deleted instance
+                continue
+
+            uuid = instance['uuid']
+
+            # skip migration if instance isn't in a resize state:
+            if not self._instance_in_resize_state(instance):
+                LOG.warn(_("Instance not resizing, skipping migration."),
+                         instance_uuid=uuid)
+                continue
+
+            # filter to most recently updated migration for each instance:
+            m = filtered.get(uuid, None)
+            if not m or migration['updated_at'] >= m['updated_at']:
+                filtered[uuid] = migration
+
+        for migration in filtered.values():
+            self._update_usage_from_migration(resources, migration)
+
     def _update_usage_from_instance(self, resources, instance):
         """Update usage for a single instance."""
 
@@ -268,7 +449,7 @@ class ResourceTracker(object):
         is_deleted_instance = instance['vm_state'] == vm_states.DELETED
 
         if is_new_instance:
-            self.tracked_instances[uuid] = 1
+            self.tracked_instances[uuid] = jsonutils.to_primitive(instance)
             sign = 1
 
         if is_deleted_instance:
@@ -280,18 +461,7 @@ class ResourceTracker(object):
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
             # new instance, update compute node resource usage:
-            resources['memory_mb_used'] += sign * instance['memory_mb']
-            resources['local_gb_used'] += sign * instance['root_gb']
-            resources['local_gb_used'] += sign * instance['ephemeral_gb']
-
-            # free ram and disk may be negative, depending on policy:
-            resources['free_ram_mb'] = (resources['memory_mb'] -
-                                        resources['memory_mb_used'])
-            resources['free_disk_gb'] = (resources['local_gb'] -
-                                         resources['local_gb_used'])
-
-            resources['running_vms'] = self.stats.num_instances
-            resources['vcpus_used'] = self.stats.num_vcpus_used
+            self._update_usage(resources, instance, sign=sign)
 
         resources['current_workload'] = self.stats.calculate_workload()
         resources['stats'] = self.stats
@@ -329,3 +499,17 @@ class ResourceTracker(object):
         if missing_keys:
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
+
+    def _instance_in_resize_state(self, instance):
+        vm = instance['vm_state']
+        task = instance['task_state']
+
+        if vm == vm_states.RESIZED:
+            return True
+
+        if (vm == vm_states.ACTIVE and task in [task_states.RESIZE_PREP,
+                task_states.RESIZE_MIGRATING, task_states.RESIZE_MIGRATED,
+                task_states.RESIZE_FINISH]):
+            return True
+
+        return False
