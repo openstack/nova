@@ -457,7 +457,7 @@ class CloudController(object):
             r['groups'] = []
             r['ipRanges'] = []
             if rule.group_id:
-                source_group = db.security_group_get(context, rule.group_id)
+                source_group = rule.grantee_group
                 r['groups'] += [{'groupName': source_group.name,
                                  'userId': source_group.project_id}]
                 if rule.protocol:

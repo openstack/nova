@@ -3423,7 +3423,7 @@ def _security_group_get_query(context, session=None, read_deleted=None,
     query = model_query(context, models.SecurityGroup, session=session,
             read_deleted=read_deleted, project_only=project_only)
     if join_rules:
-        query = query.options(joinedload_all('rules'))
+        query = query.options(joinedload_all('rules.grantee_group'))
     return query
 
 
@@ -3480,7 +3480,7 @@ def security_group_get_by_name(context, project_id, group_name,
             filter_by(name=group_name)
 
     if columns_to_join is None:
-        columns_to_join = ['instances', 'rules']
+        columns_to_join = ['instances', 'rules.grantee_group']
 
     for column in columns_to_join:
         query = query.options(joinedload_all(column))
