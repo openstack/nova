@@ -1488,6 +1488,11 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 5})
 
+        # NOTE(danms): because we're stubbing out the instance_types from
+        # the database, our instance['instance_type'] doesn't get properly
+        # filled out here, so put what we need into it
+        instance['instance_type']['swap'] = 1024
+
         def fake_generate_swap(*args, **kwargs):
             self.called = True
         self.stubs.Set(vm_utils, 'generate_swap', fake_generate_swap)
@@ -1499,6 +1504,11 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         instance = db.instance_create(self.context, self.instance_values)
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 4})
+
+        # NOTE(danms): because we're stubbing out the instance_types from
+        # the database, our instance['instance_type'] doesn't get properly
+        # filled out here, so put what we need into it
+        instance['instance_type']['ephemeral_gb'] = 160
 
         def fake_generate_ephemeral(*args):
             self.called = True

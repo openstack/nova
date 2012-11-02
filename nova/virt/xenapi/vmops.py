@@ -466,7 +466,7 @@ class VMOps(object):
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type):
         ctx = nova_context.get_admin_context()
-        instance_type = db.instance_type_get(ctx, instance['instance_type_id'])
+        instance_type = instance['instance_type']
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
@@ -475,7 +475,7 @@ class VMOps(object):
 
             cd_vdi = vdis.pop('root')
             root_vdi = vm_utils.fetch_blank_disk(self._session,
-                                                 instance['instance_type_id'])
+                                                 instance_type['id'])
             vdis['root'] = root_vdi
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
@@ -570,8 +570,7 @@ class VMOps(object):
         agent.resetnetwork()
 
         # Set VCPU weight
-        inst_type = db.instance_type_get(ctx, instance['instance_type_id'])
-        vcpu_weight = inst_type['vcpu_weight']
+        vcpu_weight = instance['instance_type']['vcpu_weight']
         if vcpu_weight is not None:
             LOG.debug(_("Setting VCPU weight"), instance=instance)
             self._session.call_xenapi('VM.add_to_VCPUs_params', vm_ref,
