@@ -57,7 +57,6 @@ from xml.dom import minidom
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import vm_mode
 from nova import config
@@ -1311,8 +1310,7 @@ class LibvirtDriver(driver.ComputeDriver):
         root_fname = hashlib.sha1(str(disk_images['image_id'])).hexdigest()
         size = instance['root_gb'] * 1024 * 1024 * 1024
 
-        inst_type_id = instance['instance_type_id']
-        inst_type = instance_types.get_instance_type(inst_type_id)
+        inst_type = instance['instance_type']
         if size == 0 or suffix == '.rescue':
             size = None
 
@@ -1678,10 +1676,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'ramdisk_id' if a ramdisk is needed for the rescue image and
             'kernel_id' if a kernel is needed for the rescue image.
         """
-        # FIXME(vish): stick this in db
-        inst_type_id = instance['instance_type_id']
-        inst_type = instance_types.get_instance_type(inst_type_id,
-                                                     inactive=True)
+        inst_type = instance['instance_type']
 
         guest = vconfig.LibvirtConfigGuest()
         guest.virt_type = CONF.libvirt_type
