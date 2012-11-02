@@ -954,7 +954,6 @@ class API(base.Base):
         elevated = context.elevated()
         self.network_api.deallocate_for_instance(elevated,
                 instance)
-        self.db.instance_destroy(context, instance_uuid)
         system_meta = self.db.instance_system_metadata_get(context,
                 instance_uuid)
 
@@ -979,6 +978,7 @@ class API(base.Base):
                                          vm_state=vm_states.DELETED,
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
+        self.db.instance_destroy(context, instance_uuid)
         compute_utils.notify_about_instance_usage(
             context, instance, "delete.end", system_metadata=system_meta)
 
