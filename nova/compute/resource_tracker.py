@@ -474,7 +474,7 @@ class ResourceTracker(object):
             self.tracked_instances[uuid] = 1
             sign = 1
 
-        if instance['vm_state'] == vm_states.DELETED:
+        if is_deleted_instance:
             self.tracked_instances.pop(uuid)
             sign = -1
 
