@@ -37,7 +37,6 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as nova_context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import notifications
@@ -78,11 +77,11 @@ def _late_load_cheetah():
 
 class BareMetalDriver(driver.ComputeDriver):
 
-    def __init__(self, read_only):
+    def __init__(self, virtapi, read_only):
         _late_load_cheetah()
         # Note that baremetal doesn't have a read-only connection
         # mode, so the read_only parameter is ignored
-        super(BareMetalDriver, self).__init__()
+        super(BareMetalDriver, self).__init__(virtapi)
         self.baremetal_nodes = nodes.get_baremetal_nodes()
         self._wrapped_conn = None
         self._host_state = None
@@ -230,7 +229,7 @@ class BareMetalDriver(driver.ComputeDriver):
             try:
                 LOG.debug(_("Key is injected but instance is not running yet"),
                           instance=instance)
-                (old_ref, new_ref) = db.instance_update_and_get_original(
+                (old_ref, new_ref) = self.virtapi.instance_update(
                         context, instance['uuid'],
                         {'vm_state': vm_states.BUILDING})
                 notifications.send_update(context, old_ref, new_ref)
@@ -239,7 +238,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: booted'), instance['name'],
                               instance=instance)
-                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                    (old_ref, new_ref) = self.virtapi.instance_update(
                             context, instance['uuid'],
                             {'vm_state': vm_states.ACTIVE})
                     notifications.send_update(context, old_ref, new_ref)
@@ -254,7 +253,7 @@ class BareMetalDriver(driver.ComputeDriver):
             except Exception:
                 LOG.exception(_("Baremetal assignment is overcommitted."),
                           instance=instance)
-                (old_ref, new_ref) = db.instance_update_and_get_original(
+                (old_ref, new_ref) = self.virtapi.instance_update(
                         context, instance['uuid'],
                         {'vm_state': vm_states.ERROR,
                          'power_state': power_state.FAILED})

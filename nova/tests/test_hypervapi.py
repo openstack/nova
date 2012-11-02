@@ -66,7 +66,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
                         vswitch_name='external')
 
         self._hypervutils = hypervutils.HyperVUtils()
-        self._conn = driver_hyperv.HyperVDriver()
+        self._conn = driver_hyperv.HyperVDriver(None)
 
     def _setup_stubs(self):
         db_fakes.stub_out_db_instance_api(self.stubs)

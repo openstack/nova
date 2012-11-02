@@ -257,7 +257,7 @@ class BareMetalTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         # Code under test
-        conn = driver.BareMetalDriver(True)
+        conn = driver.BareMetalDriver(None, True)
         # TODO(mikalstill): this is not a very good fake instance
         info = conn.get_info({'name': 'instance-00000001'})
 

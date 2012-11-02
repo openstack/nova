@@ -73,8 +73,8 @@ LOG = logging.getLogger(__name__)
 
 
 class HyperVDriver(driver.ComputeDriver):
-    def __init__(self):
-        super(HyperVDriver, self).__init__()
+    def __init__(self, virtapi):
+        super(HyperVDriver, self).__init__(virtapi)
 
         self._hostops = hostops.HostOps()
         self._volumeops = volumeops.VolumeOps()

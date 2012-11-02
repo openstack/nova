@@ -18,7 +18,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 
 from nova import context as nova_context
-from nova import db
 from nova import flags
 
 from nova.openstack.common import cfg
@@ -59,8 +58,8 @@ class PowerVMDriver(driver.ComputeDriver):
 
     """PowerVM Implementation of Compute Driver."""
 
-    def __init__(self):
-        super(PowerVMDriver, self).__init__()
+    def __init__(self, virtapi):
+        super(PowerVMDriver, self).__init__(virtapi)
         self._powervm = operator.PowerVMOperator()
 
     @property
