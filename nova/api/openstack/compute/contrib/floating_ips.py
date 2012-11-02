@@ -92,7 +92,7 @@ def disassociate_floating_ip(self, context, instance, address):
     try:
         self.network_api.disassociate_floating_ip(context, instance, address)
     except exception.NotAuthorized:
-        raise webob.exc.HTTPUnauthorized()
+        raise webob.exc.HTTPForbidden()
     except exception.FloatingIpNotAssociated:
         msg = _('Floating ip is not associated')
         raise webob.exc.HTTPBadRequest(explanation=msg)
