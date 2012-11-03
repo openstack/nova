@@ -207,6 +207,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(network_api.API, 'allocate_for_instance',
                        fake_get_nw_info)
         self.compute_api = compute.API()
+        # Just to make long lines short
+        self.rt = self.compute.resource_tracker
 
     def tearDown(self):
         super(ComputeTestCase, self).tearDown()
@@ -305,20 +307,17 @@ class ComputeTestCase(BaseTestCase):
     def test_create_instance_unlimited_memory(self):
         """Default of memory limit=None is unlimited"""
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
         params = {"memory_mb": 999999999999}
         filter_properties = {'limits': {'memory_mb': None}}
         instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance,
                 filter_properties=filter_properties)
-        self.assertEqual(999999999999,
-                self.compute.resource_tracker.compute_node['memory_mb_used'])
+        self.assertEqual(999999999999, self.rt.compute_node['memory_mb_used'])
 
     def test_create_instance_unlimited_disk(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
         params = {"root_gb": 999999999999,
                   "ephemeral_gb": 99999999999}
         filter_properties = {'limits': {'disk_gb': None}}
@@ -328,26 +327,21 @@ class ComputeTestCase(BaseTestCase):
 
     def test_create_multiple_instances_then_starve(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
         filter_properties = {'limits': {'memory_mb': 4096, 'disk_gb': 1000}}
         params = {"memory_mb": 1024, "root_gb": 128, "ephemeral_gb": 128}
         instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance,
                                   filter_properties=filter_properties)
-        self.assertEquals(1024,
-                self.compute.resource_tracker.compute_node['memory_mb_used'])
-        self.assertEquals(256,
-                self.compute.resource_tracker.compute_node['local_gb_used'])
+        self.assertEquals(1024, self.rt.compute_node['memory_mb_used'])
+        self.assertEquals(256, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 2048, "root_gb": 256, "ephemeral_gb": 256}
         instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance,
                                   filter_properties=filter_properties)
-        self.assertEquals(3072,
-                self.compute.resource_tracker.compute_node['memory_mb_used'])
-        self.assertEquals(768,
-                self.compute.resource_tracker.compute_node['local_gb_used'])
+        self.assertEquals(3072, self.rt.compute_node['memory_mb_used'])
+        self.assertEquals(768, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 8192, "root_gb": 8192, "ephemeral_gb": 8192}
         instance = self._create_fake_instance(params)
@@ -359,8 +353,7 @@ class ComputeTestCase(BaseTestCase):
         """Test passing of oversubscribed ram policy from the scheduler."""
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource()
@@ -380,16 +373,14 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance,
                 filter_properties=filter_properties)
 
-        self.assertEqual(instance_mb,
-                self.compute.resource_tracker.compute_node['memory_mb_used'])
+        self.assertEqual(instance_mb, self.rt.compute_node['memory_mb_used'])
 
     def test_create_instance_with_oversubscribed_ram_fail(self):
         """Test passing of oversubscribed ram policy from the scheduler, but
         with insufficient memory.
         """
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource()
@@ -414,8 +405,7 @@ class ComputeTestCase(BaseTestCase):
         """Test passing of oversubscribed cpu policy from the scheduler."""
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
         limits = {'vcpu': 3}
         filter_properties = {'limits': limits}
 
@@ -431,8 +421,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance,
                 filter_properties=filter_properties)
 
-        self.assertEqual(2,
-                self.compute.resource_tracker.compute_node['vcpus_used'])
+        self.assertEqual(2, self.rt.compute_node['vcpus_used'])
 
         # create one more instance:
         params = {"memory_mb": 10, "root_gb": 1,
@@ -441,16 +430,14 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance,
                 filter_properties=filter_properties)
 
-        self.assertEqual(3,
-                self.compute.resource_tracker.compute_node['vcpus_used'])
+        self.assertEqual(3, self.rt.compute_node['vcpus_used'])
 
         # delete the instance:
         instance['vm_state'] = vm_states.DELETED
-        self.compute.resource_tracker.update_usage(self.context,
+        self.rt.update_usage(self.context,
                 instance=instance)
 
-        self.assertEqual(2,
-                self.compute.resource_tracker.compute_node['vcpus_used'])
+        self.assertEqual(2, self.rt.compute_node['vcpus_used'])
 
         # now oversubscribe vcpus and fail:
         params = {"memory_mb": 10, "root_gb": 1,
@@ -467,8 +454,7 @@ class ComputeTestCase(BaseTestCase):
         """Test passing of oversubscribed disk policy from the scheduler."""
 
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource()
@@ -487,16 +473,14 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance,
                 filter_properties=filter_properties)
 
-        self.assertEqual(instance_gb,
-                self.compute.resource_tracker.compute_node['local_gb_used'])
+        self.assertEqual(instance_gb, self.rt.compute_node['local_gb_used'])
 
     def test_create_instance_with_oversubscribed_disk_fail(self):
         """Test passing of oversubscribed disk policy from the scheduler, but
         with insufficient disk.
         """
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.compute.resource_tracker.update_available_resource(
-                self.context.elevated())
+        self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource()
