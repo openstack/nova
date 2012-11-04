@@ -18,11 +18,11 @@
 Client side of the console RPC API.
 """
 
+from nova import config
 from nova import flags
 import nova.openstack.common.rpc.proxy
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):
@@ -44,7 +44,7 @@ class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self, topic=None):
-        topic = topic if topic else FLAGS.console_topic
+        topic = topic if topic else CONF.console_topic
         super(ConsoleAPI, self).__init__(
                 topic=topic,
                 default_version=self.BASE_RPC_API_VERSION)
