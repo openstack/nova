@@ -126,7 +126,7 @@ class ResourcePool(object):
                 slave_info = self._create_slave_info()
 
                 self.compute_rpcapi.add_aggregate_host(
-                    context, aggregate.id, host, master_compute, slave_info)
+                    context, aggregate, host, master_compute, slave_info)
 
     def remove_from_aggregate(self, context, aggregate, host, slave_info=None):
         """Remove a compute host from an aggregate."""

@@ -2173,7 +2173,7 @@ class AggregateAPI(base.Base):
         self.db.aggregate_host_add(context, aggregate_id, host)
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
-                aggregate_id=aggregate_id, host_param=host, host=host)
+                aggregate=aggregate, host_param=host, host=host)
         return self.get_aggregate(context, aggregate_id)
 
     def remove_host_from_aggregate(self, context, aggregate_id, host):
