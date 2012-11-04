@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import excutils
@@ -22,19 +23,19 @@ from nova.openstack.common import log as logging
 from quantumclient import client
 from quantumclient.v2_0 import client as clientv20
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
 def _get_auth_token():
     try:
         httpclient = client.HTTPClient(
-            username=FLAGS.quantum_admin_username,
-            tenant_name=FLAGS.quantum_admin_tenant_name,
-            password=FLAGS.quantum_admin_password,
-            auth_url=FLAGS.quantum_admin_auth_url,
-            timeout=FLAGS.quantum_url_timeout,
-            auth_strategy=FLAGS.quantum_auth_strategy)
+            username=CONF.quantum_admin_username,
+            tenant_name=CONF.quantum_admin_tenant_name,
+            password=CONF.quantum_admin_password,
+            auth_url=CONF.quantum_admin_auth_url,
+            timeout=CONF.quantum_url_timeout,
+            auth_strategy=CONF.quantum_auth_strategy)
         httpclient.authenticate()
     except Exception:
         with excutils.save_and_reraise_exception():
@@ -44,11 +45,11 @@ def _get_auth_token():
 
 def get_client(context):
     token = context.auth_token
-    if not token and FLAGS.quantum_auth_strategy:
+    if not token and CONF.quantum_auth_strategy:
         token = _get_auth_token()
     params = {
-        'endpoint_url': FLAGS.quantum_url,
-        'timeout': FLAGS.quantum_url_timeout,
+        'endpoint_url': CONF.quantum_url,
+        'timeout': CONF.quantum_url_timeout,
     }
     if token:
         params['token'] = token

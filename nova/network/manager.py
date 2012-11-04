@@ -54,6 +54,7 @@ from eventlet import greenpool
 import netaddr
 
 from nova.compute import api as compute_api
+from nova import config
 from nova import context
 from nova import exception
 from nova import flags
@@ -159,9 +160,8 @@ network_opts = [
                help="Indicates underlying L3 management library")
     ]
 
-
-FLAGS = flags.FLAGS
-FLAGS.register_opts(network_opts)
+CONF = config.CONF
+CONF.register_opts(network_opts)
 
 
 class RPCAllocateFixedIP(object):
@@ -285,7 +285,7 @@ class FloatingIP(object):
                     LOG.debug(msg)
                     continue
                 fixed_address = fixed_ip_ref['address']
-                interface = FLAGS.public_interface or floating_ip['interface']
+                interface = CONF.public_interface or floating_ip['interface']
                 try:
                     self.l3driver.add_floating_ip(floating_ip['address'],
                             fixed_address, interface)
@@ -312,7 +312,7 @@ class FloatingIP(object):
         # do this first so fixed ip is already allocated
         nw_info = super(FloatingIP, self).allocate_for_instance(context,
                                                                 **kwargs)
-        if FLAGS.auto_assign_floating_ip:
+        if CONF.auto_assign_floating_ip:
             # allocate a floating ip
             floating_address = self.allocate_floating_ip(context, project_id,
                 True)
@@ -402,7 +402,7 @@ class FloatingIP(object):
                              pool=None):
         """Gets a floating ip from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
-        pool = pool or FLAGS.default_floating_pool
+        pool = pool or CONF.default_floating_pool
         use_quota = not auto_assigned
 
         # Check the quota; can't put this in the API because we get
@@ -521,7 +521,7 @@ class FloatingIP(object):
         else:
             host = network['host']
 
-        interface = FLAGS.public_interface or floating_ip['interface']
+        interface = CONF.public_interface or floating_ip['interface']
         if host == self.host:
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
@@ -584,7 +584,7 @@ class FloatingIP(object):
 
         # send to correct host, unless i'm the correct host
         network = self._get_network_by_id(context, fixed_ip['network_id'])
-        interface = FLAGS.public_interface or floating_ip['interface']
+        interface = CONF.public_interface or floating_ip['interface']
         if network['multi_host']:
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip['instance_uuid'])
@@ -682,7 +682,7 @@ class FloatingIP(object):
                            "migrate it "), locals())
                 continue
 
-            interface = FLAGS.public_interface or floating_ip['interface']
+            interface = CONF.public_interface or floating_ip['interface']
             fixed_ip = self.db.fixed_ip_get(context,
                                             floating_ip['fixed_ip_id'])
             self.l3driver.remove_floating_ip(floating_ip['address'],
@@ -720,7 +720,7 @@ class FloatingIP(object):
                                        floating_ip['address'],
                                        {'host': dest})
 
-            interface = FLAGS.public_interface or floating_ip['interface']
+            interface = CONF.public_interface or floating_ip['interface']
             fixed_ip = self.db.fixed_ip_get(context,
                                             floating_ip['fixed_ip_id'])
             self.l3driver.add_floating_ip(floating_ip['address'],
@@ -857,13 +857,13 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def __init__(self, network_driver=None, *args, **kwargs):
         if not network_driver:
-            network_driver = FLAGS.network_driver
+            network_driver = CONF.network_driver
         self.driver = importutils.import_module(network_driver)
         self.instance_dns_manager = importutils.import_object(
-                FLAGS.instance_dns_manager)
-        self.instance_dns_domain = FLAGS.instance_dns_domain
+                CONF.instance_dns_manager)
+        self.instance_dns_domain = CONF.instance_dns_domain
         self.floating_dns_manager = importutils.import_object(
-                FLAGS.floating_ip_dns_manager)
+                CONF.floating_ip_dns_manager)
         self.network_api = network_api.API()
         self.network_rpcapi = network_rpcapi.NetworkAPI()
         self.security_group_api = compute_api.SecurityGroupAPI()
@@ -874,7 +874,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 already imported ipam, import nova ipam here
         if not hasattr(self, 'ipam'):
             self._import_ipam_lib('nova.network.nova_ipam_lib')
-        l3_lib = kwargs.get("l3_lib", FLAGS.l3_lib)
+        l3_lib = kwargs.get("l3_lib", CONF.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
 
         super(NetworkManager, self).__init__(service_name='network',
@@ -922,7 +922,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     def _disassociate_stale_fixed_ips(self, context):
         if self.timeout_fixed_ips:
             now = timeutils.utcnow()
-            timeout = FLAGS.fixed_ip_disassociate_timeout
+            timeout = CONF.fixed_ip_disassociate_timeout
             time = now - datetime.timedelta(seconds=timeout)
             num = self.db.fixed_ip_disassociate_all_by_timeout(context,
                                                                self.host,
@@ -1264,7 +1264,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                'network_id': network_id,
                'uuid': str(utils.gen_uuid())}
         # try FLAG times to create a vif record with a unique mac_address
-        for i in xrange(FLAGS.create_unique_mac_address_attempts):
+        for i in xrange(CONF.create_unique_mac_address_attempts):
             try:
                 return self.db.virtual_interface_create(context, vif)
             except exception.VirtualInterfaceCreateException:
@@ -1379,7 +1379,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               fixed_ip_ref['network_id'])
             self._teardown_network_on_host(context, network)
 
-            if FLAGS.force_dhcp_release:
+            if CONF.force_dhcp_release:
                 dev = self.driver.get_dev(network)
                 # NOTE(vish): The below errors should never happen, but there
                 #             may be a race condition that is causing them per
@@ -1478,38 +1478,38 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not (kwargs["cidr"] or kwargs["cidr_v6"]):
             raise exception.NetworkNotCreated(req="cidr or cidr_v6")
 
-        kwargs["bridge"] = kwargs["bridge"] or FLAGS.flat_network_bridge
+        kwargs["bridge"] = kwargs["bridge"] or CONF.flat_network_bridge
         kwargs["bridge_interface"] = (kwargs["bridge_interface"] or
-                                      FLAGS.flat_interface)
+                                      CONF.flat_interface)
 
         for fld in self.required_create_args:
             if not kwargs[fld]:
                 raise exception.NetworkNotCreated(req=fld)
 
-        kwargs["num_networks"] = kwargs["num_networks"] or FLAGS.num_networks
+        kwargs["num_networks"] = kwargs["num_networks"] or CONF.num_networks
         if not kwargs["network_size"]:
             if kwargs["cidr"]:
                 fixnet = netaddr.IPNetwork(kwargs["cidr"])
                 each_subnet_size = fixnet.size / kwargs["num_networks"]
-                if each_subnet_size > FLAGS.network_size:
-                    subnet = 32 - int(math.log(FLAGS.network_size_size, 2))
+                if each_subnet_size > CONF.network_size:
+                    subnet = 32 - int(math.log(CONF.network_size_size, 2))
                     oversize_msg = _(
                         'Subnet(s) too large, defaulting to /%s.'
                         '  To override, specify network_size flag.') % subnet
                     LOG.warn(oversize_msg)
-                    kwargs["network_size"] = FLAGS.network_size
+                    kwargs["network_size"] = CONF.network_size
                 else:
                     kwargs["network_size"] = fixnet.size
             else:
-                kwargs["network_size"] = FLAGS.network_size
+                kwargs["network_size"] = CONF.network_size
 
-        kwargs["multi_host"] = (FLAGS.multi_host
+        kwargs["multi_host"] = (CONF.multi_host
                                 if kwargs["multi_host"] is None
                                 else
                                 utils.bool_from_str(kwargs["multi_host"]))
-        kwargs["vlan_start"] = kwargs.get("vlan_start") or FLAGS.vlan_start
-        kwargs["vpn_start"] = kwargs.get("vpn_start") or FLAGS.vpn_start
-        kwargs["dns1"] = kwargs["dns1"] or FLAGS.flat_network_dns
+        kwargs["vlan_start"] = kwargs.get("vlan_start") or CONF.vlan_start
+        kwargs["vpn_start"] = kwargs.get("vpn_start") or CONF.vpn_start
+        kwargs["dns1"] = kwargs["dns1"] or CONF.flat_network_dns
 
         if kwargs["fixed_cidr"]:
             kwargs["fixed_cidr"] = netaddr.IPNetwork(kwargs["fixed_cidr"])
@@ -1918,7 +1918,7 @@ class FlatManager(NetworkManager):
         # allocation, this functionality makes more sense in create_network
         # but we'd have to move the flat_injected flag to compute
         net = {}
-        net['injected'] = FLAGS.flat_injected
+        net['injected'] = CONF.flat_injected
         self.db.network_update(context, network['id'], net)
 
     def _teardown_network_on_host(self, context, network):
@@ -1990,17 +1990,17 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
         self.l3driver.initialize_gateway(network)
 
-        if not FLAGS.fake_network:
+        if not CONF.fake_network:
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
-            if(FLAGS.use_ipv6):
+            if(CONF.use_ipv6):
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
     def _teardown_network_on_host(self, context, network):
-        if not FLAGS.fake_network:
+        if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
@@ -2145,7 +2145,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                   kwargs)
 
         kwargs['bridge_interface'] = (kwargs.get('bridge_interface') or
-                                      FLAGS.vlan_interface)
+                                      CONF.vlan_interface)
         return NetworkManager.create_networks(
             self, context, vpn=True, **kwargs)
 
@@ -2153,7 +2153,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Sets up network on this host."""
         if not network['vpn_public_address']:
             net = {}
-            address = FLAGS.vpn_ip
+            address = CONF.vpn_ip
             net['vpn_public_address'] = address
             network = self.db.network_update(context, network['id'], net)
         else:
@@ -2164,22 +2164,22 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
-        if address == FLAGS.vpn_ip and hasattr(self.driver,
+        if address == CONF.vpn_ip and hasattr(self.driver,
                                                "ensure_vpn_forward"):
-            self.l3driver.add_vpn(FLAGS.vpn_ip,
+            self.l3driver.add_vpn(CONF.vpn_ip,
                     network['vpn_public_port'],
                     network['vpn_private_address'])
-        if not FLAGS.fake_network:
+        if not CONF.fake_network:
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
-            if(FLAGS.use_ipv6):
+            if(CONF.use_ipv6):
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
     def _teardown_network_on_host(self, context, network):
-        if not FLAGS.fake_network:
+        if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
@@ -2210,4 +2210,4 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     def _top_reserved_ips(self):
         """Number of reserved ips at the top of the range."""
         parent_reserved = super(VlanManager, self)._top_reserved_ips
-        return parent_reserved + FLAGS.cnt_vpn_clients
+        return parent_reserved + CONF.cnt_vpn_clients

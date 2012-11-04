@@ -53,10 +53,8 @@ quantum_opts = [
     ]
 
 CONF = config.CONF
+CONF.register_opts(quantum_opts)
 CONF.import_opt('default_floating_pool', 'nova.network.manager')
-
-FLAGS = flags.FLAGS
-FLAGS.register_opts(quantum_opts)
 LOG = logging.getLogger(__name__)
 
 NET_EXTERNAL = 'router:external'
@@ -124,7 +122,7 @@ class API(base.Base):
         created_port_ids = []
         for network in nets:
             network_id = network['id']
-            zone = 'compute:%s' % FLAGS.node_availability_zone
+            zone = 'compute:%s' % CONF.node_availability_zone
             port_req_body = {'port': {'device_id': instance['uuid'],
                                       'device_owner': zone}}
             try:
@@ -284,7 +282,7 @@ class API(base.Base):
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
-        zone = 'compute:%s' % FLAGS.node_availability_zone
+        zone = 'compute:%s' % CONF.node_availability_zone
         search_opts = {'device_id': instance['uuid'],
                        'device_owner': zone}
         data = client.list_ports(**search_opts)
@@ -458,7 +456,7 @@ class API(base.Base):
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating ip to a project from a pool."""
         client = quantumv2.get_client(context)
-        pool = pool or FLAGS.default_floating_pool
+        pool = pool or CONF.default_floating_pool
         pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
 
         # TODO(amotoki): handle exception during create_floatingip()
@@ -555,7 +553,7 @@ class API(base.Base):
             network = network_model.Network(
                 id=port['network_id'],
                 bridge='',  # Quantum ignores this field
-                injected=FLAGS.flat_injected,
+                injected=CONF.flat_injected,
                 label=network_name,
                 tenant_id=net['tenant_id']
             )

@@ -15,13 +15,14 @@
 import ldap
 import time
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 ldap_dns_opts = [
@@ -61,7 +62,7 @@ ldap_dns_opts = [
                     'Statement of Authority'),
     ]
 
-flags.FLAGS.register_opts(ldap_dns_opts)
+CONF.register_opts(ldap_dns_opts)
 
 
 # Importing ldap.modlist breaks the tests for some reason,
@@ -90,7 +91,7 @@ class DNSEntry(object):
 
     @classmethod
     def _get_tuple_for_domain(cls, lobj, domain):
-        entry = lobj.search_s(flags.FLAGS.ldap_dns_base_dn, ldap.SCOPE_SUBTREE,
+        entry = lobj.search_s(CONF.ldap_dns_base_dn, ldap.SCOPE_SUBTREE,
                               '(associatedDomain=%s)' % utils.utf8(domain))
         if not entry:
             return None
@@ -101,7 +102,7 @@ class DNSEntry(object):
 
     @classmethod
     def _get_all_domains(cls, lobj):
-        entries = lobj.search_s(flags.FLAGS.ldap_dns_base_dn,
+        entries = lobj.search_s(CONF.ldap_dns_base_dn,
                                 ldap.SCOPE_SUBTREE, '(sOARecord=*)')
         domains = []
         for entry in entries:
@@ -142,13 +143,13 @@ class DomainEntry(DNSEntry):
     def _soa(cls):
         date = time.strftime('%Y%m%d%H%M%S')
         soa = '%s %s %s %s %s %s %s' % (
-                 flags.FLAGS.ldap_dns_servers[0],
-                 flags.FLAGS.ldap_dns_soa_hostmaster,
+                 CONF.ldap_dns_servers[0],
+                 CONF.ldap_dns_soa_hostmaster,
                  date,
-                 flags.FLAGS.ldap_dns_soa_refresh,
-                 flags.FLAGS.ldap_dns_soa_retry,
-                 flags.FLAGS.ldap_dns_soa_expiry,
-                 flags.FLAGS.ldap_dns_soa_minimum)
+                 CONF.ldap_dns_soa_refresh,
+                 CONF.ldap_dns_soa_retry,
+                 CONF.ldap_dns_soa_expiry,
+                 CONF.ldap_dns_soa_minimum)
         return utils.utf8(soa)
 
     @classmethod
@@ -158,7 +159,7 @@ class DomainEntry(DNSEntry):
         if entry:
             raise exception.FloatingIpDNSExists(name=domain, domain='')
 
-        newdn = 'dc=%s,%s' % (domain, flags.FLAGS.ldap_dns_base_dn)
+        newdn = 'dc=%s,%s' % (domain, CONF.ldap_dns_base_dn)
         attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
                                  'domain', 'dcobject', 'top'],
                  'sOARecord': [cls._soa()],
@@ -305,9 +306,9 @@ class LdapDNS(object):
        in the top-level, aRecords only."""
 
     def __init__(self):
-        self.lobj = ldap.initialize(flags.FLAGS.ldap_dns_url)
-        self.lobj.simple_bind_s(flags.FLAGS.ldap_dns_user,
-                                flags.FLAGS.ldap_dns_password)
+        self.lobj = ldap.initialize(CONF.ldap_dns_url)
+        self.lobj.simple_bind_s(CONF.ldap_dns_user,
+                                CONF.ldap_dns_password)
 
     def get_domains(self):
         return DomainEntry._get_all_domains(self.lobj)

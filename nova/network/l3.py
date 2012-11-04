@@ -22,8 +22,6 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-FLAGS = flags.FLAGS
-
 
 class L3Driver(object):
     """Abstract class that defines a generic L3 API"""
