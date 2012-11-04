@@ -27,7 +27,6 @@ import nova.utils
 
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 SUPPORTED_FILTERS = {
     'name': 'name',

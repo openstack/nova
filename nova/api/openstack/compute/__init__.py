@@ -31,6 +31,7 @@ from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -42,8 +43,8 @@ allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
         default=True,
         help='Permit instance snapshot operations.')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(allow_instance_snapshots_opt)
+CONF = config.CONF
+CONF.register_opt(allow_instance_snapshots_opt)
 
 
 class APIRouter(nova.api.openstack.APIRouter):

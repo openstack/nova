@@ -25,9 +25,7 @@ from nova.api.openstack import xmlutil
 from nova import flags
 from nova.openstack.common import log as logging
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 def make_network(elem):

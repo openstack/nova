@@ -21,6 +21,7 @@ Request Body limiting middleware.
 import webob.dec
 import webob.exc
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -33,8 +34,8 @@ max_request_body_size_opt = cfg.IntOpt('osapi_max_request_body_size',
                                        help='the maximum body size '
                                             'per each osapi request(bytes)')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(max_request_body_size_opt)
+CONF = config.CONF
+CONF.register_opt(max_request_body_size_opt)
 LOG = logging.getLogger(__name__)
 
 
@@ -46,8 +47,8 @@ class RequestBodySizeLimiter(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        if (req.content_length > FLAGS.osapi_max_request_body_size
-            or len(req.body) > FLAGS.osapi_max_request_body_size):
+        if (req.content_length > CONF.osapi_max_request_body_size
+            or len(req.body) > CONF.osapi_max_request_body_size):
             msg = _("Request is too large.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         else:

@@ -27,8 +27,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 

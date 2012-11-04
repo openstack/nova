@@ -16,11 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova import manager
 from nova.openstack.common import importutils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class MetadataManager(manager.Manager):
@@ -31,7 +32,7 @@ class MetadataManager(manager.Manager):
     """
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
-        self.network_driver = importutils.import_module(FLAGS.network_driver)
+        self.network_driver = importutils.import_module(CONF.network_driver)
 
     def init_host(self):
         """Perform any initialization.

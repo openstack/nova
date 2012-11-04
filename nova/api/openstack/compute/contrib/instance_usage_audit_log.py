@@ -21,11 +21,12 @@ import datetime
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova import config
 from nova import db
 from nova import flags
 from nova import utils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 authorize = extensions.extension_authorizer('compute',
@@ -82,7 +83,7 @@ class InstanceUsageAuditLogController(object):
         # We do this this way to include disabled compute services,
         # which can have instances on them. (mdragon)
         services = [svc for svc in db.service_get_all(context)
-                    if svc['topic'] == FLAGS.compute_topic]
+                    if svc['topic'] == CONF.compute_topic]
         hosts = set(serv['host'] for serv in services)
         seen_hosts = set()
         done_hosts = set()

@@ -30,7 +30,6 @@ from nova import flags
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 def _underscore_to_camelcase(str):

@@ -24,9 +24,6 @@ from nova import flags
 from nova.image import glance
 
 
-FLAGS = flags.FLAGS
-
-
 class Controller(object):
     """The image metadata API controller for the OpenStack API"""
 

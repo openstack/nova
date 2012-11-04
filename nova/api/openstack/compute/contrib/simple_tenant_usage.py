@@ -26,8 +26,6 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 
-
-FLAGS = flags.FLAGS
 authorize_show = extensions.extension_authorizer('compute',
                                                  'simple_tenant_usage:show')
 authorize_list = extensions.extension_authorizer('compute',

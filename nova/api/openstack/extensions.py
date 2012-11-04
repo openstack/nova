@@ -30,9 +30,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 import nova.policy
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 class ExtensionDescriptor(object):
