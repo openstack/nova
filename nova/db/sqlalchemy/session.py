@@ -48,9 +48,23 @@ def get_session(autocommit=True, expire_on_commit=False):
         _MAKER = get_maker(engine, autocommit, expire_on_commit)
 
     session = _MAKER()
+    session = wrap_session(session)
+    return session
+
+
+def wrap_session(session):
+    """Return a session whose exceptions are wrapped."""
     session.query = nova.exception.wrap_db_error(session.query)
     session.flush = nova.exception.wrap_db_error(session.flush)
     return session
+
+
+def get_engine():
+    """Return a SQLAlchemy engine."""
+    global _ENGINE
+    if _ENGINE is None:
+        _ENGINE = create_engine(FLAGS.sql_connection)
+    return _ENGINE
 
 
 def synchronous_switch_listener(dbapi_conn, connection_rec):
@@ -106,72 +120,70 @@ def is_db_connection_error(args):
     return False
 
 
-def get_engine():
-    """Return a SQLAlchemy engine."""
-    global _ENGINE
-    if _ENGINE is None:
-        connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+def create_engine(sql_connection):
+    """Return a new SQLAlchemy engine."""
+    connection_dict = sqlalchemy.engine.url.make_url(sql_connection)
 
-        engine_args = {
-            "pool_recycle": FLAGS.sql_idle_timeout,
-            "echo": False,
-            'convert_unicode': True,
-        }
+    engine_args = {
+        "pool_recycle": FLAGS.sql_idle_timeout,
+        "echo": False,
+        'convert_unicode': True,
+    }
 
-        # Map our SQL debug level to SQLAlchemy's options
-        if FLAGS.sql_connection_debug >= 100:
-            engine_args['echo'] = 'debug'
-        elif FLAGS.sql_connection_debug >= 50:
-            engine_args['echo'] = True
+    # Map our SQL debug level to SQLAlchemy's options
+    if FLAGS.sql_connection_debug >= 100:
+        engine_args['echo'] = 'debug'
+    elif FLAGS.sql_connection_debug >= 50:
+        engine_args['echo'] = True
 
-        if "sqlite" in connection_dict.drivername:
-            engine_args["poolclass"] = NullPool
+    if "sqlite" in connection_dict.drivername:
+        engine_args["poolclass"] = NullPool
 
-            if FLAGS.sql_connection == "sqlite://":
-                engine_args["poolclass"] = StaticPool
-                engine_args["connect_args"] = {'check_same_thread': False}
+        if FLAGS.sql_connection == "sqlite://":
+            engine_args["poolclass"] = StaticPool
+            engine_args["connect_args"] = {'check_same_thread': False}
 
-        _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
+    engine = sqlalchemy.create_engine(sql_connection, **engine_args)
 
-        sqlalchemy.event.listen(_ENGINE, 'checkin', greenthread_yield)
+    sqlalchemy.event.listen(engine, 'checkin', greenthread_yield)
 
-        if 'mysql' in connection_dict.drivername:
-            sqlalchemy.event.listen(_ENGINE, 'checkout', ping_listener)
-        elif 'sqlite' in connection_dict.drivername:
-            if not FLAGS.sqlite_synchronous:
-                sqlalchemy.event.listen(_ENGINE, 'connect',
-                                        synchronous_switch_listener)
-            sqlalchemy.event.listen(_ENGINE, 'connect', add_regexp_listener)
+    if 'mysql' in connection_dict.drivername:
+        sqlalchemy.event.listen(engine, 'checkout', ping_listener)
+    elif 'sqlite' in connection_dict.drivername:
+        if not FLAGS.sqlite_synchronous:
+            sqlalchemy.event.listen(engine, 'connect',
+                                    synchronous_switch_listener)
+        sqlalchemy.event.listen(engine, 'connect', add_regexp_listener)
 
-        if (FLAGS.sql_connection_trace and
-                _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
-            import MySQLdb.cursors
-            _do_query = debug_mysql_do_query()
-            setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
+    if (FLAGS.sql_connection_trace and
+            engine.dialect.dbapi.__name__ == 'MySQLdb'):
+        import MySQLdb.cursors
+        _do_query = debug_mysql_do_query()
+        setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
 
-        try:
-            _ENGINE.connect()
-        except OperationalError, e:
-            if not is_db_connection_error(e.args[0]):
-                raise
+    try:
+        engine.connect()
+    except OperationalError, e:
+        if not is_db_connection_error(e.args[0]):
+            raise
 
-            remaining = FLAGS.sql_max_retries
-            if remaining == -1:
-                remaining = 'infinite'
-            while True:
-                msg = _('SQL connection failed. %s attempts left.')
-                LOG.warn(msg % remaining)
-                if remaining != 'infinite':
-                    remaining -= 1
-                time.sleep(FLAGS.sql_retry_interval)
-                try:
-                    _ENGINE.connect()
-                    break
-                except OperationalError, e:
-                    if (remaining != 'infinite' and remaining == 0) or \
-                       not is_db_connection_error(e.args[0]):
-                        raise
-    return _ENGINE
+        remaining = FLAGS.sql_max_retries
+        if remaining == -1:
+            remaining = 'infinite'
+        while True:
+            msg = _('SQL connection failed. %s attempts left.')
+            LOG.warn(msg % remaining)
+            if remaining != 'infinite':
+                remaining -= 1
+            time.sleep(FLAGS.sql_retry_interval)
+            try:
+                engine.connect()
+                break
+            except OperationalError, e:
+                if (remaining != 'infinite' and remaining == 0) or \
+                   not is_db_connection_error(e.args[0]):
+                    raise
+    return engine
 
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
