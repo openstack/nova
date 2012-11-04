@@ -33,7 +33,6 @@ from nova import utils
 from nova.virt.xenapi import driver as xenapi_driver
 from nova.virt.xenapi import vm_utils
 
-FLAGS = flags.FLAGS
 destroy_opts = [
     cfg.BoolOpt('all_cached',
                 default=False,
@@ -44,7 +43,8 @@ destroy_opts = [
                 help='Don\'t actually delete the VDIs.')
 ]
 
-FLAGS.register_cli_opts(destroy_opts)
+CONF = config.CONF
+CONF.register_cli_opts(destroy_opts)
 
 
 def main():
@@ -56,8 +56,8 @@ def main():
 
     sr_ref = vm_utils.safe_find_sr(session)
     destroyed = vm_utils.destroy_cached_images(
-            session, sr_ref, all_cached=FLAGS.all_cached,
-            dry_run=FLAGS.dry_run)
+            session, sr_ref, all_cached=CONF.all_cached,
+            dry_run=CONF.dry_run)
 
     if '--verbose' in sys.argv:
         print '\n'.join(destroyed)

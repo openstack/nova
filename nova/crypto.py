@@ -28,6 +28,7 @@ import hashlib
 import os
 import string
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -72,30 +73,30 @@ crypto_opts = [
                       'project, timestamp')),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(crypto_opts)
+CONF = config.CONF
+CONF.register_opts(crypto_opts)
 
 
 def ca_folder(project_id=None):
-    if FLAGS.use_project_ca and project_id:
-        return os.path.join(FLAGS.ca_path, 'projects', project_id)
-    return FLAGS.ca_path
+    if CONF.use_project_ca and project_id:
+        return os.path.join(CONF.ca_path, 'projects', project_id)
+    return CONF.ca_path
 
 
 def ca_path(project_id=None):
-    return os.path.join(ca_folder(project_id), FLAGS.ca_file)
+    return os.path.join(ca_folder(project_id), CONF.ca_file)
 
 
 def key_path(project_id=None):
-    return os.path.join(ca_folder(project_id), FLAGS.key_file)
+    return os.path.join(ca_folder(project_id), CONF.key_file)
 
 
 def crl_path(project_id=None):
-    return os.path.join(ca_folder(project_id), FLAGS.crl_file)
+    return os.path.join(ca_folder(project_id), CONF.crl_file)
 
 
 def fetch_ca(project_id=None):
-    if not FLAGS.use_project_ca:
+    if not CONF.use_project_ca:
         project_id = None
     ca_file_path = ca_path(project_id)
     if not os.path.exists(ca_file_path):
@@ -157,7 +158,7 @@ def generate_key_pair(bits=1024):
 
 def fetch_crl(project_id):
     """Get crl file for project."""
-    if not FLAGS.use_project_ca:
+    if not CONF.use_project_ca:
         project_id = None
     crl_file_path = crl_path(project_id)
     if not os.path.exists(crl_file_path):
@@ -189,7 +190,7 @@ def revoke_cert(project_id, file_name):
     utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
                   file_name)
     utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
-                  '-out', FLAGS.crl_file)
+                  '-out', CONF.crl_file)
     os.chdir(start)
 
 
@@ -219,12 +220,12 @@ def revoke_certs_by_user_and_project(user_id, project_id):
 
 def _project_cert_subject(project_id):
     """Helper to generate user cert subject."""
-    return FLAGS.project_cert_subject % (project_id, timeutils.isotime())
+    return CONF.project_cert_subject % (project_id, timeutils.isotime())
 
 
 def _user_cert_subject(user_id, project_id):
     """Helper to generate user cert subject."""
-    return FLAGS.user_cert_subject % (project_id, user_id, timeutils.isotime())
+    return CONF.user_cert_subject % (project_id, user_id, timeutils.isotime())
 
 
 def generate_x509_cert(user_id, project_id, bits=1024):
@@ -281,7 +282,7 @@ def generate_vpn_files(project_id):
 
 
 def sign_csr(csr_text, project_id=None):
-    if not FLAGS.use_project_ca:
+    if not CONF.use_project_ca:
         project_id = None
     if not project_id:
         return _sign_csr(csr_text, ca_folder())

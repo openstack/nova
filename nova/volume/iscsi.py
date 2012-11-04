@@ -21,6 +21,7 @@ Helper code for the iSCSI volume driver.
 """
 import os
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -39,8 +40,8 @@ iscsi_helper_opt = [
                    help='Volume configuration file storage directory'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(iscsi_helper_opt)
+CONF = config.CONF
+CONF.register_opts(iscsi_helper_opt)
 
 
 class TargetAdmin(object):
@@ -110,7 +111,7 @@ class TgtAdm(TargetAdmin):
         # Note(jdg) tid and lun aren't used by TgtAdm but remain for
         # compatibility
 
-        fileutils.ensure_tree(FLAGS.volumes_dir)
+        fileutils.ensure_tree(CONF.volumes_dir)
 
         vol_id = name.split(':')[1]
         volume_conf = """
@@ -120,7 +121,7 @@ class TgtAdm(TargetAdmin):
         """ % (name, path)
 
         LOG.info(_('Creating volume: %s') % vol_id)
-        volumes_dir = FLAGS.volumes_dir
+        volumes_dir = CONF.volumes_dir
         volume_path = os.path.join(volumes_dir, vol_id)
 
         f = open(volume_path, 'w+')
@@ -140,7 +141,7 @@ class TgtAdm(TargetAdmin):
             os.unlink(volume_path)
             raise exception.ISCSITargetCreateFailed(volume_id=vol_id)
 
-        iqn = '%s%s' % (FLAGS.iscsi_target_prefix, vol_id)
+        iqn = '%s%s' % (CONF.iscsi_target_prefix, vol_id)
         tid = self._get_target(iqn)
         if tid is None:
             LOG.error(_("Failed to create iscsi target for volume "
@@ -153,9 +154,9 @@ class TgtAdm(TargetAdmin):
     def remove_iscsi_target(self, tid, lun, vol_id, **kwargs):
         LOG.info(_('Removing volume: %s') % vol_id)
         vol_uuid_file = 'volume-%s' % vol_id
-        volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
+        volume_path = os.path.join(CONF.volumes_dir, vol_uuid_file)
         if os.path.isfile(volume_path):
-            iqn = '%s%s' % (FLAGS.iscsi_target_prefix,
+            iqn = '%s%s' % (CONF.iscsi_target_prefix,
                             vol_uuid_file)
         else:
             raise exception.ISCSITargetRemoveFailed(volume_id=vol_id)
@@ -228,7 +229,7 @@ class IetAdm(TargetAdmin):
 
 
 def get_target_admin():
-    if FLAGS.iscsi_helper == 'tgtadm':
+    if CONF.iscsi_helper == 'tgtadm':
         return TgtAdm()
     else:
         return IetAdm()

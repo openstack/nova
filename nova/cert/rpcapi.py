@@ -18,11 +18,11 @@
 Client side of the cert manager RPC API.
 """
 
+from nova import config
 from nova import flags
 import nova.openstack.common.rpc.proxy
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
@@ -45,7 +45,7 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def __init__(self):
         super(CertAPI, self).__init__(
-                topic=FLAGS.cert_topic,
+                topic=CONF.cert_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
     def revoke_certs_by_user(self, ctxt, user_id):

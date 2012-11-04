@@ -32,7 +32,6 @@ from nova import manager
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 class CertManager(manager.Manager):

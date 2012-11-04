@@ -19,6 +19,7 @@
 the system.
 """
 
+from nova import config
 import nova.context
 from nova import db
 from nova import exception
@@ -50,16 +51,16 @@ notify_api_faults = cfg.BoolOpt('notify_api_faults', default=False,
          'in the API service.')
 
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(notify_state_opt)
-FLAGS.register_opt(notify_any_opt)
-FLAGS.register_opt(notify_api_faults)
+CONF = config.CONF
+CONF.register_opt(notify_state_opt)
+CONF.register_opt(notify_any_opt)
+CONF.register_opt(notify_api_faults)
 
 
 def send_api_fault(url, status, exception):
     """Send an api.fault notification."""
 
-    if not FLAGS.notify_api_faults:
+    if not CONF.notify_api_faults:
         return
 
     payload = {'url': url, 'exception': str(exception), 'status': status}
@@ -75,7 +76,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
     in that instance
     """
 
-    if not FLAGS.notify_on_any_change and not FLAGS.notify_on_state_change:
+    if not CONF.notify_on_any_change and not CONF.notify_on_state_change:
         # skip all this if updates are disabled
         return
 
@@ -91,8 +92,8 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
     if old_vm_state != new_vm_state:
         # yes, the vm state is changing:
         update_with_state_change = True
-    elif FLAGS.notify_on_state_change:
-        if (FLAGS.notify_on_state_change.lower() == "vm_and_task_state" and
+    elif CONF.notify_on_state_change:
+        if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
             old_task_state != new_task_state):
             # yes, the task state is changing:
             update_with_state_change = True
@@ -120,7 +121,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
     are any, in the instance
     """
 
-    if not FLAGS.notify_on_state_change:
+    if not CONF.notify_on_state_change:
         # skip all this if updates are disabled
         return
 
@@ -135,8 +136,8 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
             fire_update = True
-        elif FLAGS.notify_on_state_change:
-            if (FLAGS.notify_on_state_change.lower() == "vm_and_task_state" and
+        elif CONF.notify_on_state_change:
+            if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
                 old_task_state != new_task_state):
                 # yes, the task state is changing:
                 fire_update = True

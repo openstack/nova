@@ -20,6 +20,7 @@
 
 import time
 
+from nova import config
 from nova import flags
 from nova import manager
 from nova.openstack.common import cfg
@@ -38,8 +39,8 @@ consoleauth_opts = [
                help='Manager for console auth'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(consoleauth_opts)
+CONF = config.CONF
+CONF.register_opts(consoleauth_opts)
 
 
 class ConsoleAuthManager(manager.Manager):
@@ -50,11 +51,11 @@ class ConsoleAuthManager(manager.Manager):
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
 
-        if FLAGS.memcached_servers:
+        if CONF.memcached_servers:
             import memcache
         else:
             from nova.common import memorycache as memcache
-        self.mc = memcache.Client(FLAGS.memcached_servers,
+        self.mc = memcache.Client(CONF.memcached_servers,
                                   debug=0)
 
     def authorize_console(self, context, token, console_type, host, port,
@@ -66,7 +67,7 @@ class ConsoleAuthManager(manager.Manager):
                       'internal_access_path': internal_access_path,
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
-        self.mc.set(token, data, FLAGS.console_token_ttl)
+        self.mc.set(token, data, CONF.console_token_ttl)
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
 
     def check_token(self, context, token):
