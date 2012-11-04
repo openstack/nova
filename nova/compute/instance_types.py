@@ -22,6 +22,7 @@
 
 import re
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -29,7 +30,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
@@ -129,7 +130,7 @@ get_all_flavors = get_all_types
 
 def get_default_instance_type():
     """Get the default instance type."""
-    name = FLAGS.default_instance_type
+    name = CONF.default_instance_type
     return get_instance_type_by_name(name)
 
 

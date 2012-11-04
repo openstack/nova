@@ -18,14 +18,14 @@
 Client side of the compute RPC API.
 """
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 def _compute_topic(topic, ctxt, host, instance):
@@ -158,7 +158,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def __init__(self):
         super(ComputeAPI, self).__init__(
-                topic=FLAGS.compute_topic,
+                topic=CONF.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
     def add_aggregate_host(self, ctxt, aggregate, host_param, host,
@@ -589,7 +589,7 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def __init__(self):
         super(SecurityGroupAPI, self).__init__(
-                topic=FLAGS.compute_topic,
+                topic=CONF.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
