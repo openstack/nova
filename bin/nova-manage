@@ -89,8 +89,6 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
 
-FLAGS = flags.FLAGS
-
 CONF = config.CONF
 CONF.import_opt('flat_network_bridge', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
@@ -381,9 +379,9 @@ class FloatingIpCommands(object):
         """Creates floating ips for zone by range"""
         admin_context = context.get_admin_context()
         if not pool:
-            pool = FLAGS.default_floating_pool
+            pool = CONF.default_floating_pool
         if not interface:
-            interface = FLAGS.public_interface
+            interface = CONF.public_interface
 
         ips = ({'address': str(address), 'pool': pool, 'interface': interface}
                for address in self.address_to_hosts(ip_range))
@@ -477,7 +475,7 @@ class NetworkCommands(object):
                        if v and k != "self"))
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
-        net_manager = importutils.import_object(FLAGS.network_manager)
+        net_manager = importutils.import_object(CONF.network_manager)
         net_manager.create_networks(context.get_admin_context(), **kwargs)
 
     def list(self):
@@ -521,8 +519,8 @@ class NetworkCommands(object):
         if fixed_range is None and uuid is None:
             raise Exception("Please specify either fixed_range or uuid")
 
-        net_manager = importutils.import_object(FLAGS.network_manager)
-        if "QuantumManager" in FLAGS.network_manager:
+        net_manager = importutils.import_object(CONF.network_manager)
+        if "QuantumManager" in CONF.network_manager:
             if uuid is None:
                 raise Exception("UUID is required to delete Quantum Networks")
             if fixed_range:
@@ -636,7 +634,7 @@ class ServiceCommands(object):
                     _('Updated_At'))
         for svc in services:
             delta = now - (svc['updated_at'] or svc['created_at'])
-            alive = abs(utils.total_seconds(delta)) <= FLAGS.service_down_time
+            alive = abs(utils.total_seconds(delta)) <= CONF.service_down_time
             art = (alive and ":-)") or "XXX"
             active = 'enabled'
             if svc['disabled']:
@@ -1123,10 +1121,10 @@ class GetLogCommands(object):
     def errors(self):
         """Get all of the errors from the log files"""
         error_found = 0
-        if FLAGS.logdir:
-            logs = [x for x in os.listdir(FLAGS.logdir) if x.endswith('.log')]
+        if CONF.logdir:
+            logs = [x for x in os.listdir(CONF.logdir) if x.endswith('.log')]
             for file in logs:
-                log_file = os.path.join(FLAGS.logdir, file)
+                log_file = os.path.join(CONF.logdir, file)
                 lines = [line.strip() for line in open(log_file, "r")]
                 lines.reverse()
                 print_name = 0
@@ -1226,7 +1224,7 @@ def main():
         argv = config.parse_args(sys.argv)
         logging.setup("nova")
     except cfg.ConfigFilesNotFoundError:
-        cfgfile = FLAGS.config_file[-1] if FLAGS.config_file else None
+        cfgfile = CONF.config_file[-1] if CONF.config_file else None
         if cfgfile and not os.access(cfgfile, os.R_OK):
             st = os.stat(cfgfile)
             print _("Could not read %s. Re-running with sudo") % cfgfile

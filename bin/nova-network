@@ -40,12 +40,13 @@ from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
+CONF = config.CONF
+
 if __name__ == '__main__':
     config.parse_args(sys.argv)
-    FLAGS = flags.FLAGS
     logging.setup("nova")
     utils.monkey_patch()
     server = service.Service.create(binary='nova-network',
-                                    topic=FLAGS.network_topic)
+                                    topic=CONF.network_topic)
     service.serve(server)
     service.wait()

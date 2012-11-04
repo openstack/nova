@@ -46,21 +46,20 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import utils
 
-FLAGS = flags.FLAGS
-
+CONF = config.CONF
 LOG = logging.getLogger('nova.dhcpbridge')
 
 
 def add_lease(mac, ip_address):
     """Set the IP that was assigned by the DHCP server."""
-    if FLAGS.fake_rabbit:
+    if CONF.fake_rabbit:
         LOG.debug(_("leasing ip"))
-        network_manager = importutils.import_object(FLAGS.network_manager)
+        network_manager = importutils.import_object(CONF.network_manager)
         network_manager.lease_fixed_ip(context.get_admin_context(),
                                        ip_address)
     else:
         api = network_rpcapi.NetworkAPI()
-        api.lease_fixed_ip(context.get_admin_context(), ip_address, FLAGS.host)
+        api.lease_fixed_ip(context.get_admin_context(), ip_address, CONF.host)
 
 
 def old_lease(mac, ip_address):
@@ -73,28 +72,28 @@ def old_lease(mac, ip_address):
 
 def del_lease(mac, ip_address):
     """Called when a lease expires."""
-    if FLAGS.fake_rabbit:
+    if CONF.fake_rabbit:
         LOG.debug(_("releasing ip"))
-        network_manager = importutils.import_object(FLAGS.network_manager)
+        network_manager = importutils.import_object(CONF.network_manager)
         network_manager.release_fixed_ip(context.get_admin_context(),
                                          ip_address)
     else:
         api = network_rpcapi.NetworkAPI()
         api.release_fixed_ip(context.get_admin_context(), ip_address,
-                             FLAGS.host)
+                             CONF.host)
 
 
 def init_leases(network_id):
     """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
     network_ref = db.network_get(ctxt, network_id)
-    network_manager = importutils.import_object(FLAGS.network_manager)
+    network_manager = importutils.import_object(CONF.network_manager)
     return network_manager.get_dhcp_leases(ctxt, network_ref)
 
 
 def main():
     """Parse environment and arguments and call the approproate action."""
-    flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
+    flagfile = os.environ.get('FLAGFILE', CONF.dhcpbridge_flagfile)
     argv = config.parse_args(sys.argv, default_config_files=[flagfile])
     logging.setup("nova")
 

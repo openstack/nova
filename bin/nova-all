@@ -49,6 +49,7 @@ from nova import utils
 from nova.vnc import xvp_proxy
 
 
+CONF = config.CONF
 LOG = logging.getLogger('nova.all')
 
 if __name__ == '__main__':
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     launcher = service.ProcessLauncher()
 
     # nova-api
-    for api in flags.FLAGS.enabled_apis:
+    for api in CONF.enabled_apis:
         try:
             server = service.WSGIService(api)
             launcher.launch_server(server, workers=server.workers or 1)

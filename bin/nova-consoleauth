@@ -37,12 +37,12 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import service
 
+CONF = config.CONF
 
 if __name__ == "__main__":
     config.parse_args(sys.argv)
-    FLAGS = flags.FLAGS
     logging.setup("nova")
     server = service.Service.create(binary='nova-consoleauth',
-                                    topic=FLAGS.consoleauth_topic)
+                                    topic=CONF.consoleauth_topic)
     service.serve(server)
     service.wait()
