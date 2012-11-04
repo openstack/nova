@@ -139,6 +139,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.9 - Add publish_service_capabilities()
         2.10 - Adds filter_properties and request_spec to prep_resize()
         2.11 - Adds soft_delete_instance() and restore_instance()
+        2.12 - Remove migration_id, add migration to revert_resize
     '''
 
     #
@@ -441,13 +442,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def revert_resize(self, ctxt, instance, migration_id, host,
+    def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
         instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
         self.cast(ctxt, self.make_msg('revert_resize',
-                instance=instance_p, migration_id=migration_id,
+                instance=instance_p, migration=migration_p,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, instance))
+                topic=_compute_topic(self.topic, ctxt, host, instance),
+                version='2.12')
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)

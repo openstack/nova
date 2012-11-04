@@ -230,7 +230,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.11'
+    RPC_API_VERSION = '2.12'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1532,16 +1532,17 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def revert_resize(self, context, instance, migration_id,
-                      reservations=None):
+    def revert_resize(self, context, instance, migration=None,
+                      migration_id=None, reservations=None):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
         source machine.
 
         """
-        migration_ref = self.db.migration_get(context.elevated(),
-                migration_id)
+        if not migration:
+            migration = self.db.migration_get(context.elevated(),
+                                                  migration_id)
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
@@ -1555,7 +1556,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                     teardown=True)
 
             self.network_api.migrate_instance_start(context, instance,
-                                                    migration_ref)
+                                                    migration)
 
             network_info = self._get_instance_nw_info(context, instance)
             block_device_info = self._get_instance_volume_block_device_info(
@@ -1567,7 +1568,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._terminate_volume_connections(context, instance)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration_ref['id'], migration_ref['source_compute'],
+                    migration['id'], migration['source_compute'],
                     reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
