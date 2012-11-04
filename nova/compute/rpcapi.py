@@ -140,6 +140,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.10 - Adds filter_properties and request_spec to prep_resize()
         2.11 - Adds soft_delete_instance() and restore_instance()
         2.12 - Remove migration_id, add migration to revert_resize
+        2.13 - Remove migration_id, add migration to finish_revert_resize
     '''
 
     #
@@ -238,13 +239,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None),
                 version='2.8')
 
-    def finish_revert_resize(self, ctxt, instance, migration_id, host,
+    def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
         instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
         self.cast(ctxt, self.make_msg('finish_revert_resize',
-                instance=instance_p, migration_id=migration_id,
+                instance=instance_p, migration=migration_p,
                 reservations=reservations),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='2.13')
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)

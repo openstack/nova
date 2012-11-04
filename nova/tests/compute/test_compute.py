@@ -2002,8 +2002,8 @@ class ComputeTestCase(BaseTestCase):
                        fake_setup_networks_on_host)
 
         self.compute.finish_revert_resize(self.context,
-                migration_id=migration_ref['id'], instance=rpcinst,
-                reservations=reservations)
+                migration=jsonutils.to_primitive(migration_ref),
+                instance=rpcinst, reservations=reservations)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
