@@ -20,13 +20,13 @@
 
 from eventlet import tpool
 
+from nova import config
 from nova import flags
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 try:
     import libvirt
@@ -115,7 +115,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             if mapping['dhcp_server']:
                 allow_dhcp = True
                 break
-        if instance['image_ref'] == str(FLAGS.vpn_image_id):
+        if instance['image_ref'] == str(CONF.vpn_image_id):
             base_filter = 'nova-vpn'
         elif allow_dhcp:
             base_filter = 'nova-base'
@@ -142,7 +142,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         filter_set = ['no-mac-spoofing',
                       'no-ip-spoofing',
                       'no-arp-spoofing']
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             self._define_filter(self.nova_no_nd_reflection_filter)
             filter_set.append('nova-no-nd-reflection')
         self._define_filter(self._filter_container('nova-nodhcp', filter_set))
@@ -164,7 +164,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         if callable(xml):
             xml = xml()
         # execute in a native thread and block current greenthread until done
-        if not FLAGS.libvirt_nonblocking:
+        if not CONF.libvirt_nonblocking:
             # NOTE(maoy): the original implementation is to have the API called
             # in the thread pool no matter what.
             tpool.execute(self._conn.nwfilterDefineXML, xml)

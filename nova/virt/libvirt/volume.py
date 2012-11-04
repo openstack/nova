@@ -30,7 +30,6 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 CONF = config.CONF
 CONF.import_opt('num_iscsi_scan_tries', 'nova.volume.driver')
 
@@ -92,11 +91,11 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         netdisk_properties = connection_info['data']
         auth_enabled = netdisk_properties.get('auth_enabled')
         if (conf.source_protocol == 'rbd' and
-            FLAGS.rbd_secret_uuid):
-            conf.auth_secret_uuid = FLAGS.rbd_secret_uuid
+            CONF.rbd_secret_uuid):
+            conf.auth_secret_uuid = CONF.rbd_secret_uuid
             auth_enabled = True  # Force authentication locally
-            if FLAGS.rbd_user:
-                conf.auth_username = FLAGS.rbd_user
+            if CONF.rbd_user:
+                conf.auth_username = CONF.rbd_user
         if auth_enabled:
             conf.auth_username = (conf.auth_username or
                                   netdisk_properties['auth_username'])
@@ -172,7 +171,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
         tries = 0
         while not os.path.exists(host_device):
-            if tries >= FLAGS.num_iscsi_scan_tries:
+            if tries >= CONF.num_iscsi_scan_tries:
                 raise exception.NovaException(_("iSCSI device not found at %s")
                                               % (host_device))
 

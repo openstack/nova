@@ -37,6 +37,7 @@ from eventlet import greenthread
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -116,8 +117,8 @@ xenapi_vm_utils_opts = [
                     ' within a given dom0. (-1 = no limit)')
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(xenapi_vm_utils_opts)
+CONF = config.CONF
+CONF.register_opts(xenapi_vm_utils_opts)
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -318,7 +319,7 @@ def unplug_vbd(session, vbd_ref):
     # DEVICE_DETACH_REJECTED.  For reasons which we don't understand,
     # we're seeing the device still in use, even when all processes
     # using the device should be dead.
-    max_attempts = FLAGS.xenapi_num_vbd_unplug_retries + 1
+    max_attempts = CONF.xenapi_num_vbd_unplug_retries + 1
     for num_attempt in xrange(1, max_attempts + 1):
         try:
             session.call_xenapi('VBD.unplug', vbd_ref)
@@ -609,7 +610,7 @@ def get_sr_path(session):
     sr_ref = safe_find_sr(session)
     sr_rec = session.call_xenapi("SR.get_record", sr_ref)
     sr_uuid = sr_rec["uuid"]
-    return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
+    return os.path.join(CONF.xenapi_sr_base_path, sr_uuid)
 
 
 def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
@@ -695,7 +696,7 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
 
     properties = {
         'auto_disk_config': instance['auto_disk_config'],
-        'os_type': instance['os_type'] or FLAGS.default_os_type,
+        'os_type': instance['os_type'] or CONF.default_os_type,
     }
 
     params = {'vdi_uuids': vdi_uuids,
@@ -831,7 +832,7 @@ def generate_ephemeral(session, instance, vm_ref, userdevice, name_label,
                        size_gb):
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'ephemeral', size_gb * 1024,
-                   FLAGS.default_ephemeral_format)
+                   CONF.default_ephemeral_format)
 
 
 def create_kernel_image(context, session, instance, name_label, image_id,
@@ -842,7 +843,7 @@ def create_kernel_image(context, session, instance, name_label, image_id,
     Returns: A list of dictionaries that describe VDIs
     """
     filename = ""
-    if FLAGS.cache_images:
+    if CONF.cache_images:
         args = {}
         args['cached-image'] = image_id
         args['new-image-uuid'] = str(uuid.uuid4())
@@ -872,7 +873,7 @@ def _create_cached_image(context, session, instance, name_label,
     sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
     vdis = {}
 
-    if FLAGS.use_cow_images and sr_type != "ext":
+    if CONF.use_cow_images and sr_type != "ext":
         LOG.warning(_("Fast cloning is only supported on default local SR "
                       "of type ext. SR on this system was found to be of "
                       "type %(sr_type)s. Ignoring the cow flag.")
@@ -890,7 +891,7 @@ def _create_cached_image(context, session, instance, name_label,
         session.call_xenapi('VDI.add_to_other_config',
                             root_vdi_ref, 'image-id', str(image_id))
 
-    if FLAGS.use_cow_images and sr_type == 'ext':
+    if CONF.use_cow_images and sr_type == 'ext':
         new_vdi_ref = _clone_vdi(session, root_vdi_ref)
     else:
         new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, root_vdi_ref)
@@ -913,7 +914,7 @@ def _create_image(context, session, instance, name_label, image_id,
 
     Returns: A list of dictionaries that describe VDIs
     """
-    cache_images = FLAGS.cache_images.lower()
+    cache_images = CONF.cache_images.lower()
 
     # Deterimine if the image is cacheable
     if image_type == ImageType.DISK_ISO:
@@ -932,7 +933,7 @@ def _create_image(context, session, instance, name_label, image_id,
         cache = False
     else:
         LOG.warning(_("Unrecognized cache_images value '%s', defaulting to"
-                      " True"), FLAGS.cache_images)
+                      " True"), CONF.cache_images)
         cache = True
 
     # Fetch (and cache) the image
@@ -974,7 +975,7 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
 
 def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
                                         plugin_name, params, callback=None):
-    max_attempts = FLAGS.glance_num_retries + 1
+    max_attempts = CONF.glance_num_retries + 1
     sleep_time = 0.5
     for attempt_num in xrange(1, max_attempts + 1):
         LOG.info(_('download_vhd %(image_id)s, '
@@ -1011,7 +1012,7 @@ def _make_uuid_stack():
 
 def _image_uses_bittorrent(context, instance):
     bittorrent = False
-    xenapi_torrent_images = FLAGS.xenapi_torrent_images.lower()
+    xenapi_torrent_images = CONF.xenapi_torrent_images.lower()
 
     if xenapi_torrent_images == 'all':
         bittorrent = True
@@ -1047,19 +1048,19 @@ def _fetch_vhd_image(context, session, instance, image_id):
     if _image_uses_bittorrent(context, instance):
         plugin_name = 'bittorrent'
         callback = None
-        params['torrent_base_url'] = FLAGS.xenapi_torrent_base_url
-        params['torrent_seed_duration'] = FLAGS.xenapi_torrent_seed_duration
-        params['torrent_seed_chance'] = FLAGS.xenapi_torrent_seed_chance
+        params['torrent_base_url'] = CONF.xenapi_torrent_base_url
+        params['torrent_seed_duration'] = CONF.xenapi_torrent_seed_duration
+        params['torrent_seed_chance'] = CONF.xenapi_torrent_seed_chance
         params['torrent_max_last_accessed'] =\
-                FLAGS.xenapi_torrent_max_last_accessed
+                CONF.xenapi_torrent_max_last_accessed
         params['torrent_listen_port_start'] =\
-                FLAGS.xenapi_torrent_listen_port_start
+                CONF.xenapi_torrent_listen_port_start
         params['torrent_listen_port_end'] =\
-                FLAGS.xenapi_torrent_listen_port_end
+                CONF.xenapi_torrent_listen_port_end
         params['torrent_download_stall_cutoff'] =\
-                FLAGS.xenapi_torrent_download_stall_cutoff
+                CONF.xenapi_torrent_download_stall_cutoff
         params['torrent_max_seeder_processes_per_host'] =\
-                FLAGS.xenapi_torrent_max_seeder_processes_per_host
+                CONF.xenapi_torrent_max_seeder_processes_per_host
     else:
         plugin_name = 'glance'
         glance_api_servers = glance.get_api_servers()
@@ -1162,8 +1163,8 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         # Make room for MBR.
         vdi_size += MBR_SIZE_BYTES
     elif (image_type in (ImageType.KERNEL, ImageType.RAMDISK) and
-          vdi_size > FLAGS.max_kernel_ramdisk_size):
-        max_size = FLAGS.max_kernel_ramdisk_size
+          vdi_size > CONF.max_kernel_ramdisk_size):
+        max_size = CONF.max_kernel_ramdisk_size
         raise exception.NovaException(
             _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
               "max %(max_size)d bytes") % locals())
@@ -1192,7 +1193,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
 
             # Let the plugin copy the correct number of bytes.
             args['image-size'] = str(vdi_size)
-            if FLAGS.cache_images:
+            if CONF.cache_images:
                 args['cached-image'] = image_id
             filename = session.call_plugin('kernel', 'copy_vdi', args)
 
@@ -1461,13 +1462,13 @@ def _find_sr(session):
     """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
     try:
-        tokens = FLAGS.sr_matching_filter.split(':')
+        tokens = CONF.sr_matching_filter.split(':')
         filter_criteria = tokens[0]
         filter_pattern = tokens[1]
     except IndexError:
         # oops, flag is invalid
         LOG.warning(_("Flag sr_matching_filter '%s' does not respect "
-                      "formatting convention"), FLAGS.sr_matching_filter)
+                      "formatting convention"), CONF.sr_matching_filter)
         return None
 
     if filter_criteria == 'other-config':
@@ -1535,7 +1536,7 @@ def _find_iso_sr(session):
 
 def _get_rrd_server():
     """Return server's scheme and address to use for retrieving RRD XMLs."""
-    xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
+    xs_url = urlparse.urlparse(CONF.xenapi_connection_url)
     return [xs_url.scheme, xs_url.netloc]
 
 
@@ -1544,8 +1545,8 @@ def _get_rrd(server, vm_uuid):
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/vm_rrd?uuid=%s" % (
             server[0],
-            FLAGS.xenapi_connection_username,
-            FLAGS.xenapi_connection_password,
+            CONF.xenapi_connection_username,
+            CONF.xenapi_connection_password,
             server[1],
             vm_uuid))
         return xml.read()
@@ -1560,8 +1561,8 @@ def _get_rrd_updates(server, start_time):
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/rrd_updates?start=%s" % (
             server[0],
-            FLAGS.xenapi_connection_username,
-            FLAGS.xenapi_connection_password,
+            CONF.xenapi_connection_username,
+            CONF.xenapi_connection_password,
             server[1],
             start_time))
         return xml.read()
@@ -1762,7 +1763,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     # matches the underlying VHDs.
     _scan_sr(session, sr_ref)
 
-    max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
+    max_attempts = CONF.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
@@ -1775,7 +1776,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
             base_uuid = _get_vhd_parent_uuid(session, parent_ref)
             return parent_uuid, base_uuid
 
-        greenthread.sleep(FLAGS.xenapi_vhd_coalesce_poll_interval)
+        greenthread.sleep(CONF.xenapi_vhd_coalesce_poll_interval)
 
     msg = (_("VHD coalesce attempts exceeded (%(max_attempts)d)"
              ", giving up...") % locals())
@@ -1792,12 +1793,12 @@ def _remap_vbd_dev(dev):
     For now, we work around it by just doing a string replace.
     """
     # NOTE(sirp): This hack can go away when we pull support for Maverick
-    should_remap = FLAGS.xenapi_remap_vbd_dev
+    should_remap = CONF.xenapi_remap_vbd_dev
     if not should_remap:
         return dev
 
     old_prefix = 'xvd'
-    new_prefix = FLAGS.xenapi_remap_vbd_dev_prefix
+    new_prefix = CONF.xenapi_remap_vbd_dev_prefix
     remapped_dev = dev.replace(old_prefix, new_prefix)
 
     return remapped_dev
@@ -1805,7 +1806,7 @@ def _remap_vbd_dev(dev):
 
 def _wait_for_device(dev):
     """Wait for device node to appear"""
-    for i in xrange(0, FLAGS.block_device_creation_timeout):
+    for i in xrange(0, CONF.block_device_creation_timeout):
         dev_path = utils.make_dev_path(dev)
         if os.path.exists(dev_path):
             return
@@ -2047,7 +2048,7 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
 
             _write_partition(virtual_size, dst)
 
-            if FLAGS.xenapi_sparse_copy:
+            if CONF.xenapi_sparse_copy:
                 _sparse_copy(src_path, dst_path, virtual_size)
             else:
                 num_blocks = virtual_size / SECTOR_SIZE
@@ -2102,7 +2103,7 @@ def _prepare_injectables(inst, network_info):
     #only if injection is performed
     from Cheetah import Template as t
     template = t.Template
-    template_data = open(FLAGS.injected_network_template).read()
+    template_data = open(CONF.injected_network_template).read()
 
     metadata = inst['metadata']
     key = str(inst['key_data'])
@@ -2137,7 +2138,7 @@ def _prepare_injectables(inst, network_info):
                               'address_v6': '',
                               'netmask_v6': '',
                               'gateway_v6': '',
-                              'use_ipv6': FLAGS.use_ipv6}
+                              'use_ipv6': CONF.use_ipv6}
 
             # NOTE(tr3buchet): the original code used the old network_info
             #                  which only supported a single ipv4 subnet
@@ -2187,7 +2188,7 @@ def _prepare_injectables(inst, network_info):
         if interfaces_info:
             net = str(template(template_data,
                                 searchList=[{'interfaces': interfaces_info,
-                                            'use_ipv6': FLAGS.use_ipv6}]))
+                                            'use_ipv6': CONF.use_ipv6}]))
     return key, net, metadata
 
 

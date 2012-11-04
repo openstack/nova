@@ -26,8 +26,6 @@ import netaddr
 from nova import config
 from nova import flags
 
-
-FLAGS = flags.FLAGS
 CONF = config.CONF
 CONF.import_opt('injected_network_template', 'nova.virt.disk.api')
 
@@ -57,8 +55,8 @@ def get_ip_version(cidr):
     return int(net.version)
 
 
-def get_injected_network_template(network_info, use_ipv6=FLAGS.use_ipv6,
-                                  template=FLAGS.injected_network_template):
+def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
+                                  template=CONF.injected_network_template):
     """
     return a rendered network template for the given network_info
 

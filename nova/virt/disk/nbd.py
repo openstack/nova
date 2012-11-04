@@ -18,6 +18,7 @@
 import os
 import time
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova import utils
@@ -33,8 +34,8 @@ nbd_opts = [
                help='maximum number of possible nbd devices'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(nbd_opts)
+CONF = config.CONF
+CONF.register_opts(nbd_opts)
 
 
 class Mount(mount.Mount):
@@ -52,7 +53,7 @@ class Mount(mount.Mount):
     # are no free devices. Note that patch currently hardcodes 16 devices.
     # We might be able to alleviate problem 2. by scanning /proc/partitions
     # like the aformentioned patch does.
-    _DEVICES = ['/dev/nbd%s' % i for i in range(FLAGS.max_nbd_devices)]
+    _DEVICES = ['/dev/nbd%s' % i for i in range(CONF.max_nbd_devices)]
 
     def _allocate_nbd(self):
         if not os.path.exists("/sys/block/nbd0"):
@@ -89,7 +90,7 @@ class Mount(mount.Mount):
 
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuing
-        for _i in range(FLAGS.timeout_nbd):
+        for _i in range(CONF.timeout_nbd):
             if os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
                 self.device = device
                 break

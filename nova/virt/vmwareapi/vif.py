@@ -17,6 +17,7 @@
 
 """VIF drivers for VMWare."""
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
@@ -26,8 +27,8 @@ from nova.virt.vmwareapi import network_utils
 
 LOG = logging.getLogger(__name__)
 
-FLAGS = flags.FLAGS
-FLAGS.set_default('vmwareapi_vlan_interface', 'vmnic0')
+CONF = config.CONF
+CONF.set_default('vmwareapi_vlan_interface', 'vmnic0')
 
 
 class VMWareVlanBridgeDriver(vif.VIFDriver):
@@ -44,7 +45,7 @@ class VMWareVlanBridgeDriver(vif.VIFDriver):
         """Create a vlan and bridge unless they already exist."""
         vlan_num = network['vlan']
         bridge = network['bridge']
-        vlan_interface = FLAGS.vmwareapi_vlan_interface
+        vlan_interface = CONF.vmwareapi_vlan_interface
 
         # Check if the vlan_interface physical network adapter exists on the
         # host.

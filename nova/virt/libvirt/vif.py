@@ -42,9 +42,8 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(libvirt_vif_opts)
 CONF = config.CONF
+CONF.register_opts(libvirt_vif_opts)
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 
 LINUX_DEV_LEN = 14
@@ -63,7 +62,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
         conf.mac_addr = mapping['mac']
         conf.source_dev = network['bridge']
         conf.script = ""
-        if FLAGS.libvirt_use_virtio_for_bridges:
+        if CONF.libvirt_use_virtio_for_bridges:
             conf.model = "virtio"
 
         conf.filtername = "nova-instance-" + instance['name'] + "-" + mac_id
@@ -71,15 +70,15 @@ class LibvirtBridgeDriver(vif.VIFDriver):
         if mapping['dhcp_server']:
             conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
 
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             conf.add_filter_param("RASERVER",
                                   mapping.get('gateway_v6') + "/128")
 
-        if FLAGS.allow_same_net_traffic:
+        if CONF.allow_same_net_traffic:
             net, mask = netutils.get_net_and_mask(network['cidr'])
             conf.add_filter_param("PROJNET", net)
             conf.add_filter_param("PROJMASK", mask)
-            if FLAGS.use_ipv6:
+            if CONF.use_ipv6:
                 net_v6, prefixlen_v6 = netutils.get_net_and_prefixlen(
                                            network['cidr_v6'])
                 conf.add_filter_param("PROJNET6", net_v6)
@@ -93,7 +92,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
         if (not network.get('multi_host') and
             mapping.get('should_create_bridge')):
             if mapping.get('should_create_vlan'):
-                iface = FLAGS.vlan_interface or network['bridge_interface']
+                iface = CONF.vlan_interface or network['bridge_interface']
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
                            'bridge': network['bridge']},
@@ -103,7 +102,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
                                              network['bridge'],
                                              iface)
             else:
-                iface = FLAGS.flat_interface or network['bridge_interface']
+                iface = CONF.flat_interface or network['bridge_interface']
                 LOG.debug(_("Ensuring bridge %s"), network['bridge'],
                           instance=instance)
                 linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
@@ -129,7 +128,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
 
     def create_ovs_vif_port(self, dev, iface_id, mac, instance_id):
         utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
-                FLAGS.libvirt_ovs_bridge, dev,
+                CONF.libvirt_ovs_bridge, dev,
                 '--', 'set', 'Interface', dev,
                 'external-ids:iface-id=%s' % iface_id,
                 'external-ids:iface-status=active',
@@ -138,7 +137,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
                 run_as_root=True)
 
     def delete_ovs_vif_port(self, dev):
-        utils.execute('ovs-vsctl', 'del-port', FLAGS.libvirt_ovs_bridge,
+        utils.execute('ovs-vsctl', 'del-port', CONF.libvirt_ovs_bridge,
                       dev, run_as_root=True)
         utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
 
@@ -165,7 +164,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
 
         conf = vconfig.LibvirtConfigGuestInterface()
 
-        if FLAGS.libvirt_use_virtio_for_bridges:
+        if CONF.libvirt_use_virtio_for_bridges:
             conf.model = "virtio"
         conf.net_type = "ethernet"
         conf.target_dev = dev
@@ -260,9 +259,9 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
         conf = vconfig.LibvirtConfigGuestInterface()
 
         conf.net_type = "bridge"
-        conf.source_dev = FLAGS.libvirt_ovs_bridge
+        conf.source_dev = CONF.libvirt_ovs_bridge
         conf.mac_addr = mapping['mac']
-        if FLAGS.libvirt_use_virtio_for_bridges:
+        if CONF.libvirt_use_virtio_for_bridges:
             conf.model = "virtio"
         conf.vporttype = "openvswitch"
         conf.add_vport_param("interfaceid", mapping['vif_uuid'])
@@ -285,12 +284,12 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
 
-        if FLAGS.libvirt_type != 'xen':
+        if CONF.libvirt_type != 'xen':
             linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
 
         conf = vconfig.LibvirtConfigGuestInterface()
 
-        if FLAGS.libvirt_use_virtio_for_bridges:
+        if CONF.libvirt_use_virtio_for_bridges:
             conf.model = 'virtio'
         conf.net_type = "ethernet"
         conf.target_dev = dev

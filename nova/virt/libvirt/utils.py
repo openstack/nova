@@ -48,10 +48,9 @@ util_opts = [
     ]
 
 CONF = config.CONF
+CONF.register_opts(util_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')
-FLAGS = flags.FLAGS
-FLAGS.register_opts(util_opts)
 
 
 def execute(*args, **kwargs):
@@ -212,12 +211,12 @@ def pick_disk_driver_name(is_block_dev=False):
     :param is_block_dev:
     :returns: driver_name or None
     """
-    if FLAGS.libvirt_type == "xen":
+    if CONF.libvirt_type == "xen":
         if is_block_dev:
             return "phy"
         else:
             return "tap"
-    elif FLAGS.libvirt_type in ('kvm', 'qemu'):
+    elif CONF.libvirt_type in ('kvm', 'qemu'):
         return "qemu"
     else:
         # UML doesn't want a driver_name set
@@ -396,7 +395,7 @@ def find_disk(virt_dom):
     May be file or device"""
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
-    if FLAGS.libvirt_type == 'lxc':
+    if CONF.libvirt_type == 'lxc':
         source = domain.find('devices/filesystem/source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
@@ -452,7 +451,7 @@ def get_info_filename(base_path):
     """
 
     base_file = os.path.basename(base_path)
-    return (FLAGS.image_info_filename_pattern
+    return (CONF.image_info_filename_pattern
             % {'image': base_file})
 
 
@@ -460,7 +459,7 @@ def is_valid_info_file(path):
     """Test if a given path matches the pattern for info files."""
 
     digest_size = hashlib.sha1().digestsize * 2
-    regexp = (FLAGS.image_info_filename_pattern
+    regexp = (CONF.image_info_filename_pattern
               % {'image': ('([0-9a-f]{%(digest_size)d}|'
                            '[0-9a-f]{%(digest_size)d}_sm|'
                            '[0-9a-f]{%(digest_size)d}_[0-9]+)'

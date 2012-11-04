@@ -57,10 +57,9 @@ imagecache_opts = [
     ]
 
 CONF = config.CONF
+CONF.register_opts(imagecache_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')
-FLAGS = flags.FLAGS
-FLAGS.register_opts(imagecache_opts)
 
 
 def read_stored_checksum(target):
@@ -148,7 +147,7 @@ class ImageCacheManager(object):
             image_ref_str = str(instance['image_ref'])
             local, remote, insts = self.used_images.get(image_ref_str,
                                                         (0, 0, []))
-            if instance['host'] == FLAGS.host:
+            if instance['host'] == CONF.host:
                 local += 1
             else:
                 remote += 1
@@ -161,10 +160,10 @@ class ImageCacheManager(object):
     def _list_backing_images(self):
         """List the backing images currently in use."""
         inuse_images = []
-        for ent in os.listdir(FLAGS.instances_path):
+        for ent in os.listdir(CONF.instances_path):
             if ent in self.instance_names:
                 LOG.debug(_('%s is a valid instance name'), ent)
-                disk_path = os.path.join(FLAGS.instances_path, ent, 'disk')
+                disk_path = os.path.join(CONF.instances_path, ent, 'disk')
                 if os.path.exists(disk_path):
                     LOG.debug(_('%s has a disk file'), ent)
                     backing_file = virtutils.get_disk_backing_file(disk_path)
@@ -174,8 +173,8 @@ class ImageCacheManager(object):
                                'backing': backing_file})
 
                     if backing_file:
-                        backing_path = os.path.join(FLAGS.instances_path,
-                                                    FLAGS.base_dir_name,
+                        backing_path = os.path.join(CONF.instances_path,
+                                                    CONF.base_dir_name,
                                                     backing_file)
                         if not backing_path in inuse_images:
                             inuse_images.append(backing_path)
@@ -226,7 +225,7 @@ class ImageCacheManager(object):
         handle manually when it occurs.
         """
 
-        if not FLAGS.checksum_base_images:
+        if not CONF.checksum_base_images:
             return None
 
         stored_checksum = read_stored_checksum(base_file)
@@ -272,9 +271,9 @@ class ImageCacheManager(object):
         mtime = os.path.getmtime(base_file)
         age = time.time() - mtime
 
-        maxage = FLAGS.remove_unused_resized_minimum_age_seconds
+        maxage = CONF.remove_unused_resized_minimum_age_seconds
         if base_file in self.originals:
-            maxage = FLAGS.remove_unused_original_minimum_age_seconds
+            maxage = CONF.remove_unused_original_minimum_age_seconds
 
         if age < maxage:
             LOG.info(_('Base file too young to remove: %s'),
@@ -374,7 +373,7 @@ class ImageCacheManager(object):
         # created, but may remain from previous versions.
         self._reset_state()
 
-        base_dir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
+        base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
         if not os.path.exists(base_dir):
             LOG.debug(_('Skipping verification, no base directory at %s'),
                       base_dir)
@@ -420,7 +419,7 @@ class ImageCacheManager(object):
             LOG.info(_('Removable base files: %s'),
                      ' '.join(self.removable_base_files))
 
-            if FLAGS.remove_unused_base_images:
+            if CONF.remove_unused_base_images:
                 for base_file in self.removable_base_files:
                     self._remove_base_file(base_file)
 

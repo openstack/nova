@@ -25,6 +25,7 @@ import sys
 import time
 
 from nova import block_device
+from nova import config
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt import driver
@@ -35,7 +36,7 @@ if sys.platform == 'win32':
     import _winreg
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class VolumeUtils(object):
@@ -71,7 +72,7 @@ class VolumeUtils(object):
                 initiator_name = "iqn.1991-05.com.microsoft:" + \
                     hostname.lower()
             return {
-                'ip': FLAGS.my_ip,
+                'ip': CONF.my_ip,
                 'initiator': initiator_name,
             }
 
@@ -89,7 +90,7 @@ class VolumeUtils(object):
             #Sending login
             self.execute('iscsicli.exe ' + 'qlogintarget ' + target_iqn)
             #Waiting the disk to be mounted. Research this
-            time.sleep(FLAGS.hyperv_wait_between_attach_retry)
+            time.sleep(CONF.hyperv_wait_between_attach_retry)
 
         def logout_storage_target(self, _conn_wmi, target_iqn):
             """ Logs out storage target through its session id """

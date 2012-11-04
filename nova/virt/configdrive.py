@@ -21,6 +21,7 @@ import os
 import shutil
 import tempfile
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -47,8 +48,8 @@ configdrive_opts = [
                     '(if set, valid options are: always)'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(configdrive_opts)
+CONF = config.CONF
+CONF.register_opts(configdrive_opts)
 
 
 class ConfigDriveBuilder(object):
@@ -58,7 +59,7 @@ class ConfigDriveBuilder(object):
         # TODO(mikal): I don't think I can use utils.tempdir here, because
         # I need to have the directory last longer than the scope of this
         # method call
-        self.tempdir = tempfile.mkdtemp(dir=FLAGS.config_drive_tempdir,
+        self.tempdir = tempfile.mkdtemp(dir=CONF.config_drive_tempdir,
                                         prefix='cd_gen_')
 
         if instance_md is not None:
@@ -105,7 +106,7 @@ class ConfigDriveBuilder(object):
 
         mounted = False
         try:
-            mountdir = tempfile.mkdtemp(dir=FLAGS.config_drive_tempdir,
+            mountdir = tempfile.mkdtemp(dir=CONF.config_drive_tempdir,
                                         prefix='cd_mnt_')
             _out, err = utils.trycmd('mount', '-o', 'loop', path, mountdir,
                                      run_as_root=True)
@@ -133,13 +134,13 @@ class ConfigDriveBuilder(object):
             shutil.rmtree(mountdir)
 
     def make_drive(self, path):
-        if FLAGS.config_drive_format == 'iso9660':
+        if CONF.config_drive_format == 'iso9660':
             self._make_iso9660(path)
-        elif FLAGS.config_drive_format == 'vfat':
+        elif CONF.config_drive_format == 'vfat':
             self._make_vfat(path)
         else:
             raise exception.ConfigDriveUnknownFormat(
-                format=FLAGS.config_drive_format)
+                format=CONF.config_drive_format)
 
     def cleanup(self):
         if self.imagefile:
@@ -152,7 +153,7 @@ class ConfigDriveBuilder(object):
 
 
 def required_by(instance):
-    return instance.get('config_drive') or FLAGS.force_config_drive
+    return instance.get('config_drive') or CONF.force_config_drive
 
 
 def enabled_for(instance):

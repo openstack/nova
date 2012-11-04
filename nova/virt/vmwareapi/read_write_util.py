@@ -32,8 +32,6 @@ from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
-FLAGS = flags.FLAGS
-
 USER_AGENT = "OpenStack-ESX-Adapter"
 
 READ_CHUNKSIZE = 65536

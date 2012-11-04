@@ -27,6 +27,7 @@ import urllib2
 import uuid
 
 from nova.compute import power_state
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -42,8 +43,8 @@ vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
         default='nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
         help='The VMWare VIF driver to configure the VIFs.')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(vmware_vif_driver_opt)
+CONF = config.CONF
+CONF.register_opt(vmware_vif_driver_opt)
 
 LOG = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class VMWareVMOps(object):
     def __init__(self, session):
         """Initializer."""
         self._session = session
-        self._vif_driver = importutils.import_object(FLAGS.vmware_vif_driver)
+        self._vif_driver = importutils.import_object(CONF.vmware_vif_driver)
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
@@ -207,7 +208,7 @@ class VMWareVMOps(object):
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
-        if FLAGS.flat_injected:
+        if CONF.flat_injected:
             self._set_machine_id(client_factory, instance, network_info)
 
         # Naming the VM files in correspondence with the VM instance name

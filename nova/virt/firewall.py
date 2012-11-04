@@ -17,6 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -41,12 +42,12 @@ firewall_opts = [
                 help='Whether to allow network traffic from same network'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(firewall_opts)
+CONF = config.CONF
+CONF.register_opts(firewall_opts)
 
 
 def load_driver(default, *args, **kwargs):
-    fw_class = importutils.import_class(FLAGS.firewall_driver or default)
+    fw_class = importutils.import_class(CONF.firewall_driver or default)
     return fw_class(*args, **kwargs)
 
 
@@ -204,7 +205,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules = self._create_filter(ips_v4, chain_name)
 
         ipv6_rules = []
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             ips_v6 = [ip['ip'] for (_n, mapping) in network_info
                      for ip in mapping['ip6s']]
             ipv6_rules = self._create_filter(ips_v6, chain_name)
@@ -215,7 +216,7 @@ class IptablesFirewallDriver(FirewallDriver):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
 
@@ -223,7 +224,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                  inst_ipv6_rules):
         network_info = self.network_infos[instance['id']]
         chain_name = self._instance_chain_name(instance)
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
         self.iptables.ipv4['filter'].add_chain(chain_name)
         ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
@@ -235,7 +236,7 @@ class IptablesFirewallDriver(FirewallDriver):
         chain_name = self._instance_chain_name(instance)
 
         self.iptables.ipv4['filter'].remove_chain(chain_name)
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
     @staticmethod
@@ -276,7 +277,7 @@ class IptablesFirewallDriver(FirewallDriver):
         cidrs = [network['cidr'] for (network, _i) in network_info]
         for cidr in cidrs:
             ipv4_rules.append('-s %s -j ACCEPT' % (cidr,))
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             cidrv6s = [network['cidr_v6'] for (network, _i) in
                        network_info]
 
@@ -335,13 +336,13 @@ class IptablesFirewallDriver(FirewallDriver):
         self._do_dhcp_rules(ipv4_rules, network_info)
 
         #Allow project network traffic
-        if FLAGS.allow_same_net_traffic:
+        if CONF.allow_same_net_traffic:
             self._do_project_network_rules(ipv4_rules, ipv6_rules,
                                            network_info)
-        # We wrap these in FLAGS.use_ipv6 because they might cause
+        # We wrap these in CONF.use_ipv6 because they might cause
         # a DB lookup. The other ones are just list operations, so
         # they're not worth the clutter.
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             # Allow RA responses
             self._do_ra_rules(ipv6_rules, network_info)
 
@@ -462,19 +463,19 @@ class IptablesFirewallDriver(FirewallDriver):
     def _purge_provider_fw_rules(self):
         """Remove all rules from the provider chains."""
         self.iptables.ipv4['filter'].empty_chain('provider')
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             self.iptables.ipv6['filter'].empty_chain('provider')
 
     def _build_provider_fw_rules(self):
         """Create all rules for the provider IP DROPs."""
         self.iptables.ipv4['filter'].add_chain('provider')
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             self.iptables.ipv6['filter'].add_chain('provider')
         ipv4_rules, ipv6_rules = self._provider_rules()
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule('provider', rule)
 
-        if FLAGS.use_ipv6:
+        if CONF.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule('provider', rule)
 

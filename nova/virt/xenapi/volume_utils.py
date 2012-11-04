@@ -22,11 +22,12 @@ and storage repositories
 import re
 import string
 
+from nova import config
 from nova import flags
 from nova.openstack.common import log as logging
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -359,22 +360,22 @@ def _get_target_host(iscsi_string):
     """Retrieve target host"""
     if iscsi_string:
         return iscsi_string[0:iscsi_string.find(':')]
-    elif iscsi_string is None or FLAGS.target_host:
-        return FLAGS.target_host
+    elif iscsi_string is None or CONF.target_host:
+        return CONF.target_host
 
 
 def _get_target_port(iscsi_string):
     """Retrieve target port"""
     if iscsi_string:
         return iscsi_string[iscsi_string.find(':') + 1:]
-    elif iscsi_string is None or FLAGS.target_port:
-        return FLAGS.target_port
+    elif iscsi_string is None or CONF.target_port:
+        return CONF.target_port
 
 
 def _get_iqn(iscsi_string, id):
     """Retrieve target IQN"""
     if iscsi_string:
         return iscsi_string
-    elif iscsi_string is None or FLAGS.iqn_prefix:
+    elif iscsi_string is None or CONF.iqn_prefix:
         volume_id = _get_volume_id(id)
-        return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
+        return '%s:%s' % (CONF.iqn_prefix, volume_id)

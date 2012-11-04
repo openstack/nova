@@ -21,6 +21,7 @@ Management class for basic VM operations.
 import os
 import uuid
 
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -44,8 +45,8 @@ hyperv_opts = [
                     'hosts with different CPU features')
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(hyperv_opts)
+CONF = config.CONF
+CONF.register_opts(hyperv_opts)
 
 
 class VMOps(baseops.BaseOps):
@@ -128,7 +129,7 @@ class VMOps(baseops.BaseOps):
                   image_id=instance['image_ref'],
                   user=instance['user_id'],
                   project=instance['project_id'],
-                  cow=FLAGS.use_cow_images)
+                  cow=CONF.use_cow_images)
             except Exception as exn:
                 LOG.exception(_('cache image failed: %s'), exn)
                 self.destroy(instance)
@@ -200,7 +201,7 @@ class VMOps(baseops.BaseOps):
         procsetting.Reservation = vcpus
         procsetting.Limit = 100000  # static assignment to 100%
 
-        if FLAGS.limit_cpu_features:
+        if CONF.limit_cpu_features:
             procsetting.LimitProcessorFeatures = True
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
@@ -337,20 +338,20 @@ class VMOps(baseops.BaseOps):
         """
         #If there are no physical nics connected to networks, return.
         LOG.debug(_("Attempting to bind NIC to %s ")
-                % FLAGS.vswitch_name)
-        if FLAGS.vswitch_name:
+                % CONF.vswitch_name)
+        if CONF.vswitch_name:
             LOG.debug(_("Attempting to bind NIC to %s ")
-                % FLAGS.vswitch_name)
+                % CONF.vswitch_name)
             bound = self._conn.Msvm_VirtualSwitch(
-                ElementName=FLAGS.vswitch_name)
+                ElementName=CONF.vswitch_name)
         else:
             LOG.debug(_("No vSwitch specified, attaching to default"))
             self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')
         if len(bound) == 0:
             return None
-        if FLAGS.vswitch_name:
+        if CONF.vswitch_name:
             return self._conn.Msvm_VirtualSwitch(
-                ElementName=FLAGS.vswitch_name)[0]\
+                ElementName=CONF.vswitch_name)[0]\
                 .associators(wmi_result_class='Msvm_SwitchPort')[0]\
                 .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
         else:
