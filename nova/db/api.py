@@ -43,6 +43,7 @@ these objects be simple dictionaries.
 
 """
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -64,8 +65,8 @@ db_opts = [
                help='Template string to be used to generate snapshot names'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(db_opts)
+CONF = config.CONF
+CONF.register_opts(db_opts)
 
 IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.api')

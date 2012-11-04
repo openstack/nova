@@ -169,12 +169,13 @@ import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 
+from nova import config
 import nova.exception
 import nova.flags as flags
 import nova.openstack.common.log as logging
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None
@@ -205,7 +206,7 @@ def get_engine():
     """Return a SQLAlchemy engine."""
     global _ENGINE
     if _ENGINE is None:
-        _ENGINE = create_engine(FLAGS.sql_connection)
+        _ENGINE = create_engine(CONF.sql_connection)
     return _ENGINE
 
 
@@ -267,21 +268,21 @@ def create_engine(sql_connection):
     connection_dict = sqlalchemy.engine.url.make_url(sql_connection)
 
     engine_args = {
-        "pool_recycle": FLAGS.sql_idle_timeout,
+        "pool_recycle": CONF.sql_idle_timeout,
         "echo": False,
         'convert_unicode': True,
     }
 
     # Map our SQL debug level to SQLAlchemy's options
-    if FLAGS.sql_connection_debug >= 100:
+    if CONF.sql_connection_debug >= 100:
         engine_args['echo'] = 'debug'
-    elif FLAGS.sql_connection_debug >= 50:
+    elif CONF.sql_connection_debug >= 50:
         engine_args['echo'] = True
 
     if "sqlite" in connection_dict.drivername:
         engine_args["poolclass"] = NullPool
 
-        if FLAGS.sql_connection == "sqlite://":
+        if CONF.sql_connection == "sqlite://":
             engine_args["poolclass"] = StaticPool
             engine_args["connect_args"] = {'check_same_thread': False}
 
@@ -292,12 +293,12 @@ def create_engine(sql_connection):
     if 'mysql' in connection_dict.drivername:
         sqlalchemy.event.listen(engine, 'checkout', ping_listener)
     elif 'sqlite' in connection_dict.drivername:
-        if not FLAGS.sqlite_synchronous:
+        if not CONF.sqlite_synchronous:
             sqlalchemy.event.listen(engine, 'connect',
                                     synchronous_switch_listener)
         sqlalchemy.event.listen(engine, 'connect', add_regexp_listener)
 
-    if (FLAGS.sql_connection_trace and
+    if (CONF.sql_connection_trace and
             engine.dialect.dbapi.__name__ == 'MySQLdb'):
         import MySQLdb.cursors
         _do_query = debug_mysql_do_query()
@@ -309,7 +310,7 @@ def create_engine(sql_connection):
         if not is_db_connection_error(e.args[0]):
             raise
 
-        remaining = FLAGS.sql_max_retries
+        remaining = CONF.sql_max_retries
         if remaining == -1:
             remaining = 'infinite'
         while True:
@@ -317,7 +318,7 @@ def create_engine(sql_connection):
             LOG.warn(msg % remaining)
             if remaining != 'infinite':
                 remaining -= 1
-            time.sleep(FLAGS.sql_retry_interval)
+            time.sleep(CONF.sql_retry_interval)
             try:
                 engine.connect()
                 break
