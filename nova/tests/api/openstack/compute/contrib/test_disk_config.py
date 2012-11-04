@@ -31,8 +31,6 @@ MANUAL_INSTANCE_UUID = fakes.FAKE_UUID
 AUTO_INSTANCE_UUID = fakes.FAKE_UUID.replace('a', 'b')
 
 stub_instance = fakes.stub_instance
-FLAGS = flags.FLAGS
-
 
 API_DISK_CONFIG = 'OS-DCF:diskConfig'
 

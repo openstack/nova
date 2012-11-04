@@ -15,13 +15,14 @@
 import webob
 
 from nova import compute
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 def rescue(self, context, instance, rescue_password=None):
@@ -71,7 +72,7 @@ class RescueTest(test.TestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
-        self.assertEqual(FLAGS.password_length, len(resp_json['adminPass']))
+        self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
 
     def test_rescue_of_rescued_instance(self):
         body = dict(rescue=None)

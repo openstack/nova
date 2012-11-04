@@ -17,13 +17,14 @@
 
 import os
 
+from nova import config
 from nova import flags
 from nova.openstack.common import fileutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class _ImageTestCase(test.TestCase):
@@ -42,9 +43,9 @@ class _ImageTestCase(test.TestCase):
         self.NAME = 'fake.vm'
         self.TEMPLATE = 'template'
 
-        self.PATH = os.path.join(FLAGS.instances_path, self.INSTANCE,
+        self.PATH = os.path.join(CONF.instances_path, self.INSTANCE,
                                  self.NAME)
-        self.TEMPLATE_DIR = os.path.join(FLAGS.instances_path,
+        self.TEMPLATE_DIR = os.path.join(CONF.instances_path,
                                          '_base')
         self.TEMPLATE_PATH = os.path.join(self.TEMPLATE_DIR, 'template')
 

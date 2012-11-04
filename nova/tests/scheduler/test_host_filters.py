@@ -18,6 +18,7 @@ Tests For Scheduler Host Filters.
 import httplib
 import stubout
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -30,7 +31,7 @@ from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
 
-
+CONF = config.CONF
 DATA = ''
 
 
@@ -433,7 +434,7 @@ class HostFiltersTestCase(test.TestCase):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
 
-        affinity_ip = flags.FLAGS.my_ip.split('.')[0:3]
+        affinity_ip = CONF.my_ip.split('.')[0:3]
         affinity_ip.append('100')
         affinity_ip = str.join('.', affinity_ip)
 

@@ -25,10 +25,6 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
-FLAGS = flags.FLAGS
-
-
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
 UUID3 = '00000000-0000-0000-0000-000000000003'

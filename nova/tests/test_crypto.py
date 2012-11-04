@@ -27,8 +27,6 @@ from nova import flags
 from nova import test
 from nova import utils
 
-FLAGS = flags.FLAGS
-
 
 class X509Test(test.TestCase):
     def test_can_generate_x509(self):

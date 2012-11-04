@@ -18,14 +18,14 @@
 Unit Tests for nova.scheduler.rpcapi
 """
 
+from nova import config
 from nova import context
 from nova import flags
 from nova.openstack.common import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class SchedulerRpcAPITestCase(test.TestCase):
@@ -51,7 +51,7 @@ class SchedulerRpcAPITestCase(test.TestCase):
         retval = getattr(rpcapi, method)(ctxt, **kwargs)
 
         self.assertEqual(retval, expected_retval)
-        expected_args = [ctxt, FLAGS.scheduler_topic, expected_msg]
+        expected_args = [ctxt, CONF.scheduler_topic, expected_msg]
         for arg, expected_arg in zip(self.fake_args, expected_args):
             self.assertEqual(arg, expected_arg)
 

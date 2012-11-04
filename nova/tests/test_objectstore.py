@@ -28,13 +28,13 @@ import tempfile
 from boto import exception as boto_exception
 from boto.s3 import connection as s3
 
+from nova import config
 from nova import flags
 from nova.objectstore import s3server
 from nova import test
 from nova import wsgi
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 # Create a unique temporary directory. We don't delete after test to
 # allow checking the contents after running tests. Users and/or tools
@@ -55,14 +55,14 @@ class S3APITestCase(test.TestCase):
         self.flags(buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
                    s3_host='127.0.0.1')
 
-        shutil.rmtree(FLAGS.buckets_path)
-        os.mkdir(FLAGS.buckets_path)
+        shutil.rmtree(CONF.buckets_path)
+        os.mkdir(CONF.buckets_path)
 
-        router = s3server.S3Application(FLAGS.buckets_path)
+        router = s3server.S3Application(CONF.buckets_path)
         self.server = wsgi.Server("S3 Objectstore",
                                   router,
-                                  host=FLAGS.s3_host,
-                                  port=FLAGS.s3_port)
+                                  host=CONF.s3_host,
+                                  port=CONF.s3_port)
         self.server.start()
 
         if not boto.config.has_section('Boto'):
@@ -71,8 +71,8 @@ class S3APITestCase(test.TestCase):
         boto.config.set('Boto', 'num_retries', '0')
         conn = s3.S3Connection(aws_access_key_id='fake',
                                aws_secret_access_key='fake',
-                               host=FLAGS.s3_host,
-                               port=FLAGS.s3_port,
+                               host=CONF.s3_host,
+                               port=CONF.s3_port,
                                is_secure=False,
                                calling_format=s3.OrdinaryCallingFormat())
         self.conn = conn

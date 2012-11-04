@@ -20,6 +20,7 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import admin_actions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import exception
 from nova import flags
@@ -29,8 +30,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 INSTANCE = {
              "id": 1,
@@ -216,7 +216,7 @@ class CreateBackupTests(test.TestCase):
                 'metadata': {'123': 'asdf'},
             },
         }
-        for num in range(FLAGS.quota_metadata_items + 1):
+        for num in range(CONF.quota_metadata_items + 1):
             body['createBackup']['metadata']['foo%i' % num] = "bar"
 
         request = self._get_request(body)

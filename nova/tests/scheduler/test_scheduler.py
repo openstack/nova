@@ -39,8 +39,6 @@ from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
 
-FLAGS = flags.FLAGS
-
 
 class SchedulerManagerTestCase(test.TestCase):
     """Test case for scheduler manager"""

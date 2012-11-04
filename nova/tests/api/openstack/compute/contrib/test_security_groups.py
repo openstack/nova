@@ -25,6 +25,7 @@ from nova.api.openstack.compute.contrib import security_groups
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import config
 import nova.db
 from nova import exception
 from nova import flags
@@ -33,10 +34,8 @@ from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
+CONF = config.CONF
 FAKE_UUID = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
-
-FLAGS = flags.FLAGS
 
 
 class AttrDict(dict):
@@ -259,7 +258,7 @@ class TestSecurityGroups(test.TestCase):
 
     def test_create_security_group_quota_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
-        for num in range(1, FLAGS.quota_security_groups + 1):
+        for num in range(1, CONF.quota_security_groups + 1):
             name = 'test%s' % num
             sg = security_group_template(name=name)
             res_dict = self.controller.create(req, {'security_group': sg})
@@ -1000,7 +999,7 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_rule_quota_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
-        for num in range(100, 100 + FLAGS.quota_security_group_rules):
+        for num in range(100, 100 + CONF.quota_security_group_rules):
             rule = {
                 'ip_protocol': 'tcp', 'from_port': num,
                 'to_port': num, 'parent_group_id': '2', 'group_id': '1'

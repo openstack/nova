@@ -19,13 +19,13 @@ Unit Tests for nova.cert.rpcapi
 """
 
 from nova.cert import rpcapi as cert_rpcapi
+from nova import config
 from nova import context
 from nova import flags
 from nova.openstack.common import rpc
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class CertRpcAPITestCase(test.TestCase):
@@ -54,7 +54,7 @@ class CertRpcAPITestCase(test.TestCase):
 
         self.assertEqual(retval, expected_retval)
         self.assertEqual(self.call_ctxt, ctxt)
-        self.assertEqual(self.call_topic, FLAGS.cert_topic)
+        self.assertEqual(self.call_topic, CONF.cert_topic)
         self.assertEqual(self.call_msg, expected_msg)
         self.assertEqual(self.call_timeout, None)
 

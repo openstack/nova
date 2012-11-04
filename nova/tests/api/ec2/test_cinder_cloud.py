@@ -24,6 +24,7 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -35,9 +36,8 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import volume
 
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 def get_fake_cache():
@@ -59,7 +59,7 @@ def get_fake_cache():
                                                   floats=['1.2.3.4',
                                                           '5.6.7.8']),
                                               _ip('192.168.0.4')]}]}}]
-    if FLAGS.use_ipv6:
+    if CONF.use_ipv6:
         ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
         info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
                                               'ips': [_ip(ipv6_addr)]})
@@ -668,7 +668,7 @@ class CinderCloudTestCase(test.TestCase):
         self._restart_compute_service(periodic_interval=0.3)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
+                  'instance_type': CONF.default_instance_type,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
@@ -750,7 +750,7 @@ class CinderCloudTestCase(test.TestCase):
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval=0.3)
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
+                  'instance_type': CONF.default_instance_type,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
@@ -831,7 +831,7 @@ class CinderCloudTestCase(test.TestCase):
         snap2_uuid = ec2utils.ec2_snap_id_to_uuid(snap2['snapshotId'])
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
+                  'instance_type': CONF.default_instance_type,
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'snapshot_id': snap1_uuid,
@@ -891,7 +891,7 @@ class CinderCloudTestCase(test.TestCase):
             create_volumes_and_snapshots=True)
 
         kwargs = {'image_id': 'ami-1',
-                  'instance_type': FLAGS.default_instance_type,
+                  'instance_type': CONF.default_instance_type,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 

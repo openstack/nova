@@ -32,8 +32,6 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
 
-
-FLAGS = flags.FLAGS
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 

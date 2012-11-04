@@ -26,7 +26,6 @@ from nova.openstack.common.log import logging
 from nova import service
 from nova.tests.integrated import integrated_helpers
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 

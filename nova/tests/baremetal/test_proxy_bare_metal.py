@@ -29,10 +29,6 @@ from nova.tests import fake_utils
 from nova.virt.baremetal import dom
 from nova.virt.baremetal import driver
 
-
-FLAGS = flags.FLAGS
-
-
 # Same fake_domains is used by different classes,
 # but different fake_file is used by different classes for unit test.
 fake_domains = [{'status': 1, 'name': 'instance-00000001',

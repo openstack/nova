@@ -43,9 +43,6 @@ from nova.openstack.common import timeutils
 from nova import test
 
 
-FLAGS = flags.FLAGS
-
-
 class FakeHttplibSocket(object):
     """a fake socket implementation for httplib.HTTPResponse, trivial"""
     def __init__(self, response_string):

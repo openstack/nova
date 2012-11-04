@@ -23,15 +23,13 @@ import uuid
 import webob
 
 from nova.api.openstack.compute.contrib import networks
+from nova import config
 from nova import exception
+from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
 
-from nova import flags
-
-
-FLAGS = flags.FLAGS
-
+CONF = config.CONF
 
 FAKE_NETWORKS = [
     {
@@ -137,12 +135,12 @@ class FakeNetworkAPI(object):
 
     def create(self, context, **kwargs):
         subnet_bits = int(math.ceil(math.log(kwargs.get(
-                        'network_size', FLAGS.network_size), 2)))
+                        'network_size', CONF.network_size), 2)))
         fixed_net_v4 = netaddr.IPNetwork(kwargs['cidr'])
         prefixlen_v4 = 32 - subnet_bits
         subnets_v4 = list(fixed_net_v4.subnet(
                 prefixlen_v4,
-                count=kwargs.get('num_networks', FLAGS.num_networks)))
+                count=kwargs.get('num_networks', CONF.num_networks)))
         new_networks = []
         new_id = max((net['id'] for net in self.networks))
         for index, subnet_v4 in enumerate(subnets_v4):

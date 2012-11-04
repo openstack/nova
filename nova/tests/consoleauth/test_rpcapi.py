@@ -18,14 +18,14 @@
 Unit Tests for nova.consoleauth.rpcapi
 """
 
+from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import flags
 from nova.openstack.common import rpc
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ConsoleAuthRpcAPITestCase(test.TestCase):
@@ -54,7 +54,7 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
 
         self.assertEqual(retval, expected_retval)
         self.assertEqual(self.call_ctxt, ctxt)
-        self.assertEqual(self.call_topic, FLAGS.consoleauth_topic)
+        self.assertEqual(self.call_topic, CONF.consoleauth_topic)
         self.assertEqual(self.call_msg, expected_msg)
         self.assertEqual(self.call_timeout, None)
 

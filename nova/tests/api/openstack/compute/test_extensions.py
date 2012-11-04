@@ -25,13 +25,13 @@ from nova.api.openstack.compute import extensions as compute_extensions
 from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import config
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 NS = "{http://docs.openstack.org/common/api/v1.0}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -141,7 +141,7 @@ class StubExtensionManager(object):
 class ExtensionTestCase(test.TestCase):
     def setUp(self):
         super(ExtensionTestCase, self).setUp()
-        ext_list = FLAGS.osapi_compute_extension[:]
+        ext_list = CONF.osapi_compute_extension[:]
         fox = ('nova.tests.api.openstack.compute.extensions.'
                'foxinsocks.Foxinsocks')
         if fox not in ext_list:

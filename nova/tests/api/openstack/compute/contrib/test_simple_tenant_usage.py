@@ -31,9 +31,6 @@ from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
-FLAGS = flags.FLAGS
-
 SERVERS = 5
 TENANTS = 2
 HOURS = 24

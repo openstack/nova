@@ -27,8 +27,6 @@ from nova.virt import driver
 
 from nova.openstack.common import jsonutils
 
-FLAGS = flags.FLAGS
-
 
 class TestVirtDriver(test.TestCase):
     def test_block_device(self):

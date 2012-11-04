@@ -18,14 +18,14 @@
 Unit Tests for nova.console.rpcapi
 """
 
+from nova import config
 from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import flags
 from nova.openstack.common import rpc
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ConsoleRpcAPITestCase(test.TestCase):
@@ -49,7 +49,7 @@ class ConsoleRpcAPITestCase(test.TestCase):
         getattr(rpcapi, method)(ctxt, **kwargs)
 
         self.assertEqual(self.cast_ctxt, ctxt)
-        self.assertEqual(self.cast_topic, FLAGS.console_topic)
+        self.assertEqual(self.cast_topic, CONF.console_topic)
         self.assertEqual(self.cast_msg, expected_msg)
 
     def test_add_console(self):
