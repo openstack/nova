@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -24,8 +25,8 @@ max_instances_per_host_opt = cfg.IntOpt("max_instances_per_host",
         default=50,
         help="Ignore hosts that have too many instances")
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(max_instances_per_host_opt)
+CONF = config.CONF
+CONF.register_opt(max_instances_per_host_opt)
 
 
 class NumInstancesFilter(filters.BaseHostFilter):
@@ -33,7 +34,7 @@ class NumInstancesFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         num_instances = host_state.num_instances
-        max_instances = FLAGS.max_instances_per_host
+        max_instances = CONF.max_instances_per_host
         passes = num_instances < max_instances
         if not passes:
             LOG.debug(_("%(host_state)s fails num_instances check: Max "

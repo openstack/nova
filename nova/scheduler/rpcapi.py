@@ -18,12 +18,12 @@
 Client side of the scheduler manager RPC API.
 """
 
+from nova import config
 from nova import flags
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
@@ -60,7 +60,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     BASE_RPC_API_VERSION = '2.0'
 
     def __init__(self):
-        super(SchedulerAPI, self).__init__(topic=FLAGS.scheduler_topic,
+        super(SchedulerAPI, self).__init__(topic=CONF.scheduler_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
     def run_instance(self, ctxt, request_spec, admin_password,

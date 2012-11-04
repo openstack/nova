@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -23,8 +24,8 @@ LOG = logging.getLogger(__name__)
 disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio", default=1.0,
                          help="virtual disk to physical disk allocation ratio")
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(disk_allocation_ratio_opt)
+CONF = config.CONF
+CONF.register_opt(disk_allocation_ratio_opt)
 
 
 class DiskFilter(filters.BaseHostFilter):
@@ -39,7 +40,7 @@ class DiskFilter(filters.BaseHostFilter):
         free_disk_mb = host_state.free_disk_mb
         total_usable_disk_mb = host_state.total_usable_disk_gb * 1024
 
-        disk_mb_limit = total_usable_disk_mb * FLAGS.disk_allocation_ratio
+        disk_mb_limit = total_usable_disk_mb * CONF.disk_allocation_ratio
         used_disk_mb = total_usable_disk_mb - free_disk_mb
         usable_disk_mb = disk_mb_limit - used_disk_mb
 

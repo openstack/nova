@@ -22,6 +22,7 @@ The cost-function and weights are tabulated, and the host with the least cost
 is then selected for provisioning.
 """
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -45,8 +46,8 @@ least_cost_opts = [
                     'e.g. spread-first'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(least_cost_opts)
+CONF = config.CONF
+CONF.register_opts(least_cost_opts)
 
 # TODO(sirp): Once we have enough of these rules, we can break them out into a
 # cost_functions.py file (perhaps in a least_cost_scheduler directory)

@@ -21,6 +21,7 @@ Weighing Functions.
 
 import operator
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
@@ -30,8 +31,7 @@ from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -61,7 +61,7 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
-        weighted_hosts = self._schedule(context, FLAGS.compute_topic,
+        weighted_hosts = self._schedule(context, CONF.compute_topic,
                                         request_spec, filter_properties,
                                         instance_uuids)
 
@@ -108,7 +108,7 @@ class FilterScheduler(driver.Scheduler):
         the prep_resize operation to it.
         """
 
-        hosts = self._schedule(context, FLAGS.compute_topic, request_spec,
+        hosts = self._schedule(context, CONF.compute_topic, request_spec,
                                filter_properties, [instance['uuid']])
         if not hosts:
             raise exception.NoValidHost(reason="")
@@ -187,7 +187,7 @@ class FilterScheduler(driver.Scheduler):
         filter_properties['os_type'] = os_type
 
     def _max_attempts(self):
-        max_attempts = FLAGS.scheduler_max_attempts
+        max_attempts = CONF.scheduler_max_attempts
         if max_attempts < 1:
             raise exception.NovaException(_("Invalid value for "
                 "'scheduler_max_attempts', must be >= 1"))
@@ -226,7 +226,7 @@ class FilterScheduler(driver.Scheduler):
         ordered by their fitness.
         """
         elevated = context.elevated()
-        if topic != FLAGS.compute_topic:
+        if topic != CONF.compute_topic:
             msg = _("Scheduler only understands Compute nodes (for now)")
             raise NotImplementedError(msg)
 
@@ -306,12 +306,12 @@ class FilterScheduler(driver.Scheduler):
         """
         if topic is None:
             # Schedulers only support compute right now.
-            topic = FLAGS.compute_topic
+            topic = CONF.compute_topic
         if topic in self.cost_function_cache:
             return self.cost_function_cache[topic]
 
         cost_fns = []
-        for cost_fn_str in FLAGS.least_cost_functions:
+        for cost_fn_str in CONF.least_cost_functions:
             if '.' in cost_fn_str:
                 short_name = cost_fn_str.split('.')[-1]
             else:
@@ -333,7 +333,7 @@ class FilterScheduler(driver.Scheduler):
 
             try:
                 flag_name = "%s_weight" % cost_fn.__name__
-                weight = getattr(FLAGS, flag_name)
+                weight = getattr(CONF, flag_name)
             except AttributeError:
                 raise exception.SchedulerWeightFlagNotFound(
                         flag_name=flag_name)

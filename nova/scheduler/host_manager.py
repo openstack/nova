@@ -21,6 +21,7 @@ import UserDict
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -49,8 +50,8 @@ host_manager_opts = [
                       'when not specified in the request.'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(host_manager_opts)
+CONF = config.CONF
+CONF.register_opts(host_manager_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -281,7 +282,7 @@ class HostManager(object):
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
         self.host_state_map = {}
         self.filter_classes = filters.get_filter_classes(
-                FLAGS.scheduler_available_filters)
+                CONF.scheduler_available_filters)
 
     def _choose_host_filters(self, filters):
         """Since the caller may specify which filters to use we need
@@ -290,7 +291,7 @@ class HostManager(object):
         of acceptable filters.
         """
         if filters is None:
-            filters = FLAGS.scheduler_default_filters
+            filters = CONF.scheduler_default_filters
         if not isinstance(filters, (list, tuple)):
             filters = [filters]
         good_filters = []
@@ -347,7 +348,7 @@ class HostManager(object):
         with the instance (in case the InstanceType changed since the
         instance was created)."""
 
-        if topic != FLAGS.compute_topic:
+        if topic != CONF.compute_topic:
             raise NotImplementedError(_(
                 "host_manager only implemented for 'compute'"))
 
