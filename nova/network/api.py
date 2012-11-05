@@ -329,7 +329,7 @@ class API(base.Base):
         except exception.FixedIpNotFoundForInstance:
             return False
         network = self.db.network_get(context, fixed_ips[0]['network_id'],
-                                      project_only=True)
+                                      project_only='allow_none')
         return network['multi_host']
 
     def _get_floating_ip_addresses(self, context, instance):
