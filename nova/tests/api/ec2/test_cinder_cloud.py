@@ -114,8 +114,7 @@ class CinderCloudTestCase(test.TestCase):
 
         # set up our cloud
         self.cloud = cloud.CloudController()
-        self.flags(compute_scheduler_driver='nova.scheduler.'
-                'chance.ChanceScheduler')
+        self.flags(scheduler_driver='nova.scheduler.chance.ChanceScheduler')
 
         # set up services
         self.compute = self.start_service('compute')
