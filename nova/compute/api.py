@@ -1558,7 +1558,7 @@ class API(base.Base):
                                expected_task_state=None)
 
         self.compute_rpcapi.revert_resize(context,
-                instance=instance, migration_id=migration_ref['id'],
+                instance=instance, migration=migration_ref,
                 host=migration_ref['dest_compute'], reservations=reservations)
 
         self.db.migration_update(elevated, migration_ref['id'],

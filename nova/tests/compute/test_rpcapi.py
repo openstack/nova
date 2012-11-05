@@ -293,8 +293,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',
-                instance=self.fake_instance, migration_id='id', host='host',
-                reservations=list('fake_res'))
+                instance=self.fake_instance, migration={'id': 'fake_id'},
+                host='host', reservations=list('fake_res'), version='2.12')
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
