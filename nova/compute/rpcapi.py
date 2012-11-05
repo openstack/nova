@@ -142,6 +142,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.12 - Remove migration_id, add migration to revert_resize
         2.13 - Remove migration_id, add migration to finish_revert_resize
         2.14 - Remove aggregate_id, add aggregate to add_aggregate_host
+        2.15 - Remove aggregate_id, add aggregate to remove_aggregate_host
     '''
 
     #
@@ -389,7 +390,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
                 _compute_topic(self.topic, ctxt, host, None))
 
-    def remove_aggregate_host(self, ctxt, aggregate_id, host_param, host,
+    def remove_aggregate_host(self, ctxt, aggregate, host_param, host,
                               slave_info=None):
         '''Remove aggregate host.
 
@@ -400,11 +401,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         :param host: This is the host to send the message to.
         '''
 
+        aggregate_p = jsonutils.to_primitive(aggregate)
         self.cast(ctxt, self.make_msg('remove_aggregate_host',
-                aggregate_id=aggregate_id, host=host_param,
+                aggregate=aggregate_p, host=host_param,
                 slave_info=slave_info),
                 topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.2')
+                version='2.15')
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
         instance_p = jsonutils.to_primitive(instance)

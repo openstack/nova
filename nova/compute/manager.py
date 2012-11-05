@@ -230,7 +230,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.14'
+    RPC_API_VERSION = '2.15'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3131,10 +3131,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                aggregate['id'], host)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def remove_aggregate_host(self, context, aggregate_id,
-                              host, slave_info=None):
+    def remove_aggregate_host(self, context, host, slave_info=None,
+                              aggregate=None, aggregate_id=None):
         """Removes a host from a physical hypervisor pool."""
-        aggregate = self.db.aggregate_get(context, aggregate_id)
+        if not aggregate:
+            aggregate = self.db.aggregate_get(context, aggregate_id)
+
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
                                               slave_info=slave_info)
@@ -3143,7 +3145,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
                                     context, self.db.aggregate_host_add,
-                                    aggregate.id, host,
+                                    aggregate['id'], host,
                                     isinstance(e, exception.AggregateError))
 
     @manager.periodic_task(

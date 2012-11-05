@@ -2188,9 +2188,10 @@ class AggregateAPI(base.Base):
         """Removes host from the aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
         service = self.db.service_get_all_compute_by_host(context, host)[0]
+        aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_delete(context, aggregate_id, host)
         self.compute_rpcapi.remove_aggregate_host(context,
-                aggregate_id=aggregate_id, host_param=host, host=host)
+                aggregate=aggregate, host_param=host, host=host)
         return self.get_aggregate(context, aggregate_id)
 
     def _get_aggregate_info(self, context, aggregate):
