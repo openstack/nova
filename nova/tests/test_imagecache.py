@@ -379,6 +379,29 @@ class ImageCacheManagerTestCase(test.TestCase):
                 res = image_cache_manager._verify_checksum(img, fname)
                 self.assertTrue(res)
 
+    def test_verify_checksum_disabled(self):
+        img = {'container_format': 'ami', 'id': '42'}
+
+        self.flags(checksum_base_images=False)
+
+        with self._intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.info'))
+                fname, info_fname, testdata = self._make_checksum(tmpdir)
+
+                # Checksum is valid
+                f = open(info_fname, 'w')
+                csum = hashlib.sha1()
+                csum.update(testdata)
+                f.write('{"sha1": "%s"}\n' % csum.hexdigest())
+                f.close()
+
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertTrue(res is None)
+
     def test_verify_checksum_invalid_json(self):
         img = {'container_format': 'ami', 'id': '42'}
 
@@ -653,6 +676,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_checksum_fails(self):
+        self.flags(checksum_base_images=True)
         self.stubs.Set(virtutils, 'chown', lambda x, y: None)
 
         img = '123'
