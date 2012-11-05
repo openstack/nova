@@ -38,7 +38,7 @@ def _read_proc_net():
         dev = devmap.get(dom, {})
         # Note, we deliberately swap in and out, as instance traffic
         # shows up inverted due to going though the bridge. (mdragon)
-        dev[vifnum] = dict(bw_in=int(slist[0]), bw_out=int(slist[8]))
+        dev[vifnum] = dict(bw_in=int(slist[8]), bw_out=int(slist[0]))
         devmap[dom] = dev
     return devmap
 
