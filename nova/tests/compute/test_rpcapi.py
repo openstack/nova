@@ -286,7 +286,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_resize_instance(self):
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance, migration={'id': 'fake_id'},
-                image='image', reservations=list('fake_res'), version='2.6')
+                image='image', instance_type={'id': 1},
+                reservations=list('fake_res'), version='2.16')
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',

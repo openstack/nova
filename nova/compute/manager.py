@@ -230,7 +230,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.15'
+    RPC_API_VERSION = '2.16'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1694,7 +1694,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.audit(_('Migrating'), context=context,
                         instance=instance)
                 self.compute_rpcapi.resize_instance(context, instance,
-                        migration_ref, image, reservations)
+                        migration_ref, image, instance_type, reservations)
 
             except Exception:
                 # try to re-schedule the resize elsewhere:
@@ -1749,15 +1749,17 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        reservations=None, migration=None, migration_id=None):
+                        reservations=None, migration=None, migration_id=None,
+                        instance_type=None):
         """Starts the migration of a running instance to another host."""
         elevated = context.elevated()
         if not migration:
             migration = self.db.migration_get(elevated, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
-            instance_type_ref = self.db.instance_type_get(context,
-                    migration['new_instance_type_id'])
+            if not instance_type:
+                instance_type = self.db.instance_type_get(context,
+                        migration['new_instance_type_id'])
 
             network_info = self._get_instance_nw_info(context, instance)
 
@@ -1777,7 +1779,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration['dest_host'],
-                    instance_type_ref, self._legacy_nw_info(network_info),
+                    instance_type, self._legacy_nw_info(network_info),
                     block_device_info)
 
             self._terminate_volume_connections(context, instance)

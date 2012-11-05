@@ -143,6 +143,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.13 - Remove migration_id, add migration to finish_revert_resize
         2.14 - Remove aggregate_id, add aggregate to add_aggregate_host
         2.15 - Remove aggregate_id, add aggregate to remove_aggregate_host
+        2.16 - Add instance_type to resize_instance
     '''
 
     #
@@ -433,15 +434,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def resize_instance(self, ctxt, instance, migration, image,
+    def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):
         topic = _compute_topic(self.topic, ctxt, None, instance)
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
+        instance_type_p = jsonutils.to_primitive(instance_type)
         self.cast(ctxt, self.make_msg('resize_instance',
                 instance=instance_p, migration=migration_p,
-                image=image, reservations=reservations), topic,
-                version='2.6')
+                image=image, reservations=reservations,
+                instance_type=instance_type_p), topic,
+                version='2.16')
 
     def resume_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)

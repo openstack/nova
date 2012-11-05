@@ -1767,7 +1767,7 @@ class ComputeTestCase(BaseTestCase):
         migration_ref = db.migration_get_by_instance_and_status(
                 self.context.elevated(), instance['uuid'], 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
-                migration=migration_ref, image={})
+                migration=migration_ref, image={}, instance_type=new_type)
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
@@ -1890,7 +1890,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=instance,
                           migration=migration_ref, image={},
-                          reservations=reservations)
+                          reservations=reservations,
+                          instance_type=jsonutils.to_primitive(instance_type))
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -1912,8 +1913,8 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=instance,
-                                     migration=migration_ref,
-                                     image={})
+                migration=migration_ref, image={},
+                instance_type=jsonutils.to_primitive(instance_type))
         inst = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(migration_ref['dest_compute'], inst['host'])
 
@@ -1946,9 +1947,10 @@ class ComputeTestCase(BaseTestCase):
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(
                 self.context, 3)
+        new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
         self.compute.prep_resize(self.context,
                 instance=jsonutils.to_primitive(new_inst_ref),
-                instance_type=jsonutils.to_primitive(new_instance_type_ref),
+                instance_type=new_instance_type_p,
                 image={}, reservations=reservations)
 
         migration_ref = db.migration_get_by_instance_and_status(
@@ -1960,7 +1962,8 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.RESIZE_PREP})
         self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration_ref,
-                                     image={})
+                                     image={},
+                                     instance_type=new_instance_type_p)
         self.compute.finish_resize(self.context,
                     migration=jsonutils.to_primitive(migration_ref),
                     disk_info={}, image={}, instance=instance)
@@ -2048,7 +2051,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=inst_ref,
                           migration=migration_ref, image={},
-                          reservations=reservations)
+                          reservations=reservations,
+                          instance_type=jsonutils.to_primitive(instance_type))
         inst_ref = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(self.context,
