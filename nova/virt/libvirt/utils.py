@@ -21,8 +21,10 @@
 
 import errno
 import hashlib
+import json
 import os
 import re
+import time
 
 from lxml import etree
 
@@ -32,6 +34,7 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import images
@@ -470,23 +473,38 @@ def is_valid_info_file(path):
     return False
 
 
-def read_stored_info(base_path, field=None):
+def _read_possible_json(serialized, info_file):
+    try:
+        d = jsonutils.loads(serialized)
+
+    except ValueError, e:
+        LOG.error(_('Error reading image info file %(filename)s: '
+                    '%(error)s'),
+                  {'filename': info_file,
+                   'error': e})
+        d = {}
+
+    return d
+
+
+def read_stored_info(target, field=None, timestamped=False):
     """Read information about an image.
 
     Returns an empty dictionary if there is no info, just the field value if
     a field is requested, or the entire dictionary otherwise.
     """
 
-    info_file = get_info_filename(base_path)
+    info_file = get_info_filename(target)
     if not os.path.exists(info_file):
-        # Special case to handle essex checksums being converted
-        old_filename = base_path + '.sha1'
+        # NOTE(mikal): Special case to handle essex checksums being converted.
+        # There is an assumption here that target is a base image filename.
+        old_filename = target + '.sha1'
         if field == 'sha1' and os.path.exists(old_filename):
             hash_file = open(old_filename)
             hash_value = hash_file.read()
             hash_file.close()
 
-            write_stored_info(base_path, field=field, value=hash_value)
+            write_stored_info(target, field=field, value=hash_value)
             os.remove(old_filename)
             d = {field: hash_value}
 
@@ -494,24 +512,24 @@ def read_stored_info(base_path, field=None):
             d = {}
 
     else:
-        LOG.info(_('Reading image info file: %s'), info_file)
-        f = open(info_file, 'r')
-        serialized = f.read().rstrip()
-        f.close()
-        LOG.info(_('Read: %s'), serialized)
+        lock_name = 'info-%s' % os.path.split(target)[-1]
+        lock_path = os.path.join(CONF.instances_path, 'locks')
 
-        try:
-            d = jsonutils.loads(serialized)
+        @lockutils.synchronized(lock_name, 'nova-', external=True,
+                                lock_path=lock_path)
+        def read_file(info_file):
+            LOG.debug(_('Reading image info file: %s'), info_file)
+            with open(info_file, 'r') as f:
+                return f.read().rstrip()
 
-        except ValueError, e:
-            LOG.error(_('Error reading image info file %(filename)s: '
-                        '%(error)s'),
-                      {'filename': info_file,
-                       'error': e})
-            d = {}
+        serialized = read_file(info_file)
+        d = _read_possible_json(serialized, info_file)
 
     if field:
-        return d.get(field, None)
+        if timestamped:
+            return (d.get(field, None), d.get('%s-timestamp' % field, None))
+        else:
+            return d.get(field, None)
     return d
 
 
@@ -522,14 +540,25 @@ def write_stored_info(target, field=None, value=None):
         return
 
     info_file = get_info_filename(target)
+    LOG.info(_('Writing stored info to %s'), info_file)
     fileutils.ensure_tree(os.path.dirname(info_file))
 
-    d = read_stored_info(info_file)
-    d[field] = value
-    serialized = jsonutils.dumps(d)
+    lock_name = 'info-%s' % os.path.split(target)[-1]
+    lock_path = os.path.join(CONF.instances_path, 'locks')
 
-    LOG.info(_('Writing image info file: %s'), info_file)
-    LOG.info(_('Wrote: %s'), serialized)
-    f = open(info_file, 'w')
-    f.write(serialized)
-    f.close()
+    @lockutils.synchronized(lock_name, 'nova-', external=True,
+                            lock_path=lock_path)
+    def write_file(info_file, field, value):
+        d = {}
+
+        if os.path.exists(info_file):
+            with open(info_file, 'r') as f:
+                d = _read_possible_json(f.read(), info_file)
+
+        d[field] = value
+        d['%s-timestamp' % field] = time.time()
+
+        with open(info_file, 'w') as f:
+            f.write(json.dumps(d))
+
+    write_file(info_file, field, value)

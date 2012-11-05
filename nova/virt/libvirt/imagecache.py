@@ -32,6 +32,7 @@ from nova.compute import vm_states
 from nova import config
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import utils as virtutils
@@ -54,6 +55,9 @@ imagecache_opts = [
     cfg.BoolOpt('checksum_base_images',
                 default=False,
                 help='Write a checksum for files in _base to disk'),
+    cfg.IntOpt('checksum_interval_seconds',
+               default=3600,
+               help='How frequently to checksum base images'),
     ]
 
 CONF = config.CONF
@@ -62,27 +66,26 @@ CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')
 
 
-def read_stored_checksum(target):
+def read_stored_checksum(target, timestamped=True):
     """Read the checksum.
 
     Returns the checksum (as hex) or None.
     """
-    return virtutils.read_stored_info(target, field='sha1')
+    return virtutils.read_stored_info(target, field='sha1',
+                                      timestamped=timestamped)
 
 
 def write_stored_checksum(target):
     """Write a checksum to disk for a file in _base."""
 
-    if not read_stored_checksum(target):
-        img_file = open(target, 'r')
+    with open(target, 'r') as img_file:
         checksum = utils.hash_file(img_file)
-        img_file.close()
-
-        virtutils.write_stored_info(target, field='sha1', value=checksum)
+    virtutils.write_stored_info(target, field='sha1', value=checksum)
 
 
 class ImageCacheManager(object):
     def __init__(self):
+        self.lock_path = os.path.join(CONF.instances_path, 'locks')
         self._reset_state()
 
     def _reset_state(self):
@@ -228,35 +231,61 @@ class ImageCacheManager(object):
         if not CONF.checksum_base_images:
             return None
 
-        stored_checksum = read_stored_checksum(base_file)
-        if stored_checksum:
-            f = open(base_file, 'r')
-            current_checksum = utils.hash_file(f)
-            f.close()
+        lock_name = 'hash-%s' % os.path.split(base_file)[-1]
 
-            if current_checksum != stored_checksum:
-                LOG.error(_('%(id)s (%(base_file)s): image verification '
-                            'failed'),
-                          {'id': img_id,
-                           'base_file': base_file})
-                return False
+        # Protect against other nova-computes performing checksums at the same
+        # time if we are using shared storage
+        @lockutils.synchronized(lock_name, 'nova-', external=True,
+                                lock_path=self.lock_path)
+        def inner_verify_checksum():
+            (stored_checksum, stored_timestamp) = read_stored_checksum(
+                base_file, timestamped=True)
+            if stored_checksum:
+                # NOTE(mikal): Checksums are timestamped. If we have recently
+                # checksummed (possibly on another compute node if we are using
+                # shared storage), then we don't need to checksum again.
+                if (stored_timestamp and
+                    time.time() - stored_timestamp <
+                    CONF.checksum_interval_seconds):
+                    return True
+
+                # NOTE(mikal): If there is no timestamp, then the checksum was
+                # performed by a previous version of the code.
+                if not stored_timestamp:
+                    virtutils.write_stored_info(base_file, field='sha1',
+                                                value=stored_checksum)
+
+                with open(base_file, 'r') as f:
+                    current_checksum = utils.hash_file(f)
+
+                if current_checksum != stored_checksum:
+                    LOG.error(_('%(id)s (%(base_file)s): image verification '
+                                'failed'),
+                              {'id': img_id,
+                               'base_file': base_file})
+                    return False
+
+                else:
+                    return True
 
             else:
-                return True
+                LOG.info(_('%(id)s (%(base_file)s): image verification '
+                           'skipped, no hash stored'),
+                         {'id': img_id,
+                          'base_file': base_file})
 
-        else:
-            LOG.info(_('%(id)s (%(base_file)s): image verification skipped, '
-                       'no hash stored'),
-                     {'id': img_id,
-                      'base_file': base_file})
+                # NOTE(mikal): If the checksum file is missing, then we should
+                # create one. We don't create checksums when we download images
+                # from glance because that would delay VM startup.
+                if CONF.checksum_base_images and create_if_missing:
+                    LOG.info(_('%(id)s (%(base_file)s): generating checksum'),
+                             {'id': img_id,
+                              'base_file': base_file})
+                    write_stored_checksum(base_file)
 
-            # NOTE(mikal): If the checksum file is missing, then we should
-            # create one. We don't create checksums when we download images
-            # from glance because that would delay VM startup.
-            if create_if_missing:
-                write_stored_checksum(base_file)
+                return None
 
-            return None
+        return inner_verify_checksum()
 
     def _remove_base_file(self, base_file):
         """Remove a single base file if it is old enough.

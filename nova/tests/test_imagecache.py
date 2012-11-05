@@ -19,6 +19,7 @@
 import contextlib
 import cStringIO
 import hashlib
+import json
 import logging
 import os
 import time
@@ -52,7 +53,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def test_read_stored_checksum_missing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
-        csum = imagecache.read_stored_checksum('/tmp/foo')
+        csum = imagecache.read_stored_checksum('/tmp/foo', timestamped=False)
         self.assertEquals(csum, None)
 
     def test_read_stored_checksum(self):
@@ -68,7 +69,8 @@ class ImageCacheManagerTestCase(test.TestCase):
             f.write(csum_input)
             f.close()
 
-            csum_output = imagecache.read_stored_checksum(fname)
+            csum_output = imagecache.read_stored_checksum(fname,
+                                                          timestamped=False)
             self.assertEquals(csum_input.rstrip(),
                               '{"sha1": "%s"}' % csum_output)
 
@@ -84,7 +86,8 @@ class ImageCacheManagerTestCase(test.TestCase):
             f.write('fdghkfhkgjjksfdgjksjkghsdf')
             f.close()
 
-            csum_output = imagecache.read_stored_checksum(fname)
+            csum_output = imagecache.read_stored_checksum(fname,
+                                                          timestamped=False)
             self.assertEquals(csum_output, 'fdghkfhkgjjksfdgjksjkghsdf')
             self.assertFalse(os.path.exists(old_fname))
             self.assertTrue(os.path.exists(virtutils.get_info_filename(fname)))
@@ -350,9 +353,8 @@ class ImageCacheManagerTestCase(test.TestCase):
         fname = os.path.join(tmpdir, 'aaa')
         info_fname = virtutils.get_info_filename(fname)
 
-        f = open(fname, 'w')
-        f.write(testdata)
-        f.close()
+        with open(fname, 'w') as f:
+            f.write(testdata)
 
         return fname, info_fname, testdata
 
@@ -479,26 +481,23 @@ class ImageCacheManagerTestCase(test.TestCase):
                 self.assertNotEqual(log.find('image verification failed'), -1)
 
     def test_verify_checksum_file_missing(self):
-        img = {'container_format': 'ami', 'id': '42'}
-
         self.flags(checksum_base_images=True)
 
-        with self._intercept_log_messages() as stream:
-            with utils.tempdir() as tmpdir:
-                self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'))
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.info'))
 
-                fname, info_fname, testdata = self._make_checksum(tmpdir)
+            fname, info_fname, testdata = self._make_checksum(tmpdir)
 
-                # Checksum file missing
-                image_cache_manager = imagecache.ImageCacheManager()
-                res = image_cache_manager._verify_checksum(img, fname)
-                self.assertEquals(res, None)
+            # Checksum file missing
+            image_cache_manager = imagecache.ImageCacheManager()
+            res = image_cache_manager._verify_checksum('aaa', fname)
+            self.assertEquals(res, None)
 
-                # Checksum requests for a file with no checksum now have the
-                # side effect of creating the checksum
-                self.assertTrue(os.path.exists(info_fname))
+            # Checksum requests for a file with no checksum now have the
+            # side effect of creating the checksum
+            self.assertTrue(os.path.exists(info_fname))
 
     @contextlib.contextmanager
     def _make_base_file(self, checksum=True):
@@ -682,9 +681,12 @@ class ImageCacheManagerTestCase(test.TestCase):
         img = '123'
 
         with self._make_base_file() as fname:
-            f = open(fname, 'w')
-            f.write('banana')
-            f.close()
+            with open(fname, 'w') as f:
+                f.write('banana')
+
+            d = {'sha1': '21323454'}
+            with open('%s.info' % fname, 'w') as f:
+                f.write(json.dumps(d))
 
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
