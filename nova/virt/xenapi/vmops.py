@@ -1145,10 +1145,12 @@ class VMOps(object):
                         instance=instance)
         else:
             vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+            self._acquire_bootlock(vm_ref)
 
     def restore(self, instance):
         """Restore the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
+        self._release_bootlock(vm_ref)
         self._start(instance, vm_ref)
 
     def power_off(self, instance):
