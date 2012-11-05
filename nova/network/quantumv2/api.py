@@ -26,7 +26,7 @@ from nova.network import quantumv2
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova import utils
+from nova.openstack.common import uuidutils
 
 
 quantum_opts = [
@@ -437,7 +437,7 @@ class API(base.Base):
 
     def _get_floating_ip_pool_id_by_name_or_id(self, client, name_or_id):
         search_opts = {NET_EXTERNAL: True, 'fields': 'id'}
-        if utils.is_uuid_like(name_or_id):
+        if uuidutils.is_uuid_like(name_or_id):
             search_opts.update({'id': name_or_id})
         else:
             search_opts.update({'name': name_or_id})

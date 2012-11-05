@@ -69,6 +69,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
 from nova import utils
@@ -943,7 +944,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # NOTE(francois.charlier): the instance may have been deleted already
         # thus enabling `read_deleted`
         admin_context = context.get_admin_context(read_deleted='yes')
-        if utils.is_uuid_like(instance_id):
+        if uuidutils.is_uuid_like(instance_id):
             instance_ref = self.db.instance_get_by_uuid(admin_context,
                                                         instance_id)
         else:
@@ -1277,7 +1278,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     @wrap_check_policy
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
-        if utils.is_uuid_like(network_id):
+        if uuidutils.is_uuid_like(network_id):
             network = self.get_network(context, network_id)
         else:
             network = self._get_network_by_id(context, network_id)

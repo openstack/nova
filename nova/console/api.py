@@ -22,7 +22,7 @@ from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import flags
 from nova.openstack.common import rpc
-from nova import utils
+from nova.openstack.common import uuidutils
 
 
 FLAGS = flags.FLAGS
@@ -63,7 +63,7 @@ class API(base.Base):
         return rpcapi.get_console_topic(context, instance_host)
 
     def _get_instance(self, context, instance_uuid):
-        if utils.is_uuid_like(instance_uuid):
+        if uuidutils.is_uuid_like(instance_uuid):
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
         else:
             instance = self.db.instance_get(context, instance_uuid)

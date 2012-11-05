@@ -36,6 +36,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import utils
 
 
@@ -621,7 +622,7 @@ class Controller(wsgi.Controller):
                         # port parameter is only for qunatum v2.0
                         msg = _("Unknown argment : port")
                         raise exc.HTTPBadRequest(explanation=msg)
-                    if not utils.is_uuid_like(port_id):
+                    if not uuidutils.is_uuid_like(port_id):
                         msg = _("Bad port format: port uuid is "
                                 "not in proper format "
                                 "(%s)") % port_id
@@ -629,9 +630,9 @@ class Controller(wsgi.Controller):
                 else:
                     network_uuid = network['uuid']
 
-                if not port_id and not utils.is_uuid_like(network_uuid):
+                if not port_id and not uuidutils.is_uuid_like(network_uuid):
                     br_uuid = network_uuid.split('-', 1)[-1]
-                    if not utils.is_uuid_like(br_uuid):
+                    if not uuidutils.is_uuid_like(br_uuid):
                         msg = _("Bad networks format: network uuid is "
                                 "not in proper format "
                                 "(%s)") % network_uuid
@@ -1099,7 +1100,7 @@ class Controller(wsgi.Controller):
         # down to an id and use the default glance connection params
         image_uuid = image_href.split('/').pop()
 
-        if not utils.is_uuid_like(image_uuid):
+        if not uuidutils.is_uuid_like(image_uuid):
             msg = _("Invalid imageRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
