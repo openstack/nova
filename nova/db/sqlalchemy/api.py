@@ -23,7 +23,6 @@ import collections
 import copy
 import datetime
 import functools
-import warnings
 
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
@@ -1598,7 +1597,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     if marker is not None:
         try:
             marker = instance_get_by_uuid(context, marker, session=session)
-        except exception.InstanceNotFound as e:
+        except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
     query_prefix = paginate_query(query_prefix, models.Instance, limit,
                            [sort_key, 'created_at', 'id'],
@@ -3234,7 +3233,7 @@ def volume_metadata_update(context, volume_id, metadata, delete):
         try:
             meta_ref = volume_metadata_get_item(context, volume_id,
                                                   meta_key, session)
-        except exception.VolumeMetadataNotFound, e:
+        except exception.VolumeMetadataNotFound:
             meta_ref = models.VolumeMetadata()
             item.update({"key": meta_key, "volume_id": volume_id})
 
@@ -4180,7 +4179,7 @@ def instance_metadata_update(context, instance_uuid, metadata, delete,
         try:
             meta_ref = instance_metadata_get_item(context, instance_uuid,
                                                   meta_key, session)
-        except exception.InstanceMetadataNotFound, e:
+        except exception.InstanceMetadataNotFound:
             meta_ref = models.InstanceMetadata()
             item.update({"key": meta_key, "instance_uuid": instance_uuid})
 
@@ -4262,7 +4261,7 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete,
         try:
             meta_ref = _instance_system_metadata_get_item(
                     context, instance_uuid, meta_key, session)
-        except exception.InstanceSystemMetadataNotFound, e:
+        except exception.InstanceSystemMetadataNotFound:
             meta_ref = models.InstanceSystemMetadata()
             item.update({"key": meta_key, "instance_uuid": instance_uuid})
 
@@ -4449,7 +4448,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
         try:
             spec_ref = instance_type_extra_specs_get_item(
                 context, flavor_id, key, session)
-        except exception.InstanceTypeExtraSpecsNotFound, e:
+        except exception.InstanceTypeExtraSpecsNotFound:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "instance_type_id": instance_type["id"],
@@ -4628,7 +4627,7 @@ def volume_type_extra_specs_update_or_create(context, volume_type_id,
         try:
             spec_ref = volume_type_extra_specs_get_item(
                 context, volume_type_id, key, session)
-        except exception.VolumeTypeExtraSpecsNotFound, e:
+        except exception.VolumeTypeExtraSpecsNotFound:
             spec_ref = models.VolumeTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
                          "volume_type_id": volume_type_id,
@@ -4988,12 +4987,12 @@ def aggregate_delete(context, aggregate_id):
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
     #Delete Metadata
-    rows = model_query(context,
-                       models.AggregateMetadata).\
-                       filter_by(aggregate_id=aggregate_id).\
-                       update({'deleted': True,
-                      'deleted_at': timeutils.utcnow(),
-                      'updated_at': literal_column('updated_at')})
+    model_query(context,
+                models.AggregateMetadata).\
+                filter_by(aggregate_id=aggregate_id).\
+                update({'deleted': True,
+                'deleted_at': timeutils.utcnow(),
+                'updated_at': literal_column('updated_at')})
 
 
 @require_admin_context
