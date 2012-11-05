@@ -36,7 +36,6 @@ an 'active' pool goes into an 'error' state. To recover from such a state,
 admin intervention is required. Currently an error state is irreversible,
 that is, in order to recover from it an pool must be deleted.
 """
-from nova import db
 
 CREATED = 'created'
 CHANGING = 'changing'
@@ -49,7 +48,6 @@ KEY = 'operational_state'
 POOL_FLAG = 'hypervisor_pool'
 
 
-def is_hv_pool(context, aggregate_id):
+def is_hv_pool(metadata):
     """Checks if aggregate is a hypervisor_pool"""
-    metadata = db.aggregate_metadata_get(context, aggregate_id)
     return POOL_FLAG in metadata.keys()

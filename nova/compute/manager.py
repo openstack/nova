@@ -226,6 +226,22 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def instance_get_all_by_host(self, context, host):
         return self._compute.db.instance_get_all_by_host(context, host)
 
+    def aggregate_get_by_host(self, context, host, key=None):
+        return self._compute.db.aggregate_get_by_host(context, host, key=key)
+
+    def aggregate_metadata_get(self, context, aggregate_id):
+        return self._compute.db.aggregate_metadata_get(context, aggregate_id)
+
+    def aggregate_metadata_add(self, context, aggregate_id, metadata,
+                               set_delete=False):
+        return self._compute.db.aggregate_metadata_add(context, aggregate_id,
+                                                       metadata,
+                                                       set_delete=set_delete)
+
+    def aggregate_metadata_delete(self, context, aggregate_id, key):
+        return self._compute.db.aggregate_metadata_delete(context,
+                                                          aggregate_id, key)
+
 
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""

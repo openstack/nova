@@ -898,7 +898,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertRaises(xenapi_fake.Failure, conn.reboot, instance,
                 None, "SOFT")
 
-    def test_maintenance_mode(self):
+    def _test_maintenance_mode(self, find_host, find_aggregate):
         real_call_xenapi = self.conn._session.call_xenapi
         instance = self._create_instance(spawn=True)
         api_calls = {}
@@ -912,9 +912,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             return real_call_xenapi(method, *args)
         self.stubs.Set(self.conn._session, 'call_xenapi', fake_call_xenapi)
 
-        # Always find the 'bar' destination host
+        def fake_aggregate_get(context, host, key):
+            if find_aggregate:
+                return [{'fake': 'aggregate'}]
+            else:
+                return []
+        self.stubs.Set(self.conn.virtapi, 'aggregate_get_by_host',
+                       fake_aggregate_get)
+
         def fake_host_find(context, session, src, dst):
-            return 'bar'
+            if find_host:
+                return 'bar'
+            else:
+                raise exception.NoValidHost("I saw this one coming...")
         self.stubs.Set(host, '_host_find', fake_host_find)
 
         result = self.conn.host_maintenance_mode('bar', 'on_maintenance')
@@ -928,6 +938,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertTrue(instance['vm_state'], vm_states.ACTIVE)
         self.assertTrue(instance['task_state'], task_states.MIGRATING)
+
+    def test_maintenance_mode(self):
+        self._test_maintenance_mode(True, True)
+
+    def test_maintenance_mode_no_host(self):
+        self.assertRaises(exception.NoValidHost,
+                          self._test_maintenance_mode, False, True)
+
+    def test_maintenance_mode_no_aggregate(self):
+        self.assertRaises(exception.NotFound,
+                          self._test_maintenance_mode, True, False)
 
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""

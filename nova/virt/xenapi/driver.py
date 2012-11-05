@@ -145,7 +145,7 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops = vmops.VMOps(self._session, self.virtapi)
         self._initiator = None
         self._hypervisor_hostname = None
-        self._pool = pool.ResourcePool(self._session)
+        self._pool = pool.ResourcePool(self._session, self.virtapi)
 
     @property
     def host_state(self):
@@ -656,8 +656,9 @@ class XenAPISession(object):
 
     def _get_host_uuid(self):
         if self.is_slave:
-            aggr = db.aggregate_get_by_host(context.get_admin_context(),
-                    CONF.host, key=pool_states.POOL_FLAG)[0]
+            aggr = self.virtapi.aggregate_get_by_host(
+                context.get_admin_context(),
+                CONF.host, key=pool_states.POOL_FLAG)[0]
             if not aggr:
                 LOG.error(_('Host is member of a pool, but DB '
                                 'says otherwise'))
