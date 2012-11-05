@@ -1052,7 +1052,7 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.file_delete(rescue_file)
 
     @exception.wrap_exception()
-    def poll_rebooting_instances(self, timeout):
+    def poll_rebooting_instances(self, timeout, instances):
         pass
 
     @exception.wrap_exception()
