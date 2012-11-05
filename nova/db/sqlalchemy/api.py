@@ -25,6 +25,16 @@ import datetime
 import functools
 import warnings
 
+from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload_all
+from sqlalchemy.sql.expression import asc
+from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import literal_column
+from sqlalchemy.sql import func
+
 from nova import block_device
 from nova.common.sqlalchemyutils import paginate_query
 from nova.compute import vm_states
@@ -37,15 +47,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import utils
-from sqlalchemy import and_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql.expression import desc
-from sqlalchemy.sql.expression import literal_column
-from sqlalchemy.sql import func
+
 
 FLAGS = flags.FLAGS
 
