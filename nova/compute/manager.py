@@ -1680,12 +1680,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     msg = _('destination same as source!')
                     raise exception.MigrationError(msg)
 
-                # TODO(russellb): no-db-compute: Send the old instance type
-                # info that is needed via rpc so db access isn't required
-                # here.
-                old_instance_type_id = instance['instance_type_id']
-                old_instance_type = instance_types.get_instance_type(
-                        old_instance_type_id)
+                old_instance_type = instance['instance_type']
 
                 migration_ref = self.db.migration_create(context.elevated(),
                         {'instance_uuid': instance['uuid'],
