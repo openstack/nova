@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova 2013.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2012-11-03 00:01+0000\n"
+"POT-Creation-Date: 2012-11-05 00:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3864,7 +3864,7 @@ msgstr ""
 msgid "Upgrade DB using Essex release first."
 msgstr ""
 
-#: nova/db/sqlalchemy/session.py:162
+#: nova/db/sqlalchemy/session.py:174
 #, python-format
 msgid "SQL connection failed. %s attempts left."
 msgstr ""
@@ -4836,36 +4836,36 @@ msgstr ""
 msgid "Weighted %(weighted_host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:237
+#: nova/scheduler/host_manager.py:246
 #, python-format
 msgid "Host filter fails for ignored host %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:244
+#: nova/scheduler/host_manager.py:253
 #, python-format
 msgid "Host filter fails for non-forced host %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:250
+#: nova/scheduler/host_manager.py:259
 #, python-format
 msgid "Host filter function %(func)s failed for %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:256
+#: nova/scheduler/host_manager.py:265
 #, python-format
 msgid "Host filter passes for %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:318
+#: nova/scheduler/host_manager.py:328
 #, python-format
 msgid "Received %(service_name)s service update from %(host)s."
 msgstr ""
 
-#: nova/scheduler/host_manager.py:341
+#: nova/scheduler/host_manager.py:351
 msgid "host_manager only implemented for 'compute'"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:351
+#: nova/scheduler/host_manager.py:359
 #, python-format
 msgid "No service for compute ID %s"
 msgstr ""
@@ -5156,7 +5156,7 @@ msgstr ""
 #: nova/tests/compute/test_compute.py:651
 #: nova/tests/compute/test_compute.py:687
 #: nova/tests/compute/test_compute.py:712
-#: nova/tests/compute/test_compute.py:2403
+#: nova/tests/compute/test_compute.py:2387
 #, python-format
 msgid "Running instances: %s"
 msgstr ""
@@ -5173,7 +5173,7 @@ msgstr ""
 msgid "Internal error"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:2414
+#: nova/tests/compute/test_compute.py:2398
 #, python-format
 msgid "After force-killing instances: %s"
 msgstr ""
