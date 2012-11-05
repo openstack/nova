@@ -27,6 +27,8 @@ import re
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
@@ -895,6 +897,37 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         xenapi_fake.create_vm(instance.name, 'Unknown')
         self.assertRaises(xenapi_fake.Failure, conn.reboot, instance,
                 None, "SOFT")
+
+    def test_maintenance_mode(self):
+        real_call_xenapi = self.conn._session.call_xenapi
+        instance = self._create_instance(spawn=True)
+        api_calls = {}
+
+        # Record all the xenapi calls, and return a fake list of hosts
+        # for the host.get_all call
+        def fake_call_xenapi(method, *args):
+            api_calls[method] = args
+            if method == 'host.get_all':
+                return ['foo', 'bar', 'baz']
+            return real_call_xenapi(method, *args)
+        self.stubs.Set(self.conn._session, 'call_xenapi', fake_call_xenapi)
+
+        # Always find the 'bar' destination host
+        def fake_host_find(context, session, src, dst):
+            return 'bar'
+        self.stubs.Set(host, '_host_find', fake_host_find)
+
+        result = self.conn.host_maintenance_mode('bar', 'on_maintenance')
+        self.assertEqual(result, 'on_maintenance')
+
+        # We expect the VM.pool_migrate call to have been called to
+        # migrate our instance to the 'bar' host
+        expected = (instance['uuid'], 'bar', {})
+        self.assertTrue(api_calls.get('VM.pool_migrate'), expected)
+
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertTrue(instance['vm_state'], vm_states.ACTIVE)
+        self.assertTrue(instance['task_state'], task_states.MIGRATING)
 
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
