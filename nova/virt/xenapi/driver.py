@@ -181,13 +181,7 @@ class XenAPIDriver(driver.ComputeDriver):
         """Finish reverting a resize, powering back on the instance"""
         # NOTE(vish): Xen currently does not use network info.
         self._vmops.finish_revert_migration(instance)
-        block_device_mapping = driver.block_device_info_get_mapping(
-                block_device_info)
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
-            mount_device = vol['mount_device'].rpartition("/")[2]
-            self.attach_volume(connection_info,
-                    instance['name'], mount_device)
+        self._attach_mapped_block_devices(instance, block_device_info)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
@@ -195,6 +189,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Completes a resize, turning on the migrated instance"""
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance)
+        self._attach_mapped_block_devices(instance, block_device_info)
+
+    def _attach_mapped_block_devices(self, instance, block_device_info):
         block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
         for vol in block_device_mapping:
