@@ -19,6 +19,7 @@
 
 """VIF drivers for libvirt."""
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.network import linux_net
@@ -28,7 +29,7 @@ from nova import utils
 from nova.virt import netutils
 from nova.virt import vif
 
-from nova.virt.libvirt import config
+from nova.virt.libvirt import config as vconfig
 
 LOG = logging.getLogger(__name__)
 
@@ -43,7 +44,8 @@ libvirt_vif_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(libvirt_vif_opts)
-flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
+CONF = config.CONF
+CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 
 LINUX_DEV_LEN = 14
 
@@ -56,7 +58,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
 
         mac_id = mapping['mac'].replace(':', '')
 
-        conf = config.LibvirtConfigGuestInterface()
+        conf = vconfig.LibvirtConfigGuestInterface()
         conf.net_type = "bridge"
         conf.mac_addr = mapping['mac']
         conf.source_dev = network['bridge']
@@ -161,7 +163,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
         self.create_ovs_vif_port(dev, iface_id, mapping['mac'],
                                  instance['uuid'])
 
-        conf = config.LibvirtConfigGuestInterface()
+        conf = vconfig.LibvirtConfigGuestInterface()
 
         if FLAGS.libvirt_use_virtio_for_bridges:
             conf.model = "virtio"
@@ -255,7 +257,7 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
         """ Pass data required to create OVS virtual port element"""
         network, mapping = vif
 
-        conf = config.LibvirtConfigGuestInterface()
+        conf = vconfig.LibvirtConfigGuestInterface()
 
         conf.net_type = "bridge"
         conf.source_dev = FLAGS.libvirt_ovs_bridge
@@ -286,7 +288,7 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         if FLAGS.libvirt_type != 'xen':
             linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
 
-        conf = config.LibvirtConfigGuestInterface()
+        conf = vconfig.LibvirtConfigGuestInterface()
 
         if FLAGS.libvirt_use_virtio_for_bridges:
             conf.model = 'virtio'

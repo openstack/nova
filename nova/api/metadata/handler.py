@@ -23,6 +23,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
@@ -30,7 +31,8 @@ from nova import wsgi
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('use_forwarded_for', 'nova.api.auth')
+CONF = config.CONF
+CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 if FLAGS.memcached_servers:
     import memcache

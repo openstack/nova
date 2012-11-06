@@ -31,6 +31,7 @@ from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
+from nova import config
 from nova import context
 from nova import exception
 from nova import flags
@@ -74,7 +75,8 @@ ec2_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(ec2_opts)
 
-flags.DECLARE('use_forwarded_for', 'nova.api.auth')
+CONF = config.CONF
+CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
 def ec2_error(req, request_id, code, message):

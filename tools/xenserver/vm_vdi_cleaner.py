@@ -27,17 +27,17 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
         sys.path.insert(0, possible_topdir)
 
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova.virt.xenapi import driver as xenapi_driver
 
 
-CONF = cfg.CONF
-flags.DECLARE("resize_confirm_window", "nova.compute.manager")
+CONF = config.CONF
+CONF.import_opt("resize_confirm_window", "nova.compute.manager")
 
 
 ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",

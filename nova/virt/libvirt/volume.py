@@ -20,17 +20,19 @@
 import os
 import time
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.libvirt import config
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('num_iscsi_scan_tries', 'nova.volume.driver')
+CONF = config.CONF
+CONF.import_opt('num_iscsi_scan_tries', 'nova.volume.driver')
 
 
 class LibvirtVolumeDriver(object):
@@ -40,7 +42,7 @@ class LibvirtVolumeDriver(object):
 
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
-        conf = config.LibvirtConfigGuestDisk()
+        conf = vconfig.LibvirtConfigGuestDisk()
         conf.source_type = "block"
         conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=True)
         conf.driver_format = "raw"
@@ -60,7 +62,7 @@ class LibvirtFakeVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 
     def connect_volume(self, connection_info, mount_device):
-        conf = config.LibvirtConfigGuestDisk()
+        conf = vconfig.LibvirtConfigGuestDisk()
         conf.source_type = "network"
         conf.driver_name = "qemu"
         conf.driver_format = "raw"
@@ -77,7 +79,7 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 
     def connect_volume(self, connection_info, mount_device):
-        conf = config.LibvirtConfigGuestDisk()
+        conf = vconfig.LibvirtConfigGuestDisk()
         conf.source_type = "network"
         conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=False)
         conf.driver_format = "raw"

@@ -36,6 +36,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -66,7 +67,8 @@ from nova.volume import cinder
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
-flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
+CONF = config.CONF
+CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'

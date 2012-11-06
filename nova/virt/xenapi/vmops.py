@@ -30,6 +30,7 @@ from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import vm_mode
 from nova.compute import vm_states
+from nova import config
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -63,7 +64,8 @@ xenapi_vmops_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(xenapi_vmops_opts)
 
-flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
+CONF = config.CONF
+CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
