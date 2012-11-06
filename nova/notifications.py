@@ -300,6 +300,7 @@ def info_from_instance(context, instance_ref, network_info,
         instance_id=instance_ref['uuid'],
         display_name=instance_ref['display_name'],
         reservation_id=instance_ref['reservation_id'],
+        hostname=instance_ref['hostname'],
 
         # Type properties
         instance_type=instance_type_name,
