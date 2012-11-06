@@ -26,6 +26,7 @@ import sys
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 import nova.context
 from nova import db
 from nova import exception
@@ -46,8 +47,8 @@ scheduler_driver_opt = cfg.StrOpt('scheduler_driver',
         default='nova.scheduler.filter_scheduler.FilterScheduler',
         help='Default driver to use for the scheduler')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(scheduler_driver_opt)
+CONF = config.CONF
+CONF.register_opt(scheduler_driver_opt)
 
 QUOTAS = quota.QUOTAS
 
@@ -59,7 +60,7 @@ class SchedulerManager(manager.Manager):
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
-            scheduler_driver = FLAGS.scheduler_driver
+            scheduler_driver = CONF.scheduler_driver
         self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 

@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -25,8 +26,8 @@ ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
         default=1.5,
         help="virtual ram to physical ram allocation ratio")
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(ram_allocation_ratio_opt)
+CONF = config.CONF
+CONF.register_opt(ram_allocation_ratio_opt)
 
 
 class RamFilter(filters.BaseHostFilter):
@@ -39,7 +40,7 @@ class RamFilter(filters.BaseHostFilter):
         free_ram_mb = host_state.free_ram_mb
         total_usable_ram_mb = host_state.total_usable_ram_mb
 
-        memory_mb_limit = total_usable_ram_mb * FLAGS.ram_allocation_ratio
+        memory_mb_limit = total_usable_ram_mb * CONF.ram_allocation_ratio
         used_ram_mb = total_usable_ram_mb - free_ram_mb
         usable_ram = memory_mb_limit - used_ram_mb
         if not usable_ram >= requested_ram:

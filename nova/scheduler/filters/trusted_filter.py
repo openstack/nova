@@ -48,6 +48,7 @@ import httplib
 import socket
 import ssl
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -81,10 +82,10 @@ trusted_opts = [
                help='attestation authorization blob - must change'),
 ]
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 trust_group = cfg.OptGroup(name='trusted_computing', title='Trust parameters')
-FLAGS.register_group(trust_group)
-FLAGS.register_opts(trusted_opts, group='trusted_computing')
+CONF.register_group(trust_group)
+CONF.register_opts(trusted_opts, group=trust_group)
 
 
 class HTTPSClientAuthConnection(httplib.HTTPSConnection):
@@ -124,13 +125,13 @@ class AttestationService(httplib.HTTPSConnection):
     # Provide access wrapper to attestation server to get integrity report.
 
     def __init__(self):
-        self.api_url = FLAGS.trusted_computing.attestation_api_url
-        self.host = FLAGS.trusted_computing.attestation_server
-        self.port = FLAGS.trusted_computing.attestation_port
-        self.auth_blob = FLAGS.trusted_computing.attestation_auth_blob
+        self.api_url = CONF.trusted_computing.attestation_api_url
+        self.host = CONF.trusted_computing.attestation_server
+        self.port = CONF.trusted_computing.attestation_port
+        self.auth_blob = CONF.trusted_computing.attestation_auth_blob
         self.key_file = None
         self.cert_file = None
-        self.ca_file = FLAGS.trusted_computing.attestation_server_ca_file
+        self.ca_file = CONF.trusted_computing.attestation_server_ca_file
         self.request_count = 100
 
     def _do_request(self, method, action_url, body, headers):

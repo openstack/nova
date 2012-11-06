@@ -26,6 +26,7 @@ import datetime
 import json
 import os
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -37,8 +38,8 @@ scheduler_json_config_location_opt = cfg.StrOpt(
         default='',
         help='Absolute path to scheduler configuration JSON file.')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(scheduler_json_config_location_opt)
+CONF = config.CONF
+CONF.register_opt(scheduler_json_config_location_opt)
 
 LOG = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class SchedulerOptions(object):
     def get_configuration(self, filename=None):
         """Check the json file for changes and load it if needed."""
         if not filename:
-            filename = FLAGS.scheduler_json_config_location
+            filename = CONF.scheduler_json_config_location
         if not filename:
             return self.data
         if self.last_checked:

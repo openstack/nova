@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -24,8 +25,8 @@ max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
         default=8,
         help="Ignore hosts that have too many builds/resizes/snaps/migrations")
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(max_io_ops_per_host_opt)
+CONF = config.CONF
+CONF.register_opt(max_io_ops_per_host_opt)
 
 
 class IoOpsFilter(filters.BaseHostFilter):
@@ -36,7 +37,7 @@ class IoOpsFilter(filters.BaseHostFilter):
         compute node statistics to decide whether to filter.
         """
         num_io_ops = host_state.num_io_ops
-        max_io_ops = FLAGS.max_io_ops_per_host
+        max_io_ops = CONF.max_io_ops_per_host
         passes = num_io_ops < max_io_ops
         if not passes:
             LOG.debug(_("%(host_state)s fails I/O ops check: Max IOs per host "

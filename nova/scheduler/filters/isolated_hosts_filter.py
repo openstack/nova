@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from nova import config
 from nova import flags
 from nova.scheduler import filters
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class IsolatedHostsFilter(filters.BaseHostFilter):
@@ -28,6 +27,6 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
         spec = filter_properties.get('request_spec', {})
         props = spec.get('instance_properties', {})
         image_ref = props.get('image_ref')
-        image_isolated = image_ref in FLAGS.isolated_images
-        host_isolated = host_state.host in FLAGS.isolated_hosts
+        image_isolated = image_ref in CONF.isolated_images
+        host_isolated = host_state.host in CONF.isolated_hosts
         return image_isolated == host_isolated
