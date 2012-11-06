@@ -19,6 +19,7 @@
 
 from nova import context
 from nova import network
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import rpc
 from nova import test
 
@@ -78,3 +79,66 @@ class ApiTestCase(test.TestCase):
 
     def test_associate_unassociated_floating_ip(self):
         self._do_test_associate_floating_ip(None)
+
+    def _stub_migrate_instance_calls(self, method, multi_host, info):
+        fake_instance_type = {'rxtx_factor': 'fake_factor'}
+        fake_instance = {'uuid': 'fake_uuid',
+                         'instance_type': fake_instance_type,
+                         'project_id': 'fake_project_id'}
+        fake_migration = {'source_compute': 'fake_compute_source',
+                          'dest_compute': 'fake_compute_dest'}
+
+        def fake_mig_inst_method(*args, **kwargs):
+            info['kwargs'] = kwargs
+
+        def fake_is_multi_host(*args, **kwargs):
+            return multi_host
+
+        def fake_get_floaters(*args, **kwargs):
+            return ['fake_float1', 'fake_float2']
+
+        self.stubs.Set(network_rpcapi.NetworkAPI, method,
+                fake_mig_inst_method)
+        self.stubs.Set(self.network_api, '_is_multi_host',
+                fake_is_multi_host)
+        self.stubs.Set(self.network_api, '_get_floating_ip_addresses',
+                fake_get_floaters)
+
+        expected = {'instance_uuid': 'fake_uuid',
+                    'source_compute': 'fake_compute_source',
+                    'dest_compute': 'fake_compute_dest',
+                    'rxtx_factor': 'fake_factor',
+                    'project_id': 'fake_project_id',
+                    'floating_addresses': None}
+        if multi_host:
+            expected['host'] = 'fake_compute_dest'
+            expected['floating_addresses'] = ['fake_float1', 'fake_float2']
+        return fake_instance, fake_migration, expected
+
+    def test_migrate_instance_start_with_multhost(self):
+        info = {'kwargs': {}}
+        arg1, arg2, expected = self._stub_migrate_instance_calls(
+                'migrate_instance_start', True, info)
+        self.network_api.migrate_instance_start(self.context, arg1, arg2)
+        self.assertEqual(info['kwargs'], expected)
+
+    def test_migrate_instance_start_without_multhost(self):
+        info = {'kwargs': {}}
+        arg1, arg2, expected = self._stub_migrate_instance_calls(
+                'migrate_instance_start', False, info)
+        self.network_api.migrate_instance_start(self.context, arg1, arg2)
+        self.assertEqual(info['kwargs'], expected)
+
+    def test_migrate_instance_finish_with_multhost(self):
+        info = {'kwargs': {}}
+        arg1, arg2, expected = self._stub_migrate_instance_calls(
+                'migrate_instance_finish', True, info)
+        self.network_api.migrate_instance_finish(self.context, arg1, arg2)
+        self.assertEqual(info['kwargs'], expected)
+
+    def test_migrate_instance_finish_without_multhost(self):
+        info = {'kwargs': {}}
+        arg1, arg2, expected = self._stub_migrate_instance_calls(
+                'migrate_instance_finish', False, info)
+        self.network_api.migrate_instance_finish(self.context, arg1, arg2)
+        self.assertEqual(info['kwargs'], expected)

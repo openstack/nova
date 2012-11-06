@@ -36,11 +36,17 @@ class NetworkRpcAPITestCase(test.TestCase):
         expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
         expected_topic = FLAGS.network_topic
         expected_msg = rpcapi.make_msg(method, **kwargs)
+        if 'source_compute' in expected_msg['args']:
+            # Fix up for migrate_instance_* calls.
+            args = expected_msg['args']
+            args['source'] = args.pop('source_compute')
+            args['dest'] = args.pop('dest_compute')
         targeted_methods = [
             'lease_fixed_ip', 'release_fixed_ip', 'rpc_setup_network_on_host',
             '_rpc_allocate_fixed_ip', 'deallocate_fixed_ip',
             '_associate_floating_ip', '_disassociate_floating_ip',
-            'lease_fixed_ip', 'release_fixed_ip'
+            'lease_fixed_ip', 'release_fixed_ip',
+            'migrate_instance_start', 'migrate_instance_finish',
         ]
         if method in targeted_methods and 'host' in kwargs:
             if method != 'deallocate_fixed_ip':
@@ -258,3 +264,45 @@ class NetworkRpcAPITestCase(test.TestCase):
     def test_release_fixed_ip(self):
         self._test_network_api('release_fixed_ip', rpc_method='cast',
                 address='fake_addr', host='fake_host')
+
+    def test_migrate_instance_start(self):
+        self._test_network_api('migrate_instance_start', rpc_method='call',
+                instance_uuid='fake_instance_uuid',
+                rxtx_factor='fake_factor',
+                project_id='fake_project',
+                source_compute='fake_src_compute',
+                dest_compute='fake_dest_compute',
+                floating_addresses='fake_floating_addresses',
+                version='1.2')
+
+    def test_migrate_instance_start_multi_host(self):
+        self._test_network_api('migrate_instance_start', rpc_method='call',
+                instance_uuid='fake_instance_uuid',
+                rxtx_factor='fake_factor',
+                project_id='fake_project',
+                source_compute='fake_src_compute',
+                dest_compute='fake_dest_compute',
+                floating_addresses='fake_floating_addresses',
+                host='fake_host',
+                version='1.2')
+
+    def test_migrate_instance_finish(self):
+        self._test_network_api('migrate_instance_finish', rpc_method='call',
+                instance_uuid='fake_instance_uuid',
+                rxtx_factor='fake_factor',
+                project_id='fake_project',
+                source_compute='fake_src_compute',
+                dest_compute='fake_dest_compute',
+                floating_addresses='fake_floating_addresses',
+                version='1.2')
+
+    def test_migrate_instance_finish_multi_host(self):
+        self._test_network_api('migrate_instance_finish', rpc_method='call',
+                instance_uuid='fake_instance_uuid',
+                rxtx_factor='fake_factor',
+                project_id='fake_project',
+                source_compute='fake_src_compute',
+                dest_compute='fake_dest_compute',
+                floating_addresses='fake_floating_addresses',
+                host='fake_host',
+                version='1.2')
