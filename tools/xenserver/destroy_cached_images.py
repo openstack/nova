@@ -25,6 +25,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -47,7 +48,7 @@ FLAGS.register_cli_opts(destroy_opts)
 
 
 def main():
-    flags.parse_args(sys.argv)
+    config.parse_args(sys.argv)
     utils.monkey_patch()
 
     xenapi = xenapi_driver.XenAPIDriver()

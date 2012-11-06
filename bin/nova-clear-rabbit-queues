@@ -42,6 +42,7 @@ gettext.install('nova', unicode=1)
 
 from nova import context
 from nova import exception
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -69,7 +70,7 @@ def delete_queues(queues):
         x.queue_delete(q)
 
 if __name__ == '__main__':
-    args = flags.parse_args(sys.argv)
+    args = config.parse_args(sys.argv)
     logging.setup("nova")
     delete_queues(args[1:])
     if FLAGS.delete_exchange:
