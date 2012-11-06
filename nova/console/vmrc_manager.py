@@ -29,17 +29,9 @@ from nova.virt.vmwareapi import driver as vmwareapi_conn
 
 LOG = logging.getLogger(__name__)
 
-vmrc_manager_opts = [
-    cfg.StrOpt('console_public_hostname',
-               default='',
-               help='Publicly visible name for this console host'),
-    cfg.StrOpt('console_driver',
-               default='nova.console.vmrc.VMRCConsole',
-               help='Driver to use for the console'),
-    ]
-
 FLAGS = flags.FLAGS
-FLAGS.register_opts(vmrc_manager_opts)
+flags.DECLARE('console_driver', 'nova.console.manager')
+flags.DECLARE('console_public_hostname', 'nova.console.manager')
 
 
 class ConsoleVMRCManager(manager.Manager):
