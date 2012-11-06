@@ -53,8 +53,8 @@ delete_exchange_opt = cfg.BoolOpt('delete_exchange',
                                   default=False,
                                   help='delete nova exchange too.')
 
-FLAGS = flags.FLAGS
-FLAGS.register_cli_opt(delete_exchange_opt)
+CONF = config.CONF
+CONF.register_cli_opt(delete_exchange_opt)
 
 
 def delete_exchange(exch):
@@ -73,5 +73,5 @@ if __name__ == '__main__':
     args = config.parse_args(sys.argv)
     logging.setup("nova")
     delete_queues(args[1:])
-    if FLAGS.delete_exchange:
-        delete_exchange(FLAGS.control_exchange)
+    if CONF.delete_exchange:
+        delete_exchange(CONF.control_exchange)

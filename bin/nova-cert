@@ -38,11 +38,12 @@ from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
+CONF = config.CONF
+
 if __name__ == '__main__':
     config.parse_args(sys.argv)
-    FLAGS = flags.FLAGS
     logging.setup("nova")
     utils.monkey_patch()
-    server = service.Service.create(binary='nova-cert', topic=FLAGS.cert_topic)
+    server = service.Service.create(binary='nova-cert', topic=CONF.cert_topic)
     service.serve(server)
     service.wait()

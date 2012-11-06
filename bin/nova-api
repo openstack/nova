@@ -42,12 +42,14 @@ from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
+CONF = config.CONF
+
 if __name__ == '__main__':
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
     launcher = service.ProcessLauncher()
-    for api in flags.FLAGS.enabled_apis:
+    for api in CONF.enabled_apis:
         server = service.WSGIService(api)
         launcher.launch_server(server, workers=server.workers or 1)
     launcher.wait()
