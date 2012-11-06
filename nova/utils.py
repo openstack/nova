@@ -1164,9 +1164,13 @@ def mkfs(fs, path, label=None):
     else:
         args = ['mkfs', '-t', fs]
         #add -F to force no interactive excute on non-block device.
-        if fs in ['ext3', 'ext4']:
+        if fs in ('ext3', 'ext4'):
             args.extend(['-F'])
         if label:
-            args.extend(['-n', label])
+            if fs in ('msdos', 'vfat'):
+                label_opt = '-n'
+            else:
+                label_opt = '-L'
+            args.extend([label_opt, label])
         args.append(path)
         execute(*args)
