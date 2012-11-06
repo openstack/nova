@@ -1044,7 +1044,7 @@ def generate_mac_address():
     #             properly: 0xfa.
     #             Discussion: https://bugs.launchpad.net/nova/+bug/921838
     mac = [0xfa, 0x16, 0x3e,
-           random.randint(0x00, 0x7f),
+           random.randint(0x00, 0xff),
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
     return ':'.join(map(lambda x: "%02x" % x, mac))
