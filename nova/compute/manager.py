@@ -1450,6 +1450,27 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance=instance)
         self.driver.inject_file(instance, path, file_contents)
 
+    def _get_rescue_image_ref(self, context, instance):
+        """Determine what image should be used to boot the rescue VM. """
+        system_meta = self.db.instance_system_metadata_get(
+                context, instance['uuid'])
+
+        rescue_image_ref = system_meta.get('image_base_image_ref')
+
+        # 1. First try to use base image associated with instance's current
+        #    image.
+        #
+        # The idea here is to provide the customer with a rescue environment
+        # which they are familiar with. So, if they built their instance off of
+        # a Debian image, their rescue VM wil also be Debian.
+        if rescue_image_ref:
+            return rescue_image_ref
+
+        # 2. As a last resort, use instance's current image
+        LOG.warn(_('Unable to find a different image to use for rescue VM,'
+                   ' using instance\'s current image'))
+        return instance['image_ref']
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
@@ -1465,12 +1486,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                       utils.generate_password(CONF.password_length))
 
         network_info = self._get_instance_nw_info(context, instance)
-        image_meta = _get_image_meta(context, instance['image_ref'])
+
+        # Boot the instance using the 'base' image instead of the user's
+        # current (possibly broken) image
+        rescue_image_ref = self._get_rescue_image_ref(context, instance)
+        rescue_image_meta = _get_image_meta(context, rescue_image_ref)
 
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.rescue(context, instance,
-                               self._legacy_nw_info(network_info), image_meta,
-                               admin_password)
+                               self._legacy_nw_info(network_info),
+                               rescue_image_meta, admin_password)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

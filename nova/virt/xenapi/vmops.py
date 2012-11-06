@@ -238,10 +238,10 @@ class VMOps(object):
                                   False, False)
 
     def _create_disks(self, context, instance, name_label, disk_image_type,
-                      block_device_info=None):
+                      image_meta, block_device_info=None):
         vdis = vm_utils.get_vdis_for_instance(context, self._session,
                                           instance, name_label,
-                                          instance['image_ref'],
+                                          image_meta['id'],
                                           disk_image_type,
                                           block_device_info=block_device_info)
         # Just get the VDI ref once
@@ -269,9 +269,10 @@ class VMOps(object):
             return vm_utils.determine_disk_image_type(image_meta)
 
         @step
-        def create_disks_step(undo_mgr, disk_image_type):
+        def create_disks_step(undo_mgr, disk_image_type, image_meta):
             vdis = self._create_disks(context, instance, name_label,
-                                      disk_image_type, block_device_info)
+                                      disk_image_type, image_meta,
+                                      block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()
@@ -387,7 +388,7 @@ class VMOps(object):
             bdev_set_default_root(undo_mgr)
             disk_image_type = determine_disk_image_type_step(undo_mgr)
 
-            vdis = create_disks_step(undo_mgr, disk_image_type)
+            vdis = create_disks_step(undo_mgr, disk_image_type, image_meta)
             kernel_file, ramdisk_file = create_kernel_ramdisk_step(undo_mgr)
             vm_ref = create_vm_record_step(undo_mgr, vdis, disk_image_type,
                     kernel_file, ramdisk_file)
