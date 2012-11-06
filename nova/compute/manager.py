@@ -230,7 +230,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.12'
+    RPC_API_VERSION = '2.13'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1568,14 +1568,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._terminate_volume_connections(context, instance)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration['id'], migration['source_compute'],
+                    migration, migration['source_compute'],
                     reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def finish_revert_resize(self, context, migration_id, instance,
-                             reservations=None):
+    def finish_revert_resize(self, context, instance, reservations=None,
+                             migration=None, migration_id=None):
         """Finishes the second half of reverting a resize.
 
         Power back on the source instance and revert the resized attributes
@@ -1583,7 +1583,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         elevated = context.elevated()
-        migration_ref = self.db.migration_get(elevated, migration_id)
+
+        if not migration:
+            migration = self.db.migration_get(elevated, migration_id)
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
@@ -1594,11 +1596,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             instance = self._instance_update(context,
                                         instance['uuid'],
-                                        host=migration_ref['source_compute'])
+                                        host=migration['source_compute'])
             self.network_api.setup_networks_on_host(context, instance,
-                                            migration_ref['source_compute'])
+                                            migration['source_compute'])
 
-            old_instance_type = migration_ref['old_instance_type_id']
+            old_instance_type = migration['old_instance_type_id']
             instance_type = instance_types.get_instance_type(old_instance_type)
 
             bdms = self._get_instance_volume_bdms(context, instance['uuid'])
@@ -1629,13 +1631,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       RESIZE_REVERTING)
 
             self.network_api.migrate_instance_finish(context, instance,
-                                                     migration_ref)
+                                                     migration)
 
             self._instance_update(context, instance['uuid'],
                                   vm_state=vm_states.ACTIVE,
                                   task_state=None)
 
-            self.db.migration_update(elevated, migration_id,
+            self.db.migration_update(elevated, migration['id'],
                     {'status': 'reverted'})
 
             self._notify_about_instance_usage(
