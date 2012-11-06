@@ -41,9 +41,8 @@ metadata_opts = [
                      'config drive')),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(metadata_opts)
 CONF = config.CONF
+CONF.register_opts(metadata_opts)
 CONF.import_opt('dhcp_domain', 'nova.network.manager')
 
 
@@ -310,8 +309,8 @@ class InstanceMetadata():
 
     def _get_hostname(self):
         return "%s%s%s" % (self.instance['hostname'],
-                           '.' if FLAGS.dhcp_domain else '',
-                           FLAGS.dhcp_domain)
+                           '.' if CONF.dhcp_domain else '',
+                           CONF.dhcp_domain)
 
     def lookup(self, path):
         if path == "" or path[0] != "/":
@@ -353,7 +352,7 @@ class InstanceMetadata():
         """Yields (path, value) tuples for metadata elements."""
         # EC2 style metadata
         for version in VERSIONS + ["latest"]:
-            if version in FLAGS.config_drive_skip_versions.split(' '):
+            if version in CONF.config_drive_skip_versions.split(' '):
                 continue
 
             data = self.get_ec2_metadata(version)

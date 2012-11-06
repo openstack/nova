@@ -15,11 +15,12 @@
 import webob.dec
 import webob.exc
 
+from nova import config
 from nova import context
 from nova import flags
 from nova import utils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class Fault(webob.exc.HTTPException):
@@ -44,7 +45,7 @@ class Fault(webob.exc.HTTPException):
         user_id, _sep, project_id = req.params['AWSAccessKeyId'].partition(':')
         project_id = project_id or user_id
         remote_address = getattr(req, 'remote_address', '127.0.0.1')
-        if FLAGS.use_forwarded_for:
+        if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         ctxt = context.RequestContext(user_id,

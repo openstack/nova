@@ -21,13 +21,14 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 authorize = exts.extension_authorizer('compute', 'rescue')
 
@@ -54,7 +55,7 @@ class RescueController(wsgi.Controller):
         if body['rescue'] and 'adminPass' in body['rescue']:
             password = body['rescue']['adminPass']
         else:
-            password = utils.generate_password(FLAGS.password_length)
+            password = utils.generate_password(CONF.password_length)
 
         instance = self._get_instance(context, id)
         try:

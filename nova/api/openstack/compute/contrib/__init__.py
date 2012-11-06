@@ -22,11 +22,12 @@ It can't be called 'extensions' because that causes namespacing problems.
 """
 
 from nova.api.openstack import extensions
+from nova import config
 from nova import flags
 from nova.openstack.common import log as logging
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -36,4 +37,4 @@ def standard_extensions(ext_mgr):
 
 def select_extensions(ext_mgr):
     extensions.load_standard_extensions(ext_mgr, LOG, __path__, __package__,
-                                        FLAGS.osapi_compute_ext_list)
+                                        CONF.osapi_compute_ext_list)

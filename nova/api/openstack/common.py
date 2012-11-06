@@ -28,6 +28,7 @@ from nova.api.openstack import xmlutil
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
@@ -35,7 +36,7 @@ from nova import quota
 
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 QUOTAS = quota.QUOTAS
 
 
@@ -148,7 +149,7 @@ def _get_marker_param(request):
     return request.GET['marker']
 
 
-def limited(items, request, max_limit=FLAGS.osapi_max_limit):
+def limited(items, request, max_limit=CONF.osapi_max_limit):
     """Return a slice of items according to requested offset and limit.
 
     :param items: A sliceable entity
@@ -185,7 +186,7 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     return items[offset:range_end]
 
 
-def get_limit_and_marker(request, max_limit=FLAGS.osapi_max_limit):
+def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
     """get limited parameter from request"""
     params = get_pagination_params(request)
     limit = params.get('limit', max_limit)
@@ -195,7 +196,7 @@ def get_limit_and_marker(request, max_limit=FLAGS.osapi_max_limit):
     return limit, marker
 
 
-def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
+def limited_by_marker(items, request, max_limit=CONF.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
     limit, marker = get_limit_and_marker(request, max_limit)
 
@@ -414,7 +415,7 @@ class MetadataTemplate(xmlutil.TemplateBuilder):
 def check_snapshots_enabled(f):
     @functools.wraps(f)
     def inner(*args, **kwargs):
-        if not FLAGS.allow_instance_snapshots:
+        if not CONF.allow_instance_snapshots:
             LOG.warn(_('Rejecting snapshot request, snapshots currently'
                        ' disabled'))
             msg = _("Instance snapshots are not permitted at this time.")
@@ -443,7 +444,7 @@ class ViewBuilder(object):
         params = request.params.copy()
         params["marker"] = identifier
         prefix = self._update_link_prefix(request.application_url,
-                                          FLAGS.osapi_compute_link_prefix)
+                                          CONF.osapi_compute_link_prefix)
         url = os.path.join(prefix,
                            request.environ["nova.context"].project_id,
                            collection_name)
@@ -452,7 +453,7 @@ class ViewBuilder(object):
     def _get_href_link(self, request, identifier, collection_name):
         """Return an href string pointing to this object."""
         prefix = self._update_link_prefix(request.application_url,
-                                          FLAGS.osapi_compute_link_prefix)
+                                          CONF.osapi_compute_link_prefix)
         return os.path.join(prefix,
                             request.environ["nova.context"].project_id,
                             collection_name,
@@ -462,7 +463,7 @@ class ViewBuilder(object):
         """Create a URL that refers to a specific resource."""
         base_url = remove_version_from_href(request.application_url)
         base_url = self._update_link_prefix(base_url,
-                                            FLAGS.osapi_compute_link_prefix)
+                                            CONF.osapi_compute_link_prefix)
         return os.path.join(base_url,
                             request.environ["nova.context"].project_id,
                             collection_name,

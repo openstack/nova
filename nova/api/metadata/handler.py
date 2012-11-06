@@ -29,12 +29,12 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import wsgi
 
-LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 CONF = config.CONF
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
-if FLAGS.memcached_servers:
+LOG = logging.getLogger(__name__)
+
+if CONF.memcached_servers:
     import memcache
 else:
     from nova.common import memorycache as memcache
@@ -44,7 +44,7 @@ class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
 
     def __init__(self):
-        self._cache = memcache.Client(FLAGS.memcached_servers, debug=0)
+        self._cache = memcache.Client(CONF.memcached_servers, debug=0)
 
     def get_metadata(self, address):
         if not address:
@@ -67,7 +67,7 @@ class MetadataRequestHandler(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
+        if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         if os.path.normpath("/" + req.path_info) == "/":

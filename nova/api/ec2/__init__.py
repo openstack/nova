@@ -72,10 +72,8 @@ ec2_opts = [
                help='Time in seconds before ec2 timestamp expires'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(ec2_opts)
-
 CONF = config.CONF
+CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
@@ -165,11 +163,11 @@ class Lockout(wsgi.Middleware):
 
     def __init__(self, application):
         """middleware can use fake for testing."""
-        if FLAGS.memcached_servers:
+        if CONF.memcached_servers:
             import memcache
         else:
             from nova.common import memorycache as memcache
-        self.mc = memcache.Client(FLAGS.memcached_servers,
+        self.mc = memcache.Client(CONF.memcached_servers,
                                   debug=0)
         super(Lockout, self).__init__(application)
 
@@ -178,7 +176,7 @@ class Lockout(wsgi.Middleware):
         access_key = str(req.params['AWSAccessKeyId'])
         failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
-        if failures >= FLAGS.lockout_attempts:
+        if failures >= CONF.lockout_attempts:
             detail = _("Too many failed authentications.")
             raise webob.exc.HTTPForbidden(detail=detail)
         res = req.get_response(self.application)
@@ -186,15 +184,15 @@ class Lockout(wsgi.Middleware):
             failures = self.mc.incr(failures_key)
             if failures is None:
                 # NOTE(vish): To use incr, failures has to be a string.
-                self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
-            elif failures >= FLAGS.lockout_attempts:
-                lock_mins = FLAGS.lockout_minutes
+                self.mc.set(failures_key, '1', time=CONF.lockout_window * 60)
+            elif failures >= CONF.lockout_attempts:
+                lock_mins = CONF.lockout_minutes
                 msg = _('Access key %(access_key)s has had %(failures)d'
                         ' failed authentications and will be locked out'
                         ' for %(lock_mins)d minutes.') % locals()
                 LOG.warn(msg)
                 self.mc.set(failures_key, str(failures),
-                            time=FLAGS.lockout_minutes * 60)
+                            time=CONF.lockout_minutes * 60)
         return res
 
 
@@ -226,14 +224,14 @@ class EC2KeystoneAuth(wsgi.Middleware):
             'path': req.path,
             'params': auth_params,
         }
-        if "ec2" in FLAGS.keystone_ec2_url:
+        if "ec2" in CONF.keystone_ec2_url:
             creds = {'ec2Credentials': cred_dict}
         else:
             creds = {'auth': {'OS-KSEC2:ec2Credentials': cred_dict}}
         creds_json = jsonutils.dumps(creds)
         headers = {'Content-Type': 'application/json'}
 
-        o = urlparse.urlparse(FLAGS.keystone_ec2_url)
+        o = urlparse.urlparse(CONF.keystone_ec2_url)
         if o.scheme == "http":
             conn = httplib.HTTPConnection(o.netloc)
         else:
@@ -264,7 +262,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
             return ec2_error(req, request_id, "Unauthorized", msg)
 
         remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
+        if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For',
                                              remote_address)
 
@@ -293,7 +291,7 @@ class NoAuth(wsgi.Middleware):
         user_id, _sep, project_id = req.params['AWSAccessKeyId'].partition(':')
         project_id = project_id or user_id
         remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
+        if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         ctx = context.RequestContext(user_id,
                                      project_id,
@@ -317,7 +315,7 @@ class Requestify(wsgi.Middleware):
         args = dict(req.params)
         try:
             expired = ec2utils.is_ec2_timestamp_expired(req.params,
-                            expires=FLAGS.ec2_timestamp_expiry)
+                            expires=CONF.ec2_timestamp_expiry)
             if expired:
                 msg = _("Timestamp failed validation.")
                 LOG.exception(msg)

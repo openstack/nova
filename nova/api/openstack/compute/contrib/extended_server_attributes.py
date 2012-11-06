@@ -22,8 +22,6 @@ from nova import db
 from nova import flags
 from nova.openstack.common import log as logging
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_server_attributes')

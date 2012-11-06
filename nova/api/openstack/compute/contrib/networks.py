@@ -26,8 +26,6 @@ from nova import flags
 from nova import network
 from nova.openstack.common import log as logging
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
 authorize_view = extensions.extension_authorizer('compute', 'networks:view')

@@ -27,10 +27,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
-
 
 # States usable in resetState action
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)

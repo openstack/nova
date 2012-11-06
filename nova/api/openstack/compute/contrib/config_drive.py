@@ -23,8 +23,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import flags
 
-
-FLAGS = flags.FLAGS
 authorize = extensions.soft_extension_authorizer('compute', 'config_drive')
 
 

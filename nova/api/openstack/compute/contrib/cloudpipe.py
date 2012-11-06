@@ -21,6 +21,7 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -30,8 +31,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
@@ -70,12 +70,12 @@ class CloudpipeController(object):
         # NOTE(vish): One of the drawbacks of doing this in the api is
         #             the keys will only be on the api node that launched
         #             the cloudpipe.
-        fileutils.ensure_tree(FLAGS.keys_path)
+        fileutils.ensure_tree(CONF.keys_path)
 
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes"""
         return [instance for instance in self.compute_api.get_all(context)
-                if instance['image_ref'] == str(FLAGS.vpn_image_id)
+                if instance['image_ref'] == str(CONF.vpn_image_id)
                 and instance['vm_state'] != vm_states.DELETED]
 
     def _get_cloudpipe_for_project(self, context, project_id):

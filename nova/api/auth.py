@@ -21,6 +21,7 @@ Common Auth Middleware.
 import webob.dec
 import webob.exc
 
+from nova import config
 from nova import context
 from nova import flags
 from nova.openstack.common import cfg
@@ -34,16 +35,16 @@ use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
         help='Treat X-Forwarded-For as the canonical remote address. '
              'Only enable this if you have a sanitizing proxy.')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(use_forwarded_for_opt)
+CONF = config.CONF
+CONF.register_opt(use_forwarded_for_opt)
 LOG = logging.getLogger(__name__)
 
 
 def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-    pipeline = local_conf[FLAGS.auth_strategy]
-    if not FLAGS.api_rate_limit:
-        limit_name = FLAGS.auth_strategy + '_nolimit'
+    pipeline = local_conf[CONF.auth_strategy]
+    if not CONF.api_rate_limit:
+        limit_name = CONF.auth_strategy + '_nolimit'
         pipeline = local_conf.get(limit_name, pipeline)
     pipeline = pipeline.split()
     filters = [loader.get_filter(n) for n in pipeline[:-1]]
@@ -95,7 +96,7 @@ class NovaKeystoneContext(wsgi.Middleware):
 
         # Build a context, including the auth_token...
         remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
+        if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         service_catalog = None

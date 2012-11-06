@@ -33,6 +33,7 @@ from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -45,7 +46,7 @@ from nova import utils
 from nova import volume
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -283,22 +284,22 @@ class CloudController(object):
         return {'availabilityZoneInfo': result}
 
     def describe_regions(self, context, region_name=None, **kwargs):
-        if FLAGS.region_list:
+        if CONF.region_list:
             regions = []
-            for region in FLAGS.region_list:
+            for region in CONF.region_list:
                 name, _sep, host = region.partition('=')
-                endpoint = '%s://%s:%s%s' % (FLAGS.ec2_scheme,
+                endpoint = '%s://%s:%s%s' % (CONF.ec2_scheme,
                                              host,
-                                             FLAGS.ec2_port,
-                                             FLAGS.ec2_path)
+                                             CONF.ec2_port,
+                                             CONF.ec2_path)
                 regions.append({'regionName': name,
                                 'regionEndpoint': endpoint})
         else:
             regions = [{'regionName': 'nova',
-                        'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_scheme,
-                                                            FLAGS.ec2_host,
-                                                            FLAGS.ec2_port,
-                                                            FLAGS.ec2_path)}]
+                        'regionEndpoint': '%s://%s:%s%s' % (CONF.ec2_scheme,
+                                                            CONF.ec2_host,
+                                                            CONF.ec2_port,
+                                                            CONF.ec2_path)}]
         return {'regionInfo': regions}
 
     def describe_snapshots(self,
@@ -366,7 +367,7 @@ class CloudController(object):
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
-            suffix = FLAGS.vpn_key_suffix
+            suffix = CONF.vpn_key_suffix
             if context.is_admin or not key_pair['name'].endswith(suffix):
                 result.append({
                     'keyName': key_pair['name'],
@@ -652,7 +653,7 @@ class CloudController(object):
     def create_security_group(self, context, group_name, group_description):
         if isinstance(group_name, unicode):
             group_name = group_name.encode('utf-8')
-        if FLAGS.ec2_strict_validation:
+        if CONF.ec2_strict_validation:
             # EC2 specification gives constraints for name and description:
             # Accepts alphanumeric characters, spaces, dashes, and underscores
             allowed = '^[a-zA-Z0-9_\- ]+$'
@@ -1048,7 +1049,7 @@ class CloudController(object):
                 instances = []
         for instance in instances:
             if not context.is_admin:
-                if instance['image_ref'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(CONF.vpn_image_id):
                     continue
             i = {}
             instance_uuid = instance['uuid']
@@ -1070,7 +1071,7 @@ class CloudController(object):
                 floating_ip = ip_info['floating_ips'][0]
             if ip_info['fixed_ip6s']:
                 i['dnsNameV6'] = ip_info['fixed_ip6s'][0]
-            if FLAGS.ec2_private_dns_show_ip:
+            if CONF.ec2_private_dns_show_ip:
                 i['privateDnsName'] = fixed_ip
             else:
                 i['privateDnsName'] = instance['hostname']
