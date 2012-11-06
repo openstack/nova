@@ -105,6 +105,9 @@ class FakeIVMOperator(object):
                 'disk_used': 0,
                 'disk_avail': 10168}
 
+    def get_hostname(self):
+        return 'fake-powervm'
+
 
 def fake_get_powervm_operator():
     return FakeIVMOperator()

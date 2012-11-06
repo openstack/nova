@@ -152,6 +152,7 @@ class HostOps(baseops.BaseOps):
         data["supported_instances"] = \
             [('i686', 'hyperv', 'hvm'),
              ('x86_64', 'hyperv', 'hvm')]
+        data["hypervisor_hostname"] = platform.node()
 
         self._stats = data
 

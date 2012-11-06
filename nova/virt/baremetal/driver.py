@@ -676,6 +676,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'local_gb_used': self.get_local_gb_used(),
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
+               'hypervisor_hostname': FLAGS.host,
                'cpu_info': self.get_cpu_info(),
                'cpu_arch': FLAGS.cpu_arch}
 
@@ -737,4 +738,5 @@ class HostState(object):
                                     self.connection.get_memory_mb_used())
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
+        data["hypervisor_hostname"] = FLAGS.host
         self._stats = data
