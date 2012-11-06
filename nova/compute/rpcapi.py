@@ -141,6 +141,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.11 - Adds soft_delete_instance() and restore_instance()
         2.12 - Remove migration_id, add migration to revert_resize
         2.13 - Remove migration_id, add migration to finish_revert_resize
+        2.14 - Remove aggregate_id, add aggregate to add_aggregate_host
     '''
 
     #
@@ -158,7 +159,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=FLAGS.compute_topic,
                 default_version=self.BASE_RPC_API_VERSION)
 
-    def add_aggregate_host(self, ctxt, aggregate_id, host_param, host,
+    def add_aggregate_host(self, ctxt, aggregate, host_param, host,
                            slave_info=None):
         '''Add aggregate host.
 
@@ -169,11 +170,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         :param host: This is the host to send the message to.
         '''
 
+        aggregate_p = jsonutils.to_primitive(aggregate)
         self.cast(ctxt, self.make_msg('add_aggregate_host',
-                aggregate_id=aggregate_id, host=host_param,
+                aggregate=aggregate_p, host=host_param,
                 slave_info=slave_info),
                 topic=_compute_topic(self.topic, ctxt, host, None),
-                version='2.2')
+                version='2.14')
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
         instance_p = jsonutils.to_primitive(instance)

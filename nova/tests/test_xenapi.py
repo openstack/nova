@@ -2274,7 +2274,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         self.assertRaises(exception.AggregateError,
                           self.compute.add_aggregate_host,
-                          self.context, self.aggr.id, "fake_host")
+                          self.context, "fake_host",
+                          aggregate=jsonutils.to_primitive(self.aggr))
         excepted = db.aggregate_get(self.context, self.aggr.id)
         self.assertEqual(excepted.metadetails[pool_states.KEY],
                 pool_states.ERROR)
@@ -2291,10 +2292,10 @@ class MockComputeAPI(object):
     def __init__(self):
         self._mock_calls = []
 
-    def add_aggregate_host(self, ctxt, aggregate_id,
+    def add_aggregate_host(self, ctxt, aggregate,
                                      host_param, host, slave_info):
         self._mock_calls.append((
-            self.add_aggregate_host, ctxt, aggregate_id,
+            self.add_aggregate_host, ctxt, aggregate,
             host_param, host, slave_info))
 
     def remove_aggregate_host(self, ctxt, aggregate_id, host_param,
@@ -2337,7 +2338,8 @@ class HypervisorPoolTestCase(test.TestCase):
 
         self.assertIn(
             (slave.compute_rpcapi.add_aggregate_host,
-            "CONTEXT", 98, "slave", "master", "SLAVE_INFO"),
+            "CONTEXT", jsonutils.to_primitive(aggregate),
+            "slave", "master", "SLAVE_INFO"),
             slave.compute_rpcapi._mock_calls)
 
     def test_slave_asks_master_to_remove_slave_from_pool(self):

@@ -95,8 +95,9 @@ class ComputeRpcAPITestCase(test.TestCase):
             self.assertEqual(arg, expected_arg)
 
     def test_add_aggregate_host(self):
-        self._test_compute_api('add_aggregate_host', 'cast', aggregate_id='id',
-                host_param='host', host='host', slave_info={}, version='2.2')
+        self._test_compute_api('add_aggregate_host', 'cast',
+                aggregate={'id': 'fake_id'}, host_param='host', host='host',
+                slave_info={}, version='2.14')
 
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
