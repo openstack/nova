@@ -2670,7 +2670,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_rebooting_instances(self, context):
         if FLAGS.reboot_timeout > 0:
-            self.driver.poll_rebooting_instances(FLAGS.reboot_timeout)
+            instances = self.db.instance_get_all_hung_in_rebooting(
+                context, FLAGS.reboot_timeout)
+            self.driver.poll_rebooting_instances(FLAGS.reboot_timeout,
+                                                 instances)
 
     @manager.periodic_task
     def _poll_rescued_instances(self, context):

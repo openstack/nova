@@ -123,7 +123,7 @@ class FakeDriver(driver.ComputeDriver):
     def unrescue(self, instance, network_info):
         pass
 
-    def poll_rebooting_instances(self, timeout):
+    def poll_rebooting_instances(self, timeout, instances):
         pass
 
     def poll_rescued_instances(self, timeout):

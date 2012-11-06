@@ -290,9 +290,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Restore the specified instance"""
         self._vmops.restore(instance)
 
-    def poll_rebooting_instances(self, timeout):
+    def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances"""
-        self._vmops.poll_rebooting_instances(timeout)
+        self._vmops.poll_rebooting_instances(timeout, instances)
 
     def poll_rescued_instances(self, timeout):
         """Poll for rescued instances"""

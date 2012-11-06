@@ -1174,7 +1174,7 @@ class VMOps(object):
             if timeutils.is_older_than(task_created, timeout):
                 self._session.call_xenapi("task.cancel", task_ref)
 
-    def poll_rebooting_instances(self, timeout):
+    def poll_rebooting_instances(self, timeout, instances):
         """Look for expirable rebooting instances.
 
             - issue a "hard" reboot to any instance that has been stuck in a
@@ -1185,7 +1185,6 @@ class VMOps(object):
         self._cancel_stale_tasks(timeout, 'VM.clean_reboot')
 
         ctxt = nova_context.get_admin_context()
-        instances = db.instance_get_all_hung_in_rebooting(ctxt, timeout)
 
         instances_info = dict(instance_count=len(instances),
                 timeout=timeout)

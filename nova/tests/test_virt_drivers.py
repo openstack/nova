@@ -269,7 +269,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_poll_rebooting_instances(self):
-        self.connection.poll_rebooting_instances(10)
+        instances = [self._get_running_instance()]
+        self.connection.poll_rebooting_instances(10, instances)
 
     @catch_notimplementederror
     def test_poll_rescued_instances(self):

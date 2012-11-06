@@ -604,8 +604,14 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
-    def poll_rebooting_instances(self, timeout):
-        """Poll for rebooting instances"""
+    def poll_rebooting_instances(self, timeout, instances):
+        """Poll for rebooting instances
+
+        :param timeout: the currently configured timeout for considering
+                        rebooting instances to be stuck
+        :param instances: instances that have been in rebooting state
+                          longer than the configured timeout
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
