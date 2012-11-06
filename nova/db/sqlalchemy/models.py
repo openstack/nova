@@ -229,7 +229,7 @@ class Instance(BASE, NovaBase):
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
-    server_name = Column(String(255))
+    hostname = Column(String(255))
 
 #    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -250,8 +250,8 @@ class Instance(BASE, NovaBase):
     root_gb = Column(Integer)
     ephemeral_gb = Column(Integer)
 
-    hostname = Column(String(255))
-    # To identify the "Service" which the instance resides in.
+    # This is not related to hostname, above.  It refers
+    #  to the nova node.
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     # To identify the "ComputeNode" which the instance resides in.
     # This equals to ComputeNode.hypervisor_hostname.
