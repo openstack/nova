@@ -49,6 +49,11 @@ xenapi_agent_opts = [
                     'configuration is not injected into the image. '
                     'Used if compute_driver=xenapi.XenAPIDriver and '
                     ' flat_injected=True'),
+    cfg.StrOpt('xenapi_disable_agent',
+               default=False,
+               help='Disable XenAPI agent. Reduces the amount of time '
+                    'it takes nova to detect that a VM has started, when '
+                    'that VM does not have the agent installed'),
 ]
 
 FLAGS = flags.FLAGS
@@ -244,6 +249,9 @@ def find_guest_agent(base_dir):
     tries to locate a guest agent at the path
     specificed by agent_rel_path
     """
+    if FLAGS.xenapi_disable_agent:
+        return False
+
     agent_rel_path = FLAGS.xenapi_agent_path
     agent_path = os.path.join(base_dir, agent_rel_path)
     if os.path.isfile(agent_path):
