@@ -3171,6 +3171,7 @@ class IptablesFirewallTestCase(test.TestCase):
                 pass
         self.fake_libvirt_connection = FakeLibvirtDriver()
         self.fw = firewall.IptablesFirewallDriver(
+                      fake.FakeVirtAPI(),
                       get_connection=lambda: self.fake_libvirt_connection)
 
     in_nat_rules = [
@@ -3512,7 +3513,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection = Mock()
 
-        self.fw = firewall.NWFilterFirewall(
+        self.fw = firewall.NWFilterFirewall(fake.FakeVirtAPI(),
                                          lambda: self.fake_libvirt_connection)
 
     def test_cidr_rule_nwfilter_xml(self):

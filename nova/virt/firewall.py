@@ -19,7 +19,6 @@
 
 from nova import config
 from nova import context
-from nova import db
 from nova import flags
 from nova import network
 from nova.network import linux_net
@@ -57,6 +56,9 @@ class FirewallDriver(object):
         Defines methods that any driver providing security groups
         and provider fireall functionality should implement.
     """
+    def __init__(self, virtapi):
+        self._virtapi = virtapi
+
     def prepare_instance_filter(self, instance, network_info):
         """Prepare filters for the instance.
         At this point, the instance isn't running yet."""
@@ -140,7 +142,8 @@ class FirewallDriver(object):
 class IptablesFirewallDriver(FirewallDriver):
     """Driver which enforces security groups through iptables rules."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, virtapi, **kwargs):
+        super(IptablesFirewallDriver, self).__init__(virtapi)
         self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.network_infos = {}
@@ -346,13 +349,13 @@ class IptablesFirewallDriver(FirewallDriver):
             # Allow RA responses
             self._do_ra_rules(ipv6_rules, network_info)
 
-        security_groups = db.security_group_get_by_instance(ctxt,
-                                                            instance['id'])
+        security_groups = self._virtapi.security_group_get_by_instance(
+            ctxt, instance['id'])
 
         # then, security group chains and rules
         for security_group in security_groups:
-            rules = db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group['id'])
+            rules = self._virtapi.security_group_rule_get_by_security_group(
+                ctxt, security_group['id'])
 
             for rule in rules:
                 LOG.debug(_('Adding security group rule: %r'), rule,
@@ -479,13 +482,12 @@ class IptablesFirewallDriver(FirewallDriver):
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule('provider', rule)
 
-    @staticmethod
-    def _provider_rules():
+    def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6."""
         ctxt = context.get_admin_context()
         ipv4_rules = []
         ipv6_rules = []
-        rules = db.provider_fw_rule_get_all(ctxt)
+        rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
             LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
             version = netutils.get_ip_version(rule['cidr'])

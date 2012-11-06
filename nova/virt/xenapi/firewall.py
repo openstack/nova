@@ -18,7 +18,6 @@
 #    under the License.
 
 from nova import context
-from nova.db import api as db
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -45,9 +44,9 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         json_ret = jsonutils.loads(ret)
         return (json_ret['out'], json_ret['err'])
 
-    def __init__(self, xenapi_session=None, **kwargs):
+    def __init__(self, virtapi, xenapi_session=None, **kwargs):
         from nova.network import linux_net
-        super(Dom0IptablesFirewallDriver, self).__init__(**kwargs)
+        super(Dom0IptablesFirewallDriver, self).__init__(virtapi, **kwargs)
         self._session = xenapi_session
         # Create IpTablesManager with executor through plugin
         self.iptables = linux_net.IptablesManager(self._plugin_execute)
@@ -64,8 +63,7 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
             return ['--dport', '%s:%s' % (rule.from_port,
                                            rule.to_port)]
 
-    @staticmethod
-    def _provider_rules():
+    def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6.
         Note: We could not use the common code from virt.firewall because
         XS doesn't accept the '-m multiport' option"""
@@ -73,7 +71,7 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         ctxt = context.get_admin_context()
         ipv4_rules = []
         ipv6_rules = []
-        rules = db.provider_fw_rule_get_all(ctxt)
+        rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
             LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
             version = netutils.get_ip_version(rule['cidr'])

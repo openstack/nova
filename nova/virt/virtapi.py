@@ -76,3 +76,25 @@ class VirtAPI(object):
         :param key: metadata key to delete
         """
         raise NotImplementedError()
+
+    def security_group_get_by_instance(self, context, instance_uuid):
+        """Get the security group for a specified instance
+        :param context: security context
+        :param instance_uuid: instance defining the security group we want
+        """
+        raise NotImplementedError()
+
+    def security_group_rule_get_by_security_group(self, context,
+                                                  security_group_id):
+        """Get the rules associated with a specified security group
+        :param context: security context
+        :param security_group_id: the security group for which the rules
+                                  should be returned
+        """
+        raise NotImplementedError()
+
+    def provider_fw_rule_get_all(self, context):
+        """Get the provider firewall rules
+        :param context: security context
+        """
+        raise NotImplementedError()

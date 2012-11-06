@@ -151,7 +151,8 @@ class VMOps(object):
         self._virtapi = virtapi
         self.poll_rescue_last_ran = None
         self.firewall_driver = firewall.load_driver(
-            default=DEFAULT_FIREWALL_DRIVER,
+            DEFAULT_FIREWALL_DRIVER,
+            self._virtapi,
             xenapi_session=self._session)
         vif_impl = importutils.import_class(CONF.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
