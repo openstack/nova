@@ -7,6 +7,7 @@
     "compute:create": "",
     "compute:create:attach_network": "",
     "compute:create:attach_volume": "",
+    "compute:create:forced_host": "is_admin:True",
     "compute:get_all": "",
 
 

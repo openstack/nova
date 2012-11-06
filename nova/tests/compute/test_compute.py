@@ -5220,6 +5220,23 @@ class ComputePolicyTestCase(BaseTestCase):
                           self.compute_api.get_instance_faults,
                           self.context, instances)
 
+    def test_force_host_fail(self):
+        rules = {"compute:create": [],
+                 "compute:create:forced_host": [["role:fake"]]}
+        self._set_rules(rules)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.create, self.context, None, '1',
+                          availability_zone='1:1')
+
+    def test_force_host_pass(self):
+        rules = {"compute:create": [],
+                 "compute:create:forced_host": []}
+        self._set_rules(rules)
+
+        self.compute_api.create(self.context, None, '1',
+                                availability_zone='1:1')
+
 
 class ComputeHostAPITestCase(BaseTestCase):
     def setUp(self):

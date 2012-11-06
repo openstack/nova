@@ -500,7 +500,8 @@ class API(base.Base):
             LOG.debug(_("Going to run %s instances...") % num_instances)
 
             filter_properties = dict(scheduler_hints=scheduler_hints)
-            if context.is_admin and forced_host:
+            if forced_host:
+                check_policy(context, 'create:forced_host', {})
                 filter_properties['force_hosts'] = [forced_host]
 
             for i in xrange(num_instances):
