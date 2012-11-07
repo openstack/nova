@@ -2821,8 +2821,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              bw_ctr['uuid'],
                                              prev_time,
                                              bw_ctr['mac_address'])
-                    last_ctr_in = usage['last_ctr_in']
-                    last_ctr_out = usage['last_ctr_out']
+                    if usage:
+                        last_ctr_in = usage['last_ctr_in']
+                        last_ctr_out = usage['last_ctr_out']
 
                 if last_ctr_in is not None:
                     if bw_ctr['bw_in'] < last_ctr_in:
