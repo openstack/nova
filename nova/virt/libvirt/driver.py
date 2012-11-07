@@ -2351,6 +2351,11 @@ class LibvirtDriver(driver.ComputeDriver):
             None. if given cpu info is not compatible to this server,
             raise exception.
         """
+
+        # NOTE(berendt): virConnectCompareCPU not working for Xen
+        if CONF.libvirt_type == 'xen':
+            return 1
+
         info = jsonutils.loads(cpu_info)
         LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
         cpu = vconfig.LibvirtConfigCPU()
