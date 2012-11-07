@@ -27,6 +27,7 @@ from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
 
 from nova.db.sqlalchemy.session import get_session
+from nova.db.sqlalchemy.types import IPAddress
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 
@@ -281,8 +282,8 @@ class Instance(BASE, NovaBase):
 
     # User editable field meant to represent what ip should be used
     # to connect to the instance
-    access_ip_v4 = Column(String(255))
-    access_ip_v6 = Column(String(255))
+    access_ip_v4 = Column(IPAddress())
+    access_ip_v6 = Column(IPAddress())
 
     auto_disk_config = Column(Boolean())
     progress = Column(Integer)
@@ -583,7 +584,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
-    cidr = Column(String(255))
+    cidr = Column(IPAddress())
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
@@ -603,7 +604,7 @@ class ProviderFirewallRule(BASE, NovaBase):
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
-    cidr = Column(String(255))
+    cidr = Column(IPAddress())
 
 
 class KeyPair(BASE, NovaBase):
@@ -653,25 +654,25 @@ class Network(BASE, NovaBase):
     label = Column(String(255))
 
     injected = Column(Boolean, default=False)
-    cidr = Column(String(255), unique=True)
-    cidr_v6 = Column(String(255), unique=True)
+    cidr = Column(IPAddress(), unique=True)
+    cidr_v6 = Column(IPAddress(), unique=True)
     multi_host = Column(Boolean, default=False)
 
-    gateway_v6 = Column(String(255))
-    netmask_v6 = Column(String(255))
-    netmask = Column(String(255))
+    gateway_v6 = Column(IPAddress())
+    netmask_v6 = Column(IPAddress())
+    netmask = Column(IPAddress())
     bridge = Column(String(255))
     bridge_interface = Column(String(255))
-    gateway = Column(String(255))
-    broadcast = Column(String(255))
-    dns1 = Column(String(255))
-    dns2 = Column(String(255))
+    gateway = Column(IPAddress())
+    broadcast = Column(IPAddress())
+    dns1 = Column(IPAddress())
+    dns2 = Column(IPAddress())
 
     vlan = Column(Integer)
-    vpn_public_address = Column(String(255))
+    vpn_public_address = Column(IPAddress())
     vpn_public_port = Column(Integer)
-    vpn_private_address = Column(String(255))
-    dhcp_start = Column(String(255))
+    vpn_private_address = Column(IPAddress())
+    dhcp_start = Column(IPAddress())
 
     rxtx_base = Column(Integer)
 
@@ -696,7 +697,7 @@ class FixedIp(BASE, NovaBase):
     """Represents a fixed ip for an instance."""
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
-    address = Column(String(255))
+    address = Column(IPAddress())
     network_id = Column(Integer, nullable=True)
     virtual_interface_id = Column(Integer, nullable=True)
     instance_uuid = Column(String(36), nullable=True)
@@ -713,7 +714,7 @@ class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip."""
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
-    address = Column(String(255))
+    address = Column(IPAddress())
     fixed_ip_id = Column(Integer, nullable=True)
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
@@ -735,7 +736,7 @@ class ConsolePool(BASE, NovaBase):
     """Represents pool of consoles on the same physical node."""
     __tablename__ = 'console_pools'
     id = Column(Integer, primary_key=True)
-    address = Column(String(255))
+    address = Column(IPAddress())
     username = Column(String(255))
     password = Column(String(255))
     console_type = Column(String(255))
