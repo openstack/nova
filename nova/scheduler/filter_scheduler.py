@@ -257,14 +257,11 @@ class FilterScheduler(driver.Scheduler):
         # host, we virtually consume resources on it so subsequent
         # selections can adjust accordingly.
 
-        # unfiltered_hosts_dict is {host : ZoneManager.HostInfo()}
-        unfiltered_hosts_dict = self.host_manager.get_all_host_states(
-                elevated, topic)
-
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
-        hosts = unfiltered_hosts_dict.itervalues()
+        hosts = self.host_manager.get_all_host_states(
+                elevated, topic)
 
         selected_hosts = []
         if instance_uuids:

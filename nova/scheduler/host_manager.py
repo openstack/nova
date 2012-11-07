@@ -336,12 +336,9 @@ class HostManager(object):
         self.service_states[host] = service_caps
 
     def get_all_host_states(self, context, topic):
-        """Returns a dict of all the hosts the HostManager
-        knows about. Also, each of the consumable resources in HostState
-        are pre-populated and adjusted based on data in the db.
-
-        For example:
-        {'192.168.1.100': HostState(), ...}
+        """Returns a list of HostStates that represents all the hosts
+        the HostManager knows about. Also, each of the consumable resources
+        in HostState are pre-populated and adjusted based on data in the db.
 
         Note: this can be very slow with a lot of instances.
         InstanceType table isn't required since a copy is stored
@@ -372,4 +369,4 @@ class HostManager(object):
                 self.host_state_map[host] = host_state
             host_state.update_from_compute_node(compute)
 
-        return self.host_state_map
+        return self.host_state_map.itervalues()

@@ -41,7 +41,7 @@ class LeastCostTestCase(test.TestCase):
         fakes.mox_host_manager_db_calls(self.mox, ctxt)
         self.mox.ReplayAll()
         host_states = self.host_manager.get_all_host_states(ctxt,
-                'compute').values()
+                'compute')
         self.mox.VerifyAll()
         self.mox.ResetAll()
         return host_states
