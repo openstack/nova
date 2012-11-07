@@ -24,10 +24,7 @@ from nova import ipv6
 from nova.network import manager
 from nova.openstack.common import log as logging
 
-
 LOG = logging.getLogger(__name__)
-
-FLAGS = flags.FLAGS
 
 
 def get_ipam_lib(net_man):

@@ -16,8 +16,11 @@ import os
 import shutil
 import tempfile
 
+from nova import config
 from nova import exception
 from nova import flags
+
+CONF = config.CONF
 
 
 class MiniDNS(object):
@@ -31,8 +34,8 @@ class MiniDNS(object):
         A proper implementation will need some manner of locking."""
 
     def __init__(self):
-        if flags.FLAGS.logdir:
-            self.filename = os.path.join(flags.FLAGS.logdir, "dnstest.txt")
+        if CONF.logdir:
+            self.filename = os.path.join(CONF.logdir, "dnstest.txt")
         else:
             self.filename = "dnstest.txt"
 

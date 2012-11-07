@@ -18,13 +18,13 @@
 Client side of the network RPC API.
 """
 
+from nova import config
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import proxy as rpc_proxy
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class NetworkAPI(rpc_proxy.RpcProxy):
@@ -48,7 +48,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self, topic=None):
-        topic = topic if topic else FLAGS.network_topic
+        topic = topic if topic else CONF.network_topic
         super(NetworkAPI, self).__init__(
                 topic=topic,
                 default_version=self.BASE_RPC_API_VERSION)
