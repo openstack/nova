@@ -987,11 +987,9 @@ def dnsdomain_register_for_project(context, fqdomain, project):
 
 @require_admin_context
 def dnsdomain_unregister(context, fqdomain):
-    session = get_session()
-    with session.begin():
-        session.query(models.DNSDomain).\
-                     filter_by(domain=fqdomain).\
-                     delete()
+    model_query(context, models.DNSDomain).\
+                 filter_by(domain=fqdomain).\
+                 delete()
 
 
 @require_context
