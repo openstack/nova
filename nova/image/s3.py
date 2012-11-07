@@ -31,6 +31,7 @@ from lxml import etree
 
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
+from nova import config
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -60,8 +61,8 @@ s3_opts = [
                     'when downloading from s3'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(s3_opts)
+CONF = config.CONF
+CONF.register_opts(s3_opts)
 
 
 class S3ImageService(object):
@@ -152,17 +153,17 @@ class S3ImageService(object):
     def _conn(context):
         # NOTE(vish): access and secret keys for s3 server are not
         #             checked in nova-objectstore
-        access = FLAGS.s3_access_key
-        if FLAGS.s3_affix_tenant:
+        access = CONF.s3_access_key
+        if CONF.s3_affix_tenant:
             access = '%s:%s' % (access, context.project_id)
-        secret = FLAGS.s3_secret_key
+        secret = CONF.s3_secret_key
         calling = boto.s3.connection.OrdinaryCallingFormat()
         return boto.s3.connection.S3Connection(aws_access_key_id=access,
                                                aws_secret_access_key=secret,
-                                               is_secure=FLAGS.s3_use_ssl,
+                                               is_secure=CONF.s3_use_ssl,
                                                calling_format=calling,
-                                               port=FLAGS.s3_port,
-                                               host=FLAGS.s3_host)
+                                               port=CONF.s3_port,
+                                               host=CONF.s3_host)
 
     @staticmethod
     def _download_file(bucket, filename, local_dir):
@@ -260,7 +261,7 @@ class S3ImageService(object):
     def _s3_create(self, context, metadata):
         """Gets a manifest from s3 and makes an image."""
 
-        image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
+        image_path = tempfile.mkdtemp(dir=CONF.image_decryption_dir)
 
         image_location = metadata['properties']['image_location']
         bucket_name = image_location.split('/')[0]

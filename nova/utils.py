@@ -47,6 +47,7 @@ from eventlet import greenthread
 from eventlet import semaphore
 import netaddr
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -57,9 +58,8 @@ from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
-
-FLAGS.register_opt(
+CONF = config.CONF
+CONF.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
 
@@ -171,7 +171,7 @@ def execute(*cmd, **kwargs):
                                         'to utils.execute: %r') % kwargs)
 
     if run_as_root and os.geteuid() != 0:
-        cmd = ['sudo', 'nova-rootwrap', FLAGS.rootwrap_config] + list(cmd)
+        cmd = ['sudo', 'nova-rootwrap', CONF.rootwrap_config] + list(cmd)
 
     cmd = map(str, cmd)
 
@@ -330,7 +330,7 @@ def last_completed_audit_period(unit=None, before=None):
               The begin timestamp of this audit period is the same as the
               end of the previous."""
     if not unit:
-        unit = FLAGS.instance_usage_audit_period
+        unit = CONF.instance_usage_audit_period
 
     offset = 0
     if '@' in unit:
@@ -483,7 +483,7 @@ class LazyPluggable(object):
 
     def __get_backend(self):
         if not self.__backend:
-            backend_name = FLAGS[self.__pivot]
+            backend_name = CONF[self.__pivot]
             if backend_name not in self.__backends:
                 msg = _('Invalid backend: %s') % backend_name
                 raise exception.NovaException(msg)
@@ -839,7 +839,7 @@ def monkey_patch():
     this function patches a decorator
     for all functions in specified modules.
     You can set decorators for each modules
-    using FLAGS.monkey_patch_modules.
+    using CONF.monkey_patch_modules.
     The format is "Module path:Decorator function".
     Example: 'nova.api.ec2.cloud:nova.notifier.api.notify_decorator'
 
@@ -849,11 +849,11 @@ def monkey_patch():
     name - name of the function
     function - object of the function
     """
-    # If FLAGS.monkey_patch is not True, this function do nothing.
-    if not FLAGS.monkey_patch:
+    # If CONF.monkey_patch is not True, this function do nothing.
+    if not CONF.monkey_patch:
         return
     # Get list of modules and decorators
-    for module_and_decorator in FLAGS.monkey_patch_modules:
+    for module_and_decorator in CONF.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
         # import decorator function
         decorator = importutils.import_class(decorator_name)
@@ -901,7 +901,7 @@ def generate_glance_url():
     """Generate the URL to glance."""
     # TODO(jk0): This will eventually need to take SSL into consideration
     # when supported in glance.
-    return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
+    return "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
 
 
 def generate_image_url(image_ref):
@@ -1032,7 +1032,7 @@ def service_is_up(service):
     last_heartbeat = service['updated_at'] or service['created_at']
     # Timestamps in DB are UTC.
     elapsed = total_seconds(timeutils.utcnow() - last_heartbeat)
-    return abs(elapsed) <= FLAGS.service_down_time
+    return abs(elapsed) <= CONF.service_down_time
 
 
 def generate_mac_address():

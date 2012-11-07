@@ -44,6 +44,7 @@ import urllib
 import routes
 import webob
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
@@ -63,15 +64,15 @@ s3_opts = [
                help='port for s3 api to listen'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(s3_opts)
+CONF = config.CONF
+CONF.register_opts(s3_opts)
 
 
 def get_wsgi_server():
     return wsgi.Server("S3 Objectstore",
-                       S3Application(FLAGS.buckets_path),
-                       port=FLAGS.s3_listen_port,
-                       host=FLAGS.s3_listen)
+                       S3Application(CONF.buckets_path),
+                       port=CONF.s3_listen_port,
+                       host=CONF.s3_listen)
 
 
 class S3Application(wsgi.Router):

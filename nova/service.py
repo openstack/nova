@@ -31,6 +31,7 @@ import eventlet
 import greenlet
 
 from nova.common import eventlet_backdoor
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -90,8 +91,8 @@ service_opts = [
                help='Number of workers for metadata service'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(service_opts)
+CONF = config.CONF
+CONF.register_opts(service_opts)
 
 
 class SignalExit(SystemExit):
@@ -167,9 +168,9 @@ class ServiceLauncher(Launcher):
         signal.signal(signal.SIGTERM, self._handle_signal)
         signal.signal(signal.SIGINT, self._handle_signal)
 
-        LOG.debug(_('Full set of FLAGS:'))
-        for flag in FLAGS:
-            flag_get = FLAGS.get(flag, None)
+        LOG.debug(_('Full set of CONF:'))
+        for flag in CONF:
+            flag_get = CONF.get(flag, None)
             # hide flag contents from log if contains a password
             # should use secret flag when switch over to openstack-common
             if ("_password" in flag or "_key" in flag or
@@ -436,7 +437,7 @@ class Service(object):
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
-        zone = FLAGS.node_availability_zone
+        zone = CONF.node_availability_zone
         service_ref = db.service_create(context,
                                         {'host': self.host,
                                          'binary': self.binary,
@@ -455,30 +456,30 @@ class Service(object):
                periodic_fuzzy_delay=None):
         """Instantiates class and passes back application object.
 
-        :param host: defaults to FLAGS.host
+        :param host: defaults to CONF.host
         :param binary: defaults to basename of executable
         :param topic: defaults to bin_name - 'nova-' part
-        :param manager: defaults to FLAGS.<topic>_manager
-        :param report_interval: defaults to FLAGS.report_interval
-        :param periodic_interval: defaults to FLAGS.periodic_interval
-        :param periodic_fuzzy_delay: defaults to FLAGS.periodic_fuzzy_delay
+        :param manager: defaults to CONF.<topic>_manager
+        :param report_interval: defaults to CONF.report_interval
+        :param periodic_interval: defaults to CONF.periodic_interval
+        :param periodic_fuzzy_delay: defaults to CONF.periodic_fuzzy_delay
 
         """
         if not host:
-            host = FLAGS.host
+            host = CONF.host
         if not binary:
             binary = os.path.basename(inspect.stack()[-1][1])
         if not topic:
             topic = binary.rpartition('nova-')[2]
         if not manager:
-            manager = FLAGS.get('%s_manager' %
+            manager = CONF.get('%s_manager' %
                                 binary.rpartition('nova-')[2], None)
         if report_interval is None:
-            report_interval = FLAGS.report_interval
+            report_interval = CONF.report_interval
         if periodic_interval is None:
-            periodic_interval = FLAGS.periodic_interval
+            periodic_interval = CONF.periodic_interval
         if periodic_fuzzy_delay is None:
-            periodic_fuzzy_delay = FLAGS.periodic_fuzzy_delay
+            periodic_fuzzy_delay = CONF.periodic_fuzzy_delay
         service_obj = cls(host, binary, topic, manager,
                           report_interval=report_interval,
                           periodic_interval=periodic_interval,
@@ -523,7 +524,7 @@ class Service(object):
     def report_state(self):
         """Update the state of this service in the datastore."""
         ctxt = context.get_admin_context()
-        zone = FLAGS.node_availability_zone
+        zone = CONF.node_availability_zone
         state_catalog = {}
         try:
             try:
@@ -568,9 +569,9 @@ class WSGIService(object):
         self.manager = self._get_manager()
         self.loader = loader or wsgi.Loader()
         self.app = self.loader.load_app(name)
-        self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
-        self.port = getattr(FLAGS, '%s_listen_port' % name, 0)
-        self.workers = getattr(FLAGS, '%s_workers' % name, None)
+        self.host = getattr(CONF, '%s_listen' % name, "0.0.0.0")
+        self.port = getattr(CONF, '%s_listen_port' % name, 0)
+        self.workers = getattr(CONF, '%s_workers' % name, None)
         self.server = wsgi.Server(name,
                                   self.app,
                                   host=self.host,
@@ -589,10 +590,10 @@ class WSGIService(object):
 
         """
         fl = '%s_manager' % self.name
-        if not fl in FLAGS:
+        if not fl in CONF:
             return None
 
-        manager_class_name = FLAGS.get(fl, None)
+        manager_class_name = CONF.get(fl, None)
         if not manager_class_name:
             return None
 

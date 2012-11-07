@@ -24,6 +24,7 @@ Handles all requests relating to volumes + cinder.
 from cinderclient import service_catalog
 from cinderclient.v1 import client as cinder_client
 
+from nova import config
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -42,8 +43,8 @@ cinder_opts = [
                     'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(cinder_opts)
+CONF = config.CONF
+CONF.register_opts(cinder_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -56,10 +57,10 @@ def cinderclient(context):
         'access': {'serviceCatalog': context.service_catalog or {}}
     }
     sc = service_catalog.ServiceCatalog(compat_catalog)
-    if FLAGS.cinder_endpoint_template:
-        url = FLAGS.cinder_endpoint_template % context.to_dict()
+    if CONF.cinder_endpoint_template:
+        url = CONF.cinder_endpoint_template % context.to_dict()
     else:
-        info = FLAGS.cinder_catalog_info
+        info = CONF.cinder_catalog_info
         service_type, service_name, endpoint_type = info.split(':')
         url = sc.url_for(service_type=service_type,
                          service_name=service_name,

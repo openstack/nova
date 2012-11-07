@@ -30,6 +30,7 @@ import routes.middleware
 import webob.dec
 import webob.exc
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -44,8 +45,8 @@ wsgi_opts = [
                  'into it: client_ip, date_time, request_line, status_code, '
                  'body_length, wall_seconds.')
     ]
-FLAGS = flags.FLAGS
-FLAGS.register_opts(wsgi_opts)
+CONF = config.CONF
+CONF.register_opts(wsgi_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ class Server(object):
                                       protocol=self._protocol,
                                       custom_pool=self._pool,
                                       log=self._wsgi_logger,
-                                      log_format=FLAGS.wsgi_log_format)
+                                      log_format=CONF.wsgi_log_format)
 
     def stop(self):
         """Stop this server.
@@ -362,11 +363,11 @@ class Loader(object):
         :returns: None
 
         """
-        config_path = config_path or FLAGS.api_paste_config
+        config_path = config_path or CONF.api_paste_config
         if os.path.exists(config_path):
             self.config_path = config_path
         else:
-            self.config_path = FLAGS.find_file(config_path)
+            self.config_path = CONF.find_file(config_path)
         if not self.config_path:
             raise exception.ConfigNotFound(path=config_path)
 

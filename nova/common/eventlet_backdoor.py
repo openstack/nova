@@ -25,6 +25,7 @@ import eventlet
 import eventlet.backdoor
 import greenlet
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 
@@ -34,8 +35,8 @@ eventlet_backdoor_opts = [
                help='port for eventlet backdoor to listen')
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(eventlet_backdoor_opts)
+CONF = config.CONF
+CONF.register_opts(eventlet_backdoor_opts)
 
 
 def dont_use_this():
@@ -62,7 +63,7 @@ backdoor_locals = {
 
 
 def initialize_if_enabled():
-    if FLAGS.backdoor_port is None:
+    if CONF.backdoor_port is None:
         return
 
     # NOTE(johannes): The standard sys.displayhook will print the value of
@@ -76,5 +77,5 @@ def initialize_if_enabled():
     sys.displayhook = displayhook
 
     eventlet.spawn(eventlet.backdoor.backdoor_server,
-                   eventlet.listen(('localhost', FLAGS.backdoor_port)),
+                   eventlet.listen(('localhost', CONF.backdoor_port)),
                    locals=backdoor_locals)

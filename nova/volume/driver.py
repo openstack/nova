@@ -25,6 +25,7 @@ import tempfile
 import time
 import urllib
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -73,8 +74,8 @@ volume_opts = [
                     'driver does not write them directly to the volume'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(volume_opts)
+CONF = config.CONF
+CONF.register_opts(volume_opts)
 
 
 class VolumeDriver(object):
@@ -98,7 +99,7 @@ class VolumeDriver(object):
                 return True
             except exception.ProcessExecutionError:
                 tries = tries + 1
-                if tries >= FLAGS.num_shell_tries:
+                if tries >= CONF.num_shell_tries:
                     raise
                 LOG.exception(_("Recovering from a failed execute.  "
                                 "Try number %s"), tries)
@@ -109,14 +110,14 @@ class VolumeDriver(object):
         out, err = self._execute('vgs', '--noheadings', '-o', 'name',
                                 run_as_root=True)
         volume_groups = out.split()
-        if not FLAGS.volume_group in volume_groups:
+        if not CONF.volume_group in volume_groups:
             exception_message = (_("volume group %s doesn't exist")
-                                  % FLAGS.volume_group)
+                                  % CONF.volume_group)
             raise exception.VolumeBackendAPIException(data=exception_message)
 
     def _create_volume(self, volume_name, sizestr):
         self._try_execute('lvcreate', '-L', sizestr, '-n',
-                          volume_name, FLAGS.volume_group, run_as_root=True)
+                          volume_name, CONF.volume_group, run_as_root=True)
 
     def _copy_volume(self, srcstr, deststr, size_in_g):
         # Use O_DIRECT to avoid thrashing the system buffer cache
@@ -135,7 +136,7 @@ class VolumeDriver(object):
                       *direct_flags, run_as_root=True)
 
     def _volume_not_present(self, volume_name):
-        path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
+        path_name = '%s/%s' % (CONF.volume_group, volume_name)
         try:
             self._try_execute('lvdisplay', path_name, run_as_root=True)
         except Exception as e:
@@ -153,7 +154,7 @@ class VolumeDriver(object):
             self._try_execute('dmsetup', 'remove', '-f', dev_path,
                               run_as_root=True)
         self._try_execute('lvremove', '-f', "%s/%s" %
-                          (FLAGS.volume_group,
+                          (CONF.volume_group,
                            self._escape_snapshot(volume['name'])),
                           run_as_root=True)
 
@@ -190,7 +191,7 @@ class VolumeDriver(object):
         # deleting derived snapshots. Can we do something fancy?
         out, err = self._execute('lvdisplay', '--noheading',
                                  '-C', '-o', 'Attr',
-                                 '%s/%s' % (FLAGS.volume_group,
+                                 '%s/%s' % (CONF.volume_group,
                                             volume['name']),
                                  run_as_root=True)
         # fake_execute returns None resulting unit test error
@@ -203,7 +204,7 @@ class VolumeDriver(object):
 
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
-        orig_lv_name = "%s/%s" % (FLAGS.volume_group, snapshot['volume_name'])
+        orig_lv_name = "%s/%s" % (CONF.volume_group, snapshot['volume_name'])
         self._try_execute('lvcreate', '-L',
                           self._sizestr(snapshot['volume_size']),
                           '--name', self._escape_snapshot(snapshot['name']),
@@ -221,7 +222,7 @@ class VolumeDriver(object):
 
     def local_path(self, volume):
         # NOTE(vish): stops deprecation warning
-        escaped_group = FLAGS.volume_group.replace('-', '--')
+        escaped_group = CONF.volume_group.replace('-', '--')
         escaped_name = self._escape_snapshot(volume['name']).replace('-', '--')
         return "/dev/mapper/%s-%s" % (escaped_group, escaped_name)
 
@@ -327,8 +328,8 @@ class ISCSIDriver(VolumeDriver):
         else:
             iscsi_target = 1  # dummy value when using TgtAdm
 
-        iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
-        volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
+        iscsi_name = "%s%s" % (CONF.iscsi_target_prefix, volume['name'])
+        volume_path = "/dev/%s/%s" % (CONF.volume_group, volume['name'])
 
         # NOTE(jdg): For TgtAdm case iscsi_name is the ONLY param we need
         # should clean this all up at some point in the future
@@ -344,11 +345,11 @@ class ISCSIDriver(VolumeDriver):
         if not isinstance(self.tgtadm, iscsi.TgtAdm):
             host_iscsi_targets = self.db.iscsi_target_count_by_host(context,
                                                                     host)
-            if host_iscsi_targets >= FLAGS.iscsi_num_targets:
+            if host_iscsi_targets >= CONF.iscsi_num_targets:
                 return
 
             # NOTE(vish): Target ids start at 1, not 0.
-            for target_num in xrange(1, FLAGS.iscsi_num_targets + 1):
+            for target_num in xrange(1, CONF.iscsi_num_targets + 1):
                 target = {'host': host, 'target_num': target_num}
                 self.db.iscsi_target_create_safe(context, target)
 
@@ -356,8 +357,8 @@ class ISCSIDriver(VolumeDriver):
         """Creates an export for a logical volume."""
         #BOOKMARK(jdg)
 
-        iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
-        volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
+        iscsi_name = "%s%s" % (CONF.iscsi_target_prefix, volume['name'])
+        volume_path = "/dev/%s/%s" % (CONF.volume_group, volume['name'])
 
         model_update = {}
 
@@ -380,7 +381,7 @@ class ISCSIDriver(VolumeDriver):
                                               0,
                                               volume_path)
         model_update['provider_location'] = _iscsi_location(
-            FLAGS.iscsi_ip_address, tid, iscsi_name, lun)
+            CONF.iscsi_ip_address, tid, iscsi_name, lun)
         return model_update
 
     def remove_export(self, context, volume):
@@ -428,7 +429,7 @@ class ISCSIDriver(VolumeDriver):
                                     '-t', 'sendtargets', '-p', volume['host'],
                                     run_as_root=True)
         for target in out.splitlines():
-            if FLAGS.iscsi_ip_address in target and volume_name in target:
+            if CONF.iscsi_ip_address in target and volume_name in target:
                 return target
         return None
 
@@ -480,7 +481,7 @@ class ISCSIDriver(VolumeDriver):
         try:
             properties['target_lun'] = int(results[2])
         except (IndexError, ValueError):
-            if FLAGS.iscsi_helper == 'tgtadm':
+            if CONF.iscsi_helper == 'tgtadm':
                 properties['target_lun'] = 1
             else:
                 properties['target_lun'] = 0
@@ -542,9 +543,9 @@ class ISCSIDriver(VolumeDriver):
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
         vol_uuid_file = 'volume-%s' % volume_id
-        volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
+        volume_path = os.path.join(CONF.volumes_dir, vol_uuid_file)
         if os.path.isfile(volume_path):
-            iqn = '%s%s' % (FLAGS.iscsi_target_prefix,
+            iqn = '%s%s' % (CONF.iscsi_target_prefix,
                             vol_uuid_file)
         else:
             raise exception.PersistentVolumeFileNotFound(volume_id=volume_id)
@@ -614,9 +615,9 @@ class RBDDriver(VolumeDriver):
         """Returns an error if prerequisites aren't met"""
         (stdout, stderr) = self._execute('rados', 'lspools')
         pools = stdout.split("\n")
-        if not FLAGS.rbd_pool in pools:
+        if not CONF.rbd_pool in pools:
             exception_message = (_("rbd has no pool %s") %
-                                    FLAGS.rbd_pool)
+                                    CONF.rbd_pool)
             raise exception.VolumeBackendAPIException(data=exception_message)
 
     def _supports_layering(self):
@@ -630,7 +631,7 @@ class RBDDriver(VolumeDriver):
         else:
             size = int(volume['size']) * 1024
         args = ['rbd', 'create',
-                '--pool', FLAGS.rbd_pool,
+                '--pool', CONF.rbd_pool,
                 '--size', size,
                 volume['name']]
         if self._supports_layering():
@@ -642,19 +643,19 @@ class RBDDriver(VolumeDriver):
                           '--pool', src_pool,
                           '--image', src_image,
                           '--snap', src_snap,
-                          '--dest-pool', FLAGS.rbd_pool,
+                          '--dest-pool', CONF.rbd_pool,
                           '--dest', volume['name'])
 
     def _resize(self, volume):
         size = int(volume['size']) * 1024
         self._try_execute('rbd', 'resize',
-                          '--pool', FLAGS.rbd_pool,
+                          '--pool', CONF.rbd_pool,
                           '--image', volume['name'],
                           '--size', size)
 
     def create_volume_from_snapshot(self, volume, snapshot):
         """Creates a volume from a snapshot."""
-        self._clone(volume, FLAGS.rbd_pool,
+        self._clone(volume, CONF.rbd_pool,
                     snapshot['volume_name'], snapshot['name'])
         if int(volume['size']):
             self._resize(volume)
@@ -662,23 +663,23 @@ class RBDDriver(VolumeDriver):
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         stdout, _ = self._execute('rbd', 'snap', 'ls',
-                                  '--pool', FLAGS.rbd_pool,
+                                  '--pool', CONF.rbd_pool,
                                   volume['name'])
         if stdout.count('\n') > 1:
             raise exception.VolumeIsBusy(volume_name=volume['name'])
         self._try_execute('rbd', 'rm',
-                          '--pool', FLAGS.rbd_pool,
+                          '--pool', CONF.rbd_pool,
                           volume['name'])
 
     def create_snapshot(self, snapshot):
         """Creates an rbd snapshot"""
         self._try_execute('rbd', 'snap', 'create',
-                          '--pool', FLAGS.rbd_pool,
+                          '--pool', CONF.rbd_pool,
                           '--snap', snapshot['name'],
                           snapshot['volume_name'])
         if self._supports_layering():
             self._try_execute('rbd', 'snap', 'protect',
-                              '--pool', FLAGS.rbd_pool,
+                              '--pool', CONF.rbd_pool,
                               '--snap', snapshot['name'],
                               snapshot['volume_name'])
 
@@ -687,13 +688,13 @@ class RBDDriver(VolumeDriver):
         if self._supports_layering():
             try:
                 self._try_execute('rbd', 'snap', 'unprotect',
-                                  '--pool', FLAGS.rbd_pool,
+                                  '--pool', CONF.rbd_pool,
                                   '--snap', snapshot['name'],
                                   snapshot['volume_name'])
             except exception.ProcessExecutionError:
                 raise exception.SnapshotIsBusy(snapshot_name=snapshot['name'])
         self._try_execute('rbd', 'snap', 'rm',
-                          '--pool', FLAGS.rbd_pool,
+                          '--pool', CONF.rbd_pool,
                           '--snap', snapshot['name'],
                           snapshot['volume_name'])
 
@@ -701,7 +702,7 @@ class RBDDriver(VolumeDriver):
         """Returns the path of the rbd volume."""
         # This is the same as the remote path
         # since qemu accesses it directly.
-        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
+        return "rbd:%s/%s" % (CONF.rbd_pool, volume['name'])
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -723,11 +724,11 @@ class RBDDriver(VolumeDriver):
         return {
             'driver_volume_type': 'rbd',
             'data': {
-                'name': '%s/%s' % (FLAGS.rbd_pool, volume['name']),
-                'auth_enabled': FLAGS.rbd_secret_uuid is not None,
-                'auth_username': FLAGS.rbd_user,
+                'name': '%s/%s' % (CONF.rbd_pool, volume['name']),
+                'auth_enabled': CONF.rbd_secret_uuid is not None,
+                'auth_username': CONF.rbd_user,
                 'secret_type': 'ceph',
-                'secret_uuid': FLAGS.rbd_secret_uuid,
+                'secret_uuid': CONF.rbd_secret_uuid,
             }
         }
 
@@ -787,17 +788,17 @@ class RBDDriver(VolumeDriver):
         # TODO(jdurgin): replace with librbd
         # this is a temporary hack, since rewriting this driver
         # to use librbd would take too long
-        if FLAGS.volume_tmp_dir and not os.exists(FLAGS.volume_tmp_dir):
-            os.makedirs(FLAGS.volume_tmp_dir)
+        if CONF.volume_tmp_dir and not os.exists(CONF.volume_tmp_dir):
+            os.makedirs(CONF.volume_tmp_dir)
 
-        with tempfile.NamedTemporaryFile(dir=FLAGS.volume_tmp_dir) as tmp:
+        with tempfile.NamedTemporaryFile(dir=CONF.volume_tmp_dir) as tmp:
             image_service.download(context, image_id, tmp)
             # import creates the image, so we must remove it first
             self._try_execute('rbd', 'rm',
-                              '--pool', FLAGS.rbd_pool,
+                              '--pool', CONF.rbd_pool,
                               volume['name'])
             self._try_execute('rbd', 'import',
-                              '--pool', FLAGS.rbd_pool,
+                              '--pool', CONF.rbd_pool,
                               tmp.name, volume['name'])
 
 
@@ -950,4 +951,4 @@ class LoggingVolumeDriver(VolumeDriver):
 
 
 def _iscsi_location(ip, target, iqn, lun=None):
-    return "%s:%s,%s %s %s" % (ip, FLAGS.iscsi_port, target, iqn, lun)
+    return "%s:%s,%s %s %s" % (ip, CONF.iscsi_port, target, iqn, lun)

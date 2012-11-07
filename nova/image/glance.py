@@ -29,6 +29,7 @@ import urlparse
 import glanceclient
 import glanceclient.exc
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
@@ -37,7 +38,7 @@ from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 def _parse_image_ref(image_href):
@@ -63,8 +64,8 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
     else:
         scheme = 'http'
     params = {}
-    params['insecure'] = FLAGS.glance_api_insecure
-    if FLAGS.auth_strategy == 'keystone':
+    params['insecure'] = CONF.glance_api_insecure
+    if CONF.auth_strategy == 'keystone':
         params['token'] = context.auth_token
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
@@ -72,12 +73,12 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
 
 def get_api_servers():
     """
-    Shuffle a list of FLAGS.glance_api_servers and return an iterator
+    Shuffle a list of CONF.glance_api_servers and return an iterator
     that will cycle through the list, looping around to the beginning
     if necessary.
     """
     api_servers = []
-    for api_server in FLAGS.glance_api_servers:
+    for api_server in CONF.glance_api_servers:
         if '//' not in api_server:
             api_server = 'http://' + api_server
         o = urlparse.urlparse(api_server)
@@ -124,12 +125,12 @@ class GlanceClientWrapper(object):
     def call(self, context, version, method, *args, **kwargs):
         """
         Call a glance client method.  If we get a connection error,
-        retry the request according to FLAGS.glance_num_retries.
+        retry the request according to CONF.glance_num_retries.
         """
         retry_excs = (glanceclient.exc.ServiceUnavailable,
                 glanceclient.exc.InvalidEndpoint,
                 glanceclient.exc.CommunicationError)
-        num_attempts = 1 + FLAGS.glance_num_retries
+        num_attempts = 1 + CONF.glance_num_retries
 
         for attempt in xrange(1, num_attempts + 1):
             client = self.client or self._create_onetime_client(context,

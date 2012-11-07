@@ -19,6 +19,7 @@
 
 import os.path
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -35,8 +36,8 @@ policy_opts = [
                help=_('Rule checked when requested rule is not found')),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(policy_opts)
+CONF = config.CONF
+CONF.register_opts(policy_opts)
 
 _POLICY_PATH = None
 _POLICY_CACHE = {}
@@ -54,17 +55,17 @@ def init():
     global _POLICY_PATH
     global _POLICY_CACHE
     if not _POLICY_PATH:
-        _POLICY_PATH = FLAGS.policy_file
+        _POLICY_PATH = CONF.policy_file
         if not os.path.exists(_POLICY_PATH):
-            _POLICY_PATH = FLAGS.find_file(_POLICY_PATH)
+            _POLICY_PATH = CONF.find_file(_POLICY_PATH)
         if not _POLICY_PATH:
-            raise exception.ConfigNotFound(path=FLAGS.policy_file)
+            raise exception.ConfigNotFound(path=CONF.policy_file)
     utils.read_cached_file(_POLICY_PATH, _POLICY_CACHE,
                            reload_func=_set_rules)
 
 
 def _set_rules(data):
-    default_rule = FLAGS.policy_default_rule
+    default_rule = CONF.policy_default_rule
     policy.set_rules(policy.Rules.load_json(data, default_rule))
 
 

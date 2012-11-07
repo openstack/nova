@@ -20,6 +20,7 @@
 
 import datetime
 
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -85,8 +86,8 @@ quota_opts = [
                help='default driver to use for quota checks'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(quota_opts)
+CONF = config.CONF
+CONF.register_opts(quota_opts)
 
 
 class DbQuotaDriver(object):
@@ -314,7 +315,7 @@ class DbQuotaDriver(object):
 
         # Set up the reservation expiration
         if expire is None:
-            expire = FLAGS.reservation_expire
+            expire = CONF.reservation_expire
         if isinstance(expire, (int, long)):
             expire = datetime.timedelta(seconds=expire)
         if isinstance(expire, datetime.timedelta):
@@ -335,7 +336,7 @@ class DbQuotaDriver(object):
         #            session isn't available outside the DBAPI, we
         #            have to do the work there.
         return db.quota_reserve(context, resources, quotas, deltas, expire,
-                                FLAGS.until_refresh, FLAGS.max_age)
+                                CONF.until_refresh, CONF.max_age)
 
     def commit(self, context, reservations):
         """Commit reservations.
@@ -476,7 +477,7 @@ class BaseResource(object):
     def default(self):
         """Return the default value of the quota."""
 
-        return FLAGS[self.flag] if self.flag else -1
+        return CONF[self.flag] if self.flag else -1
 
 
 class ReservableResource(BaseResource):
@@ -568,7 +569,7 @@ class QuotaEngine(object):
         """Initialize a Quota object."""
 
         if not quota_driver_class:
-            quota_driver_class = FLAGS.quota_driver
+            quota_driver_class = CONF.quota_driver
 
         if isinstance(quota_driver_class, basestring):
             quota_driver_class = importutils.import_object(quota_driver_class)

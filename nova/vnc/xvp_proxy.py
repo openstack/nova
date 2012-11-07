@@ -26,6 +26,7 @@ import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
 
+from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import flags
@@ -46,8 +47,8 @@ xvp_proxy_opts = [
                help='Address that the XCP VNC proxy should bind to'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(xvp_proxy_opts)
+CONF = config.CONF
+CONF.register_opts(xvp_proxy_opts)
 
 
 class XCPVNCProxy(object):
@@ -180,5 +181,5 @@ def get_wsgi_server():
     return wsgi.Server("XCP VNC Proxy",
                        XCPVNCProxy(),
                        protocol=SafeHttpProtocol,
-                       host=FLAGS.xvpvncproxy_host,
-                       port=FLAGS.xvpvncproxy_port)
+                       host=CONF.xvpvncproxy_host,
+                       port=CONF.xvpvncproxy_port)

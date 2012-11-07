@@ -30,10 +30,11 @@ import os
 import socket
 import sys
 
+from nova import config
 from nova.openstack.common import cfg
 
-
-FLAGS = cfg.CONF
+CONF = config.CONF
+FLAGS = CONF
 
 
 def _get_my_ip():
@@ -88,8 +89,8 @@ debug_opts = [
                help='Add python stack traces to SQL as comment strings'),
 ]
 
-FLAGS.register_cli_opts(core_opts)
-FLAGS.register_cli_opts(debug_opts)
+CONF.register_cli_opts(core_opts)
+CONF.register_cli_opts(debug_opts)
 
 global_opts = [
     cfg.StrOpt('my_ip',
@@ -376,4 +377,4 @@ global_opts = [
                    'vmwareapi.VMWareESXDriver'),
 ]
 
-FLAGS.register_opts(global_opts)
+CONF.register_opts(global_opts)
