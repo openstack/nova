@@ -3904,6 +3904,25 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_resize_deleted_flavor_fails(self):
+        instance = self._create_fake_instance()
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
+
+        name = 'test_resize_new_flavor'
+        flavorid = 11
+        memory_mb = 128
+        root_gb = 0
+        vcpus = 1
+        instance_types.create(name, memory_mb, vcpus, root_gb, 0,
+                              flavorid, 0, 1.0, True)
+        instance_types.destroy(name)
+        self.assertRaises(exception.FlavorNotFound, self.compute_api.resize,
+                self.context, instance, 200)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_resize_same_flavor_fails(self):
         """Ensure invalid flavors raise"""
         instance = self._create_fake_instance()
@@ -5541,8 +5560,11 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         orig_get_instance_type_by_flavor_id =\
                 instance_types.get_instance_type_by_flavor_id
 
-        def fake_get_instance_type_by_flavor_id(flavor_id):
-            instance_type = orig_get_instance_type_by_flavor_id(flavor_id)
+        def fake_get_instance_type_by_flavor_id(flavor_id, ctxt=None,
+                                                read_deleted="yes"):
+            instance_type = orig_get_instance_type_by_flavor_id(flavor_id,
+                                                                ctxt,
+                                                                read_deleted)
             instance_type['disabled'] = False
             return instance_type
 
@@ -5559,8 +5581,11 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         orig_get_instance_type_by_flavor_id = \
                 instance_types.get_instance_type_by_flavor_id
 
-        def fake_get_instance_type_by_flavor_id(flavor_id):
-            instance_type = orig_get_instance_type_by_flavor_id(flavor_id)
+        def fake_get_instance_type_by_flavor_id(flavor_id, ctxt=None,
+                                                read_deleted="yes"):
+            instance_type = orig_get_instance_type_by_flavor_id(flavor_id,
+                                                                ctxt,
+                                                                read_deleted)
             instance_type['disabled'] = True
             return instance_type
 

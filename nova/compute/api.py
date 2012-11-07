@@ -1684,7 +1684,7 @@ class API(base.Base):
             new_instance_type = current_instance_type
         else:
             new_instance_type = instance_types.get_instance_type_by_flavor_id(
-                    flavor_id)
+                    flavor_id, read_deleted="no")
 
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']
