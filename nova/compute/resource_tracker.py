@@ -19,14 +19,15 @@ scheduler with useful information about availability through the ComputeNode
 model.
 """
 
+from nova.compute import claims
 from nova.compute import vm_states
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -45,63 +46,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(resource_tracker_opts)
 
 LOG = logging.getLogger(__name__)
-COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
-
-
-class Claim(object):
-    """A declaration that a compute host operation will require free resources.
-    Claims serve as marker objects that resources are being held until the
-    update_available_resource audit process runs to do a full reconciliation
-    of resource usage.
-
-    This information will be used to help keep the local compute hosts's
-    ComputeNode model in sync to aid the scheduler in making efficient / more
-    correct decisions with respect to host selection.
-    """
-
-    def __init__(self, instance):
-        self.instance = jsonutils.to_primitive(instance)
-
-    @property
-    def claim_id(self):
-        return self.instance['uuid']
-
-    @property
-    def disk_gb(self):
-        return self.instance['root_gb'] + self.instance['ephemeral_gb']
-
-    @property
-    def memory_mb(self):
-        return self.instance['memory_mb']
-
-    @property
-    def vcpus(self):
-        return self.instance['vcpus']
-
-    def __str__(self):
-        return "[Claim %s: %d MB memory, %d GB disk, %d VCPUS]" % \
-                    (self.claim_id, self.memory_mb, self.disk_gb, self.vcpus)
-
-
-class ResourceContextManager(object):
-    def __init__(self, context, claim, tracker):
-        self.context = context
-        self.claim = claim
-        self.tracker = tracker
-
-    def __enter__(self):
-        if not self.claim and not self.tracker.disabled:
-            # insufficient resources to complete request
-            raise exception.ComputeResourcesUnavailable()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if not self.claim:
-            return
-
-        if exc_type is None:
-            self.tracker.finish_resource_claim(self.claim)
-        else:
-            self.tracker.abort_resource_claim(self.context, self.claim)
+COMPUTE_RESOURCE_SEMAPHORE = claims.COMPUTE_RESOURCE_SEMAPHORE
 
 
 class ResourceTracker(object):
@@ -113,17 +58,11 @@ class ResourceTracker(object):
         self.host = host
         self.driver = driver
         self.compute_node = None
-        self.next_claim_id = 1
-        self.claims = {}
         self.stats = importutils.import_object(FLAGS.compute_stats_class)
         self.tracked_instances = {}
 
-    def resource_claim(self, context, instance_ref, limits=None):
-        claim = self.begin_resource_claim(context, instance_ref, limits)
-        return ResourceContextManager(context, claim, self)
-
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
-    def begin_resource_claim(self, context, instance_ref, limits=None):
+    def instance_claim(self, context, instance_ref, limits=None):
         """Indicate that some resources are needed for an upcoming compute
         instance build operation.
 
@@ -134,17 +73,16 @@ class ResourceTracker(object):
         :param instance_ref: instance to reserve resources for
         :param limits: Dict of oversubscription limits for memory, disk,
                        and CPUs.
-        :returns: An integer 'claim ticket'.  This should be turned into
-                  finalize  a resource claim or free resources after the
-                  compute operation is finished. Returns None if the claim
-                  failed.
+        :returns: A Claim ticket representing the reserved resources.  It can
+                  be used to revert the resource usage if an error occurs
+                  during the instance build.
         """
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # set the 'host' field and continue the build:
             instance_ref = self._set_instance_host(context,
-                                                   instance_ref['uuid'])
-            return
+                    instance_ref['uuid'])
+            return claims.NopClaim()
 
         # sanity check:
         if instance_ref['host']:
@@ -152,46 +90,23 @@ class ResourceTracker(object):
                           "until resources have been claimed."),
                           instance=instance_ref)
 
-        if not limits:
-            limits = {}
+        claim = claims.Claim(instance_ref, self)
 
-        # If an individual limit is None, the resource will be considered
-        # unlimited:
-        memory_mb_limit = limits.get('memory_mb')
-        disk_gb_limit = limits.get('disk_gb')
-        vcpu_limit = limits.get('vcpu')
+        if claim.test(self.compute_node, limits):
 
-        memory_mb = instance_ref['memory_mb']
-        disk_gb = instance_ref['root_gb'] + instance_ref['ephemeral_gb']
-        vcpus = instance_ref['vcpus']
+            instance_ref = self._set_instance_host(context,
+                    instance_ref['uuid'])
 
-        msg = _("Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d "
-                "GB, VCPUs %(vcpus)d") % locals()
-        LOG.audit(msg)
+            # Mark resources in-use and update stats
+            self._update_usage_from_instance(self.compute_node, instance_ref)
 
-        # Test for resources:
-        if not self._can_claim_memory(memory_mb, memory_mb_limit):
-            return
+            # persist changes to the compute node:
+            self._update(context, self.compute_node)
 
-        if not self._can_claim_disk(disk_gb, disk_gb_limit):
-            return
+            return claim
 
-        if not self._can_claim_cpu(vcpus, vcpu_limit):
-            return
-
-        instance_ref = self._set_instance_host(context, instance_ref['uuid'])
-
-        # keep track of this claim until we know whether the compute operation
-        # was successful/completed:
-        claim = Claim(instance_ref)
-        self.claims[claim.claim_id] = claim
-
-        # Mark resources in-use and update stats
-        self._update_usage_from_instance(self.compute_node, instance_ref)
-
-        # persist changes to the compute node:
-        self._update(context, self.compute_node)
-        return claim
+        else:
+            raise exception.ComputeResourcesUnavailable()
 
     def _set_instance_host(self, context, instance_uuid):
         """Tag the instance as belonging to this host.  This should be done
@@ -204,130 +119,15 @@ class ResourceTracker(object):
         notifications.send_update(context, old_ref, instance_ref)
         return instance_ref
 
-    def _can_claim_memory(self, memory_mb, memory_mb_limit):
-        """Test if memory needed for a claim can be safely allocated"""
-        # Installed memory and usage info:
-        msg = _("Total memory: %(total_mem)d MB, used: %(used_mem)d MB, free: "
-                "%(free_mem)d MB") % dict(
-                        total_mem=self.compute_node['memory_mb'],
-                        used_mem=self.compute_node['memory_mb_used'],
-                        free_mem=self.compute_node['local_gb_used'])
-        LOG.audit(msg)
+    def abort_instance_claim(self, instance):
+        """Remove usage from the given instance"""
+        # flag the instance as deleted to revert the resource usage
+        # and associated stats:
+        instance['vm_state'] = vm_states.DELETED
+        self._update_usage_from_instance(self.compute_node, instance)
 
-        if memory_mb_limit is None:
-            # treat memory as unlimited:
-            LOG.audit(_("Memory limit not specified, defaulting to unlimited"))
-            return True
-
-        free_ram_mb = memory_mb_limit - self.compute_node['memory_mb_used']
-
-        # Oversubscribed memory policy info:
-        msg = _("Memory limit: %(memory_mb_limit)d MB, free: "
-                "%(free_ram_mb)d MB") % locals()
-        LOG.audit(msg)
-
-        can_claim_mem = memory_mb <= free_ram_mb
-
-        if not can_claim_mem:
-            msg = _("Unable to claim resources.  Free memory %(free_ram_mb)d "
-                    "MB < requested memory %(memory_mb)d MB") % locals()
-            LOG.info(msg)
-
-        return can_claim_mem
-
-    def _can_claim_disk(self, disk_gb, disk_gb_limit):
-        """Test if disk space needed can be safely allocated"""
-        # Installed disk and usage info:
-        msg = _("Total disk: %(total_disk)d GB, used: %(used_disk)d GB, free: "
-                "%(free_disk)d GB") % dict(
-                        total_disk=self.compute_node['local_gb'],
-                        used_disk=self.compute_node['local_gb_used'],
-                        free_disk=self.compute_node['free_disk_gb'])
-        LOG.audit(msg)
-
-        if disk_gb_limit is None:
-            # treat disk as unlimited:
-            LOG.audit(_("Disk limit not specified, defaulting to unlimited"))
-            return True
-
-        free_disk_gb = disk_gb_limit - self.compute_node['local_gb_used']
-
-        # Oversubscribed disk policy info:
-        msg = _("Disk limit: %(disk_gb_limit)d GB, free: "
-                "%(free_disk_gb)d GB") % locals()
-        LOG.audit(msg)
-
-        can_claim_disk = disk_gb <= free_disk_gb
-        if not can_claim_disk:
-            msg = _("Unable to claim resources.  Free disk %(free_disk_gb)d GB"
-                    " < requested disk %(disk_gb)d GB") % dict(
-                            free_disk_gb=self.compute_node['free_disk_gb'],
-                            disk_gb=disk_gb)
-            LOG.info(msg)
-
-        return can_claim_disk
-
-    def _can_claim_cpu(self, vcpus, vcpu_limit):
-        """Test if CPUs can be safely allocated according to given policy."""
-
-        msg = _("Total VCPUs: %(total_vcpus)d, used: %(used_vcpus)d") \
-                % dict(total_vcpus=self.compute_node['vcpus'],
-                       used_vcpus=self.compute_node['vcpus_used'])
-        LOG.audit(msg)
-
-        if vcpu_limit is None:
-            # treat cpu as unlimited:
-            LOG.audit(_("VCPU limit not specified, defaulting to unlimited"))
-            return True
-
-        # Oversubscribed disk policy info:
-        msg = _("CPU limit: %(vcpu_limit)d") % locals()
-        LOG.audit(msg)
-
-        free_vcpus = vcpu_limit - self.compute_node['vcpus_used']
-        can_claim_cpu = vcpus <= free_vcpus
-
-        if not can_claim_cpu:
-            msg = _("Unable to claim resources.  Free CPU %(free_vcpus)d < "
-                    "requested CPU %(vcpus)d") % locals()
-            LOG.info(msg)
-
-        return can_claim_cpu
-
-    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
-    def finish_resource_claim(self, claim):
-        """Indicate that the compute operation that previously claimed the
-        resources identified by 'claim' has now completed and the resources
-        have been allocated at the virt layer.
-
-        :param claim: A claim indicating a set of resources that were
-                      previously claimed.
-        """
-        if self.disabled:
-            return
-
-        if self.claims.pop(claim.claim_id, None):
-            LOG.debug(_("Finishing claim: %s") % claim)
-
-    @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
-    def abort_resource_claim(self, context, claim):
-        """Indicate that the operation that claimed the resources identified by
-        'claim_id' has either failed or been aborted and the resources are no
-        longer needed.
-
-        :param claim: A claim ticket indicating a set of resources that were
-                      previously claimed.
-        """
-        if self.disabled:
-            return
-
-        if self.claims.pop(claim.claim_id, None):
-            LOG.debug(_("Aborting claim: %s") % claim)
-            # flag the instance as deleted to revert the resource usage
-            # and associated stats:
-            claim.instance['vm_state'] = vm_states.DELETED
-            self._update_usage_from_instance(self.compute_node, claim.instance)
-            self._update(context, self.compute_node)
+        ctxt = context.get_admin_context()
+        self._update(ctxt, self.compute_node)
 
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def update_usage(self, context, instance):
@@ -363,14 +163,11 @@ class ResourceTracker(object):
             LOG.audit(_("Virt driver does not support "
                 "'get_available_resource'  Compute tracking is disabled."))
             self.compute_node = None
-            self.claims = {}
             return
 
         self._verify_resources(resources)
 
         self._report_hypervisor_resource_view(resources)
-
-        self._purge_claims()
 
         # Grab all instances assigned to this host:
         instances = db.instance_get_all_by_host(context, self.host)
@@ -404,12 +201,6 @@ class ResourceTracker(object):
             # just update the record:
             self._update(context, resources, prune_stats=True)
             LOG.info(_('Compute_service record updated for %s ') % self.host)
-
-    def _purge_claims(self):
-        """Purge claims.  They are no longer needed once the audit process
-        reconciles usage values from the database.
-        """
-        self.claims.clear()
 
     def _create(self, context, values):
         """Create the compute node in the DB"""

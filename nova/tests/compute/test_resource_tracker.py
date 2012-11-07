@@ -33,8 +33,16 @@ from nova.virt import driver
 LOG = logging.getLogger(__name__)
 
 
+FAKE_VIRT_MEMORY_MB = 5
+FAKE_VIRT_LOCAL_GB = 6
+FAKE_VIRT_VCPUS = 1
+
+
 class UnsupportedVirtDriver(driver.ComputeDriver):
     """Pretend version of a lame virt driver"""
+    def __init__(self):
+        super(UnsupportedVirtDriver, self).__init__(None)
+
     def get_available_resource(self):
         # no support for getting resource usage info
         return {}
@@ -42,10 +50,11 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
 
 class FakeVirtDriver(driver.ComputeDriver):
 
-    def __init__(self, virtapi):
-        self.memory_mb = 5
-        self.local_gb = 6
-        self.vcpus = 1
+    def __init__(self):
+        super(FakeVirtDriver, self).__init__(None)
+        self.memory_mb = FAKE_VIRT_MEMORY_MB
+        self.local_gb = FAKE_VIRT_LOCAL_GB
+        self.vcpus = FAKE_VIRT_VCPUS
 
         self.memory_mb_used = 0
         self.local_gb_used = 0
@@ -148,9 +157,9 @@ class BaseTestCase(test.TestCase):
         host = "fakehost"
 
         if unsupported:
-            driver = UnsupportedVirtDriver(None)
+            driver = UnsupportedVirtDriver()
         else:
-            driver = FakeVirtDriver(None)
+            driver = FakeVirtDriver()
 
         tracker = resource_tracker.ResourceTracker(host, driver)
         return tracker
@@ -166,38 +175,31 @@ class UnsupportedDriverTestCase(BaseTestCase):
         # seed tracker with data:
         self.tracker.update_available_resource(self.context)
 
-    def testDisabled(self):
+    def test_disabled(self):
         # disabled = no compute node stats
         self.assertTrue(self.tracker.disabled)
         self.assertEqual(None, self.tracker.compute_node)
 
-    def testDisabledClaim(self):
+    def test_disabled_claim(self):
         # basic claim:
         instance = self._fake_instance()
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertEqual(None, claim)
+        claim = self.tracker.instance_claim(self.context, instance)
+        self.assertEqual(0, claim.memory_mb)
 
-    def testDisabledInstanceClaim(self):
+    def test_disabled_instance_claim(self):
         # instance variation:
         instance = self._fake_instance()
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertEqual(None, claim)
+        claim = self.tracker.instance_claim(self.context, instance)
+        self.assertEqual(0, claim.memory_mb)
 
-    def testDisabledInstanceContextClaim(self):
+    def test_disabled_instance_context_claim(self):
         # instance context manager variation:
         instance = self._fake_instance()
-        with self.tracker.resource_claim(self.context, instance):
-            pass
-        self.assertEqual(0, len(self.tracker.claims))
+        claim = self.tracker.instance_claim(self.context, instance)
+        with self.tracker.instance_claim(self.context, instance) as claim:
+            self.assertEqual(0, claim.memory_mb)
 
-    def testDisabledFinishClaim(self):
-        self.assertEqual(None, self.tracker.finish_resource_claim(None))
-
-    def testDisabledAbortClaim(self):
-        self.assertEqual(None, self.tracker.abort_resource_claim(self.context,
-            None))
-
-    def testDisabledUpdateUsage(self):
+    def test_disabled_updated_usage(self):
         instance = self._fake_instance(host='fakehost', memory_mb=5,
                 root_gb=10)
         self.tracker.update_usage(self.context, instance)
@@ -209,8 +211,7 @@ class MissingServiceTestCase(BaseTestCase):
         self.context = context.get_admin_context()
         self.tracker = self._tracker()
 
-    def testMissingService(self):
-        """No service record in DB."""
+    def test_missing_service(self):
         self.tracker.update_available_resource(self.context)
         self.assertTrue(self.tracker.disabled)
 
@@ -234,11 +235,11 @@ class MissingComputeNodeTestCase(BaseTestCase):
         service = self._create_service()
         return [service]
 
-    def testCreatedComputeNode(self):
+    def test_create_compute_node(self):
         self.tracker.update_available_resource(self.context)
         self.assertTrue(self.created)
 
-    def testEnabled(self):
+    def test_enabled(self):
         self.tracker.update_available_resource(self.context)
         self.assertFalse(self.tracker.disabled)
 
@@ -253,6 +254,7 @@ class ResourceTestCase(BaseTestCase):
                 self._fake_compute_node_update)
 
         self.tracker.update_available_resource(self.context)
+        self.limits = self._basic_limits()
 
     def _fake_service_get_all_compute_by_host(self, ctx, host):
         self.compute = self._create_compute_node()
@@ -267,10 +269,15 @@ class ResourceTestCase(BaseTestCase):
         self.compute.update(values)
         return self.compute
 
-    def testUpdateUseOnlyForTracked(self):
-        """Only update usage is a previous claim has added instance to
-        list of tracked instances.
-        """
+    def _basic_limits(self):
+        """Get basic limits, no oversubscription"""
+        return {
+            'memory_mb': FAKE_VIRT_MEMORY_MB * 2,
+            'disk_gb': FAKE_VIRT_LOCAL_GB,
+            'vcpu': FAKE_VIRT_VCPUS,
+        }
+
+    def test_update_usage_only_for_tracked(self):
         instance = self._fake_instance(memory_mb=3, root_gb=1, ephemeral_gb=1,
                 task_state=None)
         self.tracker.update_usage(self.context, instance)
@@ -279,8 +286,9 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertNotEqual(None, claim)
+        claim = self.tracker.instance_claim(self.context, instance,
+                self.limits)
+        self.assertNotEqual(0, claim.memory_mb)
         self.assertEqual(3, self.tracker.compute_node['memory_mb_used'])
         self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
 
@@ -292,126 +300,21 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
         self.assertEqual(1, self.tracker.compute_node['current_workload'])
 
-    def testFreeRamResourceValue(self):
-        driver = FakeVirtDriver(None)
+    def test_free_ram_resource_value(self):
+        driver = FakeVirtDriver()
         mem_free = driver.memory_mb - driver.memory_mb_used
         self.assertEqual(mem_free, self.tracker.compute_node['free_ram_mb'])
 
-    def testFreeDiskResourceValue(self):
-        driver = FakeVirtDriver(None)
+    def test_free_disk_resource_value(self):
+        driver = FakeVirtDriver()
         mem_free = driver.local_gb - driver.local_gb_used
         self.assertEqual(mem_free, self.tracker.compute_node['free_disk_gb'])
 
-    def testUpdateComputeNode(self):
+    def test_update_compute_node(self):
         self.assertFalse(self.tracker.disabled)
         self.assertTrue(self.updated)
 
-    def testCpuUnlimited(self):
-        """Test default of unlimited CPU"""
-        self.assertEqual(0, self.tracker.compute_node['vcpus_used'])
-        instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1,
-                                       vcpus=100000)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(100000, self.tracker.compute_node['vcpus_used'])
-
-    def testCpuOversubscription(self):
-        """Test client-supplied oversubscription of CPU"""
-        self.assertEqual(1, self.tracker.compute_node['vcpus'])
-
-        instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1,
-                                       vcpus=3)
-        limits = {'vcpu': 5}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(3, self.tracker.compute_node['vcpus_used'])
-
-    def testMemoryOversubscription(self):
-        """Test client-supplied oversubscription of memory"""
-        instance = self._fake_instance(memory_mb=8, root_gb=1, ephemeral_gb=1)
-        limits = {'memory_mb': 8}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(8, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
-
-    def testDiskOversubscription(self):
-        """Test client-supplied oversubscription of disk space"""
-        instance = self._fake_instance(memory_mb=1, root_gb=10, ephemeral_gb=1)
-        limits = {'disk_gb': 12}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(1, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(11, self.tracker.compute_node['local_gb_used'])
-
-    def testUnlimitedMemoryClaim(self):
-        """Test default of unlimited memory"""
-        instance = self._fake_instance(memory_mb=200000000000, root_gb=1,
-                                       ephemeral_gb=1)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(200000000000,
-                         self.tracker.compute_node['memory_mb_used'])
-
-    def testInsufficientMemoryClaimWithOversubscription(self):
-        """Exceed oversubscribed memory limit of 10MB"""
-        instance = self._fake_instance(memory_mb=10, root_gb=0,
-                ephemeral_gb=0)
-        limits = {'memory_mb': 10}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertNotEqual(None, claim)
-
-        instance = self._fake_instance(memory_mb=1, root_gb=0,
-                ephemeral_gb=0)
-        limits = {'memory_mb': 10}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertEqual(None, claim)
-
-    def testUnlimitDiskClaim(self):
-        """Test default of unlimited disk space"""
-        instance = self._fake_instance(memory_mb=0, root_gb=200000000,
-                                       ephemeral_gb=0)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(200000000, self.tracker.compute_node['local_gb_used'])
-
-    def testInsufficientDiskClaimWithOversubscription(self):
-        """Exceed oversubscribed disk limit of 10GB"""
-        instance = self._fake_instance(memory_mb=1, root_gb=4,
-                ephemeral_gb=5)  # 9 GB
-        limits = {'disk_gb': 10}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertNotEqual(None, claim)
-
-        instance = self._fake_instance(memory_mb=1, root_gb=1,
-                ephemeral_gb=1)  # 2 GB
-        limits = {'disk_gb': 10}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertEqual(None, claim)
-
-    def testInsufficientCpuClaim(self):
-        instance = self._fake_instance(memory_mb=0, root_gb=0,
-                ephemeral_gb=0, vcpus=1)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
-        self.assertNotEqual(None, claim)
-        self.assertEqual(1, self.tracker.compute_node['vcpus_used'])
-
-        instance = self._fake_instance(memory_mb=0, root_gb=0,
-                ephemeral_gb=0, vcpus=1)
-
-        limits = {'vcpu': 1}
-        claim = self.tracker.begin_resource_claim(self.context, instance,
-                limits)
-        self.assertEqual(None, claim)
-
-    def testClaimAndFinish(self):
+    def test_claim_and_audit(self):
         self.assertEqual(5, self.tracker.compute_node['memory_mb'])
         self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
 
@@ -422,7 +325,9 @@ class ResourceTestCase(BaseTestCase):
         claim_disk = 2
         instance = self._fake_instance(memory_mb=claim_mem, root_gb=claim_disk,
                 ephemeral_gb=0)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
+
+        claim = self.tracker.instance_claim(self.context, instance,
+                self.limits)
 
         self.assertEqual(5, self.compute["memory_mb"])
         self.assertEqual(claim_mem, self.compute["memory_mb_used"])
@@ -448,18 +353,7 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(claim_disk, self.compute['local_gb_used'])
         self.assertEqual(6 - claim_disk, self.compute['free_disk_gb'])
 
-        # Finally, finish the claimm and update from the virt layer again.
-        # Resource usage will be consistent again:
-        self.tracker.finish_resource_claim(claim)
-        self.tracker.update_available_resource(self.context)
-
-        self.assertEqual(claim_mem, self.compute['memory_mb_used'])
-        self.assertEqual(5 - claim_mem, self.compute['free_ram_mb'])
-
-        self.assertEqual(claim_disk, self.compute['local_gb_used'])
-        self.assertEqual(6 - claim_disk, self.compute['free_disk_gb'])
-
-    def testClaimAndAbort(self):
+    def test_claim_and_abort(self):
         self.assertEqual(5, self.tracker.compute_node['memory_mb'])
         self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
 
@@ -470,7 +364,8 @@ class ResourceTestCase(BaseTestCase):
         claim_disk = 2
         instance = self._fake_instance(memory_mb=claim_mem,
                 root_gb=claim_disk, ephemeral_gb=0)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
+        claim = self.tracker.instance_claim(self.context, instance,
+                self.limits)
         self.assertNotEqual(None, claim)
 
         self.assertEqual(5, self.compute["memory_mb"])
@@ -481,7 +376,7 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
         self.assertEqual(6 - claim_disk, self.compute["free_disk_gb"])
 
-        self.tracker.abort_resource_claim(self.context, claim)
+        claim.abort()
 
         self.assertEqual(5, self.compute["memory_mb"])
         self.assertEqual(0, self.compute["memory_mb_used"])
@@ -491,25 +386,42 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(0, self.compute["local_gb_used"])
         self.assertEqual(6, self.compute["free_disk_gb"])
 
-    def testClaimsPurge(self):
-        """Test that claims get get purged when the audit process runs"""
+    def test_instance_claim_with_oversubscription(self):
+        memory_mb = FAKE_VIRT_MEMORY_MB * 2
+        root_gb = ephemeral_gb = FAKE_VIRT_LOCAL_GB
+        vcpus = FAKE_VIRT_VCPUS * 2
 
-        instance = self._fake_instance(memory_mb=2, root_gb=2, ephemeral_gb=0)
-        claim = self.tracker.begin_resource_claim(self.context, instance)
+        limits = {'memory_mb': memory_mb, 'disk_gb': root_gb * 2,
+                  'vcpu': vcpus}
+        instance = self._fake_instance(memory_mb=memory_mb,
+                root_gb=root_gb, ephemeral_gb=ephemeral_gb)
 
-        self.tracker.update_available_resource(self.context)
-        self.assertEqual({}, self.tracker.claims)
+        self.tracker.instance_claim(self.context, instance, limits)
+        self.assertEqual(memory_mb,
+                self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(root_gb * 2,
+                self.tracker.compute_node['local_gb_used'])
 
-    def testInstanceClaim(self):
-        instance = self._fake_instance(memory_mb=1, root_gb=0, ephemeral_gb=2)
-        self.tracker.begin_resource_claim(self.context, instance)
-        self.assertEqual(1, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
+    def test_additive_claims(self):
+        self.limits['vcpu'] = 2
 
-    def testContextClaimWithException(self):
+        instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1,
+                vcpus=1)
+        with self.tracker.instance_claim(self.context, instance, self.limits):
+            pass
+        instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1,
+                vcpus=1)
+        with self.tracker.instance_claim(self.context, instance, self.limits):
+            pass
+
+        self.assertEqual(2, self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(4, self.tracker.compute_node['local_gb_used'])
+        self.assertEqual(2, self.tracker.compute_node['vcpus_used'])
+
+    def test_context_claim_with_exception(self):
         instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1)
         try:
-            with self.tracker.resource_claim(self.context, instance):
+            with self.tracker.instance_claim(self.context, instance):
                 # <insert exciting things that utilize resources>
                 raise test.TestingException()
         except test.TestingException:
@@ -520,9 +432,9 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(0, self.compute['memory_mb_used'])
         self.assertEqual(0, self.compute['local_gb_used'])
 
-    def testInstanceContextClaim(self):
+    def test_instance_context_claim(self):
         instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=1)
-        with self.tracker.resource_claim(self.context, instance):
+        with self.tracker.instance_claim(self.context, instance):
             # <insert exciting things that utilize resources>
             self.assertEqual(1, self.tracker.compute_node['memory_mb_used'])
             self.assertEqual(2, self.tracker.compute_node['local_gb_used'])
@@ -537,12 +449,12 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(1, self.compute['memory_mb_used'])
         self.assertEqual(2, self.compute['local_gb_used'])
 
-    def testUpdateLoadStatsForInstance(self):
+    def test_update_load_stats_for_instance(self):
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
         instance = self._fake_instance(task_state=task_states.SCHEDULING)
-        with self.tracker.resource_claim(self.context, instance):
+        with self.tracker.instance_claim(self.context, instance):
             pass
 
         self.assertEqual(1, self.tracker.compute_node['current_workload'])
@@ -554,7 +466,7 @@ class ResourceTestCase(BaseTestCase):
         self.tracker.update_usage(self.context, instance)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
-    def testCpuStats(self):
+    def test_cpu_stats(self):
         limits = {'disk_gb': 100, 'memory_mb': 100}
         self.assertEqual(0, self.tracker.compute_node['vcpus_used'])
 
@@ -564,7 +476,7 @@ class ResourceTestCase(BaseTestCase):
         self.tracker.update_usage(self.context, instance)
         self.assertEqual(0, self.tracker.compute_node['vcpus_used'])
 
-        with self.tracker.resource_claim(self.context, instance, limits):
+        with self.tracker.instance_claim(self.context, instance, limits):
             pass
         self.assertEqual(1, self.tracker.compute_node['vcpus_used'])
 
@@ -574,7 +486,7 @@ class ResourceTestCase(BaseTestCase):
         self.assertEqual(1, self.tracker.compute_node['vcpus_used'])
 
         instance = self._fake_instance(vcpus=10)
-        with self.tracker.resource_claim(self.context, instance, limits):
+        with self.tracker.instance_claim(self.context, instance, limits):
             pass
         self.assertEqual(11, self.tracker.compute_node['vcpus_used'])
 
