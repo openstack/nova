@@ -1,4 +1,6 @@
 import mox
+from nova import context
+from nova import db
 from nova import exception
 from nova.tests.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
@@ -137,3 +139,50 @@ class VMRefOrRaiseVMNotFoundTestCase(unittest.TestCase):
             self.assertTrue(
                 'somename' in str(e))
         mock.VerifyAll()
+
+
+class BittorrentTestCase(stubs.XenAPITestBase):
+    def setUp(self):
+        super(BittorrentTestCase, self).setUp()
+        self.context = context.get_admin_context()
+
+    def test_image_uses_bittorrent(self):
+        sys_meta = {'image_bittorrent': True}
+        instance = db.instance_create(self.context,
+                                      {'system_metadata': sys_meta})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.flags(xenapi_torrent_images='some')
+        self.assertTrue(vm_utils._image_uses_bittorrent(self.context,
+                                                        instance))
+
+    def _test_create_image(self, cache_type):
+        sys_meta = {'image_cache_in_nova': True}
+        instance = db.instance_create(self.context,
+                                      {'system_metadata': sys_meta})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.flags(cache_images=cache_type)
+
+        was = {'called': None}
+
+        def fake_create_cached_image(*args):
+            was['called'] = 'some'
+            return {}
+        self.stubs.Set(vm_utils, '_create_cached_image',
+                       fake_create_cached_image)
+
+        def fake_fetch_image(*args):
+            was['called'] = 'none'
+            return {}
+        self.stubs.Set(vm_utils, '_fetch_image',
+                       fake_fetch_image)
+
+        vm_utils._create_image(self.context, None, instance,
+                               'foo', 'bar', 'baz')
+
+        self.assertEqual(was['called'], cache_type)
+
+    def test_create_image_cached(self):
+        self._test_create_image('some')
+
+    def test_create_image_uncached(self):
+        self._test_create_image('none')
