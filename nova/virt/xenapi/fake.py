@@ -583,7 +583,9 @@ class SessionBase(object):
             return jsonutils.dumps({'host_memory': {'total': 10,
                                                     'overhead': 20,
                                                     'free': 30,
-                                                    'free-computed': 40}})
+                                                    'free-computed': 40},
+                                    'host_hostname': 'fake-xenhost',
+                                    })
 
     def _plugin_poweraction(self, method, args):
         return jsonutils.dumps({"power_action": method[5:]})

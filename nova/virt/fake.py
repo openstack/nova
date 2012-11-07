@@ -70,7 +70,9 @@ class FakeDriver(driver.ComputeDriver):
           'disk_total': 600000000000,
           'disk_used': 100000000000,
           'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-          'host_name_label': 'fake-mini'}
+          'host_name_label': 'fake-mini',
+          'hypervisor_hostname': 'fake-mini',
+          }
         self._mounts = {}
 
     def init_host(self, host):
@@ -265,6 +267,7 @@ class FakeDriver(driver.ComputeDriver):
                'local_gb_used': 0,
                'hypervisor_type': 'fake',
                'hypervisor_version': '1.0',
+               'hypervisor_hostname': 'fake-mini',
                'cpu_info': '?'}
         return dic
 

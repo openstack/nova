@@ -174,6 +174,7 @@ class HostState(object):
                 data["host_memory_free_computed"] = host_memory.get(
                                                     'free-computed', 0)
                 del data['host_memory']
+            data['hypervisor_hostname'] = data['host_hostname']
             self._stats = data
 
 

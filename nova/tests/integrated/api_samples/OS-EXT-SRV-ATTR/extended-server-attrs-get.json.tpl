@@ -1,7 +1,7 @@
 {
     "server": {
         "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
-        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+        "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
         "OS-EXT-SRV-ATTR:instance_name": "%(instance_name)s",
         "accessIPv4": "",
         "accessIPv6": "",

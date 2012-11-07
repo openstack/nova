@@ -303,6 +303,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
         return self._verify_response('server-get-resp', subs, response)
 
     def test_servers_list(self):
@@ -320,6 +321,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
         return self._verify_response('servers-details-resp', subs, response)
 
 
@@ -804,6 +806,7 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
         return self._verify_response('extended-server-attrs-get',
                                      subs, response)
 
@@ -815,6 +818,7 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
         return self._verify_response('extended-server-attrs-list',
                                      subs, response)
 
