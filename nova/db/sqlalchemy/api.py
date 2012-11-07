@@ -125,20 +125,6 @@ def require_context(f):
     return wrapper
 
 
-def require_instance_exists(f):
-    """Decorator to require the specified instance to exist.
-
-    Requires the wrapped function to use context and instance_id as
-    their first two arguments.
-    """
-    @functools.wraps(f)
-    def wrapper(context, instance_id, *args, **kwargs):
-        db.instance_get(context, instance_id)
-        return f(context, instance_id, *args, **kwargs)
-
-    return wrapper
-
-
 def require_instance_exists_using_uuid(f):
     """Decorator to require the specified instance to exist.
 
