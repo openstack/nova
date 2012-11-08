@@ -23,7 +23,6 @@ CONF = config.CONF
 
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')
-CONF.import_opt('iscsi_num_targets', 'nova.volume.driver')
 CONF.import_opt('network_size', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('policy_file', 'nova.policy')
@@ -35,7 +34,6 @@ def set_defaults(conf):
     conf.set_default('fake_network', True)
     conf.set_default('fake_rabbit', True)
     conf.set_default('flat_network_bridge', 'br100')
-    conf.set_default('iscsi_num_targets', 8)
     conf.set_default('network_size', 8)
     conf.set_default('num_networks', 2)
     conf.set_default('vlan_interface', 'eth0')

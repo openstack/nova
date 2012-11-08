@@ -23,6 +23,7 @@ import time
 from nova import config
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -30,8 +31,22 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
+
+volume_opts = [
+    cfg.IntOpt('num_iscsi_scan_tries',
+               default=3,
+               help='number of times to rescan iSCSI target to find volume'),
+    cfg.StrOpt('rbd_user',
+               default=None,
+               help='the RADOS client name for accessing rbd volumes'),
+    cfg.StrOpt('rbd_secret_uuid',
+               default=None,
+               help='the libvirt uuid of the secret for the rbd_user'
+                    'volumes')
+    ]
+
 CONF = config.CONF
-CONF.import_opt('num_iscsi_scan_tries', 'nova.volume.driver')
+CONF.register_opts(volume_opts)
 
 
 class LibvirtVolumeDriver(object):

@@ -60,7 +60,6 @@ from nova.virt.libvirt import snapshots
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 from nova.virt.libvirt import volume_nfs
-from nova.volume import driver as volume_driver
 
 
 try:
@@ -173,10 +172,96 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./serial').text, 'fake_serial')
 
+    def _get_iscsi_properties(self, volume):
+        """Gets iscsi configuration
+
+        We ideally get saved information in the volume entity, but fall back
+        to discovery if need be. Discovery may be completely removed in future
+        The properties are:
+
+        :target_discovered:    boolean indicating whether discovery was used
+
+        :target_iqn:    the IQN of the iSCSI target
+
+        :target_portal:    the portal of the iSCSI target
+
+        :target_lun:    the lun of the iSCSI target
+
+        :volume_id:    the id of the volume (currently used by xen)
+
+        :auth_method:, :auth_username:, :auth_password:
+
+            the authentication details. Right now, either auth_method is not
+            present meaning no authentication, or auth_method == `CHAP`
+            meaning use CHAP with the specified credentials.
+        """
+
+        properties = {}
+
+        location = volume['provider_location']
+
+        if location:
+            # provider_location is the same format as iSCSI discovery output
+            properties['target_discovered'] = False
+        else:
+            location = "stub"
+
+            if not location:
+                raise exception.InvalidVolume(_("Could not find iSCSI export "
+                                                " for volume %s") %
+                                              (volume['name']))
+
+            LOG.debug(_("ISCSI Discovery: Found %s") % (location))
+            properties['target_discovered'] = True
+
+        results = location.split(" ")
+        properties['target_portal'] = results[0].split(",")[0]
+        properties['target_iqn'] = results[1]
+        try:
+            properties['target_lun'] = int(results[2])
+        except (IndexError, ValueError):
+                properties['target_lun'] = 1
+
+        properties['volume_id'] = volume['id']
+
+        auth = volume['provider_auth']
+        if auth:
+            (auth_method, auth_username, auth_secret) = auth.split()
+
+            properties['auth_method'] = auth_method
+            properties['auth_username'] = auth_username
+            properties['auth_password'] = auth_secret
+
+        return properties
+
+    def iscsi_connection(self, volume):
+        """Initializes the connection and returns connection info.
+
+        The iscsi driver returns a driver_volume_type of 'iscsi'.
+        The format of the driver data is defined in _get_iscsi_properties.
+        Example return value::
+
+            {
+                'driver_volume_type': 'iscsi'
+                'data': {
+                    'target_discovered': True,
+                    'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
+                    'target_portal': '127.0.0.0.1:3260',
+                    'volume_id': 1,
+                }
+            }
+
+        """
+
+        iscsi_properties = self._get_iscsi_properties(volume)
+        return {
+            'driver_volume_type': 'iscsi',
+            'data': iscsi_properties
+        }
+
     def test_libvirt_iscsi_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
-        vol_driver = volume_driver.ISCSIDriver()
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         location = '10.0.2.15:3260'
         name = 'volume-00000001'
@@ -185,7 +270,7 @@ class LibvirtVolumeTestCase(test.TestCase):
                'name': name,
                'provider_auth': None,
                'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.iscsi_connection(vol)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -193,7 +278,6 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
         expected_commands = [('iscsiadm', '-m', 'node', '-T', iqn,
                               '-p', location),
                              ('iscsiadm', '-m', 'node', '-T', iqn,
@@ -213,7 +297,6 @@ class LibvirtVolumeTestCase(test.TestCase):
     def test_libvirt_iscsi_driver_still_in_use(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
-        vol_driver = volume_driver.ISCSIDriver()
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         location = '10.0.2.15:3260'
         name = 'volume-00000001'
@@ -224,7 +307,7 @@ class LibvirtVolumeTestCase(test.TestCase):
                'name': name,
                'provider_auth': None,
                'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.iscsi_connection(vol)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -232,7 +315,6 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
         expected_commands = [('iscsiadm', '-m', 'node', '-T', iqn,
                               '-p', location),
                              ('iscsiadm', '-m', 'node', '-T', iqn,
@@ -242,12 +324,19 @@ class LibvirtVolumeTestCase(test.TestCase):
                               '-n', 'node.startup', '-v', 'automatic')]
         self.assertEqual(self.executes, expected_commands)
 
+    def sheepdog_connection(self, volume):
+        return {
+            'driver_volume_type': 'sheepdog',
+            'data': {
+                'name': volume['name']
+            }
+        }
+
     def test_libvirt_sheepdog_driver(self):
-        vol_driver = volume_driver.SheepdogDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.sheepdog_connection(vol)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -255,31 +344,39 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
         self.assertEqual(tree.find('./source').get('name'), name)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
+
+    def rbd_connection(self, volume):
+        return {
+            'driver_volume_type': 'rbd',
+            'data': {
+                'name': '%s/%s' % ('rbd', volume['name']),
+                'auth_enabled': CONF.rbd_secret_uuid is not None,
+                'auth_username': CONF.rbd_user,
+                'secret_type': 'ceph',
+                'secret_uuid': CONF.rbd_secret_uuid,
+            }
+        }
 
     def test_libvirt_rbd_driver(self):
-        vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.rbd_connection(vol)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
+        rbd_name = '%s/%s' % ('rbd', name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./source/auth'), None)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_rbd_driver_auth_enabled(self):
-        vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.rbd_connection(vol)
         uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
         user = 'foo'
         secret_type = 'ceph'
@@ -293,20 +390,18 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
+        rbd_name = '%s/%s' % ('rbd', name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
         self.assertEqual(tree.find('./auth/secret').get('uuid'), uuid)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_rbd_driver_auth_enabled_flags_override(self):
-        vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.rbd_connection(vol)
         uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
         user = 'foo'
         secret_type = 'ceph'
@@ -325,20 +420,18 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
+        rbd_name = '%s/%s' % ('rbd', name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), flags_user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
         self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_rbd_driver_auth_disabled(self):
-        vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.rbd_connection(vol)
         uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
         user = 'foo'
         secret_type = 'ceph'
@@ -352,18 +445,16 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
+        rbd_name = '%s/%s' % ('rbd', name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth'), None)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_rbd_driver_auth_disabled_flags_override(self):
-        vol_driver = volume_driver.RBDDriver()
         libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.rbd_connection(vol)
         uuid = '875a8070-d0b9-4949-8b31-104d125c9a64'
         user = 'foo'
         secret_type = 'ceph'
@@ -384,17 +475,15 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
+        rbd_name = '%s/%s' % ('rbd', name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), flags_user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
         self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_lxc_volume(self):
         self.stubs.Set(os.path, 'exists', lambda x: True)
-        vol_driver = volume_driver.ISCSIDriver()
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         location = '10.0.2.15:3260'
         name = 'volume-00000001'
@@ -403,7 +492,7 @@ class LibvirtVolumeTestCase(test.TestCase):
                'name': name,
                'provider_auth': None,
                'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        connection_info = self.iscsi_connection(vol)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -411,7 +500,6 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
-        connection_info = vol_driver.terminate_connection(vol, self.connr)
 
     def test_libvirt_nfs_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
