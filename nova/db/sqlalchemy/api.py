@@ -1502,7 +1502,8 @@ def _build_instance_get(context, session=None):
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache')).\
             options(joinedload('metadata')).\
-            options(joinedload('instance_type'))
+            options(joinedload('instance_type')).\
+            options(joinedload('system_metadata'))
 
 
 @require_context
@@ -1535,6 +1536,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     query_prefix = session.query(models.Instance).\
             options(joinedload('info_cache')).\
             options(joinedload('security_groups')).\
+            options(joinedload('system_metadata')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type')).\
             order_by(sort_fn[sort_dir](getattr(models.Instance, sort_key)))
