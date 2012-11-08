@@ -21,6 +21,7 @@
 
 import datetime
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -29,7 +30,11 @@ from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
 
+
 FLAGS = flags.FLAGS
+CONF = config.CONF
+CONF.import_opt('reserved_host_memory_mb', 'nova.compute.resource_tracker')
+CONF.import_opt('reserved_host_disk_mb', 'nova.compute.resource_tracker')
 
 
 class DbApiTestCase(test.TestCase):
