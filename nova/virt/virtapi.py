@@ -15,9 +15,6 @@
 #    under the License.
 
 
-from nova import db
-
-
 class VirtAPI(object):
     def instance_update(self, context, instance_uuid, updates):
         """Perform an instance update operation on behalf of a virt driver

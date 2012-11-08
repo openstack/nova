@@ -22,7 +22,6 @@ import os
 import uuid
 
 from nova import config
-from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg

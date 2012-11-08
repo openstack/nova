@@ -23,7 +23,6 @@ import urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import config
-from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
