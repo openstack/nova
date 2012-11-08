@@ -19,6 +19,7 @@ import abc
 import contextlib
 import os
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
@@ -26,7 +27,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import lockutils
 from nova import utils
 from nova.virt.disk import api as disk
-from nova.virt.libvirt import config
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import snapshots
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -46,8 +47,8 @@ __imagebackend_opts = [
                  ' if this flag is set to True.'),
         ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(__imagebackend_opts)
+CONF = config.CONF
+CONF.register_opts(__imagebackend_opts)
 
 
 class Image(object):
@@ -67,7 +68,7 @@ class Image(object):
         # NOTE(mikal): We need a lock directory which is shared along with
         # instance files, to cover the scenario where multiple compute nodes
         # are trying to create a base file at the same time
-        self.lock_path = os.path.join(FLAGS.instances_path, 'locks')
+        self.lock_path = os.path.join(CONF.instances_path, 'locks')
 
     @abc.abstractmethod
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -90,7 +91,7 @@ class Image(object):
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
         """
-        info = config.LibvirtConfigGuestDisk()
+        info = vconfig.LibvirtConfigGuestDisk()
         info.source_type = self.source_type
         info.source_device = device_type
         info.target_bus = disk_bus
@@ -121,7 +122,7 @@ class Image(object):
                 fetch_func(target=target, *args, **kwargs)
 
         if not os.path.exists(self.path):
-            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            base_dir = os.path.join(CONF.instances_path, '_base')
             if not os.path.exists(base_dir):
                 fileutils.ensure_tree(base_dir)
             base = os.path.join(base_dir, filename)
@@ -142,7 +143,7 @@ class Raw(Image):
     def __init__(self, instance=None, name=None, path=None):
         super(Raw, self).__init__("file", "raw", is_block_dev=False)
 
-        self.path = path or os.path.join(FLAGS.instances_path,
+        self.path = path or os.path.join(CONF.instances_path,
                                          instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -170,7 +171,7 @@ class Qcow2(Image):
     def __init__(self, instance=None, name=None, path=None):
         super(Qcow2, self).__init__("file", "qcow2", is_block_dev=False)
 
-        self.path = path or os.path.join(FLAGS.instances_path,
+        self.path = path or os.path.join(CONF.instances_path,
                                          instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -209,16 +210,16 @@ class Lvm(Image):
             self.lv = info['LV']
             self.path = path
         else:
-            if not FLAGS.libvirt_images_volume_group:
+            if not CONF.libvirt_images_volume_group:
                 raise RuntimeError(_('You should specify'
                                      ' libvirt_images_volume_group'
                                      ' flag to use LVM images.'))
-            self.vg = FLAGS.libvirt_images_volume_group
+            self.vg = CONF.libvirt_images_volume_group
             self.lv = '%s_%s' % (self.escape(instance),
                                  self.escape(name))
             self.path = os.path.join('/dev', self.vg, self.lv)
 
-        self.sparse = FLAGS.libvirt_sparse_logical_volumes
+        self.sparse = CONF.libvirt_sparse_logical_volumes
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
@@ -270,7 +271,7 @@ class Backend(object):
 
     def backend(self, image_type=None):
         if not image_type:
-            image_type = FLAGS.libvirt_images_type
+            image_type = CONF.libvirt_images_type
         image = self.BACKEND.get(image_type)
         if not image:
             raise RuntimeError(_('Unknown image_type=%s') % image_type)
@@ -282,7 +283,7 @@ class Backend(object):
         :instance: Instance name.
         :name: Image name.
         :image_type: Image type.
-        Optional, is FLAGS.libvirt_images_type by default.
+        Optional, is CONF.libvirt_images_type by default.
         """
         backend = self.backend(image_type)
         return backend(instance=instance, name=name)

@@ -20,6 +20,7 @@
 import ctypes
 import os
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -34,8 +35,8 @@ volume_opts = [
                default='$state_path/mnt',
                help='Base dir where nfs expected to be mounted on compute'),
 ]
-FLAGS = flags.FLAGS
-FLAGS.register_opts(volume_opts)
+CONF = config.CONF
+CONF.register_opts(volume_opts)
 
 
 class NfsVolumeDriver(volume.LibvirtVolumeDriver):
@@ -63,7 +64,7 @@ class NfsVolumeDriver(volume.LibvirtVolumeDriver):
         """
         @type nfs_export: string
         """
-        mount_path = os.path.join(FLAGS.nfs_mount_point_base,
+        mount_path = os.path.join(CONF.nfs_mount_point_base,
                                   self.get_hash_str(nfs_export))
         self._mount_nfs(mount_path, nfs_export, ensure=True)
         return mount_path

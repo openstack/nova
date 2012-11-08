@@ -25,9 +25,7 @@ Driver base-classes:
 from nova import flags
 from nova.openstack.common import log as logging
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 def block_device_info_get_root(block_device_info):

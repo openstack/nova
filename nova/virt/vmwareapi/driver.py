@@ -36,6 +36,7 @@ import time
 
 from eventlet import event
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -81,8 +82,8 @@ vmwareapi_opts = [
                help='Physical ethernet adapter name for vlan networking'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(vmwareapi_opts)
+CONF = config.CONF
+CONF.register_opts(vmwareapi_opts)
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
 
@@ -103,10 +104,10 @@ class VMWareESXDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMWareESXDriver, self).__init__(virtapi)
 
-        host_ip = FLAGS.vmwareapi_host_ip
-        host_username = FLAGS.vmwareapi_host_username
-        host_password = FLAGS.vmwareapi_host_password
-        api_retry_count = FLAGS.vmwareapi_api_retry_count
+        host_ip = CONF.vmwareapi_host_ip
+        host_username = CONF.vmwareapi_host_username
+        host_password = CONF.vmwareapi_host_password
+        api_retry_count = CONF.vmwareapi_api_retry_count
         if not host_ip or host_username is None or host_password is None:
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
@@ -177,7 +178,7 @@ class VMWareESXDriver(driver.ComputeDriver):
         # TODO(vish): When volume attaching is supported, return the
         #             proper initiator iqn and host.
         return {
-            'ip': FLAGS.vmwareapi_host_ip,
+            'ip': CONF.vmwareapi_host_ip,
             'initiator': None,
             'host': None
         }
@@ -192,9 +193,9 @@ class VMWareESXDriver(driver.ComputeDriver):
 
     def get_console_pool_info(self, console_type):
         """Get info about the host on which the VM resides."""
-        return {'address': FLAGS.vmwareapi_host_ip,
-                'username': FLAGS.vmwareapi_host_username,
-                'password': FLAGS.vmwareapi_host_password}
+        return {'address': CONF.vmwareapi_host_ip,
+                'username': CONF.vmwareapi_host_username,
+                'password': CONF.vmwareapi_host_password}
 
     def get_available_resource(self):
         """This method is supported only by libvirt."""
@@ -373,7 +374,7 @@ class VMWareAPISession(object):
         done = event.Event()
         loop = utils.LoopingCall(self._poll_task, instance_uuid, task_ref,
                                       done)
-        loop.start(FLAGS.vmwareapi_task_poll_interval)
+        loop.start(CONF.vmwareapi_task_poll_interval)
         ret_val = done.wait()
         loop.stop()
         return ret_val

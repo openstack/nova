@@ -24,6 +24,7 @@ Handling of VM disk images.
 import os
 import re
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -40,8 +41,8 @@ image_opts = [
                 help='Force backing images to raw format'),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(image_opts)
+CONF = config.CONF
+CONF.register_opts(image_opts)
 
 
 class QemuImgInfo(object):
@@ -218,7 +219,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
 
-        if fmt != "raw" and FLAGS.force_raw_images:
+        if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
             with utils.remove_path_on_error(staged):

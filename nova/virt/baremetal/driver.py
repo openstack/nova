@@ -36,6 +36,7 @@ import shutil
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import vm_states
+from nova import config
 from nova import context as nova_context
 from nova import exception
 from nova import flags
@@ -56,7 +57,7 @@ Template = None
 
 LOG = logging.getLogger(__name__)
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 baremetal_opts = [
     cfg.StrOpt('baremetal_type',
@@ -64,7 +65,7 @@ baremetal_opts = [
                 help='baremetal domain type'),
     ]
 
-FLAGS.register_opts(baremetal_opts)
+CONF.register_opts(baremetal_opts)
 
 
 def _late_load_cheetah():
@@ -125,11 +126,11 @@ class BareMetalDriver(driver.ComputeDriver):
         return True
 
     def _cleanup(self, instance):
-        target = os.path.join(FLAGS.instances_path, instance['name'])
+        target = os.path.join(CONF.instances_path, instance['name'])
         instance_name = instance['name']
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals(), instance=instance)
-        if FLAGS.baremetal_type == 'lxc':
+        if CONF.baremetal_type == 'lxc':
             disk.destroy_container(self.container)
         if os.path.exists(target):
             shutil.rmtree(target)
@@ -175,9 +176,9 @@ class BareMetalDriver(driver.ComputeDriver):
         """
         self.destroy(instance, False)
 
-        rescue_images = {'image_id': FLAGS.baremetal_rescue_image_id,
-                         'kernel_id': FLAGS.baremetal_rescue_kernel_id,
-                         'ramdisk_id': FLAGS.baremetal_rescue_ramdisk_id}
+        rescue_images = {'image_id': CONF.baremetal_rescue_image_id,
+                         'kernel_id': CONF.baremetal_rescue_kernel_id,
+                         'ramdisk_id': CONF.baremetal_rescue_ramdisk_id}
         self._create_image(instance, '.rescue', rescue_images,
                            network_info=network_info)
 
@@ -211,7 +212,7 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.debug(_("<============= spawn of baremetal =============>"))
 
         def basepath(fname='', suffix=''):
-            return os.path.join(FLAGS.instances_path,
+            return os.path.join(CONF.instances_path,
                                 instance['name'],
                                 fname + suffix)
         bpath = basepath(suffix='')
@@ -265,7 +266,7 @@ class BareMetalDriver(driver.ComputeDriver):
         return timer.start(interval=0.5).wait()
 
     def get_console_output(self, instance):
-        console_log = os.path.join(FLAGS.instances_path, instance['name'],
+        console_log = os.path.join(CONF.instances_path, instance['name'],
                                    'console.log')
 
         libvirt_utils.chown(console_log, os.getuid())
@@ -302,7 +303,7 @@ class BareMetalDriver(driver.ComputeDriver):
         If cow is True, it will make a CoW image instead of a copy.
         """
         if not os.path.exists(target):
-            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            base_dir = os.path.join(CONF.instances_path, '_base')
             if not os.path.exists(base_dir):
                 fileutils.ensure_tree(base_dir)
             base = os.path.join(base_dir, fname)
@@ -327,7 +328,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
-            return os.path.join(FLAGS.instances_path,
+            return os.path.join(CONF.instances_path,
                                 inst['name'],
                                 fname + suffix)
 
@@ -338,7 +339,7 @@ class BareMetalDriver(driver.ComputeDriver):
         LOG.info(_('instance %s: Creating image'), inst['name'],
                  instance=inst)
 
-        if FLAGS.baremetal_type == 'lxc':
+        if CONF.baremetal_type == 'lxc':
             container_dir = '%s/rootfs' % basepath(suffix='')
             fileutils.ensure_tree(container_dir)
 
@@ -386,7 +387,7 @@ class BareMetalDriver(driver.ComputeDriver):
                           context=context,
                           target=basepath('root'),
                           fname=root_fname,
-                          cow=False,  # FLAGS.use_cow_images,
+                          cow=False,  # CONF.use_cow_images,
                           image_id=disk_images['image_id'],
                           user_id=inst['user_id'],
                           project_id=inst['project_id'])
@@ -398,7 +399,7 @@ class BareMetalDriver(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        if FLAGS.baremetal_type == 'lxc':
+        if CONF.baremetal_type == 'lxc':
             target_partition = None
 
         if inst['key_data']:
@@ -408,7 +409,7 @@ class BareMetalDriver(driver.ComputeDriver):
         net = None
 
         nets = []
-        ifc_template = open(FLAGS.injected_network_template).read()
+        ifc_template = open(CONF.injected_network_template).read()
         ifc_num = -1
         have_injected_networks = False
         admin_context = nova_context.get_admin_context()
@@ -424,7 +425,7 @@ class BareMetalDriver(driver.ComputeDriver):
             address_v6 = None
             gateway_v6 = None
             netmask_v6 = None
-            if FLAGS.use_ipv6:
+            if CONF.use_ipv6:
                 address_v6 = mapping['ip6s'][0]['ip']
                 netmask_v6 = mapping['ip6s'][0]['netmask']
                 gateway_v6 = mapping['gateway_v6']
@@ -442,7 +443,7 @@ class BareMetalDriver(driver.ComputeDriver):
         if have_injected_networks:
             net = str(Template(ifc_template,
                                searchList=[{'interfaces': nets,
-                                            'use_ipv6': FLAGS.use_ipv6}]))
+                                            'use_ipv6': CONF.use_ipv6}]))
 
         metadata = inst.get('metadata')
         if any((key, net, metadata)):
@@ -459,7 +460,7 @@ class BareMetalDriver(driver.ComputeDriver):
             try:
                 disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 use_cow=False)  # FLAGS.use_cow_images
+                                 use_cow=False)  # CONF.use_cow_images
 
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
@@ -482,9 +483,9 @@ class BareMetalDriver(driver.ComputeDriver):
 
         driver_type = 'raw'
 
-        xml_info = {'type': FLAGS.baremetal_type,
+        xml_info = {'type': CONF.baremetal_type,
                     'name': instance['name'],
-                    'basepath': os.path.join(FLAGS.instances_path,
+                    'basepath': os.path.join(CONF.instances_path,
                                              instance['name']),
                     'memory_kb': inst_type['memory_mb'] * 1024,
                     'vcpus': inst_type['vcpus'],
@@ -676,11 +677,11 @@ class BareMetalDriver(driver.ComputeDriver):
                'local_gb_used': self.get_local_gb_used(),
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
-               'hypervisor_hostname': FLAGS.host,
+               'hypervisor_hostname': CONF.host,
                'cpu_info': self.get_cpu_info(),
-               'cpu_arch': FLAGS.cpu_arch}
+               'cpu_arch': CONF.cpu_arch}
 
-        LOG.info(_('#### RLK: cpu_arch = %s ') % FLAGS.cpu_arch)
+        LOG.info(_('#### RLK: cpu_arch = %s ') % CONF.cpu_arch)
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
@@ -729,7 +730,7 @@ class HostState(object):
         data["vcpus"] = self.connection.get_vcpu_total()
         data["vcpus_used"] = self.connection.get_vcpu_used()
         data["cpu_info"] = self.connection.get_cpu_info()
-        data["cpu_arch"] = FLAGS.cpu_arch
+        data["cpu_arch"] = CONF.cpu_arch
         data["disk_total"] = self.connection.get_local_gb_total()
         data["disk_used"] = self.connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
@@ -738,5 +739,5 @@ class HostState(object):
                                     self.connection.get_memory_mb_used())
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
-        data["hypervisor_hostname"] = FLAGS.host
+        data["hypervisor_hostname"] = CONF.host
         self._stats = data

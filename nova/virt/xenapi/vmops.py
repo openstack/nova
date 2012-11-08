@@ -61,10 +61,8 @@ xenapi_vmops_opts = [
                help='The XenAPI VIF driver using XenServer Network APIs.')
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(xenapi_vmops_opts)
-
 CONF = config.CONF
+CONF.register_opts(xenapi_vmops_opts)
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
@@ -155,13 +153,13 @@ class VMOps(object):
         self.firewall_driver = firewall.load_driver(
             default=DEFAULT_FIREWALL_DRIVER,
             xenapi_session=self._session)
-        vif_impl = importutils.import_class(FLAGS.xenapi_vif_driver)
+        vif_impl = importutils.import_class(CONF.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
 
     @property
     def agent_enabled(self):
-        return not FLAGS.xenapi_disable_agent
+        return not CONF.xenapi_disable_agent
 
     def _get_agent(self, instance, vm_ref):
         if self.agent_enabled:
@@ -424,7 +422,7 @@ class VMOps(object):
     def _setup_vm_networking(self, instance, vm_ref, vdis, network_info,
             rescue):
         # Alter the image before VM start for network injection.
-        if FLAGS.flat_injected:
+        if CONF.flat_injected:
             vm_utils.preconfigure_instance(self._session, instance,
                                            vdis['root']['ref'], network_info)
 
@@ -529,7 +527,7 @@ class VMOps(object):
         # Wait for boot to finish
         LOG.debug(_('Waiting for instance state to become running'),
                   instance=instance)
-        expiration = time.time() + FLAGS.xenapi_running_timeout
+        expiration = time.time() + CONF.xenapi_running_timeout
         while time.time() < expiration:
             state = self.get_info(instance, vm_ref)['state']
             if state == power_state.RUNNING:
@@ -1317,7 +1315,7 @@ class VMOps(object):
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)
 
         # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
-        return {'host': FLAGS.vncserver_proxyclient_address, 'port': 80,
+        return {'host': CONF.vncserver_proxyclient_address, 'port': 80,
                 'internal_access_path': path}
 
     def _vif_xenstore_data(self, vif):
@@ -1540,10 +1538,10 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = db.aggregate_get_by_host(context, FLAGS.host,
+        current_aggregate = db.aggregate_get_by_host(context, CONF.host,
                key=pool_states.POOL_FLAG)[0]
         if not current_aggregate:
-            raise exception.AggregateHostNotFound(host=FLAGS.host)
+            raise exception.AggregateHostNotFound(host=CONF.host)
         try:
             return current_aggregate.metadetails[hostname]
         except KeyError:

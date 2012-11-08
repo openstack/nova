@@ -26,13 +26,14 @@ import subprocess
 import time
 
 from nova.compute import power_state
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 tilera_opts = [
     cfg.StrOpt('tile_monitor',
@@ -40,7 +41,7 @@ tilera_opts = [
                help='Tilera command line program for Bare-metal driver')
     ]
 
-FLAGS.register_opts(tilera_opts)
+CONF.register_opts(tilera_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -236,7 +237,7 @@ class BareMetalNodes(object):
 
         User can access the bare-metal node using ssh.
         """
-        cmd = (FLAGS.tile_monitor +
+        cmd = (CONF.tile_monitor +
                " --resume --net " + node_ip + " --run - " +
                "ifconfig xgbe0 hw ether " + mac_address +
                " - --wait --run - ifconfig xgbe0 " + ip_address +
@@ -299,7 +300,7 @@ class BareMetalNodes(object):
         """
         Sets and Runs sshd in the node.
         """
-        cmd = (FLAGS.tile_monitor +
+        cmd = (CONF.tile_monitor +
                " --resume --net " + node_ip + " --run - " +
                "/usr/sbin/sshd - --wait --quit")
         subprocess.Popen(cmd, shell=True)
@@ -332,7 +333,7 @@ class BareMetalNodes(object):
         """
         node_ip = self.get_ip_by_id(node_id)
         log_path = "/tftpboot/log_" + str(node_id)
-        kmsg_cmd = (FLAGS.tile_monitor +
+        kmsg_cmd = (CONF.tile_monitor +
                     " --resume --net " + node_ip +
                     " -- dmesg > " + log_path)
         subprocess.Popen(kmsg_cmd, shell=True)

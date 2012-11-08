@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -36,7 +37,7 @@ from xml.etree import ElementTree
 if sys.platform == 'win32':
     import wmi
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -75,7 +76,7 @@ class SnapshotOps(baseops.BaseOps):
         f = None
 
         try:
-            src_vhd_path = os.path.join(FLAGS.instances_path, instance_name,
+            src_vhd_path = os.path.join(CONF.instances_path, instance_name,
                 instance_name + ".vhd")
 
             image_man_svc = self._conn.Msvm_ImageManagementService()[0]

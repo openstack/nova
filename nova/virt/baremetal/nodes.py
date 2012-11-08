@@ -15,13 +15,12 @@
 #    under the License.
 #
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.virt.baremetal import fake
 from nova.virt.baremetal import tilera
-
-FLAGS = flags.FLAGS
 
 baremetal_opts = [
     cfg.StrOpt('baremetal_driver',
@@ -29,11 +28,12 @@ baremetal_opts = [
                help='Bare-metal driver runs on')
     ]
 
-FLAGS.register_opts(baremetal_opts)
+CONF = config.CONF
+CONF.register_opts(baremetal_opts)
 
 
 def get_baremetal_nodes():
-    d = FLAGS.baremetal_driver
+    d = CONF.baremetal_driver
     if d == 'tilera':
         return tilera.get_baremetal_nodes()
     elif d == 'fake':

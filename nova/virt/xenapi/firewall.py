@@ -25,9 +25,7 @@ from nova.openstack.common import log as logging
 from nova.virt import firewall
 from nova.virt import netutils
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):

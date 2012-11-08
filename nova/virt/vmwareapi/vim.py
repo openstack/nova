@@ -26,6 +26,7 @@ try:
 except ImportError:
     suds = None
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.virt.vmwareapi import error_util
@@ -41,8 +42,8 @@ vmwareapi_wsdl_loc_opt = cfg.StrOpt('vmwareapi_wsdl_loc',
              'Due to a bug in vSphere ESX 4.1 default wsdl. '
              'Refer readme-vmware to setup')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(vmwareapi_wsdl_loc_opt)
+CONF = config.CONF
+CONF.register_opt(vmwareapi_wsdl_loc_opt)
 
 
 if suds:
@@ -85,7 +86,7 @@ class Vim:
 
         self._protocol = protocol
         self._host_name = host
-        wsdl_url = FLAGS.vmwareapi_wsdl_loc
+        wsdl_url = CONF.vmwareapi_wsdl_loc
         if wsdl_url is None:
             raise Exception(_("Must specify vmwareapi_wsdl_loc"))
         # TODO(sateesh): Use this when VMware fixes their faulty wsdl

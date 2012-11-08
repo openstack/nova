@@ -32,6 +32,7 @@ import tempfile
 if os.name != 'nt':
     import crypt
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -76,14 +77,14 @@ disk_opts = [
                          'The format is <os_type>=<mkfs command>'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(disk_opts)
+CONF = config.CONF
+CONF.register_opts(disk_opts)
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
 
 
-for s in FLAGS.virt_mkfs:
+for s in CONF.virt_mkfs:
     # NOTE(yamahata): mkfs command may includes '=' for its options.
     #                 So item.partition('=') doesn't work here
     os_type, mkfs_command = s.split('=', 1)
@@ -188,7 +189,7 @@ class _DiskImage(object):
 
         # As a performance tweak, don't bother trying to
         # directly loopback mount a cow image.
-        self.handlers = FLAGS.img_handlers[:]
+        self.handlers = CONF.img_handlers[:]
         if use_cow and 'loop' in self.handlers:
             self.handlers.remove('loop')
 

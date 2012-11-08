@@ -25,6 +25,7 @@ import sys
 import time
 import uuid
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
@@ -35,7 +36,7 @@ from nova.virt import images
 if sys.platform == 'win32':
     import wmi
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -75,20 +76,20 @@ class VMUtils(object):
         return True
 
     def get_vhd_path(self, instance_name):
-        base_vhd_folder = os.path.join(FLAGS.instances_path, instance_name)
+        base_vhd_folder = os.path.join(CONF.instances_path, instance_name)
         if not os.path.exists(base_vhd_folder):
                 LOG.debug(_('Creating folder %s '), base_vhd_folder)
                 os.makedirs(base_vhd_folder)
         return os.path.join(base_vhd_folder, instance_name + ".vhd")
 
     def get_base_vhd_path(self, image_name):
-        base_dir = os.path.join(FLAGS.instances_path, '_base')
+        base_dir = os.path.join(CONF.instances_path, '_base')
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
         return os.path.join(base_dir, image_name + ".vhd")
 
     def make_export_path(self, instance_name):
-        export_folder = os.path.join(FLAGS.instances_path, "export",
+        export_folder = os.path.join(CONF.instances_path, "export",
                 instance_name)
         if os.path.isdir(export_folder):
             LOG.debug(_('Removing existing folder %s '), export_folder)

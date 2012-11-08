@@ -19,6 +19,7 @@
 
 """VIF drivers for XenAPI."""
 
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -31,8 +32,8 @@ xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
         default='xapi1',
         help='Name of Integration Bridge used by Open vSwitch')
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(xenapi_ovs_integration_bridge_opt)
+CONF = config.CONF
+CONF.register_opt(xenapi_ovs_integration_bridge_opt)
 LOG = logging.getLogger(__name__)
 
 
@@ -76,7 +77,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
         vlan_num = network.get_meta('vlan')
         bridge = network['bridge']
-        bridge_interface = (FLAGS.vlan_interface or
+        bridge_interface = (CONF.vlan_interface or
                             network.get_meta('bridge_interface'))
         # Check whether bridge already exists
         # Retrieve network whose name_label is "bridge"
@@ -144,7 +145,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         # with OVS model, always plug into an OVS integration bridge
         # that is already created
         network_ref = network_utils.find_network_with_bridge(
-                self._session, FLAGS.xenapi_ovs_integration_bridge)
+                self._session, CONF.xenapi_ovs_integration_bridge)
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref

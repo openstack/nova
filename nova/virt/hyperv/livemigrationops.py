@@ -21,6 +21,7 @@ Management class for live migration VM operations.
 import os
 import sys
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import excutils
@@ -34,7 +35,7 @@ if sys.platform == 'win32':
     import wmi
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class LiveMigrationOps(baseops.BaseOps):
@@ -139,7 +140,7 @@ class LiveMigrationOps(baseops.BaseOps):
         LOG.debug(_("pre_live_migration called"), instance=instance)
         self._check_live_migration_config()
 
-        if FLAGS.use_cow_images:
+        if CONF.use_cow_images:
             ebs_root = self._volumeops.volume_in_mapping(
                 self._volumeops.get_default_root_device(),
                 block_device_info)

@@ -21,6 +21,7 @@ Management class for Storage-related functions (attach, detach, etc).
 import time
 
 from nova import block_device
+from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -40,8 +41,8 @@ hyper_volumeops_opts = [
         help='The seconds to wait between an volume attachment attempt'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(hyper_volumeops_opts)
+CONF = config.CONF
+CONF.register_opts(hyper_volumeops_opts)
 
 
 class VolumeOps(baseops.BaseOps):
@@ -59,9 +60,9 @@ class VolumeOps(baseops.BaseOps):
         self._initiator = None
         self._default_root_device = 'vda'
         self._attaching_volume_retry_count = \
-            FLAGS.hyperv_attaching_volume_retry_count
+            CONF.hyperv_attaching_volume_retry_count
         self._wait_between_attach_retry = \
-            FLAGS.hyperv_wait_between_attach_retry
+            CONF.hyperv_wait_between_attach_retry
         self._volutils = volumeutils.VolumeUtils()
 
     def attach_boot_volume(self, block_device_info, vm_name):
@@ -207,7 +208,7 @@ class VolumeOps(baseops.BaseOps):
                 LOG.warn(_('Could not determine iscsi initiator name'),
                          instance=instance)
         return {
-            'ip': FLAGS.my_ip,
+            'ip': CONF.my_ip,
             'initiator': self._initiator,
         }
 

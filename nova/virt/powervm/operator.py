@@ -20,6 +20,7 @@ import os
 import re
 import time
 
+from nova import config
 from nova import exception as nova_exception
 from nova import flags
 from nova import utils
@@ -35,14 +36,14 @@ from nova.virt.powervm import lpar as LPAR
 
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 def get_powervm_operator():
-    if FLAGS.powervm_mgr_type == 'ivm':
-        return IVMOperator(common.Connection(FLAGS.powervm_mgr,
-                                             FLAGS.powervm_mgr_user,
-                                             FLAGS.powervm_mgr_passwd))
+    if CONF.powervm_mgr_type == 'ivm':
+        return IVMOperator(common.Connection(CONF.powervm_mgr,
+                                             CONF.powervm_mgr_user,
+                                             CONF.powervm_mgr_passwd))
 
 
 class PowerVMOperator(object):
@@ -217,14 +218,14 @@ class PowerVMOperator(object):
             """Fetch image from glance and copy it to the remote system."""
             try:
                 file_name = '.'.join([image_id, 'gz'])
-                file_path = os.path.join(FLAGS.powervm_img_local_path,
+                file_path = os.path.join(CONF.powervm_img_local_path,
                                          file_name)
                 LOG.debug(_("Fetching image '%s' from glance") % image_id)
                 images.fetch_to_raw(context, image_id, file_path,
                                     instance['user_id'],
                                     project_id=instance['project_id'])
                 LOG.debug(_("Copying image '%s' to IVM") % file_path)
-                remote_path = FLAGS.powervm_img_remote_path
+                remote_path = CONF.powervm_img_remote_path
                 remote_file_name, size = self._operator.copy_image_file(
                                                         file_path, remote_path)
                 # Logical volume

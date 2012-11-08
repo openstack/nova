@@ -21,8 +21,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import nodes
 
-FLAGS = flags.FLAGS
-
 LOG = logging.getLogger(__name__)
 
 

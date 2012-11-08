@@ -22,6 +22,7 @@ Management class for Pool-related functions (join, eject, etc).
 import urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -40,8 +41,8 @@ xenapi_pool_opts = [
                 help='To use for hosts with different CPUs'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(xenapi_pool_opts)
+CONF = config.CONF
+CONF.register_opts(xenapi_pool_opts)
 
 
 class ResourcePool(object):
@@ -110,7 +111,7 @@ class ResourcePool(object):
             # whether we can serve the request from this host or not.
             master_compute = self._get_metadata(context,
                     aggregate.id)['master_compute']
-            if master_compute == FLAGS.host and master_compute != host:
+            if master_compute == CONF.host and master_compute != host:
                 # this is the master ->  do a pool-join
                 # To this aim, nova compute on the slave has to go down.
                 # NOTE: it is assumed that ONLY nova compute is running now
@@ -147,7 +148,7 @@ class ResourcePool(object):
 
         master_compute = self._get_metadata(context,
                 aggregate.id)['master_compute']
-        if master_compute == FLAGS.host and master_compute != host:
+        if master_compute == CONF.host and master_compute != host:
             # this is the master -> instruct it to eject a host from the pool
             host_uuid = self._get_metadata(context, aggregate.id)[host]
             self._eject_slave(aggregate.id,
@@ -190,10 +191,10 @@ class ResourcePool(object):
                     'url': url,
                     'user': user,
                     'password': passwd,
-                    'force': jsonutils.dumps(FLAGS.use_join_force),
+                    'force': jsonutils.dumps(CONF.use_join_force),
                     'master_addr': self._host_addr,
-                    'master_user': FLAGS.xenapi_connection_username,
-                    'master_pass': FLAGS.xenapi_connection_password, }
+                    'master_user': CONF.xenapi_connection_username,
+                    'master_pass': CONF.xenapi_connection_password, }
             self._session.call_plugin('xenhost', 'host_join', args)
         except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-Join failed: %(e)s") % locals())
@@ -249,12 +250,12 @@ class ResourcePool(object):
         # because this might be 169.254.0.1, i.e. xenapi
         # NOTE: password in clear is not great, but it'll do for now
         sender_url = swap_xapi_host(
-            FLAGS.xenapi_connection_url, self._host_addr)
+            CONF.xenapi_connection_url, self._host_addr)
 
         return {
             "url": sender_url,
-            "user": FLAGS.xenapi_connection_username,
-            "passwd": FLAGS.xenapi_connection_password,
+            "user": CONF.xenapi_connection_username,
+            "passwd": CONF.xenapi_connection_password,
             "compute_uuid": vm_utils.get_this_vm_uuid(),
             "xenhost_uuid": self._host_uuid,
         }
