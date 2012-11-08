@@ -178,6 +178,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 result = str(result)
                 expected = expected.replace('int:', '')
             expected = expected % subs
+            expected = '^%s$' % expected
             match = re.match(expected, result)
             if not match:
                 raise NoMatch(_('Values do not match:\n'
@@ -225,7 +226,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                          '(Z|(\+|-)\d{2}:\d{2}|\.\d{6})',
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
-            'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]',
+            'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]{1,4}',
             'id': '(?P<id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                   '-[0-9a-f]{4}-[0-9a-f]{12})',
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
