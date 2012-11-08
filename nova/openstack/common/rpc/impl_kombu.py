@@ -31,9 +31,9 @@ import kombu.messaging
 
 from nova.openstack.common import cfg
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import network_utils
 from nova.openstack.common.rpc import amqp as rpc_amqp
 from nova.openstack.common.rpc import common as rpc_common
-from nova.openstack.common import network_utils
 
 kombu_opts = [
     cfg.StrOpt('kombu_ssl_version',
@@ -267,6 +267,7 @@ class FanoutConsumer(ConsumerBase):
 
         # Default options
         options = {'durable': False,
+                   'queue_arguments': _get_queue_arguments(conf),
                    'auto_delete': True,
                    'exclusive': True}
         options.update(kwargs)
@@ -776,7 +777,7 @@ def cast_to_server(conf, context, server_params, topic, msg):
 
 def fanout_cast_to_server(conf, context, server_params, topic, msg):
     """Sends a message on a fanout exchange to a specific server."""
-    return rpc_amqp.cast_to_server(
+    return rpc_amqp.fanout_cast_to_server(
         conf, context, server_params, topic, msg,
         rpc_amqp.get_connection_pool(conf, Connection))
 

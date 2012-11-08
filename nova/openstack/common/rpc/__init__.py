@@ -250,7 +250,7 @@ def queue_get_for(context, topic, host):
     Messages sent to the 'foo.<host>' topic are sent to the nova-foo service on
     <host>.
     """
-    return '%s.%s' % (topic, host)
+    return '%s.%s' % (topic, host) if host else topic
 
 
 _RPCIMPL = None
