@@ -259,7 +259,7 @@ class CloudTestCase(test.TestCase):
                                                  project_id=project_id)
 
         fixed_ips = nw_info.fixed_ips()
-        ec2_id = ec2utils.id_to_ec2_inst_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_inst_id(inst['uuid'])
 
         self.stubs.Set(ec2utils, 'get_ip_info_for_instance',
                        lambda *args: {'fixed_ips': ['10.0.0.1'],
@@ -2022,6 +2022,13 @@ class CloudTestCase(test.TestCase):
                         'status': 'in-use'}
             raise exception.VolumeNotFound(volume_id=volume_id)
         self.stubs.Set(db, 'volume_get', fake_volume_get)
+
+        def fake_get_instance_uuid_by_ec2_id(ctxt, int_id):
+            if int_id == 305419896:
+                return 'e5fe5518-0288-4fa3-b0c4-c79764101b85'
+            raise exception.InstanceNotFound(instance_id=int_id)
+        self.stubs.Set(db, 'get_instance_uuid_by_ec2_id',
+                       fake_get_instance_uuid_by_ec2_id)
 
         get_attribute = functools.partial(
             self.cloud.describe_instance_attribute,

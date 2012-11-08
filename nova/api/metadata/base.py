@@ -110,7 +110,7 @@ class InstanceMetadata():
         self.ec2_ids = {}
 
         self.ec2_ids['instance-id'] = ec2utils.id_to_ec2_inst_id(
-                instance['id'])
+            instance['uuid'])
         self.ec2_ids['ami-id'] = ec2utils.glance_id_to_ec2_id(ctxt,
             instance['image_ref'])
 
