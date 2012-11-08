@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<hosts>
+  <host host_name="e5e145b49d244d97982c922e101859fd" service="compute"/>
+  <host host_name="6d85457c4d884047b41999540c2bf454" service="cert"/>
+  <host host_name="1f9a3cef66bd450aa004655ef239ddee" service="network"/>
+  <host host_name="c6fd14f8e3be44628e76ae4a6e88cffb" service="scheduler"/>
+</hosts>
