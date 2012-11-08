@@ -416,7 +416,7 @@ def get_disk_type(path):
     if path.startswith('/dev'):
         return 'lvm'
 
-    return images.qemu_img_info(path)['file format']
+    return images.qemu_img_info(path).file_format
 
 
 def get_fs_info(path):

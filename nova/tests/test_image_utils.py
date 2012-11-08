@@ -18,9 +18,92 @@ from nova import test
 from nova import utils
 
 from nova.virt import images
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 class ImageUtilsTestCase(test.TestCase):
+    def test_disk_type(self):
+        # Seems like lvm detection
+        # if its in /dev ??
+        for p in ['/dev/b', '/dev/blah/blah']:
+            d_type = libvirt_utils.get_disk_type(p)
+            self.assertEquals('lvm', d_type)
+        # Try the other types
+        template_output = """image: %(path)s
+file format: %(format)s
+virtual size: 64M (67108864 bytes)
+cluster_size: 65536
+disk size: 96K
+"""
+        path = '/myhome/disk.config'
+        for f in ['raw', 'qcow2']:
+            output = template_output % ({
+                'format': f,
+                'path': path,
+            })
+            self.mox.StubOutWithMock(utils, 'execute')
+            utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                          'qemu-img', 'info', path).AndReturn((output, ''))
+            self.mox.ReplayAll()
+            d_type = libvirt_utils.get_disk_type(path)
+            self.assertEquals(f, d_type)
+            self.mox.UnsetStubs()
+
+    def test_disk_backing(self):
+        path = '/myhome/disk.config'
+        template_output = """image: %(path)s
+file format: raw
+virtual size: 2K (2048 bytes)
+cluster_size: 65536
+disk size: 96K
+"""
+        output = template_output % ({
+            'path': path,
+        })
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                      'qemu-img', 'info', path).AndReturn((output, ''))
+        self.mox.ReplayAll()
+        d_backing = libvirt_utils.get_disk_backing_file(path)
+        self.assertEquals(None, d_backing)
+
+    def test_disk_size(self):
+        path = '/myhome/disk.config'
+        template_output = """image: %(path)s
+file format: raw
+virtual size: %(v_size)s (%(vsize_b)s bytes)
+cluster_size: 65536
+disk size: 96K
+"""
+        for i in range(0, 128):
+            bytes = i * 65336
+            kbytes = bytes / 1024
+            mbytes = kbytes / 1024
+            output = template_output % ({
+                'v_size': "%sM" % (mbytes),
+                'vsize_b': i,
+                'path': path,
+            })
+            self.mox.StubOutWithMock(utils, 'execute')
+            utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                          'qemu-img', 'info', path).AndReturn((output, ''))
+            self.mox.ReplayAll()
+            d_size = libvirt_utils.get_disk_size(path)
+            self.assertEquals(i, d_size)
+            self.mox.UnsetStubs()
+            output = template_output % ({
+                'v_size': "%sK" % (kbytes),
+                'vsize_b': i,
+                'path': path,
+            })
+            self.mox.StubOutWithMock(utils, 'execute')
+            utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                          'qemu-img', 'info', path).AndReturn((output, ''))
+            self.mox.ReplayAll()
+            d_size = libvirt_utils.get_disk_size(path)
+            self.assertEquals(i, d_size)
+            self.mox.UnsetStubs()
+
     def test_qemu_info_canon(self):
         path = "disk.config"
         example_output = """image: disk.config
