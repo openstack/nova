@@ -17,11 +17,17 @@
 
 """Tests for network API"""
 
+import random
+
 from nova import context
+from nova import exception
 from nova import network
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import rpc
 from nova import test
+
+
+FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
 
 class ApiTestCase(test.TestCase):
@@ -142,3 +148,52 @@ class ApiTestCase(test.TestCase):
                 'migrate_instance_finish', False, info)
         self.network_api.migrate_instance_finish(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
+
+    def test_is_multi_host_instance_has_no_fixed_ip(self):
+        def fake_fixed_ip_get_by_instance(ctxt, uuid):
+            raise exception.FixedIpNotFoundForInstance
+        self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
+                       fake_fixed_ip_get_by_instance)
+        instance = {'uuid': FAKE_UUID}
+        self.assertFalse(self.network_api._is_multi_host(self.context,
+                                                         instance))
+
+    def test_is_multi_host_network_has_no_project_id(self):
+        is_multi_host = random.choice([True, False])
+        network = {'project_id': None,
+                   'multi_host': is_multi_host, }
+        network_ref = self.network_api.db.network_create_safe(
+                                                 self.context.elevated(),
+                                                 network)
+
+        def fake_fixed_ip_get_by_instance(ctxt, uuid):
+            fixed_ip = [{'network_id': network_ref['id'],
+                         'instance_uuid': FAKE_UUID, }]
+            return fixed_ip
+
+        self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
+                       fake_fixed_ip_get_by_instance)
+
+        instance = {'uuid': FAKE_UUID}
+        result = self.network_api._is_multi_host(self.context, instance)
+        self.assertEqual(is_multi_host, result)
+
+    def test_is_multi_host_network_has_project_id(self):
+        is_multi_host = random.choice([True, False])
+        network = {'project_id': self.context.project_id,
+                   'multi_host': is_multi_host, }
+        network_ref = self.network_api.db.network_create_safe(
+                                                 self.context.elevated(),
+                                                 network)
+
+        def fake_fixed_ip_get_by_instance(ctxt, uuid):
+            fixed_ip = [{'network_id': network_ref['id'],
+                         'instance_uuid': FAKE_UUID, }]
+            return fixed_ip
+
+        self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
+                       fake_fixed_ip_get_by_instance)
+
+        instance = {'uuid': FAKE_UUID}
+        result = self.network_api._is_multi_host(self.context, instance)
+        self.assertEqual(is_multi_host, result)
