@@ -20,6 +20,7 @@
 import socket
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import config
 from nova import exception
 from nova import flags
 from nova import manager
@@ -41,8 +42,8 @@ console_manager_opts = [
                help='Publicly visible name for this console host'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(console_manager_opts)
+CONF = config.CONF
+CONF.register_opts(console_manager_opts)
 LOG = logging.getLogger(__name__)
 
 
@@ -57,7 +58,7 @@ class ConsoleProxyManager(manager.Manager):
 
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
-            console_driver = FLAGS.console_driver
+            console_driver = CONF.console_driver
         self.driver = importutils.import_object(console_driver)
         super(ConsoleProxyManager, self).__init__(*args, **kwargs)
         self.driver.host = self.host
@@ -118,7 +119,7 @@ class ConsoleProxyManager(manager.Manager):
             #NOTE(mdragon): Right now, the only place this info exists is the
             #               compute worker's flagfile, at least for
             #               xenserver. Thus we ned to ask.
-            if FLAGS.stub_compute:
+            if CONF.stub_compute:
                 pool_info = {'address': '127.0.0.1',
                              'username': 'test',
                              'password': '1234pass'}
@@ -128,7 +129,7 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host
-            pool_info['public_hostname'] = FLAGS.console_public_hostname
+            pool_info['public_hostname'] = CONF.console_public_hostname
             pool_info['console_type'] = self.driver.console_type
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)

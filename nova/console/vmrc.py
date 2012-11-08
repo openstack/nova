@@ -19,6 +19,7 @@
 
 import base64
 
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -35,8 +36,8 @@ vmrc_opts = [
                help="number of retries for retrieving VMRC information"),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(vmrc_opts)
+CONF = config.CONF
+CONF.register_opts(vmrc_opts)
 
 
 class VMRCConsole(object):
@@ -51,7 +52,7 @@ class VMRCConsole(object):
 
     def get_port(self, context):
         """Get available port for consoles."""
-        return FLAGS.console_vmrc_port
+        return CONF.console_vmrc_port
 
     def setup_console(self, context, console):
         """Sets up console."""

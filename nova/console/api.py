@@ -18,14 +18,14 @@
 """Handles ConsoleProxy API requests."""
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import config
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import flags
 from nova.openstack.common import rpc
 from nova.openstack.common import uuidutils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class API(base.Base):
@@ -42,7 +42,7 @@ class API(base.Base):
 
     def delete_console(self, context, instance_uuid, console_uuid):
         console = self.db.console_get(context, console_uuid, instance_uuid)
-        topic = rpc.queue_get_for(context, FLAGS.console_topic,
+        topic = rpc.queue_get_for(context, CONF.console_topic,
                                   console['pool']['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.remove_console(context, console['id'])
