@@ -17,6 +17,7 @@ function usage {
   echo "  -P, --no-pep8            Don't run static code checks"
   echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
+  echo "  -v, --verbose            Display nosetests in the console"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
@@ -39,6 +40,7 @@ function process_option {
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
     -c|--coverage) coverage=1;;
+    -v|--verbose) verbose=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
   esac
@@ -59,6 +61,7 @@ no_pep8=0
 coverage=0
 recreate_db=1
 patch_migrate=1
+verbose=0
 
 export NOSE_WITH_OPENSTACK=1
 export NOSE_OPENSTACK_COLOR=1
@@ -88,7 +91,13 @@ function run_tests {
   # Cleanup *pyc
   ${wrapper} find . -type f -name "*.pyc" -delete
   # Just run the test suites in current environment
-  ${wrapper} $NOSETESTS | tee nosetests.log
+  if [ "$verbose" -eq 1 ];
+  then
+     ${wrapper} $NOSETESTS 2>&1 | tee nosetests.log
+  else
+     ${wrapper} $NOSETESTS | tee nosetests.log
+  fi
+
   # If we get some short import error right away, print the error log directly
   RESULT=$?
   if [ "$RESULT" -ne "0" ];
