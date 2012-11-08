@@ -2986,7 +2986,7 @@ class LibvirtDriver(driver.ComputeDriver):
             mem = domain.memoryStats()
             for key in mem.keys():
                 output["memory-" + key] = mem[key]
-        except libvirt.libvirtError:
+        except (libvirt.libvirtError, AttributeError):
             pass
         return output
 
