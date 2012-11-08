@@ -1284,6 +1284,10 @@ class NetworkManager(manager.SchedulerDependentManager):
             network = self._get_network_by_id(context, network_id)
         self._allocate_fixed_ips(context, instance_id, host, [network])
 
+    def get_backdoor_port(self, context):
+        """Return backdoor port for eventlet_backdoor"""
+        return self.backdoor_port
+
     @wrap_check_policy
     def remove_fixed_ip_from_instance(self, context, instance_id, host,
                                       address):

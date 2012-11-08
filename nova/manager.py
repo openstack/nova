@@ -140,6 +140,7 @@ class Manager(base.Base):
             host = CONF.host
         self.host = host
         self.load_plugins()
+        self.backdoor_port = None
         super(Manager, self).__init__(db_driver)
 
     def load_plugins(self):
