@@ -546,7 +546,7 @@ def _call(addr, context, msg_id, topic, msg, timeout=None):
     timeout = timeout or CONF.rpc_response_timeout
 
     # The msg_id is used to track replies.
-    msg_id = str(uuid.uuid4().hex)
+    msg_id = uuid.uuid4().hex
 
     # Replies always come into the reply service.
     reply_topic = "zmq_replies.%s" % CONF.rpc_zmq_host
