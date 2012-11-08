@@ -136,27 +136,28 @@ class HostManagerTestCase(test.TestCase):
         host_manager.LOG.warn("No service for compute ID 5")
 
         self.mox.ReplayAll()
-        host_states = self.host_manager.get_all_host_states(context, topic)
+        self.host_manager.get_all_host_states(context, topic)
+        host_states_map = self.host_manager.host_state_map
 
-        self.assertEqual(len(host_states), 4)
+        self.assertEqual(len(host_states_map), 4)
         # Check that .service is set properly
         for i in xrange(4):
             compute_node = fakes.COMPUTE_NODES[i]
             host = compute_node['service']['host']
-            self.assertEqual(host_states[host].service,
+            self.assertEqual(host_states_map[host].service,
                     compute_node['service'])
-        self.assertEqual(host_states['host1'].free_ram_mb, 512)
+        self.assertEqual(host_states_map['host1'].free_ram_mb, 512)
         # 511GB
-        self.assertEqual(host_states['host1'].free_disk_mb, 524288)
-        self.assertEqual(host_states['host2'].free_ram_mb, 1024)
+        self.assertEqual(host_states_map['host1'].free_disk_mb, 524288)
+        self.assertEqual(host_states_map['host2'].free_ram_mb, 1024)
         # 1023GB
-        self.assertEqual(host_states['host2'].free_disk_mb, 1048576)
-        self.assertEqual(host_states['host3'].free_ram_mb, 3072)
+        self.assertEqual(host_states_map['host2'].free_disk_mb, 1048576)
+        self.assertEqual(host_states_map['host3'].free_ram_mb, 3072)
         # 3071GB
-        self.assertEqual(host_states['host3'].free_disk_mb, 3145728)
-        self.assertEqual(host_states['host4'].free_ram_mb, 8192)
+        self.assertEqual(host_states_map['host3'].free_disk_mb, 3145728)
+        self.assertEqual(host_states_map['host4'].free_ram_mb, 8192)
         # 8191GB
-        self.assertEqual(host_states['host4'].free_disk_mb, 8388608)
+        self.assertEqual(host_states_map['host4'].free_disk_mb, 8388608)
 
 
 class HostStateTestCase(test.TestCase):
