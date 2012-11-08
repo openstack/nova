@@ -845,7 +845,7 @@ class RBDDriver(VolumeDriver):
         # TODO(jdurgin): replace with librbd
         # this is a temporary hack, since rewriting this driver
         # to use librbd would take too long
-        if FLAGS.volume_tmp_dir and not os.exists(FLAGS.volume_tmp_dir):
+        if FLAGS.volume_tmp_dir and not os.path.exists(FLAGS.volume_tmp_dir):
             os.makedirs(FLAGS.volume_tmp_dir)
 
         with tempfile.NamedTemporaryFile(dir=FLAGS.volume_tmp_dir) as tmp:
