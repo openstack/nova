@@ -155,6 +155,7 @@ class BaseTestCase(test.TestCase):
             'vcpus': 1,
             'host': None,
             'instance_type_id': 1,
+            'launched_on': None,
         }
         instance.update(kwargs)
 
@@ -799,3 +800,14 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
         self.tracker.update_available_resource(self.context)
         self.assertEqual(1, len(self.tracker.tracked_migrations))
+
+    def test_set_instance_host(self):
+        instance = self._fake_instance()
+        self.assertEqual(None, instance['host'])
+        self.assertEqual(None, instance['launched_on'])
+
+        claim = self.tracker.instance_claim(self.context, instance)
+        self.assertNotEqual(0, claim.memory_mb)
+
+        self.assertEqual('fakehost', instance['host'])
+        self.assertEqual('fakehost', instance['launched_on'])
