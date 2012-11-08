@@ -255,6 +255,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def provider_fw_rule_get_all(self, context):
         return self._compute.db.provider_fw_rule_get_all(context)
 
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        return self._compute.db.agent_build_get_by_triple(context,
+                                                          hypervisor,
+                                                          os,
+                                                          architecture)
+
 
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""

@@ -32,7 +32,6 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import config
 from nova import context as nova_context
-from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
@@ -537,7 +536,7 @@ class VMOps(object):
             greenthread.sleep(0.5)
 
         if self.agent_enabled:
-            agent_build = db.agent_build_get_by_triple(
+            agent_build = self._virtapi.agent_build_get_by_triple(
                 ctx, 'xen', instance['os_type'], instance['architecture'])
             if agent_build:
                 LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s'

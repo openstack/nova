@@ -98,3 +98,13 @@ class VirtAPI(object):
         :param context: security context
         """
         raise NotImplementedError()
+
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        """Get information about the available agent builds for a given
+        hypervisor, os, and architecture
+        :param context: security context
+        :param hypervisor: agent hypervisor type
+        :param os: agent operating system type
+        :param architecture: agent architecture
+        """
+        raise NotImplementedError()
