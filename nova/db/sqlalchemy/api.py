@@ -1944,18 +1944,6 @@ def key_pair_destroy(context, user_id, name):
 
 
 @require_context
-def key_pair_destroy_all_by_user(context, user_id):
-    authorize_user_context(context, user_id)
-    session = get_session()
-    with session.begin():
-        session.query(models.KeyPair).\
-                filter_by(user_id=user_id).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
-
-
-@require_context
 def key_pair_get(context, user_id, name, session=None):
     authorize_user_context(context, user_id)
     result = model_query(context, models.KeyPair, session=session).\
@@ -2035,11 +2023,6 @@ def network_associate(context, project_id, network_id=None, force=False):
             network_ref['project_id'] = project_id
             session.add(network_ref)
     return network_ref
-
-
-@require_admin_context
-def network_count(context):
-    return model_query(context, models.Network).count()
 
 
 @require_admin_context
@@ -2388,14 +2371,6 @@ def quota_update(context, project_id, resource, limit):
         quota_ref.save(session=session)
 
 
-@require_admin_context
-def quota_destroy(context, project_id, resource):
-    session = get_session()
-    with session.begin():
-        quota_ref = quota_get(context, project_id, resource, session=session)
-        quota_ref.delete(session=session)
-
-
 ###################
 
 
@@ -2446,28 +2421,6 @@ def quota_class_update(context, class_name, resource, limit):
                                           session=session)
         quota_class_ref.hard_limit = limit
         quota_class_ref.save(session=session)
-
-
-@require_admin_context
-def quota_class_destroy(context, class_name, resource):
-    session = get_session()
-    with session.begin():
-        quota_class_ref = quota_class_get(context, class_name, resource,
-                                          session=session)
-        quota_class_ref.delete(session=session)
-
-
-@require_admin_context
-def quota_class_destroy_all_by_name(context, class_name):
-    session = get_session()
-    with session.begin():
-        quota_classes = model_query(context, models.QuotaClass,
-                                    session=session, read_deleted="no").\
-                                filter_by(class_name=class_name).\
-                                all()
-
-        for quota_class_ref in quota_classes:
-            quota_class_ref.delete(session=session)
 
 
 ###################
@@ -2538,15 +2491,6 @@ def quota_usage_update(context, project_id, resource, session=None, **kwargs):
             do_update(session)
 
 
-@require_admin_context
-def quota_usage_destroy(context, project_id, resource):
-    session = get_session()
-    with session.begin():
-        quota_usage_ref = quota_usage_get(context, project_id, resource,
-                                          session=session)
-        quota_usage_ref.delete(session=session)
-
-
 ###################
 
 
@@ -2559,22 +2503,6 @@ def reservation_get(context, uuid, session=None):
 
     if not result:
         raise exception.ReservationNotFound(uuid=uuid)
-
-    return result
-
-
-@require_context
-def reservation_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
-
-    rows = model_query(context, models.QuotaUsage, read_deleted="no").\
-                   filter_by(project_id=project_id).\
-                   all()
-
-    result = {'project_id': project_id}
-    for row in rows:
-        result.setdefault(row.resource, {})
-        result[row.resource][row.uuid] = row.delta
 
     return result
 
@@ -2946,68 +2874,6 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
         raise exception.SnapshotNotFound(snapshot_id=ec2_id)
 
     return result['uuid']
-
-
-###################
-
-
-@require_context
-def snapshot_create(context, values):
-    snapshot_ref = models.Snapshot()
-    if not values.get('id'):
-        values['id'] = str(utils.gen_uuid())
-    snapshot_ref.update(values)
-
-    session = get_session()
-    with session.begin():
-        snapshot_ref.save(session=session)
-    return snapshot_ref
-
-
-@require_admin_context
-def snapshot_destroy(context, snapshot_id):
-    session = get_session()
-    with session.begin():
-        session.query(models.Snapshot).\
-                filter_by(id=snapshot_id).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
-
-
-@require_context
-def snapshot_get(context, snapshot_id, session=None):
-    result = model_query(context, models.Snapshot, session=session,
-                         project_only=True).\
-                filter_by(id=snapshot_id).\
-                first()
-
-    if not result:
-        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
-
-    return result
-
-
-@require_admin_context
-def snapshot_get_all(context):
-    return model_query(context, models.Snapshot).all()
-
-
-@require_context
-def snapshot_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
-    return model_query(context, models.Snapshot).\
-                   filter_by(project_id=project_id).\
-                   all()
-
-
-@require_context
-def snapshot_update(context, snapshot_id, values):
-    session = get_session()
-    with session.begin():
-        snapshot_ref = snapshot_get(context, snapshot_id, session=session)
-        snapshot_ref.update(values)
-        snapshot_ref.save(session=session)
 
 
 ###################
@@ -3906,15 +3772,6 @@ def instance_system_metadata_get(context, instance_uuid, session=None):
         result[row['key']] = row['value']
 
     return result
-
-
-@require_context
-def instance_system_metadata_delete(context, instance_uuid, key):
-    _instance_system_metadata_get_query(context, instance_uuid).\
-        filter_by(key=key).\
-        update({'deleted': True,
-                'deleted_at': timeutils.utcnow(),
-                'updated_at': literal_column('updated_at')})
 
 
 def _instance_system_metadata_get_item(context, instance_uuid, key,

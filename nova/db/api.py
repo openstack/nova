@@ -736,11 +736,6 @@ def key_pair_destroy(context, user_id, name):
     return IMPL.key_pair_destroy(context, user_id, name)
 
 
-def key_pair_destroy_all_by_user(context, user_id):
-    """Destroy all key_pairs by user."""
-    return IMPL.key_pair_destroy_all_by_user(context, user_id)
-
-
 def key_pair_get(context, user_id, name):
     """Get a key_pair or raise if it does not exist."""
     return IMPL.key_pair_get(context, user_id, name)
@@ -762,11 +757,6 @@ def key_pair_count_by_user(context, user_id):
 def network_associate(context, project_id, network_id=None, force=False):
     """Associate a free network to a project."""
     return IMPL.network_associate(context, project_id, network_id, force)
-
-
-def network_count(context):
-    """Return the number of networks."""
-    return IMPL.network_count(context)
 
 
 def network_count_reserved_ips(context, network_id):
@@ -791,11 +781,6 @@ def network_delete_safe(context, network_id):
 
     """
     return IMPL.network_delete_safe(context, network_id)
-
-
-def network_create_fixed_ips(context, network_id, num_vpn_clients):
-    """Create the ips for the network, reserving sepecified ips."""
-    return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
 
 
 def network_disassociate(context, network_id):
@@ -858,16 +843,6 @@ def network_get_all_by_host(context, host):
     return IMPL.network_get_all_by_host(context, host)
 
 
-def network_get_index(context, network_id):
-    """Get non-conflicting index for network."""
-    return IMPL.network_get_index(context, network_id)
-
-
-def network_set_cidr(context, network_id, cidr):
-    """Set the Classless Inner Domain Routing for the network."""
-    return IMPL.network_set_cidr(context, network_id, cidr)
-
-
 def network_set_host(context, network_id, host_id):
     """Safely set the host for network."""
     return IMPL.network_set_host(context, network_id, host_id)
@@ -924,11 +899,6 @@ def quota_update(context, project_id, resource, limit):
     return IMPL.quota_update(context, project_id, resource, limit)
 
 
-def quota_destroy(context, project_id, resource):
-    """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy(context, project_id, resource)
-
-
 ###################
 
 
@@ -950,16 +920,6 @@ def quota_class_get_all_by_name(context, class_name):
 def quota_class_update(context, class_name, resource, limit):
     """Update a quota class or raise if it does not exist."""
     return IMPL.quota_class_update(context, class_name, resource, limit)
-
-
-def quota_class_destroy(context, class_name, resource):
-    """Destroy the quota class or raise if it does not exist."""
-    return IMPL.quota_class_destroy(context, class_name, resource)
-
-
-def quota_class_destroy_all_by_name(context, class_name):
-    """Destroy all quotas associated with a given quota class."""
-    return IMPL.quota_class_destroy_all_by_name(context, class_name)
 
 
 ###################
@@ -987,11 +947,6 @@ def quota_usage_update(context, project_id, resource, **kwargs):
     return IMPL.quota_usage_update(context, project_id, resource, **kwargs)
 
 
-def quota_usage_destroy(context, project_id, resource):
-    """Destroy the quota usage or raise if it does not exist."""
-    return IMPL.quota_usage_destroy(context, project_id, resource)
-
-
 ###################
 
 
@@ -1005,11 +960,6 @@ def reservation_create(context, uuid, usage, project_id, resource, delta,
 def reservation_get(context, uuid):
     """Retrieve a reservation or raise if it does not exist."""
     return IMPL.reservation_get(context, uuid)
-
-
-def reservation_get_all_by_project(context, project_id):
-    """Retrieve all reservations associated with a given project."""
-    return IMPL.reservation_get_all_by_project(context, project_id)
 
 
 def reservation_destroy(context, uuid):
@@ -1077,43 +1027,6 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id):
 
 def ec2_snapshot_create(context, snapshot_id, forced_id=None):
     return IMPL.ec2_snapshot_create(context, snapshot_id, forced_id)
-
-
-####################
-
-
-def snapshot_create(context, values):
-    """Create a snapshot from the values dictionary."""
-    return IMPL.snapshot_create(context, values)
-
-
-def snapshot_destroy(context, snapshot_id):
-    """Destroy the snapshot or raise if it does not exist."""
-    return IMPL.snapshot_destroy(context, snapshot_id)
-
-
-def snapshot_get(context, snapshot_id):
-    """Get a snapshot or raise if it does not exist."""
-    return IMPL.snapshot_get(context, snapshot_id)
-
-
-def snapshot_get_all(context):
-    """Get all snapshots."""
-    return IMPL.snapshot_get_all(context)
-
-
-def snapshot_get_all_by_project(context, project_id):
-    """Get all snapshots belonging to a project."""
-    return IMPL.snapshot_get_all_by_project(context, project_id)
-
-
-def snapshot_update(context, snapshot_id, values):
-    """Set the given properties on a snapshot and update it.
-
-    Raises NotFound if snapshot does not exist.
-
-    """
-    return IMPL.snapshot_update(context, snapshot_id, values)
 
 
 ####################
@@ -1414,11 +1327,6 @@ def instance_metadata_update(context, instance_uuid, metadata, delete):
 def instance_system_metadata_get(context, instance_uuid):
     """Get all system metadata for an instance."""
     return IMPL.instance_system_metadata_get(context, instance_uuid)
-
-
-def instance_system_metadata_delete(context, instance_uuid, key):
-    """Delete the given system metadata item."""
-    IMPL.instance_system_metadata_delete(context, instance_uuid, key)
 
 
 def instance_system_metadata_update(context, instance_uuid, metadata, delete):
