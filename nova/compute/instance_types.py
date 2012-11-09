@@ -86,6 +86,9 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
     kwargs['flavorid'] = unicode(flavorid)
 
     # ensure is_public attribute is boolean
+    if not utils.is_valid_boolstr(is_public):
+        msg = _("is_public must be a boolean")
+        raise exception.InvalidInput(reason=msg)
     kwargs['is_public'] = utils.bool_from_str(is_public)
 
     try:
