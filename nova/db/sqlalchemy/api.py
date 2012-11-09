@@ -1230,12 +1230,12 @@ def _virtual_interface_query(context, session=None):
 
 
 @require_context
-def virtual_interface_get(context, vif_id, session=None):
+def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table.
 
     :param vif_id: = id of the virtual interface
     """
-    vif_ref = _virtual_interface_query(context, session=session).\
+    vif_ref = _virtual_interface_query(context).\
                       filter_by(id=vif_id).\
                       first()
     return vif_ref
@@ -1295,10 +1295,9 @@ def virtual_interface_delete(context, vif_id):
 
     :param vif_id: = id of vif to delete
     """
-    session = get_session()
-    vif_ref = virtual_interface_get(context, vif_id, session)
-    with session.begin():
-        session.delete(vif_ref)
+    _virtual_interface_query(context).\
+                      filter_by(id=vif_id).\
+                      delete()
 
 
 @require_context
@@ -1308,9 +1307,9 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
 
     :param instance_uuid: = uuid of instance
     """
-    vif_refs = virtual_interface_get_by_instance(context, instance_uuid)
-    for vif_ref in vif_refs:
-        virtual_interface_delete(context, vif_ref['id'])
+    _virtual_interface_query(context).\
+           filter_by(instance_uuid=instance_uuid).\
+           delete()
 
 
 @require_context
