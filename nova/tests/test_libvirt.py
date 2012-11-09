@@ -2071,12 +2071,6 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         instance_ref = db.instance_update(self.context, instance_ref['uuid'],
                                           instance_dict)
-        vol_dict = {'status': 'migrating', 'size': 1}
-        volume_ref = db.volume_create(self.context, vol_dict)
-        db.volume_attached(self.context,
-                           volume_ref['id'],
-                           instance_ref['uuid'],
-                           '/dev/fake')
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
@@ -2107,10 +2101,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_get(self.context, instance_ref['id'])
         self.assertTrue(instance_ref['vm_state'] == vm_states.ACTIVE)
         self.assertTrue(instance_ref['power_state'] == power_state.RUNNING)
-        volume_ref = db.volume_get(self.context, volume_ref['id'])
-        self.assertTrue(volume_ref['status'] == 'in-use')
 
-        db.volume_destroy(self.context, volume_ref['id'])
         db.instance_destroy(self.context, instance_ref['uuid'])
 
     def test_pre_live_migration_works_correctly_mocked(self):

@@ -12,15 +12,11 @@
             "maxTotalInstances": 10,
             "maxTotalKeypairs": 100,
             "maxTotalRAMSize": 51200,
-            "maxTotalVolumeGigabytes": 1000,
-            "maxTotalVolumes": 10,
             "totalCoresUsed": 0,
             "totalInstancesUsed": 0,
             "totalKeyPairsUsed": 0,
             "totalRAMUsed": 0,
-            "totalSecurityGroupsUsed": 0,
-            "totalVolumeGigabytesUsed": 0,
-            "totalVolumesUsed": 0
+            "totalSecurityGroupsUsed": 0
         },
         "rate": [
             {

@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Quotas for instances, volumes, and floating ips."""
+"""Quotas for instances, and floating ips."""
 
 import datetime
 
@@ -42,13 +42,7 @@ quota_opts = [
     cfg.IntOpt('quota_ram',
                default=50 * 1024,
                help='megabytes of instance ram allowed per project'),
-    cfg.IntOpt('quota_volumes',
-               default=10,
-               help='number of volumes allowed per project'),
-    cfg.IntOpt('quota_gigabytes',
-               default=1000,
-               help='number of volume gigabytes allowed per project'),
-    cfg.IntOpt('quota_floating_ips',
+   cfg.IntOpt('quota_floating_ips',
                default=10,
                help='number of floating ips allowed per project'),
     cfg.IntOpt('quota_metadata_items',
@@ -814,12 +808,6 @@ def _sync_instances(context, project_id, session):
                 context, project_id, session=session)))
 
 
-def _sync_volumes(context, project_id, session):
-    return dict(zip(('volumes', 'gigabytes'),
-                    db.volume_data_get_for_project(
-                context, project_id, session=session)))
-
-
 def _sync_floating_ips(context, project_id, session):
     return dict(floating_ips=db.floating_ip_count_by_project(
             context, project_id, session=session))
@@ -837,8 +825,6 @@ resources = [
     ReservableResource('instances', _sync_instances, 'quota_instances'),
     ReservableResource('cores', _sync_instances, 'quota_cores'),
     ReservableResource('ram', _sync_instances, 'quota_ram'),
-    ReservableResource('volumes', _sync_volumes, 'quota_volumes'),
-    ReservableResource('gigabytes', _sync_volumes, 'quota_gigabytes'),
     ReservableResource('floating_ips', _sync_floating_ips,
                        'quota_floating_ips'),
     AbsoluteResource('metadata_items', 'quota_metadata_items'),

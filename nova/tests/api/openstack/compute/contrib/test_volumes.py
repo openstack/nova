@@ -136,16 +136,11 @@ class BootFromVolumeTest(test.TestCase):
                 '/dev/vda')
 
 
-def return_volume(context, volume_id):
-    return {'id': volume_id}
-
-
 class VolumeApiTest(test.TestCase):
     def setUp(self):
         super(VolumeApiTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(db, 'volume_get', return_volume)
 
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)

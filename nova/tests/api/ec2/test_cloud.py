@@ -2015,20 +2015,12 @@ class CloudTestCase(test.TestCase):
                 }
         self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
 
-        def fake_volume_get(ctxt, volume_id, session=None):
-            if volume_id == 87654321:
-                return {'id': volume_id,
-                        'attach_time': '13:56:24',
-                        'status': 'in-use'}
-            raise exception.VolumeNotFound(volume_id=volume_id)
-        self.stubs.Set(db, 'volume_get', fake_volume_get)
-
         def fake_get_instance_uuid_by_ec2_id(ctxt, int_id):
             if int_id == 305419896:
                 return 'e5fe5518-0288-4fa3-b0c4-c79764101b85'
             raise exception.InstanceNotFound(instance_id=int_id)
         self.stubs.Set(db, 'get_instance_uuid_by_ec2_id',
-                       fake_get_instance_uuid_by_ec2_id)
+                        fake_get_instance_uuid_by_ec2_id)
 
         get_attribute = functools.partial(
             self.cloud.describe_instance_attribute,
