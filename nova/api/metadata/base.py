@@ -21,6 +21,7 @@
 import base64
 import json
 import os
+import posixpath
 
 from nova.api.ec2 import ec2utils
 from nova import block_device
@@ -314,9 +315,9 @@ class InstanceMetadata():
 
     def lookup(self, path):
         if path == "" or path[0] != "/":
-            path = os.path.normpath("/" + path)
+            path = posixpath.normpath("/" + path)
         else:
-            path = os.path.normpath(path)
+            path = posixpath.normpath(path)
 
         # fix up requests, prepending /ec2 to anything that does not match
         path_tokens = path.split('/')[1:]
