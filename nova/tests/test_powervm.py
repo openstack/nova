@@ -18,15 +18,17 @@
 Test suite for PowerVMDriver.
 """
 
-from nova.compute import power_state
 from nova import context
 from nova import db
 from nova import flags
 from nova import test
 
+from nova.compute import power_state
 from nova.openstack.common import log as logging
 from nova.virt import images
+
 from nova.virt.powervm import driver as powervm_driver
+from nova.virt.powervm import exception
 from nova.virt.powervm import lpar
 from nova.virt.powervm import operator
 
@@ -152,6 +154,28 @@ class PowerVMDriverTestCase(test.TestCase):
                                       self.instance, image_meta, 's3cr3t', [])
         state = self.powervm_connection.get_info(self.instance)['state']
         self.assertEqual(state, power_state.RUNNING)
+
+    def test_spawn_cleanup_on_fail(self):
+        """Verify on a failed spawn, we get the original exception raised"""
+        # helper function
+        def raise_(ex):
+            raise ex
+
+        self.flags(powervm_img_local_path='/images/')
+        self.stubs.Set(images, 'fetch_to_raw', lambda *x, **y: None)
+        self.stubs.Set(
+            self.powervm_connection._powervm._operator,
+            'copy_image_file',
+            lambda *x, **y: raise_(exception.PowerVMImageCreationFailed()))
+        self.stubs.Set(
+            self.powervm_connection._powervm, '_cleanup',
+            lambda *x, **y: raise_(Exception('This should be logged.')))
+
+        self.assertRaises(exception.PowerVMImageCreationFailed,
+                          self.powervm_connection.spawn,
+                          context.get_admin_context(),
+                          self.instance,
+                          {'id': 'ANY_ID'}, 's3cr3t', [])
 
     def test_destroy(self):
         self.powervm_connection.destroy(self.instance, None)

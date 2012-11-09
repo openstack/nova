@@ -26,7 +26,9 @@ from nova import flags
 from nova import utils
 
 from nova.compute import power_state
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -264,7 +266,13 @@ class PowerVMOperator(object):
                 time.sleep(1)
 
         except exception.PowerVMImageCreationFailed:
-            self._cleanup(instance['name'])
+            with excutils.save_and_reraise_exception():
+                # log errors in cleanup
+                try:
+                    self._cleanup(instance['name'])
+                except Exception:
+                    LOG.exception(_('Error while attempting to '
+                                    'clean up failed instance launch.'))
 
     def destroy(self, instance_name):
         """Destroy (shutdown and delete) the specified instance.
