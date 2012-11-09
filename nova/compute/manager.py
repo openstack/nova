@@ -1860,6 +1860,28 @@ class ComputeManager(manager.SchedulerDependentManager):
                     migration, migration['source_compute'],
                     reservations)
 
+    def _refresh_block_device_connection_info(self, context, instance):
+        """After some operations, the IQN or CHAP, for example, may have
+        changed. This call updates the DB with the latest connection info.
+        """
+        bdms = self._get_instance_volume_bdms(context, instance)
+
+        if not bdms:
+            return bdms
+
+        connector = self.driver.get_volume_connector(instance)
+
+        for bdm in bdms:
+            volume = self.volume_api.get(context, bdm['volume_id'])
+            cinfo = self.volume_api.initialize_connection(
+                    context, volume, connector)
+
+            self.conductor_api.block_device_mapping_update(
+                context, bdm['id'],
+                {'connection_info': jsonutils.dumps(cinfo)})
+
+        return bdms
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1901,15 +1923,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
-            bdms = self._get_instance_volume_bdms(context, instance)
-            block_device_info = self._get_instance_volume_block_device_info(
+            bdms = self._refresh_block_device_connection_info(
                     context, instance)
-            if bdms:
-                connector = self.driver.get_volume_connector(instance)
-                for bdm in bdms:
-                    volume = self.volume_api.get(context, bdm['volume_id'])
-                    self.volume_api.initialize_connection(context, volume,
-                                                          connector)
+
+            block_device_info = self._get_instance_volume_block_device_info(
+                    context, instance, bdms=bdms)
 
             self.driver.finish_revert_migration(instance,
                                        self._legacy_nw_info(network_info),
@@ -2171,16 +2189,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
-        bdms = self._get_instance_volume_bdms(context, instance)
+        bdms = self._refresh_block_device_connection_info(context, instance)
+
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance, bdms=bdms)
-
-        if bdms:
-            connector = self.driver.get_volume_connector(instance)
-            for bdm in bdms:
-                volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.initialize_connection(context, volume,
-                                                      connector)
 
         self.driver.finish_migration(context, migration, instance,
                                      disk_info,
@@ -2748,18 +2760,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         required for live migration without shared storage.
 
         """
-        # If any volume is mounted, prepare here.
-        block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance)
-        if not block_device_info['block_device_mapping']:
-            LOG.info(_('Instance has no volume.'), instance=instance)
+        bdms = self._refresh_block_device_connection_info(context, instance)
 
-        # assign the volume to host system
-        # needed by the lefthand volume driver and maybe others
-        connector = self.driver.get_volume_connector(instance)
-        for bdm in self._get_instance_volume_bdms(context, instance):
-            volume = self.volume_api.get(context, bdm['volume_id'])
-            self.volume_api.initialize_connection(context, volume, connector)
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance, bdms=bdms)
 
         network_info = self._get_instance_nw_info(context, instance)
 
