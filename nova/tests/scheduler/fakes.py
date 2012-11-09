@@ -96,8 +96,8 @@ class FakeHostManager(host_manager.HostManager):
 
 
 class FakeHostState(host_manager.HostState):
-    def __init__(self, host, topic, attribute_dict):
-        super(FakeHostState, self).__init__(host, topic)
+    def __init__(self, host, attribute_dict):
+        super(FakeHostState, self).__init__(host)
         for (key, val) in attribute_dict.iteritems():
             setattr(self, key, val)
 

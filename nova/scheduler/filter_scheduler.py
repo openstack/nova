@@ -39,7 +39,6 @@ class FilterScheduler(driver.Scheduler):
     """Scheduler that can be used for filtering and weighing."""
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
-        self.cost_function_cache = {}
         self.options = scheduler_options.SchedulerOptions()
 
     def schedule_run_instance(self, context, request_spec,
@@ -61,9 +60,8 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
-        weighted_hosts = self._schedule(context, CONF.compute_topic,
-                                        request_spec, filter_properties,
-                                        instance_uuids)
+        weighted_hosts = self._schedule(context, request_spec,
+                filter_properties, instance_uuids)
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
@@ -108,8 +106,8 @@ class FilterScheduler(driver.Scheduler):
         the prep_resize operation to it.
         """
 
-        hosts = self._schedule(context, CONF.compute_topic, request_spec,
-                               filter_properties, [instance['uuid']])
+        hosts = self._schedule(context, request_spec, filter_properties,
+                [instance['uuid']])
         if not hosts:
             raise exception.NoValidHost(reason="")
         host = hosts.pop(0)
@@ -220,16 +218,12 @@ class FilterScheduler(driver.Scheduler):
                     "instance %(instance_uuid)s") % locals()
             raise exception.NoValidHost(reason=msg)
 
-    def _schedule(self, context, topic, request_spec, filter_properties,
+    def _schedule(self, context, request_spec, filter_properties,
                   instance_uuids=None):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
         elevated = context.elevated()
-        if topic != CONF.compute_topic:
-            msg = _("Scheduler only understands Compute nodes (for now)")
-            raise NotImplementedError(msg)
-
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
 
@@ -260,8 +254,7 @@ class FilterScheduler(driver.Scheduler):
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
-        hosts = self.host_manager.get_all_host_states(
-                elevated, topic)
+        hosts = self.host_manager.get_all_host_states(elevated)
 
         selected_hosts = []
         if instance_uuids:
@@ -297,15 +290,12 @@ class FilterScheduler(driver.Scheduler):
         selected_hosts.sort(key=operator.attrgetter('weight'))
         return selected_hosts
 
-    def get_cost_functions(self, topic=None):
+    def get_cost_functions(self):
         """Returns a list of tuples containing weights and cost functions to
         use for weighing hosts
         """
-        if topic is None:
-            # Schedulers only support compute right now.
-            topic = CONF.compute_topic
-        if topic in self.cost_function_cache:
-            return self.cost_function_cache[topic]
+        if getattr(self, 'cost_function_cache', None) is not None:
+            return self.cost_function_cache
 
         cost_fns = []
         for cost_fn_str in CONF.least_cost_functions:
@@ -315,7 +305,7 @@ class FilterScheduler(driver.Scheduler):
                 short_name = cost_fn_str
                 cost_fn_str = "%s.%s.%s" % (
                         __name__, self.__class__.__name__, short_name)
-            if not (short_name.startswith('%s_' % topic) or
+            if not (short_name.startswith('compute_') or
                     short_name.startswith('noop')):
                 continue
 
@@ -336,5 +326,5 @@ class FilterScheduler(driver.Scheduler):
                         flag_name=flag_name)
             cost_fns.append((weight, cost_fn))
 
-        self.cost_function_cache[topic] = cost_fns
+        self.cost_function_cache = cost_fns
         return cost_fns

@@ -56,18 +56,16 @@ class HostManagerTestCase(test.TestCase):
         self.host_manager.filter_classes = [ComputeFilterClass1,
                 ComputeFilterClass2]
 
-        # Test 'compute' returns 1 correct function
+        # Test we returns 1 correct function
         filter_fns = self.host_manager._choose_host_filters(None)
         self.assertEqual(len(filter_fns), 1)
         self.assertEqual(filter_fns[0].__func__,
                 ComputeFilterClass2.host_passes.__func__)
 
     def test_filter_hosts(self):
-        topic = 'fake_topic'
-
         filters = ['fake-filter1', 'fake-filter2']
-        fake_host1 = host_manager.HostState('host1', topic)
-        fake_host2 = host_manager.HostState('host2', topic)
+        fake_host1 = host_manager.HostState('host1')
+        fake_host2 = host_manager.HostState('host2')
         hosts = [fake_host1, fake_host2]
         filter_properties = {'fake_prop': 'fake_val'}
 
@@ -93,40 +91,31 @@ class HostManagerTestCase(test.TestCase):
         self.assertDictMatch(service_states, {})
         self.mox.StubOutWithMock(timeutils, 'utcnow')
         timeutils.utcnow().AndReturn(31337)
-        timeutils.utcnow().AndReturn(31338)
         timeutils.utcnow().AndReturn(31339)
 
         host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
                 timestamp=1)
-        host1_volume_capabs = dict(free_disk=4321, timestamp=1)
         host2_compute_capabs = dict(free_memory=8756, timestamp=1)
 
         self.mox.ReplayAll()
         self.host_manager.update_service_capabilities('compute', 'host1',
                 host1_compute_capabs)
-        self.host_manager.update_service_capabilities('volume', 'host1',
-                host1_volume_capabs)
         self.host_manager.update_service_capabilities('compute', 'host2',
                 host2_compute_capabs)
 
-        # Make sure dictionary isn't re-assigned
-        self.assertEqual(self.host_manager.service_states, service_states)
         # Make sure original dictionary wasn't copied
         self.assertEqual(host1_compute_capabs['timestamp'], 1)
 
         host1_compute_capabs['timestamp'] = 31337
-        host1_volume_capabs['timestamp'] = 31338
         host2_compute_capabs['timestamp'] = 31339
 
-        expected = {'host1': {'compute': host1_compute_capabs,
-                              'volume': host1_volume_capabs},
-                    'host2': {'compute': host2_compute_capabs}}
+        expected = {'host1': host1_compute_capabs,
+                    'host2': host2_compute_capabs}
         self.assertDictMatch(service_states, expected)
 
     def test_get_all_host_states(self):
 
         context = 'fake_context'
-        topic = 'compute'
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warn')
@@ -136,7 +125,7 @@ class HostManagerTestCase(test.TestCase):
         host_manager.LOG.warn("No service for compute ID 5")
 
         self.mox.ReplayAll()
-        self.host_manager.get_all_host_states(context, topic)
+        self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
 
         self.assertEqual(len(host_states_map), 4)
@@ -167,7 +156,7 @@ class HostStateTestCase(test.TestCase):
     # in HostManagerTestCase.test_get_all_host_states()
 
     def test_host_state_passes_filters_passes(self):
-        fake_host = host_manager.HostState('host1', 'compute')
+        fake_host = host_manager.HostState('host1')
         filter_properties = {}
 
         cls1 = ComputeFilterClass1()
@@ -184,7 +173,7 @@ class HostStateTestCase(test.TestCase):
         self.assertTrue(result)
 
     def test_host_state_passes_filters_passes_with_ignore(self):
-        fake_host = host_manager.HostState('host1', 'compute')
+        fake_host = host_manager.HostState('host1')
         filter_properties = {'ignore_hosts': ['host2']}
 
         cls1 = ComputeFilterClass1()
@@ -201,7 +190,7 @@ class HostStateTestCase(test.TestCase):
         self.assertTrue(result)
 
     def test_host_state_passes_filters_fails(self):
-        fake_host = host_manager.HostState('host1', 'compute')
+        fake_host = host_manager.HostState('host1')
         filter_properties = {}
 
         cls1 = ComputeFilterClass1()
@@ -218,7 +207,7 @@ class HostStateTestCase(test.TestCase):
         self.assertFalse(result)
 
     def test_host_state_passes_filters_fails_from_ignore(self):
-        fake_host = host_manager.HostState('host1', 'compute')
+        fake_host = host_manager.HostState('host1')
         filter_properties = {'ignore_hosts': ['host1']}
 
         cls1 = ComputeFilterClass1()
@@ -235,7 +224,7 @@ class HostStateTestCase(test.TestCase):
         self.assertFalse(result)
 
     def test_host_state_passes_filters_skipped_from_force(self):
-        fake_host = host_manager.HostState('host1', 'compute')
+        fake_host = host_manager.HostState('host1')
         filter_properties = {'force_hosts': ['host1']}
 
         cls1 = ComputeFilterClass1()
@@ -268,7 +257,7 @@ class HostStateTestCase(test.TestCase):
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
                        updated_at=None)
 
-        host = host_manager.HostState("fakehost", "faketopic")
+        host = host_manager.HostState("fakehost")
         host.update_from_compute_node(compute)
 
         self.assertEqual(5, host.num_instances)
@@ -283,7 +272,7 @@ class HostStateTestCase(test.TestCase):
         self.assertEqual(42, host.num_io_ops)
 
     def test_stat_consumption_from_instance(self):
-        host = host_manager.HostState("fakehost", "faketopic")
+        host = host_manager.HostState("fakehost")
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.BUILDING,
