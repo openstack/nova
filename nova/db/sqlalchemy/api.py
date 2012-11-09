@@ -2499,9 +2499,8 @@ def quota_usage_update(context, project_id, resource, **kwargs):
 
 
 @require_context
-def reservation_get(context, uuid, session=None):
-    result = model_query(context, models.Reservation, session=session,
-                         read_deleted="no").\
+def reservation_get(context, uuid):
+    result = model_query(context, models.Reservation, read_deleted="no").\
                      filter_by(uuid=uuid).\
                      first()
 
@@ -2527,10 +2526,12 @@ def reservation_create(context, uuid, usage, project_id, resource, delta,
 
 @require_admin_context
 def reservation_destroy(context, uuid):
-    session = get_session()
-    with session.begin():
-        reservation_ref = reservation_get(context, uuid, session=session)
-        reservation_ref.delete(session=session)
+    result = model_query(context, models.Reservation, read_deleted="no").\
+                     filter_by(uuid=uuid).\
+                     delete()
+
+    if not result:
+        raise exception.ReservationNotFound(uuid=uuid)
 
 
 ###################
