@@ -98,17 +98,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 fake_context, request_spec, None, None, None, None, {})
         self.assertTrue(self.was_admin)
 
-    def test_schedule_bad_topic(self):
-        """Parameter checking."""
-        sched = fakes.FakeFilterScheduler()
-        fake_context = context.RequestContext('user', 'project')
-        self.assertRaises(NotImplementedError, sched._schedule, fake_context,
-                          "foo", {}, {})
-
     def test_scheduler_includes_launch_index(self):
         fake_context = context.RequestContext('user', 'project')
-        fake_kwargs = {'fake_kwarg1': 'fake_value1',
-                       'fake_kwarg2': 'fake_value2'}
         instance_opts = {'fake_opt1': 'meow'}
         request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
                         'instance_properties': instance_opts}
@@ -129,9 +120,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(self.driver, '_schedule')
         self.mox.StubOutWithMock(self.driver, '_provision_resource')
 
-        self.driver._schedule(fake_context, 'compute',
-                              request_spec, {}, ['fake-uuid1', 'fake-uuid2']
-                              ).AndReturn(['host1', 'host2'])
+        self.driver._schedule(fake_context, request_spec, {},
+                ['fake-uuid1', 'fake-uuid2']).AndReturn(['host1', 'host2'])
         # instance 1
         self.driver._provision_resource(
             fake_context, 'host1',
@@ -181,8 +171,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'vcpus': 1,
                                                 'os_type': 'Linux'}}
         self.mox.ReplayAll()
-        weighted_hosts = sched._schedule(fake_context, 'compute',
-                request_spec, {})
+        weighted_hosts = sched._schedule(fake_context, request_spec, {})
         self.assertEquals(len(weighted_hosts), 10)
         for weighted_host in weighted_hosts:
             self.assertTrue(weighted_host.host_state is not None)
@@ -194,7 +183,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         def _return_hosts(*args, **kwargs):
-            host_state = host_manager.HostState('host2', 'compute')
+            host_state = host_manager.HostState('host2')
             return [least_cost.WeightedHost(1.0, host_state=host_state)]
 
         self.stubs.Set(sched, '_schedule', _return_hosts)
@@ -220,7 +209,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEquals(len(fns), 1)
         weight, fn = fns[0]
         self.assertEquals(weight, -1.0)
-        hostinfo = host_manager.HostState('host', 'compute')
+        hostinfo = host_manager.HostState('host')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0, vcpus=1, disk_available_least=1000,
                 free_disk_mb=1000, free_ram_mb=872, vcpus_used=0,
@@ -248,7 +237,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
 
-        sched._schedule(self.context, 'compute', request_spec,
+        sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         # should not have retry info in the populated filter properties:
@@ -263,7 +252,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         request_spec = dict(instance_properties=instance_properties)
         filter_properties = {}
 
-        sched._schedule(self.context, 'compute', request_spec,
+        sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         num_attempts = filter_properties['retry']['num_attempts']
@@ -280,7 +269,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
 
-        sched._schedule(self.context, 'compute', request_spec,
+        sched._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         num_attempts = filter_properties['retry']['num_attempts']
@@ -298,7 +287,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = dict(retry=retry)
 
         self.assertRaises(exception.NoValidHost, sched._schedule, self.context,
-                'compute', request_spec, filter_properties=filter_properties)
+                request_spec, filter_properties=filter_properties)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
@@ -318,7 +307,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {'retry': retry}
         sched = fakes.FakeFilterScheduler()
 
-        host_state = host_manager.HostState('host', 'compute')
+        host_state = host_manager.HostState('host')
         host_state.limits['vcpus'] = 5
         sched._post_select_populate_filter_properties(filter_properties,
                 host_state)
@@ -342,14 +331,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {'retry': retry}
         reservations = None
 
-        host = fakes.FakeHostState('host', 'compute', {})
+        host = fakes.FakeHostState('host', {})
         weighted_host = least_cost.WeightedHost(1, host)
         hosts = [weighted_host]
 
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched.compute_rpcapi, 'prep_resize')
 
-        sched._schedule(self.context, 'compute', request_spec,
+        sched._schedule(self.context, request_spec,
                 filter_properties, [instance['uuid']]).AndReturn(hosts)
         sched.compute_rpcapi.prep_resize(self.context, image, instance,
                 instance_type, 'host', reservations, request_spec=request_spec,

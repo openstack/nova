@@ -24,7 +24,6 @@ from nova.compute import vm_states
 from nova import config
 from nova import db
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -94,10 +93,9 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, topic, capabilities=None, service=None):
+    def __init__(self, host, capabilities=None, service=None):
         self.host = host
-        self.topic = topic
-        self.update_capabilities(topic, capabilities, service)
+        self.update_capabilities(capabilities, service)
 
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
@@ -126,12 +124,12 @@ class HostState(object):
 
         self.updated = None
 
-    def update_capabilities(self, topic, capabilities=None, service=None):
+    def update_capabilities(self, capabilities=None, service=None):
         # Read-only capability dicts
 
         if capabilities is None:
             capabilities = {}
-        self.capabilities = ReadOnlyDict(capabilities.get(topic, None))
+        self.capabilities = ReadOnlyDict(capabilities)
         if service is None:
             service = {}
         self.service = ReadOnlyDict(service)
@@ -326,28 +324,24 @@ class HostManager(object):
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
+
+        if service_name != 'compute':
+            LOG.debug(_('Ignoring %(service_name)s service update '
+                    'from %(host)s'), locals())
+            return
+
         LOG.debug(_("Received %(service_name)s service update from "
-                    "%(host)s.") % locals())
-        service_caps = self.service_states.get(host, {})
+                    "%(host)s."), locals())
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
-        service_caps[service_name] = capab_copy
-        self.service_states[host] = service_caps
+        self.service_states[host] = capab_copy
 
-    def get_all_host_states(self, context, topic):
+    def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
-
-        Note: this can be very slow with a lot of instances.
-        InstanceType table isn't required since a copy is stored
-        with the instance (in case the InstanceType changed since the
-        instance was created)."""
-
-        if topic != CONF.compute_topic:
-            raise NotImplementedError(_(
-                "host_manager only implemented for 'compute'"))
+        """
 
         # Get resource usage across the available compute nodes:
         compute_nodes = db.compute_node_get_all(context)
@@ -360,10 +354,10 @@ class HostManager(object):
             capabilities = self.service_states.get(host, None)
             host_state = self.host_state_map.get(host)
             if host_state:
-                host_state.update_capabilities(topic, capabilities,
+                host_state.update_capabilities(capabilities,
                                                dict(service.iteritems()))
             else:
-                host_state = self.host_state_cls(host, topic,
+                host_state = self.host_state_cls(host,
                         capabilities=capabilities,
                         service=dict(service.iteritems()))
                 self.host_state_map[host] = host_state
