@@ -180,12 +180,20 @@ def execute(*cmd, **kwargs):
         try:
             LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
+
+            if os.name == 'nt':
+                preexec_fn = None
+                close_fds = False
+            else:
+                preexec_fn = _subprocess_setup
+                close_fds = True
+
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
                                    stderr=_PIPE,
-                                   close_fds=True,
-                                   preexec_fn=_subprocess_setup,
+                                   close_fds=close_fds,
+                                   preexec_fn=preexec_fn,
                                    shell=shell)
             result = None
             if process_input is not None:
