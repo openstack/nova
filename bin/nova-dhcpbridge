@@ -35,9 +35,9 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import config
 from nova import context
 from nova import db
-from nova import config
 from nova import flags
 from nova.network import linux_net
 from nova.network import rpcapi as network_rpcapi
