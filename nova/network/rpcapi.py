@@ -268,10 +268,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def migrate_instance_start(self, ctxt, instance_uuid, rxtx_factor,
                                project_id, source_compute, dest_compute,
                                floating_addresses, host=None):
-        if host is not None:
-            topic = rpc.queue_get_for(ctxt, self.topic, host)
-        else:
-            topic = self.topic
+        topic = rpc.queue_get_for(ctxt, self.topic, host)
         return self.call(ctxt, self.make_msg(
                 'migrate_instance_start',
                 instance_uuid=instance_uuid,
@@ -286,10 +283,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def migrate_instance_finish(self, ctxt, instance_uuid, rxtx_factor,
                                 project_id, source_compute, dest_compute,
                                 floating_addresses, host=None):
-        if host is not None:
-            topic = rpc.queue_get_for(ctxt, self.topic, host)
-        else:
-            topic = self.topic
+        topic = rpc.queue_get_for(ctxt, self.topic, host)
         return self.call(ctxt, self.make_msg(
                 'migrate_instance_finish',
                 instance_uuid=instance_uuid,
