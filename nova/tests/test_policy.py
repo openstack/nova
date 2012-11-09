@@ -32,17 +32,13 @@ from nova import utils
 class PolicyFileTestCase(test.TestCase):
     def setUp(self):
         super(PolicyFileTestCase, self).setUp()
-        policy.reset()
         self.context = context.RequestContext('fake', 'fake')
         self.target = {}
-
-    def tearDown(self):
-        super(PolicyFileTestCase, self).tearDown()
-        policy.reset()
 
     def test_modified_policy_reloads(self):
         with utils.tempdir() as tmpdir:
             tmpfilename = os.path.join(tmpdir, 'policy')
+
             self.flags(policy_file=tmpfilename)
 
             # NOTE(uni): context construction invokes policy check to determin
@@ -66,9 +62,6 @@ class PolicyFileTestCase(test.TestCase):
 class PolicyTestCase(test.TestCase):
     def setUp(self):
         super(PolicyTestCase, self).setUp()
-        policy.reset()
-        # NOTE(vish): preload rules to circumvent reloading from file
-        policy.init()
         rules = {
             "true": '@',
             "example:allowed": '@',
@@ -81,16 +74,9 @@ class PolicyTestCase(test.TestCase):
             "example:lowercase_admin": "role:admin or role:sysadmin",
             "example:uppercase_admin": "role:ADMIN or role:sysadmin",
         }
-        # NOTE(vish): then overload underlying brain
-        common_policy.set_rules(common_policy.Rules(
-                dict((k, common_policy.parse_rule(v))
-                     for k, v in rules.items())))
+        self.policy.set_rules(rules)
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
-
-    def tearDown(self):
-        policy.reset()
-        super(PolicyTestCase, self).tearDown()
 
     def test_enforce_nonexistent_action_throws(self):
         action = "example:noexist"
@@ -165,8 +151,6 @@ class DefaultPolicyTestCase(test.TestCase):
 
     def setUp(self):
         super(DefaultPolicyTestCase, self).setUp()
-        policy.reset()
-        policy.init()
 
         self.rules = {
             "default": '',
@@ -182,10 +166,6 @@ class DefaultPolicyTestCase(test.TestCase):
             dict((k, common_policy.parse_rule(v))
                  for k, v in self.rules.items()), default_rule)
         common_policy.set_rules(rules)
-
-    def tearDown(self):
-        super(DefaultPolicyTestCase, self).tearDown()
-        policy.reset()
 
     def test_policy_called(self):
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,

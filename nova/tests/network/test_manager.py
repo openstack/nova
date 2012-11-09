@@ -1928,9 +1928,6 @@ class NetworkPolicyTestCase(test.TestCase):
         super(NetworkPolicyTestCase, self).tearDown()
         nova.policy.reset()
 
-    def _set_rules(self, rules):
-        nova.common.policy.set_brain(nova.common.policy.HttpBrain(rules))
-
     def test_check_policy(self):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
         target = {
