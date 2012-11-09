@@ -18,6 +18,7 @@ Classes for dynamic generation of mock objects.
 """
 
 import inspect
+import pickle
 
 
 def serialize_obj(obj):
@@ -39,13 +40,23 @@ def serialize_obj(obj):
             l1 = l1 + (serialize_obj(i1),)
         val = str(l1)
     else:
-        val = str(obj)
+        if isinstance(obj, str) or isinstance(obj, unicode):
+            val = obj
+        elif hasattr(obj, '__str__') and inspect.ismethod(obj.__str__):
+            val = str(obj)
+        else:
+            val = str(type(obj))
     return val
 
 
 def serialize_args(*args, **kwargs):
     """Workaround for float string conversion issues in Python 2.6"""
     return serialize_obj((args, kwargs))
+
+
+class MockException(Exception):
+    def __init__(self, message):
+        super(MockException, self).__init__(message)
 
 
 class Mock(object):
@@ -56,7 +67,13 @@ class Mock(object):
         else:
             c = c + 1
         self._access_count[name] = c
-        return self._values[name][c]
+
+        try:
+            value = self._values[name][c]
+        except IndexError as ex:
+            raise MockException(_('Couldn\'t find invocation num. %(c)d '
+                'of attribute "%(name)s"') % locals())
+        return value
 
     def _get_next_ret_value(self, name, params):
         d = self._access_count.get(name)
@@ -69,7 +86,23 @@ class Mock(object):
         else:
             c = c + 1
         d[params] = c
-        return self._values[name][params][c]
+
+        try:
+            m = self._values[name]
+        except KeyError as ex:
+            raise MockException(_('Couldn\'t find attribute "%s"') % (name))
+
+        try:
+            value = m[params][c]
+        except KeyError as ex:
+            raise MockException(_('Couldn\'t find attribute "%(name)s" '
+                'with arguments "%(params)s"') % locals())
+        except IndexError as ex:
+            raise MockException(_('Couldn\'t find invocation num. %(c)d '
+                'of attribute "%(name)s" with arguments "%(params)s"')
+                    % locals())
+
+        return value
 
     def __init__(self, values):
         self._values = values
@@ -82,7 +115,13 @@ class Mock(object):
         if name.startswith('__') and name.endswith('__'):
             return object.__getattribute__(self, name)
         else:
-            if isinstance(self._values[name], dict):
+            try:
+                isdict = isinstance(self._values[name], dict)
+            except KeyError as ex:
+                raise MockException(_('Couldn\'t find attribute "%s"')
+                    % (name))
+
+            if isdict:
                 def newfunc(*args, **kwargs):
                     params = serialize_args(args, kwargs)
                     return self._get_next_ret_value(name, params)

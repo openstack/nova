@@ -27,7 +27,6 @@ import uuid
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 from nova.virt import images
@@ -75,12 +74,16 @@ class VMUtils(object):
                 % locals())
         return True
 
+    def get_instance_path(self, instance_name):
+        instance_path = os.path.join(CONF.instances_path, instance_name)
+        if not os.path.exists(instance_path):
+                LOG.debug(_('Creating folder %s '), instance_path)
+                os.makedirs(instance_path)
+        return instance_path
+
     def get_vhd_path(self, instance_name):
-        base_vhd_folder = os.path.join(CONF.instances_path, instance_name)
-        if not os.path.exists(base_vhd_folder):
-                LOG.debug(_('Creating folder %s '), base_vhd_folder)
-                os.makedirs(base_vhd_folder)
-        return os.path.join(base_vhd_folder, instance_name + ".vhd")
+        instance_path = self.get_instance_path(instance_name)
+        return os.path.join(instance_path, instance_name + ".vhd")
 
     def get_base_vhd_path(self, image_name):
         base_dir = os.path.join(CONF.instances_path, '_base')

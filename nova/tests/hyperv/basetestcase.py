@@ -21,6 +21,7 @@ TestCase for MockProxy based tests and related classes.
 import gzip
 import os
 import pickle
+import sys
 
 from nova import test
 from nova.tests.hyperv import mockproxy
@@ -77,7 +78,8 @@ class BaseTestCase(test.TestCase):
                     not in ['true', 'yes', '1']:
             m = self._load_mock(module_name)
         else:
-            module = __import__(module_name)
+            __import__(module_name)
+            module = sys.modules[module_name]
             m = mockproxy.MockProxy(module)
             self._mps[module_name] = m
         return m
