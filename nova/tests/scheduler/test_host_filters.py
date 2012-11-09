@@ -263,32 +263,33 @@ class HostFiltersTestCase(test.TestCase):
         self.json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
                         ['>=', '$free_disk_mb', 200 * 1024]])
-        # This has a side effect of testing 'get_filter_classes'
-        # when specifying a method (in this case, our standard filters)
-        classes = filters.get_filter_classes(
-                ['nova.scheduler.filters.standard_filters'])
+        filter_handler = filters.HostFilterHandler()
+        classes = filter_handler.get_matching_classes(
+                ['nova.scheduler.filters.all_filters'])
         self.class_map = {}
         for cls in classes:
             self.class_map[cls.__name__] = cls
 
-    def test_get_filter_classes(self):
-        classes = filters.get_filter_classes(
-                ['nova.tests.scheduler.test_host_filters.TestFilter'])
-        self.assertEqual(len(classes), 1)
-        self.assertEqual(classes[0].__name__, 'TestFilter')
-        # Test a specific class along with our standard filters
-        classes = filters.get_filter_classes(
-                ['nova.tests.scheduler.test_host_filters.TestFilter',
-                 'nova.scheduler.filters.standard_filters'])
-        self.assertEqual(len(classes), 1 + len(self.class_map))
+    def test_standard_filters_is_deprecated(self):
+        info = {'called': False}
 
-    def test_get_filter_classes_raises_on_invalid_classes(self):
-        self.assertRaises(ImportError,
-                filters.get_filter_classes,
-                ['nova.tests.scheduler.test_host_filters.NoExist'])
-        self.assertRaises(exception.ClassNotFound,
-                filters.get_filter_classes,
-                ['nova.tests.scheduler.test_host_filters.TestBogusFilter'])
+        def _fake_deprecated(*args, **kwargs):
+            info['called'] = True
+
+        self.stubs.Set(filters.LOG, 'deprecated', _fake_deprecated)
+
+        filter_handler = filters.HostFilterHandler()
+        filter_handler.get_matching_classes(
+                ['nova.scheduler.filters.standard_filters'])
+
+        self.assertTrue(info['called'])
+        self.assertIn('AllHostsFilter', self.class_map)
+        self.assertIn('ComputeFilter', self.class_map)
+
+    def test_all_filters(self):
+        # Double check at least a couple of known filters exist
+        self.assertIn('AllHostsFilter', self.class_map)
+        self.assertIn('ComputeFilter', self.class_map)
 
     def test_all_host_filter(self):
         filt_cls = self.class_map['AllHostsFilter']()

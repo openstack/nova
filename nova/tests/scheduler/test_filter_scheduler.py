@@ -32,7 +32,7 @@ from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
 
-def fake_filter_hosts(hosts, filter_properties):
+def fake_get_filtered_hosts(hosts, filter_properties):
     return list(hosts)
 
 
@@ -155,8 +155,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         fake_context = context.RequestContext('user', 'project',
                 is_admin=True)
 
-        self.stubs.Set(sched.host_manager, 'filter_hosts',
-                fake_filter_hosts)
+        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+                fake_get_filtered_hosts)
         self.stubs.Set(least_cost, 'weighted_sum', _fake_weighted_sum)
         fakes.mox_host_manager_db_calls(self.mox, fake_context)
 

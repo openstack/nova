@@ -17,71 +17,41 @@
 Scheduler host filters
 """
 
-import os
-import types
+from nova import filters
+from nova.openstack.common import log as logging
 
-from nova import exception
-from nova.openstack.common import importutils
+LOG = logging.getLogger(__name__)
 
 
-class BaseHostFilter(object):
+class BaseHostFilter(filters.BaseFilter):
     """Base class for host filters."""
+    def _filter_one(self, obj, filter_properties):
+        """Return True if the object passes the filter, otherwise False."""
+        return self.host_passes(obj, filter_properties)
 
     def host_passes(self, host_state, filter_properties):
+        """Return True if the HostState passes the filter, otherwise False.
+        Override this in a subclass.
+        """
         raise NotImplementedError()
 
-    def _full_name(self):
-        """module.classname of the filter."""
-        return "%s.%s" % (self.__module__, self.__class__.__name__)
+
+class HostFilterHandler(filters.BaseFilterHandler):
+    def __init__(self):
+        super(HostFilterHandler, self).__init__(BaseHostFilter)
 
 
-def _is_filter_class(cls):
-    """Return whether a class is a valid Host Filter class."""
-    return type(cls) is types.TypeType and issubclass(cls, BaseHostFilter)
+def all_filters():
+    """Return a list of filter classes found in this directory.
 
-
-def _get_filter_classes_from_module(module_name):
-    """Get all filter classes from a module."""
-    classes = []
-    module = importutils.import_module(module_name)
-    for obj_name in dir(module):
-        itm = getattr(module, obj_name)
-        if _is_filter_class(itm):
-            classes.append(itm)
-    return classes
+    This method is used as the default for available scheduler filters
+    and should return a list of all filter classes available.
+    """
+    return HostFilterHandler().get_all_classes()
 
 
 def standard_filters():
-    """Return a list of filter classes found in this directory."""
-    classes = []
-    filters_dir = __path__[0]
-    for dirpath, dirnames, filenames in os.walk(filters_dir):
-        relpath = os.path.relpath(dirpath, filters_dir)
-        if relpath == '.':
-            relpkg = ''
-        else:
-            relpkg = '.%s' % '.'.join(relpath.split(os.sep))
-        for fname in filenames:
-            root, ext = os.path.splitext(fname)
-            if ext != '.py' or root == '__init__':
-                continue
-            module_name = "%s%s.%s" % (__package__, relpkg, root)
-            mod_classes = _get_filter_classes_from_module(module_name)
-            classes.extend(mod_classes)
-    return classes
-
-
-def get_filter_classes(filter_class_names):
-    """Get filter classes from class names."""
-    classes = []
-    for cls_name in filter_class_names:
-        obj = importutils.import_class(cls_name)
-        if _is_filter_class(obj):
-            classes.append(obj)
-        elif type(obj) is types.FunctionType:
-            # Get list of classes from a function
-            classes.extend(obj())
-        else:
-            raise exception.ClassNotFound(class_name=cls_name,
-                    exception='Not a valid scheduler filter')
-    return classes
+    """Deprecated.  Configs should change to use all_filters()."""
+    LOG.deprecated(_("Use 'nova.scheduler.filters.all_filters' instead "
+            "of 'nova.scheduler.filters.standard_filters'"))
+    return all_filters()
