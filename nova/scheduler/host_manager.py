@@ -28,6 +28,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
+from nova.scheduler import weights
 
 host_manager_opts = [
     cfg.MultiStrOpt('scheduler_available_filters',
@@ -47,6 +48,9 @@ host_manager_opts = [
                   ],
                 help='Which filter class names to use for filtering hosts '
                       'when not specified in the request.'),
+    cfg.ListOpt('scheduler_weight_classes',
+                default=['nova.scheduler.weights.all_weighers'],
+                help='Which weight class names to use for weighing hosts'),
     ]
 
 CONF = config.CONF
@@ -258,6 +262,9 @@ class HostManager(object):
         self.filter_handler = filters.HostFilterHandler()
         self.filter_classes = self.filter_handler.get_matching_classes(
                 CONF.scheduler_available_filters)
+        self.weight_handler = weights.HostWeightHandler()
+        self.weight_classes = self.weight_handler.get_matching_classes(
+                CONF.scheduler_weight_classes)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -315,6 +322,11 @@ class HostManager(object):
 
         return self.filter_handler.get_filtered_objects(filter_classes,
                 hosts, filter_properties)
+
+    def get_weighed_hosts(self, hosts, weight_properties):
+        """Weigh the hosts"""
+        return self.weight_handler.get_weighed_objects(self.weight_classes,
+                hosts, weight_properties)
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
