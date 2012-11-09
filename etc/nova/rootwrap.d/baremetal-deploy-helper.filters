@@ -1,0 +1,10 @@
+# nova-rootwrap command filters for nova-baremetal-deploy-helper
+# This file should be owned by (and only-writeable by) the root user
+
+[Filters]
+# nova-baremetal-deploy-helper
+iscsiadm: CommandFilter, /sbin/iscsiadm, root
+fdisk: CommandFilter, /sbin/fdisk, root
+dd: CommandFilter, /bin/dd, root
+mkswap: CommandFilter, /sbin/mkswap, root
+blkid: CommandFilter, /sbin/blkid, root
