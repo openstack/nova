@@ -1160,17 +1160,17 @@ def mkfs(fs, path, label=None):
     :param label: Volume label to use
     """
     if fs == 'swap':
-        execute('mkswap', path)
+        args = ['mkswap']
     else:
         args = ['mkfs', '-t', fs]
-        #add -F to force no interactive excute on non-block device.
-        if fs in ('ext3', 'ext4'):
-            args.extend(['-F'])
-        if label:
-            if fs in ('msdos', 'vfat'):
-                label_opt = '-n'
-            else:
-                label_opt = '-L'
-            args.extend([label_opt, label])
-        args.append(path)
-        execute(*args)
+    #add -F to force no interactive execute on non-block device.
+    if fs in ('ext3', 'ext4'):
+        args.extend(['-F'])
+    if label:
+        if fs in ('msdos', 'vfat'):
+            label_opt = '-n'
+        else:
+            label_opt = '-L'
+        args.extend([label_opt, label])
+    args.append(path)
+    execute(*args)
