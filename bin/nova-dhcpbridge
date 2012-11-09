@@ -103,7 +103,7 @@ def main():
     logging.setup("nova")
 
     if int(os.environ.get('TESTING', '0')):
-        from nova.tests import fake_flags
+        from nova.tests import conf_fixture
 
     action = argv[1]
     if action in ['add', 'del', 'old']:

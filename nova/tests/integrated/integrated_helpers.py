@@ -67,7 +67,7 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(**f)
         self.flags(verbose=True)
 
-        self.stub_module('crypto', fake_crypto)
+        self.useFixture(test.ReplaceModule('crypto', fake_crypto))
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.flags(scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
