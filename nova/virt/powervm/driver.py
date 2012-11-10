@@ -142,7 +142,7 @@ class PowerVMDriver(driver.ComputeDriver):
         """Power on the specified instance"""
         self._powervm.power_on(instance['name'])
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         """Retrieve resource info."""
         return self._powervm.get_available_resource()
 

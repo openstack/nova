@@ -99,6 +99,15 @@ def instance_update_db(context, instance_uuid):
     return db.instance_update(context, instance_uuid, values)
 
 
+def db_instance_node_set(context, instance_uuid, node):
+    '''Set the node field of an Instance.
+
+    :returns: An Instance with the updated fields set properly.
+    '''
+    values = {'node': node}
+    return db.instance_update(context, instance_uuid, values)
+
+
 def cast_to_compute_host(context, host, method, **kwargs):
     """Cast request to a compute host queue"""
 

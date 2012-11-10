@@ -43,7 +43,7 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
     def __init__(self):
         super(UnsupportedVirtDriver, self).__init__(None)
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         # no support for getting resource usage info
         return {}
 
@@ -59,7 +59,7 @@ class FakeVirtDriver(driver.ComputeDriver):
         self.memory_mb_used = 0
         self.local_gb_used = 0
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         d = {
             'vcpus': self.vcpus,
             'memory_mb': self.memory_mb,
@@ -86,8 +86,8 @@ class BaseTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
 
         self._instances = {}
-        self.stubs.Set(db, 'instance_get_all_by_host',
-                       lambda c, h: self._instances.values())
+        self.stubs.Set(db, 'instance_get_all_by_host_and_node',
+                       lambda c, h, n: self._instances.values())
         self.stubs.Set(db, 'instance_update_and_get_original',
                        self._fake_instance_update_and_get_original)
 
@@ -106,7 +106,8 @@ class BaseTestCase(test.TestCase):
             "current_workload": 1,
             "running_vms": 0,
             "cpu_info": None,
-            "stats": [{"key": "num_instances", "value": "1"}]
+            "stats": [{"key": "num_instances", "value": "1"}],
+           "hypervisor_hostname": "fakenode",
         }
         if values:
             compute.update(values)
@@ -155,13 +156,14 @@ class BaseTestCase(test.TestCase):
 
     def _tracker(self, unsupported=False):
         host = "fakehost"
+        node = "fakenode"
 
         if unsupported:
             driver = UnsupportedVirtDriver()
         else:
             driver = FakeVirtDriver()
 
-        tracker = resource_tracker.ResourceTracker(host, driver)
+        tracker = resource_tracker.ResourceTracker(host, driver, node)
         return tracker
 
 

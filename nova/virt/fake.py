@@ -36,6 +36,32 @@ from nova.virt import virtapi
 LOG = logging.getLogger(__name__)
 
 
+_FAKE_NODES = ['fake-mini']
+
+
+def set_nodes(nodes):
+    """Sets FakeDriver's node.list.
+
+    It has effect on the following methods:
+        get_available_nodes()
+        get_available_resource
+        get_host_stats()
+
+    To restore the change, call restore_nodes()
+    """
+    global _FAKE_NODES
+    _FAKE_NODES = nodes
+
+
+def restore_nodes():
+    """Resets FakeDriver's node list modified by set_nodes().
+
+    Usually called from tearDown().
+    """
+    global _FAKE_NODES
+    _FAKE_NODES = ['fake-mini']
+
+
 class FakeInstance(object):
 
     def __init__(self, name, state):
@@ -56,7 +82,7 @@ class FakeDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
         super(FakeDriver, self).__init__(virtapi)
         self.instances = {}
-        self.host_status = {
+        self.host_status_base = {
           'host_name-description': 'Fake Host',
           'host_hostname': 'fake-mini',
           'host_memory_total': 8000000000,
@@ -252,12 +278,14 @@ class FakeDriver(driver.ComputeDriver):
     def refresh_provider_fw_rules(self):
         pass
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         """Updates compute manager resource info on ComputeNode table.
 
            Since we don't have a real hypervisor, pretend we have lots of
            disk and ram.
         """
+        if nodename not in _FAKE_NODES:
+            raise exception.NovaException("node %s is not found" % nodename)
 
         dic = {'vcpus': 1,
                'memory_mb': 8192,
@@ -267,7 +295,7 @@ class FakeDriver(driver.ComputeDriver):
                'local_gb_used': 0,
                'hypervisor_type': 'fake',
                'hypervisor_version': '1.0',
-               'hypervisor_hostname': 'fake-mini',
+               'hypervisor_hostname': nodename,
                'cpu_info': '?'}
         return dic
 
@@ -319,7 +347,19 @@ class FakeDriver(driver.ComputeDriver):
 
     def get_host_stats(self, refresh=False):
         """Return fake Host Status of ram, disk, network."""
-        return self.host_status
+        stats = []
+        for nodename in _FAKE_NODES:
+            host_status = self.host_status_base.copy()
+            host_status['hypervisor_hostname'] = nodename
+            host_status['host_hostname'] = nodename
+            host_status['host_name_label'] = nodename
+            stats.append(host_status)
+        if len(stats) == 0:
+            raise exception.NovaException("FakeDriver has no node")
+        elif len(stats) == 1:
+            return stats[0]
+        else:
+            return stats
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
@@ -340,6 +380,9 @@ class FakeDriver(driver.ComputeDriver):
 
     def get_volume_connector(self, instance):
         return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}
+
+    def get_available_nodes(self):
+        return _FAKE_NODES
 
 
 class FakeVirtAPI(virtapi.VirtAPI):

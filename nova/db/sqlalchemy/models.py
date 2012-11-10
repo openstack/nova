@@ -250,7 +250,11 @@ class Instance(BASE, NovaBase):
     ephemeral_gb = Column(Integer)
 
     hostname = Column(String(255))
+    # To identify the "Service" which the instance resides in.
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    # To identify the "ComputeNode" which the instance resides in.
+    # This equals to ComputeNode.hypervisor_hostname.
+    node = Column(String(255))
 
     # *not* flavor_id
     instance_type_id = Column(Integer)

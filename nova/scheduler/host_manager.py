@@ -93,8 +93,9 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, capabilities=None, service=None):
+    def __init__(self, host, node, capabilities=None, service=None):
         self.host = host
+        self.nodename = node
         self.update_capabilities(capabilities, service)
 
         # Mutable available resources.
@@ -265,8 +266,8 @@ class HostState(object):
         return True
 
     def __repr__(self):
-        return ("%s ram:%s disk:%s io_ops:%s instances:%s vm_type:%s" %
-                (self.host, self.free_ram_mb, self.free_disk_mb,
+        return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s vm_type:%s" %
+                (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb,
                  self.num_io_ops, self.num_instances, self.allowed_vm_type))
 
 
@@ -277,7 +278,8 @@ class HostManager(object):
     host_state_cls = HostState
 
     def __init__(self):
-        self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
+        # { (host, hypervisor_hostname) : { <service> : { cap k : v }}}
+        self.service_states = {}
         self.host_state_map = {}
         self.filter_classes = filters.get_filter_classes(
                 CONF.scheduler_available_filters)
@@ -330,12 +332,13 @@ class HostManager(object):
                     'from %(host)s'), locals())
             return
 
+        state_key = (host, capabilities.get('hypervisor_hostname'))
         LOG.debug(_("Received %(service_name)s service update from "
-                    "%(host)s."), locals())
+                    "%(state_key)s.") % locals())
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
-        self.service_states[host] = capab_copy
+        self.service_states[state_key] = capab_copy
 
     def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts
@@ -351,16 +354,18 @@ class HostManager(object):
                 LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
-            capabilities = self.service_states.get(host, None)
-            host_state = self.host_state_map.get(host)
+            node = compute.get('hypervisor_hostname')
+            state_key = (host, node)
+            capabilities = self.service_states.get(state_key, None)
+            host_state = self.host_state_map.get(state_key)
             if host_state:
                 host_state.update_capabilities(capabilities,
                                                dict(service.iteritems()))
             else:
-                host_state = self.host_state_cls(host,
+                host_state = self.host_state_cls(host, node,
                         capabilities=capabilities,
                         service=dict(service.iteritems()))
-                self.host_state_map[host] = host_state
+                self.host_state_map[state_key] = host_state
             host_state.update_from_compute_node(compute)
 
         return self.host_state_map.itervalues()

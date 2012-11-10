@@ -269,15 +269,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        self.resource_tracker = resource_tracker.ResourceTracker(self.host,
-                self.driver)
+        self._resource_tracker_dict = {}
+
+    def _get_resource_tracker(self, nodename):
+        rt = self._resource_tracker_dict.get(nodename)
+        if not rt:
+            rt = resource_tracker.ResourceTracker(self.host,
+                                                  self.driver,
+                                                  nodename)
+            self._resource_tracker_dict[nodename] = rt
+        return rt
 
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        self.resource_tracker.update_usage(context, instance_ref)
+        rt = self._get_resource_tracker(instance_ref.get('node'))
+        rt.update_usage(context, instance_ref)
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
@@ -520,10 +529,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, "create.start",
                     extra_usage_info=extra_usage_info)
             network_info = None
+            rt = self._get_resource_tracker(instance.get('node'))
             try:
                 limits = filter_properties.get('limits', {})
-                with self.resource_tracker.instance_claim(context, instance,
-                        limits):
+                with rt.instance_claim(context, instance, limits):
 
                     network_info = self._allocate_network(context, instance,
                             requested_networks)
@@ -2855,7 +2864,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             # This will grab info about the host and queue it
             # to be sent to the Schedulers.
             capabilities = self.driver.get_host_stats(refresh=True)
-            capabilities['host_ip'] = FLAGS.my_ip
+            for capability in (capabilities if isinstance(capabilities, list)
+                               else [capabilities]):
+                capability['host_ip'] = FLAGS.my_ip
             self.update_service_capabilities(capabilities)
 
     @manager.periodic_task(ticks_between_runs=10)
@@ -3024,7 +3035,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         """
-        self.resource_tracker.update_available_resource(context)
+        new_resource_tracker_dict = {}
+        nodenames = self.driver.get_available_nodes()
+        for nodename in nodenames:
+            rt = self._get_resource_tracker(nodename)
+            rt.update_available_resource(context)
+            new_resource_tracker_dict[nodename] = rt
+        self._resource_tracker_dict = new_resource_tracker_dict
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)

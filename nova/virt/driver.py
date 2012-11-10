@@ -347,12 +347,15 @@ class ComputeDriver(object):
         """Restore the specified instance"""
         raise NotImplementedError()
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         """Retrieve resource information.
 
         This method is called when nova-compute launches, and
         as part of a periodic task
 
+        :param nodename:
+            node which the caller want to get resources from
+            a driver that manages only one node can safely ignore this
         :returns: Dictionary describing resources
         """
         raise NotImplementedError()
@@ -735,3 +738,16 @@ class ComputeDriver(object):
             }
         """
         raise NotImplementedError()
+
+    def get_available_nodes(self):
+        """Returns nodenames of all nodes managed by the compute service.
+
+        This method is for multi compute-nodes support. If a driver supports
+        multi compute-nodes, this method returns a list of nodenames managed
+        by the service. Otherwise, this method should return
+        [hypervisor_hostname].
+        """
+        stats = self.get_host_stats(refresh=True)
+        if not isinstance(stats, list):
+            stats = [stats]
+        return [s['hypervisor_hostname'] for s in stats]

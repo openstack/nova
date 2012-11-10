@@ -135,7 +135,11 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
-        updated_instance = driver.instance_update_db(context, instance_uuid)
+        # TODO(NTTdocomo): Combine the next two updates into one
+        driver.db_instance_node_set(context,
+                instance_uuid, weighted_host.host_state.nodename)
+        updated_instance = driver.instance_update_db(context,
+                instance_uuid)
 
         self._post_select_populate_filter_properties(filter_properties,
                 weighted_host.host_state)

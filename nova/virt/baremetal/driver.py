@@ -661,7 +661,7 @@ class BareMetalDriver(driver.ComputeDriver):
         # Bare metal doesn't currently support security groups
         pass
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         """Updates compute manager resource info on ComputeNode table.
 
         This method is called when nova-coompute launches, and

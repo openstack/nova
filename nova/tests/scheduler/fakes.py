@@ -29,38 +29,42 @@ COMPUTE_NODES = [
         dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
              disk_available_least=512, free_ram_mb=512, vcpus_used=1,
              free_disk_mb=512, local_gb_used=0, updated_at=None,
-             service=dict(host='host1', disabled=False)),
+             service=dict(host='host1', disabled=False),
+             hypervisor_hostname='node1'),
         dict(id=2, local_gb=2048, memory_mb=2048, vcpus=2,
              disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
              free_disk_mb=1024, local_gb_used=0, updated_at=None,
-             service=dict(host='host2', disabled=True)),
+             service=dict(host='host2', disabled=True),
+             hypervisor_hostname='node2'),
         dict(id=3, local_gb=4096, memory_mb=4096, vcpus=4,
              disk_available_least=3072, free_ram_mb=3072, vcpus_used=1,
              free_disk_mb=3072, local_gb_used=0, updated_at=None,
-             service=dict(host='host3', disabled=False)),
+             service=dict(host='host3', disabled=False),
+             hypervisor_hostname='node3'),
         dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
              disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
              free_disk_mb=8192, local_gb_used=0, updated_at=None,
-             service=dict(host='host4', disabled=False)),
+             service=dict(host='host4', disabled=False),
+             hypervisor_hostname='node4'),
         # Broken entry
         dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
 ]
 
 INSTANCES = [
         dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-             host='host1'),
+             host='host1', node='node1'),
         dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-             host='host2'),
+             host='host2', node='node2'),
         dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
-             host='host2'),
+             host='host2', node='node2'),
         dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
-             host='host3'),
+             host='host3', node='node3'),
         # Broken host
         dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
              host=None),
         # No matching host
         dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
-             host='host5'),
+             host='host5', node='node5'),
 ]
 
 
@@ -96,8 +100,8 @@ class FakeHostManager(host_manager.HostManager):
 
 
 class FakeHostState(host_manager.HostState):
-    def __init__(self, host, attribute_dict):
-        super(FakeHostState, self).__init__(host)
+    def __init__(self, host, node, attribute_dict):
+        super(FakeHostState, self).__init__(host, node)
         for (key, val) in attribute_dict.iteritems():
             setattr(self, key, val)
 
