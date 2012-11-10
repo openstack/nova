@@ -61,6 +61,7 @@ from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova import utils
+from nova.virt import fake
 from nova.volume import cinder
 
 
@@ -72,6 +73,8 @@ CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
+
+NODENAME = 'fakenode1'
 
 
 def nop_report_driver_status(self):
@@ -101,12 +104,13 @@ class BaseTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
+        fake.set_nodes([NODENAME])
         self.compute = importutils.import_object(FLAGS.compute_manager)
 
         # override tracker with a version that doesn't need the database:
-        self.compute.resource_tracker = \
-            fake_resource_tracker.FakeResourceTracker(self.compute.host,
-                    self.compute.driver)
+        fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
+                    self.compute.driver, NODENAME)
+        self.compute._resource_tracker_dict[NODENAME] = fake_rt
         self.compute.update_available_resource(
                 context.get_admin_context())
 
@@ -137,6 +141,7 @@ class BaseTestCase(test.TestCase):
         notifier_api._reset_drivers()
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['uuid'])
+        fake.restore_nodes()
         super(BaseTestCase, self).tearDown()
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
@@ -152,6 +157,7 @@ class BaseTestCase(test.TestCase):
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
         inst['host'] = 'fake_host'
+        inst['node'] = NODENAME
         type_id = instance_types.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
@@ -210,7 +216,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_get_nw_info)
         self.compute_api = compute.API()
         # Just to make long lines short
-        self.rt = self.compute.resource_tracker
+        self.rt = self.compute._get_resource_tracker(NODENAME)
 
     def tearDown(self):
         super(ComputeTestCase, self).tearDown()
@@ -358,7 +364,7 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource()
+        resources = self.compute.driver.get_available_resource(NODENAME)
         total_mem_mb = resources['memory_mb']
 
         oversub_limit_mb = total_mem_mb * 1.5
@@ -385,7 +391,7 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource()
+        resources = self.compute.driver.get_available_resource(NODENAME)
         total_mem_mb = resources['memory_mb']
 
         oversub_limit_mb = total_mem_mb * 1.5
@@ -412,7 +418,7 @@ class ComputeTestCase(BaseTestCase):
         filter_properties = {'limits': limits}
 
         # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource()
+        resources = self.compute.driver.get_available_resource(NODENAME)
         self.assertEqual(1, resources['vcpus'])
 
         # build an instance, specifying an amount of memory that exceeds
@@ -459,7 +465,7 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource()
+        resources = self.compute.driver.get_available_resource(NODENAME)
         total_disk_gb = resources['local_gb']
 
         oversub_limit_gb = total_disk_gb * 1.5
@@ -485,7 +491,7 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
 
         # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource()
+        resources = self.compute.driver.get_available_resource(NODENAME)
         total_disk_gb = resources['local_gb']
 
         oversub_limit_gb = total_disk_gb * 1.5

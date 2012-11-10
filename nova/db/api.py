@@ -614,6 +614,11 @@ def instance_get_all_by_host(context, host):
     return IMPL.instance_get_all_by_host(context, host)
 
 
+def instance_get_all_by_host_and_node(context, host, node):
+    """Get all instances belonging to a node."""
+    return IMPL.instance_get_all_by_host_and_node(context, host, node)
+
+
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     """Get all instances belonging to a host with a different type_id."""
     return IMPL.instance_get_all_by_host_and_not_type(context, host, type_id)

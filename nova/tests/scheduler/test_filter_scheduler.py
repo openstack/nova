@@ -183,7 +183,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         def _return_hosts(*args, **kwargs):
-            host_state = host_manager.HostState('host2')
+            host_state = host_manager.HostState('host2', 'node2')
             return [least_cost.WeightedHost(1.0, host_state=host_state)]
 
         self.stubs.Set(sched, '_schedule', _return_hosts)
@@ -209,7 +209,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEquals(len(fns), 1)
         weight, fn = fns[0]
         self.assertEquals(weight, -1.0)
-        hostinfo = host_manager.HostState('host')
+        hostinfo = host_manager.HostState('host', 'node')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0, vcpus=1, disk_available_least=1000,
                 free_disk_mb=1000, free_ram_mb=872, vcpus_used=0,
@@ -307,7 +307,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {'retry': retry}
         sched = fakes.FakeFilterScheduler()
 
-        host_state = host_manager.HostState('host')
+        host_state = host_manager.HostState('host', 'node')
         host_state.limits['vcpus'] = 5
         sched._post_select_populate_filter_properties(filter_properties,
                 host_state)
@@ -331,7 +331,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {'retry': retry}
         reservations = None
 
-        host = fakes.FakeHostState('host', {})
+        host = fakes.FakeHostState('host', 'node', {})
         weighted_host = least_cost.WeightedHost(1, host)
         hosts = [weighted_host]
 

@@ -155,7 +155,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             super(HyperVAPITestCase, self).tearDown()
 
     def test_get_available_resource(self):
-        dic = self._conn.get_available_resource()
+        dic = self._conn.get_available_resource(None)
 
         self.assertEquals(dic['hypervisor_hostname'], platform.node())
 

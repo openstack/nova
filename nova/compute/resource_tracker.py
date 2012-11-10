@@ -54,9 +54,10 @@ class ResourceTracker(object):
     are built and destroyed.
     """
 
-    def __init__(self, host, driver):
+    def __init__(self, host, driver, nodename):
         self.host = host
         self.driver = driver
+        self.nodename = nodename
         self.compute_node = None
         self.stats = importutils.import_object(FLAGS.compute_stats_class)
         self.tracked_instances = {}
@@ -157,7 +158,7 @@ class ResourceTracker(object):
         declared a need for resources, but not necessarily retrieved them from
         the hypervisor layer yet.
         """
-        resources = self.driver.get_available_resource()
+        resources = self.driver.get_available_resource(self.nodename)
         if not resources:
             # The virt driver does not support this function
             LOG.audit(_("Virt driver does not support "
@@ -169,8 +170,9 @@ class ResourceTracker(object):
 
         self._report_hypervisor_resource_view(resources)
 
-        # Grab all instances assigned to this host:
-        instances = db.instance_get_all_by_host(context, self.host)
+        # Grab all instances assigned to this node:
+        instances = db.instance_get_all_by_host_and_node(context, self.host,
+                                                         self.nodename)
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(resources, instances)
@@ -187,9 +189,12 @@ class ResourceTracker(object):
                 # no service record, disable resource
                 return
 
-            compute_node_ref = service['compute_node']
-            if compute_node_ref:
-                self.compute_node = compute_node_ref[0]
+            compute_node_refs = service['compute_node']
+            if compute_node_refs:
+                for cn in compute_node_refs:
+                    if cn.get('hypervisor_hostname') == self.nodename:
+                        self.compute_node = cn
+                        break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:

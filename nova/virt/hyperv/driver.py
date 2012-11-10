@@ -122,7 +122,7 @@ class HyperVDriver(driver.ComputeDriver):
     def poll_rescued_instances(self, timeout):
         pass
 
-    def get_available_resource(self):
+    def get_available_resource(self, nodename):
         return self._hostops.get_available_resource()
 
     def get_host_stats(self, refresh=False):

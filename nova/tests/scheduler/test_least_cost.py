@@ -95,7 +95,7 @@ class TestWeightedHost(test.TestCase):
         self.assertDictMatch(host.to_dict(), expected)
 
     def test_dict_conversion_with_host_state(self):
-        host_state = host_manager.HostState('somehost')
+        host_state = host_manager.HostState('somehost', None)
         host = least_cost.WeightedHost('someweight', host_state)
         expected = {'weight': 'someweight',
                     'host': 'somehost'}

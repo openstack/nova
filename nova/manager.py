@@ -240,6 +240,8 @@ class SchedulerDependentManager(Manager):
 
     def update_service_capabilities(self, capabilities):
         """Remember these capabilities to send on next periodic update."""
+        if not isinstance(capabilities, list):
+            capabilities = [capabilities]
         self.last_capabilities = capabilities
 
     @periodic_task
@@ -251,5 +253,8 @@ class SchedulerDependentManager(Manager):
         """
         if self.last_capabilities:
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            self.scheduler_rpcapi.update_service_capabilities(context,
-                    self.service_name, self.host, self.last_capabilities)
+            for capability_item in self.last_capabilities:
+                self.scheduler_rpcapi.update_service_capabilities(context,
+                        self.service_name, self.host, capability_item)
+        # TODO(NTTdocomo): Make update_service_capabilities() accept a list
+        #                  of capabilities
