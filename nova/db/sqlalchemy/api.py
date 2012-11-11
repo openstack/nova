@@ -962,15 +962,8 @@ def dnsdomain_unregister(context, fqdomain):
 
 @require_context
 def dnsdomain_list(context):
-    session = get_session()
-    records = model_query(context, models.DNSDomain,
-                  session=session, read_deleted="no").\
-                  all()
-    domains = []
-    for record in records:
-        domains.append(record.domain)
-
-    return domains
+    query = model_query(context, models.DNSDomain, read_deleted="no")
+    return [row.domain for row in query.all()]
 
 
 ###################

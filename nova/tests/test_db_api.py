@@ -382,6 +382,10 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(project, self.project_id)
         self.assertEqual(scope, 'public')
 
+        expected = [domain1, domain2]
+        domains = db.dnsdomain_list(ctxt)
+        self.assertEqual(expected, domains)
+
         db.dnsdomain_unregister(ctxt, domain1)
         db.dnsdomain_unregister(ctxt, domain2)
 
