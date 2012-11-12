@@ -97,6 +97,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-cloudpipe-update",
+            "description": "%(text)s",
+            "links": [],
+            "name": "CloudpipeUpdate",
+            "namespace": "http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-config-drive",
             "description": "%(text)s",
             "links": [],

@@ -87,6 +87,7 @@
     "compute_extension:aggregates": "",
     "compute_extension:certificates": "",
     "compute_extension:cloudpipe": "",
+    "compute_extension:cloudpipe_update": "",
     "compute_extension:config_drive": "",
     "compute_extension:console_output": "",
     "compute_extension:consoles": "",

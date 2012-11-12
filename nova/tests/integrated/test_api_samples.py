@@ -1256,6 +1256,34 @@ class CloudPipeSampleXmlTest(CloudPipeSampleJsonTest):
     ctype = "xml"
 
 
+class CloudPipeUpdateJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".cloudpipe_update.Cloudpipe_update")
+
+    def _get_flags(self):
+        f = super(CloudPipeUpdateJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # Cloudpipe_update also needs cloudpipe to be loaded
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe')
+        return f
+
+    def setUp(self):
+        super(CloudPipeUpdateJsonTest, self).setUp()
+
+    def test_cloud_pipe_update(self):
+        subs = {'vpn_ip': '192.168.1.1',
+                'vpn_port': 2000}
+        response = self._do_put('os-cloudpipe/configure-project',
+                                'cloud-pipe-update-req',
+                                subs)
+        self.assertEqual(response.status, 202)
+
+
+class CloudPipeUpdateXmlTest(CloudPipeUpdateJsonTest):
+    ctype = "xml"
+
+
 class AggregatesSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                                      ".aggregates.Aggregates"

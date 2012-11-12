@@ -97,6 +97,14 @@
             "updated": "2011-12-16T00:00:00+00:00"
         },
         {
+            "alias": "os-cloudpipe-update",
+            "description": "Adds the ability to set the vpn ip/port for cloudpipe instances.",
+            "links": [],
+            "name": "CloudpipeUpdate",
+            "namespace": "http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2",
+            "updated": "2012-11-14T00:00:00+00:00"
+        },
+        {
             "alias": "os-config-drive",
             "description": "Config Drive Extension",
             "links": [],
