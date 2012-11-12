@@ -215,13 +215,15 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         img_ref = self.image_service.create(self.ctxt, {'name': 'snap-1'})
         self.assertRaises(exception.InstanceNotRunning,
                           self.connection.snapshot,
-                          self.ctxt, instance_ref, img_ref['id'])
+                          self.ctxt, instance_ref, img_ref['id'],
+                          lambda *args, **kwargs: None)
 
     @catch_notimplementederror
     def test_snapshot_running(self):
         img_ref = self.image_service.create(self.ctxt, {'name': 'snap-1'})
         instance_ref, network_info = self._get_running_instance()
-        self.connection.snapshot(self.ctxt, instance_ref, img_ref['id'])
+        self.connection.snapshot(self.ctxt, instance_ref, img_ref['id'],
+                                 lambda *args, **kwargs: None)
 
     @catch_notimplementederror
     def test_reboot(self):

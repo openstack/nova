@@ -397,6 +397,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertThat(fake_diagnostics, matchers.DictMatches(expected))
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
+
         def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
                            vbd_type='disk', read_only=False, bootable=False,
                            osvol=False):
@@ -417,9 +418,20 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         image_id = "my_snapshot_id"
         self.assertRaises(exception.NovaException, self.conn.snapshot,
-                          self.context, instance, image_id)
+                          self.context, instance, image_id,
+                          lambda *args, **kwargs: None)
 
     def test_instance_snapshot(self):
+        expected_calls = [
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_UPLOADING,
+                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+
         stubs.stubout_instance_snapshot(self.stubs)
         stubs.stubout_is_snapshot(self.stubs)
         # Stubbing out firewall driver as previous stub sets alters
@@ -428,7 +440,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = self._create_instance()
 
         image_id = "my_snapshot_id"
-        self.conn.snapshot(self.context, instance, image_id)
+        self.conn.snapshot(self.context, instance, image_id,
+                           func_call_matcher.call)
 
         # Ensure VM was torn down
         vm_labels = []
@@ -446,6 +459,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             vbd_labels.append(vbd_rec["vm_name_label"])
 
         self.assertEquals(vbd_labels, [instance['name']])
+
+        # Ensure task states changed in correct order
+        self.assertIsNone(func_call_matcher.match())
 
         # Ensure VDIs were torn down
         for vdi_ref in xenapi_fake.get_all('VDI'):

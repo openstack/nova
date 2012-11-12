@@ -188,9 +188,9 @@ class XenAPIDriver(driver.ComputeDriver):
                                      network_info, image_meta, resize_instance,
                                      block_device_info)
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """ Create snapshot from a running VM instance """
-        self._vmops.snapshot(context, instance, image_id)
+        self._vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, instance, network_info, reboot_type,
                block_device_info=None):

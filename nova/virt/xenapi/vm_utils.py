@@ -36,6 +36,7 @@ from eventlet import greenthread
 
 from nova import block_device
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
@@ -604,7 +605,11 @@ def get_vdi_for_vm_safely(session, vm_ref):
 
 
 @contextlib.contextmanager
-def snapshot_attached_here(session, instance, vm_ref, label):
+def snapshot_attached_here(session, instance, vm_ref, label, *args):
+    update_task_state = None
+    if len(args) == 1:
+        update_task_state = args[0]
+
     """Snapshot the root disk only.  Return a list of uuids for the vhds
     in the chain.
     """
@@ -616,6 +621,8 @@ def snapshot_attached_here(session, instance, vm_ref, label):
     sr_ref = vm_vdi_rec["SR"]
 
     snapshot_ref = session.call_xenapi("VDI.snapshot", vm_vdi_ref, {})
+    if update_task_state is not None:
+        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
     try:
         snapshot_rec = session.call_xenapi("VDI.get_record", snapshot_ref)
         _wait_for_vhd_coalesce(session, instance, sr_ref, vm_vdi_ref,

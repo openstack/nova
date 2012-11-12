@@ -28,6 +28,7 @@ import netaddr
 
 from nova.compute import api as compute
 from nova.compute import power_state
+from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context as nova_context
@@ -626,7 +627,7 @@ class VMOps(object):
             vm,
             "start")
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance.
 
         :param context: request context
@@ -654,7 +655,10 @@ class VMOps(object):
         label = "%s-snapshot" % instance['name']
 
         with vm_utils.snapshot_attached_here(
-                self._session, instance, vm_ref, label) as vdi_uuids:
+                self._session, instance, vm_ref, label,
+                update_task_state) as vdi_uuids:
+            update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                              expected_state=task_states.IMAGE_PENDING_UPLOAD)
             vm_utils.upload_image(
                     context, self._session, instance, vdi_uuids, image_id)
 

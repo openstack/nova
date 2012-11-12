@@ -1388,16 +1388,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        self.driver.snapshot(context, instance, image_id)
-
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
 
         elif image_type == 'backup':
             expected_task_state = task_states.IMAGE_BACKUP
 
+        def update_task_state(task_state, expected_state=expected_task_state):
+            self._instance_update(context, instance['uuid'],
+                                  task_state=task_state,
+                                  expected_task_state=expected_state)
+
+        self.driver.snapshot(context, instance, image_id, update_task_state)
+
         self._instance_update(context, instance['uuid'], task_state=None,
-                              expected_task_state=expected_task_state)
+                              expected_task_state=task_states.IMAGE_UPLOADING)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()

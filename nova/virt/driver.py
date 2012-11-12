@@ -280,7 +280,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """
         Snapshots the specified instance.
 

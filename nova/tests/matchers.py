@@ -198,6 +198,21 @@ class IsSubDictOf(object):
                     return SubDictMismatch(k, sub_value, super_value)
 
 
+class FunctionCallMatcher(object):
+
+    def __init__(self, expected_func_calls):
+        self.expected_func_calls = expected_func_calls
+        self.actual_func_calls = []
+
+    def call(self, *args, **kwargs):
+        func_call = {'args': args, 'kwargs': kwargs}
+        self.actual_func_calls.append(func_call)
+
+    def match(self):
+        dict_list_matcher = DictListMatches(self.expected_func_calls)
+        return dict_list_matcher.match(self.actual_func_calls)
+
+
 class XMLMismatch(object):
     """Superclass for XML mismatch."""
 

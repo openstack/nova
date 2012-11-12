@@ -26,6 +26,7 @@ semantics of real hypervisor connections.
 """
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
@@ -122,9 +123,10 @@ class FakeDriver(driver.ComputeDriver):
         fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance
 
-    def snapshot(self, context, instance, name):
+    def snapshot(self, context, instance, name, update_task_state):
         if not instance['name'] in self.instances:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+        update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
     def reboot(self, instance, network_info, reboot_type,
                block_device_info=None):

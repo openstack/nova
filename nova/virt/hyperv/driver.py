@@ -128,8 +128,8 @@ class HyperVDriver(driver.ComputeDriver):
     def host_power_action(self, host, action):
         return self._hostops.host_power_action(host, action)
 
-    def snapshot(self, context, instance, name):
-        self._snapshotops.snapshot(context, instance, name)
+    def snapshot(self, context, instance, name, update_task_state):
+        self._snapshotops.snapshot(context, instance, name, update_task_state)
 
     def pause(self, instance):
         self._vmops.pause(instance)

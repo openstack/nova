@@ -20,11 +20,13 @@ Test suite for VMWareAPI.
 """
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import context
 from nova import db
 from nova import exception
 from nova import test
 import nova.tests.image.fake
+from nova.tests import matchers
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
@@ -159,17 +161,29 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot(self):
+        expected_calls = [
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_UPLOADING,
+                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
         self._create_vm()
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.snapshot(self.context, self.instance, "Test-Snapshot")
+        self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
+                           func_call_matcher.call)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
+        self.assertIsNone(func_call_matcher.match())
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.snapshot,
-                          self.context, self.instance, "Test-Snapshot")
+                          self.context, self.instance, "Test-Snapshot",
+                          lambda *args, **kwargs: None)
 
     def test_reboot(self):
         self._create_vm()

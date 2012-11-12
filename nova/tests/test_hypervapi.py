@@ -26,6 +26,7 @@ import sys
 import uuid
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import context
 from nova import db
 from nova.image import glance
@@ -36,6 +37,7 @@ from nova.tests.hyperv import db_fakes
 from nova.tests.hyperv import hypervutils
 from nova.tests.hyperv import mockproxy
 import nova.tests.image.fake as fake_image
+from nova.tests import matchers
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import driver as driver_hyperv
 from nova.virt.hyperv import vmutils
@@ -407,26 +409,54 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             self.assertTrue(self._fetched_image is None)
 
     def test_snapshot_with_update_failure(self):
+        expected_calls = [
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+            {'args': (),
+             'kwargs':
+                 {'task_state': task_states.IMAGE_UPLOADING,
+                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+
         self._spawn_instance(True)
 
         self._update_image_raise_exception = True
         snapshot_name = 'test_snapshot_' + str(uuid.uuid4())
         self.assertRaises(vmutils.HyperVException, self._conn.snapshot,
-            self._context, self._instance_data, snapshot_name)
+                          self._context, self._instance_data, snapshot_name,
+                          func_call_matcher.call)
+
+        # assert states changed in correct order
+        self.assertIsNone(func_call_matcher.match())
 
         # assert VM snapshots have been removed
         self.assertEquals(self._hypervutils.get_vm_snapshots_count(
             self._instance_data["name"]), 0)
 
     def test_snapshot(self):
+        expected_calls = [
+            {'args': (),
+               'kwargs':
+                   {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
+              {'args': (),
+               'kwargs':
+                   {'task_state': task_states.IMAGE_UPLOADING,
+                    'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
+        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+
         self._spawn_instance(True)
 
         snapshot_name = 'test_snapshot_' + str(uuid.uuid4())
-        self._conn.snapshot(self._context, self._instance_data, snapshot_name)
+        self._conn.snapshot(self._context, self._instance_data, snapshot_name,
+                            func_call_matcher.call)
 
         self.assertTrue(self._image_metadata and
                 "disk_format" in self._image_metadata and
                 self._image_metadata["disk_format"] == "vhd")
+
+        # assert states changed in correct order
+        self.assertIsNone(func_call_matcher.match())
 
         # assert VM snapshots have been removed
         self.assertEquals(self._hypervutils.get_vm_snapshots_count(
