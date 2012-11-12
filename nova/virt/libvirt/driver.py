@@ -267,7 +267,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._wrapped_conn = None
         self.read_only = read_only
         self.firewall_driver = firewall.load_driver(
-            default=DEFAULT_FIREWALL_DRIVER,
+            DEFAULT_FIREWALL_DRIVER,
+            self.virtapi,
             get_connection=self._get_connection)
         self.vif_driver = importutils.import_object(CONF.libvirt_vif_driver)
         self.volume_drivers = {}

@@ -243,6 +243,18 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return self._compute.db.aggregate_metadata_delete(context,
                                                           aggregate_id, key)
 
+    def security_group_get_by_instance(self, context, instance_uuid):
+        return self._compute.db.security_group_get_by_instance(context,
+                                                               instance_uuid)
+
+    def security_group_rule_get_by_security_group(self, context,
+                                                  security_group_id):
+        return self._compute.db.security_group_rule_get_by_security_group(
+            context, security_group_id)
+
+    def provider_fw_rule_get_all(self, context):
+        return self._compute.db.provider_fw_rule_get_all(context)
+
 
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
