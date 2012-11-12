@@ -22,13 +22,14 @@ import webob.dec
 import webob.exc
 
 from nova.api import ec2
+from nova import config
 from nova import context
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 @webob.dec.wsgify
@@ -62,28 +63,28 @@ class LockoutTestCase(test.TestCase):
         return (req.get_response(self.lockout).status_int == 403)
 
     def test_lockout(self):
-        self._send_bad_attempts('test', FLAGS.lockout_attempts)
+        self._send_bad_attempts('test', CONF.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
 
     def test_timeout(self):
-        self._send_bad_attempts('test', FLAGS.lockout_attempts)
+        self._send_bad_attempts('test', CONF.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
-        timeutils.advance_time_seconds(FLAGS.lockout_minutes * 60)
+        timeutils.advance_time_seconds(CONF.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test'))
 
     def test_multiple_keys(self):
-        self._send_bad_attempts('test1', FLAGS.lockout_attempts)
+        self._send_bad_attempts('test1', CONF.lockout_attempts)
         self.assertTrue(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
-        timeutils.advance_time_seconds(FLAGS.lockout_minutes * 60)
+        timeutils.advance_time_seconds(CONF.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
 
     def test_window_timeout(self):
-        self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
+        self._send_bad_attempts('test', CONF.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
-        timeutils.advance_time_seconds(FLAGS.lockout_window * 60)
-        self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
+        timeutils.advance_time_seconds(CONF.lockout_window * 60)
+        self._send_bad_attempts('test', CONF.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
 
 

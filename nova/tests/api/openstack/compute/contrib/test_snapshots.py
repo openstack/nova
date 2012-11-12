@@ -27,8 +27,6 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.volume import cinder
 
-FLAGS = flags.FLAGS
-
 LOG = logging.getLogger(__name__)
 
 _last_param = {}

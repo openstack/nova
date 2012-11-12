@@ -16,12 +16,13 @@
 
 import platform
 
+import nova.config
 import nova.context
 import nova.db
 import nova.flags
 from nova.image import glance
 
-FLAGS = nova.flags.FLAGS
+CONF = nova.config.CONF
 
 
 def get_test_admin_context():
@@ -74,7 +75,7 @@ def get_test_instance(context=None):
 
 
 def get_test_network_info(count=1):
-    ipv6 = FLAGS.use_ipv6
+    ipv6 = CONF.use_ipv6
     fake = 'fake'
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'

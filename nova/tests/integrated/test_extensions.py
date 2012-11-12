@@ -15,19 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import config
 from nova import flags
 from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
     def _get_flags(self):
         f = super(ExtensionsTest, self)._get_flags()
-        f['osapi_compute_extension'] = FLAGS.osapi_compute_extension[:]
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         f['osapi_compute_extension'].append(
             'nova.tests.api.openstack.compute.extensions.'
             'foxinsocks.Foxinsocks')

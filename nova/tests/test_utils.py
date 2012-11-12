@@ -27,6 +27,7 @@ from eventlet import greenpool
 import mox
 
 import nova
+from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
@@ -34,8 +35,7 @@ from nova.openstack.common import uuidutils
 from nova import test
 from nova import utils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ByteConversionTest(test.TestCase):
@@ -382,7 +382,7 @@ class GenericUtilsTestCase(test.TestCase):
 
     def test_generate_glance_url(self):
         generated_url = utils.generate_glance_url()
-        actual_url = "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
+        actual_url = "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
         self.assertEqual(generated_url, actual_url)
 
     def test_read_cached_file(self):

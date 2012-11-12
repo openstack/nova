@@ -17,18 +17,18 @@
 
 import mox
 
+from nova import config
 from nova import context
 from nova import exception
 from nova.network import model
 from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantumapi
-from nova.openstack.common import cfg
 from nova import test
 from nova import utils
 from quantumclient.v2_0 import client
 
+CONF = config.CONF
 
-FLAGS = cfg.CONF
 #NOTE: Quantum client raises Exception which is discouraged by HACKING.
 #      We set this variable here and use it for assertions below to avoid
 #      the hacking checks until we can make quantum client throw a custom
@@ -92,9 +92,9 @@ class TestQuantumClient(test.TestCase):
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            endpoint_url=FLAGS.quantum_url,
+            endpoint_url=CONF.quantum_url,
             token=my_context.auth_token,
-            timeout=FLAGS.quantum_url_timeout).AndReturn(None)
+            timeout=CONF.quantum_url_timeout).AndReturn(None)
         self.mox.ReplayAll()
         quantumv2.get_client(my_context)
 
@@ -107,23 +107,17 @@ class TestQuantumClient(test.TestCase):
                           my_context)
 
     def test_withouttoken_keystone_not_auth(self):
-        # self.flags(quantum_auth_strategy=None) fail to work
-        old_quantum_auth_strategy = FLAGS.quantum_auth_strategy
-        setattr(FLAGS, 'quantum_auth_strategy', None)
+        self.flags(quantum_auth_strategy=None)
         self.flags(quantum_url='http://anyhost/')
         self.flags(quantum_url_timeout=30)
         my_context = context.RequestContext('userid', 'my_tenantid')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            endpoint_url=FLAGS.quantum_url,
+            endpoint_url=CONF.quantum_url,
             auth_strategy=None,
-            timeout=FLAGS.quantum_url_timeout).AndReturn(None)
+            timeout=CONF.quantum_url_timeout).AndReturn(None)
         self.mox.ReplayAll()
-        try:
-            quantumv2.get_client(my_context)
-        finally:
-            setattr(FLAGS, 'quantum_auth_strategy',
-                    old_quantum_auth_strategy)
+        quantumv2.get_client(my_context)
 
 
 class TestQuantumv2(test.TestCase):
@@ -225,7 +219,7 @@ class TestQuantumv2(test.TestCase):
             self.mox.UnsetStubs()
             self.mox.VerifyAll()
         finally:
-            FLAGS.reset()
+            CONF.reset()
         super(TestQuantumv2, self).tearDown()
 
     def _verify_nw_info(self, nw_inf, index=0):

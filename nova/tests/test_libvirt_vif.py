@@ -16,13 +16,14 @@
 
 from lxml import etree
 
+from nova import config
 from nova import flags
 from nova import test
 from nova import utils
-from nova.virt.libvirt import config
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import vif
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class LibvirtVifTestCase(test.TestCase):
@@ -66,7 +67,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
     def _get_instance_xml(self, driver):
-        conf = config.LibvirtConfigGuest()
+        conf = vconfig.LibvirtConfigGuest()
         conf.virt_type = "qemu"
         conf.name = "fake-name"
         conf.uuid = "fake-uuid"
@@ -122,7 +123,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(node.get("type"), "bridge")
 
         br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, FLAGS.libvirt_ovs_bridge)
+        self.assertEqual(br_name, CONF.libvirt_ovs_bridge)
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
         vp = node.find("virtualport")

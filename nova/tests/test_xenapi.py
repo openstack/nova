@@ -29,6 +29,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -55,7 +56,7 @@ from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger(__name__)
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'
@@ -173,7 +174,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         vol['user_id'] = 'fake'
         vol['project_id'] = 'fake'
         vol['host'] = 'localhost'
-        vol['availability_zone'] = FLAGS.node_availability_zone
+        vol['availability_zone'] = CONF.node_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
         return db.volume_create(self.context, vol)
@@ -265,7 +266,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
-        self.network = importutils.import_object(FLAGS.network_manager)
+        self.network = importutils.import_object(CONF.network_manager)
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
@@ -275,7 +276,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
+        xenapi_fake.create_network('fake', CONF.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
@@ -511,16 +512,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
     def _list_vdis(self):
-        url = FLAGS.xenapi_connection_url
-        username = FLAGS.xenapi_connection_username
-        password = FLAGS.xenapi_connection_password
+        url = CONF.xenapi_connection_url
+        username = CONF.xenapi_connection_username
+        password = CONF.xenapi_connection_password
         session = xenapi_conn.XenAPISession(url, username, password)
         return session.call_xenapi('VDI.get_all')
 
     def _list_vms(self):
-        url = FLAGS.xenapi_connection_url
-        username = FLAGS.xenapi_connection_username
-        password = FLAGS.xenapi_connection_password
+        url = CONF.xenapi_connection_url
+        username = CONF.xenapi_connection_username
+        password = CONF.xenapi_connection_password
         session = xenapi_conn.XenAPISession(url, username, password)
         return session.call_xenapi('VM.get_all')
 
@@ -772,7 +773,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.network.allocate_for_instance(ctxt,
                           instance_id=2,
                           instance_uuid='00000000-0000-0000-0000-000000000002',
-                          host=FLAGS.host,
+                          host=CONF.host,
                           vpn=None,
                           rxtx_factor=3,
                           project_id=self.project_id)
@@ -1003,7 +1004,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
+        xenapi_fake.create_network('fake', CONF.flat_network_bridge)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -1702,7 +1703,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForFirewallTests,
                               test_case=self)
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.network = importutils.import_object(FLAGS.network_manager)
+        self.network = importutils.import_object(CONF.network_manager)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.fw = self.conn._vmops.firewall_driver
 
@@ -2030,7 +2031,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.compute = importutils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(CONF.compute_manager)
         self.api = compute_api.AggregateAPI()
         values = {'name': 'test_aggr',
                   'availability_zone': 'test_zone',
@@ -2548,7 +2549,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                 self.metadetails = {"host": "test_host_uuid"}
 
         def fake_aggregate_get_by_host(context, host, key=None):
-            self.assertEqual(FLAGS.host, host)
+            self.assertEqual(CONF.host, host)
             return [fake_aggregate()]
 
         self.stubs.Set(db, "aggregate_get_by_host",
@@ -2565,7 +2566,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                 self.metadetails = {"dest_other": "test_host_uuid"}
 
         def fake_aggregate_get_by_host(context, host, key=None):
-            self.assertEqual(FLAGS.host, host)
+            self.assertEqual(CONF.host, host)
             return [fake_aggregate()]
 
         self.stubs.Set(db, "aggregate_get_by_host",

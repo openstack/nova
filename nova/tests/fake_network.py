@@ -17,6 +17,7 @@
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
+from nova import config
 import nova.context
 from nova import db
 from nova import exception
@@ -30,7 +31,7 @@ from nova.virt.libvirt import config as libvirt_config
 
 
 HOST = "testhost"
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class FakeIptablesFirewallDriver(object):
@@ -158,7 +159,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
 
 def fake_network(network_id, ipv6=None):
     if ipv6 is None:
-        ipv6 = FLAGS.use_ipv6
+        ipv6 = CONF.use_ipv6
     fake_network = {'id': network_id,
              'uuid': '00000000-0000-0000-0000-00000000000000%02d' % network_id,
              'label': 'test%d' % network_id,
@@ -185,7 +186,7 @@ def fake_network(network_id, ipv6=None):
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id
         fake_network['netmask_v6'] = '64'
-    if FLAGS.flat_injected:
+    if CONF.flat_injected:
         fake_network['injected'] = True
 
     return fake_network
@@ -433,7 +434,7 @@ def _get_fake_cache():
                          'label': 'private',
                          'subnets': [{'cidr': '192.168.0.0/24',
                                       'ips': [_ip('192.168.0.3')]}]}}]
-    if FLAGS.use_ipv6:
+    if CONF.use_ipv6:
         ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
         info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
                                               'ips': [_ip(ipv6_addr)]})

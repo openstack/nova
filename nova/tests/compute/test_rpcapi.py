@@ -19,6 +19,7 @@ Unit Tests for nova.compute.rpcapi
 """
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -26,8 +27,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ComputeRpcAPITestCase(test.TestCase):
@@ -74,7 +74,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             host = kwargs['destination']
         else:
             host = kwargs['instance']['host']
-        expected_topic = '%s.%s' % (FLAGS.compute_topic, host)
+        expected_topic = '%s.%s' % (CONF.compute_topic, host)
 
         self.fake_args = None
         self.fake_kwargs = None

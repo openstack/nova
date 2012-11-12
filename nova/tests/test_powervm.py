@@ -30,8 +30,6 @@ from nova.virt.powervm import driver as powervm_driver
 from nova.virt.powervm import lpar
 from nova.virt.powervm import operator
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 

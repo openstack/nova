@@ -23,8 +23,7 @@ from nova.openstack.common import cfg
 from nova import test
 
 CONF = config.CONF
-FLAGS = flags.FLAGS
-FLAGS.register_opt(cfg.StrOpt('flags_unittest',
+CONF.register_opt(cfg.StrOpt('flags_unittest',
                               default='foo',
                               help='for testing purposes only'))
 
@@ -43,7 +42,7 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(CONF.answer, 256)
 
     def test_getopt_non_interspersed_args(self):
-        self.assert_('runtime_answer' not in FLAGS)
+        self.assert_('runtime_answer' not in CONF)
 
         argv = ['flags_test', 'extra_arg', '--runtime_answer=60']
         args = config.parse_args(argv, default_config_files=[])
@@ -51,42 +50,42 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(argv, args)
 
     def test_runtime_and_unknown_flags(self):
-        self.assert_('runtime_answer' not in FLAGS)
+        self.assert_('runtime_answer' not in CONF)
         import nova.tests.runtime_flags
-        self.assert_('runtime_answer' in FLAGS)
-        self.assertEqual(FLAGS.runtime_answer, 54)
+        self.assert_('runtime_answer' in CONF)
+        self.assertEqual(CONF.runtime_answer, 54)
 
     def test_long_vs_short_flags(self):
-        FLAGS.clear()
-        FLAGS.register_cli_opt(cfg.StrOpt('duplicate_answer_long',
+        CONF.clear()
+        CONF.register_cli_opt(cfg.StrOpt('duplicate_answer_long',
                                           default='val',
                                           help='desc'))
         argv = ['flags_test', '--duplicate_answer=60', 'extra_arg']
         args = config.parse_args(argv, default_config_files=[])
 
-        self.assert_('duplicate_answer' not in FLAGS)
-        self.assert_(FLAGS.duplicate_answer_long, 60)
+        self.assert_('duplicate_answer' not in CONF)
+        self.assert_(CONF.duplicate_answer_long, 60)
 
-        FLAGS.clear()
-        FLAGS.register_cli_opt(cfg.IntOpt('duplicate_answer',
+        CONF.clear()
+        CONF.register_cli_opt(cfg.IntOpt('duplicate_answer',
                                           default=60, help='desc'))
         args = config.parse_args(argv, default_config_files=[])
-        self.assertEqual(FLAGS.duplicate_answer, 60)
-        self.assertEqual(FLAGS.duplicate_answer_long, 'val')
+        self.assertEqual(CONF.duplicate_answer, 60)
+        self.assertEqual(CONF.duplicate_answer_long, 'val')
 
     def test_flag_leak_left(self):
-        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        self.assertEqual(CONF.flags_unittest, 'foo')
         self.flags(flags_unittest='bar')
-        self.assertEqual(FLAGS.flags_unittest, 'bar')
+        self.assertEqual(CONF.flags_unittest, 'bar')
 
     def test_flag_leak_right(self):
-        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        self.assertEqual(CONF.flags_unittest, 'foo')
         self.flags(flags_unittest='bar')
-        self.assertEqual(FLAGS.flags_unittest, 'bar')
+        self.assertEqual(CONF.flags_unittest, 'bar')
 
     def test_flag_overrides(self):
-        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        self.assertEqual(CONF.flags_unittest, 'foo')
         self.flags(flags_unittest='bar')
-        self.assertEqual(FLAGS.flags_unittest, 'bar')
-        FLAGS.reset()
-        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        self.assertEqual(CONF.flags_unittest, 'bar')
+        CONF.reset()
+        self.assertEqual(CONF.flags_unittest, 'foo')

@@ -29,7 +29,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import rpc
 from nova import test
 
-FLAGS = flags.FLAGS
 CONF = config.CONF
 CONF.import_opt('console_driver', 'nova.console.manager')
 
@@ -40,7 +39,7 @@ class ConsoleTestCase(test.TestCase):
         super(ConsoleTestCase, self).setUp()
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
                    stub_compute=True)
-        self.console = importutils.import_object(FLAGS.console_manager)
+        self.console = importutils.import_object(CONF.console_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

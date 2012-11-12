@@ -21,10 +21,6 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
-FLAGS = flags.FLAGS
-
-
 FAKE_FLAVORS = {
     'flavor 1': {
         "flavorid": '1',

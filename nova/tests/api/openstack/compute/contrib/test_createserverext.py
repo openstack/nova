@@ -28,9 +28,6 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
-
-FLAGS = flags.FLAGS
-
 FAKE_UUID = fakes.FAKE_UUID
 
 FAKE_NETWORKS = [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10.0.1.12'),

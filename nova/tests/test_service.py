@@ -23,7 +23,7 @@ Unit Tests for remote procedure calls using queue
 import mox
 import sys
 
-
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -47,7 +47,8 @@ test_service_opts = [
                help="Port number to bind test service to"),
     ]
 
-flags.FLAGS.register_opts(test_service_opts)
+CONF = config.CONF
+CONF.register_opts(test_service_opts)
 
 
 class FakeManager(manager.Manager):

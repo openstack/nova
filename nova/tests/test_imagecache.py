@@ -27,6 +27,7 @@ from nova import test
 
 from nova.compute import manager as compute_manager
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova import flags
 from nova.openstack.common import importutils
@@ -35,8 +36,7 @@ from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 LOG = log.getLogger(__name__)
 
@@ -147,13 +147,13 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def test_list_running_instances(self):
         all_instances = [{'image_ref': '1',
-                          'host': FLAGS.host,
+                          'host': CONF.host,
                           'name': 'inst-1',
                           'uuid': '123',
                           'vm_state': '',
                           'task_state': ''},
                          {'image_ref': '2',
-                          'host': FLAGS.host,
+                          'host': CONF.host,
                           'name': 'inst-2',
                           'uuid': '456',
                           'vm_state': '',
@@ -182,7 +182,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def test_list_resizing_instances(self):
         all_instances = [{'image_ref': '1',
-                          'host': FLAGS.host,
+                          'host': CONF.host,
                           'name': 'inst-1',
                           'uuid': '123',
                           'vm_state': vm_states.RESIZED,
@@ -209,7 +209,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
+        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -231,7 +231,7 @@ class ImageCacheManagerTestCase(test.TestCase):
                        lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
                                   '10737418240'))
 
-        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
+        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_'
                              '10737418240')
 
@@ -252,7 +252,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
+        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -789,13 +789,13 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         # Fake the database call which lists running instances
         all_instances = [{'image_ref': '1',
-                          'host': FLAGS.host,
+                          'host': CONF.host,
                           'name': 'instance-1',
                           'uuid': '123',
                           'vm_state': '',
                           'task_state': ''},
                          {'image_ref': '1',
-                          'host': FLAGS.host,
+                          'host': CONF.host,
                           'name': 'instance-2',
                           'uuid': '456',
                           'vm_state': '',
@@ -868,11 +868,11 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
         self.flags(image_info_filename_pattern=('$instances_path/_base/'
                                                 '%(image)s.info'))
-        base_filename = os.path.join(FLAGS.instances_path, '_base', hashed)
+        base_filename = os.path.join(CONF.instances_path, '_base', hashed)
 
         self.assertFalse(virtutils.is_valid_info_file('banana'))
         self.assertFalse(virtutils.is_valid_info_file(
-                os.path.join(FLAGS.instances_path, '_base', '00000001')))
+                os.path.join(CONF.instances_path, '_base', '00000001')))
         self.assertFalse(virtutils.is_valid_info_file(base_filename))
         self.assertFalse(virtutils.is_valid_info_file(base_filename + '.sha1'))
         self.assertTrue(virtutils.is_valid_info_file(base_filename + '.info'))
@@ -889,13 +889,13 @@ class ImageCacheManagerTestCase(test.TestCase):
 
             # Fake the database call which lists running instances
             all_instances = [{'image_ref': '1',
-                              'host': FLAGS.host,
+                              'host': CONF.host,
                               'name': 'instance-1',
                               'uuid': '123',
                               'vm_state': '',
                               'task_state': ''},
                              {'image_ref': '1',
-                              'host': FLAGS.host,
+                              'host': CONF.host,
                               'name': 'instance-2',
                               'uuid': '456',
                               'vm_state': '',
@@ -927,19 +927,19 @@ class ImageCacheManagerTestCase(test.TestCase):
         def fake_get_all(context):
             was['called'] = True
             return [{'image_ref': '1',
-                     'host': FLAGS.host,
+                     'host': CONF.host,
                      'name': 'instance-1',
                      'uuid': '123',
                      'vm_state': '',
                      'task_state': ''},
                     {'image_ref': '1',
-                     'host': FLAGS.host,
+                     'host': CONF.host,
                      'name': 'instance-2',
                      'uuid': '456',
                      'vm_state': '',
                      'task_state': ''}]
 
         self.stubs.Set(db, 'instance_get_all', fake_get_all)
-        compute = importutils.import_object(FLAGS.compute_manager)
+        compute = importutils.import_object(CONF.compute_manager)
         compute._run_image_cache_manager_pass(None)
         self.assertTrue(was['called'])

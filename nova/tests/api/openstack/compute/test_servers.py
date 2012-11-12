@@ -34,6 +34,7 @@ from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -49,8 +50,8 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova import utils
 
+CONF = config.CONF
 
-FLAGS = flags.FLAGS
 FAKE_UUID = fakes.FAKE_UUID
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -1670,7 +1671,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry"""
-            if (topic == FLAGS.scheduler_topic and
+            if (topic == CONF.scheduler_topic and
                 msg['method'] == 'run_instance'):
                 request_spec = msg['args']['request_spec']
                 num_instances = request_spec.get('num_instances', 1)
@@ -1720,7 +1721,7 @@ class ServersControllerCreateTest(test.TestCase):
         length.
 
         """
-        self.assertEqual(FLAGS.password_length,
+        self.assertEqual(CONF.password_length,
                          len(server_dict["adminPass"]))
 
     def _check_admin_pass_missing(self, server_dict):

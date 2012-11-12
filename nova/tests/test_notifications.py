@@ -34,7 +34,6 @@ from nova import test
 from nova.tests import fake_network
 
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 class NotificationsTestCase(test.TestCase):

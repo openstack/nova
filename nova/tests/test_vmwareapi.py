@@ -32,9 +32,6 @@ from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 
 
-FLAGS = flags.FLAGS
-
-
 class VMWareAPIVMTestCase(test.TestCase):
     """Unit tests for Vmware API connection calls."""
 

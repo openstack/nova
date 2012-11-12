@@ -27,9 +27,6 @@ from nova.openstack.common import log
 from nova import utils
 from nova.virt import configdrive
 
-
-FLAGS = flags.FLAGS
-
 LOG = log.getLogger(__name__)
 
 

@@ -67,7 +67,6 @@ from nova.volume import cinder
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 CONF = config.CONF
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
@@ -105,7 +104,7 @@ class BaseTestCase(test.TestCase):
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         fake.set_nodes([NODENAME])
-        self.compute = importutils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(CONF.compute_manager)
 
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
@@ -2101,7 +2100,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_compute_info(
             self.context, inst_ref['host']).AndReturn(compute_info)
         self.compute._get_compute_info(
-            self.context, FLAGS.host).AndReturn(compute_info)
+            self.context, CONF.host).AndReturn(compute_info)
         self.compute.driver.check_can_live_migrate_destination(self.context,
                 inst_ref,
                 compute_info, compute_info,
@@ -2130,7 +2129,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_compute_info(
             self.context, inst_ref['host']).AndReturn(compute_info)
         self.compute._get_compute_info(
-            self.context, FLAGS.host).AndReturn(compute_info)
+            self.context, CONF.host).AndReturn(compute_info)
         self.compute.driver.check_can_live_migrate_destination(self.context,
                 inst_ref,
                 compute_info, compute_info,
@@ -2161,7 +2160,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_compute_info(
             self.context, inst_ref['host']).AndReturn(compute_info)
         self.compute._get_compute_info(
-            self.context, FLAGS.host).AndReturn(compute_info)
+            self.context, CONF.host).AndReturn(compute_info)
         self.compute.driver.check_can_live_migrate_destination(self.context,
                 inst_ref,
                 compute_info, compute_info,
@@ -2228,7 +2227,7 @@ class ComputeTestCase(BaseTestCase):
         inst_id = instance['id']
 
         c = context.get_admin_context()
-        topic = rpc.queue_get_for(c, FLAGS.compute_topic, instance['host'])
+        topic = rpc.queue_get_for(c, CONF.compute_topic, instance['host'])
 
         # creating volume testdata
         volume_id = 'fake'
@@ -2300,7 +2299,7 @@ class ComputeTestCase(BaseTestCase):
 
         # create
         self.mox.StubOutWithMock(rpc, 'call')
-        topic = rpc.queue_get_for(c, FLAGS.compute_topic, instance['host'])
+        topic = rpc.queue_get_for(c, CONF.compute_topic, instance['host'])
         rpc.call(c, topic,
                 {"method": "pre_live_migration",
                  "args": {'instance': instance,
@@ -2344,7 +2343,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(inst_ref, [])
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
+        rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance': inst_ref, 'block_migration': False},
              "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
@@ -2548,7 +2547,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
         timeutils.is_older_than('sometimeago',
-                    FLAGS.running_deleted_instance_timeout).AndReturn(True)
+                    CONF.running_deleted_instance_timeout).AndReturn(True)
 
         self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
         self.compute.db.instance_get_all_by_host('context',
@@ -2568,7 +2567,7 @@ class ComputeTestCase(BaseTestCase):
         instances = []
         for x in xrange(5):
             uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': FLAGS.host}
+            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host}
             instances.append(instance_map[uuid])
 
         call_info = {'get_all_by_host': 0, 'get_by_uuid': 0,
@@ -2672,7 +2671,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_migration_get_unconfirmed_by_dest_compute(context,
                 resize_confirm_window, dest_compute):
-            self.assertEqual(dest_compute, FLAGS.host)
+            self.assertEqual(dest_compute, CONF.host)
             return migrations
 
         def fake_migration_update(context, migration_id, values):
@@ -2734,7 +2733,7 @@ class ComputeTestCase(BaseTestCase):
         instances = []
         for x in xrange(5):
             uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': FLAGS.host,
+            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
                     'vm_state': vm_states.BUILDING,
                     'created_at': created_at}
             instances.append(instance_map[uuid])
@@ -2766,7 +2765,7 @@ class ComputeTestCase(BaseTestCase):
         instances = []
         for x in xrange(5):
             uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': FLAGS.host,
+            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
                     'vm_state': vm_states.BUILDING,
                     'created_at': created_at}
             instances.append(instance_map[uuid])
@@ -2799,7 +2798,7 @@ class ComputeTestCase(BaseTestCase):
         #expired instances
         for x in xrange(4):
             uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': FLAGS.host,
+            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
                     'vm_state': vm_states.BUILDING,
                     'created_at': created_at}
             instances.append(instance_map[uuid])
@@ -2808,7 +2807,7 @@ class ComputeTestCase(BaseTestCase):
         uuid = 'fake-uuid-5'
         instance_map[uuid] = {
             'uuid': uuid,
-            'host': FLAGS.host,
+            'host': CONF.host,
             'vm_state': vm_states.BUILDING,
             'created_at': timeutils.utcnow(),
         }
@@ -3164,7 +3163,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         self.compute_api.delete(self.context, instance)
 
@@ -3175,7 +3174,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_in_resized(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         instance['vm_state'] = vm_states.RESIZED
 
@@ -3199,7 +3198,7 @@ class ComputeAPITestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
 
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
         timeutils.set_time_override(old_time)
         self.compute_api.delete(self.context, instance)
         timeutils.clear_time_override()
@@ -3230,7 +3229,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(QUOTAS, 'commit', fake_commit)
 
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         self.compute_api.delete(self.context, instance)
         self.compute_api.delete(self.context, instance)
@@ -3250,7 +3249,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_handles_host_setting_race_condition(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
         instance['host'] = None  # make it think host was never set
         self.compute_api.delete(self.context, instance)
 
@@ -3261,7 +3260,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_fail(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         instance = db.instance_update(self.context, instance_uuid,
                                       {'disable_terminate': True})
@@ -3274,7 +3273,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_soft(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
@@ -3289,7 +3288,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_soft_fail(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
         instance = db.instance_update(self.context, instance_uuid,
                                       {'disable_terminate': True})
 
@@ -3302,7 +3301,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_delete_soft_rollback(self):
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
         nova.quota.QUOTAS.rollback(mox.IgnoreArg(), mox.IgnoreArg())
@@ -3324,7 +3323,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_force_delete(self):
         """Ensure instance can be deleted after a soft delete"""
         instance = jsonutils.to_primitive(self._create_fake_instance(params={
-                'host': FLAGS.host}))
+                'host': CONF.host}))
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
@@ -3416,7 +3415,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_restore(self):
         """Ensure instance can be restored from a soft delete"""
         instance, instance_uuid = self._run_instance(params={
-                'host': FLAGS.host})
+                'host': CONF.host})
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.compute_api.soft_delete(self.context, instance)
@@ -3982,7 +3981,7 @@ class ComputeAPITestCase(BaseTestCase):
         orig_instance_type = instance['instance_type']
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
-        # the compute manager is using a cached copy of FLAGS.host,
+        # the compute manager is using a cached copy of CONF.host,
         # so we can't just self.flags(host='host2') before calling
         # run_instance above.  Also, set progress to 10 so we ensure
         # it is reset to 0 in compute_api.resize().  (verified in
@@ -4017,7 +4016,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = jsonutils.to_primitive(instance)
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
-        # the compute manager is using a cached copy of FLAGS.host,
+        # the compute manager is using a cached copy of CONF.host,
         # so we can't just self.flags(host='host2') before calling
         # run_instance above.  Also, set progress to 10 so we ensure
         # it is reset to 0 in compute_api.resize().  (verified in
@@ -4638,7 +4637,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, i_ref['uuid'])
 
     def test_add_remove_fixed_ip(self):
-        instance = self._create_fake_instance(params={'host': FLAGS.host})
+        instance = self._create_fake_instance(params={'host': CONF.host})
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
         self.compute_api.delete(self.context, instance)
@@ -4677,7 +4676,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg1, None).AndReturn(fake_connect_info2)
-        rpc.call(self.context, FLAGS.consoleauth_topic,
+        rpc.call(self.context, CONF.consoleauth_topic,
                 rpc_msg2, None).AndReturn(None)
 
         self.mox.ReplayAll()
@@ -4806,7 +4805,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(result["detached"])
 
     def test_inject_network_info(self):
-        instance = self._create_fake_instance(params={'host': FLAGS.host})
+        instance = self._create_fake_instance(params={'host': CONF.host})
         self.compute.run_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
         instance = self.compute_api.get(self.context, instance['uuid'])
@@ -4881,7 +4880,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
         self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
@@ -4910,7 +4909,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
         self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
@@ -4951,7 +4950,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
         self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
@@ -4972,7 +4971,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
         self.mox.StubOutWithMock(rpc, 'cast')
-        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(self.context, CONF.compute_topic,
                                   instance['host'])
         rpc.cast(self.context, topic,
                 {"method": "refresh_instance_security_rules",
@@ -5465,7 +5464,7 @@ class KeypairAPITestCase(BaseTestCase):
 
     def test_create_keypair_quota_limit(self):
         def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return FLAGS.quota_key_pairs
+            return CONF.quota_key_pairs
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.create_key_pair,
@@ -5499,7 +5498,7 @@ class KeypairAPITestCase(BaseTestCase):
 
     def test_import_keypair_quota_limit(self):
         def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return FLAGS.quota_key_pairs
+            return CONF.quota_key_pairs
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.import_key_pair,

@@ -20,6 +20,7 @@ import datetime
 
 from nova import compute
 from nova.compute import instance_types
+from nova import config
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqa_api
@@ -33,8 +34,7 @@ from nova.scheduler import driver as scheduler_driver
 from nova import test
 import nova.tests.image.fake
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class QuotaIntegrationTestCase(test.TestCase):
@@ -59,7 +59,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry"""
-            if (topic == FLAGS.scheduler_topic and
+            if (topic == CONF.scheduler_topic and
                 msg['method'] == 'run_instance'):
                 scheduler = scheduler_driver.Scheduler
                 instance = scheduler().create_instance_db_entry(
@@ -90,7 +90,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_too_many_instances(self):
         instance_uuids = []
-        for i in range(FLAGS.quota_instances):
+        for i in range(CONF.quota_instances):
             instance = self._create_instance()
             instance_uuids.append(instance['uuid'])
         inst_type = instance_types.get_instance_type_by_name('m1.small')
@@ -142,7 +142,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_too_many_metadata_items(self):
         metadata = {}
-        for i in range(FLAGS.quota_metadata_items + 1):
+        for i in range(CONF.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
@@ -172,38 +172,38 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_max_injected_files(self):
         files = []
-        for i in xrange(FLAGS.quota_injected_files):
+        for i in xrange(CONF.quota_injected_files):
             files.append(('/my/path%d' % i, 'config = test\n'))
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_files(self):
         files = []
-        for i in xrange(FLAGS.quota_injected_files + 1):
+        for i in xrange(CONF.quota_injected_files + 1):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_content_bytes(self):
-        max = FLAGS.quota_injected_file_content_bytes
+        max = CONF.quota_injected_file_content_bytes
         content = ''.join(['a' for i in xrange(max)])
         files = [('/test/path', content)]
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_file_content_bytes(self):
-        max = FLAGS.quota_injected_file_content_bytes
+        max = CONF.quota_injected_file_content_bytes
         content = ''.join(['a' for i in xrange(max + 1)])
         files = [('/test/path', content)]
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_path_bytes(self):
-        max = FLAGS.quota_injected_file_path_bytes
+        max = CONF.quota_injected_file_path_bytes
         path = ''.join(['a' for i in xrange(max)])
         files = [(path, 'config = quotatest')]
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_file_path_bytes(self):
-        max = FLAGS.quota_injected_file_path_bytes
+        max = CONF.quota_injected_file_path_bytes
         path = ''.join(['a' for i in xrange(max + 1)])
         files = [(path, 'config = quotatest')]
         self.assertRaises(exception.QuotaError,

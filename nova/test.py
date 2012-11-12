@@ -49,8 +49,8 @@ test_opts = [
                 help='should we use everything for testing'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(test_opts)
+CONF = config.CONF
+CONF.register_opts(test_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class TestCase(testtools.TestCase):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
 
-        fake_flags.set_defaults(FLAGS)
+        fake_flags.set_defaults(CONF)
         config.parse_args([], default_config_files=[])
 
         # NOTE(vish): We need a better method for creating fixtures for tests
@@ -93,7 +93,7 @@ class TestCase(testtools.TestCase):
             super(TestCase, self).tearDown()
         finally:
             # Reset any overridden flags
-            FLAGS.reset()
+            CONF.reset()
 
             # Unstub modules
             for name, mod in self._modules.iteritems():
@@ -131,7 +131,7 @@ class TestCase(testtools.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
-            FLAGS.set_override(k, v)
+            CONF.set_override(k, v)
 
     def start_service(self, name, host=None, **kwargs):
         host = host and host or uuid.uuid4().hex

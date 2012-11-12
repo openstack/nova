@@ -21,6 +21,7 @@ import string
 
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -35,9 +36,8 @@ from nova.tests import fake_network
 import nova.tests.image.fake
 from nova import utils
 
-
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class ComputeValidateDeviceTestCase(test.TestCase):
@@ -217,7 +217,7 @@ class UsageInfoTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
-        self.compute = importutils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(CONF.compute_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

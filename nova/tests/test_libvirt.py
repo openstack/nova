@@ -33,6 +33,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import vm_mode
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -51,7 +52,7 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import images
-from nova.virt.libvirt import config
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
@@ -69,7 +70,7 @@ except ImportError:
 libvirt_driver.libvirt = libvirt
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
@@ -267,7 +268,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./source/auth'), None)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
@@ -292,7 +293,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
@@ -324,7 +325,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), flags_user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
@@ -351,7 +352,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth'), None)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
@@ -383,7 +384,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
-        rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
+        rbd_name = '%s/%s' % (CONF.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         self.assertEqual(tree.find('./auth').get('username'), flags_user)
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
@@ -448,11 +449,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         # which can cause race conditions with the multiple threads we
         # use for tests. So, create the path here so utils.synchronized()
         # won't delete it out from under one of the threads.
-        self.lock_path = os.path.join(FLAGS.instances_path, 'locks')
+        self.lock_path = os.path.join(CONF.instances_path, 'locks')
         fileutils.ensure_tree(self.lock_path)
 
         def fake_exists(fname):
-            basedir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
+            basedir = os.path.join(CONF.instances_path, CONF.base_dir_name)
             if fname == basedir or fname == self.lock_path:
                 return True
             return False
@@ -647,28 +648,28 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 7)
         self.assertEquals(type(cfg.devices[0]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[1]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[2]),
-                          config.LibvirtConfigGuestInterface)
+                          vconfig.LibvirtConfigGuestInterface)
         self.assertEquals(type(cfg.devices[3]),
-                          config.LibvirtConfigGuestSerial)
+                          vconfig.LibvirtConfigGuestSerial)
         self.assertEquals(type(cfg.devices[4]),
-                          config.LibvirtConfigGuestSerial)
+                          vconfig.LibvirtConfigGuestSerial)
         self.assertEquals(type(cfg.devices[5]),
-                          config.LibvirtConfigGuestInput)
+                          vconfig.LibvirtConfigGuestInput)
         self.assertEquals(type(cfg.devices[6]),
-                          config.LibvirtConfigGuestGraphics)
+                          vconfig.LibvirtConfigGuestGraphics)
 
         self.assertEquals(type(cfg.clock),
-                          config.LibvirtConfigGuestClock)
+                          vconfig.LibvirtConfigGuestClock)
         self.assertEquals(cfg.clock.offset, "utc")
         self.assertEquals(len(cfg.clock.timers), 2)
         self.assertEquals(type(cfg.clock.timers[0]),
-                          config.LibvirtConfigGuestTimer)
+                          vconfig.LibvirtConfigGuestTimer)
         self.assertEquals(type(cfg.clock.timers[1]),
-                          config.LibvirtConfigGuestTimer)
+                          vconfig.LibvirtConfigGuestTimer)
         self.assertEquals(cfg.clock.timers[0].name, "pit")
         self.assertEquals(cfg.clock.timers[0].tickpolicy,
                           "delay")
@@ -691,21 +692,21 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 8)
         self.assertEquals(type(cfg.devices[0]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[1]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[2]),
-                          config.LibvirtConfigGuestInterface)
+                          vconfig.LibvirtConfigGuestInterface)
         self.assertEquals(type(cfg.devices[3]),
-                          config.LibvirtConfigGuestInterface)
+                          vconfig.LibvirtConfigGuestInterface)
         self.assertEquals(type(cfg.devices[4]),
-                          config.LibvirtConfigGuestSerial)
+                          vconfig.LibvirtConfigGuestSerial)
         self.assertEquals(type(cfg.devices[5]),
-                          config.LibvirtConfigGuestSerial)
+                          vconfig.LibvirtConfigGuestSerial)
         self.assertEquals(type(cfg.devices[6]),
-                          config.LibvirtConfigGuestInput)
+                          vconfig.LibvirtConfigGuestInput)
         self.assertEquals(type(cfg.devices[7]),
-                          config.LibvirtConfigGuestGraphics)
+                          vconfig.LibvirtConfigGuestGraphics)
 
     def test_get_guest_config_with_root_device_name(self):
         self.flags(libvirt_type='uml')
@@ -722,11 +723,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.os_root, 'dev/vdb')
         self.assertEquals(len(cfg.devices), 3)
         self.assertEquals(type(cfg.devices[0]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[1]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[2]),
-                          config.LibvirtConfigGuestConsole)
+                          vconfig.LibvirtConfigGuestConsole)
 
     def test_get_guest_config_with_block_device(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -739,10 +740,10 @@ class LibvirtConnTestCase(test.TestCase):
 
         cfg = conn.get_guest_config(instance_ref, [], None, None, info)
         self.assertEquals(type(cfg.devices[2]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(cfg.devices[2].target_dev, 'vdc')
         self.assertEquals(type(cfg.devices[3]),
-                          config.LibvirtConfigGuestDisk)
+                          vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(cfg.devices[3].target_dev, 'vdd')
 
     def test_get_guest_cpu_config_none(self):
@@ -772,7 +773,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, "host-model")
         self.assertEquals(conf.cpu.model, None)
 
@@ -815,7 +816,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, "host-passthrough")
         self.assertEquals(conf.cpu.model, None)
 
@@ -834,7 +835,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, "host-model")
         self.assertEquals(conf.cpu.model, None)
 
@@ -854,7 +855,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, "custom")
         self.assertEquals(conf.cpu.model, "Penryn")
 
@@ -880,12 +881,12 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Ensure we have a predictable host CPU
         def get_host_capabilities_stub(self):
-            cpu = config.LibvirtConfigGuestCPU()
+            cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.model = "Opteron_G4"
             cpu.vendor = "AMD"
 
-            caps = config.LibvirtConfigCaps()
-            caps.host = config.LibvirtConfigCapsHost()
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
             caps.host.cpu = cpu
             return caps
 
@@ -903,7 +904,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, None)
         self.assertEquals(conf.cpu.model, "Opteron_G4")
         self.assertEquals(conf.cpu.vendor, "AMD")
@@ -924,7 +925,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      _fake_network_info(self.stubs, 1),
                                      None, None)
         self.assertEquals(type(conf.cpu),
-                          config.LibvirtConfigGuestCPU)
+                          vconfig.LibvirtConfigGuestCPU)
         self.assertEquals(conf.cpu.mode, None)
         self.assertEquals(conf.cpu.model, "Penryn")
 
@@ -1838,9 +1839,9 @@ class LibvirtConnTestCase(test.TestCase):
         # This test is supposed to make sure we don't
         # override a specifically set uri
         #
-        # Deliberately not just assigning this string to FLAGS.libvirt_uri and
+        # Deliberately not just assigning this string to CONF.libvirt_uri and
         # checking against that later on. This way we make sure the
-        # implementation doesn't fiddle around with the FLAGS.
+        # implementation doesn't fiddle around with the CONF.
         testuri = 'something completely different'
         self.flags(libvirt_uri=testuri)
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
@@ -2064,7 +2065,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_live_migration_raises_exception(self):
         """Confirms recover method is called when exceptions are raised."""
         # Preparing data
-        self.compute = importutils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = {'host': 'fake',
                          'power_state': power_state.RUNNING,
                          'vm_state': vm_states.ACTIVE}
@@ -2075,8 +2076,8 @@ class LibvirtConnTestCase(test.TestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
-        _bandwidth = FLAGS.live_migration_bandwidth
-        vdmock.migrateToURI(FLAGS.live_migration_uri % 'dest',
+        _bandwidth = CONF.live_migration_bandwidth
+        vdmock.migrateToURI(CONF.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
                             None,
                             _bandwidth).AndRaise(libvirt.libvirtError('ERR'))
@@ -2287,14 +2288,14 @@ class LibvirtConnTestCase(test.TestCase):
         conn.spawn(self.context, instance, None, [], 'herp',
                        network_info=network_info)
 
-        path = os.path.join(FLAGS.instances_path, instance.name)
+        path = os.path.join(CONF.instances_path, instance.name)
         if os.path.isdir(path):
             shutil.rmtree(path)
 
-        path = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
+        path = os.path.join(CONF.instances_path, CONF.base_dir_name)
         if os.path.isdir(path):
-            shutil.rmtree(os.path.join(FLAGS.instances_path,
-                                       FLAGS.base_dir_name))
+            shutil.rmtree(os.path.join(CONF.instances_path,
+                                       CONF.base_dir_name))
 
     def test_get_console_output_file(self):
 
@@ -2384,7 +2385,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_host_ip_addr(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         ip = conn.get_host_ip_addr()
-        self.assertEquals(ip, FLAGS.my_ip)
+        self.assertEquals(ip, CONF.my_ip)
 
     def test_broken_connection(self):
         for (error, domain) in (
@@ -2574,14 +2575,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
         result = conn.get_disk_available_least()
-        space = fake_libvirt_utils.get_fs_info(FLAGS.instances_path)['free']
+        space = fake_libvirt_utils.get_fs_info(CONF.instances_path)['free']
         self.assertEqual(result, space / 1024 ** 3)
 
     def test_cpu_info(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         def get_host_capabilities_stub(self):
-            cpu = config.LibvirtConfigCPU()
+            cpu = vconfig.LibvirtConfigCPU()
             cpu.model = "Opteron_G4"
             cpu.vendor = "AMD"
             cpu.arch = "x86_64"
@@ -2590,20 +2591,20 @@ class LibvirtConnTestCase(test.TestCase):
             cpu.threads = 1
             cpu.sockets = 4
 
-            cpu.add_feature(config.LibvirtConfigCPUFeature("extapic"))
-            cpu.add_feature(config.LibvirtConfigCPUFeature("3dnow"))
+            cpu.add_feature(vconfig.LibvirtConfigCPUFeature("extapic"))
+            cpu.add_feature(vconfig.LibvirtConfigCPUFeature("3dnow"))
 
-            caps = config.LibvirtConfigCaps()
-            caps.host = config.LibvirtConfigCapsHost()
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
             caps.host.cpu = cpu
 
-            guest = config.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
             guest.arch = "x86_64"
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
-            guest = config.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
             guest.arch = "i686"
             guest.domtype = ["kvm"]
@@ -3016,15 +3017,15 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         def get_host_capabilities_stub(self):
-            caps = config.LibvirtConfigCaps()
+            caps = vconfig.LibvirtConfigCaps()
 
-            guest = config.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
             guest.arch = 'x86_64'
             guest.domtype = ['kvm', 'qemu']
             caps.guests.append(guest)
 
-            guest = config.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
             guest.arch = 'i686'
             guest.domtype = ['kvm']
@@ -4143,7 +4144,7 @@ class LibvirtDriverTestCase(test.TestCase):
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_same_host(self):
-        ins_ref = self._create_instance({'host': FLAGS.host})
+        ins_ref = self._create_instance({'host': CONF.host})
 
         def fake_os_path_exists(path):
             return True
@@ -4159,7 +4160,7 @@ class LibvirtDriverTestCase(test.TestCase):
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_not_same_host(self):
-        host = 'not' + FLAGS.host
+        host = 'not' + CONF.host
         ins_ref = self._create_instance({'host': host})
 
         def fake_os_path_exists(path):

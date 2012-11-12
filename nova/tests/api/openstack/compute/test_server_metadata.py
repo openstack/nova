@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack.compute import server_metadata
 from nova.compute import rpcapi as compute_rpcapi
+from nova import config
 import nova.db
 from nova import exception
 from nova import flags
@@ -27,8 +28,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 def return_create_instance_metadata_max(context, server_id, metadata, delete):
@@ -65,7 +65,7 @@ def stub_server_metadata():
 
 def stub_max_server_metadata():
     metadata = {"metadata": {}}
-    for num in range(FLAGS.quota_metadata_items):
+    for num in range(CONF.quota_metadata_items):
         metadata['metadata']['key%i' % num] = "blah"
     return metadata
 
@@ -416,7 +416,7 @@ class ServerMetaDataTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(FLAGS.quota_metadata_items + 1):
+        for num in range(CONF.quota_metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
@@ -455,7 +455,7 @@ class ServerMetaDataTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(FLAGS.quota_metadata_items + 1):
+        for num in range(CONF.quota_metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
@@ -469,7 +469,7 @@ class ServerMetaDataTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(FLAGS.quota_metadata_items + 1):
+        for num in range(CONF.quota_metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'

@@ -34,10 +34,6 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
 
-
-FLAGS = flags.FLAGS
-
-
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 NOW_API_FORMAT = "2010-10-11T10:30:22Z"

@@ -21,17 +21,15 @@
 import copy
 import datetime
 
+from nova import config
 from nova import exception
 from nova import flags
 import nova.image.glance
 from nova.openstack.common import log as logging
 from nova import utils
 
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
-
-
-FLAGS = flags.FLAGS
 
 
 class _FakeImageService(object):
@@ -53,8 +51,8 @@ class _FakeImageService(object):
                  'is_public': False,
                  'container_format': 'raw',
                  'disk_format': 'raw',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel,
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel,
                                 'architecture': 'x86_64'}}
 
         image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
@@ -67,8 +65,8 @@ class _FakeImageService(object):
                  'is_public': True,
                  'container_format': 'ami',
                  'disk_format': 'ami',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}}
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel}}
 
         image3 = {'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                  'name': 'fakeimage123456',
@@ -80,8 +78,8 @@ class _FakeImageService(object):
                  'is_public': True,
                  'container_format': None,
                  'disk_format': None,
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}}
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel}}
 
         image4 = {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                  'name': 'fakeimage123456',
@@ -93,8 +91,8 @@ class _FakeImageService(object):
                  'is_public': True,
                  'container_format': 'ami',
                  'disk_format': 'ami',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}}
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel}}
 
         image5 = {'id': 'c905cedb-7281-47e4-8a62-f26bc5fc4c77',
                  'name': 'fakeimage123456',
@@ -120,8 +118,8 @@ class _FakeImageService(object):
                  'is_public': False,
                  'container_format': 'ova',
                  'disk_format': 'vhd',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel,
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel,
                                 'architecture': 'x86_64',
                                 'auto_disk_config': 'False'}}
 
@@ -135,8 +133,8 @@ class _FakeImageService(object):
                  'is_public': False,
                  'container_format': 'ova',
                  'disk_format': 'vhd',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel,
+                 'properties': {'kernel_id': CONF.null_kernel,
+                                'ramdisk_id': CONF.null_kernel,
                                 'architecture': 'x86_64',
                                 'auto_disk_config': 'True'}}
 

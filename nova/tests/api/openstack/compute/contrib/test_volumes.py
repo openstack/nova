@@ -21,6 +21,7 @@ import webob
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
 from nova.compute import instance_types
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -31,8 +32,7 @@ from nova.tests.api.openstack import fakes
 from nova.volume import cinder
 from webob import exc
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'
@@ -129,7 +129,7 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
-        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
+        self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(len(_block_device_mapping_seen), 1)
         self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)
         self.assertEqual(_block_device_mapping_seen[0]['device_name'],

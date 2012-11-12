@@ -18,14 +18,14 @@
 Unit Tests for nova.network.rpcapi
 """
 
+from nova import config
 from nova import context
 from nova import flags
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import rpc
 from nova import test
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class NetworkRpcAPITestCase(test.TestCase):
@@ -34,7 +34,7 @@ class NetworkRpcAPITestCase(test.TestCase):
         rpcapi = network_rpcapi.NetworkAPI()
         expected_retval = 'foo' if method == 'call' else None
         expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
-        expected_topic = FLAGS.network_topic
+        expected_topic = CONF.network_topic
         expected_msg = rpcapi.make_msg(method, **kwargs)
         if 'source_compute' in expected_msg['args']:
             # Fix up for migrate_instance_* calls.
@@ -52,7 +52,7 @@ class NetworkRpcAPITestCase(test.TestCase):
             if method != 'deallocate_fixed_ip':
                 del expected_msg['args']['host']
             host = kwargs['host']
-            expected_topic = rpc.queue_get_for(ctxt, FLAGS.network_topic, host)
+            expected_topic = rpc.queue_get_for(ctxt, CONF.network_topic, host)
         expected_msg['version'] = expected_version
 
         self.fake_args = None

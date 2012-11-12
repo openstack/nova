@@ -14,14 +14,14 @@
 #    under the License.
 
 from nova.cloudpipe import pipelib
+from nova import config
 from nova import context
 from nova import crypto
 from nova import flags
 from nova import test
 from nova import utils
 
-
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 
 class PipelibTest(test.TestCase):
@@ -50,7 +50,7 @@ class PipelibTest(test.TestCase):
             self.cloudpipe.launch_vpn_instance(self.context)
 
     def test_setup_security_group(self):
-        group_name = "%s%s" % (self.project, FLAGS.vpn_key_suffix)
+        group_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
 
         # First attemp, does not exist (thus its created)
         res1_group = self.cloudpipe.setup_security_group(self.context)
@@ -61,7 +61,7 @@ class PipelibTest(test.TestCase):
         self.assertEqual(res1_group, res2_group)
 
     def test_setup_key_pair(self):
-        key_name = "%s%s" % (self.project, FLAGS.vpn_key_suffix)
+        key_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
         with utils.tempdir() as tmpdir:
             self.flags(keys_path=tmpdir)
 

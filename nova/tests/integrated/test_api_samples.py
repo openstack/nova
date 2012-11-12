@@ -24,6 +24,7 @@ from lxml import etree
 
 from nova.cloudpipe.pipelib import CloudPipe
 from nova.compute import api
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -38,7 +39,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -591,7 +592,7 @@ class ServersActionsJsonTest(ServersSampleBase):
                                  'server-action-rebuild-resp')
 
     def test_server_resize(self):
-        FLAGS.allow_resize_to_same_host = True
+        CONF.allow_resize_to_same_host = True
         uuid = self._post_server()
         self._test_server_action(uuid, "resize",
                                  {"id": 2,
@@ -679,7 +680,7 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBase):
 
     def _get_flags(self):
         f = super(FlavorsExtraDataJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = FLAGS.osapi_compute_extension[:]
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         # Flavorextradata extension also needs Flavormanage to be loaded.
         f['osapi_compute_extension'].append(
             'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
@@ -834,8 +835,8 @@ class FloatingIpsJsonTest(ApiSampleTestBase):
 
     def setUp(self):
         super(FloatingIpsJsonTest, self).setUp()
-        pool = FLAGS.default_floating_pool
-        interface = FLAGS.public_interface
+        pool = CONF.default_floating_pool
+        interface = CONF.public_interface
 
         self.ip_pool = [
             {
@@ -896,7 +897,7 @@ class FloatingIpsJsonTest(ApiSampleTestBase):
     def test_floating_ips_create(self):
         response = self._do_post('os-floating-ips',
                                  'floating-ips-create-req',
-                                 {"pool": FLAGS.default_floating_pool})
+                                 {"pool": CONF.default_floating_pool})
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         self._verify_response('floating-ips-create-resp',
@@ -1061,14 +1062,14 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
 
     def test_cloud_pipe_create(self):
         """Get api samples of cloud pipe extension creation"""
-        FLAGS.vpn_image_id = fake.get_valid_image_id()
+        CONF.vpn_image_id = fake.get_valid_image_id()
         project = {'project_id': 'cloudpipe-' + str(uuid.uuid4())}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
                                  project)
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         subs.update(project)
-        subs['image_id'] = FLAGS.vpn_image_id
+        subs['image_id'] = CONF.vpn_image_id
         self._verify_response('cloud-pipe-create-resp', subs, response)
         return project
 
@@ -1079,7 +1080,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         subs.update(project)
-        subs['image_id'] = FLAGS.vpn_image_id
+        subs['image_id'] = CONF.vpn_image_id
         return self._verify_response('cloud-pipe-get-resp', subs, response)
 
 

@@ -28,6 +28,7 @@ import webob
 from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova import block_device
+from nova import config
 from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
@@ -36,7 +37,7 @@ from nova.network import api as network_api
 from nova import test
 from nova.tests import fake_network
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
@@ -142,7 +143,7 @@ class MetadataTestCase(test.TestCase):
         md = fake_InstanceMetadata(self.stubs, copy(self.instance))
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-hostname'],
-            "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain))
+            "%s.%s" % (self.instance['hostname'], CONF.dhcp_domain))
 
     def test_format_instance_mapping(self):
         """Make sure that _format_instance_mappings works"""

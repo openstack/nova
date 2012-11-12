@@ -19,6 +19,7 @@ import os
 
 import mox
 
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -29,11 +30,8 @@ from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
 
-
-FLAGS = flags.FLAGS
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
-
 
 HOST = "testhost"
 
@@ -216,7 +214,7 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
-        network_driver = FLAGS.network_driver
+        network_driver = CONF.network_driver
         self.driver = importutils.import_module(network_driver)
         self.driver.db = db
         self.context = context.RequestContext('testuser', 'testproject',

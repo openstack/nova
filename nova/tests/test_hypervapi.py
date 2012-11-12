@@ -25,6 +25,7 @@ import sys
 import uuid
 
 from nova.compute import power_state
+from nova import config
 from nova import context
 from nova import db
 from nova import flags
@@ -39,6 +40,8 @@ from nova.virt.hyperv import constants
 from nova.virt.hyperv import driver as driver_hyperv
 from nova.virt.hyperv import vmutils
 from nova.virt import images
+
+CONF = config.CONF
 
 
 class HyperVAPITestCase(basetestcase.BaseTestCase):
@@ -148,7 +151,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
             self._hypervutils.logout_iscsi_volume_sessions(self._volume_id)
 
-            shutil.rmtree(flags.FLAGS.instances_path, True)
+            shutil.rmtree(CONF.instances_path, True)
 
             fake_image.FakeImageService_reset()
         finally:

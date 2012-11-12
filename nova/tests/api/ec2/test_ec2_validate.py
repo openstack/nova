@@ -21,6 +21,7 @@ import datetime
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import utils as compute_utils
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -32,8 +33,8 @@ from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
-FLAGS = flags.FLAGS
 
 
 class EC2ValidateTestCase(test.TestCase):

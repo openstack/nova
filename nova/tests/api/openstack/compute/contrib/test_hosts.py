@@ -25,8 +25,6 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import test
 
-
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 HOST_LIST = [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},

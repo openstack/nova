@@ -30,9 +30,6 @@ from nova import test
 from nova import utils
 
 
-FLAGS = flags.FLAGS
-
-
 class PolicyFileTestCase(test.TestCase):
     def setUp(self):
         super(PolicyFileTestCase, self).setUp()
