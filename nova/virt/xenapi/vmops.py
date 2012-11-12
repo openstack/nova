@@ -1538,8 +1538,8 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = db.aggregate_get_by_host(context, CONF.host,
-               key=pool_states.POOL_FLAG)[0]
+        current_aggregate = self._virtapi.aggregate_get_by_host(
+            context, CONF.host, key=pool_states.POOL_FLAG)[0]
         if not current_aggregate:
             raise exception.AggregateHostNotFound(host=CONF.host)
         try:

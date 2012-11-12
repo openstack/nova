@@ -49,20 +49,22 @@ class ResourcePool(object):
     """
     Implements resource pool operations.
     """
-    def __init__(self, session):
+    def __init__(self, session, virtapi):
         host_ref = session.get_xenapi_host()
         host_rec = session.call_xenapi('host.get_record', host_ref)
         self._host_name = host_rec['hostname']
         self._host_addr = host_rec['address']
         self._host_uuid = host_rec['uuid']
         self._session = session
+        self._virtapi = virtapi
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def _is_hv_pool(self, context, aggregate_id):
-        return pool_states.is_hv_pool(context, aggregate_id)
+        return pool_states.is_hv_pool(
+            self._virtapi.aggregate_metadata_get(context, aggregate_id))
 
     def _get_metadata(self, context, aggregate_id):
-        return db.aggregate_metadata_get(context, aggregate_id)
+        return self._virtapi.aggregate_metadata_get(context, aggregate_id)
 
     def undo_aggregate_operation(self, context, op, aggregate_id,
                                   host, set_error):
@@ -70,7 +72,8 @@ class ResourcePool(object):
         try:
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
-                db.aggregate_metadata_add(context, aggregate_id, metadata)
+                self._virtapi.aggregate_metadata_add(context, aggregate_id,
+                                                     metadata)
             op(context, aggregate_id, host)
         except Exception:
             LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
@@ -96,8 +99,9 @@ class ResourcePool(object):
 
         if (self._get_metadata(context, aggregate.id)[pool_states.KEY]
                 == pool_states.CREATED):
-            db.aggregate_metadata_add(context, aggregate.id,
-                    {pool_states.KEY: pool_states.CHANGING})
+            self._virtapi.aggregate_metadata_add(context, aggregate.id,
+                                                 {pool_states.KEY:
+                                                      pool_states.CHANGING})
         if len(aggregate.hosts) == 1:
             # this is the first host of the pool -> make it master
             self._init_pool(aggregate.id, aggregate.name)
@@ -105,7 +109,8 @@ class ResourcePool(object):
             metadata = {'master_compute': host,
                         host: self._host_uuid,
                         pool_states.KEY: pool_states.ACTIVE}
-            db.aggregate_metadata_add(context, aggregate.id, metadata)
+            self._virtapi.aggregate_metadata_add(context, aggregate.id,
+                                                 metadata)
         else:
             # the pool is already up and running, we need to figure out
             # whether we can serve the request from this host or not.
@@ -120,7 +125,8 @@ class ResourcePool(object):
                                  slave_info.get('url'), slave_info.get('user'),
                                  slave_info.get('passwd'))
                 metadata = {host: slave_info.get('xenhost_uuid'), }
-                db.aggregate_metadata_add(context, aggregate.id, metadata)
+                self._virtapi.aggregate_metadata_add(context, aggregate.id,
+                                                     metadata)
             elif master_compute and master_compute != host:
                 # send rpc cast to master, asking to add the following
                 # host with specified credentials.
@@ -153,7 +159,8 @@ class ResourcePool(object):
             host_uuid = self._get_metadata(context, aggregate.id)[host]
             self._eject_slave(aggregate.id,
                               slave_info.get('compute_uuid'), host_uuid)
-            db.aggregate_metadata_delete(context, aggregate.id, host)
+            self._virtapi.aggregate_metadata_delete(context, aggregate.id,
+                                                    host)
         elif master_compute == host:
             # Remove master from its own pool -> destroy pool only if the
             # master is on its own, otherwise raise fault. Destroying a
@@ -169,7 +176,8 @@ class ResourcePool(object):
                                              % locals())
             self._clear_pool(aggregate.id)
             for key in ['master_compute', host]:
-                db.aggregate_metadata_delete(context, aggregate.id, key)
+                self._virtapi.aggregate_metadata_delete(context, aggregate.id,
+                                                        key)
         elif master_compute and master_compute != host:
             # A master exists -> forward pool-eject request to master
             slave_info = self._create_slave_info()

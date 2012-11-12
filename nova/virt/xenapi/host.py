@@ -77,7 +77,15 @@ class Host(object):
                     instance = self._virtapi.instance_get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
-                    dest = _host_find(ctxt, self._session, host, host_ref)
+                    aggregate = self._virtapi.aggregate_get_by_host(
+                        ctxt, host, key=pool_states.POOL_FLAG)
+                    if not aggregate:
+                        msg = _('Aggregate for host %(host)s count not be'
+                                ' found.') % dict(host=host)
+                        raise exception.NotFound(msg)
+
+                    dest = _host_find(ctxt, self._session, aggregate[0],
+                                      host_ref)
                     (old_ref, new_ref) = self._virtapi.instance_update(
                                     ctxt,
                                     instance['uuid'],
@@ -222,10 +230,11 @@ def _uuid_find(virtapi, context, host, name_label):
     return None
 
 
-def _host_find(context, session, src, dst):
+def _host_find(context, session, src_aggregate, dst):
     """Return the host from the xenapi host reference.
 
-    :param src: the compute host being put in maintenance (source of VMs)
+    :param src_aggregate: the aggregate that the compute host being put in
+                          maintenance (source of VMs) belongs to
     :param dst: the hypervisor host reference (destination of VMs)
 
     :return: the compute host that manages dst
@@ -233,15 +242,11 @@ def _host_find(context, session, src, dst):
     # NOTE: this would be a lot simpler if nova-compute stored
     # CONF.host in the XenServer host's other-config map.
     # TODO(armando-migliaccio): improve according the note above
-    aggregate = db.aggregate_get_by_host(context, src,
-            key=pool_states.POOL_FLAG)[0]
-    if not aggregate:
-        raise exception.AggregateHostNotFound(host=src)
     uuid = session.call_xenapi('host.get_record', dst)['uuid']
-    for compute_host, host_uuid in aggregate.metadetails.iteritems():
+    for compute_host, host_uuid in src_aggregate.metadetails.iteritems():
         if host_uuid == uuid:
             return compute_host
     raise exception.NoValidHost(reason='Host %(host_uuid)s could not be found '
                                 'from aggregate metadata: %(metadata)s.' %
                                 {'host_uuid': uuid,
-                                 'metadata': aggregate.metadetails})
+                                 'metadata': src_aggregate.metadetails})
