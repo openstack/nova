@@ -249,12 +249,24 @@ class VolumeTests(base.UserSmokeTestCase):
 
         self.assertTrue(volume.status.startswith('in-use'))
 
-        # Give instance time to recognize volume.
-        time.sleep(5)
-
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
+
+        # NOTE(dprince): give some time for volume to show up in partitions
+        stdin, stdout, stderr = conn.exec_command(
+                'COUNT="0";'
+                'until cat /proc/partitions | grep "%s\\$"; do '
+                '[ "$COUNT" -eq "60" ] && exit 1;'
+                'COUNT=$(( $COUNT + 1 ));'
+                'sleep 1; '
+                'done'
+                % self.device.rpartition('/')[2])
+        out = stdout.read()
+        if not out.strip().endswith(self.device.rpartition('/')[2]):
+            self.fail('Timeout waiting for volume partition in instance. %s %s'
+                        % (out, stderr.read()))
+
         # NOTE(vish): this will create a dev for images that don't have
         #             udev rules
         stdin, stdout, stderr = conn.exec_command(
