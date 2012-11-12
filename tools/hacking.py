@@ -271,6 +271,13 @@ def nova_import_alphabetical(logical_line, line_number, lines):
                 % (split_previous[1], split_line[1]))
 
 
+def nova_import_no_db_in_virt(logical_line, filename):
+    if ("nova/virt" in filename and
+        not filename.endswith("fake.py") and
+        "nova import db" in logical_line):
+        yield (0, "NOVA N307: nova.db import not allowed in nova/virt/*")
+
+
 def nova_docstring_start_space(physical_line):
     """Check for docstring not start with space.
 
