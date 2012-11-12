@@ -480,11 +480,6 @@ def fixed_ips_by_virtual_interface(context, vif_id):
     return IMPL.fixed_ips_by_virtual_interface(context, vif_id)
 
 
-def fixed_ip_get_network(context, address):
-    """Get a network for a fixed ip by address."""
-    return IMPL.fixed_ip_get_network(context, address)
-
-
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
