@@ -104,7 +104,7 @@ class Vim:
     def __getattr__(self, attr_name):
         """Makes the API calls and gets the result."""
         try:
-            return object.__getattr__(self, attr_name)
+            return getattr(self, attr_name)
         except AttributeError:
 
             def vim_request_handler(managed_object, **kwargs):
