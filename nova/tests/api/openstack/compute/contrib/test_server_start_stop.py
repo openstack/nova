@@ -64,7 +64,3 @@ class ServerStartStopTest(test.TestCase):
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, req, 'test_inst', body)
-
-
-if __name__ == '__main__':
-    unittest.main()

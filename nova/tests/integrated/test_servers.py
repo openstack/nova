@@ -434,7 +434,3 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self._delete_server(created_server_id)
         for server_id in server_map.iterkeys():
             self._delete_server(server_id)
-
-
-if __name__ == "__main__":
-    unittest.main()
