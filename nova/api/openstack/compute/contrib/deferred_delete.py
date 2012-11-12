@@ -43,7 +43,8 @@ class DeferredDeleteController(wsgi.Controller):
         try:
             self.compute_api.restore(context, instance)
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error),
+            raise webob.exc.HTTPRequestEntityTooLarge(
+                                                explanation=unicode(error),
                                                 headers={'Retry-After': 0})
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
