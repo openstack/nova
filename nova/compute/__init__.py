@@ -18,11 +18,12 @@
 
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.compute import <foo>' elsewhere.
+import nova.config
 import nova.flags
 import nova.openstack.common.importutils
 
 
 def API(*args, **kwargs):
     importutils = nova.openstack.common.importutils
-    cls = importutils.import_class(nova.flags.FLAGS.compute_api_class)
+    cls = importutils.import_class(nova.config.CONF.compute_api_class)
     return cls(*args, **kwargs)

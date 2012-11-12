@@ -22,6 +22,7 @@ import traceback
 
 from nova import block_device
 from nova.compute import instance_types
+from nova import config
 from nova import db
 from nova import exception
 from nova import flags
@@ -31,7 +32,7 @@ from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova import utils
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
@@ -86,7 +87,7 @@ def get_device_name_for_instance(context, instance, device):
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
     # NOTE(vish): remove this when xenapi is setting default_root_device
-    if FLAGS.compute_driver.endswith('xenapi.XenAPIDriver'):
+    if CONF.compute_driver.endswith('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
@@ -101,7 +102,7 @@ def get_device_name_for_instance(context, instance, device):
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
-    if FLAGS.compute_driver.endswith('xenapi.XenAPIDriver'):
+    if CONF.compute_driver.endswith('xenapi.XenAPIDriver'):
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
         if instance_type['ephemeral_gb']:
@@ -184,11 +185,11 @@ def notify_about_instance_usage(context, instance, event_suffix,
     :param extra_usage_info: Dictionary containing extra values to add or
         override in the notification.
     :param host: Compute host for the instance, if specified.  Default is
-        FLAGS.host
+        CONF.host
     """
 
     if not host:
-        host = FLAGS.host
+        host = CONF.host
 
     if not extra_usage_info:
         extra_usage_info = {}
