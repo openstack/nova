@@ -46,6 +46,10 @@ configdrive_opts = [
                default=None,
                help='Set to force injection to take place on a config drive '
                     '(if set, valid options are: always)'),
+    cfg.StrOpt('mkisofs_cmd',
+               default='genisoimage',
+               help='Name and optionally path of the tool used for '
+                    'ISO image creation')
     ]
 
 CONF = config.CONF
@@ -79,7 +83,7 @@ class ConfigDriveBuilder(object):
                       {'filepath': path})
 
     def _make_iso9660(self, path):
-        utils.execute('genisoimage',
+        utils.execute(CONF.mkisofs_cmd,
                       '-o', path,
                       '-ldots',
                       '-allow-lowercase',
