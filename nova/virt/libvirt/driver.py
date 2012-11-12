@@ -2357,7 +2357,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.cores = info['topology']['cores']
         cpu.threads = info['topology']['threads']
         for f in info['features']:
-            cpu.add_feature(config.LibvirtConfigCPUFeature(f))
+            cpu.add_feature(vconfig.LibvirtConfigCPUFeature(f))
 
         u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
