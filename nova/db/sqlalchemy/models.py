@@ -27,13 +27,14 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
 
+from nova import config
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 BASE = declarative_base()
 
 
@@ -200,7 +201,7 @@ class Instance(BASE, NovaBase):
     @property
     def name(self):
         try:
-            base_name = FLAGS.instance_name_template % self.id
+            base_name = CONF.instance_name_template % self.id
         except TypeError:
             # Support templates like "uuid-%(uuid)s", etc.
             info = {}
@@ -214,7 +215,7 @@ class Instance(BASE, NovaBase):
                     continue
                 info[key] = self[key]
             try:
-                base_name = FLAGS.instance_name_template % info
+                base_name = CONF.instance_name_template % info
             except KeyError:
                 base_name = self.uuid
         return base_name
@@ -356,7 +357,7 @@ class Volume(BASE, NovaBase):
 
     @property
     def name(self):
-        return FLAGS.volume_name_template % self.id
+        return CONF.volume_name_template % self.id
 
     ec2_id = Column(Integer)
     user_id = Column(String(255))
@@ -470,11 +471,11 @@ class Snapshot(BASE, NovaBase):
 
     @property
     def name(self):
-        return FLAGS.snapshot_name_template % self.id
+        return CONF.snapshot_name_template % self.id
 
     @property
     def volume_name(self):
-        return FLAGS.volume_name_template % self.volume_id
+        return CONF.volume_name_template % self.volume_id
 
     user_id = Column(String(255))
     project_id = Column(String(255))

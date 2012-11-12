@@ -37,6 +37,7 @@ from sqlalchemy.sql import func
 from nova import block_device
 from nova.common.sqlalchemyutils import paginate_query
 from nova.compute import vm_states
+from nova import config
 from nova import db
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
@@ -48,7 +49,7 @@ from nova.openstack.common import uuidutils
 from nova import utils
 
 
-FLAGS = flags.FLAGS
+CONF = config.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -298,7 +299,7 @@ def service_destroy(context, service_id):
         service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
-        if (service_ref.topic == FLAGS.compute_topic and
+        if (service_ref.topic == CONF.compute_topic and
             service_ref.compute_node):
             for c in service_ref.compute_node:
                 c.delete(session=session)
@@ -355,7 +356,7 @@ def service_get_all_compute_by_host(context, host):
     result = model_query(context, models.Service, read_deleted="no").\
                 options(joinedload('compute_node')).\
                 filter_by(host=host).\
-                filter_by(topic=FLAGS.compute_topic).\
+                filter_by(topic=CONF.compute_topic).\
                 all()
 
     if not result:
@@ -388,7 +389,7 @@ def service_get_all_compute_sorted(context):
         #             (SELECT host, SUM(instances.vcpus) AS instance_cores
         #              FROM instances GROUP BY host) AS inst_cores
         #             ON services.host = inst_cores.host
-        topic = FLAGS.compute_topic
+        topic = CONF.compute_topic
         label = 'instance_cores'
         subq = model_query(context, models.Instance.host,
                            func.sum(models.Instance.vcpus).label(label),
@@ -419,7 +420,7 @@ def service_get_by_args(context, host, binary):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
-    if not FLAGS.enable_new_services:
+    if not CONF.enable_new_services:
         service_ref.disabled = True
     service_ref.save()
     return service_ref
@@ -1569,7 +1570,7 @@ def regex_filter(query, model, filters):
         'oracle': 'REGEXP_LIKE',
         'sqlite': 'REGEXP'
     }
-    db_string = FLAGS.sql_connection.split(':')[0].split('+')[0]
+    db_string = CONF.sql_connection.split(':')[0].split('+')[0]
     db_regexp_op = regexp_op_map.get(db_string, 'LIKE')
     for filter_name in filters.iterkeys():
         try:
