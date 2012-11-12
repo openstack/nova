@@ -520,6 +520,10 @@ class StorageRepositoryNotFound(NotFound):
     message = _("Cannot find SR to read/write VDI.")
 
 
+class NetworkDuplicated(NovaException):
+    message = _("Network %(network_id)s is duplicated.")
+
+
 class NetworkInUse(NovaException):
     message = _("Network %(network_id)s is still in use.")
 
