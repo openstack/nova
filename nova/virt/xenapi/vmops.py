@@ -692,8 +692,7 @@ class VMOps(object):
                   instance=instance)
 
         # 2. Power down the instance before resizing
-        vm_utils.shutdown_vm(
-                self._session, instance, vm_ref, hard=False)
+        vm_utils.clean_shutdown_vm(self._session, instance, vm_ref)
         self._update_instance_progress(context, instance,
                                        step=2,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -740,8 +739,7 @@ class VMOps(object):
                                                total_steps=RESIZE_TOTAL_STEPS)
 
         # 3. Now power down the instance
-        vm_utils.shutdown_vm(
-                self._session, instance, vm_ref, hard=False)
+        vm_utils.clean_shutdown_vm(self._session, instance, vm_ref)
         self._update_instance_progress(context, instance,
                                        step=3,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -1074,7 +1072,7 @@ class VMOps(object):
                         instance=instance)
             return
 
-        vm_utils.shutdown_vm(self._session, instance, vm_ref)
+        vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
         # Destroy VDIs
         self._detach_vm_vols(instance, vm_ref, block_device_info)
@@ -1125,7 +1123,7 @@ class VMOps(object):
                                % instance['name'])
 
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_utils.shutdown_vm(self._session, instance, vm_ref)
+        vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         self.spawn(context, instance, image_meta, [], rescue_password,
                    network_info, name_label=rescue_name_label, rescue=True)
@@ -1158,7 +1156,7 @@ class VMOps(object):
             LOG.warning(_("VM is not present, skipping soft delete..."),
                         instance=instance)
         else:
-            vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+            vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
             self._acquire_bootlock(vm_ref)
 
     def restore(self, instance):
@@ -1170,7 +1168,7 @@ class VMOps(object):
     def power_off(self, instance):
         """Power off the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+        vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
     def power_on(self, instance):
         """Power on the specified instance."""
