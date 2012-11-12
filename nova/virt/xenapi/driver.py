@@ -137,7 +137,7 @@ class XenAPIDriver(driver.ComputeDriver):
                               'xenapi_connection_password to use '
                               'compute_driver=xenapi.XenAPIDriver'))
 
-        self._session = XenAPISession(url, username, password)
+        self._session = XenAPISession(url, username, password, self.virtapi)
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session, self.virtapi)
@@ -616,7 +616,7 @@ class XenAPIDriver(driver.ComputeDriver):
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
 
-    def __init__(self, url, user, pw):
+    def __init__(self, url, user, pw, virtapi):
         import XenAPI
         self.XenAPI = XenAPI
         self._sessions = queue.Queue()
@@ -628,6 +628,7 @@ class XenAPISession(object):
         self.host_uuid = self._get_host_uuid()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
+        self._virtapi = virtapi
 
     def _create_first_session(self, url, user, pw, exception):
         try:
@@ -656,7 +657,7 @@ class XenAPISession(object):
 
     def _get_host_uuid(self):
         if self.is_slave:
-            aggr = self.virtapi.aggregate_get_by_host(
+            aggr = self._virtapi.aggregate_get_by_host(
                 context.get_admin_context(),
                 CONF.host, key=pool_states.POOL_FLAG)[0]
             if not aggr:
