@@ -1418,7 +1418,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
         self.stubs.Set(sqa_api, 'get_session', fake_get_session)
         self.stubs.Set(sqa_api, '_get_quota_usages', fake_get_quota_usages)
-        self.stubs.Set(sqa_api, 'quota_usage_create', fake_quota_usage_create)
+        self.stubs.Set(sqa_api, '_quota_usage_create', fake_quota_usage_create)
         self.stubs.Set(sqa_api, 'reservation_create', fake_reservation_create)
 
         timeutils.set_time_override()

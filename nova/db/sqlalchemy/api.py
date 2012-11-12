@@ -2326,9 +2326,8 @@ def iscsi_target_create_safe(context, values):
 
 
 @require_context
-def quota_get(context, project_id, resource, session=None):
-    result = model_query(context, models.Quota, session=session,
-                         read_deleted="no").\
+def quota_get(context, project_id, resource):
+    result = model_query(context, models.Quota, read_deleted="no").\
                      filter_by(project_id=project_id).\
                      filter_by(resource=resource).\
                      first()
@@ -2366,20 +2365,21 @@ def quota_create(context, project_id, resource, limit):
 
 @require_admin_context
 def quota_update(context, project_id, resource, limit):
-    session = get_session()
-    with session.begin():
-        quota_ref = quota_get(context, project_id, resource, session=session)
-        quota_ref.hard_limit = limit
-        quota_ref.save(session=session)
+    result = model_query(context, models.Quota, read_deleted="no").\
+                     filter_by(project_id=project_id).\
+                     filter_by(resource=resource).\
+                     update({'hard_limit': limit})
+
+    if not result:
+        raise exception.ProjectQuotaNotFound(project_id=project_id)
 
 
 ###################
 
 
 @require_context
-def quota_class_get(context, class_name, resource, session=None):
-    result = model_query(context, models.QuotaClass, session=session,
-                         read_deleted="no").\
+def quota_class_get(context, class_name, resource):
+    result = model_query(context, models.QuotaClass, read_deleted="no").\
                      filter_by(class_name=class_name).\
                      filter_by(resource=resource).\
                      first()
@@ -2417,21 +2417,21 @@ def quota_class_create(context, class_name, resource, limit):
 
 @require_admin_context
 def quota_class_update(context, class_name, resource, limit):
-    session = get_session()
-    with session.begin():
-        quota_class_ref = quota_class_get(context, class_name, resource,
-                                          session=session)
-        quota_class_ref.hard_limit = limit
-        quota_class_ref.save(session=session)
+    result = model_query(context, models.QuotaClass, read_deleted="no").\
+                     filter_by(class_name=class_name).\
+                     filter_by(resource=resource).\
+                     update({'hard_limit': limit})
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
 
 
 ###################
 
 
 @require_context
-def quota_usage_get(context, project_id, resource, session=None):
-    result = model_query(context, models.QuotaUsage, session=session,
-                         read_deleted="no").\
+def quota_usage_get(context, project_id, resource):
+    result = model_query(context, models.QuotaUsage, read_deleted="no").\
                      filter_by(project_id=project_id).\
                      filter_by(resource=resource).\
                      first()
@@ -2459,6 +2459,13 @@ def quota_usage_get_all_by_project(context, project_id):
 
 @require_admin_context
 def quota_usage_create(context, project_id, resource, in_use, reserved,
+                       until_refresh):
+    return _quota_usage_create(context, project_id, resource, in_use,
+                                reserved, until_refresh)
+
+
+@require_admin_context
+def _quota_usage_create(context, project_id, resource, in_use, reserved,
                        until_refresh, session=None):
     quota_usage_ref = models.QuotaUsage()
     quota_usage_ref.project_id = project_id
@@ -2466,31 +2473,29 @@ def quota_usage_create(context, project_id, resource, in_use, reserved,
     quota_usage_ref.in_use = in_use
     quota_usage_ref.reserved = reserved
     quota_usage_ref.until_refresh = until_refresh
+
     quota_usage_ref.save(session=session)
 
     return quota_usage_ref
 
 
 @require_admin_context
-def quota_usage_update(context, project_id, resource, session=None, **kwargs):
-    def do_update(session):
-        quota_usage_ref = quota_usage_get(context, project_id, resource,
-                                          session=session)
-        if 'in_use' in kwargs:
-            quota_usage_ref.in_use = kwargs['in_use']
-        if 'reserved' in kwargs:
-            quota_usage_ref.reserved = kwargs['reserved']
-        if 'until_refresh' in kwargs:
-            quota_usage_ref.until_refresh = kwargs['until_refresh']
-        quota_usage_ref.save(session=session)
+def quota_usage_update(context, project_id, resource, **kwargs):
+    updates = {}
+    if 'in_use' in kwargs:
+        updates['in_use'] = kwargs['in_use']
+    if 'reserved' in kwargs:
+        updates['reserved'] = kwargs['reserved']
+    if 'until_refresh' in kwargs:
+        updates['until_refresh'] = kwargs['until_refresh']
 
-    if session:
-        # Assume caller started a transaction
-        do_update(session)
-    else:
-        session = get_session()
-        with session.begin():
-            do_update(session)
+    result = model_query(context, models.QuotaUsage, read_deleted="no").\
+                     filter_by(project_id=project_id).\
+                     filter_by(resource=resource).\
+                     update(updates)
+
+    if not result:
+        raise exception.QuotaUsageNotFound(project_id=project_id)
 
 
 ###################
@@ -2567,7 +2572,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             # Do we need to refresh the usage?
             refresh = False
             if resource not in usages:
-                usages[resource] = quota_usage_create(elevated,
+                usages[resource] = _quota_usage_create(elevated,
                                                       context.project_id,
                                                       resource,
                                                       0, 0,
@@ -2595,7 +2600,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                 for res, in_use in updates.items():
                     # Make sure we have a destination for the usage!
                     if res not in usages:
-                        usages[res] = quota_usage_create(elevated,
+                        usages[res] = _quota_usage_create(elevated,
                                                          context.project_id,
                                                          res,
                                                          0, 0,
