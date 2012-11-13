@@ -89,9 +89,6 @@
 # state_path=$pybasedir
 #### (StrOpt) Top-level directory for maintaining nova's state
 
-# lock_path=$pybasedir
-#### (StrOpt) Directory to use for lock files
-
 # fake_network=false
 #### (BoolOpt) If passed, use fake network devices and addresses
 
@@ -150,16 +147,13 @@
 # scheduler_topic=scheduler
 #### (StrOpt) the topic scheduler nodes listen on
 
-# volume_topic=volume
-#### (StrOpt) the topic volume nodes listen on
-
 # network_topic=network
 #### (StrOpt) the topic network nodes listen on
 
 # api_rate_limit=true
 #### (BoolOpt) whether to rate limit the api
 
-# enabled_apis=ec2,osapi_compute,osapi_volume,metadata
+# enabled_apis=ec2,osapi_compute,metadata
 #### (ListOpt) a list of APIs to enable by default
 
 # ec2_host=$my_ip
@@ -185,14 +179,6 @@
 
 # osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions
 #### (MultiStrOpt) osapi compute extension to load
-
-# osapi_volume_ext_list=
-#### (ListOpt) Specify list of extensions to load when using
-####           osapi_volume_extension option with
-####           nova.api.openstack.volume.contrib.select_extensions
-
-# osapi_volume_extension=nova.api.openstack.volume.contrib.standard_extensions
-#### (MultiStrOpt) osapi volume extension to load
 
 # osapi_path=/v1.1/
 #### (StrOpt) the path prefix used to call the openstack api server
@@ -268,9 +254,6 @@
 # network_manager=nova.network.manager.VlanManager
 #### (StrOpt) full class name for the Manager for network
 
-# volume_manager=nova.volume.manager.VolumeManager
-#### (StrOpt) full class name for the Manager for volume
-
 # scheduler_manager=nova.scheduler.manager.SchedulerManager
 #### (StrOpt) full class name for the Manager for scheduler
 
@@ -304,10 +287,7 @@
 #### (StrOpt) The default format an ephemeral_volume will be formatted
 ####          with on creation.
 
-# root_helper=sudo
-#### (StrOpt) Deprecated: command to use for running commands as root
-
-# rootwrap_config=<None>
+# rootwrap_config=/etc/nova/rootwrap.conf
 #### (StrOpt) Path to the rootwrap configuration file to use for running
 ####          commands as root
 
@@ -365,7 +345,7 @@
 # network_api_class=nova.network.api.API
 #### (StrOpt) The full class name of the network API class to use
 
-# volume_api_class=nova.volume.api.API
+# volume_api_class=nova.volume.cinder.API
 #### (StrOpt) The full class name of the volume API class to use
 
 # security_group_handler=nova.network.sg.NullSecurityGroupHandler
@@ -377,13 +357,19 @@
 # auth_strategy=noauth
 #### (StrOpt) The strategy to use for auth: noauth or keystone.
 
-# non_inheritable_image_properties=cache_in_nova,instance_uuid,user_id,image_type,backup_type,min_ram,min_disk
+# non_inheritable_image_properties=cache_in_nova,bittorrent
 #### (ListOpt) These are image properties which a snapshot should not
 ####           inherit from an instance
 
 # defer_iptables_apply=false
 #### (BoolOpt) Whether to batch up the application of IPTables rules during
 ####           a host restart and apply all at the end of the init phase
+
+# compute_driver=<None>
+#### (StrOpt) Driver to use for controlling virtualization. Options
+####          include: libvirt.LibvirtDriver, xenapi.XenAPIDriver,
+####          fake.FakeDriver, baremetal.BareMetalDriver,
+####          vmwareapi.VMWareESXDriver
 
 
 ######## defined in nova.notifications ########
@@ -393,6 +379,10 @@
 ####           instance state changes.  Valid values are False for no
 ####           notifications, True for notifications on any instance
 ####           changes.
+
+# notify_api_faults=false
+#### (BoolOpt) If set, send api.fault notifications on caught exceptions in
+####           the API service.
 
 # notify_on_state_change=<None>
 #### (StrOpt) If set, send compute.instance.update notifications on
@@ -421,12 +411,6 @@
 
 # quota_ram=51200
 #### (IntOpt) megabytes of instance ram allowed per project
-
-# quota_volumes=10
-#### (IntOpt) number of volumes allowed per project
-
-# quota_gigabytes=1000
-#### (IntOpt) number of volume gigabytes allowed per project
 
 # quota_floating_ips=10
 #### (IntOpt) number of floating ips allowed per project
@@ -508,15 +492,6 @@
 # metadata_workers=<None>
 #### (IntOpt) Number of workers for metadata service
 
-# osapi_volume_listen=0.0.0.0
-#### (StrOpt) IP address for OpenStack Volume API to listen
-
-# osapi_volume_listen_port=8776
-#### (IntOpt) port for os volume api to listen
-
-# osapi_volume_workers=<None>
-#### (IntOpt) Number of workers for OpenStack Volume API service
-
 
 ######## defined in nova.test ########
 
@@ -525,6 +500,15 @@
 
 # fake_tests=true
 #### (BoolOpt) should we use everything for testing
+
+
+######## defined in nova.wsgi ########
+
+# wsgi_log_format=%(client_ip)s "%(request_line)s" status: %(status_code)s len: %(body_length)s time: %(wall_seconds).7f
+#### (StrOpt) A python format string that is used as the template to
+####          generate log lines. The following values can be formatted
+####          into it: client_ip, date_time, request_line, status_code,
+####          body_length, wall_seconds.
 
 
 ######## defined in nova.api.auth ########
@@ -554,6 +538,9 @@
 
 # ec2_strict_validation=true
 #### (BoolOpt) Validate security group names according to EC2 specification
+
+# ec2_timestamp_expiry=300
+#### (IntOpt) Time in seconds before ec2 timestamp expires
 
 
 ######## defined in nova.api.metadata.base ########
@@ -590,12 +577,6 @@
 #### (StrOpt) Netmask to push into openvpn config
 
 
-######## defined in nova.common.deprecated ########
-
-# fatal_deprecations=false
-#### (BoolOpt) make deprecations fatal
-
-
 ######## defined in nova.common.eventlet_backdoor ########
 
 # backdoor_port=<None>
@@ -611,12 +592,6 @@
 #### (StrOpt) Where cached images are stored under $instances_path.This is
 ####          NOT the full path - just a folder name.For per-compute-host
 ####          cached images, set to _base_$my_ip
-
-# compute_driver=nova.virt.connection.get_connection
-#### (StrOpt) Driver to use for controlling virtualization. Options
-####          include: libvirt.LibvirtDriver, xenapi.XenAPIDriver,
-####          fake.FakeDriver, baremetal.BareMetalDriver,
-####          vmwareapi.VMWareESXDriver
 
 # console_host=nova
 #### (StrOpt) Console proxy host to use to connect to instances on this
@@ -677,9 +652,6 @@
 
 # reserved_host_memory_mb=512
 #### (IntOpt) Amount of memory in MB to reserve for the host
-
-# claim_timeout_seconds=600
-#### (IntOpt) How long, in seconds, before a resource claim times out
 
 # compute_stats_class=nova.compute.stats.Stats
 #### (StrOpt) Class that will manage stats for the local compute host
@@ -748,9 +720,6 @@
 #### (BoolOpt) Services to be added to the available pool on create
 
 # instance_name_template=instance-%08x
-#### (StrOpt) Template string to be used to generate instance names
-
-# volume_name_template=volume-%s
 #### (StrOpt) Template string to be used to generate instance names
 
 # snapshot_name_template=snapshot-%s
@@ -991,6 +960,15 @@
 #### (IntOpt) port for s3 api to listen
 
 
+######## defined in nova.openstack.common.lockutils ########
+
+# disable_process_locking=false
+#### (BoolOpt) Whether to disable inter-process locks
+
+# lock_path=/usr/lib/python/site-packages/nova/openstack
+#### (StrOpt) Directory to use for lock files
+
+
 ######## defined in nova.openstack.common.log ########
 
 # logdir=<None>
@@ -1008,13 +986,13 @@
 # logging_context_format_string=%(asctime)s %(levelname)s %(name)s [%(request_id)s %(user_id)s %(project_id)s] %(instance)s%(message)s
 #### (StrOpt) format string to use for log messages with context
 
-# logging_default_format_string=%(asctime)s %(levelname)s %(name)s [-] %(instance)s%(message)s
+# logging_default_format_string=%(asctime)s %(process)d %(levelname)s %(name)s [-] %(instance)s%(message)s
 #### (StrOpt) format string to use for log messages without context
 
-# logging_debug_format_suffix=from (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d
+# logging_debug_format_suffix=%(funcName)s %(pathname)s:%(lineno)d
 #### (StrOpt) data to append to log format when level is DEBUG
 
-# logging_exception_prefix=%(asctime)s TRACE %(name)s %(instance)s
+# logging_exception_prefix=%(asctime)s %(process)d TRACE %(name)s %(instance)s
 #### (StrOpt) prefix each line of exception output with this format
 
 # default_log_levels=amqplib=WARN,sqlalchemy=WARN,boto=WARN,suds=INFO,keystone=INFO,eventlet.wsgi.server=WARN
@@ -1022,6 +1000,9 @@
 
 # publish_errors=false
 #### (BoolOpt) publish error events
+
+# fatal_deprecations=false
+#### (BoolOpt) make deprecations fatal
 
 # instance_format="[instance: %(uuid)s] "
 #### (StrOpt) If an instance is passed with the log message, format it
@@ -1067,12 +1048,9 @@
 #### (IntOpt) Seconds to wait before a cast expires (TTL). Only supported
 ####          by impl_zmq.
 
-# allowed_rpc_exception_modules=nova.openstack.common.exception,nova.exception
+# allowed_rpc_exception_modules=nova.openstack.common.exception,nova.exception,cinder.exception
 #### (ListOpt) Modules of exceptions that are permitted to be recreatedupon
 ####           receiving exception data from an rpc call.
-
-# control_exchange=nova
-#### (StrOpt) AMQP exchange to connect to if using RabbitMQ or Qpid
 
 # fake_rabbit=false
 #### (BoolOpt) If passed, use a fake RabbitMQ provider
@@ -1093,10 +1071,13 @@
 #### (StrOpt) SSL certification authority file (valid only if SSL enabled)
 
 # rabbit_host=localhost
-#### (StrOpt) the RabbitMQ host
+#### (StrOpt) The RabbitMQ broker address where a single node is used
 
 # rabbit_port=5672
-#### (IntOpt) the RabbitMQ port
+#### (IntOpt) The RabbitMQ broker port where a single node is used
+
+# rabbit_hosts=$rabbit_host:$rabbit_port
+#### (ListOpt) RabbitMQ HA cluster host:port pairs
 
 # rabbit_use_ssl=false
 #### (BoolOpt) connect over SSL for RabbitMQ
@@ -1123,6 +1104,10 @@
 
 # rabbit_durable_queues=false
 #### (BoolOpt) use durable queues in RabbitMQ
+
+# rabbit_ha_queues=false
+#### (BoolOpt) use H/A queues in RabbitMQ (x-ha-policy: all).You need to
+####           wipe RabbitMQ database when changing this option.
 
 
 ######## defined in nova.openstack.common.rpc.impl_qpid ########
@@ -1221,6 +1206,19 @@
 #### (FloatOpt) virtual disk to physical disk allocation ratio
 
 
+######## defined in nova.scheduler.filters.io_ops_filter ########
+
+# max_io_ops_per_host=8
+#### (IntOpt) Ignore hosts that have too many
+####          builds/resizes/snaps/migrations
+
+
+######## defined in nova.scheduler.filters.num_instances_filter ########
+
+# max_instances_per_host=50
+#### (IntOpt) Ignore hosts that have too many instances
+
+
 ######## defined in nova.scheduler.filters.ram_filter ########
 
 # ram_allocation_ratio=1.5
@@ -1229,19 +1227,19 @@
 
 ######## defined in nova.scheduler.filters.trusted_filter ########
 
-# server=<None>
+# attestation_server=<None>
 #### (StrOpt) attestation server http
 
-# server_ca_file=<None>
+# attestation_server_ca_file=<None>
 #### (StrOpt) attestation server Cert file for Identity verification
 
-# port=8443
+# attestation_port=8443
 #### (StrOpt) attestation server port
 
-# api_url=/OpenAttestationWebServices/V1.0
+# attestation_api_url=/OpenAttestationWebServices/V1.0
 #### (StrOpt) attestation web API URL
 
-# auth_blob=<None>
+# attestation_auth_blob=<None>
 #### (StrOpt) attestation authorization blob - must change
 
 
@@ -1273,7 +1271,7 @@
 
 ######## defined in nova.scheduler.manager ########
 
-# scheduler_driver=nova.scheduler.multi.MultiScheduler
+# scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
 #### (StrOpt) Default driver to use for the scheduler
 
 
@@ -1281,9 +1279,6 @@
 
 # compute_scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
 #### (StrOpt) Driver to use for scheduling compute calls
-
-# volume_scheduler_driver=nova.scheduler.chance.ChanceScheduler
-#### (StrOpt) Driver to use for scheduling volume calls
 
 # default_scheduler_driver=nova.scheduler.chance.ChanceScheduler
 #### (StrOpt) Default driver to use for scheduling calls
@@ -1293,12 +1288,6 @@
 
 # scheduler_json_config_location=
 #### (StrOpt) Absolute path to scheduler configuration JSON file.
-
-
-######## defined in nova.scheduler.simple ########
-
-# max_gigabytes=10000
-#### (IntOpt) maximum number of volume gigabytes to allow per host
 
 
 ######## defined in nova.virt.baremetal.driver ########
@@ -1327,6 +1316,10 @@
 # config_drive_tempdir=<None>
 #### (StrOpt) Where to put temporary files associated with config drive
 ####          creation
+
+# force_config_drive=<None>
+#### (StrOpt) Set to force injection to take place on a config drive (if
+####          set, valid options are: always)
 
 
 ######## defined in nova.virt.disk.api ########
@@ -1458,10 +1451,6 @@
 #### (BoolOpt) Use a separated OS thread pool to realize non-blocking
 ####           libvirt calls
 
-# force_config_drive=<None>
-#### (StrOpt) Set to force injection to take place on a config drive (if
-####          set, valid options are: always)
-
 # libvirt_cpu_mode=<None>
 #### (StrOpt) Set to "host-model" to clone the host CPU feature flags; to
 ####          "host-passthrough" to use the host CPU model exactly; to
@@ -1526,6 +1515,18 @@
 
 # libvirt_use_virtio_for_bridges=false
 #### (BoolOpt) Use virtio for bridge interfaces
+
+
+######## defined in nova.virt.libvirt.volume ########
+
+# num_iscsi_scan_tries=3
+#### (IntOpt) number of times to rescan iSCSI target to find volume
+
+# rbd_user=<None>
+#### (StrOpt) the RADOS client name for accessing rbd volumes
+
+# rbd_secret_uuid=<None>
+#### (StrOpt) the libvirt uuid of the secret for the rbd_uservolumes
 
 
 ######## defined in nova.virt.libvirt.volume_nfs ########
@@ -1598,8 +1599,26 @@
 
 ######## defined in nova.virt.xenapi.agent ########
 
+# agent_timeout=30
+#### (IntOpt) number of seconds to wait for agent reply
+
 # agent_version_timeout=300
 #### (IntOpt) number of seconds to wait for agent to be fully operational
+
+# agent_resetnetwork_timeout=60
+#### (IntOpt) number of seconds to wait for agent reply to resetnetwork
+####          request
+
+# xenapi_agent_path=usr/sbin/xe-update-networking
+#### (StrOpt) Specifies the path in which the xenapi guest agent should be
+####          located. If the agent is present, network configuration is
+####          not injected into the image. Used if
+####          compute_driver=xenapi.XenAPIDriver and  flat_injected=True
+
+# xenapi_disable_agent=false
+#### (BoolOpt) Disable XenAPI agent. Reduces the amount of time it takes
+####           nova to detect that a VM has started, when that VM does not
+####           have the agent installed
 
 
 ######## defined in nova.virt.xenapi.driver ########
@@ -1631,12 +1650,6 @@
 # xenapi_vhd_coalesce_max_attempts=5
 #### (IntOpt) Max number of times to poll for VHD to coalesce. Used only
 ####          if compute_driver=xenapi.XenAPIDriver
-
-# xenapi_agent_path=usr/sbin/xe-update-networking
-#### (StrOpt) Specifies the path in which the xenapi guest agent should be
-####          located. If the agent is present, network configuration is
-####          not injected into the image. Used if
-####          compute_driver=xenapi.XenAPIDriver and  flat_injected=True
 
 # xenapi_sr_base_path=/var/run/sr-mount
 #### (StrOpt) Base path to the storage repository
@@ -1703,6 +1716,38 @@
 # xenapi_num_vbd_unplug_retries=10
 #### (IntOpt) Maximum number of retries to unplug VBD
 
+# xenapi_torrent_images=none
+#### (StrOpt) Whether or not to download images via Bit Torrent
+####          (all|some|none).
+
+# xenapi_torrent_base_url=<None>
+#### (StrOpt) Base URL for torrent files.
+
+# xenapi_torrent_seed_chance=1.0
+#### (FloatOpt) Probability that peer will become a seeder. (1.0 = 100%)
+
+# xenapi_torrent_seed_duration=3600
+#### (IntOpt) Number of seconds after downloading an image via BitTorrent
+####          that it should be seeded for other peers.
+
+# xenapi_torrent_max_last_accessed=86400
+#### (IntOpt) Cached torrent files not accessed within this number of
+####          seconds can be reaped
+
+# xenapi_torrent_listen_port_start=6881
+#### (IntOpt) Beginning of port range to listen on
+
+# xenapi_torrent_listen_port_end=6891
+#### (IntOpt) End of port range to listen on
+
+# xenapi_torrent_download_stall_cutoff=600
+#### (IntOpt) Number of seconds a download can remain at the same progress
+####          percentage w/o being considered a stall
+
+# xenapi_torrent_max_seeder_processes_per_host=1
+#### (IntOpt) Maximum number of seeder processes to run concurrently
+####          within a given dom0. (-1 = no limit)
+
 
 ######## defined in nova.virt.xenapi.vmops ########
 
@@ -1712,9 +1757,6 @@
 
 # xenapi_vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
 #### (StrOpt) The XenAPI VIF driver using XenServer Network APIs.
-
-# xenapi_generate_swap=false
-#### (BoolOpt) Whether to generate swap (False means fetching it from OVA)
 
 
 ######## defined in nova.vnc ########
@@ -1750,13 +1792,6 @@
 #### (StrOpt) Address that the XCP VNC proxy should bind to
 
 
-######## defined in nova.volume.api ########
-
-# snapshot_same_host=true
-#### (BoolOpt) Create volume from snapshot at the host where snapshot
-####           resides
-
-
 ######## defined in nova.volume.cinder ########
 
 # cinder_catalog_info=volume:cinder:publicURL
@@ -1769,254 +1804,4 @@
 ####          endpoint e.g. http://localhost:8776/v1/%(project_id)s
 
 
-######## defined in nova.volume.driver ########
-
-# volume_group=nova-volumes
-#### (StrOpt) Name for the VG that will contain exported volumes
-
-# num_shell_tries=3
-#### (IntOpt) number of times to attempt to run flakey shell commands
-
-# num_iscsi_scan_tries=3
-#### (IntOpt) number of times to rescan iSCSI target to find volume
-
-# iscsi_num_targets=100
-#### (IntOpt) Number of iscsi target ids per host
-
-# iscsi_target_prefix=iqn.2010-10.org.openstack:
-#### (StrOpt) prefix for iscsi volumes
-
-# iscsi_ip_address=$my_ip
-#### (StrOpt) use this ip for iscsi
-
-# iscsi_port=3260
-#### (IntOpt) The port that the iSCSI daemon is listening on
-
-# rbd_pool=rbd
-#### (StrOpt) the RADOS pool in which rbd volumes are stored
-
-# rbd_user=<None>
-#### (StrOpt) the RADOS client name for accessing rbd volumes
-
-# rbd_secret_uuid=<None>
-#### (StrOpt) the libvirt uuid of the secret for the rbd_uservolumes
-
-# volume_tmp_dir=<None>
-#### (StrOpt) where to store temporary image files if the volume driver
-####          does not write them directly to the volume
-
-
-######## defined in nova.volume.iscsi ########
-
-# iscsi_helper=tgtadm
-#### (StrOpt) iscsi target user-land tool to use
-
-# volumes_dir=$state_path/volumes
-#### (StrOpt) Volume configuration file storage directory
-
-
-######## defined in nova.volume.manager ########
-
-# storage_availability_zone=nova
-#### (StrOpt) availability zone of this service
-
-# volume_driver=nova.volume.driver.ISCSIDriver
-#### (StrOpt) Driver to use for volume creation
-
-# use_local_volumes=true
-#### (BoolOpt) if True, will not discover local volumes
-
-# volume_force_update_capabilities=false
-#### (BoolOpt) if True will force update capabilities on each check
-
-
-######## defined in nova.volume.netapp ########
-
-# netapp_wsdl_url=<None>
-#### (StrOpt) URL of the WSDL file for the DFM server
-
-# netapp_login=<None>
-#### (StrOpt) User name for the DFM server
-
-# netapp_password=<None>
-#### (StrOpt) Password for the DFM server
-
-# netapp_server_hostname=<None>
-#### (StrOpt) Hostname for the DFM server
-
-# netapp_server_port=8088
-#### (IntOpt) Port number for the DFM server
-
-# netapp_storage_service=<None>
-#### (StrOpt) Storage service to use for provisioning (when
-####          volume_type=None)
-
-# netapp_storage_service_prefix=<None>
-#### (StrOpt) Prefix of storage service name to use for provisioning
-####          (volume_type name will be appended)
-
-# netapp_vfiler=<None>
-#### (StrOpt) Vfiler to use for provisioning
-
-
-######## defined in nova.volume.netapp_nfs ########
-
-# synchronous_snapshot_create=0
-#### (IntOpt) Does snapshot creation call returns immediately
-
-# netapp_wsdl_url=<None>
-#### (StrOpt) URL of the WSDL file for the DFM server
-
-# netapp_login=<None>
-#### (StrOpt) User name for the DFM server
-
-# netapp_password=<None>
-#### (StrOpt) Password for the DFM server
-
-# netapp_server_hostname=<None>
-#### (StrOpt) Hostname for the DFM server
-
-# netapp_server_port=8088
-#### (IntOpt) Port number for the DFM server
-
-# netapp_storage_service=<None>
-#### (StrOpt) Storage service to use for provisioning (when
-####          volume_type=None)
-
-# netapp_storage_service_prefix=<None>
-#### (StrOpt) Prefix of storage service name to use for provisioning
-####          (volume_type name will be appended)
-
-# netapp_vfiler=<None>
-#### (StrOpt) Vfiler to use for provisioning
-
-
-######## defined in nova.volume.nexenta.volume ########
-
-# nexenta_host=
-#### (StrOpt) IP address of Nexenta SA
-
-# nexenta_rest_port=2000
-#### (IntOpt) HTTP port to connect to Nexenta REST API server
-
-# nexenta_rest_protocol=auto
-#### (StrOpt) Use http or https for REST connection (default auto)
-
-# nexenta_user=admin
-#### (StrOpt) User name to connect to Nexenta SA
-
-# nexenta_password=nexenta
-#### (StrOpt) Password to connect to Nexenta SA
-
-# nexenta_iscsi_target_portal_port=3260
-#### (IntOpt) Nexenta target portal port
-
-# nexenta_volume=nova
-#### (StrOpt) pool on SA that will hold all volumes
-
-# nexenta_target_prefix=iqn.1986-03.com.sun:02:nova-
-#### (StrOpt) IQN prefix for iSCSI targets
-
-# nexenta_target_group_prefix=nova/
-#### (StrOpt) prefix for iSCSI target groups on SA
-
-# nexenta_blocksize=
-#### (StrOpt) block size for volumes (blank=default,8KB)
-
-# nexenta_sparse=false
-#### (BoolOpt) flag to create sparse volumes
-
-
-######## defined in nova.volume.nfs ########
-
-# nfs_shares_config=<None>
-#### (StrOpt) File with the list of available nfs shares
-
-# nfs_disk_util=df
-#### (StrOpt) Use du or df for free space calculation
-
-# nfs_sparsed_volumes=true
-#### (BoolOpt) Create volumes as sparsed files which take no space.If set
-####           to False volume is created as regular file.In such case
-####           volume creation takes a lot of time.
-
-
-######## defined in nova.volume.san ########
-
-# san_thin_provision=true
-#### (BoolOpt) Use thin provisioning for SAN volumes?
-
-# san_ip=
-#### (StrOpt) IP address of SAN controller
-
-# san_login=admin
-#### (StrOpt) Username for SAN controller
-
-# san_password=
-#### (StrOpt) Password for SAN controller
-
-# san_private_key=
-#### (StrOpt) Filename of private key to use for SSH authentication
-
-# san_clustername=
-#### (StrOpt) Cluster name to use for creating volumes
-
-# san_ssh_port=22
-#### (IntOpt) SSH port to use with SAN
-
-# san_is_local=false
-#### (BoolOpt) Execute commands locally instead of over SSH; use if the
-####           volume service is running on the SAN device
-
-# san_zfs_volume_base=rpool/
-#### (StrOpt) The ZFS path under which to create zvols for volumes.
-
-
-######## defined in nova.volume.solidfire ########
-
-# sf_emulate_512=true
-#### (BoolOpt) Set 512 byte emulation on volume creation;
-
-# sf_mvip=
-#### (StrOpt) IP address of SolidFire MVIP
-
-# sf_login=admin
-#### (StrOpt) Username for SF Cluster Admin
-
-# sf_password=
-#### (StrOpt) Password for SF Cluster Admin
-
-# sf_allow_tenant_qos=true
-#### (BoolOpt) Allow tenants to specify QOS on create
-
-
-######## defined in nova.volume.storwize_svc ########
-
-# storwize_svc_volpool_name=volpool
-#### (StrOpt) Storage system storage pool for volumes
-
-# storwize_svc_vol_rsize=2%
-#### (StrOpt) Storage system space-efficiency parameter for volumes
-
-# storwize_svc_vol_warning=0
-#### (StrOpt) Storage system threshold for volume capacity warnings
-
-# storwize_svc_vol_autoexpand=true
-#### (BoolOpt) Storage system autoexpand parameter for volumes (True/False)
-
-# storwize_svc_vol_grainsize=256
-#### (StrOpt) Storage system grain size parameter for volumes
-####          (32/64/128/256)
-
-# storwize_svc_vol_compression=false
-#### (BoolOpt) Storage system compression option for volumes
-
-# storwize_svc_vol_easytier=true
-#### (BoolOpt) Enable Easy Tier for volumes
-
-# storwize_svc_flashcopy_timeout=120
-#### (StrOpt) Maximum number of seconds to wait for FlashCopy to be
-####          prepared. Maximum value is 600 seconds (10 minutes).
-
-
-# Total option count: 527
+# Total option count: 462
