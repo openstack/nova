@@ -276,22 +276,42 @@ def destroy_vm(session, instance, vm_ref):
     LOG.debug(_("VM destroyed"), instance=instance)
 
 
-def shutdown_vm(session, instance, vm_ref, hard=True):
+def clean_shutdown_vm(session, instance, vm_ref):
+    if _is_vm_shutdown(session, vm_ref):
+        LOG.warn(_("VM already halted, skipping shutdown..."),
+                 instance=instance)
+        return False
+
+    LOG.debug(_("Shutting down VM (cleanly)"), instance=instance)
+    try:
+        session.call_xenapi('VM.clean_shutdown', vm_ref)
+    except session.XenAPI.Failure, exc:
+        LOG.exception(exc)
+        return False
+    return True
+
+
+def hard_shutdown_vm(session, instance, vm_ref):
+    if _is_vm_shutdown(session, vm_ref):
+        LOG.warn(_("VM already halted, skipping shutdown..."),
+                 instance=instance)
+        return False
+
+    LOG.debug(_("Shutting down VM (hard)"), instance=instance)
+    try:
+        session.call_xenapi('VM.hard_shutdown', vm_ref)
+    except session.XenAPI.Failure, exc:
+        LOG.exception(exc)
+        return False
+    return True
+
+
+def _is_vm_shutdown(session, vm_ref):
     vm_rec = session.call_xenapi("VM.get_record", vm_ref)
     state = compile_info(vm_rec)['state']
     if state == power_state.SHUTDOWN:
-        LOG.warn(_("VM already halted, skipping shutdown..."),
-                 instance=instance)
-        return
-
-    LOG.debug(_("Shutting down VM"), instance=instance)
-    try:
-        if hard:
-            session.call_xenapi('VM.hard_shutdown', vm_ref)
-        else:
-            session.call_xenapi('VM.clean_shutdown', vm_ref)
-    except session.XenAPI.Failure, exc:
-        LOG.exception(exc)
+        return True
+    return False
 
 
 def ensure_free_mem(session, instance):
