@@ -44,6 +44,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
+from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import volume_utils
@@ -2106,11 +2107,14 @@ def _mounted_processing(device, key, net, metadata):
             try:
                 # This try block ensures that the umount occurs
                 if not agent.find_guest_agent(tmpdir):
+                    vfs = vfsimpl.VFSLocalFS(imgfile=None,
+                                             imgfmt=None,
+                                             imgdir=tmpdir)
                     LOG.info(_('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we
                     # support injecting arbitrary files here.
-                    disk.inject_data_into_fs(tmpdir,
+                    disk.inject_data_into_fs(vfs,
                                              key, net, metadata, None, None)
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
