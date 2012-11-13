@@ -236,10 +236,10 @@ log files:
 This module also contains a global instance of the CommonConfigOpts class
 in order to support a common usage pattern in OpenStack:
 
-  from openstack.common import cfg
+  from nova.openstack.common import cfg
 
   opts = [
-    cfg.StrOpt('bind_host' default='0.0.0.0'),
+    cfg.StrOpt('bind_host', default='0.0.0.0'),
     cfg.IntOpt('bind_port', default=9292),
   ]
 
@@ -1507,7 +1507,7 @@ class ConfigOpts(collections.Mapping):
                 if ('default' in info or 'override' in info):
                     continue
 
-                if self._get(opt.name, group) is None:
+                if self._get(opt.dest, group) is None:
                     raise RequiredOptError(opt.name, group)
 
     def _parse_cli_opts(self, args):
