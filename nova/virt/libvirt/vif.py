@@ -293,7 +293,8 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
             conf.model = 'virtio'
         conf.net_type = "ethernet"
         conf.target_dev = dev
-        conf.script = ""
+        if CONF.libvirt_type != 'xen':
+            conf.script = ""
         conf.mac_addr = mapping['mac']
 
         return conf
@@ -303,7 +304,8 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         network, mapping = vif
         dev = self.get_dev_name(mapping['vif_uuid'])
         try:
-            utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+            if CONF.libvirt_type != 'xen':
+                utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
         except exception.ProcessExecutionError:
             LOG.warning(_("Failed while unplugging vif"), instance=instance)
             raise
