@@ -78,6 +78,9 @@
   <extension alias="os-hosts" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/hosts/api/v1.1" name="Hosts">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-services" name="Services" namespace="http://docs.openstack.org/compute/ext/services/api/v2" updated="%(timestamp)s">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-hypervisors" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/hypervisors/api/v1.1" name="Hypervisors">
     <description>%(text)s</description>
   </extension>
