@@ -3780,6 +3780,28 @@ class ComputeAPITestCase(BaseTestCase):
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 
+    def test_create_saves_type_in_system_metadata(self):
+        instance_type = instance_types.get_default_instance_type()
+        (ref, resv_id) = self.compute_api.create(
+                self.context,
+                instance_type=instance_type,
+                image_href=None)
+        try:
+            sys_metadata = db.instance_system_metadata_get(self.context,
+                    ref[0]['uuid'])
+
+            instance_type_props = ['name', 'memory_mb', 'vcpus', 'root_gb',
+                                   'ephemeral_gb', 'flavorid', 'swap',
+                                   'rxtx_factor', 'vcpu_weight']
+            for key in instance_type_props:
+                sys_meta_key = "instance_type_%s" % key
+                self.assertTrue(sys_meta_key in sys_metadata)
+                self.assertEqual(str(instance_type[key]),
+                                 str(sys_metadata[sys_meta_key]))
+
+        finally:
+            db.instance_destroy(self.context, ref[0]['uuid'])
+
     def test_create_instance_associates_security_groups(self):
         # Make sure create associates security groups.
         group = self._create_group()
