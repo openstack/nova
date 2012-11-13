@@ -1632,8 +1632,6 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if kwargs.get('vpn', False):
                 # this bit here is for vlan-manager
-                del net['dns1']
-                del net['dns2']
                 vlan = kwargs['vlan_start'] + index
                 net['vpn_private_address'] = str(subnet_v4[2])
                 net['dhcp_start'] = str(subnet_v4[3])
