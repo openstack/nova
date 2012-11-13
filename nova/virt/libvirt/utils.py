@@ -169,7 +169,7 @@ def list_logical_volumes(vg):
 
     :param vg: volume group name
     """
-    out, err = execute('lvs', '--noheadings', '-o', 'lv_path', vg,
+    out, err = execute('lvs', '--noheadings', '-o', 'lv_name', vg,
                        run_as_root=True)
 
     return [line.strip() for line in out.splitlines()]
