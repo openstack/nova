@@ -31,6 +31,7 @@ from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.image import fake
+from nova.tests import matchers
 from nova import utils
 
 CONF = config.CONF
@@ -1052,7 +1053,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 ],
             },
         }
-        self.assertDictMatch(request['body'], expected)
+        self.assertThat(request['body'], matchers.DictMatches(expected))
 
     def test_rebuild_minimum(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1065,7 +1066,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "imageRef": "http://localhost/images/1",
             },
         }
-        self.assertDictMatch(request['body'], expected)
+        self.assertThat(request['body'], matchers.DictMatches(expected))
 
     def test_rebuild_no_imageRef(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>

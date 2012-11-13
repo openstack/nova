@@ -60,6 +60,7 @@ from nova.tests.db.fakes import FakeModel
 from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
+from nova.tests import matchers
 from nova import utils
 from nova.virt import fake
 from nova.volume import cinder
@@ -4508,7 +4509,7 @@ class ComputeAPITestCase(BaseTestCase):
             ]
         bdms.sort()
         expected_result.sort()
-        self.assertDictListMatch(bdms, expected_result)
+        self.assertThat(bdms, matchers.DictListMatches(expected_result))
 
         self.compute_api._update_block_device_mapping(
             self.context, instance_types.get_default_instance_type(),
@@ -4544,7 +4545,7 @@ class ComputeAPITestCase(BaseTestCase):
             {'no_device': True, 'device_name': '/dev/sdd4'}]
         bdms.sort()
         expected_result.sort()
-        self.assertDictListMatch(bdms, expected_result)
+        self.assertThat(bdms, matchers.DictListMatches(expected_result))
 
         for bdm in db.block_device_mapping_get_all_by_instance(
             self.context, instance['uuid']):
@@ -5055,7 +5056,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         metadata['foo_key1'] = None
         expected = self.api.update_aggregate_metadata(self.context,
                                              aggr['id'], metadata)
-        self.assertDictMatch(expected['metadata'], {'foo_key2': 'foo_value2'})
+        self.assertThat(expected['metadata'],
+                        matchers.DictMatches({'foo_key2': 'foo_value2'}))
 
     def test_delete_aggregate(self):
         """Ensure we can delete an aggregate."""

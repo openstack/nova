@@ -25,6 +25,7 @@ from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
+from nova.tests import matchers
 from nova import utils
 
 CONF = config.CONF
@@ -108,7 +109,7 @@ class CloudpipeTest(test.TestCase):
                                     'state': 'running',
                                     'instance_id': 7777,
                                     'created_at': '1981-10-20T00:00:00Z'}]}
-        self.assertDictMatch(res_dict, response)
+        self.assertThat(res_dict, matchers.DictMatches(response))
 
     def test_cloudpipe_create(self):
         def launch_vpn_instance(context):

@@ -22,6 +22,7 @@ from nova import context
 from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
+from nova.tests import matchers
 
 LOG = logging.getLogger(__name__)
 AGGREGATE_LIST = [
@@ -319,7 +320,8 @@ class AggregateTestCase(test.TestCase):
         def stub_update_aggregate(context, aggregate, values):
             self.assertEqual(context, self.context, "context")
             self.assertEqual("1", aggregate, "aggregate")
-            self.assertDictMatch(body["set_metadata"]['metadata'], values)
+            self.assertThat(body["set_metadata"]['metadata'],
+                            matchers.DictMatches(values))
             return AGGREGATE
         self.stubs.Set(self.controller.api,
                        "update_aggregate_metadata",

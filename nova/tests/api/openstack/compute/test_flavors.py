@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
@@ -215,7 +216,7 @@ class FlavorsTest(test.TestCase):
                'rel': 'next'}
             ]
         }
-        self.assertDictMatch(flavor, expected)
+        self.assertThat(flavor, matchers.DictMatches(expected))
 
     def test_get_flavor_detail_with_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?limit=1')
@@ -247,7 +248,8 @@ class FlavorsTest(test.TestCase):
         href_parts = urlparse.urlparse(response_links[0]['href'])
         self.assertEqual('/v2/fake/flavors', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-        self.assertDictMatch({'limit': ['1'], 'marker': ['1']}, params)
+        self.assertThat({'limit': ['1'], 'marker': ['1']},
+                        matchers.DictMatches(params))
 
     def test_get_flavor_with_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
@@ -293,7 +295,8 @@ class FlavorsTest(test.TestCase):
         href_parts = urlparse.urlparse(response_links[0]['href'])
         self.assertEqual('/v2/fake/flavors', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-        self.assertDictMatch({'limit': ['2'], 'marker': ['2']}, params)
+        self.assertThat({'limit': ['2'], 'marker': ['2']},
+                        matchers.DictMatches(params))
 
     def test_get_flavor_list_detail(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail')

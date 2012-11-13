@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
+from nova.tests import matchers
 from nova import utils
 
 CONF = config.CONF
@@ -621,14 +622,16 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
-        self.assertDictMatch(expected_metadata, _get_fake_aggr_metadata())
+        self.assertThat(expected_metadata,
+                        matchers.DictMatches(_get_fake_aggr_metadata()))
 
     def test_aggregate_create_delete_create_with_metadata(self):
         """Ensure aggregate metadata is deleted bug 1052479."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
-        self.assertDictMatch(expected_metadata, _get_fake_aggr_metadata())
+        self.assertThat(expected_metadata,
+                        matchers.DictMatches(_get_fake_aggr_metadata()))
         db.aggregate_delete(ctxt, result['id'])
         result = _create_aggregate(metadata=None)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
@@ -750,7 +753,8 @@ class AggregateDBApiTestCase(test.TestCase):
         values['metadata'] = _get_fake_aggr_metadata()
         db.aggregate_update(ctxt, 1, values)
         expected = db.aggregate_metadata_get(ctxt, result.id)
-        self.assertDictMatch(_get_fake_aggr_metadata(), expected)
+        self.assertThat(_get_fake_aggr_metadata(),
+                        matchers.DictMatches(expected))
 
     def test_aggregate_update_with_existing_metadata(self):
         """Ensure an aggregate can be updated with existing metadata."""
@@ -761,7 +765,7 @@ class AggregateDBApiTestCase(test.TestCase):
         values['metadata']['fake_key1'] = 'foo'
         db.aggregate_update(ctxt, 1, values)
         expected = db.aggregate_metadata_get(ctxt, result.id)
-        self.assertDictMatch(values['metadata'], expected)
+        self.assertThat(values['metadata'], matchers.DictMatches(expected))
 
     def test_aggregate_update_raise_not_found(self):
         """Ensure AggregateNotFound is raised when updating an aggregate."""
@@ -807,7 +811,7 @@ class AggregateDBApiTestCase(test.TestCase):
         metadata = _get_fake_aggr_metadata()
         db.aggregate_metadata_add(ctxt, result.id, metadata)
         expected = db.aggregate_metadata_get(ctxt, result.id)
-        self.assertDictMatch(metadata, expected)
+        self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_update(self):
         """Ensure we can update metadata for the aggregate."""
@@ -820,7 +824,7 @@ class AggregateDBApiTestCase(test.TestCase):
         db.aggregate_metadata_add(ctxt, result.id, new_metadata)
         expected = db.aggregate_metadata_get(ctxt, result.id)
         metadata[key] = 'foo'
-        self.assertDictMatch(metadata, expected)
+        self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_delete(self):
         """Ensure we can delete metadata for the aggregate."""
@@ -831,7 +835,7 @@ class AggregateDBApiTestCase(test.TestCase):
         db.aggregate_metadata_delete(ctxt, result.id, metadata.keys()[0])
         expected = db.aggregate_metadata_get(ctxt, result.id)
         del metadata[metadata.keys()[0]]
-        self.assertDictMatch(metadata, expected)
+        self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_delete_raise_not_found(self):
         """Ensure AggregateMetadataNotFound is raised when deleting."""

@@ -36,6 +36,7 @@ from nova.openstack.common import timeutils
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import test
+from nova.tests import matchers
 from nova.tests.scheduler import fakes
 from nova import utils
 
@@ -136,7 +137,7 @@ class SchedulerManagerTestCase(test.TestCase):
                                  'local_gb_used': 512,
                                  'memory_mb': 1024,
                                  'memory_mb_used': 512}}
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
 
     def _mox_schedule_method_helper(self, method_name):
         # Make sure the method exists that we're going to test call
@@ -719,7 +720,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         result = driver.encode_instance(instance, True)
         expected = {'id': instance['id'], '_is_precooked': False}
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
         # Orig dict not changed
         self.assertNotEqual(result, instance)
 
@@ -727,6 +728,6 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         expected = {}
         expected.update(instance)
         expected['_is_precooked'] = True
-        self.assertDictMatch(result, expected)
+        self.assertThat(result, matchers.DictMatches(expected))
         # Orig dict not changed
         self.assertNotEqual(result, instance)

@@ -48,6 +48,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
 from nova.tests.image import fake
+from nova.tests import matchers
 from nova import utils
 
 CONF = config.CONF
@@ -316,7 +317,7 @@ class ServersControllerTest(test.TestCase):
             }
         }
 
-        self.assertDictMatch(res_dict, expected_server)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_active_status_by_id(self):
         image_bookmark = "http://localhost/fake/images/10"
@@ -382,7 +383,7 @@ class ServersControllerTest(test.TestCase):
             }
         }
 
-        self.assertDictMatch(res_dict, expected_server)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_id_image_ref_by_id(self):
         image_ref = "10"
@@ -451,7 +452,7 @@ class ServersControllerTest(test.TestCase):
             }
         }
 
-        self.assertDictMatch(res_dict, expected_server)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_addresses_from_cache(self):
         pub0 = ('172.19.0.1', '172.19.0.2',)
@@ -502,7 +503,7 @@ class ServersControllerTest(test.TestCase):
                 ],
             },
         }
-        self.assertDictMatch(res_dict, expected)
+        self.assertThat(res_dict, matchers.DictMatches(expected))
 
     def test_get_server_addresses_nonexistent_network(self):
         url = '/v2/fake/servers/%s/ips/network_0' % FAKE_UUID
@@ -597,7 +598,7 @@ class ServersControllerTest(test.TestCase):
         params = urlparse.parse_qs(href_parts.query)
         expected_params = {'limit': ['3'],
                            'marker': [fakes.get_fake_uuid(2)]}
-        self.assertDictMatch(expected_params, params)
+        self.assertThat(params, matchers.DictMatches(expected_params))
 
     def test_get_servers_with_limit_bad_value(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=aaa')
@@ -619,7 +620,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected = {'limit': ['3'], 'marker': [fakes.get_fake_uuid(2)]}
-        self.assertDictMatch(expected, params)
+        self.assertThat(params, matchers.DictMatches(expected))
 
     def test_get_server_details_with_limit_bad_value(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?limit=aaa')
@@ -641,9 +642,9 @@ class ServersControllerTest(test.TestCase):
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-
-        self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
-                              'marker': [fakes.get_fake_uuid(2)]}, params)
+        expected = {'limit': ['3'], 'blah': ['2:t'],
+                    'marker': [fakes.get_fake_uuid(2)]}
+        self.assertThat(params, matchers.DictMatches(expected))
 
     def test_get_servers_with_too_big_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=30')
@@ -3254,7 +3255,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 ],
             },
         }
-        self.assertDictMatch(request['body'], expected)
+        self.assertThat(request['body'], matchers.DictMatches(expected))
 
     def test_spec_request(self):
         image_bookmark_link = ("http://servers.api.openstack.org/1234/"
@@ -3699,7 +3700,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.basic(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_with_project_id(self):
         expected_server = {
@@ -3721,7 +3722,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.basic(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail(self):
         image_bookmark = "http://localhost/fake/images/5"
@@ -3780,7 +3781,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -3854,7 +3855,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.request.context = context.RequestContext('fake', 'fake')
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail_with_fault_no_details_not_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -3872,7 +3873,8 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.request.context = context.RequestContext('fake', 'fake')
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output['server']['fault'], expected_fault)
+        self.assertThat(output['server']['fault'],
+                        matchers.DictMatches(expected_fault))
 
     def test_build_server_detail_with_fault_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -3891,7 +3893,8 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.request.context = context.get_admin_context()
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output['server']['fault'], expected_fault)
+        self.assertThat(output['server']['fault'],
+                        matchers.DictMatches(expected_fault))
 
     def test_build_server_detail_with_fault_no_details_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -3909,7 +3912,8 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.request.context = context.get_admin_context()
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output['server']['fault'], expected_fault)
+        self.assertThat(output['server']['fault'],
+                        matchers.DictMatches(expected_fault))
 
     def test_build_server_detail_with_fault_but_active(self):
         self.instance['vm_state'] = vm_states.ACTIVE
@@ -3990,7 +3994,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail_with_accessipv4(self):
 
@@ -4052,7 +4056,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail_with_accessipv6(self):
 
@@ -4114,7 +4118,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail_with_metadata(self):
 
@@ -4178,7 +4182,7 @@ class ServersViewBuilderTest(test.TestCase):
         }
 
         output = self.view_builder.show(self.request, self.instance)
-        self.assertDictMatch(output, expected_server)
+        self.assertThat(output, matchers.DictMatches(expected_server))
 
 
 class ServerXMLSerializationTest(test.TestCase):

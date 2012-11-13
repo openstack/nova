@@ -30,6 +30,7 @@ from nova.api.openstack import xmlutil
 import nova.context
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests import matchers
 
 
 TEST_LIMITS = [
@@ -862,7 +863,7 @@ class LimitsViewBuilderTest(test.TestCase):
 
         output = self.view_builder.build(self.rate_limits,
                                          self.absolute_limits)
-        self.assertDictMatch(output, expected_limits)
+        self.assertThat(output, matchers.DictMatches(expected_limits))
 
     def test_build_limits_empty_limits(self):
         expected_limits = {"limits": {"rate": [],
@@ -871,7 +872,7 @@ class LimitsViewBuilderTest(test.TestCase):
         abs_limits = {}
         rate_limits = []
         output = self.view_builder.build(rate_limits, abs_limits)
-        self.assertDictMatch(output, expected_limits)
+        self.assertThat(output, matchers.DictMatches(expected_limits))
 
 
 class LimitsXMLSerializationTest(test.TestCase):

@@ -22,6 +22,7 @@ Tests for Block Device Mapping Code.
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova import test
+from nova.tests import matchers
 
 
 class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
@@ -41,7 +42,7 @@ class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
 
     def _assertApply(self, action, bdm_list):
         for bdm, expected_result in bdm_list:
-            self.assertDictMatch(action(bdm), expected_result)
+            self.assertThat(action(bdm), matchers.DictMatches(expected_result))
 
     def test_parse_block_device_mapping(self):
         self.stubs.Set(ec2utils,
