@@ -693,7 +693,10 @@ class VMOps(object):
                   instance=instance)
 
         # 2. Power down the instance before resizing
-        vm_utils.clean_shutdown_vm(self._session, instance, vm_ref)
+        if not vm_utils.clean_shutdown_vm(self._session, instance, vm_ref):
+            LOG.debug(_("Clean shutdown did not complete successfully, "
+                        "trying hard shutdown."), instance=instance)
+            vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
         self._update_instance_progress(context, instance,
                                        step=2,
                                        total_steps=RESIZE_TOTAL_STEPS)
