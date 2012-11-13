@@ -1013,6 +1013,55 @@ class CapacityTestCase(test.TestCase):
         self.assertEqual(1, int(stat['value']))
 
 
+class MigrationTestCase(test.TestCase):
+
+    def setUp(self):
+        super(MigrationTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+        self._create()
+        self._create()
+        self._create(status='reverted')
+        self._create(status='confirmed')
+        self._create(source_compute='host2', dest_compute='host1')
+        self._create(source_compute='host2', dest_compute='host3')
+        self._create(source_compute='host3', dest_compute='host4')
+
+    def _create(self, status='migrating', source_compute='host1',
+                dest_compute='host2'):
+
+        values = {'host': source_compute}
+        instance = db.instance_create(self.ctxt, values)
+
+        values = {'status': status, 'source_compute': source_compute,
+                  'dest_compute': dest_compute,
+                  'instance_uuid': instance['uuid']}
+        db.migration_create(self.ctxt, values)
+
+    def _assert_in_progress(self, migrations):
+        for migration in migrations:
+            self.assertNotEqual('confirmed', migration.status)
+            self.assertNotEqual('reverted', migration.status)
+
+    def test_in_progress_host1(self):
+        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host1')
+        # 2 as source + 1 as dest
+        self.assertEqual(3, len(migrations))
+        self._assert_in_progress(migrations)
+
+    def test_in_progress_host2(self):
+        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host2')
+        # 2 as dest, 2 as source
+        self.assertEqual(4, len(migrations))
+        self._assert_in_progress(migrations)
+
+    def test_instance_join(self):
+        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host2')
+        for migration in migrations:
+            instance = migration['instance']
+            self.assertEqual(migration['instance_uuid'], instance['uuid'])
+
+
 class TestIpAllocation(test.TestCase):
 
     def setUp(self):

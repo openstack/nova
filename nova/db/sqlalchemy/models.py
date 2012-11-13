@@ -641,6 +641,11 @@ class Migration(BASE, NovaBase):
     #TODO(_cerberus_): enum
     status = Column(String(255))
 
+    instance = relationship("Instance", foreign_keys=instance_uuid,
+                            primaryjoin='and_(Migration.instance_uuid == '
+                                        'Instance.uuid, Instance.deleted == '
+                                        'False)')
+
 
 class Network(BASE, NovaBase):
     """Represents a network."""

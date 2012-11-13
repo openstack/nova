@@ -3351,6 +3351,17 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
             all()
 
 
+@require_admin_context
+def migration_get_in_progress_by_host(context, host, session=None):
+
+    return model_query(context, models.Migration, session=session).\
+            filter(or_(models.Migration.source_compute == host,
+                       models.Migration.dest_compute == host)).\
+            filter(~models.Migration.status.in_(['confirmed', 'reverted'])).\
+            options(joinedload('instance')).\
+            all()
+
+
 ##################
 
 
