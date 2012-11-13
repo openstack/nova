@@ -1,0 +1,159 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2012 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+import os
+import tempfile
+
+from nova import exception
+from nova.openstack.common import log as logging
+from nova import utils
+from nova.virt.disk.mount import loop
+from nova.virt.disk.mount import nbd
+from nova.virt.disk.vfs import api as vfs
+
+LOG = logging.getLogger(__name__)
+
+
+class VFSLocalFS(vfs.VFS):
+
+    """
+    os.path.join() with safety check for injected file paths.
+
+    Join the supplied path components and make sure that the
+    resulting path we are injecting into is within the
+    mounted guest fs.  Trying to be clever and specifying a
+    path with '..' in it will hit this safeguard.
+    """
+    def _canonical_path(self, path):
+        canonpath, _err = utils.execute(
+            'readlink', '-nm',
+            os.path.join(self.imgdir, path.lstrip("/")),
+            run_as_root=True)
+        if not canonpath.startswith(os.path.realpath(self.imgdir) + '/'):
+            raise exception.Invalid(_('File path %s not valid') % path)
+        return canonpath
+
+    """
+    This class implements a VFS module that is mapped to a virtual
+    root directory present on the host filesystem. This implementation
+    uses the nova.virt.disk.mount.Mount API to make virtual disk
+    images visible in the host filesystem. If the disk format is
+    raw, it will use the loopback mount impl, otherwise it will
+    use the qemu-nbd impl.
+    """
+    def __init__(self, imgfile, imgfmt="raw", partition=None, imgdir=None):
+        super(VFSLocalFS, self).__init__(imgfile, imgfmt, partition)
+
+        self.imgdir = imgdir
+        self.mount = None
+
+    def setup(self):
+        self.imgdir = tempfile.mkdtemp(prefix="openstack-vfs-localfs")
+        try:
+            if self.imgfmt == "raw":
+                LOG.debug(_("Using LoopMount"))
+                mount = loop.LoopMount(self.imgfile,
+                                       self.imgdir,
+                                       self.partition)
+            else:
+                LOG.debug(_("Using NbdMount"))
+                mount = nbd.NbdMount(self.imgfile,
+                                     self.imgdir,
+                                     self.partition)
+            if not mount.do_mount():
+                raise Exception(_("Failed to mount image: %s") %
+                                mount.error)
+            self.mount = mount
+        except Exception, e:
+            LOG.debug(_("Failed to mount image %(ex)s)") %
+                      {'ex': str(e)})
+            self.teardown()
+            raise e
+
+    def teardown(self):
+        try:
+            if self.mount:
+                self.mount.do_umount()
+        except Exception, e:
+            LOG.debug(_("Failed to unmount %(imgdir)s: %(ex)s") %
+                      {'imgdir': self.imgdir, 'ex': str(e)})
+        try:
+            if self.imgdir:
+                os.rmdir(self.imgdir)
+        except Exception, e:
+            LOG.debug(_("Failed to remove %(imgdir)s: %(ex)s") %
+                      {'imgdir': self.imgdir, 'ex': str(e)})
+        self.imgdir = None
+        self.mount = None
+
+    def make_path(self, path):
+        LOG.debug(_("Make directory path=%(path)s") % locals())
+        canonpath = self._canonical_path(path)
+        utils.execute('mkdir', '-p', canonpath, run_as_root=True)
+
+    def append_file(self, path, content):
+        LOG.debug(_("Append file path=%(path)s") % locals())
+        canonpath = self._canonical_path(path)
+
+        args = ["-a", canonpath]
+        kwargs = dict(process_input=content, run_as_root=True)
+
+        utils.execute('tee', *args, **kwargs)
+
+    def replace_file(self, path, content):
+        LOG.debug(_("Replace file path=%(path)s") % locals())
+        canonpath = self._canonical_path(path)
+
+        args = [canonpath]
+        kwargs = dict(process_input=content, run_as_root=True)
+
+        utils.execute('tee', *args, **kwargs)
+
+    def read_file(self, path):
+        LOG.debug(_("Read file path=%(path)s") % locals())
+        canonpath = self._canonical_path(path)
+
+        return utils.read_file_as_root(canonpath)
+
+    def has_file(self, path):
+        LOG.debug(_("Has file path=%(path)s") % locals())
+        canonpath = self._canonical_path(path)
+        exists, _err = utils.trycmd('readlink', '-e',
+                                    canonpath,
+                                    run_as_root=True)
+        return exists
+
+    def set_permissions(self, path, mode):
+        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)o") % locals())
+        canonpath = self._canonical_path(path)
+        utils.execute('chmod', "%o" % mode, canonpath, run_as_root=True)
+
+    def set_ownership(self, path, user, group):
+        LOG.debug(_("Set permissions path=%(path)s "
+                    "user=%(user)s group=%(group)s") % locals())
+        canonpath = self._canonical_path(path)
+        owner = None
+        cmd = "chown"
+        if group is not None and user is not None:
+            owner = user + ":" + group
+        elif user is not None:
+            owner = user
+        elif group is not None:
+            owner = group
+            cmd = "chgrp"
+
+        if owner is not None:
+            utils.execute(cmd, owner, canonpath, run_as_root=True)
