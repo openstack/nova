@@ -351,7 +351,7 @@ class API(base.Base):
         if self._is_multi_host(context, instance):
             args['floating_addresses'] = \
                 self._get_floating_ip_addresses(context, instance)
-            args['host'] = migration['dest_compute']
+            args['host'] = migration['source_compute']
 
         self.network_rpcapi.migrate_instance_start(context, **args)
 
