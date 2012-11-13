@@ -17,6 +17,7 @@
 
 import os
 
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -30,7 +31,29 @@ class Mount(object):
     to be called in that order.
     """
 
-    mode = device_id_string = None  # to be overridden in subclasses
+    mode = None  # to be overridden in subclasses
+
+    @staticmethod
+    def instance_for_format(imgfile, mountdir, partition, imgfmt):
+        if imgfmt == "raw":
+            return importutils.import_object(
+                "nova.virt.disk.mount.loop.LoopMount",
+                imgfile, mountdir, partition)
+        else:
+            return importutils.import_object(
+                "nova.virt.disk.mount.nbd.NbdMount",
+                imgfile, mountdir, partition)
+
+    @staticmethod
+    def instance_for_device(imgfile, mountdir, partition, device):
+        if "loop" in device:
+            return importutils.import_object(
+                "nova.virt.disk.mount.loop.LoopMount",
+                imgfile, mountdir, partition, device)
+        else:
+            return importutils.import_object(
+                "nova.virt.disk.mount.nbd.NbdMount",
+                imgfile, mountdir, partition, device)
 
     def __init__(self, image, mount_dir, partition=None, device=None):
 

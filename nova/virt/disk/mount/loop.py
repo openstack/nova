@@ -22,7 +22,6 @@ from nova.virt.disk.mount import api
 class LoopMount(api.Mount):
     """loop back support for raw images."""
     mode = 'loop'
-    device_id_string = mode
 
     def get_dev(self):
         out, err = utils.trycmd('losetup', '--find', '--show', self.image,

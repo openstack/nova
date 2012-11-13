@@ -107,7 +107,6 @@ class TestVirtDisk(test.TestCase):
                 '/mnt/loop/part': '/dev/mapper/loop0p1',
                 '/mnt/nbd/nopart': '/dev/nbd15',
                 '/mnt/nbd/part': '/dev/mapper/nbd15p1',
-                '/mnt/guestfs': 'guestmount',
             }
             return mount_points[mount_point]
 
@@ -140,12 +139,5 @@ class TestVirtDisk(test.TestCase):
                               ('kpartx', '-d', '/dev/nbd15'),
                               ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
-
-        disk_api.destroy_container('/mnt/guestfs')
-        expected_commands += [
-                              ('fusermount', '-u', '/mnt/guestfs'),
-                             ]
-        # It's not worth trying to match the last timeout command
-        self.executes.pop()
 
         self.assertEqual(self.executes, expected_commands)

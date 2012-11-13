@@ -39,7 +39,6 @@ CONF.register_opts(nbd_opts)
 class NbdMount(api.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
-    device_id_string = mode
 
     # NOTE(padraig): There are three issues with this nbd device handling
     #  1. max_nbd_devices should be inferred (#861504)

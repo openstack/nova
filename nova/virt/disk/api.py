@@ -37,9 +37,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.disk.mount import guestfs
-from nova.virt.disk.mount import loop
-from nova.virt.disk.mount import nbd
+from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
 from nova.virt import images
 
@@ -50,9 +48,6 @@ disk_opts = [
     cfg.StrOpt('injected_network_template',
                default='$pybasedir/nova/virt/interfaces.template',
                help='Template file for injected network'),
-    cfg.ListOpt('img_handlers',
-                default=['loop', 'nbd', 'guestfs'],
-                help='Order of methods used to mount disk images'),
 
     # NOTE(yamahata): ListOpt won't work because the command may include a
     #                 comma. For example:
@@ -174,25 +169,14 @@ class _DiskImage(object):
         self.image = image
         self.partition = partition
         self.mount_dir = mount_dir
+        self.use_cow = use_cow
 
         # Internal
         self._mkdir = False
         self._mounter = None
         self._errors = []
 
-        # As a performance tweak, don't bother trying to
-        # directly loopback mount a cow image.
-        self.handlers = CONF.img_handlers[:]
-        if use_cow and 'loop' in self.handlers:
-            self.handlers.remove('loop')
-
-        if not self.handlers:
-            msg = _('no capable image handler configured')
-            raise exception.NovaException(msg)
-
         if mount_dir:
-            # Note the os.path.ismount() shortcut doesn't
-            # work with libguestfs due to permissions issues.
             device = self._device_for_path(mount_dir)
             if device:
                 self._reset(device)
@@ -211,12 +195,10 @@ class _DiskImage(object):
 
     def _reset(self, device):
         """Reset internal state for a previously mounted directory."""
-        mounter_cls = self._handler_class(device=device)
-        mounter = mounter_cls(image=self.image,
-                              partition=self.partition,
-                              mount_dir=self.mount_dir,
-                              device=device)
-        self._mounter = mounter
+        self._mounter = mount.Mount.instance_for_device(self.image,
+                                                        self.mount_dir,
+                                                        self.partition,
+                                                        device)
 
         mount_name = os.path.basename(self.mount_dir or '')
         self._mkdir = mount_name.startswith(self.tmp_prefix)
@@ -225,17 +207,6 @@ class _DiskImage(object):
     def errors(self):
         """Return the collated errors from all operations."""
         return '\n--\n'.join([''] + self._errors)
-
-    @staticmethod
-    def _handler_class(mode=None, device=None):
-        """Look up the appropriate class to use based on MODE or DEVICE."""
-        for cls in (loop.LoopMount, nbd.NbdMount, guestfs.GuestFSMount):
-            if mode and cls.mode == mode:
-                return cls
-            elif device and cls.device_id_string in device:
-                return cls
-        msg = _("no disk image handler for: %s") % mode or device
-        raise exception.NovaException(msg)
 
     def mount(self):
         """Mount a disk image, using the object attributes.
@@ -252,21 +223,19 @@ class _DiskImage(object):
             self.mount_dir = tempfile.mkdtemp(prefix=self.tmp_prefix)
             self._mkdir = True
 
-        try:
-            for h in self.handlers:
-                mounter_cls = self._handler_class(h)
-                mounter = mounter_cls(image=self.image,
-                                      partition=self.partition,
-                                      mount_dir=self.mount_dir)
-                if mounter.do_mount():
-                    self._mounter = mounter
-                    break
-                else:
-                    LOG.debug(mounter.error)
-                    self._errors.append(mounter.error)
-        finally:
-            if not self._mounter:
-                self.umount()  # rmdir
+        imgfmt = "raw"
+        if self.use_cow:
+            imgfmt = "qcow2"
+
+        mounter = mount.Mount.instance_for_format(self.image,
+                                                  self.mount_dir,
+                                                  self.partition,
+                                                  imgfmt)
+        if mounter.do_mount():
+            self._mounter = mounter
+        else:
+            LOG.debug(mounter.error)
+            self._errors.append(mounter.error)
 
         return bool(self._mounter)
 
@@ -275,6 +244,7 @@ class _DiskImage(object):
         try:
             if self._mounter:
                 self._mounter.do_umount()
+                self._mounter = None
         finally:
             if self._mkdir:
                 os.rmdir(self.mount_dir)
