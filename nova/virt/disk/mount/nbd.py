@@ -22,7 +22,7 @@ from nova import config
 from nova import flags
 from nova.openstack.common import cfg
 from nova import utils
-from nova.virt.disk import mount
+from nova.virt.disk.mount import api
 
 
 nbd_opts = [
@@ -38,7 +38,7 @@ CONF = config.CONF
 CONF.register_opts(nbd_opts)
 
 
-class Mount(mount.Mount):
+class NbdMount(api.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
     device_id_string = mode
