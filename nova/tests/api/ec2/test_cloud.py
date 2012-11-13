@@ -95,10 +95,8 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   volume_api_class='nova.tests.fake_volume.API',
-                   volumes_dir=vol_tmpdir)
+                   volume_api_class='nova.tests.fake_volume.API')
 
         def fake_show(meh, context, id):
             return {'id': id,
