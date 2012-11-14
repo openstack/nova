@@ -20,13 +20,14 @@
 
 import copy
 import datetime
+import uuid
 
 from nova import config
 from nova import exception
 from nova import flags
 import nova.image.glance
 from nova.openstack.common import log as logging
-from nova import utils
+
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
@@ -176,7 +177,7 @@ class _FakeImageService(object):
         :raises: Duplicate if the image already exist.
 
         """
-        image_id = str(metadata.get('id', utils.gen_uuid()))
+        image_id = str(metadata.get('id', uuid.uuid4()))
         metadata['id'] = image_id
         if image_id in self.images:
             raise exception.Duplicate()

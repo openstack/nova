@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 from lxml import etree
 import webob
 
@@ -29,7 +31,7 @@ from nova.openstack.common import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
-from nova import utils
+
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
@@ -88,7 +90,7 @@ def network_api_disassociate(self, context, instance, floating_address):
 def fake_instance_get(context, instance_id):
         return {
         "id": 1,
-        "uuid": utils.gen_uuid(),
+        "uuid": uuid.uuid4(),
         "name": 'fake',
         "user_id": 'fakeuser',
         "project_id": '123'}

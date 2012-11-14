@@ -15,6 +15,8 @@
 #
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+import uuid
+
 import mox
 
 from nova import config
@@ -24,8 +26,8 @@ from nova.network import model
 from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantumapi
 from nova import test
-from nova import utils
 from quantumclient.v2_0 import client
+
 
 CONF = config.CONF
 
@@ -133,7 +135,7 @@ class TestQuantumv2(test.TestCase):
                 'auth_token',
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
         self.instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
-                         'uuid': str(utils.gen_uuid()),
+                         'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance',
                          'security_groups': []}
         self.nets1 = [{'id': 'my_netid1',

@@ -31,7 +31,6 @@ from nova import config
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
-from nova.openstack.common import uuidutils
 from nova import test
 from nova import utils
 
@@ -507,31 +506,6 @@ class GenericUtilsTestCase(test.TestCase):
         h1 = utils.hash_file(flo)
         h2 = hashlib.sha1(data).hexdigest()
         self.assertEquals(h1, h2)
-
-
-class IsUUIDLikeTestCase(test.TestCase):
-    def assertUUIDLike(self, val, expected):
-        result = uuidutils.is_uuid_like(val)
-        self.assertEqual(result, expected)
-
-    def test_good_uuid(self):
-        val = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        self.assertUUIDLike(val, True)
-
-    def test_integer_passed(self):
-        val = 1
-        self.assertUUIDLike(val, False)
-
-    def test_non_uuid_string_passed(self):
-        val = 'foo-fooo'
-        self.assertUUIDLike(val, False)
-
-    def test_non_uuid_string_passed2(self):
-        val = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-        self.assertUUIDLike(val, False)
-
-    def test_gen_valid_uuid(self):
-        self.assertUUIDLike(str(utils.gen_uuid()), True)
 
 
 class MonkeyPatchTestCase(test.TestCase):

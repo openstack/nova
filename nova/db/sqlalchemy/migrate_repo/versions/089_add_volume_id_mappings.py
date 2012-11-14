@@ -15,11 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import MetaData, String, Table
 
 from nova.openstack.common import log as logging
-from nova import utils
+
 
 LOG = logging.getLogger(__name__)
 
@@ -93,7 +95,7 @@ def upgrade(migrate_engine):
     volume_list = list(volumes.select().execute())
     for v in volume_list:
         old_id = v['id']
-        new_id = utils.gen_uuid()
+        new_id = uuid.uuid4()
         row = volume_id_mappings.insert()
         row.execute({'id': old_id,
               'uuid': str(new_id)})
@@ -101,7 +103,7 @@ def upgrade(migrate_engine):
     snapshot_list = list(snapshots.select().execute())
     for s in snapshot_list:
         old_id = s['id']
-        new_id = utils.gen_uuid()
+        new_id = uuid.uuid4()
         row = snapshot_id_mappings.insert()
         row.execute({'id': old_id,
               'uuid': str(new_id)})

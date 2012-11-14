@@ -21,6 +21,7 @@ Provides common functionality for integrated unit tests
 
 import random
 import string
+import uuid
 
 import nova.image.glance
 from nova.openstack.common.log import logging
@@ -29,7 +30,6 @@ from nova import test  # For the flags
 from nova.tests import fake_crypto
 import nova.tests.image.fake
 from nova.tests.integrated.api import client
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -116,7 +116,7 @@ class _IntegratedTestBase(test.TestCase):
         return generate_new_element(server_names, 'server')
 
     def get_invalid_image(self):
-        return str(utils.gen_uuid())
+        return str(uuid.uuid4())
 
     def _build_minimal_create_server_request(self):
         server = {}

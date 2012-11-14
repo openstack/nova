@@ -14,10 +14,12 @@
 
 """Implementation of a fake volume API"""
 
+import uuid
+
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
-from nova import utils
+
 
 LOG = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class fake_volume():
         if snapshot is not None:
             snapshot_id = snapshot['id']
         if volume_id is None:
-            volume_id = str(utils.gen_uuid())
+            volume_id = str(uuid.uuid4())
         self.vol = {
             'created_at': timeutils.utcnow(),
             'deleted_at': None,
@@ -79,7 +81,7 @@ class fake_snapshot():
 
     def __init__(self, volume_id, size, name, desc, id=None):
         if id is None:
-            id = str(utils.gen_uuid())
+            id = str(uuid.uuid4())
         self.snap = {
             'created_at': timeutils.utcnow(),
             'deleted_at': None,

@@ -16,6 +16,7 @@
 #    under the License.
 
 import datetime
+import uuid
 
 import glanceclient.v1.images
 import routes
@@ -44,7 +45,6 @@ from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
-from nova import utils
 from nova import wsgi
 
 
@@ -373,7 +373,7 @@ def create_info_cache(nw_cache):
 
 def get_fake_uuid(token=0):
     if not token in FAKE_UUIDS:
-        FAKE_UUIDS[token] = str(utils.gen_uuid())
+        FAKE_UUIDS[token] = str(uuid.uuid4())
     return FAKE_UUIDS[token]
 
 

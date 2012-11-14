@@ -20,19 +20,19 @@
 """RequestContext: context for requests that persist through all of nova."""
 
 import copy
+import uuid
 
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import policy
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
 
 def generate_request_id():
-    return 'req-' + str(utils.gen_uuid())
+    return 'req-' + str(uuid.uuid4())
 
 
 class RequestContext(object):

@@ -21,6 +21,7 @@
 """Built-in instance properties."""
 
 import re
+import uuid
 
 from nova import config
 from nova import context
@@ -41,7 +42,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
     """Creates instance types."""
 
     if flavorid is None:
-        flavorid = utils.gen_uuid()
+        flavorid = uuid.uuid4()
     if swap is None:
         swap = 0
     if rxtx_factor is None:

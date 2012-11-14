@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 import webob
 
 from nova.api.openstack.compute import server_metadata
@@ -26,7 +28,7 @@ from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
+
 
 CONF = config.CONF
 
@@ -108,7 +110,7 @@ class ServerMetaDataTest(test.TestCase):
                        fake_change_instance_metadata)
 
         self.controller = server_metadata.Controller()
-        self.uuid = str(utils.gen_uuid())
+        self.uuid = str(uuid.uuid4())
         self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
 
     def test_index(self):
