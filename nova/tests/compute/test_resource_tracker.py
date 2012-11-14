@@ -84,8 +84,8 @@ class BaseTestCase(test.TestCase):
         self.context = FakeContext()
 
         self._instances = []
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                self._fake_instance_get_all_by_filters)
+        self.stubs.Set(db, 'instance_get_all_by_host',
+                       lambda c, h: self._instances)
 
     def _create_compute_node(self, values=None):
         compute = {
@@ -138,9 +138,6 @@ class BaseTestCase(test.TestCase):
 
         self._instances.append(instance)
         return instance
-
-    def _fake_instance_get_all_by_filters(self, ctx, filters, **kwargs):
-        return self._instances
 
     def _tracker(self, unsupported=False):
         host = "fakehost"
