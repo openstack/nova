@@ -627,22 +627,22 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_used_remotely(self):
+        self.stubs.Set(virtutils, 'chown', lambda x, y: None)
         img = '123'
 
         with self._make_base_file() as fname:
             os.utime(fname, (-1, time.time() - 3601))
 
             image_cache_manager = imagecache.ImageCacheManager()
+            image_cache_manager.unexplained_images = [fname]
             image_cache_manager.used_images = {'123': (0, 1, ['banana-42'])}
-            image_cache_manager._handle_base_image(img, None)
+            image_cache_manager._handle_base_image(img, fname)
 
             self.assertEquals(image_cache_manager.unexplained_images, [])
             self.assertEquals(image_cache_manager.removable_base_files, [])
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_absent(self):
-        """Ensure we warn for use of a missing base image."""
-
         img = '123'
 
         with self._intercept_log_messages() as stream:
@@ -942,7 +942,10 @@ class ImageCacheManagerTestCase(test.TestCase):
                      'vm_state': '',
                      'task_state': ''}]
 
-        self.stubs.Set(db, 'instance_get_all', fake_get_all)
-        compute = importutils.import_object(CONF.compute_manager)
-        compute._run_image_cache_manager_pass(None)
-        self.assertTrue(was['called'])
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+
+            self.stubs.Set(db, 'instance_get_all', fake_get_all)
+            compute = importutils.import_object(CONF.compute_manager)
+            compute._run_image_cache_manager_pass(None)
+            self.assertTrue(was['called'])
