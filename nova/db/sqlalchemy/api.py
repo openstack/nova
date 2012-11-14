@@ -23,6 +23,7 @@ import collections
 import copy
 import datetime
 import functools
+import uuid
 
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
@@ -46,7 +47,6 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
-from nova import utils
 
 
 CONF = config.CONF
@@ -1344,7 +1344,7 @@ def instance_create(context, values):
 
     instance_ref = models.Instance()
     if not values.get('uuid'):
-        values['uuid'] = str(utils.gen_uuid())
+        values['uuid'] = str(uuid.uuid4())
     instance_ref['info_cache'] = models.InstanceInfoCache()
     info_cache = values.pop('info_cache', None)
     if info_cache is not None:
@@ -2042,7 +2042,7 @@ def network_create_safe(context, values):
             raise exception.DuplicateVlan(vlan=values['vlan'])
 
     network_ref = models.Network()
-    network_ref['uuid'] = str(utils.gen_uuid())
+    network_ref['uuid'] = str(uuid.uuid4())
     network_ref.update(values)
 
     try:
@@ -2643,7 +2643,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             reservations = []
             for resource, delta in deltas.items():
                 reservation = reservation_create(elevated,
-                                                 str(utils.gen_uuid()),
+                                                 str(uuid.uuid4()),
                                                  usages[resource],
                                                  context.project_id,
                                                  resource, delta, expire,

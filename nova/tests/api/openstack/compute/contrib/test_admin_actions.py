@@ -13,6 +13,7 @@
 #   under the License.
 
 import datetime
+import uuid
 
 import webob
 
@@ -28,7 +29,7 @@ from nova.openstack.common import jsonutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
+
 
 CONF = config.CONF
 
@@ -88,7 +89,7 @@ class AdminActionsTest(test.TestCase):
     def setUp(self):
         super(AdminActionsTest, self).setUp()
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
-        self.UUID = utils.gen_uuid()
+        self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
         self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
@@ -181,7 +182,7 @@ class CreateBackupTests(test.TestCase):
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
         self.app = compute.APIRouter(init_only=('servers',))
-        self.uuid = utils.gen_uuid()
+        self.uuid = uuid.uuid4()
 
     def _get_request(self, body):
         url = '/fake/servers/%s/action' % self.uuid
@@ -307,7 +308,7 @@ class ResetStateTests(test.TestCase):
 
         self.exists = True
         self.kwargs = None
-        self.uuid = utils.gen_uuid()
+        self.uuid = uuid.uuid4()
 
         def fake_get(inst, context, instance_id):
             if self.exists:

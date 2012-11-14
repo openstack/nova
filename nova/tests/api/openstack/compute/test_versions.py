@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid as uuidutils
+
 import feedparser
 from lxml import etree
 import webob
@@ -27,7 +29,6 @@ from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers
-from nova import utils
 
 
 NS = {
@@ -385,7 +386,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
 
     def test_multi_choice_server(self):
-        uuid = str(utils.gen_uuid())
+        uuid = str(uuidutils.uuid4())
         req = webob.Request.blank('/servers/' + uuid)
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())

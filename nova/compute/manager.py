@@ -40,6 +40,7 @@ import socket
 import sys
 import time
 import traceback
+import uuid
 
 from eventlet import greenthread
 
@@ -2180,7 +2181,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Return connection information for a vnc console."""
         context = context.elevated()
         LOG.debug(_("Getting vnc console"), instance=instance)
-        token = str(utils.gen_uuid())
+        token = str(uuid.uuid4())
 
         if console_type == 'novnc':
             # For essex, novncproxy_base_url must include the full path

@@ -49,6 +49,7 @@ import itertools
 import math
 import re
 import socket
+import uuid
 
 from eventlet import greenpool
 import netaddr
@@ -1263,7 +1264,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         vif = {'address': utils.generate_mac_address(),
                'instance_uuid': instance_uuid,
                'network_id': network_id,
-               'uuid': str(utils.gen_uuid())}
+               'uuid': str(uuid.uuid4())}
         # try FLAG times to create a vif record with a unique mac_address
         for i in xrange(CONF.create_unique_mac_address_attempts):
             try:

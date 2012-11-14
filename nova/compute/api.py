@@ -27,6 +27,7 @@ import re
 import string
 import time
 import urllib
+import uuid
 
 from nova import block_device
 from nova.compute import instance_types
@@ -678,7 +679,7 @@ class API(base.Base):
         if not instance.get('uuid'):
             # Generate the instance_uuid here so we can use it
             # for additional setup before creating the DB entry.
-            instance['uuid'] = str(utils.gen_uuid())
+            instance['uuid'] = str(uuid.uuid4())
 
         instance['launch_index'] = 0
         instance['vm_state'] = vm_states.BUILDING

@@ -23,6 +23,7 @@ import copy
 import datetime
 import sys
 import time
+import uuid
 
 import mox
 
@@ -2397,7 +2398,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_add_instance_fault(self):
         exc_info = None
-        instance_uuid = str(utils.gen_uuid())
+        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
             self.assertTrue(values['details'].startswith('test'))
@@ -2425,7 +2426,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_add_instance_fault_with_remote_error(self):
         exc_info = None
-        instance_uuid = str(utils.gen_uuid())
+        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
             self.assertTrue(values['details'].startswith('Remote error'))
@@ -2454,7 +2455,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_add_instance_fault_user_error(self):
         exc_info = None
-        instance_uuid = str(utils.gen_uuid())
+        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
 
@@ -2480,7 +2481,7 @@ class ComputeTestCase(BaseTestCase):
             user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
-        instance_uuid = str(utils.gen_uuid())
+        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
             expected = {
@@ -3036,7 +3037,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_default_hostname_generator(self):
-        fake_uuids = [str(utils.gen_uuid()) for x in xrange(4)]
+        fake_uuids = [str(uuid.uuid4()) for x in xrange(4)]
 
         orig_populate = self.compute_api._populate_instance_for_create
 
