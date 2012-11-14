@@ -1813,6 +1813,13 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
 
         instance_ref.update(values)
         instance_ref.save(session=session)
+        if 'instance_type_id' in values:
+            # NOTE(comstud): It appears that sqlalchemy doesn't refresh
+            # the instance_type model after you update the ID.  You end
+            # up with an instance_type model that only has 'id' updated,
+            # but the rest of the model has the data from the old
+            # instance_type.
+            session.refresh(instance_ref['instance_type'])
 
     return (old_instance_ref, instance_ref)
 
