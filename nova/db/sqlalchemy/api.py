@@ -1188,12 +1188,6 @@ def fixed_ips_by_virtual_interface(context, vif_id):
     return result
 
 
-@require_admin_context
-def fixed_ip_get_network(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.network
-
-
 @require_context
 def fixed_ip_update(context, address, values):
     session = get_session()

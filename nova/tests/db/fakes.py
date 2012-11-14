@@ -68,7 +68,6 @@ def stub_out_db_network_api(stubs):
 
     fixed_ip_fields = {'id': 0,
                        'network_id': 0,
-                       'network': FakeModel(network_fields),
                        'address': '192.168.0.100',
                        'instance': False,
                        'instance_id': 0,
@@ -208,15 +207,6 @@ def stub_out_db_network_api(stubs):
         if ips:
             return FakeModel(ips[0])
 
-    def fake_fixed_ip_get_network(context, address):
-        ips = filter(lambda i: i['address'] == address,
-                     fixed_ips)
-        if ips:
-            nets = filter(lambda n: n['id'] == ips[0]['network_id'],
-                          networks)
-            if nets:
-                return FakeModel(nets[0])
-
     def fake_fixed_ip_update(context, address, values):
         ips = filter(lambda i: i['address'] == address,
                      fixed_ips)
@@ -318,7 +308,6 @@ def stub_out_db_network_api(stubs):
              fake_fixed_ip_disassociate_all_by_timeout,
              fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
-             fake_fixed_ip_get_network,
              fake_fixed_ip_update,
              fake_instance_type_get,
              fake_virtual_interface_create,
