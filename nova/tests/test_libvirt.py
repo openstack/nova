@@ -173,91 +173,15 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./serial').text, 'fake_serial')
 
-    def _get_iscsi_properties(self, volume):
-        """Gets iscsi configuration
-
-        We ideally get saved information in the volume entity, but fall back
-        to discovery if need be. Discovery may be completely removed in future
-        The properties are:
-
-        :target_discovered:    boolean indicating whether discovery was used
-
-        :target_iqn:    the IQN of the iSCSI target
-
-        :target_portal:    the portal of the iSCSI target
-
-        :target_lun:    the lun of the iSCSI target
-
-        :volume_id:    the id of the volume (currently used by xen)
-
-        :auth_method:, :auth_username:, :auth_password:
-
-            the authentication details. Right now, either auth_method is not
-            present meaning no authentication, or auth_method == `CHAP`
-            meaning use CHAP with the specified credentials.
-        """
-
-        properties = {}
-
-        location = volume['provider_location']
-
-        if location:
-            # provider_location is the same format as iSCSI discovery output
-            properties['target_discovered'] = False
-        else:
-            location = "stub"
-
-            if not location:
-                raise exception.InvalidVolume(_("Could not find iSCSI export "
-                                                " for volume %s") %
-                                              (volume['name']))
-
-            LOG.debug(_("ISCSI Discovery: Found %s") % (location))
-            properties['target_discovered'] = True
-
-        results = location.split(" ")
-        properties['target_portal'] = results[0].split(",")[0]
-        properties['target_iqn'] = results[1]
-        try:
-            properties['target_lun'] = int(results[2])
-        except (IndexError, ValueError):
-                properties['target_lun'] = 1
-
-        properties['volume_id'] = volume['id']
-
-        auth = volume['provider_auth']
-        if auth:
-            (auth_method, auth_username, auth_secret) = auth.split()
-
-            properties['auth_method'] = auth_method
-            properties['auth_username'] = auth_username
-            properties['auth_password'] = auth_secret
-
-        return properties
-
-    def iscsi_connection(self, volume):
-        """Initializes the connection and returns connection info.
-
-        The iscsi driver returns a driver_volume_type of 'iscsi'.
-        The format of the driver data is defined in _get_iscsi_properties.
-        Example return value::
-
-            {
-                'driver_volume_type': 'iscsi'
-                'data': {
-                    'target_discovered': True,
-                    'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
-                    'target_portal': '127.0.0.0.1:3260',
-                    'volume_id': 1,
-                }
-            }
-
-        """
-
-        iscsi_properties = self._get_iscsi_properties(volume)
+    def iscsi_connection(self, volume, location, iqn):
         return {
-            'driver_volume_type': 'iscsi',
-            'data': iscsi_properties
+                'driver_volume_type': 'iscsi',
+                'data': {
+                    'volume_id': volume['id'],
+                    'target_portal': location,
+                    'target_iqn': iqn,
+                    'target_lun': 1,
+                }
         }
 
     def test_libvirt_iscsi_driver(self):
@@ -267,11 +191,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         location = '10.0.2.15:3260'
         name = 'volume-00000001'
         iqn = 'iqn.2010-10.org.openstack:%s' % name
-        vol = {'id': 1,
-               'name': name,
-               'provider_auth': None,
-               'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = self.iscsi_connection(vol)
+        vol = {'id': 1, 'name': name}
+        connection_info = self.iscsi_connection(vol, location, iqn)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -304,11 +225,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         iqn = 'iqn.2010-10.org.openstack:%s' % name
         devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)]
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
-        vol = {'id': 1,
-               'name': name,
-               'provider_auth': None,
-               'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = self.iscsi_connection(vol)
+        vol = {'id': 1, 'name': name}
+        connection_info = self.iscsi_connection(vol, location, iqn)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
@@ -486,14 +404,11 @@ class LibvirtVolumeTestCase(test.TestCase):
     def test_libvirt_lxc_volume(self):
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        location = '10.0.2.15:3260'
         name = 'volume-00000001'
+        location = '10.0.2.15:3260'
         iqn = 'iqn.2010-10.org.openstack:%s' % name
-        vol = {'id': 1,
-               'name': name,
-               'provider_auth': None,
-               'provider_location': '%s,fake %s' % (location, iqn)}
-        connection_info = self.iscsi_connection(vol)
+        vol = {'id': 1, 'name': name}
+        connection_info = self.iscsi_connection(vol, location, iqn)
         mount_device = "vde"
         conf = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = conf.format_dom()
