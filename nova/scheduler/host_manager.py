@@ -31,7 +31,7 @@ from nova.scheduler import filters
 
 host_manager_opts = [
     cfg.MultiStrOpt('scheduler_available_filters',
-            default=['nova.scheduler.filters.standard_filters'],
+            default=['nova.scheduler.filters.all_filters'],
             help='Filter classes available to the scheduler which may '
                     'be specified more than once.  An entry of '
                     '"nova.scheduler.filters.standard_filters" '
@@ -239,32 +239,6 @@ class HostState(object):
     def _statmap(self, stats):
         return dict((st['key'], st['value']) for st in stats)
 
-    def passes_filters(self, filter_fns, filter_properties):
-        """Return whether or not this host passes filters."""
-
-        if self.host in filter_properties.get('ignore_hosts', []):
-            LOG.debug(_('Host filter fails for ignored host %(host)s'),
-                      {'host': self.host})
-            return False
-
-        force_hosts = filter_properties.get('force_hosts', [])
-        if force_hosts:
-            if not self.host in force_hosts:
-                LOG.debug(_('Host filter fails for non-forced host %(host)s'),
-                          {'host': self.host})
-            return self.host in force_hosts
-
-        for filter_fn in filter_fns:
-            if not filter_fn(self, filter_properties):
-                LOG.debug(_('Host filter function %(func)s failed for '
-                            '%(host)s'),
-                          {'func': repr(filter_fn),
-                           'host': self.host})
-                return False
-
-        LOG.debug(_('Host filter passes for %(host)s'), {'host': self.host})
-        return True
-
     def __repr__(self):
         return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s vm_type:%s" %
                 (self.host, self.nodename, self.free_ram_mb, self.free_disk_mb,
@@ -281,32 +255,28 @@ class HostManager(object):
         # { (host, hypervisor_hostname) : { <service> : { cap k : v }}}
         self.service_states = {}
         self.host_state_map = {}
-        self.filter_classes = filters.get_filter_classes(
+        self.filter_handler = filters.HostFilterHandler()
+        self.filter_classes = self.filter_handler.get_matching_classes(
                 CONF.scheduler_available_filters)
 
-    def _choose_host_filters(self, filters):
+    def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
         to have an authoritative list of what is permissible. This
         function checks the filter names against a predefined set
         of acceptable filters.
         """
-        if filters is None:
-            filters = CONF.scheduler_default_filters
-        if not isinstance(filters, (list, tuple)):
-            filters = [filters]
+        if filter_cls_names is None:
+            filter_cls_names = CONF.scheduler_default_filters
+        if not isinstance(filter_cls_names, (list, tuple)):
+            filter_cls_names = [filter_cls_names]
         good_filters = []
         bad_filters = []
-        for filter_name in filters:
+        for filter_name in filter_cls_names:
             found_class = False
             for cls in self.filter_classes:
                 if cls.__name__ == filter_name:
+                    good_filters.append(cls)
                     found_class = True
-                    filter_instance = cls()
-                    # Get the filter function
-                    filter_func = getattr(filter_instance,
-                            'host_passes', None)
-                    if filter_func:
-                        good_filters.append(filter_func)
                     break
             if not found_class:
                 bad_filters.append(filter_name)
@@ -315,14 +285,36 @@ class HostManager(object):
             raise exception.SchedulerHostFilterNotFound(filter_name=msg)
         return good_filters
 
-    def filter_hosts(self, hosts, filter_properties, filters=None):
+    def get_filtered_hosts(self, hosts, filter_properties,
+            filter_class_names=None):
         """Filter hosts and return only ones passing all filters"""
-        filtered_hosts = []
-        filter_fns = self._choose_host_filters(filters)
-        for host in hosts:
-            if host.passes_filters(filter_fns, filter_properties):
-                filtered_hosts.append(host)
-        return filtered_hosts
+        filter_classes = self._choose_host_filters(filter_class_names)
+
+        hosts = set(hosts)
+        ignore_hosts = set(filter_properties.get('ignore_hosts', []))
+        ignore_hosts = hosts & ignore_hosts
+        if ignore_hosts:
+            ignored_hosts = ', '.join(ignore_hosts)
+            msg = _('Host filter ignoring hosts: %(ignored_hosts)s')
+            LOG.debug(msg, locals())
+            hosts = hosts - ignore_hosts
+
+        force_hosts = set(filter_properties.get('force_hosts', []))
+        if force_hosts:
+            matching_force_hosts = hosts & force_hosts
+            if not matching_force_hosts:
+                forced_hosts = ', '.join(force_hosts)
+                msg = _("No hosts matched due to not matching 'force_hosts'"
+                        "value of '%(forced_hosts)s'")
+                LOG.debug(msg, locals())
+                return []
+            forced_hosts = ', '.join(matching_force_hosts)
+            msg = _('Host filter forcing available hosts to %(forced_hosts)s')
+            LOG.debug(msg, locals())
+            hosts = matching_force_hosts
+
+        return self.filter_handler.get_filtered_objects(filter_classes,
+                hosts, filter_properties)
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
