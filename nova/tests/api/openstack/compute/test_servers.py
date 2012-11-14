@@ -2786,7 +2786,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'open': 'stack',
                 },
                 'personality': {},
-                'config_drive': True,
             },
         }
 
