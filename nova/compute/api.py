@@ -725,6 +725,10 @@ class API(base.Base):
         self._populate_instance_shutdown_terminate(instance, image,
                                                    block_device_mapping)
 
+        # ensure_default security group is called before the instance
+        # is created so the creation of the default security group is
+        # proxied to the sgh.
+        self.security_group_api.ensure_default(context)
         instance = self.db.instance_create(context, instance)
 
         self._populate_instance_for_bdm(context, instance,
