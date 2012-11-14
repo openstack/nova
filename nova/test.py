@@ -26,6 +26,7 @@ inline callbacks.
 import sys
 import uuid
 
+from fixtures import EnvironmentVariable
 import mox
 import stubout
 import testtools
@@ -82,6 +83,7 @@ class TestCase(testtools.TestCase):
         self.injected = []
         self._services = []
         self._modules = {}
+        self.useFixture(EnvironmentVariable('http_proxy'))
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""

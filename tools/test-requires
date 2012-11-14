@@ -2,6 +2,7 @@
 distribute>=0.6.24
 
 coverage
+fixtures
 mox==0.5.3
 nose
 testtools
