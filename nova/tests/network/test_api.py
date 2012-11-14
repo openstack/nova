@@ -117,7 +117,6 @@ class ApiTestCase(test.TestCase):
                     'project_id': 'fake_project_id',
                     'floating_addresses': None}
         if multi_host:
-            expected['host'] = 'fake_compute_dest'
             expected['floating_addresses'] = ['fake_float1', 'fake_float2']
         return fake_instance, fake_migration, expected
 
@@ -125,6 +124,7 @@ class ApiTestCase(test.TestCase):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_start', True, info)
+        expected['host'] = 'fake_compute_source'
         self.network_api.migrate_instance_start(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
 
@@ -139,6 +139,7 @@ class ApiTestCase(test.TestCase):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_finish', True, info)
+        expected['host'] = 'fake_compute_dest'
         self.network_api.migrate_instance_finish(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
 
