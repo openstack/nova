@@ -1120,7 +1120,8 @@ class CommonNetworkTestCase(test.TestCase):
         db.virtual_interface_delete_by_instance = lambda _x, _y: None
         ctx = context.RequestContext('igonre', 'igonre')
 
-        db.fixed_ip_get_by_instance = lambda x, y: [dict(address='1.2.3.4')]
+        db.fixed_ip_get_by_instance = lambda x, y: [dict(address='1.2.3.4',
+                                                    network_id='ignoredid')]
 
         manager.deallocate_for_instance(
             ctx, instance_id='ignore', host='somehost')

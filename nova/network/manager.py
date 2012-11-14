@@ -157,6 +157,11 @@ network_opts = [
                 default=False,
                 help='If True in multi_host mode, all compute hosts share '
                      'the same dhcp address.'),
+    cfg.BoolOpt('update_dns_entries',
+                default=False,
+                help='If True, when a DNS entry must be updated, it sends a '
+                     'fanout cast to all network hosts to update their DNS '
+                     'entries in multi host mode'),
     cfg.StrOpt('dhcp_domain',
                default='novalocal',
                help='domain to use for building the hostnames'),
@@ -871,7 +876,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.2'
+    RPC_API_VERSION = '1.3'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -949,6 +954,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         ctxt = context.get_admin_context()
         for network in self.db.network_get_all_by_host(ctxt, self.host):
             self._setup_network_on_host(ctxt, network)
+            if CONF.update_dns_entries:
+                dev = self.driver.get_dev(network)
+                self.driver.update_dns(ctxt, dev, network)
 
     @manager.periodic_task
     def _disassociate_stale_fixed_ips(self, context):
@@ -1102,6 +1110,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._allocate_fixed_ips(admin_context, instance_id,
                                  host, networks, vpn=vpn,
                                  requested_networks=requested_networks)
+
+        if CONF.update_dns_entries:
+            network_ids = [network['id'] for network in networks]
+            self.network_rpcapi.update_dns(context, network_ids)
+
         return self.get_instance_nw_info(context, instance_id, instance_uuid,
                                          rxtx_factor, host)
 
@@ -1119,6 +1132,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         instance_id = kwargs.pop('instance_id')
         instance = self.db.instance_get(read_deleted_context, instance_id)
+        host = kwargs.get('host')
 
         try:
             fixed_ips = (kwargs.get('fixed_ips') or
@@ -1130,8 +1144,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                   context=read_deleted_context)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, fixed_ip['address'],
-                host=kwargs.get('host'))
+            self.deallocate_fixed_ip(context, fixed_ip['address'], host=host)
+
+        if CONF.update_dns_entries:
+            network_ids = [fixed_ip['network_id'] for fixed_ip in fixed_ips]
+            self.network_rpcapi.update_dns(context, network_ids)
 
         # deallocate vifs (mac addresses)
         self.db.virtual_interface_delete_by_instance(read_deleted_context,
@@ -1910,6 +1927,21 @@ class NetworkManager(manager.SchedulerDependentManager):
         return self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
 
+    def update_dns(self, context, network_ids):
+        """Called when fixed IP is allocated or deallocated"""
+        if CONF.fake_network:
+            return
+
+        for network_id in network_ids:
+            network = self.db.network_get(context, network_id)
+            if not network['multi_host']:
+                continue
+            host_networks = self.db.network_get_all_by_host(context, self.host)
+            for host_network in host_networks:
+                if host_network['id'] == network_id:
+                    dev = self.driver.get_dev(network)
+                    self.driver.update_dns(context, dev, network)
+
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -2015,6 +2047,10 @@ class FlatManager(NetworkManager):
                                 floating_addresses, host=None,
                                 rxtx_factor=None, project_id=None,
                                 source=None, dest=None):
+        pass
+
+    def update_dns(self, context, network_ids):
+        """Called when fixed IP is allocated or deallocated"""
         pass
 
 

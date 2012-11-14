@@ -43,10 +43,10 @@ class NetworkRpcAPITestCase(test.TestCase):
             args['dest'] = args.pop('dest_compute')
         targeted_methods = [
             'lease_fixed_ip', 'release_fixed_ip', 'rpc_setup_network_on_host',
-            '_rpc_allocate_fixed_ip', 'deallocate_fixed_ip',
+            '_rpc_allocate_fixed_ip', 'deallocate_fixed_ip', 'update_dns',
             '_associate_floating_ip', '_disassociate_floating_ip',
-            'lease_fixed_ip', 'release_fixed_ip',
-            'migrate_instance_start', 'migrate_instance_finish',
+            'lease_fixed_ip', 'release_fixed_ip', 'migrate_instance_start',
+            'migrate_instance_finish',
         ]
         if method in targeted_methods and 'host' in kwargs:
             if method != 'deallocate_fixed_ip':
@@ -249,6 +249,10 @@ class NetworkRpcAPITestCase(test.TestCase):
     def test_deallocate_fixed_ip(self):
         self._test_network_api('deallocate_fixed_ip', rpc_method='call',
                 address='fake_addr', host='fake_host')
+
+    def test_update_dns(self):
+        self._test_network_api('update_dns', rpc_method='fanout_cast',
+                network_ids='fake_id', version='1.3')
 
     def test__associate_floating_ip(self):
         self._test_network_api('_associate_floating_ip', rpc_method='call',
