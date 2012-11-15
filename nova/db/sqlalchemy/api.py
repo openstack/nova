@@ -1153,8 +1153,9 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 @require_admin_context
 def fixed_ip_get_by_address_detailed(context, address, session=None):
-    # This method returns a tuple of (models.FixedIp, models.Network,
-    # models.Instance).
+    """
+    :returns: a tuple of (models.FixedIp, models.Network, models.Instance)
+    """
     if not session:
         session = get_session()
 
