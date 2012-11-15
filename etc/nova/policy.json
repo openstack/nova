@@ -9,6 +9,7 @@
     "compute:create:attach_volume": "",
     "compute:create:forced_host": "is_admin:True",
     "compute:get_all": "",
+    "compute:get_all_tenants": "",
 
 
     "admin_api": "is_admin:True",
