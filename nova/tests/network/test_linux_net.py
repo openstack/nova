@@ -308,7 +308,7 @@ class LinuxNetworkTestCase(test.TestCase):
         self.assertEquals(actual_hosts, expected)
 
     def test_get_dhcp_opts_for_nw00(self):
-        expected_opts = 'NW-0,3\nNW-3,3\nNW-4,3'
+        expected_opts = 'NW-3,3\nNW-4,3'
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
 
         self.assertEquals(actual_opts, expected_opts)
