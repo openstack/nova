@@ -409,17 +409,17 @@ class Connection(object):
             hostname, port = network_utils.parse_host_port(
                 adr, default_port=self.conf.rabbit_port)
 
-            params = {}
+            params = {
+                'hostname': hostname,
+                'port': port,
+                'userid': self.conf.rabbit_userid,
+                'password': self.conf.rabbit_password,
+                'virtual_host': self.conf.rabbit_virtual_host,
+            }
 
             for sp_key, value in server_params.iteritems():
                 p_key = server_params_to_kombu_params.get(sp_key, sp_key)
                 params[p_key] = value
-
-            params.setdefault('hostname', hostname)
-            params.setdefault('port', port)
-            params.setdefault('userid', self.conf.rabbit_userid)
-            params.setdefault('password', self.conf.rabbit_password)
-            params.setdefault('virtual_host', self.conf.rabbit_virtual_host)
 
             if self.conf.fake_rabbit:
                 params['transport'] = 'memory'

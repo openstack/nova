@@ -24,7 +24,6 @@ import tempfile
 import time
 import weakref
 
-from eventlet import greenthread
 from eventlet import semaphore
 
 from nova.openstack.common import cfg
