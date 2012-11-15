@@ -19,11 +19,14 @@
 Management class for host operations.
 """
 import multiprocessing
+import os
 import platform
 
+from nova import config
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import baseops
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -55,19 +58,21 @@ class HostOps(baseops.BaseOps):
         total_mb = long(total_kb) / 1024
         return total_mb
 
-    def _get_local_gb_total(self):
-        """Get the total hdd size(GB) of physical computer.
+    def _get_local_hdd_info_gb(self):
+        """Get the total and used size of the volume containing
+           CONF.instances_path expressed in GB.
         :returns:
-            The total amount of HDD(GB).
-            Note that this value shows a partition where
-            NOVA-INST-DIR/instances mounts.
+            A tuple with the total and used space in GB.
         """
-        #TODO(jordanrinke): This binds to C only right now,
-        #need to bind to instance dir
-        total_kb = self._conn_cimv2.query(
-            "SELECT Size FROM win32_logicaldisk WHERE DriveType=3")[0].Size
-        total_gb = long(total_kb) / (1024 ** 3)
-        return total_gb
+        normalized_path = os.path.normpath(CONF.instances_path)
+        drive, path = os.path.splitdrive(normalized_path)
+        hdd_info = self._conn_cimv2.query(
+            ("SELECT FreeSpace,Size FROM win32_logicaldisk WHERE DeviceID='%s'"
+            ) % drive)[0]
+        total_gb = long(hdd_info.Size) / (1024 ** 3)
+        free_gb = long(hdd_info.FreeSpace) / (1024 ** 3)
+        used_gb = total_gb - free_gb
+        return total_gb, used_gb
 
     def _get_vcpu_used(self):
         """ Get vcpu usage number of physical computer.
@@ -87,21 +92,6 @@ class HostOps(baseops.BaseOps):
         total_mb = long(total_kb) / 1024
 
         return total_mb
-
-    def _get_local_gb_used(self):
-        """Get the free hdd size(GB) of physical computer.
-        :returns:
-           The total usage of HDD(GB).
-           Note that this value shows a partition where
-           NOVA-INST-DIR/instances mounts.
-        """
-        #TODO(jordanrinke): This binds to C only right now,
-        #need to bind to instance dir
-        total_kb = self._conn_cimv2.query(
-            "SELECT FreeSpace FROM win32_logicaldisk WHERE DriveType=3")[0]\
-                .FreeSpace
-        total_gb = long(total_kb) / (1024 ** 3)
-        return total_gb
 
     def _get_hypervisor_version(self):
         """Get hypervisor version.
@@ -123,13 +113,14 @@ class HostOps(baseops.BaseOps):
         """
         LOG.info(_('get_available_resource called'))
 
+        local_gb, used_gb = self._get_local_hdd_info_gb()
         # TODO(alexpilotti) implemented cpu_info
         dic = {'vcpus': self._get_vcpu_total(),
                'memory_mb': self._get_memory_mb_total(),
-               'local_gb': self._get_local_gb_total(),
+               'local_gb': local_gb,
                'vcpus_used': self._get_vcpu_used(),
                'memory_mb_used': self._get_memory_mb_used(),
-               'local_gb_used': self._get_local_gb_used(),
+               'local_gb_used': used_gb,
                'hypervisor_type': "hyperv",
                'hypervisor_version': self._get_hypervisor_version(),
                'hypervisor_hostname': platform.node(),
@@ -141,8 +132,7 @@ class HostOps(baseops.BaseOps):
         LOG.debug(_("Updating host stats"))
 
         data = {}
-        data["disk_total"] = self._get_local_gb_total()
-        data["disk_used"] = self._get_local_gb_used()
+        data["disk_total"], data["disk_used"] = self._get_local_hdd_info_gb()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
         data["host_memory_total"] = self._get_memory_mb_total()
         data["host_memory_overhead"] = self._get_memory_mb_used()
