@@ -35,6 +35,7 @@ from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import vm_states
+import nova.config
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
@@ -151,7 +152,7 @@ def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
 def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1'
-    stubs.Set(nova.flags, '_get_my_ip', get_my_ip)
+    stubs.Set(nova.config, '_get_my_ip', get_my_ip)
 
 
 def stub_out_compute_api_snapshot(stubs):
