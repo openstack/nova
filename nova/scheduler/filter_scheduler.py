@@ -19,16 +19,11 @@ You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
 """
 
-import operator
-
 from nova import config
 from nova import exception
-from nova import flags
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.scheduler import driver
-from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
 
 CONF = config.CONF
@@ -61,7 +56,7 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
-        weighted_hosts = self._schedule(context, request_spec,
+        weighed_hosts = self._schedule(context, request_spec,
                 filter_properties, instance_uuids)
 
         # NOTE(comstud): Make sure we do not pass this through.  It
@@ -73,11 +68,11 @@ class FilterScheduler(driver.Scheduler):
 
             try:
                 try:
-                    weighted_host = weighted_hosts.pop(0)
+                    weighed_host = weighed_hosts.pop(0)
                 except IndexError:
                     raise exception.NoValidHost(reason="")
 
-                self._provision_resource(context, weighted_host,
+                self._provision_resource(context, weighed_host,
                                          request_spec,
                                          filter_properties,
                                          requested_networks,
@@ -107,29 +102,29 @@ class FilterScheduler(driver.Scheduler):
         the prep_resize operation to it.
         """
 
-        hosts = self._schedule(context, request_spec, filter_properties,
-                [instance['uuid']])
-        if not hosts:
+        weighed_hosts = self._schedule(context, request_spec,
+                filter_properties, [instance['uuid']])
+        if not weighed_hosts:
             raise exception.NoValidHost(reason="")
-        host = hosts.pop(0)
+        weighed_host = weighed_hosts.pop(0)
 
         self._post_select_populate_filter_properties(filter_properties,
-                host.host_state)
+                weighed_host.obj)
 
         # context is not serializable
         filter_properties.pop('context', None)
 
         # Forward off to the host
         self.compute_rpcapi.prep_resize(context, image, instance,
-                instance_type, host.host_state.host, reservations,
+                instance_type, weighed_host.obj.host, reservations,
                 request_spec=request_spec, filter_properties=filter_properties)
 
-    def _provision_resource(self, context, weighted_host, request_spec,
+    def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,
             admin_password, is_first_time, instance_uuid=None):
         """Create the requested resource in this Zone."""
         payload = dict(request_spec=request_spec,
-                       weighted_host=weighted_host.to_dict(),
+                       weighted_host=weighed_host.to_dict(),
                        instance_id=instance_uuid)
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.scheduled', notifier.INFO,
@@ -137,15 +132,15 @@ class FilterScheduler(driver.Scheduler):
 
         # TODO(NTTdocomo): Combine the next two updates into one
         driver.db_instance_node_set(context,
-                instance_uuid, weighted_host.host_state.nodename)
+                instance_uuid, weighed_host.obj.nodename)
         updated_instance = driver.instance_update_db(context,
                 instance_uuid)
 
         self._post_select_populate_filter_properties(filter_properties,
-                weighted_host.host_state)
+                weighed_host.obj)
 
         self.compute_rpcapi.run_instance(context, instance=updated_instance,
-                host=weighted_host.host_state.host,
+                host=weighed_host.obj.host,
                 request_spec=request_spec, filter_properties=filter_properties,
                 requested_networks=requested_networks,
                 injected_files=injected_files,
@@ -232,7 +227,6 @@ class FilterScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
 
-        cost_functions = self.get_cost_functions()
         config_options = self._get_configuration_options()
 
         # check retry policy.  Rather ugly use of instance_uuids[0]...
@@ -276,60 +270,12 @@ class FilterScheduler(driver.Scheduler):
 
             LOG.debug(_("Filtered %(hosts)s") % locals())
 
-            # weighted_host = WeightedHost() ... the best
-            # host for the job.
-            # TODO(comstud): filter_properties will also be used for
-            # weighing and I plan fold weighing into the host manager
-            # in a future patch.  I'll address the naming of this
-            # variable at that time.
-            weighted_host = least_cost.weighted_sum(cost_functions,
-                    hosts, filter_properties)
-            LOG.debug(_("Weighted %(weighted_host)s") % locals())
-            selected_hosts.append(weighted_host)
-
+            weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
+                    filter_properties)
+            best_host = weighed_hosts[0]
+            LOG.debug(_("Choosing host %(best_host)s") % locals())
+            selected_hosts.append(best_host)
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            weighted_host.host_state.consume_from_instance(
-                    instance_properties)
-
-        selected_hosts.sort(key=operator.attrgetter('weight'))
+            best_host.obj.consume_from_instance(instance_properties)
         return selected_hosts
-
-    def get_cost_functions(self):
-        """Returns a list of tuples containing weights and cost functions to
-        use for weighing hosts
-        """
-        if self.cost_function_cache is not None:
-            return self.cost_function_cache
-
-        cost_fns = []
-        for cost_fn_str in CONF.least_cost_functions:
-            if '.' in cost_fn_str:
-                short_name = cost_fn_str.split('.')[-1]
-            else:
-                short_name = cost_fn_str
-                cost_fn_str = "%s.%s.%s" % (
-                        __name__, self.__class__.__name__, short_name)
-            if not (short_name.startswith('compute_') or
-                    short_name.startswith('noop')):
-                continue
-
-            try:
-                # NOTE: import_class is somewhat misnamed since
-                # the weighing function can be any non-class callable
-                # (i.e., no 'self')
-                cost_fn = importutils.import_class(cost_fn_str)
-            except ImportError:
-                raise exception.SchedulerCostFunctionNotFound(
-                        cost_fn_str=cost_fn_str)
-
-            try:
-                flag_name = "%s_weight" % cost_fn.__name__
-                weight = getattr(CONF, flag_name)
-            except AttributeError:
-                raise exception.SchedulerWeightFlagNotFound(
-                        flag_name=flag_name)
-            cost_fns.append((weight, cost_fn))
-
-        self.cost_function_cache = cost_fns
-        return cost_fns

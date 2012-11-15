@@ -27,7 +27,7 @@ from nova import exception
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
-from nova.scheduler import least_cost
+from nova.scheduler import weights
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
@@ -145,11 +145,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.next_weight = 1.0
 
-        def _fake_weighted_sum(functions, hosts, options):
+        def _fake_weigh_objects(_self, functions, hosts, options):
             self.next_weight += 2.0
             host_state = hosts[0]
-            return least_cost.WeightedHost(self.next_weight,
-                    host_state=host_state)
+            return [weights.WeighedHost(host_state, self.next_weight)]
 
         sched = fakes.FakeFilterScheduler()
         fake_context = context.RequestContext('user', 'project',
@@ -157,7 +156,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
-        self.stubs.Set(least_cost, 'weighted_sum', _fake_weighted_sum)
+        self.stubs.Set(weights.HostWeightHandler,
+                'get_weighed_objects', _fake_weigh_objects)
         fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         request_spec = {'num_instances': 10,
@@ -171,10 +171,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'vcpus': 1,
                                                 'os_type': 'Linux'}}
         self.mox.ReplayAll()
-        weighted_hosts = sched._schedule(fake_context, request_spec, {})
-        self.assertEquals(len(weighted_hosts), 10)
-        for weighted_host in weighted_hosts:
-            self.assertTrue(weighted_host.host_state is not None)
+        weighed_hosts = sched._schedule(fake_context, request_spec, {})
+        self.assertEquals(len(weighed_hosts), 10)
+        for weighed_host in weighed_hosts:
+            self.assertTrue(weighed_host.obj is not None)
 
     def test_schedule_prep_resize_doesnt_update_host(self):
         fake_context = context.RequestContext('user', 'project',
@@ -184,7 +184,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         def _return_hosts(*args, **kwargs):
             host_state = host_manager.HostState('host2', 'node2')
-            return [least_cost.WeightedHost(1.0, host_state=host_state)]
+            return [weights.WeighedHost(host_state, 1.0)]
 
         self.stubs.Set(sched, '_schedule', _return_hosts)
 
@@ -202,19 +202,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched.schedule_prep_resize(fake_context, {}, {}, {},
                                    instance, {}, None)
         self.assertEqual(info['called'], 0)
-
-    def test_get_cost_functions(self):
-        fixture = fakes.FakeFilterScheduler()
-        fns = fixture.get_cost_functions()
-        self.assertEquals(len(fns), 1)
-        weight, fn = fns[0]
-        self.assertEquals(weight, -1.0)
-        hostinfo = host_manager.HostState('host', 'node')
-        hostinfo.update_from_compute_node(dict(memory_mb=1000,
-                local_gb=0, vcpus=1, disk_available_least=1000,
-                free_disk_mb=1000, free_ram_mb=872, vcpus_used=0,
-                local_gb_used=0, updated_at=None))
-        self.assertEquals(872, fn(hostinfo, {}))
 
     def test_max_attempts(self):
         self.flags(scheduler_max_attempts=4)
@@ -332,14 +319,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         reservations = None
 
         host = fakes.FakeHostState('host', 'node', {})
-        weighted_host = least_cost.WeightedHost(1, host)
-        hosts = [weighted_host]
+        weighed_host = weights.WeighedHost(host, 1)
+        weighed_hosts = [weighed_host]
 
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched.compute_rpcapi, 'prep_resize')
 
-        sched._schedule(self.context, request_spec,
-                filter_properties, [instance['uuid']]).AndReturn(hosts)
+        sched._schedule(self.context, request_spec, filter_properties,
+                [instance['uuid']]).AndReturn(weighed_hosts)
         sched.compute_rpcapi.prep_resize(self.context, image, instance,
                 instance_type, 'host', reservations, request_spec=request_spec,
                 filter_properties=filter_properties)
