@@ -41,7 +41,6 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 
 
 from nova import config
-from nova import flags
 from nova.objectstore import s3server
 from nova.openstack.common import log as logging
 from nova import service

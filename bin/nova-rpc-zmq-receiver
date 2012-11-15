@@ -34,7 +34,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import impl_zmq
