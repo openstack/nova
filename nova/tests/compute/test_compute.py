@@ -887,7 +887,8 @@ class ComputeTestCase(BaseTestCase):
                                       image_ref, image_ref,
                                       injected_files=[],
                                       new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata)
+                                      orig_sys_metadata=sys_metadata,
+                                      bdms=[])
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rebuild_launch_time(self):
@@ -906,8 +907,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.rebuild_instance(self.context, instance,
                                       image_ref, image_ref,
                                       injected_files=[],
-                                      new_pass="new_password")
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+                                      new_pass="new_password",
+                                      bdms=[])
+        instance = db.instance_get_by_uuid(self.context, instance_uuid,)
         self.assertEquals(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
@@ -1717,7 +1719,8 @@ class ComputeTestCase(BaseTestCase):
                                       image_ref, new_image_ref,
                                       injected_files=[],
                                       new_pass=password,
-                                      orig_sys_metadata=orig_sys_metadata)
+                                      orig_sys_metadata=orig_sys_metadata,
+                                      bdms=[])
 
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
 

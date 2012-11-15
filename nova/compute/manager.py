@@ -265,7 +265,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.17'
+    RPC_API_VERSION = '2.18'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1158,7 +1158,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
-                         injected_files, new_pass, orig_sys_metadata=None):
+                         injected_files, new_pass, orig_sys_metadata=None,
+                         bdms=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -1212,7 +1213,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance.injected_files = injected_files
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
-            bdms = self.db.block_device_mapping_get_all_by_instance(
+            if bdms is None:
+                bdms = self.db.block_device_mapping_get_all_by_instance(
                                   context, instance['uuid'])
             device_info = self._setup_block_device_mapping(context, instance,
                                                            bdms)

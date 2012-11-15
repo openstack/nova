@@ -1545,10 +1545,13 @@ class API(base.Base):
         # system metadata... and copy in the properties for the new image.
         orig_sys_metadata = _reset_image_metadata()
 
+        bdms = self.db.block_device_mapping_get_all_by_instance(context,
+                instance['uuid'])
+
         self.compute_rpcapi.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata)
+                orig_sys_metadata=orig_sys_metadata, bdms=bdms)
 
     @wrap_check_policy
     @check_instance_lock

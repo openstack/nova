@@ -242,8 +242,8 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('rebuild_instance', 'cast',
                 instance=self.fake_instance, new_pass='pass',
                 injected_files='files', image_ref='ref',
-                orig_image_ref='orig_ref',
-                orig_sys_metadata='orig_sys_metadata', version='2.1')
+                orig_image_ref='orig_ref', bdms=[],
+                orig_sys_metadata='orig_sys_metadata', version='2.18')
 
     def test_reserve_block_device_name(self):
         self._test_compute_api('reserve_block_device_name', 'call',
