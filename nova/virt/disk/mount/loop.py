@@ -15,8 +15,11 @@
 # under the License.
 """Support for mounting images with the loop device"""
 
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api
+
+LOG = logging.getLogger(__name__)
 
 
 class LoopMount(api.Mount):
@@ -31,11 +34,13 @@ class LoopMount(api.Mount):
             return False
 
         self.device = out.strip()
+        LOG.debug(_("Got loop device %s"), self.device)
         self.linked = True
         return True
 
     def unget_dev(self):
         if not self.linked:
             return
+        LOG.debug(_("Release loop device %s"), self.device)
         utils.execute('losetup', '--detach', self.device, run_as_root=True)
         self.linked = False

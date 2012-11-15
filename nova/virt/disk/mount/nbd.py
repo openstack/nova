@@ -19,9 +19,11 @@ import os
 import time
 
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api
 
+LOG = logging.getLogger(__name__)
 
 nbd_opts = [
     cfg.IntOpt('timeout_nbd',
@@ -78,6 +80,8 @@ class NbdMount(api.Mount):
         device = self._allocate_nbd()
         if not device:
             return False
+        LOG.debug(_("Get nbd device %(dev)s for %(imgfile)s") %
+                  {'dev': device, 'imgfile': self.image})
         _out, err = utils.trycmd('qemu-nbd', '-c', device, self.image,
                                  run_as_root=True)
         if err:
@@ -103,6 +107,7 @@ class NbdMount(api.Mount):
     def unget_dev(self):
         if not self.linked:
             return
+        LOG.debug(_("Release nbd device %s"), self.device)
         utils.execute('qemu-nbd', '-d', self.device, run_as_root=True)
         self._free_nbd(self.device)
         self.linked = False

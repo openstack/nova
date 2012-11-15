@@ -35,22 +35,32 @@ class Mount(object):
 
     @staticmethod
     def instance_for_format(imgfile, mountdir, partition, imgfmt):
+        LOG.debug(_("Instance for format imgfile=%(imgfile)s "
+                    "mountdir=%(mountdir)s partition=%(partition)s "
+                    "imgfmt=%(imgfmt)s") % locals())
         if imgfmt == "raw":
+            LOG.debug(_("Using LoopMount"))
             return importutils.import_object(
                 "nova.virt.disk.mount.loop.LoopMount",
                 imgfile, mountdir, partition)
         else:
+            LOG.debug(_("Using NbdMount"))
             return importutils.import_object(
                 "nova.virt.disk.mount.nbd.NbdMount",
                 imgfile, mountdir, partition)
 
     @staticmethod
     def instance_for_device(imgfile, mountdir, partition, device):
+        LOG.debug(_("Instance for device imgfile=%(imgfile)s "
+                    "mountdir=%(mountdir)s partition=%(partition)s "
+                    "device=%(device)s") % locals())
         if "loop" in device:
+            LOG.debug(_("Using LoopMount"))
             return importutils.import_object(
                 "nova.virt.disk.mount.loop.LoopMount",
                 imgfile, mountdir, partition, device)
         else:
+            LOG.debug(_("Using NbdMount"))
             return importutils.import_object(
                 "nova.virt.disk.mount.nbd.NbdMount",
                 imgfile, mountdir, partition, device)
@@ -99,6 +109,7 @@ class Mount(object):
     def map_dev(self):
         """Map partitions of the device to the file system namespace."""
         assert(os.path.exists(self.device))
+        LOG.debug(_("Map dev %s"), self.device)
         automapped_path = '/dev/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
 
@@ -142,6 +153,7 @@ class Mount(object):
         """Remove partitions of the device from the file system namespace."""
         if not self.mapped:
             return
+        LOG.debug(_("Unmap dev %s"), self.device)
         if self.partition and not self.automapped:
             utils.execute('kpartx', '-d', self.device, run_as_root=True)
         self.mapped = False
@@ -149,6 +161,8 @@ class Mount(object):
 
     def mnt_dev(self):
         """Mount the device into the file system."""
+        LOG.debug(_("Mount %(dev)s on %(dir)s") %
+                  {'dev': self.mapped_device, 'dir': self.mount_dir})
         _out, err = utils.trycmd('mount', self.mapped_device, self.mount_dir,
                                  run_as_root=True)
         if err:
@@ -162,6 +176,7 @@ class Mount(object):
         """Unmount the device from the file system."""
         if not self.mounted:
             return
+        LOG.debug(_("Umount %s") % self.mapped_device)
         utils.execute('umount', self.mapped_device, run_as_root=True)
         self.mounted = False
 
@@ -172,6 +187,7 @@ class Mount(object):
             status = self.get_dev() and self.map_dev() and self.mnt_dev()
         finally:
             if not status:
+                LOG.debug(_("Fail to mount, tearing back down"))
                 self.do_umount()
         return status
 
