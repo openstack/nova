@@ -30,13 +30,13 @@ import time
 import eventlet
 import greenlet
 
-from nova.common import eventlet_backdoor
 from nova import config
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import eventlet_backdoor
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
