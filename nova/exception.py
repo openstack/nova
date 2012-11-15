@@ -217,24 +217,12 @@ class Invalid(NovaException):
     code = 400
 
 
-class InvalidSnapshot(Invalid):
-    message = _("Invalid snapshot") + ": %(reason)s"
-
-
 class VolumeUnattached(Invalid):
     message = _("Volume %(volume_id)s is not attached to anything")
 
 
-class VolumeAttached(Invalid):
-    message = _("Volume %(volume_id)s is still attached, detach volume first.")
-
-
 class InvalidKeypair(Invalid):
     message = _("Keypair data is invalid")
-
-
-class SfJsonEncodeFailure(NovaException):
-    message = _("Failed to load data into json format")
 
 
 class InvalidRequest(Invalid):
@@ -243,10 +231,6 @@ class InvalidRequest(Invalid):
 
 class InvalidInput(Invalid):
     message = _("Invalid input received") + ": %(reason)s"
-
-
-class InvalidVolumeType(Invalid):
-    message = _("Invalid volume type") + ": %(reason)s"
 
 
 class InvalidVolume(Invalid):
@@ -428,65 +412,16 @@ class NotFound(NovaException):
     code = 404
 
 
-class VirtDriverNotFound(NotFound):
-    message = _("Could not find driver for compute_driver %(name)s")
-
-
-class PersistentVolumeFileNotFound(NotFound):
-    message = _("Volume %(volume_id)s persistence file could not be found.")
-
-
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
-
-
-class SfAccountNotFound(NotFound):
-    message = _("Unable to locate account %(account_name)s on "
-                "Solidfire device")
-
-
-class VolumeMetadataNotFound(NotFound):
-    message = _("Volume %(volume_id)s has no metadata with "
-                "key %(metadata_key)s.")
-
-
-class VolumeTypeNotFound(NotFound):
-    message = _("Volume type %(volume_type_id)s could not be found.")
-
-
-class VolumeTypeNotFoundByName(VolumeTypeNotFound):
-    message = _("Volume type with name %(volume_type_name)s "
-                "could not be found.")
-
-
-class VolumeTypeExtraSpecsNotFound(NotFound):
-    message = _("Volume Type %(volume_type_id)s has no extra specs with "
-                "key %(extra_specs_key)s.")
 
 
 class SnapshotNotFound(NotFound):
     message = _("Snapshot %(snapshot_id)s could not be found.")
 
 
-class VolumeIsBusy(NovaException):
-    message = _("deleting volume %(volume_name)s that has snapshot")
-
-
-class SnapshotIsBusy(NovaException):
-    message = _("deleting snapshot %(snapshot_name)s that has "
-                "dependent volumes")
-
-
 class ISCSITargetNotFoundForVolume(NotFound):
     message = _("No target id found for volume %(volume_id)s.")
-
-
-class ISCSITargetCreateFailed(NovaException):
-    message = _("Failed to create iscsi target for volume %(volume_id)s.")
-
-
-class ISCSITargetRemoveFailed(NovaException):
-    message = _("Failed to remove iscsi target for volume %(volume_id)s.")
 
 
 class DiskNotFound(NotFound):
@@ -559,10 +494,6 @@ class NoNetworksFound(NotFound):
 class NetworkNotFoundForProject(NotFound):
     message = _("Either Network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")
-
-
-class NetworkHostNotSet(NovaException):
-    message = _("Host is not set to the network (%(network_id)s).")
 
 
 class DatastoreNotFound(NotFound):
@@ -904,10 +835,6 @@ class FlavorAccessExists(Duplicate):
                 "and project %(project_id)s combination.")
 
 
-class VolumeTypeExists(Duplicate):
-    message = _("Volume Type %(name)s already exists.")
-
-
 class InvalidSharedStorage(NovaException):
     message = _("%(path)s is not on shared storage: %(reason)s")
 
@@ -978,14 +905,6 @@ class TooManyInstances(QuotaError):
                 " but already used %(used)d of %(allowed)d %(resource)s")
 
 
-class VolumeSizeTooLarge(QuotaError):
-    message = _("Maximum volume size exceeded")
-
-
-class VolumeLimitExceeded(QuotaError):
-    message = _("Maximum number of volumes allowed (%(allowed)d) exceeded")
-
-
 class FloatingIpLimitExceeded(QuotaError):
     message = _("Maximum number of floating ips exceeded")
 
@@ -1040,32 +959,6 @@ class AggregateHostExists(Duplicate):
     message = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
-class DuplicateSfVolumeNames(Duplicate):
-    message = _("Detected more than one volume with name %(vol_name)s")
-
-
-class VolumeTypeCreateFailed(NovaException):
-    message = _("Cannot create volume_type with "
-                "name %(name)s and specs %(extra_specs)s")
-
-
-class VolumeBackendAPIException(NovaException):
-    message = _("Bad or unexpected response from the storage volume "
-                "backend API: %(data)s")
-
-
-class NfsException(NovaException):
-    message = _("Unknown NFS exception")
-
-
-class NfsNoSharesMounted(NotFound):
-    message = _("No mounted NFS shares found")
-
-
-class NfsNoSuitableShareFound(NotFound):
-    message = _("There is no share which can host %(volume_size)sG")
-
-
 class InstanceTypeCreateFailed(NovaException):
     message = _("Unable to create instance type")
 
@@ -1074,14 +967,6 @@ class InstancePasswordSetFailed(NovaException):
     message = _("Failed to set admin password on %(instance)s "
                 "because %(reason)s")
     safe = True
-
-
-class SolidFireAPIException(NovaException):
-    message = _("Bad response from SolidFire API")
-
-
-class SolidFireAPIDataException(SolidFireAPIException):
-    message = _("Error in SolidFire API response: data=%(data)s")
 
 
 class DuplicateVlan(Duplicate):
