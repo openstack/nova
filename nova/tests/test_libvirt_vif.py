@@ -39,7 +39,8 @@ class LibvirtVifTestCase(test.TestCase):
              'vlan': 99,
              'gateway': '101.168.1.1',
              'broadcast': '101.168.1.255',
-             'dns1': '8.8.8.8'
+             'dns1': '8.8.8.8',
+             'id': 'network-id-xxx-yyy-zzz'
     }
 
     mapping = {
@@ -77,6 +78,48 @@ class LibvirtVifTestCase(test.TestCase):
         nic = driver.plug(self.instance, (self.net, self.mapping))
         conf.add_device(nic)
         return conf.to_xml()
+
+    def test_multiple_nics(self):
+        conf = vconfig.LibvirtConfigGuest()
+        conf.virt_type = "qemu"
+        conf.name = "fake-name"
+        conf.uuid = "fake-uuid"
+        conf.memory = 100 * 1024
+        conf.vcpus = 4
+
+        # Tests multiple nic configuration and that target_dev is
+        # set for each
+        nics = [{'net_type': 'bridge',
+                 'mac_addr': '00:00:00:00:00:0b',
+                 'source_dev': 'b_source_dev',
+                 'target_dev': 'b_target_dev'},
+                {'net_type': 'ethernet',
+                 'mac_addr': '00:00:00:00:00:0e',
+                 'source_dev': 'e_source_dev',
+                 'target_dev': 'e_target_dev'},
+                {'net_type': 'direct',
+                 'mac_addr': '00:00:00:00:00:0d',
+                 'source_dev': 'd_source_dev',
+                 'target_dev': 'd_target_dev'}]
+
+        for nic in nics:
+            nic_conf = vconfig.LibvirtConfigGuestInterface()
+            nic_conf.net_type = nic['net_type']
+            nic_conf.target_dev = nic['target_dev']
+            nic_conf.mac_addr = nic['mac_addr']
+            nic_conf.source_dev = nic['source_dev']
+            conf.add_device(nic_conf)
+
+        xml = conf.to_xml()
+        doc = etree.fromstring(xml)
+        for nic in nics:
+            path = "./devices/interface/[@type='%s']" % nic['net_type']
+            node = doc.find(path)
+            self.assertEqual(nic['net_type'], node.get("type"))
+            self.assertEqual(nic['mac_addr'],
+                             node.find("mac").get("address"))
+            self.assertEqual(nic['target_dev'],
+                             node.find("target").get("dev"))
 
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver()
@@ -146,13 +189,13 @@ class LibvirtVifTestCase(test.TestCase):
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
-        self.assertEqual(node.get("type"), "ethernet")
+        self.assertEqual(node.get("type"), "bridge")
         dev_name = node.find("target").get("dev")
         self.assertTrue(dev_name.startswith("tap"))
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
-        script = node.find("script").get("path")
-        self.assertEquals(script, "")
+        br_name = node.find("source").get("bridge")
+        self.assertTrue(br_name.startswith("brq"))
 
         d.unplug(None, (self.net, self.mapping))
 
