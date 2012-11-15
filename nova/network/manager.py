@@ -665,11 +665,13 @@ class FloatingIP(object):
         return False if floating_ip.get('fixed_ip_id') else True
 
     @wrap_check_policy
-    def migrate_instance_start(self, context, instance_uuid, rxtx_factor,
-                               project_id, source, dest, floating_addresses):
+    def migrate_instance_start(self, context, instance_uuid,
+                               floating_addresses,
+                               rxtx_factor=None, project_id=None,
+                               source=None, dest=None):
         # We only care if floating_addresses are provided and we're
         # switching hosts
-        if not floating_addresses or source == dest:
+        if not floating_addresses or (source and source == dest):
             return
 
         LOG.info(_("Starting migration network for instance"
@@ -698,11 +700,15 @@ class FloatingIP(object):
                                        {'host': None})
 
     @wrap_check_policy
-    def migrate_instance_finish(self, context, instance_uuid, rxtx_factor,
-                                project_id, source, dest, floating_addresses):
+    def migrate_instance_finish(self, context, instance_uuid,
+                                floating_addresses, host=None,
+                                rxtx_factor=None, project_id=None,
+                                source=None, dest=None):
         # We only care if floating_addresses are provided and we're
         # switching hosts
-        if not floating_addresses or source == dest:
+        if host and not dest:
+            dest = host
+        if not floating_addresses or (source and source == dest):
             return
 
         LOG.info(_("Finishing migration network for instance"
@@ -1954,12 +1960,16 @@ class FlatManager(NetworkManager):
         """Returns the floating IPs associated with a fixed_address"""
         return []
 
-    def migrate_instance_start(self, context, instance_uuid, rxtx_factor,
-                               project_id, source, dest, floating_addresses):
+    def migrate_instance_start(self, context, instance_uuid,
+                               floating_addresses,
+                               rxtx_factor=None, project_id=None,
+                               source=None, dest=None):
         pass
 
-    def migrate_instance_finish(self, context, instance_uuid, rxtx_factor,
-                                project_id, source, dest, floating_addresses):
+    def migrate_instance_finish(self, context, instance_uuid,
+                                floating_addresses, host=None,
+                                rxtx_factor=None, project_id=None,
+                                source=None, dest=None):
         pass
 
 
