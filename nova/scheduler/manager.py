@@ -30,7 +30,6 @@ from nova import config
 import nova.context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import manager
 from nova import notifications
 from nova.openstack.common import cfg
