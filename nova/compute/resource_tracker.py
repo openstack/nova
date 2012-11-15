@@ -30,7 +30,6 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova import utils
 
 resource_tracker_opts = [
     cfg.IntOpt('reserved_host_disk_mb', default=0,
