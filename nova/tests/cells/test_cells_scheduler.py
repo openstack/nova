@@ -19,6 +19,8 @@ import time
 
 from oslo.config import cfg
 
+from nova.cells import filters
+from nova.cells import weights
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -29,6 +31,26 @@ from nova.tests.cells import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('scheduler_retries', 'nova.cells.scheduler', group='cells')
+CONF.import_opt('scheduler_filter_classes', 'nova.cells.scheduler',
+                group='cells')
+CONF.import_opt('scheduler_weight_classes', 'nova.cells.scheduler',
+                group='cells')
+
+
+class FakeFilterClass1(filters.BaseCellFilter):
+    pass
+
+
+class FakeFilterClass2(filters.BaseCellFilter):
+    pass
+
+
+class FakeWeightClass1(weights.BaseCellWeigher):
+    pass
+
+
+class FakeWeightClass2(weights.BaseCellWeigher):
+    pass
 
 
 class CellsSchedulerTestCase(test.TestCase):
@@ -36,6 +58,11 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def setUp(self):
         super(CellsSchedulerTestCase, self).setUp()
+        self.flags(scheduler_filter_classes=[], scheduler_weight_classes=[],
+                   group='cells')
+        self._init_cells_scheduler()
+
+    def _init_cells_scheduler(self):
         fakes.init(self)
         self.msg_runner = fakes.get_message_runner('api-cell')
         self.scheduler = self.msg_runner.scheduler
@@ -109,7 +136,8 @@ class CellsSchedulerTestCase(test.TestCase):
         self.stubs.Set(self.msg_runner, 'schedule_run_instance',
                 msg_runner_schedule_run_instance)
 
-        host_sched_kwargs = {'request_spec': self.request_spec}
+        host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {}}
         self.msg_runner.schedule_run_instance(self.ctxt,
                 self.my_cell_state, host_sched_kwargs)
 
@@ -138,6 +166,7 @@ class CellsSchedulerTestCase(test.TestCase):
                        'run_instance', fake_rpc_run_instance)
 
         host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {},
                              'other': 'stuff'}
         self.msg_runner.schedule_run_instance(self.ctxt,
                 self.my_cell_state, host_sched_kwargs)
@@ -149,7 +178,8 @@ class CellsSchedulerTestCase(test.TestCase):
     def test_run_instance_retries_when_no_cells_avail(self):
         self.flags(scheduler_retries=7, group='cells')
 
-        host_sched_kwargs = {'request_spec': self.request_spec}
+        host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {}}
 
         call_info = {'num_tries': 0, 'errored_uuids': []}
 
@@ -177,7 +207,8 @@ class CellsSchedulerTestCase(test.TestCase):
     def test_run_instance_on_random_exception(self):
         self.flags(scheduler_retries=7, group='cells')
 
-        host_sched_kwargs = {'request_spec': self.request_spec}
+        host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {}}
 
         call_info = {'num_tries': 0,
                      'errored_uuids1': [],
@@ -206,3 +237,148 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(1, call_info['num_tries'])
         self.assertEqual(self.instance_uuids, call_info['errored_uuids1'])
         self.assertEqual(self.instance_uuids, call_info['errored_uuids2'])
+
+    def test_cells_filter_args_correct(self):
+        # Re-init our fakes with some filters.
+        our_path = 'nova.tests.cells.test_cells_scheduler'
+        cls_names = [our_path + '.' + 'FakeFilterClass1',
+                     our_path + '.' + 'FakeFilterClass2']
+        self.flags(scheduler_filter_classes=cls_names, group='cells')
+        self._init_cells_scheduler()
+
+        # Make sure there's no child cells so that we will be
+        # selected.  Makes stubbing easier.
+        self.state_manager.child_cells = {}
+
+        call_info = {}
+
+        def fake_create_instances_here(ctxt, request_spec):
+            call_info['ctxt'] = ctxt
+            call_info['request_spec'] = request_spec
+
+        def fake_rpc_run_instance(ctxt, **host_sched_kwargs):
+            call_info['host_sched_kwargs'] = host_sched_kwargs
+
+        def fake_get_filtered_objs(filter_classes, cells, filt_properties):
+            call_info['filt_classes'] = filter_classes
+            call_info['filt_cells'] = cells
+            call_info['filt_props'] = filt_properties
+            return cells
+
+        self.stubs.Set(self.scheduler, '_create_instances_here',
+                fake_create_instances_here)
+        self.stubs.Set(self.scheduler.scheduler_rpcapi,
+                       'run_instance', fake_rpc_run_instance)
+        filter_handler = self.scheduler.filter_handler
+        self.stubs.Set(filter_handler, 'get_filtered_objects',
+                       fake_get_filtered_objs)
+
+        host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {},
+                             'other': 'stuff'}
+
+        self.msg_runner.schedule_run_instance(self.ctxt,
+                self.my_cell_state, host_sched_kwargs)
+        # Our cell was selected.
+        self.assertEqual(self.ctxt, call_info['ctxt'])
+        self.assertEqual(self.request_spec, call_info['request_spec'])
+        self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
+        # Filter args are correct
+        expected_filt_props = {'context': self.ctxt,
+                               'scheduler': self.scheduler,
+                               'routing_path': self.my_cell_state.name,
+                               'host_sched_kwargs': host_sched_kwargs,
+                               'request_spec': self.request_spec}
+        self.assertEqual(expected_filt_props, call_info['filt_props'])
+        self.assertEqual([FakeFilterClass1, FakeFilterClass2],
+                         call_info['filt_classes'])
+        self.assertEqual([self.my_cell_state], call_info['filt_cells'])
+
+    def test_cells_filter_returning_none(self):
+        # Re-init our fakes with some filters.
+        our_path = 'nova.tests.cells.test_cells_scheduler'
+        cls_names = [our_path + '.' + 'FakeFilterClass1',
+                     our_path + '.' + 'FakeFilterClass2']
+        self.flags(scheduler_filter_classes=cls_names, group='cells')
+        self._init_cells_scheduler()
+
+        # Make sure there's no child cells so that we will be
+        # selected.  Makes stubbing easier.
+        self.state_manager.child_cells = {}
+
+        call_info = {'scheduled': False}
+
+        def fake_create_instances_here(ctxt, request_spec):
+            # Should not be called
+            call_info['scheduled'] = True
+
+        def fake_get_filtered_objs(filter_classes, cells, filt_properties):
+            # Should cause scheduling to be skipped.  Means that the
+            # filter did it.
+            return None
+
+        self.stubs.Set(self.scheduler, '_create_instances_here',
+                fake_create_instances_here)
+        filter_handler = self.scheduler.filter_handler
+        self.stubs.Set(filter_handler, 'get_filtered_objects',
+                       fake_get_filtered_objs)
+
+        self.msg_runner.schedule_run_instance(self.ctxt,
+                self.my_cell_state, {})
+        self.assertFalse(call_info['scheduled'])
+
+    def test_cells_weight_args_correct(self):
+        # Re-init our fakes with some filters.
+        our_path = 'nova.tests.cells.test_cells_scheduler'
+        cls_names = [our_path + '.' + 'FakeWeightClass1',
+                     our_path + '.' + 'FakeWeightClass2']
+        self.flags(scheduler_weight_classes=cls_names, group='cells')
+        self._init_cells_scheduler()
+
+        # Make sure there's no child cells so that we will be
+        # selected.  Makes stubbing easier.
+        self.state_manager.child_cells = {}
+
+        call_info = {}
+
+        def fake_create_instances_here(ctxt, request_spec):
+            call_info['ctxt'] = ctxt
+            call_info['request_spec'] = request_spec
+
+        def fake_rpc_run_instance(ctxt, **host_sched_kwargs):
+            call_info['host_sched_kwargs'] = host_sched_kwargs
+
+        def fake_get_weighed_objs(weight_classes, cells, filt_properties):
+            call_info['weight_classes'] = weight_classes
+            call_info['weight_cells'] = cells
+            call_info['weight_props'] = filt_properties
+            return [weights.WeightedCell(cells[0], 0.0)]
+
+        self.stubs.Set(self.scheduler, '_create_instances_here',
+                fake_create_instances_here)
+        self.stubs.Set(self.scheduler.scheduler_rpcapi,
+                       'run_instance', fake_rpc_run_instance)
+        weight_handler = self.scheduler.weight_handler
+        self.stubs.Set(weight_handler, 'get_weighed_objects',
+                       fake_get_weighed_objs)
+
+        host_sched_kwargs = {'request_spec': self.request_spec,
+                             'filter_properties': {},
+                             'other': 'stuff'}
+
+        self.msg_runner.schedule_run_instance(self.ctxt,
+                self.my_cell_state, host_sched_kwargs)
+        # Our cell was selected.
+        self.assertEqual(self.ctxt, call_info['ctxt'])
+        self.assertEqual(self.request_spec, call_info['request_spec'])
+        self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
+        # Weight args are correct
+        expected_filt_props = {'context': self.ctxt,
+                               'scheduler': self.scheduler,
+                               'routing_path': self.my_cell_state.name,
+                               'host_sched_kwargs': host_sched_kwargs,
+                               'request_spec': self.request_spec}
+        self.assertEqual(expected_filt_props, call_info['weight_props'])
+        self.assertEqual([FakeWeightClass1, FakeWeightClass2],
+                         call_info['weight_classes'])
+        self.assertEqual([self.my_cell_state], call_info['weight_cells'])

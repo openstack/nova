@@ -54,8 +54,14 @@ class BaseFilterHandler(loadables.BaseLoader):
         list_objs = list(objs)
         LOG.debug("Starting with %d host(s)", len(list_objs))
         for filter_cls in filter_classes:
-            list_objs = list(filter_cls().filter_all(list_objs,
-                             filter_properties))
-            LOG.debug("Filter %s returned %d host(s)",
-                      filter_cls.__name__, len(list_objs))
+            cls_name = filter_cls.__name__
+            objs = filter_cls().filter_all(list_objs,
+                                           filter_properties)
+            if objs is None:
+                LOG.debug("Filter %(cls_name)s says to stop filtering",
+                          {'cls_name': cls_name})
+                return
+            list_objs = list(objs)
+            LOG.debug("Filter %(cls_name)s returned %(obj_len)d host(s)",
+                      {'cls_name': cls_name, 'obj_len': len(list_objs)})
         return list_objs
