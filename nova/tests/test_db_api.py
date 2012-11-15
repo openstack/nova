@@ -20,7 +20,7 @@
 """Unit tests for the DB API"""
 
 import datetime
-import uuid as uuidutils
+import uuid as stdlib_uuid
 
 from nova import config
 from nova import context
@@ -146,7 +146,7 @@ class DbApiTestCase(test.TestCase):
         self.assertRaises(exception.MarkerNotFound,
                           db.instance_get_all_by_filters,
                           self.context, {'display_name': '%test%'},
-                          marker=str(uuidutils.uuid4()))
+                          marker=str(stdlib_uuid.uuid4()))
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
@@ -307,7 +307,7 @@ class DbApiTestCase(test.TestCase):
     def test_instance_fault_create(self):
         """Ensure we can create an instance fault"""
         ctxt = context.get_admin_context()
-        uuid = str(uuidutils.uuid4())
+        uuid = str(stdlib_uuid.uuid4())
 
         # Create a fault
         fault_values = {
