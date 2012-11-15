@@ -56,7 +56,6 @@ from nova.compute import vm_states
 from nova import config
 import nova.context
 from nova import exception
-from nova import flags
 from nova.image import glance
 from nova import manager
 from nova import network

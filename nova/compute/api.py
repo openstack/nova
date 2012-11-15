@@ -41,7 +41,6 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
 from nova import exception
-from nova import flags
 from nova.image import glance
 from nova import network
 from nova import notifications

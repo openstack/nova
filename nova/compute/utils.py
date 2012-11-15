@@ -25,7 +25,6 @@ from nova.compute import instance_types
 from nova import config
 from nova import db
 from nova import exception
-from nova import flags
 from nova.network import model as network_model
 from nova import notifications
 from nova.openstack.common import log
