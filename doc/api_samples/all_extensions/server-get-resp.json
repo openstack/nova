@@ -1,8 +1,8 @@
 {
     "server": {
         "OS-DCF:diskConfig": "AUTO",
-        "OS-EXT-SRV-ATTR:host": "3972bc79fa2a4754b7559153a5a48422",
-        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+        "OS-EXT-SRV-ATTR:host": "543330fc7412414094e79c867798cefd",
+        "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
         "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
@@ -18,7 +18,7 @@
             ]
         },
         "config_drive": "",
-        "created": "2012-08-20T21:11:06Z",
+        "created": "2012-11-15T19:28:30Z",
         "flavor": {
             "id": "1",
             "links": [
@@ -28,8 +28,8 @@
                 }
             ]
         },
-        "hostId": "dc23873c80c22f14705d190b645b59398cbc8ed3cdf6145468051c0d",
-        "id": "7dc62bde-85f0-45b5-8c74-5fb209314807",
+        "hostId": "edc4f072b6ca46a2d95c717401aa9835a204d3e4e6b148a7faba9ab0",
+        "id": "05c070bf-1c34-4d99-901c-0f97a7239b86",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -42,11 +42,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/servers/7dc62bde-85f0-45b5-8c74-5fb209314807",
+                "href": "http://openstack.example.com/v2/openstack/servers/05c070bf-1c34-4d99-901c-0f97a7239b86",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/servers/7dc62bde-85f0-45b5-8c74-5fb209314807",
+                "href": "http://openstack.example.com/openstack/servers/05c070bf-1c34-4d99-901c-0f97a7239b86",
                 "rel": "bookmark"
             }
         ],
@@ -62,7 +62,7 @@
         ],
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "2012-08-20T21:11:06Z",
+        "updated": "2012-11-15T19:28:31Z",
         "user_id": "fake"
     }
 }
