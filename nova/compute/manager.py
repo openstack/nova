@@ -486,13 +486,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = network_info.legacy()
         return network_info
 
-    def _setup_block_device_mapping(self, context, instance):
+    def _setup_block_device_mapping(self, context, instance, bdms):
         """setup volumes for block device mapping"""
         block_device_mapping = []
         swap = None
         ephemerals = []
-        for bdm in self.db.block_device_mapping_get_all_by_instance(
-            context, instance['uuid']):
+        for bdm in bdms:
             LOG.debug(_('Setting up bdm %s'), bdm, instance=instance)
 
             if bdm['no_device']:
@@ -568,6 +567,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, "create.start",
                     extra_usage_info=extra_usage_info)
             network_info = None
+            bdms = self.db.block_device_mapping_get_all_by_instance(
+                        context, instance['uuid'])
             rt = self._get_resource_tracker(instance.get('node'))
             try:
                 limits = filter_properties.get('limits', {})
@@ -576,7 +577,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     network_info = self._allocate_network(context, instance,
                             requested_networks)
                     block_device_info = self._prep_block_device(context,
-                            instance)
+                            instance, bdms)
                     instance = self._spawn(context, instance, image_meta,
                                            network_info, block_device_info,
                                            injected_files, admin_password)
@@ -813,13 +814,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return network_info
 
-    def _prep_block_device(self, context, instance):
+    def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging"""
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
         try:
-            return self._setup_block_device_mapping(context, instance)
+            return self._setup_block_device_mapping(context, instance, bdms)
         except Exception:
             LOG.exception(_('Instance failed block device setup'),
                           instance=instance)
@@ -1211,7 +1212,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance.injected_files = injected_files
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
-            device_info = self._setup_block_device_mapping(context, instance)
+            bdms = self.db.block_device_mapping_get_all_by_instance(
+                                  context, instance['uuid'])
+            device_info = self._setup_block_device_mapping(context, instance,
+                                                           bdms)
 
             instance = self._instance_update(context,
                                              instance['uuid'],

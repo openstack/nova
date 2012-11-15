@@ -1480,7 +1480,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
         self.compute._setup_block_device_mapping(
-                mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndRaise(rpc.common.RemoteError('', '', ''))
 
         self.mox.ReplayAll()
