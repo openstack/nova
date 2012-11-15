@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid as uuidutils
+import uuid as stdlib_uuid
 
 import feedparser
 from lxml import etree
@@ -386,7 +386,7 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/json")
 
     def test_multi_choice_server(self):
-        uuid = str(uuidutils.uuid4())
+        uuid = str(stdlib_uuid.uuid4())
         req = webob.Request.blank('/servers/' + uuid)
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
