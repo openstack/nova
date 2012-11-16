@@ -39,9 +39,9 @@ from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt.disk import guestfs
-from nova.virt.disk import loop
-from nova.virt.disk import nbd
+from nova.virt.disk.mount import guestfs
+from nova.virt.disk.mount import loop
+from nova.virt.disk.mount import nbd
 from nova.virt import images
 
 
@@ -229,7 +229,7 @@ class _DiskImage(object):
     @staticmethod
     def _handler_class(mode=None, device=None):
         """Look up the appropriate class to use based on MODE or DEVICE."""
-        for cls in (loop.Mount, nbd.Mount, guestfs.Mount):
+        for cls in (loop.LoopMount, nbd.NbdMount, guestfs.GuestFSMount):
             if mode and cls.mode == mode:
                 return cls
             elif device and cls.device_id_string in device:

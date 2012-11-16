@@ -19,10 +19,10 @@ import os
 
 from nova import exception
 from nova import utils
-from nova.virt.disk import mount
+from nova.virt.disk.mount import api
 
 
-class Mount(mount.Mount):
+class GuestFSMount(api.Mount):
     """libguestfs support for arbitrary images."""
     mode = 'guestfs'
     device_id_string = 'guest'

@@ -16,10 +16,10 @@
 """Support for mounting images with the loop device"""
 
 from nova import utils
-from nova.virt.disk import mount
+from nova.virt.disk.mount import api
 
 
-class Mount(mount.Mount):
+class LoopMount(api.Mount):
     """loop back support for raw images."""
     mode = 'loop'
     device_id_string = mode
