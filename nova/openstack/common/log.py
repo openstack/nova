@@ -54,15 +54,14 @@ log_opts = [
                        '%(message)s',
                help='format string to use for log messages with context'),
     cfg.StrOpt('logging_default_format_string',
-               default='%(asctime)s %(levelname)s %(name)s [-] %(instance)s'
-                       '%(message)s',
+               default='%(asctime)s %(process)d %(levelname)s %(name)s [-]'
+                       ' %(instance)s%(message)s',
                help='format string to use for log messages without context'),
     cfg.StrOpt('logging_debug_format_suffix',
-               default='from (pid=%(process)d) %(funcName)s '
-                       '%(pathname)s:%(lineno)d',
+               default='%(funcName)s %(pathname)s:%(lineno)d',
                help='data to append to log format when level is DEBUG'),
     cfg.StrOpt('logging_exception_prefix',
-               default='%(asctime)s TRACE %(name)s %(instance)s',
+               default='%(asctime)s %(process)d TRACE %(name)s %(instance)s',
                help='prefix each line of exception output with this format'),
     cfg.ListOpt('default_log_levels',
                 default=[

@@ -116,8 +116,12 @@ def write_requirements():
 
 
 def _run_shell_command(cmd):
-    output = subprocess.Popen(["/bin/sh", "-c", cmd],
-                              stdout=subprocess.PIPE)
+    if os.name == 'nt':
+        output = subprocess.Popen(["cmd.exe", "/C", cmd],
+                                  stdout=subprocess.PIPE)
+    else:
+        output = subprocess.Popen(["/bin/sh", "-c", cmd],
+                                  stdout=subprocess.PIPE)
     out = output.communicate()
     if len(out) == 0:
         return None
@@ -135,15 +139,17 @@ def _get_git_next_version_suffix(branch_name):
     _run_shell_command("git fetch origin +refs/meta/*:refs/remotes/meta/*")
     milestone_cmd = "git show meta/openstack/release:%s" % branch_name
     milestonever = _run_shell_command(milestone_cmd)
-    if not milestonever:
-        milestonever = ""
+    if milestonever:
+        first_half = "%s~%s" % (milestonever, datestamp)
+    else:
+        first_half = datestamp
+
     post_version = _get_git_post_version()
     # post version should look like:
     # 0.1.1.4.gcc9e28a
     # where the bit after the last . is the short sha, and the bit between
     # the last and second to last is the revno count
     (revno, sha) = post_version.split(".")[-2:]
-    first_half = "%s~%s" % (milestonever, datestamp)
     second_half = "%s%s.%s" % (revno_prefix, revno, sha)
     return ".".join((first_half, second_half))
 
