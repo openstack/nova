@@ -26,6 +26,23 @@ class CommandFilter(object):
         self.exec_path = exec_path
         self.run_as = run_as
         self.args = args
+        self.real_exec = None
+
+    def get_exec(self, exec_dirs=[]):
+        """Returns existing executable, or empty string if none found"""
+        if self.real_exec is not None:
+            return self.real_exec
+        self.real_exec = ""
+        if self.exec_path.startswith('/'):
+            if os.access(self.exec_path, os.X_OK):
+                self.real_exec = self.exec_path
+        else:
+            for binary_path in exec_dirs:
+                expanded_path = os.path.join(binary_path, self.exec_path)
+                if os.access(expanded_path, os.X_OK):
+                    self.real_exec = expanded_path
+                    break
+        return self.real_exec
 
     def match(self, userargs):
         """Only check that the first argument (command) matches exec_path"""
@@ -33,12 +50,13 @@ class CommandFilter(object):
             return True
         return False
 
-    def get_command(self, userargs):
+    def get_command(self, userargs, exec_dirs=[]):
         """Returns command to execute (with sudo -u if run_as != root)."""
+        to_exec = self.get_exec(exec_dirs=exec_dirs) or self.exec_path
         if (self.run_as != 'root'):
             # Used to run commands at lesser privileges
-            return ['sudo', '-u', self.run_as, self.exec_path] + userargs[1:]
-        return [self.exec_path] + userargs[1:]
+            return ['sudo', '-u', self.run_as, to_exec] + userargs[1:]
+        return [to_exec] + userargs[1:]
 
     def get_environment(self, userargs):
         """Returns specific environment to set, None if none"""
@@ -82,9 +100,10 @@ class DnsmasqFilter(CommandFilter):
             return True
         return False
 
-    def get_command(self, userargs):
+    def get_command(self, userargs, exec_dirs=[]):
+        to_exec = self.get_exec(exec_dirs=exec_dirs) or self.exec_path
         dnsmasq_pos = userargs.index('dnsmasq')
-        return [self.exec_path] + userargs[dnsmasq_pos + 1:]
+        return [to_exec] + userargs[dnsmasq_pos + 1:]
 
     def get_environment(self, userargs):
         env = os.environ.copy()

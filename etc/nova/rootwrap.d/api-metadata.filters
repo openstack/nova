@@ -5,13 +5,9 @@
 
 [Filters]
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
-iptables-save: CommandFilter, /sbin/iptables-save, root
-iptables-save_usr: CommandFilter, /usr/sbin/iptables-save, root
-ip6tables-save: CommandFilter, /sbin/ip6tables-save, root
-ip6tables-save_usr: CommandFilter, /usr/sbin/ip6tables-save, root
+iptables-save: CommandFilter, iptables-save, root
+ip6tables-save: CommandFilter, ip6tables-save, root
 
 # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
-iptables-restore: CommandFilter, /sbin/iptables-restore, root
-iptables-restore_usr: CommandFilter, /usr/sbin/iptables-restore, root
-ip6tables-restore: CommandFilter, /sbin/ip6tables-restore, root
-ip6tables-restore_usr: CommandFilter, /usr/sbin/ip6tables-restore, root
+iptables-restore: CommandFilter, iptables-restore, root
+ip6tables-restore: CommandFilter, ip6tables-restore, root
