@@ -79,6 +79,7 @@ from nova import db
 from nova.db import migration
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import cliutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -1160,15 +1161,18 @@ def main():
     fn_args = [arg.decode('utf-8') for arg in fn_args]
 
     # call the action with the remaining arguments
+    # check arguments
+    try:
+        cliutils.validate_args(fn, *fn_args, **fn_kwargs)
+    except cliutils.MissingArgs as e:
+        print fn.__doc__
+        parser.print_help()
+        print e
+        sys.exit(1)
     try:
         fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         sys.exit(0)
-    except TypeError:
-        print _("Possible wrong number of arguments supplied")
-        print fn.__doc__
-        parser.print_help()
-        raise
     except Exception:
         print _("Command failed, please check log for more info")
         raise
