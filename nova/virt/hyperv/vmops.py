@@ -21,12 +21,14 @@ Management class for basic VM operations.
 import os
 import uuid
 
+from nova.api.metadata import base as instance_metadata
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova import utils
+from nova.virt import configdrive
 from nova.virt.hyperv import baseops
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
@@ -40,8 +42,19 @@ hyperv_opts = [
                     'if none provided first external is used'),
     cfg.BoolOpt('limit_cpu_features',
                default=False,
-               help='required for live migration among '
-                    'hosts with different CPU features')
+               help='Required for live migration among '
+                    'hosts with different CPU features'),
+    cfg.BoolOpt('config_drive_inject_password',
+               default=False,
+               help='Sets the admin password in the config drive image'),
+    cfg.StrOpt('qemu_img_cmd',
+               default="qemu-img.exe",
+               help='qemu-img is used to convert between '
+                    'different image types'),
+    cfg.BoolOpt('config_drive_cdrom',
+               default=False,
+               help='Attaches the Config Drive image as a cdrom drive '
+                    'instead of a disk drive')
     ]
 
 CONF = config.CONF
@@ -104,8 +117,8 @@ class VMOps(baseops.BaseOps):
                 'num_cpu': info.NumberOfProcessors,
                 'cpu_time': info.UpTime}
 
-    def spawn(self, context, instance, image_meta, network_info,
-        block_device_info=None):
+    def spawn(self, context, instance, image_meta, injected_files,
+        admin_password, network_info, block_device_info=None):
         """ Create a new VM and start it."""
         instance_name = instance["name"]
         vm = self._vmutils.lookup(self._conn, instance_name)
@@ -137,7 +150,8 @@ class VMOps(baseops.BaseOps):
             self._create_vm(instance)
 
             if not ebs_root:
-                self._create_disk(instance['name'], vhdfile)
+                self._attach_ide_drive(instance['name'], vhdfile, 0, 0,
+                    constants.IDE_DISK)
             else:
                 self._volumeops.attach_boot_volume(block_device_info,
                                              instance_name)
@@ -149,13 +163,63 @@ class VMOps(baseops.BaseOps):
                 mac_address = vif['address'].replace(':', '')
                 self._create_nic(instance['name'], mac_address)
 
+            if configdrive.required_by(instance):
+                self._create_config_drive(instance, injected_files,
+                    admin_password)
+
             LOG.debug(_('Starting VM %s '), instance_name)
             self._set_vm_state(instance['name'], 'Enabled')
             LOG.info(_('Started VM %s '), instance_name)
         except Exception as exn:
             LOG.exception(_('spawn vm failed: %s'), exn)
             self.destroy(instance)
-            raise
+            raise exn
+
+    def _create_config_drive(self, instance, injected_files, admin_password):
+        if CONF.config_drive_format != 'iso9660':
+            vmutils.HyperVException(_('Invalid config_drive_format "%s"') %
+                CONF.config_drive_format)
+
+        LOG.info(_('Using config drive'), instance=instance)
+        extra_md = {}
+        if admin_password and CONF.config_drive_inject_password:
+            extra_md['admin_pass'] = admin_password
+
+        inst_md = instance_metadata.InstanceMetadata(instance,
+            content=injected_files, extra_md=extra_md)
+
+        instance_path = self._vmutils.get_instance_path(
+            instance['name'])
+        configdrive_path_iso = os.path.join(instance_path, 'configdrive.iso')
+        LOG.info(_('Creating config drive at %(path)s'),
+                 {'path': configdrive_path_iso}, instance=instance)
+
+        cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
+        try:
+            cdb.make_drive(configdrive_path_iso)
+        finally:
+            cdb.cleanup()
+
+        if not CONF.config_drive_cdrom:
+            drive_type = constants.IDE_DISK
+            configdrive_path = os.path.join(instance_path,
+                'configdrive.vhd')
+            utils.execute(CONF.qemu_img_cmd,
+                          'convert',
+                          '-f',
+                          'raw',
+                          '-O',
+                          'vpc',
+                          configdrive_path_iso,
+                          configdrive_path,
+                          attempts=1)
+            os.remove(configdrive_path_iso)
+        else:
+            drive_type = constants.IDE_DVD
+            configdrive_path = configdrive_path_iso
+
+        self._attach_ide_drive(instance['name'], configdrive_path, 1, 0,
+            drive_type)
 
     def _create_vm(self, instance):
         """Create a VM but don't start it.  """
@@ -229,60 +293,80 @@ class VMOps(baseops.BaseOps):
                 _('Failed to add scsi controller to VM %s') %
                 vm_name)
 
-    def _create_disk(self, vm_name, vhdfile):
-        """Create a disk and attach it to the vm"""
-        LOG.debug(_('Creating disk for %(vm_name)s by attaching'
-                ' disk file %(vhdfile)s') % locals())
+    def _get_ide_controller(self, vm, ctrller_addr):
         #Find the IDE controller for the vm.
-        vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
-        vm = vms[0]
         vmsettings = vm.associators(
             wmi_result_class='Msvm_VirtualSystemSettingData')
         rasds = vmsettings[0].associators(
             wmi_result_class='MSVM_ResourceAllocationSettingData')
         ctrller = [r for r in rasds
             if r.ResourceSubType == 'Microsoft Emulated IDE Controller'
-            and r.Address == "0"]
+            and r.Address == str(ctrller_addr)]
+        return ctrller
+
+    def _attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
+        drive_type=constants.IDE_DISK):
+        """Create an IDE drive and attach it to the vm"""
+        LOG.debug(_('Creating disk for %(vm_name)s by attaching'
+                ' disk file %(path)s') % locals())
+
+        vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
+        vm = vms[0]
+
+        ctrller = self._get_ide_controller(vm, ctrller_addr)
+
+        if drive_type == constants.IDE_DISK:
+            resSubType = 'Microsoft Synthetic Disk Drive'
+        elif drive_type == constants.IDE_DVD:
+            resSubType = 'Microsoft Synthetic DVD Drive'
+
         #Find the default disk drive object for the vm and clone it.
-        diskdflt = self._conn.query(
+        drivedflt = self._conn.query(
             "SELECT * FROM Msvm_ResourceAllocationSettingData \
-            WHERE ResourceSubType LIKE 'Microsoft Synthetic Disk Drive'\
-            AND InstanceID LIKE '%Default%'")[0]
-        diskdrive = self._vmutils.clone_wmi_obj(self._conn,
-                'Msvm_ResourceAllocationSettingData', diskdflt)
+            WHERE ResourceSubType LIKE '%(resSubType)s'\
+            AND InstanceID LIKE '%%Default%%'" % locals())[0]
+        drive = self._vmutils.clone_wmi_obj(self._conn,
+                'Msvm_ResourceAllocationSettingData', drivedflt)
         #Set the IDE ctrller as parent.
-        diskdrive.Parent = ctrller[0].path_()
-        diskdrive.Address = 0
+        drive.Parent = ctrller[0].path_()
+        drive.Address = drive_addr
         #Add the cloned disk drive object to the vm.
         new_resources = self._vmutils.add_virt_resource(self._conn,
-            diskdrive, vm)
+            drive, vm)
         if new_resources is None:
             raise vmutils.HyperVException(
-                _('Failed to add diskdrive to VM %s') %
+                _('Failed to add drive to VM %s') %
                     vm_name)
-        diskdrive_path = new_resources[0]
-        LOG.debug(_('New disk drive path is %s'), diskdrive_path)
+        drive_path = new_resources[0]
+        LOG.debug(_('New %(drive_type)s drive path is %(drive_path)s') %
+            locals())
+
+        if drive_type == constants.IDE_DISK:
+            resSubType = 'Microsoft Virtual Hard Disk'
+        elif drive_type == constants.IDE_DVD:
+            resSubType = 'Microsoft Virtual CD/DVD Disk'
+
         #Find the default VHD disk object.
-        vhddefault = self._conn.query(
+        drivedefault = self._conn.query(
                 "SELECT * FROM Msvm_ResourceAllocationSettingData \
-                 WHERE ResourceSubType LIKE 'Microsoft Virtual Hard Disk' AND \
-                 InstanceID LIKE '%Default%' ")[0]
+                 WHERE ResourceSubType LIKE '%(resSubType)s' AND \
+                 InstanceID LIKE '%%Default%%' " % locals())[0]
 
         #Clone the default and point it to the image file.
-        vhddisk = self._vmutils.clone_wmi_obj(self._conn,
-                'Msvm_ResourceAllocationSettingData', vhddefault)
+        res = self._vmutils.clone_wmi_obj(self._conn,
+                'Msvm_ResourceAllocationSettingData', drivedefault)
         #Set the new drive as the parent.
-        vhddisk.Parent = diskdrive_path
-        vhddisk.Connection = [vhdfile]
+        res.Parent = drive_path
+        res.Connection = [path]
 
         #Add the new vhd object as a virtual hard disk to the vm.
-        new_resources = self._vmutils.add_virt_resource(self._conn,
-            vhddisk, vm)
+        new_resources = self._vmutils.add_virt_resource(self._conn, res, vm)
         if new_resources is None:
             raise vmutils.HyperVException(
-                _('Failed to add vhd file to VM %s') %
-                    vm_name)
-        LOG.info(_('Created disk for %s'), vm_name)
+                _('Failed to add %(drive_type)s image to VM %(vm_name)s') %
+                    locals())
+        LOG.info(_('Created drive type %(drive_type)s for %(vm_name)s') %
+            locals())
 
     def _create_nic(self, vm_name, mac):
         """Create a (synthetic) nic and attach it to the vm"""

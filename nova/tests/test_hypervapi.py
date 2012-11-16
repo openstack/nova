@@ -18,6 +18,7 @@
 Test suite for the Hyper-V driver and related APIs.
 """
 
+import json
 import os
 import platform
 import shutil
@@ -59,8 +60,8 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._update_image_raise_exception = False
         self._post_method_called = False
         self._recover_method_called = False
-        self._volume_target_portal = '192.168.1.112:3260'
-        self._volume_id = '10958016-e196-42e3-9e7f-5d8927ae3099'
+        self._volume_target_portal = 'testtargetportal:3260'
+        self._volume_id = 'd3f99512-af51-4a75-aee1-79875e016159'
         self._context = context.RequestContext(self._user_id, self._project_id)
 
         self._setup_stubs()
@@ -74,6 +75,11 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
     def _setup_stubs(self):
         db_fakes.stub_out_db_instance_api(self.stubs)
         fake_image.stub_out_image_service(self.stubs)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
+
+        def fake_dumps(msg):
+            return '""'
+        self.stubs.Set(json, 'dumps', fake_dumps)
 
         def fake_fetch(context, image_id, target, user, project):
             self._fetched_image = target
@@ -101,7 +107,9 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             'time',
             'subprocess',
             'multiprocessing',
-            '_winreg'
+            '_winreg',
+            'nova.virt.configdrive',
+            'nova.utils'
         ]
 
         # Modules in which the mocks are going to be injected
@@ -124,6 +132,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             snapshotops,
             livemigrationops,
             hypervutils,
+            db_fakes,
             sys.modules[__name__]
         ]
 
@@ -187,6 +196,39 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
     def test_spawn_no_cow_image(self):
         self._test_spawn_instance(False)
+
+    def test_spawn_config_drive(self):
+        self.flags(force_config_drive=True)
+        self.flags(mkisofs_cmd='mkisofs.exe')
+
+        self._spawn_instance(True)
+
+        (vhd_paths, _, dvd_paths) = self._hypervutils.get_vm_disks(
+            self._instance_data["name"])
+        self.assertEquals(len(dvd_paths), 0)
+        self.assertEquals(len(vhd_paths), 2)
+
+    def test_spawn_config_drive_cdrom(self):
+        self.flags(force_config_drive=True)
+        self.flags(config_drive_cdrom=True)
+        self.flags(mkisofs_cmd='mkisofs.exe')
+
+        self._spawn_instance(True)
+
+        (vhd_paths, _, dvd_paths) = self._hypervutils.get_vm_disks(
+            self._instance_data["name"])
+        self.assertEquals(len(dvd_paths), 1)
+        self.assertEquals(len(vhd_paths), 1)
+        self.assertTrue(os.path.exists(dvd_paths[0]))
+
+    def test_spawn_no_config_drive(self):
+        self.flags(force_config_drive=False)
+
+        self._spawn_instance(True)
+
+        (_, _, dvd_paths) = self._hypervutils.get_vm_disks(
+            self._instance_data["name"])
+        self.assertEquals(len(dvd_paths), 0)
 
     def test_spawn_no_vswitch_exception(self):
         # Set flag to a non existing vswitch
@@ -272,7 +314,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
     def test_destroy(self):
         self._spawn_instance(True)
-        (vhd_paths, _) = self._hypervutils.get_vm_disks(
+        (vhd_paths, _, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])
 
         self._conn.destroy(self._instance_data)
@@ -289,7 +331,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._spawn_instance(False)
 
         # Existing server
-        self._dest_server = "HV12RCTest1"
+        self._dest_server = "HV12OSDEMO2"
 
         self._live_migration(self._dest_server)
 
@@ -411,7 +453,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         vmstate = self._hypervutils.get_vm_state(self._instance_data["name"])
         self.assertEquals(vmstate, constants.HYPERV_VM_STATE_ENABLED)
 
-        (vhd_paths, _) = self._hypervutils.get_vm_disks(
+        (vhd_paths, _, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])
         self.assertEquals(len(vhd_paths), 1)
 
@@ -434,7 +476,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
     def test_attach_volume(self):
         self._attach_volume()
 
-        (_, volumes_paths) = self._hypervutils.get_vm_disks(
+        (_, volumes_paths, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])
         self.assertEquals(len(volumes_paths), 1)
 
@@ -450,7 +492,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._conn.detach_volume(connection_info,
             self._instance_data["name"], '/dev/sdc')
 
-        (_, volumes_paths) = self._hypervutils.get_vm_disks(
+        (_, volumes_paths, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])
         self.assertEquals(len(volumes_paths), 0)
 
@@ -464,7 +506,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
         self._spawn_instance(False, block_device_info)
 
-        (_, volumes_paths) = self._hypervutils.get_vm_disks(
+        (_, volumes_paths, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])
 
         self.assertEquals(len(volumes_paths), 1)

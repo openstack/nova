@@ -165,7 +165,13 @@ class HyperVUtils(object):
             drive_path = hostResources[0]
             volume_drives.append(drive_path)
 
-        return (disk_files, volume_drives)
+        dvds = [r for r in rasds
+            if r.ResourceSubType == 'Microsoft Virtual CD/DVD Disk']
+        dvd_files = []
+        for dvd in dvds:
+            dvd_files.extend([c for c in dvd.Connection])
+
+        return (disk_files, volume_drives, dvd_files)
 
     def remove_remote_vm(self, server, vm_name):
         conn = wmi.WMI(moniker='//' + server + '/root/virtualization')
@@ -181,7 +187,8 @@ class HyperVUtils(object):
         #Stop the VM first.
         self._set_vm_state(conn, vm_name, 3)
 
-        (disk_files, volume_drives) = self._get_vm_disks(conn, vm_name)
+        (disk_files, volume_drives, dvd_files) = self._get_vm_disks(conn,
+            vm_name)
 
         (job, ret_val) = vs_man_svc.DestroyVirtualSystem(vm.path_())
         if ret_val == constants.WMI_JOB_STATUS_STARTED:
@@ -192,7 +199,7 @@ class HyperVUtils(object):
             raise Exception(_('Failed to destroy vm %s') % vm_name)
 
         #Delete associated vhd disk files.
-        for disk in disk_files:
+        for disk in disk_files + dvd_files:
             vhd_file = conn_cimv2.query(
             "Select * from CIM_DataFile where Name = '" +
                 disk.replace("'", "''") + "'")[0]

@@ -30,14 +30,20 @@ from nova import utils
 def get_fake_instance_data(name, project_id, user_id):
     return {'name': name,
               'id': 1,
-              'uuid': uuid.uuid4(),
+              'uuid': str(uuid.uuid4()),
               'project_id': project_id,
               'user_id': user_id,
               'image_ref': "1",
               'kernel_id': "1",
               'ramdisk_id': "1",
               'mac_address': "de:ad:be:ef:be:ef",
-              'instance_type': 'm1.tiny',
+              'instance_type':
+                {'name': 'm1.tiny',
+                'memory_mb': 512,
+                'vcpus': 1,
+                'root_gb': 0,
+                'flavorid': 1,
+                'rxtx_factor': 1}
               }
 
 
@@ -105,14 +111,20 @@ def stub_out_db_instance_api(stubs):
         def __init__(self, values):
             self.values = values
 
+        def get(self, key, default=None):
+            if key in self.values:
+                return self.values[key]
+            else:
+                return default
+
         def __getattr__(self, name):
             return self.values[name]
 
         def __getitem__(self, key):
-            if key in self.values:
-                return self.values[key]
-            else:
-                raise NotImplementedError()
+            return self.get(key)
+
+        def __str__(self):
+            return str(self.values)
 
     def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
@@ -120,12 +132,12 @@ def stub_out_db_instance_api(stubs):
         if 'instance_type' not in values:
             return
 
-        type_data = INSTANCE_TYPES[values['instance_type']]
+        instance_type = values['instance_type']
 
         base_options = {
             'name': values['name'],
             'id': values['id'],
-            'uuid': uuid.uuid4(),
+            'uuid': str(uuid.uuid4()),
             'reservation_id': utils.generate_uid('r'),
             'image_ref': values['image_ref'],
             'kernel_id': values['kernel_id'],
@@ -135,11 +147,11 @@ def stub_out_db_instance_api(stubs):
             'user_id': values['user_id'],
             'project_id': values['project_id'],
             'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-            'instance_type': values['instance_type'],
-            'memory_mb': type_data['memory_mb'],
-            'vcpus': type_data['vcpus'],
+            'instance_type': instance_type,
+            'memory_mb': instance_type['memory_mb'],
+            'vcpus': instance_type['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
-            'root_gb': type_data['root_gb'],
+            'root_gb': instance_type['root_gb'],
             }
         return FakeModel(base_options)
 
@@ -161,7 +173,12 @@ def stub_out_db_instance_api(stubs):
     def fake_instance_type_get_by_name(context, name):
         return INSTANCE_TYPES[name]
 
+    def fake_block_device_mapping_get_all_by_instance(context, instance_uuid):
+        return {}
+
     stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+        fake_block_device_mapping_get_all_by_instance)

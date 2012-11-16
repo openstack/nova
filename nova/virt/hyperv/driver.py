@@ -91,8 +91,8 @@ class HyperVDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        self._vmops.spawn(context, instance, image_meta, network_info,
-            block_device_info)
+        self._vmops.spawn(context, instance, image_meta, injected_files,
+              admin_password, network_info, block_device_info)
 
     def reboot(self, instance, network_info, reboot_type,
                block_device_info=None):
