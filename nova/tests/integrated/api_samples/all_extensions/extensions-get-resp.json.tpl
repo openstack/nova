@@ -225,6 +225,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-fping",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Fping",
+            "namespace": "http://docs.openstack.org/compute/ext/fping/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-hypervisors",
             "description": "%(text)s",
             "links": [],

@@ -84,6 +84,9 @@
   <extension alias="os-services" name="Services" namespace="http://docs.openstack.org/compute/ext/services/api/v2" updated="%(timestamp)s">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-fping" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/fping/api/v1.1" name="Fping">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-hypervisors" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/hypervisors/api/v1.1" name="Hypervisors">
     <description>%(text)s</description>
   </extension>

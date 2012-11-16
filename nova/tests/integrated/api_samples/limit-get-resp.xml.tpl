@@ -12,6 +12,9 @@
     <rate regex=".*changes-since.*" uri="*changes-since*">
       <limit next-available="%(timestamp)s" unit="MINUTE" verb="GET" remaining="3" value="3"/>
     </rate>
+    <rate regex="^/os-fping" uri="*/os-fping">
+      <limit next-available="%(timestamp)s" unit="HOUR" verb="GET" remaining="12" value="12"/>
+    </rate>
   </rates>
   <absolute>
     <limit name="maxServerMeta" value="128"/>
