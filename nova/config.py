@@ -218,6 +218,13 @@ global_opts = [
     cfg.IntOpt('sql_retry_interval',
                default=10,
                help='interval between retries of opening a sql connection'),
+    cfg.IntOpt('sql_pool_size',
+               default=None,
+               help='If set, use this value for pool_size with sqlalchemy'),
+    cfg.IntOpt('sql_max_overflow',
+               default=None,
+               help='If set, use this value for max_overflow with '
+                    'sqlalchemy'),
     cfg.StrOpt('compute_manager',
                default='nova.compute.manager.ComputeManager',
                help='full class name for the Manager for compute'),

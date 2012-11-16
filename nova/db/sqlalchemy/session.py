@@ -273,6 +273,11 @@ def create_engine(sql_connection):
         'convert_unicode': True,
     }
 
+    if CONF.sql_pool_size is not None:
+        engine_args['pool_size'] = CONF.sql_pool_size
+    if CONF.sql_max_overflow is not None:
+        engine_args['max_overflow'] = CONF.sql_max_overflow
+
     # Map our SQL debug level to SQLAlchemy's options
     if CONF.sql_connection_debug >= 100:
         engine_args['echo'] = 'debug'
