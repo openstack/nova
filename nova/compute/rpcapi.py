@@ -20,7 +20,6 @@ Client side of the compute RPC API.
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy
