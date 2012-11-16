@@ -97,11 +97,14 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 
 class FakeCinderClient(cinder.cinder_client.Client):
 
-    def __init__(self, username, password, project_id=None, auth_url=None):
+    def __init__(self, username, password, project_id=None, auth_url=None,
+                 retries=None):
         super(FakeCinderClient, self).__init__(username, password,
                                                project_id=project_id,
-                                               auth_url=auth_url)
-        self.client = FakeHTTPClient(username, password, project_id, auth_url)
+                                               auth_url=auth_url,
+                                               retries=retries)
+        self.client = FakeHTTPClient(username, password, project_id, auth_url,
+                                     retries=retries)
         # keep a ref to the clients callstack for factory's assert_called
         self.callstack = self.client.callstack = []
 
@@ -173,3 +176,11 @@ class CinderTestCase(test.TestCase):
         self.assert_called('GET', '/volumes/5678')
         self.assertTrue('volume_image_metadata' in volume)
         self.assertEqual(volume['volume_image_metadata'], _image_metadata)
+
+    def test_cinder_http_retries(self):
+        retries = 42
+        self.flags(cinder_http_retries=retries)
+        volume = self.api.get(self.context, '1234')
+        self.assert_called('GET', '/volumes/1234')
+        self.assertEquals(
+            self.fake_client_factory.client.client.retries, retries)

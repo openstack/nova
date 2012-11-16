@@ -1806,5 +1806,8 @@
 #### (StrOpt) Override service catalog lookup with template for cinder
 ####          endpoint e.g. http://localhost:8776/v1/%(project_id)s
 
+# cinder_http_retries=3
+#### (IntOpt) Number of cinderclient retries on failed http calls
 
-# Total option count: 462
+
+# Total option count: 463
