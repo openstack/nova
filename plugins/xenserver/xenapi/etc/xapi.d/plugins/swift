@@ -197,7 +197,6 @@ def _upload_tarball(staging_path, image_id, **params):
     using swift_client's chunked-transfer-encoded HTTP.
     """
     enable_snet = params['swift_enable_snet']
-    user = params['swift_store_user']
     create_container_on_put = params['swift_store_create_container_on_put']
     container =  params['swift_store_container']
     large_object_size = params['swift_store_large_object_size']
@@ -210,6 +209,7 @@ def _upload_tarball(staging_path, image_id, **params):
     key = params.get('swift_store_key')
     auth_version = params.get('swift_store_auth_version')
     full_auth_address = params.get('full_auth_address')
+    user = params.get('swift_store_user')
 
     # Multi Tenant
     storage_url = params.get('storage_url')
