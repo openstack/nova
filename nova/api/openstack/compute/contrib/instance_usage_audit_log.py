@@ -23,7 +23,6 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova import config
 from nova import db
-from nova import flags
 from nova import utils
 
 CONF = config.CONF

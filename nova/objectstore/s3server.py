@@ -45,7 +45,6 @@ import routes
 import webob
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova import utils

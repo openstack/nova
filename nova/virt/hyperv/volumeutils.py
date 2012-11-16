@@ -26,7 +26,6 @@ import time
 
 from nova import block_device
 from nova import config
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import vmutils

@@ -24,7 +24,6 @@ from nova.compute import vm_states
 from nova import config
 from nova import context
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test

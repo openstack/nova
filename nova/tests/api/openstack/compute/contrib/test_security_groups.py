@@ -28,7 +28,6 @@ from nova import compute
 from nova import config
 import nova.db
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova import quota
 from nova import test

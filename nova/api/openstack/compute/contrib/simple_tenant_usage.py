@@ -22,8 +22,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import api
+from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import timeutils
 
 authorize_show = extensions.extension_authorizer('compute',

@@ -24,7 +24,6 @@ import uuid
 
 from nova import config
 from nova import exception
-from nova import flags
 import nova.image.glance
 from nova.openstack.common import log as logging
 

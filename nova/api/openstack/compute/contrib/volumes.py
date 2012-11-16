@@ -24,8 +24,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import volume

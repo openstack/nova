@@ -19,7 +19,6 @@
 """Base class for classes that need modular database access."""
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 

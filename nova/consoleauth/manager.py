@@ -21,7 +21,6 @@
 import time
 
 from nova import config
-from nova import flags
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils

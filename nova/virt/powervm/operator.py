@@ -22,7 +22,6 @@ import time
 
 from nova import config
 from nova import exception as nova_exception
-from nova import flags
 from nova import utils
 
 from nova.compute import power_state

@@ -26,7 +26,6 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import matchers

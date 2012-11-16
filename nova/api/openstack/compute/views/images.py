@@ -19,7 +19,6 @@ import os.path
 
 from nova.api.openstack import common
 from nova import config
-from nova import flags
 from nova import utils
 
 CONF = config.CONF

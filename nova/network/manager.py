@@ -58,7 +58,6 @@ from nova.compute import api as compute_api
 from nova import config
 from nova import context
 from nova import exception
-from nova import flags
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api

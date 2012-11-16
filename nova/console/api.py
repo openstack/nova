@@ -21,7 +21,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import config
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
-from nova import flags
 from nova.openstack.common import rpc
 from nova.openstack.common import uuidutils
 

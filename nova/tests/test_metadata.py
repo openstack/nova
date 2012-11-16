@@ -32,7 +32,6 @@ from nova import config
 from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
-from nova import flags
 from nova.network import api as network_api
 from nova import test
 from nova.tests import fake_network

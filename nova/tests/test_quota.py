@@ -26,7 +26,6 @@ from nova import db
 from nova.db.sqlalchemy import api as sqa_api
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
-from nova import flags
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota

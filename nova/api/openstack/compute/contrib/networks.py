@@ -21,8 +21,8 @@ import webob
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova import config
 from nova import exception
-from nova import flags
 from nova import network
 from nova.openstack.common import log as logging
 

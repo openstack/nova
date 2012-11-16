@@ -17,7 +17,6 @@
 
 from nova.api.openstack import extensions as base_extensions
 from nova import config
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 

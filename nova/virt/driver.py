@@ -22,7 +22,7 @@ Driver base-classes:
     types that support that contract
 """
 
-from nova import flags
+from nova import config
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

@@ -27,7 +27,6 @@ except ImportError:
     suds = None
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.virt.vmwareapi import error_util
 

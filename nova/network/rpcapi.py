@@ -19,7 +19,6 @@ Client side of the network RPC API.
 """
 
 from nova import config
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import proxy as rpc_proxy

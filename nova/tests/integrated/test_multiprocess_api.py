@@ -21,7 +21,7 @@ import signal
 import time
 import traceback
 
-from nova import flags
+from nova import config
 from nova.openstack.common.log import logging
 from nova import service
 from nova.tests.integrated import integrated_helpers

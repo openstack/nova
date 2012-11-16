@@ -23,10 +23,10 @@ import urlparse
 from nova.api.openstack.compute import flavors
 from nova.api.openstack import xmlutil
 import nova.compute.instance_types
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers

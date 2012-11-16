@@ -40,7 +40,6 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova import flags
 from nova.network import manager
 from nova.network.quantumv2 import api as quantum_api
 from nova.openstack.common import jsonutils

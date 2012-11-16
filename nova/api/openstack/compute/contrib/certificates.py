@@ -20,7 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
-from nova import flags
+from nova import config
 from nova import network
 from nova.openstack.common import log as logging
 

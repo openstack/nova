@@ -20,7 +20,6 @@ Unit Tests for nova.network.rpcapi
 
 from nova import config
 from nova import context
-from nova import flags
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import rpc
 from nova import test

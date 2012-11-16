@@ -29,7 +29,6 @@ from nova.compute import manager as compute_manager
 from nova.compute import vm_states
 from nova import config
 from nova import db
-from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import log
 from nova import utils

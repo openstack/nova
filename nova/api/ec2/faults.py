@@ -17,7 +17,6 @@ import webob.exc
 
 from nova import config
 from nova import context
-from nova import flags
 from nova import utils
 
 CONF = config.CONF

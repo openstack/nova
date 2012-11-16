@@ -20,7 +20,6 @@ from nova.api.openstack import wsgi
 from nova.compute import utils as compute_utils
 from nova import config
 from nova import db
-from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes

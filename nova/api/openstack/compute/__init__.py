@@ -32,7 +32,6 @@ from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 

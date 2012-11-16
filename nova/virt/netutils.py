@@ -24,7 +24,6 @@
 import netaddr
 
 from nova import config
-from nova import flags
 
 CONF = config.CONF
 CONF.import_opt('injected_network_template', 'nova.virt.disk.api')

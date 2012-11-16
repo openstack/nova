@@ -22,7 +22,6 @@ import mox
 from nova import config
 from nova import context
 from nova import db
-from nova import flags
 from nova.network import linux_net
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils

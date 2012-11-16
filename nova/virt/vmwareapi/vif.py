@@ -19,7 +19,6 @@
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt import vif
 from nova.virt.vmwareapi import network_utils

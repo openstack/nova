@@ -24,8 +24,8 @@ import webob.exc
 import nova.api.openstack
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 import nova.policy

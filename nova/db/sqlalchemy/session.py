@@ -171,7 +171,6 @@ from sqlalchemy.pool import NullPool, StaticPool
 
 from nova import config
 import nova.exception
-import nova.flags as flags
 import nova.openstack.common.log as logging
 
 

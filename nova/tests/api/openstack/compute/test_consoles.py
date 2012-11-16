@@ -24,10 +24,10 @@ import webob
 
 from nova.api.openstack.compute import consoles
 from nova.compute import vm_states
+from nova import config
 from nova import console
 from nova import db
 from nova import exception
-from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -21,7 +21,7 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import flags
+from nova import config
 
 authorize = extensions.soft_extension_authorizer('compute', 'config_drive')
 
