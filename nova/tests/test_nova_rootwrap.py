@@ -69,29 +69,34 @@ class RootwrapTestCase(test.TestCase):
         p = subprocess.Popen(["cat"], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-        f = filters.KillFilter("root", "/bin/cat", "-9", "-HUP")
-        f2 = filters.KillFilter("root", "/usr/bin/cat", "-9", "-HUP")
-        usercmd = ['kill', '-ALRM', p.pid]
-        # Incorrect signal should fail
-        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
-        usercmd = ['kill', p.pid]
-        # Providing no signal should fail
-        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
-        # Providing matching signal should be allowed
-        usercmd = ['kill', '-9', p.pid]
-        self.assertTrue(f.match(usercmd) or f2.match(usercmd))
+        try:
+            f = filters.KillFilter("root", "/bin/cat", "-9", "-HUP")
+            f2 = filters.KillFilter("root", "/usr/bin/cat", "-9", "-HUP")
+            usercmd = ['kill', '-ALRM', p.pid]
+            # Incorrect signal should fail
+            self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+            usercmd = ['kill', p.pid]
+            # Providing no signal should fail
+            self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+            # Providing matching signal should be allowed
+            usercmd = ['kill', '-9', p.pid]
+            self.assertTrue(f.match(usercmd) or f2.match(usercmd))
 
-        f = filters.KillFilter("root", "/bin/cat")
-        f2 = filters.KillFilter("root", "/usr/bin/cat")
-        usercmd = ['kill', os.getpid()]
-        # Our own PID does not match /bin/sleep, so it should fail
-        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
-        usercmd = ['kill', 999999]
-        # Nonexistent PID should fail
-        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
-        usercmd = ['kill', p.pid]
-        # Providing no signal should work
-        self.assertTrue(f.match(usercmd) or f2.match(usercmd))
+            f = filters.KillFilter("root", "/bin/cat")
+            f2 = filters.KillFilter("root", "/usr/bin/cat")
+            usercmd = ['kill', os.getpid()]
+            # Our own PID does not match /bin/sleep, so it should fail
+            self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+            usercmd = ['kill', 999999]
+            # Nonexistent PID should fail
+            self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+            usercmd = ['kill', p.pid]
+            # Providing no signal should work
+            self.assertTrue(f.match(usercmd) or f2.match(usercmd))
+        finally:
+            # Terminate the "cat" process and wait for it to finish
+            p.terminate()
+            p.wait()
 
     def test_KillFilter_no_raise(self):
         """Makes sure ValueError from bug 926412 is gone"""
