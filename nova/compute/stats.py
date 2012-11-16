@@ -114,6 +114,10 @@ class Stats(dict):
         # save updated I/O workload in stats:
         self["io_workload"] = self.io_workload
 
+    def update_stats_for_migration(self, instance_type, sign=1):
+        x = self.get("num_vcpus_used", 0)
+        self["num_vcpus_used"] = x + (sign * instance_type['vcpus'])
+
     def _decrement(self, key):
         x = self.get(key, 0)
         self[key] = x - 1

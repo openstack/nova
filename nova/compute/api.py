@@ -1567,12 +1567,12 @@ class API(base.Base):
                                task_state=task_states.RESIZE_REVERTING,
                                expected_task_state=None)
 
+        self.db.migration_update(elevated, migration_ref['id'],
+                                 {'status': 'reverting'})
+
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration=migration_ref,
                 host=migration_ref['dest_compute'], reservations=reservations)
-
-        self.db.migration_update(elevated, migration_ref['id'],
-                                 {'status': 'reverted'})
 
     @wrap_check_policy
     @check_instance_lock
@@ -1591,13 +1591,13 @@ class API(base.Base):
                                task_state=None,
                                expected_task_state=None)
 
+        self.db.migration_update(elevated, migration_ref['id'],
+                {'status': 'confirming'})
+
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration=migration_ref,
                 host=migration_ref['source_compute'],
                 reservations=reservations)
-
-        self.db.migration_update(elevated, migration_ref['id'],
-                {'status': 'confirmed'})
 
     @staticmethod
     def _resize_quota_delta(context, new_instance_type,

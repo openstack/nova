@@ -26,15 +26,27 @@ from nova import test
 LOG = logging.getLogger(__name__)
 
 
+class DummyTracker(object):
+    icalled = False
+    rcalled = False
+
+    def abort_instance_claim(self, *args, **kwargs):
+        self.icalled = True
+
+    def abort_resize_claim(self, *args, **kwargs):
+        self.rcalled = True
+
+
 class ClaimTestCase(test.TestCase):
 
     def setUp(self):
         super(ClaimTestCase, self).setUp()
         self.resources = self._fake_resources()
+        self.tracker = DummyTracker()
 
     def _claim(self, **kwargs):
         instance = self._fake_instance(**kwargs)
-        return claims.Claim(instance, None)
+        return claims.Claim(instance, self.tracker)
 
     def _fake_instance(self, **kwargs):
         instance = {
@@ -46,6 +58,18 @@ class ClaimTestCase(test.TestCase):
         }
         instance.update(**kwargs)
         return instance
+
+    def _fake_instance_type(self, **kwargs):
+        instance_type = {
+            'id': 1,
+            'name': 'fakeitype',
+            'memory_mb': 1,
+            'vcpus': 1,
+            'root_gb': 1,
+            'ephemeral_gb': 2
+        }
+        instance_type.update(**kwargs)
+        return instance_type
 
     def _fake_resources(self, values=None):
         resources = {
@@ -109,17 +133,30 @@ class ClaimTestCase(test.TestCase):
         self.assertFalse(claim.test(self.resources, limits))
 
     def test_abort(self):
-        instance = self._fake_instance(root_gb=10, ephemeral_gb=40)
+        claim = self._abort()
+        self.assertTrue(claim.tracker.icalled)
 
-        def fake_abort(self):
-            self._called = True
-
-        self.stubs.Set(claims.Claim, 'abort', fake_abort)
+    def _abort(self):
         claim = None
         try:
-            with claims.Claim(instance, None) as claim:
+            with self._claim(memory_mb=4096) as claim:
                 raise test.TestingException("abort")
         except test.TestingException:
             pass
 
-        self.assertTrue(claim._called)
+        return claim
+
+
+class ResizeClaimTestCase(ClaimTestCase):
+
+    def setUp(self):
+        super(ResizeClaimTestCase, self).setUp()
+        self.instance = self._fake_instance()
+
+    def _claim(self, **kwargs):
+        instance_type = self._fake_instance_type(**kwargs)
+        return claims.ResizeClaim(self.instance, instance_type, self.tracker)
+
+    def test_abort(self):
+        claim = self._abort()
+        self.assertTrue(claim.tracker.rcalled)
