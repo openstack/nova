@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
@@ -72,7 +70,7 @@ class FixedIPController(object):
             fixed_ip = db.fixed_ip_get_by_address(context, address)
             db.fixed_ip_update(context, fixed_ip['address'],
                                {'reserved': reserved})
-        except exception.FixedIpNotFoundForAddress as ex:
+        except exception.FixedIpNotFoundForAddress:
             msg = _("Fixed IP %s not found") % address
             raise webob.exc.HTTPNotFound(explanation=msg)
 
