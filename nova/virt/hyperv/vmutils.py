@@ -55,7 +55,6 @@ class VMUtils(object):
         else:
             return vms[0].ElementName
 
-    #TODO(alexpilotti): use the reactor to poll instead of sleep
     def check_job_status(self, jobpath):
         """Poll WMI job state for completion"""
         job_wmi_path = jobpath.replace('\\', '/')
@@ -65,12 +64,26 @@ class VMUtils(object):
             time.sleep(0.1)
             job = wmi.WMI(moniker=job_wmi_path)
         if job.JobState != constants.WMI_JOB_STATE_COMPLETED:
-            LOG.debug(_("WMI job failed: %(ErrorSummaryDescription)s - "
-                "%(ErrorDescription)s - %(ErrorCode)s") % job)
+            job_state = job.JobState
+            if job.path().Class == "Msvm_ConcreteJob":
+                err_sum_desc = job.ErrorSummaryDescription
+                err_desc = job.ErrorDescription
+                err_code = job.ErrorCode
+                LOG.debug(_("WMI job failed with status %(job_state)d. "
+                    "Error details: %(err_sum_desc)s - %(err_desc)s - "
+                    "Error code: %(err_code)d") % locals())
+            else:
+                (error, ret_val) = job.GetError()
+                if not ret_val and error:
+                    LOG.debug(_("WMI job failed with status %(job_state)d. "
+                        "Error details: %(error)s") % locals())
+                else:
+                    LOG.debug(_("WMI job failed with status %(job_state)d. "
+                        "No error description available") % locals())
             return False
         desc = job.Description
         elap = job.ElapsedTime
-        LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s ")
+        LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s")
                 % locals())
         return True
 
