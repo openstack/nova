@@ -1016,7 +1016,8 @@ class Resource(wsgi.Application):
                 meth = getattr(self.controller, action)
         except AttributeError:
             if (not self.wsgi_actions or
-                action not in ['action', 'create', 'delete']):
+                action not in ['action', 'create', 'delete', 'update',
+                               'show']):
                 # Propagate the error
                 raise
         else:
