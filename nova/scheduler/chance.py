@@ -25,7 +25,6 @@ import random
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.scheduler import driver
 
 CONF = config.CONF

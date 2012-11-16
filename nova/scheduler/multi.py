@@ -28,7 +28,6 @@ https://bugs.launchpad.net/nova/+bug/1009681
 """
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.scheduler import driver

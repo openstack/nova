@@ -18,13 +18,7 @@
 Manage hosts in the current zone.
 """
 
-from nova import flags
-from nova.openstack.common import log as logging
 from nova.scheduler import host_manager
-
-
-FLAGS = flags.FLAGS
-LOG = logging.getLogger(__name__)
 
 
 class BaremetalNodeState(host_manager.HostState):
