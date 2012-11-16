@@ -23,7 +23,6 @@ import os
 import sqlalchemy
 
 from nova import exception
-from nova import flags
 from nova.openstack.common import log as logging
 from nova.virt.baremetal.db import migration
 from nova.virt.baremetal.db.sqlalchemy.session import get_engine
@@ -58,7 +57,6 @@ from migrate import exceptions as versioning_exceptions
 from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
 
-FLAGS = flags.FLAGS
 
 _REPOSITORY = None
 
