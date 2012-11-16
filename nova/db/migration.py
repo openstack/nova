@@ -24,7 +24,7 @@ from nova import utils
 IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.migration')
 
-INIT_VERSION = 81
+INIT_VERSION = 132
 
 
 def db_sync(version=None):
