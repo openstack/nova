@@ -124,6 +124,9 @@ class API(base.Base):
         return self.network_rpcapi.get_floating_ips_by_fixed_address(context,
                 fixed_address)
 
+    def get_backdoor_port(self, context):
+        return self.network_rpcapi.get_backdoor_port(context)
+
     def get_instance_id_by_floating_address(self, context, address):
         # NOTE(tr3buchet): i hate this
         return self.network_rpcapi.get_instance_id_by_floating_address(context,

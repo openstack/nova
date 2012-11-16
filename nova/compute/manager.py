@@ -265,7 +265,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.16'
+    RPC_API_VERSION = '2.17'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -421,6 +421,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.get_info(instance)["state"]
         except exception.NotFound:
             return power_state.NOSTATE
+
+    def get_backdoor_port(self, context):
+        """Return backdoor port for eventlet_backdoor"""
+        return self.backdoor_port
 
     def get_console_topic(self, context):
         """Retrieves the console host for a project on this host.
