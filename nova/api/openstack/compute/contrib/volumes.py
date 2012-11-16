@@ -127,20 +127,20 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
 
     def _extract_volume(self, node):
         """Marshal the volume attribute of a parsed request."""
-        volume = {}
+        vol = {}
         volume_node = self.find_first_child_named(node, 'volume')
 
         attributes = ['display_name', 'display_description', 'size',
                       'volume_type', 'availability_zone']
         for attr in attributes:
             if volume_node.getAttribute(attr):
-                volume[attr] = volume_node.getAttribute(attr)
+                vol[attr] = volume_node.getAttribute(attr)
 
         metadata_node = self.find_first_child_named(volume_node, 'metadata')
         if metadata_node is not None:
-            volume['metadata'] = self.extract_metadata(metadata_node)
+            vol['metadata'] = self.extract_metadata(metadata_node)
 
-        return volume
+        return vol
 
 
 class CreateDeserializer(CommonDeserializer):
@@ -153,8 +153,8 @@ class CreateDeserializer(CommonDeserializer):
     def default(self, string):
         """Deserialize an xml-formatted volume create request."""
         dom = minidom.parseString(string)
-        volume = self._extract_volume(dom)
-        return {'body': {'volume': volume}}
+        vol = self._extract_volume(dom)
+        return {'body': {'volume': vol}}
 
 
 class VolumeController(wsgi.Controller):
@@ -185,8 +185,8 @@ class VolumeController(wsgi.Controller):
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
 
         try:
-            volume = self.volume_api.get(context, id)
-            self.volume_api.delete(context, volume)
+            vol = self.volume_api.get(context, id)
+            self.volume_api.delete(context, vol)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -581,7 +581,7 @@ class SnapshotController(wsgi.Controller):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
-        volume = self.volume_api.get(context, volume_id)
+        vol = self.volume_api.get(context, volume_id)
 
         force = snapshot.get('force', False)
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
@@ -593,12 +593,12 @@ class SnapshotController(wsgi.Controller):
 
         if utils.bool_from_str(force):
             new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        volume,
+                                        vol,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(context,
-                                        volume,
+                                        vol,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
 
