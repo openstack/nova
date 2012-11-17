@@ -169,13 +169,17 @@ import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 
-from nova import config
 import nova.exception
 from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
 
 
 CONF = cfg.CONF
+CONF.import_opt('sql_connection', 'nova.config')
+CONF.import_opt('sql_idle_timeout', 'nova.config')
+CONF.import_opt('sqlite_synchronous', 'nova.config')
+CONF.import_opt('sql_max_retries', 'nova.config')
+CONF.import_opt('sql_retry_interval', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None

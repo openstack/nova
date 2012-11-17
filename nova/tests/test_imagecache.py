@@ -27,7 +27,6 @@ from nova import test
 
 from nova.compute import manager as compute_manager
 from nova.compute import vm_states
-from nova import config
 from nova import db
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -37,6 +36,8 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
 CONF = cfg.CONF
+CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('host', 'nova.config')
 
 LOG = log.getLogger(__name__)
 

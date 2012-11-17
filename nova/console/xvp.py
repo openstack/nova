@@ -22,7 +22,6 @@ import signal
 
 from Cheetah import Template
 
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -51,6 +50,8 @@ xvp_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xvp_opts)
+CONF.import_opt('host', 'nova.config')
+CONF.import_opt('pybasedir', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

@@ -55,7 +55,6 @@ from eventlet import greenpool
 import netaddr
 
 from nova.compute import api as compute_api
-from nova import config
 from nova import context
 from nova import exception
 from nova import ipv6
@@ -163,6 +162,13 @@ network_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(network_opts)
+CONF.import_opt('fake_network', 'nova.config')
+CONF.import_opt('floating_ip_dns_manager', 'nova.config')
+CONF.import_opt('instance_dns_domain', 'nova.config')
+CONF.import_opt('instance_dns_manager', 'nova.config')
+CONF.import_opt('network_driver', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
 
 
 class RPCAllocateFixedIP(object):

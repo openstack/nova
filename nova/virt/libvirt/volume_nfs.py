@@ -20,7 +20,6 @@
 import ctypes
 import os
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -36,6 +35,7 @@ volume_opts = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(volume_opts)
+CONF.import_opt('state_path', 'nova.config')
 
 
 class NfsVolumeDriver(volume.LibvirtVolumeDriver):

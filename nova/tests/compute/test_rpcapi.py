@@ -19,7 +19,6 @@ Unit Tests for nova.compute.rpcapi
 """
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova import config
 from nova import context
 from nova import db
 from nova.openstack.common import cfg
@@ -28,6 +27,7 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.config')
 
 
 class ComputeRpcAPITestCase(test.TestCase):

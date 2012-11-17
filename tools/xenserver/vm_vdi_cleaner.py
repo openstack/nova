@@ -27,7 +27,6 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
         sys.path.insert(0, possible_topdir)
 
 
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -37,6 +36,7 @@ from nova.virt.xenapi import driver as xenapi_driver
 
 
 CONF = cfg.CONF
+CONF.import_opt('zombie_instance_updated_at_window', 'nova.config')
 CONF.import_opt("resize_confirm_window", "nova.compute.manager")
 
 

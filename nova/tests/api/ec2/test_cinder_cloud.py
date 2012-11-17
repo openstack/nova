@@ -24,7 +24,6 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -38,6 +37,8 @@ from nova.tests import matchers
 from nova import volume
 
 CONF = cfg.CONF
+CONF.import_opt('default_instance_type', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

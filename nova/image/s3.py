@@ -31,7 +31,6 @@ from lxml import etree
 
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
-from nova import config
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
@@ -62,6 +61,8 @@ s3_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(s3_opts)
+CONF.import_opt('s3_host', 'nova.config')
+CONF.import_opt('s3_port', 'nova.config')
 
 
 class S3ImageService(object):

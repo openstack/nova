@@ -28,13 +28,14 @@ import tempfile
 from boto import exception as boto_exception
 from boto.s3 import connection as s3
 
-from nova import config
 from nova.objectstore import s3server
 from nova.openstack.common import cfg
 from nova import test
 from nova import wsgi
 
 CONF = cfg.CONF
+CONF.import_opt('s3_host', 'nova.config')
+CONF.import_opt('s3_port', 'nova.config')
 
 # Create a unique temporary directory. We don't delete after test to
 # allow checking the contents after running tests. Users and/or tools

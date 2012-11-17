@@ -18,11 +18,11 @@
 import os.path
 
 from nova.api.openstack import common
-from nova import config
 from nova.openstack.common import cfg
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('osapi_glance_link_prefix', 'nova.config')
 
 
 class ViewBuilder(common.ViewBuilder):

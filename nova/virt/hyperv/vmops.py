@@ -22,7 +22,6 @@ import os
 import uuid
 
 from nova.api.metadata import base as instance_metadata
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
@@ -59,6 +58,7 @@ hyperv_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts)
+CONF.import_opt('use_cow_images', 'nova.config')
 
 
 class VMOps(baseops.BaseOps):

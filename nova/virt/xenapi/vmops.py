@@ -30,7 +30,6 @@ from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import vm_mode
 from nova.compute import vm_states
-from nova import config
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import cfg
@@ -61,6 +60,7 @@ xenapi_vmops_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vmops_opts)
+CONF.import_opt('host', 'nova.config')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (

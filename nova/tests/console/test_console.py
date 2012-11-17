@@ -18,7 +18,6 @@
 
 """Tests For Console proxy."""
 
-from nova import config
 from nova.console import api as console_api
 from nova.console import rpcapi as console_rpcapi
 from nova import context
@@ -30,6 +29,7 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
+CONF.import_opt('console_manager', 'nova.config')
 CONF.import_opt('console_driver', 'nova.console.manager')
 
 

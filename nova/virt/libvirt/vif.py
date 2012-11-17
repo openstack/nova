@@ -19,7 +19,6 @@
 
 """VIF drivers for libvirt."""
 
-from nova import config
 from nova import exception
 from nova.network import linux_net
 from nova.openstack.common import cfg
@@ -44,6 +43,7 @@ libvirt_vif_opts = [
 CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts)
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
+CONF.import_opt('use_ipv6', 'nova.config')
 
 LINUX_DEV_LEN = 14
 

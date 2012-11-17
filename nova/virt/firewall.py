@@ -17,7 +17,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova import context
 from nova import network
 from nova.network import linux_net
@@ -42,6 +41,7 @@ firewall_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(firewall_opts)
+CONF.import_opt('use_ipv6', 'nova.config')
 
 
 def load_driver(default, *args, **kwargs):

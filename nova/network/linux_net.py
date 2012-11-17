@@ -24,7 +24,6 @@ import inspect
 import netaddr
 import os
 
-from nova import config
 from nova import db
 from nova import exception
 from nova.openstack.common import cfg
@@ -89,6 +88,14 @@ linux_net_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(linux_net_opts)
+CONF.import_opt('bindir', 'nova.config')
+CONF.import_opt('fake_network', 'nova.config')
+CONF.import_opt('host', 'nova.config')
+CONF.import_opt('metadata_host', 'nova.config')
+CONF.import_opt('metadata_port', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('state_path', 'nova.config')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we

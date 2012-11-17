@@ -15,12 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers
 
 CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

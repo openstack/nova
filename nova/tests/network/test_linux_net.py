@@ -19,7 +19,6 @@ import os
 
 import mox
 
-from nova import config
 from nova import context
 from nova import db
 from nova.network import linux_net
@@ -31,6 +30,7 @@ from nova import test
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('network_driver', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 HOST = "testhost"

@@ -28,7 +28,6 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova import config
 from nova import db
 from nova import exception
 from nova import notifications
@@ -54,8 +53,7 @@ scheduler_driver_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(scheduler_driver_opts)
-
-CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.config')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 

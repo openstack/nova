@@ -29,7 +29,6 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -58,6 +57,10 @@ from nova.virt.xenapi import volume_utils
 LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
+CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('host', 'nova.config')
+CONF.import_opt('network_manager', 'nova.config')
+CONF.import_opt('node_availability_zone', 'nova.config')
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'

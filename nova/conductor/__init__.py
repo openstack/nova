@@ -13,7 +13,6 @@
 #    under the License.
 
 from nova.conductor import api as conductor_api
-import nova.config
 import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 

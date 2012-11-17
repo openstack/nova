@@ -14,7 +14,6 @@
 
 """Client side of the conductor RPC API"""
 
-from nova import config
 from nova.openstack.common import cfg
 import nova.openstack.common.rpc.proxy
 

@@ -22,7 +22,6 @@ import traceback
 
 from nova import block_device
 from nova.compute import instance_types
-from nova import config
 from nova import db
 from nova import exception
 from nova.network import model as network_model
@@ -33,6 +32,8 @@ from nova.openstack.common.notifier import api as notifier_api
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('compute_driver', 'nova.config')
+CONF.import_opt('host', 'nova.config')
 LOG = log.getLogger(__name__)
 
 

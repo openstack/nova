@@ -44,7 +44,6 @@ import urllib
 import routes
 import webob
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova import utils
@@ -65,6 +64,7 @@ s3_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(s3_opts)
+CONF.import_opt('state_path', 'nova.config')
 
 
 def get_wsgi_server():

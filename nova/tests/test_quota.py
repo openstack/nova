@@ -20,7 +20,6 @@ import datetime
 
 from nova import compute
 from nova.compute import instance_types
-from nova import config
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqa_api
@@ -35,6 +34,7 @@ from nova import test
 import nova.tests.image.fake
 
 CONF = cfg.CONF
+CONF.import_opt('scheduler_topic', 'nova.config')
 
 
 class QuotaIntegrationTestCase(test.TestCase):

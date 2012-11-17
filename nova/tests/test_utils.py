@@ -27,7 +27,6 @@ from eventlet import greenpool
 import mox
 
 import nova
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
@@ -35,6 +34,7 @@ from nova import test
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('glance_port', 'nova.config')
 
 
 class ByteConversionTest(test.TestCase):
