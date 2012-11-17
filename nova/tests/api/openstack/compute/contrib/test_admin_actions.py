@@ -21,16 +21,16 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import admin_actions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.api.openstack import fakes
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 INSTANCE = {
              "id": 1,

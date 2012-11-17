@@ -71,7 +71,7 @@ ec2_opts = [
                help='Time in seconds before ec2 timestamp expires'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 

@@ -23,9 +23,10 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova import config
 from nova import db
+from nova.openstack.common import cfg
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 authorize = extensions.extension_authorizer('compute',

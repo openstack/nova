@@ -18,11 +18,12 @@
 
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.volume import <foo>' elsewhere.
-import nova.config
+import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
 
 def API():
     importutils = nova.openstack.common.importutils
-    cls = importutils.import_class(nova.config.CONF.volume_api_class)
+    volume_api_class = nova.openstack.common.cfg.CONF.volume_api_class
+    cls = importutils.import_class(volume_api_class)
     return cls()

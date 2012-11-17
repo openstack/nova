@@ -23,7 +23,6 @@ from nova.compute import claims
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -44,7 +43,7 @@ resource_tracker_opts = [
                help='Class that will manage stats for the local compute host')
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(resource_tracker_opts)
 
 LOG = logging.getLogger(__name__)

@@ -42,13 +42,14 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 
 from nova import config
 from nova.objectstore import s3server
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 from nova.vnc import xvp_proxy
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger('nova.all')
 
 if __name__ == '__main__':

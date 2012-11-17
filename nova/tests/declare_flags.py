@@ -16,8 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(cfg.IntOpt('answer', default=42, help='test flag'))

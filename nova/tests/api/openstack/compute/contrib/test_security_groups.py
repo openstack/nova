@@ -25,15 +25,15 @@ from nova.api.openstack.compute.contrib import security_groups
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova import config
 import nova.db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
 
-CONF = config.CONF
+CONF = cfg.CONF
 FAKE_UUID = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
 
 

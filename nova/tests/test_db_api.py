@@ -22,16 +22,16 @@
 import datetime
 import uuid as stdlib_uuid
 
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import matchers
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('reserved_host_memory_mb', 'nova.compute.resource_tracker')
 CONF.import_opt('reserved_host_disk_mb', 'nova.compute.resource_tracker')
 

@@ -38,7 +38,7 @@ consoleauth_opts = [
                help='Manager for console auth'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(consoleauth_opts)
 
 

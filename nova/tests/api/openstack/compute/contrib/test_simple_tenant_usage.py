@@ -22,7 +22,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage
 from nova.compute import api
-from nova import config
 from nova import context
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy

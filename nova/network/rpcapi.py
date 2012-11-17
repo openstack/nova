@@ -19,11 +19,12 @@ Client side of the network RPC API.
 """
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import proxy as rpc_proxy
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class NetworkAPI(rpc_proxy.RpcProxy):

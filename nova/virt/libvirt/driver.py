@@ -183,7 +183,7 @@ libvirt_opts = [
                     'before uploading them to image service'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(libvirt_opts)
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')

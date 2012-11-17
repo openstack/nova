@@ -26,7 +26,6 @@ import re
 
 from lxml import etree
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
@@ -46,7 +45,7 @@ util_opts = [
                     'non-standard locations')
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(util_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')

@@ -15,15 +15,15 @@
 
 """Bare-metal DB test base class."""
 
-from nova import config
 from nova import context as nova_context
+from nova.openstack.common import cfg
 from nova import test
 from nova.virt.baremetal.db import migration as bm_migration
 from nova.virt.baremetal.db.sqlalchemy import session as bm_session
 
 _DB = None
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('baremetal_sql_connection',
                 'nova.virt.baremetal.db.sqlalchemy.session')
 

@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 

@@ -30,7 +30,7 @@ opts = [
                     'bare-metal database'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(opts)
 
 _ENGINE = None

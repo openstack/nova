@@ -18,7 +18,6 @@
 """VMRC Console Manager."""
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova import config
 from nova import exception
 from nova import manager
 from nova.openstack.common import cfg
@@ -29,7 +28,7 @@ from nova.virt.vmwareapi import driver as vmwareapi_conn
 
 LOG = logging.getLogger(__name__)
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('console_driver', 'nova.console.manager')
 CONF.import_opt('console_public_hostname', 'nova.console.manager')
 

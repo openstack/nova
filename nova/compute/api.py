@@ -44,6 +44,7 @@ from nova import exception
 from nova.image import glance
 from nova import network
 from nova import notifications
+from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -59,7 +60,7 @@ from nova import volume
 
 LOG = logging.getLogger(__name__)
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
 
 MAX_USERDATA_SIZE = 65535

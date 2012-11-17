@@ -20,7 +20,6 @@ stacking, you can set the 'ram_weight_multiplier' option to a negative
 number and the weighing has the opposite effect of the default.
 """
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.scheduler import weights
 
@@ -32,7 +31,7 @@ ram_weight_opts = [
                           'numbers mean to stack vs spread.'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(ram_weight_opts)
 
 

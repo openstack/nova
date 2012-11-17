@@ -18,11 +18,12 @@
 
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.network import <foo>' elsewhere.
-import nova.config
+import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
 
 def API():
     importutils = nova.openstack.common.importutils
-    cls = importutils.import_class(nova.config.CONF.network_api_class)
+    network_api_class = nova.openstack.common.cfg.CONF.network_api_class
+    cls = importutils.import_class(network_api_class)
     return cls()

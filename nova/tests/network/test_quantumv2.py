@@ -19,17 +19,17 @@ import uuid
 
 import mox
 
-from nova import config
 from nova import context
 from nova import exception
 from nova.network import model
 from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantumapi
+from nova.openstack.common import cfg
 from nova import test
 from quantumclient.v2_0 import client
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 #NOTE: Quantum client raises Exception which is discouraged by HACKING.
 #      We set this variable here and use it for assertions below to avoid

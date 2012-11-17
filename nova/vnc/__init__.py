@@ -18,7 +18,6 @@
 
 """Module for VNC Proxying."""
 
-from nova import config
 from nova.openstack.common import cfg
 
 
@@ -46,5 +45,5 @@ vnc_opts = [
                help='keymap for vnc'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(vnc_opts)

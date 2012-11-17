@@ -51,7 +51,7 @@ quantum_opts = [
                     'quantum in admin context'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(quantum_opts)
 CONF.import_opt('default_floating_pool', 'nova.network.manager')
 LOG = logging.getLogger(__name__)

@@ -25,10 +25,11 @@ import webob.exc
 from nova.api.metadata import base
 from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import wsgi
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 LOG = logging.getLogger(__name__)

@@ -19,7 +19,6 @@
 
 import base64
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -35,7 +34,7 @@ vmrc_opts = [
                help="number of retries for retrieving VMRC information"),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(vmrc_opts)
 
 

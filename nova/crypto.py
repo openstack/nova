@@ -72,7 +72,7 @@ crypto_opts = [
                       'project, timestamp')),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(crypto_opts)
 
 

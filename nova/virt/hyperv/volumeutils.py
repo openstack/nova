@@ -26,6 +26,7 @@ import time
 
 from nova import block_device
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import vmutils
@@ -35,7 +36,7 @@ if sys.platform == 'win32':
     import _winreg
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class VolumeUtils(object):

@@ -22,9 +22,9 @@ import os
 import shutil
 import sys
 
-from nova import config
 from nova import exception
 from nova.image import glance
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import baseops
 from nova.virt.hyperv import constants
@@ -36,7 +36,7 @@ from xml.etree import ElementTree
 if sys.platform == 'win32':
     import wmi
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

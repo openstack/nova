@@ -19,7 +19,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
-from nova import config
 from nova import exception
 from nova.image import glance
 

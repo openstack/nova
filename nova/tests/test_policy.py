@@ -21,7 +21,6 @@ import os.path
 import StringIO
 import urllib2
 
-from nova import config
 from nova import context
 from nova import exception
 from nova.openstack.common import policy as common_policy

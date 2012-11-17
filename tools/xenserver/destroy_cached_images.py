@@ -43,7 +43,7 @@ destroy_opts = [
                 help='Don\'t actually delete the VDIs.')
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_cli_opts(destroy_opts)
 
 

@@ -20,7 +20,6 @@
 
 import datetime
 
-from nova import config
 from nova import db
 from nova import exception
 from nova.openstack.common import cfg
@@ -79,7 +78,7 @@ quota_opts = [
                help='default driver to use for quota checks'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(quota_opts)
 
 

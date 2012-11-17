@@ -28,6 +28,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova.network.manager import NetworkManager
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging
@@ -38,7 +39,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

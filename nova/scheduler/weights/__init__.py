@@ -18,13 +18,13 @@ Scheduler host weights
 """
 
 
-from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler.weights import least_cost
 from nova import weights
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class WeighedHost(weights.WeighedObject):

@@ -32,7 +32,7 @@ conductor_opts = [
 ]
 conductor_group = cfg.OptGroup(name='conductor',
                                title='Conductor Options')
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_group(conductor_group)
 CONF.register_opts(conductor_opts, conductor_group)
 

@@ -24,7 +24,6 @@ import webob
 
 from nova.api.openstack.compute import consoles
 from nova.compute import vm_states
-from nova import config
 from nova import console
 from nova import db
 from nova import exception

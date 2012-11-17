@@ -35,7 +35,6 @@ from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import vm_states
-import nova.config
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc

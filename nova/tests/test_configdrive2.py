@@ -22,7 +22,6 @@ import tempfile
 
 from nova import test
 
-from nova import config
 from nova.openstack.common import log
 from nova import utils
 from nova.virt import configdrive

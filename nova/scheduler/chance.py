@@ -25,9 +25,10 @@ import random
 
 from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.scheduler import driver
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class ChanceScheduler(driver.Scheduler):

@@ -18,7 +18,6 @@
 
 """Base class for classes that need modular database access."""
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 
@@ -26,7 +25,7 @@ db_driver_opt = cfg.StrOpt('db_driver',
                            default='nova.db',
                            help='driver to use for database access')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(db_driver_opt)
 
 

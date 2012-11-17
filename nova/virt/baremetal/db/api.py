@@ -42,7 +42,6 @@ these objects be simple dictionaries.
 
 """
 
-from nova import config
 from nova.openstack.common import cfg
 from nova import utils
 
@@ -53,7 +52,7 @@ db_opts = [
                help='The backend to use for db'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(db_opts)
 
 IMPL = utils.LazyPluggable(

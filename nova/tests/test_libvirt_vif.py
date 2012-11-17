@@ -16,13 +16,13 @@
 
 from lxml import etree
 
-from nova import config
+from nova.openstack.common import cfg
 from nova import test
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import vif
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class LibvirtVifTestCase(test.TestCase):

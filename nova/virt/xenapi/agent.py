@@ -21,7 +21,6 @@ import os
 import time
 import uuid
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -56,7 +55,7 @@ xenapi_agent_opts = [
                     'that VM does not have the agent installed'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xenapi_agent_opts)
 
 

@@ -115,7 +115,7 @@ xenapi_vm_utils_opts = [
                     ' within a given dom0. (-1 = no limit)')
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xenapi_vm_utils_opts)
 
 XENAPI_POWER_STATE = {

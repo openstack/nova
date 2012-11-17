@@ -20,6 +20,7 @@ from nova.api.openstack import wsgi
 from nova.compute import utils as compute_utils
 from nova import config
 from nova import db
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -27,7 +28,7 @@ from nova.tests import fake_network
 from nova.tests import matchers
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 def fake_vpn_instance():

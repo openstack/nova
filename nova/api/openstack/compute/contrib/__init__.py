@@ -23,10 +23,11 @@ It can't be called 'extensions' because that causes namespacing problems.
 
 from nova.api.openstack import extensions
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

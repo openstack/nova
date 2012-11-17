@@ -25,7 +25,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -42,7 +41,7 @@ fping_opts = [
                help="Full path to fping."),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(fping_opts)
 
 

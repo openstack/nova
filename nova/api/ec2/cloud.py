@@ -38,6 +38,7 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova import network
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
@@ -45,7 +46,7 @@ from nova import utils
 from nova import volume
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 

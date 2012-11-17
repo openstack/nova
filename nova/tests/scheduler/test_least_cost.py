@@ -15,7 +15,6 @@
 """
 Tests For Least Cost functions.
 """
-from nova import config
 from nova import context
 from nova.openstack.common import cfg
 from nova.scheduler import weights
@@ -33,7 +32,7 @@ test_least_cost_opts = [
              help='How much weight to give the fake_weigher2 function'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('least_cost_functions', 'nova.scheduler.weights.least_cost')
 CONF.import_opt('compute_fill_first_cost_fn_weight',
         'nova.scheduler.weights.least_cost')

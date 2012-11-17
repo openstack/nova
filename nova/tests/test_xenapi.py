@@ -33,6 +33,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -56,7 +57,7 @@ from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger(__name__)
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'

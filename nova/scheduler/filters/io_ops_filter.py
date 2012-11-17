@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
@@ -24,7 +23,7 @@ max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
         default=8,
         help="Ignore hosts that have too many builds/resizes/snaps/migrations")
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(max_io_ops_per_host_opt)
 
 

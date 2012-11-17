@@ -17,8 +17,8 @@
 
 """VIF drivers for VMWare."""
 
-from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import vif
 from nova.virt.vmwareapi import network_utils
@@ -26,7 +26,7 @@ from nova.virt.vmwareapi import network_utils
 
 LOG = logging.getLogger(__name__)
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.set_default('vmwareapi_vlan_interface', 'vmnic0')
 
 

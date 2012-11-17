@@ -21,13 +21,13 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
-from nova import config
 from nova import context
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import wsgi as base_wsgi
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 

@@ -49,7 +49,7 @@ test_opts = [
                 help='should we use everything for testing'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(test_opts)
 
 LOG = logging.getLogger(__name__)

@@ -23,12 +23,12 @@ import uuid
 import webob
 
 from nova.api.openstack.compute.contrib import networks
-from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova import test
 from nova.tests.api.openstack import fakes
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 FAKE_NETWORKS = [
     {

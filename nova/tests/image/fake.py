@@ -25,10 +25,11 @@ import uuid
 from nova import config
 from nova import exception
 import nova.image.glance
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

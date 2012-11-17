@@ -14,9 +14,10 @@
 #    under the License.
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.scheduler import filters
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class IsolatedHostsFilter(filters.BaseHostFilter):

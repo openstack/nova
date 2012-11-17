@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
@@ -27,7 +26,7 @@ cpu_allocation_ratio_opt = cfg.FloatOpt('cpu_allocation_ratio',
         default=16.0,
         help='Virtual CPU to Physical CPU allocation ratio')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(cpu_allocation_ratio_opt)
 
 

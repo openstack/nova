@@ -27,10 +27,11 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")

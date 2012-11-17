@@ -40,7 +40,7 @@ firewall_opts = [
                 help='Whether to allow network traffic from same network'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(firewall_opts)
 
 

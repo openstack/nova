@@ -19,7 +19,6 @@
 
 """VIF drivers for XenAPI."""
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import vif
@@ -31,7 +30,7 @@ xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
         default='xapi1',
         help='Name of Integration Bridge used by Open vSwitch')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(xenapi_ovs_integration_bridge_opt)
 LOG = logging.getLogger(__name__)
 

@@ -17,7 +17,6 @@
 from nova.compute import task_states
 from nova.compute import vm_states
 
-from nova import config
 from nova import context as nova_context
 
 from nova.openstack.common import cfg
@@ -50,7 +49,7 @@ powervm_opts = [
                help='Local directory to download glance images to'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(powervm_opts)
 
 

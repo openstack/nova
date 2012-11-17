@@ -25,12 +25,13 @@ from nova.network import api as network_api
 from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.libvirt import config as libvirt_config
 
 
 HOST = "testhost"
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class FakeIptablesFirewallDriver(object):

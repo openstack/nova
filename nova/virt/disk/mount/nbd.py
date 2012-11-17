@@ -18,7 +18,6 @@
 import os
 import time
 
-from nova import config
 from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.disk.mount import api
@@ -33,7 +32,7 @@ nbd_opts = [
                help='maximum number of possible nbd devices'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(nbd_opts)
 
 

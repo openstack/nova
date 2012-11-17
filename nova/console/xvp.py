@@ -49,7 +49,7 @@ xvp_opts = [
                help='port for XVP to multiplex VNC connections on'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xvp_opts)
 LOG = logging.getLogger(__name__)
 

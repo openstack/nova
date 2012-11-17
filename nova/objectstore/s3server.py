@@ -63,7 +63,7 @@ s3_opts = [
                help='port for s3 api to listen'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(s3_opts)
 
 

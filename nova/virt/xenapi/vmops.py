@@ -59,7 +59,7 @@ xenapi_vmops_opts = [
                help='The XenAPI VIF driver using XenServer Network APIs.')
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xenapi_vmops_opts)
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 

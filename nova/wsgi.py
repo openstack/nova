@@ -44,7 +44,7 @@ wsgi_opts = [
                  'into it: client_ip, date_time, request_line, status_code, '
                  'body_length, wall_seconds.')
     ]
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(wsgi_opts)
 
 LOG = logging.getLogger(__name__)

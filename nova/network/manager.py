@@ -161,7 +161,7 @@ network_opts = [
                help="Indicates underlying L3 management library")
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(network_opts)
 
 

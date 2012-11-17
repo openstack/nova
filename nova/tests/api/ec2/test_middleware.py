@@ -22,13 +22,13 @@ import webob.dec
 import webob.exc
 
 from nova.api import ec2
-from nova import config
 from nova import context
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 @webob.dec.wsgify

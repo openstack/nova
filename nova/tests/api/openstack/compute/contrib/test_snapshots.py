@@ -17,7 +17,6 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import volumes
-from nova import config
 from nova import context
 from nova import exception
 from nova.openstack.common import jsonutils

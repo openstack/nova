@@ -67,7 +67,7 @@ opts = [
                help='Port on which to listen for incoming requests'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_cli_opts(opts)
 LOG = logging.getLogger(__name__)
 

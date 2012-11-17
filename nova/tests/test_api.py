@@ -36,7 +36,6 @@ from nova.api import ec2
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova import block_device
-from nova import config
 from nova import context
 from nova import exception
 from nova.openstack.common import timeutils
