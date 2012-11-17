@@ -636,7 +636,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             task_state = task_states.SCHEDULING
 
             rescheduled = self._reschedule(context, request_spec,
-                    instance['uuid'], filter_properties,
+                    filter_properties, instance['uuid'],
                     self.scheduler_rpcapi.run_instance, method_args,
                     task_state)
 
