@@ -297,6 +297,14 @@
             "updated": "2012-01-23T00:00:00+00:00"
         },
         {
+            "alias": "os-services",
+            "description": "Services support",
+            "links": [],
+            "name": "Services",
+            "namespace": "http://docs.openstack.org/compute/ext/services/api/v2",
+            "updated": "2012-10-28T00:00:00-00:00"
+        },
+        {
             "alias": "os-simple-tenant-usage",
             "description": "Simple tenant usage extension",
             "links": [],
