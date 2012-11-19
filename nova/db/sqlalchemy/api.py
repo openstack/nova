@@ -2493,13 +2493,6 @@ def quota_usage_get_all_by_project(context, project_id):
 
 
 @require_admin_context
-def quota_usage_create(context, project_id, resource, in_use, reserved,
-                       until_refresh):
-    return _quota_usage_create(context, project_id, resource, in_use,
-                                reserved, until_refresh)
-
-
-@require_admin_context
 def _quota_usage_create(context, project_id, resource, in_use, reserved,
                        until_refresh, session=None):
     quota_usage_ref = models.QuotaUsage()
