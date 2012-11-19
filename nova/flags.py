@@ -24,5 +24,3 @@ This is left to support backwards compatibility.
 """
 
 from nova import config
-
-FLAGS = config.CONF
