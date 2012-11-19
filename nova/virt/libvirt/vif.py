@@ -144,7 +144,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
         network, mapping = vif
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
-        if not linux_net._device_exists(dev):
+        if not linux_net.device_exists(dev):
             # Older version of the command 'ip' from the iproute2 package
             # don't have support for the tuntap option (lp:882568).  If it
             # turns out we're on an old version we work around this by using
@@ -212,10 +212,10 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
         br_name = self.get_br_name(iface_id)
         v1_name, v2_name = self.get_veth_pair_names(iface_id)
 
-        if not linux_net._device_exists(br_name):
+        if not linux_net.device_exists(br_name):
             utils.execute('brctl', 'addbr', br_name, run_as_root=True)
 
-        if not linux_net._device_exists(v2_name):
+        if not linux_net.device_exists(v2_name):
             linux_net._create_veth_pair(v1_name, v2_name)
             utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
             utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
