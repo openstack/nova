@@ -5862,8 +5862,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
 
             self.compute._deallocate_network(self.context,
                     self.instance)
-            self.compute._reschedule(self.context, None, instance_uuid,
-                    {}, self.compute.scheduler_rpcapi.run_instance,
+            self.compute._reschedule(self.context, None, {}, instance_uuid,
+                    self.compute.scheduler_rpcapi.run_instance,
                     method_args, task_states.SCHEDULING).AndReturn(True)
             self.compute._log_original_error(exc_info, instance_uuid)
 
