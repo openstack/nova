@@ -26,7 +26,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
     """Filter compute nodes that satisfy instance image properties.
 
     The ImagePropertiesFilter filters compute nodes that satisfy
-    any architecture, hpervisor type, or virtual machine mode properties
+    any architecture, hypervisor type, or virtual machine mode properties
     specified on the instance's image properties.  Image properties are
     contained in the image dictionary in the request_spec.
     """
