@@ -1987,16 +1987,16 @@ def key_pair_create(context, values):
 @require_context
 def key_pair_destroy(context, user_id, name):
     authorize_user_context(context, user_id)
-    session = get_session()
-    with session.begin():
-        key_pair_ref = key_pair_get(context, user_id, name, session=session)
-        key_pair_ref.delete(session=session)
+    model_query(context, models.KeyPair).\
+             filter_by(user_id=user_id).\
+             filter_by(name=name).\
+             delete()
 
 
 @require_context
-def key_pair_get(context, user_id, name, session=None):
+def key_pair_get(context, user_id, name):
     authorize_user_context(context, user_id)
-    result = model_query(context, models.KeyPair, session=session).\
+    result = model_query(context, models.KeyPair).\
                      filter_by(user_id=user_id).\
                      filter_by(name=name).\
                      first()
