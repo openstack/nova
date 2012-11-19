@@ -952,7 +952,7 @@ def _execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
 
-def _device_exists(device):
+def device_exists(device):
     """Check if ethernet device exists."""
     (_out, err) = _execute('ip', 'link', 'show', 'dev', device,
                            check_exit_code=False, run_as_root=True)
@@ -1021,7 +1021,7 @@ def _create_veth_pair(dev1_name, dev2_name):
     deleting any previous devices with those names.
     """
     for dev in [dev1_name, dev2_name]:
-        if _device_exists(dev):
+        if device_exists(dev):
             try:
                 utils.execute('ip', 'link', 'delete', dev1_name,
                               run_as_root=True, check_exit_code=[0, 2, 254])
@@ -1124,7 +1124,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def ensure_vlan(_self, vlan_num, bridge_interface, mac_address=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
-        if not _device_exists(interface):
+        if not device_exists(interface):
             LOG.debug(_('Starting VLAN inteface %s'), interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
                      'name', interface, 'type', 'vlan',
@@ -1163,7 +1163,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         interface onto the bridge and reset the default gateway if necessary.
 
         """
-        if not _device_exists(bridge):
+        if not device_exists(bridge):
             LOG.debug(_('Starting Bridge %s'), bridge)
             _execute('brctl', 'addbr', bridge, run_as_root=True)
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
@@ -1232,7 +1232,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network, mac_address, gateway=True):
         dev = self.get_dev(network)
-        if not _device_exists(dev):
+        if not device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
             _execute('ovs-vsctl',
                      '--', '--may-exist', 'add-port', bridge, dev,
@@ -1310,7 +1310,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev, mac_address)
 
-        if not _device_exists(bridge):
+        if not device_exists(bridge):
             LOG.debug(_("Starting bridge %s "), bridge)
             utils.execute('brctl', 'addbr', bridge, run_as_root=True)
             utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
@@ -1331,7 +1331,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def unplug(self, network):
         dev = self.get_dev(network)
 
-        if not _device_exists(dev):
+        if not device_exists(dev):
             return None
         else:
             try:
@@ -1345,7 +1345,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @classmethod
     def create_tap_dev(_self, dev, mac_address=None):
-        if not _device_exists(dev):
+        if not device_exists(dev):
             try:
                 # First, try with 'ip'
                 utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
