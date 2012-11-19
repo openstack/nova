@@ -19,7 +19,6 @@ Client side of the console RPC API.
 """
 
 from nova import config
-from nova import flags
 import nova.openstack.common.rpc.proxy
 
 CONF = config.CONF

@@ -18,10 +18,10 @@
 
 import re
 
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack.compute import image_metadata
 from nova import config
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

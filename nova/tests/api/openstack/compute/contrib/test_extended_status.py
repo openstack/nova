@@ -18,8 +18,8 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
+from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

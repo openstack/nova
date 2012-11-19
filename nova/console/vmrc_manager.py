@@ -20,7 +20,6 @@
 from nova.compute import rpcapi as compute_rpcapi
 from nova import config
 from nova import exception
-from nova import flags
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils

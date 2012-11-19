@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova import config
-from nova import flags
 from nova.scheduler import filters
 
 CONF = config.CONF

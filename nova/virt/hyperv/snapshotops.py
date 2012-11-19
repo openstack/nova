@@ -24,7 +24,6 @@ import sys
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import baseops

@@ -20,9 +20,9 @@
 import functools
 import inspect
 
+from nova import config
 from nova.db import base
 from nova import exception
-from nova import flags
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import log as logging

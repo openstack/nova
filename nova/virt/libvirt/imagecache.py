@@ -30,7 +30,6 @@ import time
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils

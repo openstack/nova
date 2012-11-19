@@ -26,10 +26,10 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils

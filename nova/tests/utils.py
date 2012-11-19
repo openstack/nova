@@ -19,7 +19,6 @@ import platform
 import nova.config
 import nova.context
 import nova.db
-import nova.flags
 from nova.image import glance
 
 CONF = nova.config.CONF

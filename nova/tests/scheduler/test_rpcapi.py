@@ -20,7 +20,6 @@ Unit Tests for nova.scheduler.rpcapi
 
 from nova import config
 from nova import context
-from nova import flags
 from nova.openstack.common import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test

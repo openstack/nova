@@ -20,7 +20,6 @@ from nova.compute import api as compute_api
 from nova import config
 from nova.db import base
 from nova import exception
-from nova import flags
 from nova.network.api import refresh_cache
 from nova.network import model as network_model
 from nova.network import quantumv2

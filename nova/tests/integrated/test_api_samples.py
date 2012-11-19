@@ -27,7 +27,6 @@ from nova.compute import api
 from nova import config
 from nova import context
 from nova import db
-from nova import flags
 from nova.network.manager import NetworkManager
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils

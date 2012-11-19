@@ -18,7 +18,6 @@
 import os
 
 from nova import config
-from nova import flags
 from nova.openstack.common import fileutils
 from nova import test
 from nova.tests import fake_libvirt_utils

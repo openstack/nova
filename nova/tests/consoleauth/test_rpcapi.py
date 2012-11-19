@@ -21,7 +21,6 @@ Unit Tests for nova.consoleauth.rpcapi
 from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
-from nova import flags
 from nova.openstack.common import rpc
 from nova import test
 

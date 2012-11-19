@@ -24,7 +24,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import config
 import nova.db
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

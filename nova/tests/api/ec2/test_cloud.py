@@ -36,7 +36,6 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova.image import s3
 from nova.network import api as network_api
 from nova.openstack.common import log as logging

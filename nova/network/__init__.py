@@ -19,7 +19,6 @@
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.network import <foo>' elsewhere.
 import nova.config
-import nova.flags
 import nova.openstack.common.importutils
 
 

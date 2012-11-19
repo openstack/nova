@@ -16,7 +16,6 @@ import webob
 
 import nova.api.sizelimit
 from nova import config
-from nova import flags
 from nova import test
 
 CONF = config.CONF

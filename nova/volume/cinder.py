@@ -27,7 +27,6 @@ from cinderclient.v1 import client as cinder_client
 from nova import config
 from nova.db import base
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 

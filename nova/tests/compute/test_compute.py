@@ -41,7 +41,6 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.openstack.common import importutils

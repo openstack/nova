@@ -21,9 +21,9 @@ from xml.dom import minidom
 import webob
 
 from nova.compute import api as compute_api
+from nova import config
 from nova import db
 from nova import exception
-from nova import flags
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

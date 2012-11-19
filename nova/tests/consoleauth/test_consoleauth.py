@@ -22,9 +22,9 @@ Tests for Consoleauth Code.
 
 import time
 
+from nova import config
 from nova.consoleauth import manager
 from nova import context
-from nova import flags
 from nova.openstack.common import log as logging
 from nova import test
 

@@ -28,7 +28,6 @@ from nova import block_device
 from nova import config
 from nova import context
 from nova import db
-from nova import flags
 from nova import network
 from nova.openstack.common import cfg
 from nova.virt import netutils

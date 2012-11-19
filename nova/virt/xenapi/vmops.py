@@ -33,7 +33,6 @@ from nova.compute import vm_states
 from nova import config
 from nova import context as nova_context
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils

@@ -21,7 +21,6 @@ import base64
 
 from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.virt.vmwareapi import vim_util

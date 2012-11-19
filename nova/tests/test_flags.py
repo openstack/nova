@@ -18,7 +18,6 @@
 #    under the License.
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 from nova import test
 

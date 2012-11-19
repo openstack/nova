@@ -29,7 +29,6 @@ from boto import exception as boto_exception
 from boto.s3 import connection as s3
 
 from nova import config
-from nova import flags
 from nova.objectstore import s3server
 from nova import test
 from nova import wsgi

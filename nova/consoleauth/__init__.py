@@ -19,7 +19,6 @@
 """Module to authenticate Consoles."""
 
 from nova import config
-from nova import flags
 from nova.openstack.common import cfg
 
 

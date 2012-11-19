@@ -17,7 +17,6 @@
 #    under the License.
 
 from nova import config
-from nova import flags
 
 CONF = config.CONF
 

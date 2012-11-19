@@ -18,7 +18,6 @@ import tempfile
 
 from nova import config
 from nova import exception
-from nova import flags
 
 CONF = config.CONF
 

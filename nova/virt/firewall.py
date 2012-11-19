@@ -19,7 +19,6 @@
 
 from nova import config
 from nova import context
-from nova import flags
 from nova import network
 from nova.network import linux_net
 from nova.openstack.common import cfg

@@ -36,7 +36,6 @@ from nova.compute import vm_states
 from nova import config
 from nova import db
 from nova import exception
-from nova import flags
 from nova.image import s3
 from nova import network
 from nova.openstack.common import log as logging

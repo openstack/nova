@@ -30,7 +30,6 @@ from sqlalchemy.orm import relationship, backref, object_mapper
 from nova import config
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
-from nova import flags
 from nova.openstack.common import timeutils
 
 

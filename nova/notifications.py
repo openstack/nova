@@ -23,7 +23,6 @@ from nova import config
 import nova.context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import network
 from nova.network import model as network_model
 from nova.openstack.common import cfg
