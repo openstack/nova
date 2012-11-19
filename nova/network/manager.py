@@ -1385,6 +1385,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self.instance_dns_manager.delete_entry(n,
                                                       self.instance_dns_domain)
 
+        self.db.fixed_ip_update(context, address,
+                                {'allocated': False,
+                                 'virtual_interface_id': None})
+
         if teardown:
             network = self._get_network_by_id(context,
                                               fixed_ip_ref['network_id'])
@@ -1410,10 +1414,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
                 self.driver.release_dhcp(dev, address, vif['address'])
-
-        self.db.fixed_ip_update(context, address,
-                                {'allocated': False,
-                                 'virtual_interface_id': None})
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
