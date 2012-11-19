@@ -25,8 +25,8 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
+from nova import config
 from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
@@ -42,8 +42,8 @@ fping_opts = [
                help="Full path to fping."),
 ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(fping_opts)
+CONF = config.CONF
+CONF.register_opts(fping_opts)
 
 
 class FpingController(object):
@@ -53,13 +53,13 @@ class FpingController(object):
         self.last_call = {}
 
     def check_fping(self):
-        if not os.access(FLAGS.fping_path, os.X_OK):
+        if not os.access(CONF.fping_path, os.X_OK):
             raise exc.HTTPServiceUnavailable(
                 explanation=_("fping utility is not found."))
 
     @staticmethod
     def fping(ips):
-        fping_ret = utils.execute(FLAGS.fping_path, *ips,
+        fping_ret = utils.execute(CONF.fping_path, *ips,
                                   check_exit_code=False)
         if not fping_ret:
             return set()
