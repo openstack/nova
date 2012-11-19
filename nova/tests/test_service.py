@@ -159,7 +159,7 @@ class ServiceTestCase(test.TestCase):
         self._service_start_mocks()
         # pre_start_hook is called after service record is created,
         # but before RPC consumer is created
-        self.manager_mock.pre_start_hook()
+        self.manager_mock.pre_start_hook(rpc_connection=mox.IgnoreArg())
         self.manager_mock.create_rpc_dispatcher()
         # post_start_hook is called after RPC consumer is created.
         self.manager_mock.post_start_hook()
