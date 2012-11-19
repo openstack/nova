@@ -1,0 +1,45 @@
+==========
+nova-conductor
+==========
+
+--------------------------------
+Server for the Nova Conductor
+--------------------------------
+
+:Author: openstack@lists.launchpad.net
+:Date:   2012-11-16
+:Copyright: OpenStack LLC
+:Version: 2012.1
+:Manual section: 1
+:Manual group: cloud computing
+
+SYNOPSIS
+========
+
+  nova-conductor [options]
+
+DESCRIPTION
+===========
+
+nova-conductor is a server daemon that serves the Nova Conductor service, which provides coordination and database query support for Nova.
+
+OPTIONS
+=======
+
+ **General options**
+
+FILES
+========
+
+* /etc/nova/nova.conf
+
+SEE ALSO
+========
+
+* `OpenStack Nova <http://nova.openstack.org>`__
+* `OpenStack Nova <http://nova.openstack.org>`__
+
+BUGS
+====
+
+* Nova is sourced in Launchpad so you can view current bugs at `OpenStack Nova <http://nova.openstack.org>`__
