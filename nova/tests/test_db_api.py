@@ -304,6 +304,41 @@ class DbApiTestCase(test.TestCase):
         self.assertEquals("building", old_ref["vm_state"])
         self.assertEquals("needscoffee", new_ref["vm_state"])
 
+    def test_instance_update_with_extra_specs(self):
+        """Ensure _extra_specs are returned from _instance_update"""
+        ctxt = context.get_admin_context()
+
+        # create a flavor
+        inst_type_dict = dict(
+                    name="test_flavor",
+                    memory_mb=1,
+                    vcpus=1,
+                    root_gb=1,
+                    ephemeral_gb=1,
+                    flavorid=105)
+        inst_type_ref = db.instance_type_create(ctxt, inst_type_dict)
+
+        # add some extra spec to our flavor
+        spec = {'test_spec': 'foo'}
+        db.instance_type_extra_specs_update_or_create(
+                    ctxt,
+                    inst_type_ref['flavorid'],
+                    spec)
+
+        # create instance, just populates db, doesn't pull extra_spec
+        instance = db.instance_create(
+                    ctxt,
+                    {'instance_type_id': inst_type_ref['id']})
+        self.assertNotIn('extra_specs', instance)
+
+        # update instance, used when starting instance to set state, etc
+        (old_ref, new_ref) = db.instance_update_and_get_original(
+                    ctxt,
+                    instance['uuid'],
+                    {})
+        self.assertEquals(spec, old_ref['extra_specs'])
+        self.assertEquals(spec, new_ref['extra_specs'])
+
     def test_instance_fault_create(self):
         """Ensure we can create an instance fault"""
         ctxt = context.get_admin_context()
