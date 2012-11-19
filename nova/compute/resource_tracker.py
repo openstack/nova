@@ -370,7 +370,7 @@ class ResourceTracker(object):
         represent an incoming or outbound migration.
         """
         uuid = migration['instance_uuid']
-        LOG.audit("Updating from migration %s" % uuid)
+        LOG.audit(_("Updating from migration %s") % uuid)
 
         incoming = (migration['dest_compute'] == self.host)
         outbound = (migration['source_compute'] == self.host)

@@ -195,8 +195,9 @@ class FakeDriver(driver.ComputeDriver):
         if key in self.instances:
             del self.instances[key]
         else:
-            LOG.warning("Key '%s' not in instances '%s'" %
-                        (key, self.instances), instance=instance)
+            LOG.warning(_("Key '%(key)s' not in instances '%(inst)s'") %
+                        {'key': key,
+                         'inst': self.instances}, instance=instance)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach the disk to the instance at mountpoint using info"""

@@ -104,8 +104,8 @@ class Host(object):
 
                     break
                 except self._session.XenAPI.Failure:
-                    LOG.exception('Unable to migrate VM %(vm_ref)s'
-                                  'from %(host)s' % locals())
+                    LOG.exception(_('Unable to migrate VM %(vm_ref)s'
+                                  'from %(host)s') % locals())
                     (old_ref, new_ref) = self._virtapi.instance_update(
                                 ctxt,
                                 instance['uuid'],

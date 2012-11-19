@@ -226,7 +226,7 @@ def bandwidth_usage(instance_ref, audit_start,
             nw_info = network.API().get_instance_nw_info(admin_context,
                     instance_ref)
         except Exception:
-            LOG.exception('Failed to get nw_info', instance=instance_ref)
+            LOG.exception(_('Failed to get nw_info'), instance=instance_ref)
             if ignore_missing_network_data:
                 return
             raise
