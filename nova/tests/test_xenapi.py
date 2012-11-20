@@ -1254,6 +1254,20 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=False)
 
+    def test_migrate_no_auto_disk_config_no_resize_down(self):
+        """Resize down should fail when auto_disk_config not set"""
+        instance_values = self.instance_values
+        instance_values['root_gb'] = 40
+        instance_values['auto_disk_config'] = False
+        instance = db.instance_create(self.context, instance_values)
+        xenapi_fake.create_vm(instance.name, 'Running')
+        instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.ResizeError,
+                          conn.migrate_disk_and_power_off,
+                          self.context, instance,
+                          '127.0.0.1', instance_type, None)
+
 
 class XenAPIImageTypeTestCase(test.TestCase):
     """Test ImageType class."""
