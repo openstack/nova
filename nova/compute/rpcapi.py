@@ -145,6 +145,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.15 - Remove aggregate_id, add aggregate to remove_aggregate_host
         2.16 - Add instance_type to resize_instance
         2.17 - Add get_backdoor_port()
+        2.18 - Add bdms to rebuild_instance
     '''
 
     #
@@ -378,15 +379,16 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='2.5')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
-            image_ref, orig_image_ref, orig_sys_metadata):
+            image_ref, orig_image_ref, orig_sys_metadata, bdms):
         instance_p = jsonutils.to_primitive(instance)
+        bdms_p = jsonutils.to_primitive(bdms)
         self.cast(ctxt, self.make_msg('rebuild_instance',
                 instance=instance_p, new_pass=new_pass,
                 injected_files=injected_files, image_ref=image_ref,
                 orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata),
+                orig_sys_metadata=orig_sys_metadata, bdms=bdms_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.1')
+                version='2.18')
 
     def refresh_provider_fw_rules(self, ctxt, host):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
