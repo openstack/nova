@@ -116,6 +116,15 @@ class ExecutorTestCase(test.TestCase):
         result = self._execute(not_found)
         self.assertIn('i-00000005', self._extract_message(result))
 
+    def test_instance_not_found_none(self):
+        def not_found(context):
+            raise exception.InstanceNotFound(instance_id=None)
+
+        # NOTE(mikal): we want no exception to be raised here, which was what
+        # was happening in bug/1080406
+        result = self._execute(not_found)
+        self.assertIn('None', self._extract_message(result))
+
     def test_snapshot_not_found(self):
         def not_found(context):
             raise exception.SnapshotNotFound(snapshot_id=5)
