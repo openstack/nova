@@ -2754,10 +2754,10 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(dest_compute, CONF.host)
             return migrations
 
-        def fake_migration_update(context, migration_id, values):
+        def fake_migration_update(context, m, status):
             for migration in migrations:
-                if migration['id'] == migration_id and 'status' in values:
-                    migration['status'] = values['status']
+                if migration['id'] == m['id']:
+                    migration['status'] = status
 
         def fake_confirm_resize(context, instance):
             # raise exception for 'fake_uuid4' to check migration status
@@ -2772,7 +2772,7 @@ class ComputeTestCase(BaseTestCase):
                 fake_instance_get_by_uuid)
         self.stubs.Set(db, 'migration_get_unconfirmed_by_dest_compute',
                 fake_migration_get_unconfirmed_by_dest_compute)
-        self.stubs.Set(db, 'migration_update',
+        self.stubs.Set(self.compute.conductor_api, 'migration_update',
                 fake_migration_update)
         self.stubs.Set(self.compute.compute_api, 'confirm_resize',
                 fake_confirm_resize)

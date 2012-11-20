@@ -24,6 +24,7 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import notifications
+from nova.openstack.common import jsonutils
 from nova import test
 
 
@@ -87,6 +88,15 @@ class ConductorTestCase(BaseTestCase):
         if self.db == None:
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
+
+    def test_migration_update(self):
+        migration = db.migration_create(self.context.elevated(),
+                {'instance_uuid': 'fake-uuid',
+                 'status': 'migrating'})
+        migration_p = jsonutils.to_primitive(migration)
+        migration = self.conductor.migration_update(self.context, migration_p,
+                                                    'finished')
+        self.assertEqual(migration['status'], 'finished')
 
 
 class ConductorRPCAPITestCase(ConductorTestCase):

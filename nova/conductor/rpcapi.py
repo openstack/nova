@@ -15,6 +15,7 @@
 """Client side of the conductor RPC API"""
 
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
 CONF = cfg.CONF
@@ -26,6 +27,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
     1.0 - Initial version.
+    1.1 - Added migration_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -40,3 +42,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
                                        updates=updates))
+
+    def migration_update(self, context, migration, status):
+        migration_p = jsonutils.to_primitive(migration)
+        msg = self.make_msg('migration_update', migration=migration_p,
+                            status=status)
+        return self.call(context, msg)
