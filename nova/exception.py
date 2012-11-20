@@ -732,7 +732,7 @@ class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
 
 
 class ConsoleTypeInvalid(Invalid):
-    message = _("Invalid console type %(console_type)s ")
+    message = _("Invalid console type %(console_type)s")
 
 
 class InstanceTypeNotFound(NotFound):
