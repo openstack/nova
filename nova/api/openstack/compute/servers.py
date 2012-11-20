@@ -239,13 +239,9 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
 
     def _extract_scheduler_hints(self, server_node):
         """Marshal the scheduler hints attribute of a parsed request"""
-        node = self.find_first_child_named(server_node,
-                                           "OS-SCH-HNT:scheduler_hints")
-        # NOTE(vish): Support the os: prefix because it is what we use
-        #             for json, even though OS-SCH-HNT: is more correct
-        if not node:
-            node = self.find_first_child_named(server_node,
-                                               "os:scheduler_hints")
+        node = self.find_first_child_named_in_namespace(server_node,
+            "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
+            "scheduler_hints")
         if node:
             scheduler_hints = {}
             for child in self.extract_elements(node):
