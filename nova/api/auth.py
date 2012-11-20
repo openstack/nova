@@ -21,7 +21,6 @@ Common Auth Middleware.
 import webob.dec
 import webob.exc
 
-from nova import config
 from nova import context
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -36,6 +35,8 @@ use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
 
 CONF = cfg.CONF
 CONF.register_opt(use_forwarded_for_opt)
+CONF.import_opt('api_rate_limit', 'nova.config')
+CONF.import_opt('auth_strategy', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

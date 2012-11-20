@@ -16,10 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
+CONF.import_opt('state_path', 'nova.config')
 
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')

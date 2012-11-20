@@ -16,7 +16,6 @@
 
 from nova.conductor import manager
 from nova.conductor import rpcapi
-from nova import config
 from nova.openstack.common import cfg
 
 conductor_opts = [

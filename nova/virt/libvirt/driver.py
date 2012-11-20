@@ -59,7 +59,6 @@ from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import vm_mode
-from nova import config
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
@@ -185,6 +184,10 @@ libvirt_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(libvirt_opts)
+CONF.import_opt('default_ephemeral_format', 'nova.config')
+CONF.import_opt('host', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('use_cow_images', 'nova.config')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 

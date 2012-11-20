@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.cloudpipe import pipelib
-from nova import config
 from nova import context
 from nova import crypto
 from nova.openstack.common import cfg
@@ -22,6 +21,7 @@ from nova import test
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('vpn_key_suffix', 'nova.config')
 
 
 class PipelibTest(test.TestCase):

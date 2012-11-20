@@ -38,7 +38,6 @@ from sqlalchemy.sql import func
 from nova import block_device
 from nova.common.sqlalchemyutils import paginate_query
 from nova.compute import vm_states
-from nova import config
 from nova import db
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
@@ -50,6 +49,8 @@ from nova.openstack.common import uuidutils
 
 
 CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('sql_connection', 'nova.config')
 
 LOG = logging.getLogger(__name__)
 

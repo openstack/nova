@@ -50,6 +50,7 @@ from nova.vnc import xvp_proxy
 
 
 CONF = cfg.CONF
+CONF.import_opt('enabled_apis', 'nova.config')
 LOG = logging.getLogger('nova.all')
 
 if __name__ == '__main__':

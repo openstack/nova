@@ -32,7 +32,6 @@ import tempfile
 if os.name != 'nt':
     import crypt
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -78,6 +77,7 @@ disk_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(disk_opts)
+CONF.import_opt('pybasedir', 'nova.config')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None

@@ -53,7 +53,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova import config
 import nova.context
 from nova import exception
 from nova.image import glance
@@ -143,6 +142,22 @@ compute_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
+CONF.import_opt('allow_resize_to_same_host', 'nova.config')
+CONF.import_opt('bandwidth_poll_interval', 'nova.config')
+CONF.import_opt('compute_driver', 'nova.config')
+CONF.import_opt('console_topic', 'nova.config')
+CONF.import_opt('default_access_ip_network_name', 'nova.config')
+CONF.import_opt('defer_iptables_apply', 'nova.config')
+CONF.import_opt('host', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('network_manager', 'nova.config')
+CONF.import_opt('password_length', 'nova.config')
+CONF.import_opt('reclaim_instance_interval', 'nova.config')
+CONF.import_opt('resume_guests_state_on_host_boot', 'nova.config')
+CONF.import_opt('start_guests_on_host_boot', 'nova.config')
+CONF.import_opt('vpn_image_id', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('state_path', 'nova.config')
 
 QUOTAS = quota.QUOTAS
 

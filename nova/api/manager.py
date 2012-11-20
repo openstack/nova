@@ -16,12 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 
 CONF = cfg.CONF
+CONF.import_opt('network_driver', 'nova.config')
 
 
 class MetadataManager(manager.Manager):

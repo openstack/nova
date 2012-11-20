@@ -17,10 +17,10 @@
 
 import re
 
-from nova import config
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
+CONF.import_opt('compute_driver', 'nova.config')
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
 _DEFAULT_MAPPINGS = {'ami': 'sda1',

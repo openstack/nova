@@ -19,13 +19,13 @@ Unit Tests for nova.cert.rpcapi
 """
 
 from nova.cert import rpcapi as cert_rpcapi
-from nova import config
 from nova import context
 from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
+CONF.import_opt('cert_topic', 'nova.config')
 
 
 class CertRpcAPITestCase(test.TestCase):

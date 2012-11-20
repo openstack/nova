@@ -20,13 +20,14 @@
 
 from eventlet import tpool
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('vpn_image_id', 'nova.config')
 
 try:
     import libvirt

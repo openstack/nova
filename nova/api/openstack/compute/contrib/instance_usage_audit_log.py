@@ -21,12 +21,12 @@ import datetime
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova import config
 from nova import db
 from nova.openstack.common import cfg
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.config')
 
 
 authorize = extensions.extension_authorizer('compute',

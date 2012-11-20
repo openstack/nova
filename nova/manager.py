@@ -55,7 +55,6 @@ This module provides Manager, a base class for managers.
 
 import eventlet
 
-from nova import config
 from nova.db import base
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -65,6 +64,7 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import version
 
 CONF = cfg.CONF
+CONF.import_opt('host', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

@@ -29,7 +29,6 @@ import time
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
@@ -57,6 +56,7 @@ imagecache_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
+CONF.import_opt('host', 'nova.config')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')
 

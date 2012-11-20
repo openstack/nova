@@ -21,7 +21,6 @@ import string
 
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -38,6 +37,7 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.import_opt('compute_manager', 'nova.config')
 
 
 class ComputeValidateDeviceTestCase(test.TestCase):

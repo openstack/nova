@@ -21,7 +21,6 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova import config
 from nova import db
 from nova import exception
 from nova import network
@@ -32,6 +31,7 @@ from nova.openstack.common import timeutils
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('vpn_image_id', 'nova.config')
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 

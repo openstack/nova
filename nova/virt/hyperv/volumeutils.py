@@ -25,7 +25,6 @@ import sys
 import time
 
 from nova import block_device
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import driver
@@ -37,6 +36,7 @@ if sys.platform == 'win32':
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.import_opt('my_ip', 'nova.config')
 
 
 class VolumeUtils(object):

@@ -21,7 +21,6 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import config
 from nova import db
 from nova import exception
 from nova.openstack.common import cfg
@@ -33,6 +32,7 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'services')
 CONF = cfg.CONF
+CONF.import_opt('service_down_time', 'nova.config')
 
 
 class ServicesIndexTemplate(xmlutil.TemplateBuilder):

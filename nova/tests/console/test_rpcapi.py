@@ -18,7 +18,6 @@
 Unit Tests for nova.console.rpcapi
 """
 
-from nova import config
 from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova.openstack.common import cfg
@@ -26,6 +25,7 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
+CONF.import_opt('console_topic', 'nova.config')
 
 
 class ConsoleRpcAPITestCase(test.TestCase):

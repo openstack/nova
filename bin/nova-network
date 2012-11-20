@@ -41,6 +41,7 @@ from nova import service
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('network_topic', 'nova.config')
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)

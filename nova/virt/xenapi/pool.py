@@ -22,7 +22,6 @@ Management class for Pool-related functions (join, eject, etc).
 import urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -41,6 +40,7 @@ xenapi_pool_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_pool_opts)
+CONF.import_opt('host', 'nova.config')
 
 
 class ResourcePool(object):

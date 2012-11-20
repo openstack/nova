@@ -23,12 +23,12 @@ Chance (Random) Scheduler implementation
 
 import random
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.scheduler import driver
 
 CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.config')
 
 
 class ChanceScheduler(driver.Scheduler):

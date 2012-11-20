@@ -35,7 +35,6 @@ from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -53,6 +52,8 @@ from nova.tests import matchers
 
 
 CONF = cfg.CONF
+CONF.import_opt('password_length', 'nova.config')
+CONF.import_opt('scheduler_topic', 'nova.config')
 
 FAKE_UUID = fakes.FAKE_UUID
 NS = "{http://docs.openstack.org/compute/api/v1.1}"

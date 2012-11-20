@@ -18,7 +18,6 @@ Tests For Scheduler Host Filters.
 import httplib
 import stubout
 
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -32,6 +31,7 @@ from nova.tests.scheduler import fakes
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('my_ip', 'nova.config')
 DATA = ''
 
 

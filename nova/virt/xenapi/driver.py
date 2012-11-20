@@ -46,7 +46,6 @@ import xmlrpclib
 from eventlet import queue
 from eventlet import timeout
 
-from nova import config
 from nova import context
 from nova import exception
 from nova.openstack.common import cfg
@@ -119,6 +118,7 @@ xenapi_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_opts)
+CONF.import_opt('host', 'nova.config')
 
 
 class XenAPIDriver(driver.ComputeDriver):

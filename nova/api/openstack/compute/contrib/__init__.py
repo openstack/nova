@@ -22,12 +22,12 @@ It can't be called 'extensions' because that causes namespacing problems.
 """
 
 from nova.api.openstack import extensions
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 
 CONF = cfg.CONF
+CONF.import_opt('osapi_compute_ext_list', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

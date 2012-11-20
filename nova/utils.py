@@ -46,7 +46,6 @@ from eventlet import greenthread
 from eventlet import semaphore
 import netaddr
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
@@ -60,6 +59,11 @@ CONF = cfg.CONF
 CONF.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
+CONF.import_opt('glance_port', 'nova.config')
+CONF.import_opt('instance_usage_audit_period', 'nova.config')
+CONF.import_opt('monkey_patch', 'nova.config')
+CONF.import_opt('rootwrap_config', 'nova.config')
+CONF.import_opt('service_down_time', 'nova.config')
 
 # Used for looking up extensions of text
 # to their 'multiplied' byte amount

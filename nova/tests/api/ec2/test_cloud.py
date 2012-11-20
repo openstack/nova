@@ -32,7 +32,6 @@ from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import db
 from nova import exception
@@ -50,6 +49,9 @@ from nova.virt import fake as fake_virt
 from nova import volume
 
 CONF = cfg.CONF
+CONF.import_opt('default_image', 'nova.config')
+CONF.import_opt('default_instance_type', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

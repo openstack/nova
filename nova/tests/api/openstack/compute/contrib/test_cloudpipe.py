@@ -18,7 +18,6 @@ from lxml import etree
 from nova.api.openstack.compute.contrib import cloudpipe
 from nova.api.openstack import wsgi
 from nova.compute import utils as compute_utils
-from nova import config
 from nova import db
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
@@ -29,6 +28,7 @@ from nova.tests import matchers
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('vpn_image_id', 'nova.config')
 
 
 def fake_vpn_instance():

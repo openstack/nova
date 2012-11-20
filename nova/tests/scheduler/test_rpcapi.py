@@ -18,7 +18,6 @@
 Unit Tests for nova.scheduler.rpcapi
 """
 
-from nova import config
 from nova import context
 from nova.openstack.common import cfg
 from nova.openstack.common import rpc
@@ -26,6 +25,7 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
 CONF = cfg.CONF
+CONF.import_opt('scheduler_topic', 'nova.config')
 
 
 class SchedulerRpcAPITestCase(test.TestCase):
