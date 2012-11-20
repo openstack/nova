@@ -731,6 +731,27 @@ class HostFiltersTestCase(test.TestCase):
             especs={'opt1': '1', 'opt2': '222', 'trust:trusted_host': 'true'},
             passes=False)
 
+    def test_compute_filter_pass_extra_specs_simple_with_scope(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'capabilities:opt1': '1',
+                    'trust:trusted_host': 'true'},
+            passes=True)
+
+    def test_compute_filter_extra_specs_simple_with_wrong_scope(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': '1', 'opt2': '2'},
+            especs={'wrong_scope:opt1': '1',
+                    'trust:trusted_host': 'true'},
+            passes=True)
+
+    def test_compute_filter_extra_specs_pass_multi_level_with_scope(self):
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'opt1': {'a': '1', 'b': {'aa': '2'}}, 'opt2': '2'},
+            especs={'opt1:a': '1', 'capabilities:opt1:b:aa': '2',
+                    'trust:trusted_host': 'true'},
+            passes=True)
+
     def test_aggregate_filter_passes_no_extra_specs(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
