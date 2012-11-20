@@ -564,22 +564,22 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
+        self.test_instance = {
+                'memory_kb': '1024000',
+                'basepath': '/some/path',
+                'bridge_name': 'br100',
+                'vcpus': 2,
+                'project_id': 'fake',
+                'bridge': 'br101',
+                'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'root_gb': 10,
+                'ephemeral_gb': 20,
+                'instance_type_id': '5'}  # m1.small
 
     def tearDown(self):
         libvirt_driver.libvirt_utils = libvirt_utils
         nova.tests.image.fake.FakeImageService_reset()
         super(LibvirtConnTestCase, self).tearDown()
-
-    test_instance = {'memory_kb': '1024000',
-                     'basepath': '/some/path',
-                     'bridge_name': 'br100',
-                     'vcpus': 2,
-                     'project_id': 'fake',
-                     'bridge': 'br101',
-                     'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                     'root_gb': 10,
-                     'ephemeral_gb': 20,
-                     'instance_type_id': '5'}  # m1.small
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""
@@ -2161,7 +2161,7 @@ class LibvirtConnTestCase(test.TestCase):
             imagebackend.Image.cache(context=mox.IgnoreArg(),
                                      fetch_func=mox.IgnoreArg(),
                                      filename='otherdisk',
-                                     image_id=123456,
+                                     image_id=self.test_instance['image_ref'],
                                      project_id='fake',
                                      size=10737418240L,
                                      user_id=None).AndReturn(None)
