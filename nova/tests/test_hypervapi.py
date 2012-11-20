@@ -188,7 +188,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._spawn_instance(True)
         info = self._conn.get_info(self._instance_data)
 
-        self.assertEquals(info["state"], str(power_state.RUNNING))
+        self.assertEquals(info["state"], power_state.RUNNING)
 
     def test_spawn_cow_image(self):
         self._test_spawn_instance(True)

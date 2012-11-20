@@ -102,12 +102,12 @@ class VMOps(baseops.BaseOps):
         info = summary_info[0]
 
         LOG.debug(_("hyperv vm state: %s"), info.EnabledState)
-        state = str(constants.HYPERV_POWER_STATE[info.EnabledState])
+        state = constants.HYPERV_POWER_STATE[info.EnabledState]
         memusage = str(info.MemoryUsage)
         numprocs = str(info.NumberOfProcessors)
         uptime = str(info.UpTime)
 
-        LOG.debug(_("Got Info for vm %(instance_name)s: state=%(state)s,"
+        LOG.debug(_("Got Info for vm %(instance_name)s: state=%(state)d,"
                 " mem=%(memusage)s, num_cpu=%(numprocs)s,"
                 " uptime=%(uptime)s"), locals())
 
