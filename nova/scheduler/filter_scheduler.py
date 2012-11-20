@@ -130,9 +130,6 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
-        # TODO(NTTdocomo): Combine the next two updates into one
-        driver.db_instance_node_set(context,
-                instance_uuid, weighed_host.obj.nodename)
         updated_instance = driver.instance_update_db(context,
                 instance_uuid)
 
@@ -144,7 +141,8 @@ class FilterScheduler(driver.Scheduler):
                 request_spec=request_spec, filter_properties=filter_properties,
                 requested_networks=requested_networks,
                 injected_files=injected_files,
-                admin_password=admin_password, is_first_time=is_first_time)
+                admin_password=admin_password, is_first_time=is_first_time,
+                node=weighed_host.obj.nodename)
 
     def _post_select_populate_filter_properties(self, filter_properties,
             host_state):

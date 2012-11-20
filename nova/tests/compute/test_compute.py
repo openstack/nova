@@ -511,6 +511,15 @@ class ComputeTestCase(BaseTestCase):
                 self.compute.run_instance, self.context, instance=instance,
                 filter_properties=filter_properties)
 
+    def test_create_instance_without_node_param(self):
+        instance = self._create_fake_instance({'node': None})
+
+        self.compute.run_instance(self.context, instance=instance)
+        instances = db.instance_get_all(self.context)
+        instance = instances[0]
+
+        self.assertEqual(NODENAME, instance['node'])
+
     def test_default_access_ip(self):
         self.flags(default_access_ip_network_name='test1')
         fake_network.unset_stub_network_methods(self.stubs)
@@ -5838,7 +5847,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
 
         self.mox.ReplayAll()
         self.compute._run_instance(self.context, None, {}, None, None, None,
-                False, self.instance)
+                False, None, self.instance)
 
     def test_deallocate_network_fail(self):
         """Test de-allocation of network failing before re-scheduling logic

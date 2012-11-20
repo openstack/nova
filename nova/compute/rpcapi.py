@@ -146,6 +146,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.16 - Add instance_type to resize_instance
         2.17 - Add get_backdoor_port()
         2.18 - Add bdms to rebuild_instance
+        2.19 - Add node to run_instance
     '''
 
     #
@@ -474,14 +475,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,
                      injected_files, admin_password,
-                     is_first_time):
+                     is_first_time, node=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('run_instance', instance=instance_p,
                 request_spec=request_spec, filter_properties=filter_properties,
                 requested_networks=requested_networks,
                 injected_files=injected_files, admin_password=admin_password,
-                is_first_time=is_first_time),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                is_first_time=is_first_time, node=node),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='2.19')
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
