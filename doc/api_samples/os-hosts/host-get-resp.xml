@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<host>
+  <resource>
+    <project>(total)</project>
+    <memory_mb>8192</memory_mb>
+    <host>ecf3458ac6bf4a299cc2e0efa740f426</host>
+    <cpu>1</cpu>
+    <disk_gb>1028</disk_gb>
+  </resource>
+  <resource>
+    <project>(used_now)</project>
+    <memory_mb>512</memory_mb>
+    <host>ecf3458ac6bf4a299cc2e0efa740f426</host>
+    <cpu>0</cpu>
+    <disk_gb>0</disk_gb>
+  </resource>
+  <resource>
+    <project>(used_max)</project>
+    <memory_mb>0</memory_mb>
+    <host>ecf3458ac6bf4a299cc2e0efa740f426</host>
+    <cpu>0</cpu>
+    <disk_gb>0</disk_gb>
+  </resource>
+</host>

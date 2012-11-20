@@ -25,11 +25,12 @@ from nova.openstack.common import log as logging
 from nova import test
 
 LOG = logging.getLogger(__name__)
-HOST_LIST = [
+HOST_LIST = {"hosts": [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
         {"host_name": "host_c2", "service": "compute", "zone": "nonova"},
         {"host_name": "host_v1", "service": "volume", "zone": "nova"},
         {"host_name": "host_v2", "service": "volume", "zone": "nonova"}]
+        }
 HOST_LIST_NOVA_ZONE = [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
         {"host_name": "host_v1", "service": "volume", "zone": "nova"}]
@@ -129,10 +130,10 @@ class HostTestCase(test.TestCase):
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
         hosts = os_hosts._list_hosts(self.req)
-        self.assertEqual(hosts, HOST_LIST)
+        self.assertEqual(hosts, HOST_LIST['hosts'])
 
         compute_hosts = os_hosts._list_hosts(self.req, "compute")
-        expected = [host for host in HOST_LIST
+        expected = [host for host in HOST_LIST['hosts']
                 if host["service"] == "compute"]
         self.assertEqual(compute_hosts, expected)
 
@@ -280,12 +281,12 @@ class HostSerializerTest(test.TestCase):
         tree = etree.fromstring(text)
 
         self.assertEqual('hosts', tree.tag)
-        self.assertEqual(len(HOST_LIST), len(tree))
+        self.assertEqual(len(HOST_LIST['hosts']), len(tree))
         for i in range(len(HOST_LIST)):
             self.assertEqual('host', tree[i].tag)
-            self.assertEqual(HOST_LIST[i]['host_name'],
+            self.assertEqual(HOST_LIST['hosts'][i]['host_name'],
                              tree[i].get('host_name'))
-            self.assertEqual(HOST_LIST[i]['service'],
+            self.assertEqual(HOST_LIST['hosts'][i]['service'],
                              tree[i].get('service'))
 
     def test_update_serializer_with_status(self):
