@@ -226,6 +226,9 @@ class ImageCacheManager(object):
         handle manually when it occurs.
         """
 
+        if not FLAGS.checksum_base_images:
+            return None
+
         stored_checksum = read_stored_checksum(base_file)
         if stored_checksum:
             f = open(base_file, 'r')
@@ -251,7 +254,7 @@ class ImageCacheManager(object):
             # NOTE(mikal): If the checksum file is missing, then we should
             # create one. We don't create checksums when we download images
             # from glance because that would delay VM startup.
-            if FLAGS.checksum_base_images and create_if_missing:
+            if create_if_missing:
                 write_stored_checksum(base_file)
 
             return None
