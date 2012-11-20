@@ -2561,29 +2561,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.unfilter_instance(instance_ref,
                                       self._legacy_nw_info(network_info))
 
-        # Database updating.
-        # NOTE(jkoelker) This needs to be converted to network api calls
-        #                if nova wants to support floating_ips in
-        #                quantum/melange
-        try:
-            # Not return if floating_ip is not found, otherwise,
-            # instance never be accessible..
-            floating_ip = self.db.instance_get_floating_address(ctxt,
-                                                         instance_ref['id'])
-            if not floating_ip:
-                LOG.info(_('No floating_ip found'), instance=instance_ref)
-            else:
-                floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
-                                                              floating_ip)
-                self.db.floating_ip_update(ctxt,
-                                           floating_ip_ref['address'],
-                                           {'host': dest})
-        except exception.NotFound:
-            LOG.info(_('No floating_ip found.'), instance=instance_ref)
-        except Exception, e:
-            LOG.error(_('Live migration: Unexpected error: cannot inherit '
-                        'floating ip.\n%(e)s'), locals(),
-                      instance=instance_ref)
+        migration = {'source_compute': self.host,
+                     'dest_compute': dest, }
+        self.network_api.migrate_instance_start(ctxt, instance_ref, migration)
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
@@ -2632,6 +2612,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         #                  plug_vifs
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
+        migration = {'source_compute': instance['host'],
+                     'dest_compute': self.host, }
+        self.network_api.migrate_instance_finish(context, instance, migration)
 
         network_info = self._get_instance_nw_info(context, instance)
         self.driver.post_live_migration_at_destination(context, instance,

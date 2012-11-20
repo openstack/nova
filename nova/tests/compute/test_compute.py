@@ -2324,11 +2324,12 @@ class ComputeTestCase(BaseTestCase):
     def test_post_live_migration_working_correctly(self):
         """Confirm post_live_migration() works as expected correctly."""
         dest = 'desthost'
-        flo_addr = '1.2.1.2'
+        srchost = self.compute.host
 
         # creating testdata
         c = context.get_admin_context()
         inst_ref = jsonutils.to_primitive(self._create_fake_instance({
+                                'host': srchost,
                                 'state_description': 'migrating',
                                 'state': power_state.PAUSED}))
         inst_uuid = inst_ref['uuid']
@@ -2337,15 +2338,15 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(c, inst_uuid,
                            {'task_state': task_states.MIGRATING,
                             'power_state': power_state.PAUSED})
-        fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
-                                          'instance_uuid': inst_ref['uuid']})
-        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
-        db.floating_ip_create(c, {'address': flo_addr,
-                                  'fixed_ip_id': fix_ref['id']})
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(inst_ref, [])
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_start')
+        migration = {'source_compute': srchost,
+                     'dest_compute': dest, }
+        self.compute.network_api.migrate_instance_start(c, inst_ref, migration)
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
@@ -2364,14 +2365,39 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._post_live_migration(c, inst_ref, dest)
 
-        # make sure floating ips are rewritten to destinatioin hostname.
-        flo_refs = db.floating_ip_get_all_by_host(c, dest)
-        self.assertTrue(flo_refs)
-        self.assertEqual(flo_refs[0]['address'], flo_addr)
+    def test_post_live_migration_at_destination(self):
+        params = {'task_state': task_states.MIGRATING,
+                  'power_state': power_state.PAUSED, }
+        instance = jsonutils.to_primitive(self._create_fake_instance(params))
 
-        # cleanup
-        db.instance_destroy(c, inst_uuid)
-        db.floating_ip_destroy(c, flo_addr)
+        admin_ctxt = context.get_admin_context()
+        instance = db.instance_get_by_uuid(admin_ctxt, instance['uuid'])
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(admin_ctxt, instance,
+                                                        self.compute.host)
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_finish')
+        migration = {'source_compute': instance['host'],
+                     'dest_compute': self.compute.host, }
+        self.compute.network_api.migrate_instance_finish(admin_ctxt,
+                                                         instance, migration)
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'post_live_migration_at_destination')
+        fake_net_info = []
+        self.compute.driver.post_live_migration_at_destination(admin_ctxt,
+                                                               instance,
+                                                               fake_net_info,
+                                                               False)
+        self.compute.network_api.setup_networks_on_host(admin_ctxt, instance,
+                                                        self.compute.host)
+
+        self.mox.ReplayAll()
+        self.compute.post_live_migration_at_destination(admin_ctxt, instance)
+        instance = db.instance_get_by_uuid(admin_ctxt, instance['uuid'])
+        self.assertEqual(instance['host'], self.compute.host)
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], None)
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
