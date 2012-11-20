@@ -113,12 +113,22 @@ class VolumeOps(object):
         # NOTE: No Resource Pool concept so far
         LOG.debug(_("Attach_volume: %(connection_info)s, %(instance_name)s,"
                 " %(mountpoint)s") % locals())
+
         driver_type = connection_info['driver_volume_type']
         if driver_type not in ['iscsi', 'xensm']:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
         connection_data = connection_info['data']
         dev_number = volume_utils.get_device_number(mountpoint)
+
+        self.connect_volume(
+            connection_data, dev_number, instance_name, vm_ref)
+
+        LOG.info(_('Mountpoint %(mountpoint)s attached to'
+                ' instance %(instance_name)s') % locals())
+
+    def connect_volume(self, connection_data, dev_number, instance_name,
+                       vm_ref):
 
         if 'name_label' not in connection_data:
             label = 'tempSR-%s' % connection_data['volume_id']
@@ -131,7 +141,6 @@ class VolumeOps(object):
         else:
             desc = connection_data['name_description']
 
-        LOG.debug(connection_info)
         sr_params = {}
         if u'sr_uuid' not in connection_data:
             sr_params = volume_utils.parse_volume_info(connection_data)
@@ -189,9 +198,6 @@ class VolumeOps(object):
             self.forget_sr(uuid)
             raise Exception(_('Unable to attach volume to instance %s')
                             % instance_name)
-
-        LOG.info(_('Mountpoint %(mountpoint)s attached to'
-                ' instance %(instance_name)s') % locals())
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
