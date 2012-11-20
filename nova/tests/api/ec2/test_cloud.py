@@ -38,6 +38,7 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
@@ -48,7 +49,7 @@ from nova import utils
 from nova.virt import fake as fake_virt
 from nova import volume
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

@@ -21,7 +21,6 @@ import UserDict
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova import db
 from nova import exception
 from nova.openstack.common import cfg
@@ -53,7 +52,7 @@ host_manager_opts = [
                 help='Which weight class names to use for weighing hosts'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(host_manager_opts)
 
 LOG = logging.getLogger(__name__)

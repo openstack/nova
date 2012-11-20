@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
@@ -25,7 +24,7 @@ ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
         default=1.5,
         help="virtual ram to physical ram allocation ratio")
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(ram_allocation_ratio_opt)
 
 

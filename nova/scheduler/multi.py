@@ -27,7 +27,6 @@ schedule requests to compute nodes but provide their own manager and topic.
 https://bugs.launchpad.net/nova/+bug/1009681
 """
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.scheduler import driver
@@ -43,7 +42,7 @@ multi_scheduler_opts = [
                help='Default driver to use for scheduling calls'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(multi_scheduler_opts)
 
 

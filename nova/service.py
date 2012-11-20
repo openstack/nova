@@ -90,7 +90,7 @@ service_opts = [
                help='Number of workers for metadata service'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(service_opts)
 
 

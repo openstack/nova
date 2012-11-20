@@ -16,10 +16,10 @@ import os
 import shutil
 import tempfile
 
-from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class MiniDNS(object):

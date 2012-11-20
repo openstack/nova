@@ -37,11 +37,12 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)

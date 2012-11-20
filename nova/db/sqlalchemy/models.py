@@ -27,13 +27,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
 
-from nova import config
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 BASE = declarative_base()
 
 

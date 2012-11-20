@@ -60,7 +60,7 @@ s3_opts = [
                     'when downloading from s3'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(s3_opts)
 
 

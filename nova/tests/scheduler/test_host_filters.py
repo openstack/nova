@@ -22,6 +22,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
@@ -30,7 +31,7 @@ from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 DATA = ''
 
 

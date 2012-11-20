@@ -87,7 +87,7 @@ linux_net_opts = [
                      'get default gateway from dhcp server'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(linux_net_opts)
 
 

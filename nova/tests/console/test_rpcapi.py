@@ -21,10 +21,11 @@ Unit Tests for nova.console.rpcapi
 from nova import config
 from nova.console import rpcapi as console_rpcapi
 from nova import context
+from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova import test
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class ConsoleRpcAPITestCase(test.TestCase):

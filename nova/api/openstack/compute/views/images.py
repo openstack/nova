@@ -19,9 +19,10 @@ import os.path
 
 from nova.api.openstack import common
 from nova import config
+from nova.openstack.common import cfg
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class ViewBuilder(common.ViewBuilder):

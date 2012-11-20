@@ -48,7 +48,6 @@ import httplib
 import socket
 import ssl
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -81,7 +80,7 @@ trusted_opts = [
                help='attestation authorization blob - must change'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 trust_group = cfg.OptGroup(name='trusted_computing', title='Trust parameters')
 CONF.register_group(trust_group)
 CONF.register_opts(trusted_opts, group=trust_group)

@@ -20,7 +20,6 @@
 import socket
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova import config
 from nova import exception
 from nova import manager
 from nova.openstack.common import cfg
@@ -41,7 +40,7 @@ console_manager_opts = [
                help='Publicly visible name for this console host'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(console_manager_opts)
 LOG = logging.getLogger(__name__)
 

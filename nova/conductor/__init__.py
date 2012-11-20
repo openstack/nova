@@ -14,11 +14,12 @@
 
 from nova.conductor import api as conductor_api
 import nova.config
+import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
 
 def API(*args, **kwargs):
-    if nova.config.CONF.conductor.use_local:
+    if nova.openstack.common.cfg.CONF.conductor.use_local:
         api = conductor_api.LocalAPI
     else:
         api = conductor_api.API

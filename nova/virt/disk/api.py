@@ -76,7 +76,7 @@ disk_opts = [
                          'The format is <os_type>=<mkfs command>'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(disk_opts)
 
 _MKFS_COMMAND = {}

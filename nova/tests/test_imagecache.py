@@ -29,13 +29,14 @@ from nova.compute import manager as compute_manager
 from nova.compute import vm_states
 from nova import config
 from nova import db
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 LOG = log.getLogger(__name__)
 

@@ -20,11 +20,11 @@ import os
 import re
 import time
 
-from nova import config
 from nova import exception as nova_exception
 from nova import utils
 
 from nova.compute import power_state
+from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 
@@ -37,7 +37,7 @@ from nova.virt.powervm import lpar as LPAR
 
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 def get_powervm_operator():

@@ -22,11 +22,11 @@ and storage repositories
 import re
 import string
 
-from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

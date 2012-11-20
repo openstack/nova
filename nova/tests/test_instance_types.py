@@ -18,7 +18,6 @@ Unit Tests for instance types code
 import time
 
 from nova.compute import instance_types
-from nova import config
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models

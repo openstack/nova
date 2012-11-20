@@ -34,7 +34,7 @@ use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
         help='Treat X-Forwarded-For as the canonical remote address. '
              'Only enable this if you have a sanitizing proxy.')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(use_forwarded_for_opt)
 LOG = logging.getLogger(__name__)
 

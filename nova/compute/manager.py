@@ -141,7 +141,7 @@ compute_opts = [
                help="Generate periodic compute.instance.exists notifications"),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 
 QUOTAS = quota.QUOTAS

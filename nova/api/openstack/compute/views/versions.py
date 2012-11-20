@@ -20,9 +20,10 @@ import os
 
 from nova.api.openstack import common
 from nova import config
+from nova.openstack.common import cfg
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 def get_view_builder(req):

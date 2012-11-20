@@ -16,10 +16,11 @@
 #    under the License.
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

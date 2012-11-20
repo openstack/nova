@@ -18,9 +18,10 @@
 
 from nova import config
 from nova import manager
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class MetadataManager(manager.Manager):

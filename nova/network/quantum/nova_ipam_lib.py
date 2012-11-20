@@ -17,7 +17,6 @@
 
 import netaddr
 
-from nova import config
 from nova import db
 from nova import exception
 from nova import ipv6

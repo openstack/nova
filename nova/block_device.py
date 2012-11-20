@@ -18,8 +18,9 @@
 import re
 
 from nova import config
+from nova.openstack.common import cfg
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
 _DEFAULT_MAPPINGS = {'ami': 'sda1',

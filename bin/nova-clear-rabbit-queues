@@ -52,7 +52,7 @@ delete_exchange_opt = cfg.BoolOpt('delete_exchange',
                                   default=False,
                                   help='delete nova exchange too.')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_cli_opt(delete_exchange_opt)
 
 

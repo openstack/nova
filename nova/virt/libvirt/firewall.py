@@ -21,11 +21,12 @@
 from eventlet import tpool
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 
 try:
     import libvirt

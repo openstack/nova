@@ -57,7 +57,7 @@ hyperv_opts = [
                     'instead of a disk drive')
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(hyperv_opts)
 
 

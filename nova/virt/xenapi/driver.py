@@ -117,7 +117,7 @@ xenapi_opts = [
                help='Timeout in seconds for XenAPI login.'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xenapi_opts)
 
 

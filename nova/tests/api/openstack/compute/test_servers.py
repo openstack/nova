@@ -42,6 +42,7 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import manager
 from nova.network.quantumv2 import api as quantum_api
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
@@ -51,7 +52,7 @@ from nova.tests.image import fake
 from nova.tests import matchers
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 FAKE_UUID = fakes.FAKE_UUID
 NS = "{http://docs.openstack.org/compute/api/v1.1}"

@@ -18,7 +18,6 @@
 import datetime
 
 from nova.api.openstack import compute
-from nova import config
 import nova.db.api
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc

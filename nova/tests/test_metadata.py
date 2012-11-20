@@ -28,15 +28,15 @@ import webob
 from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova import block_device
-from nova import config
 from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
+from nova.openstack.common import cfg
 from nova import test
 from nova.tests import fake_network
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)

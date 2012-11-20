@@ -17,7 +17,6 @@
 
 import os
 
-from nova import config
 from nova import exception
 from nova import test
 from nova import tests

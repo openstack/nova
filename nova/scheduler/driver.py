@@ -52,10 +52,10 @@ scheduler_driver_opts = [
                help='Maximum number of attempts to schedule an instance'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(scheduler_driver_opts)
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 

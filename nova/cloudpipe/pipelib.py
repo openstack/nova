@@ -53,7 +53,7 @@ cloudpipe_opts = [
                help=_('Netmask to push into openvpn config')),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(cloudpipe_opts)
 CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
 

@@ -20,7 +20,6 @@ import os
 
 import mox
 
-from nova import config
 from nova import crypto
 from nova import db
 from nova import exception

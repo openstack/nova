@@ -19,10 +19,11 @@ Client side of the scheduler manager RPC API.
 """
 
 from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):

@@ -22,7 +22,6 @@ import copy
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import config
 from nova import context
 from nova import db
 from nova.network import api as network_api

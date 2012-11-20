@@ -28,6 +28,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
@@ -36,7 +37,7 @@ from nova.tests.image import fake
 from nova.tests import matchers
 from nova import volume
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

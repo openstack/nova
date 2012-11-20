@@ -34,7 +34,7 @@ volume_opts = [
                default='$state_path/mnt',
                help='Base dir where nfs expected to be mounted on compute'),
 ]
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(volume_opts)
 
 

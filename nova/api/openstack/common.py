@@ -30,12 +30,13 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import quota
 
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 QUOTAS = quota.QUOTAS
 
 

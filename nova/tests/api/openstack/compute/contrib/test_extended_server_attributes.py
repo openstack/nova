@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
-from nova import config
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils

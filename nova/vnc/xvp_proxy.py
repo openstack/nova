@@ -26,7 +26,6 @@ import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
 
-from nova import config
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.openstack.common import cfg
@@ -46,7 +45,7 @@ xvp_proxy_opts = [
                help='Address that the XCP VNC proxy should bind to'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xvp_proxy_opts)
 
 

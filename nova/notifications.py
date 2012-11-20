@@ -19,7 +19,6 @@
 the system.
 """
 
-from nova import config
 import nova.context
 from nova import db
 from nova import exception
@@ -50,7 +49,7 @@ notify_api_faults = cfg.BoolOpt('notify_api_faults', default=False,
          'in the API service.')
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(notify_state_opt)
 CONF.register_opt(notify_any_opt)
 CONF.register_opt(notify_api_faults)

@@ -171,10 +171,11 @@ from sqlalchemy.pool import NullPool, StaticPool
 
 from nova import config
 import nova.exception
+from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None

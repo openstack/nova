@@ -17,13 +17,13 @@
 
 import os
 
-from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class _ImageTestCase(test.TestCase):

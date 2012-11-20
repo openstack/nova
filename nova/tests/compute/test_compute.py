@@ -43,6 +43,7 @@ from nova import db
 from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -68,7 +69,7 @@ from nova.volume import cinder
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 

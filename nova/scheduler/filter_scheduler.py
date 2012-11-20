@@ -19,14 +19,14 @@ You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
 """
 
-from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

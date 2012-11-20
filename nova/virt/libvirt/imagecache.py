@@ -55,7 +55,7 @@ imagecache_opts = [
                 help='Write a checksum for files in _base to disk'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('base_dir_name', 'nova.compute.manager')

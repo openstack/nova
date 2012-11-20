@@ -24,7 +24,6 @@ Handling of VM disk images.
 import os
 import re
 
-from nova import config
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
@@ -40,7 +39,7 @@ image_opts = [
                 help='Force backing images to raw format'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(image_opts)
 
 

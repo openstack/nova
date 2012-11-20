@@ -18,7 +18,6 @@
 
 import re
 
-from nova import config
 from nova import context
 from nova import db
 from nova import exception

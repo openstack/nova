@@ -27,11 +27,12 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
+from nova.openstack.common import cfg
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = log.getLogger(__name__)
 
 

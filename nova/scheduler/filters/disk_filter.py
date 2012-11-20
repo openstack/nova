@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
@@ -23,7 +22,7 @@ LOG = logging.getLogger(__name__)
 disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio", default=1.0,
                          help="virtual disk to physical disk allocation ratio")
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(disk_allocation_ratio_opt)
 
 

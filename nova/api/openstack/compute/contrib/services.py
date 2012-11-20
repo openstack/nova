@@ -24,6 +24,7 @@ from nova.api.openstack import xmlutil
 from nova import config
 from nova import db
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -31,7 +32,7 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'services')
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class ServicesIndexTemplate(xmlutil.TemplateBuilder):

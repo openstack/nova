@@ -20,11 +20,12 @@ Client side of the compute RPC API.
 
 from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 def _compute_topic(topic, ctxt, host, instance):

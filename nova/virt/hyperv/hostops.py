@@ -22,11 +22,11 @@ import multiprocessing
 import os
 import platform
 
-from nova import config
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import baseops
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

@@ -31,13 +31,14 @@ import glanceclient.exc
 
 from nova import config
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 def _parse_image_ref(image_href):

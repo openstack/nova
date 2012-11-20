@@ -20,7 +20,6 @@
 import functools
 import inspect
 
-from nova import config
 from nova.db import base
 from nova import exception
 from nova.network import model as network_model

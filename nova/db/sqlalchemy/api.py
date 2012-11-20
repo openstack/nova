@@ -43,12 +43,13 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 

@@ -25,7 +25,6 @@ NOTE(comstud): This is deprecated. One should use the RAMWeigher and/or
 create other weight modules.
 """
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -48,7 +47,7 @@ least_cost_opts = [
                       'e.g. spread-first'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(least_cost_opts)
 
 

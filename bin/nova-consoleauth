@@ -33,10 +33,11 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 from nova import config
 from nova.consoleauth import manager
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 if __name__ == "__main__":
     config.parse_args(sys.argv)

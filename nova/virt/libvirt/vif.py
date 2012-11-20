@@ -41,7 +41,7 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces'),
 ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts)
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 

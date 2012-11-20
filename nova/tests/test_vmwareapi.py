@@ -20,7 +20,6 @@ Test suite for VMWareAPI.
 """
 
 from nova.compute import power_state
-from nova import config
 from nova import context
 from nova import db
 from nova import exception

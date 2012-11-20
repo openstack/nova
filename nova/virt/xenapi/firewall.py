@@ -17,7 +17,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import config
 from nova import context
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

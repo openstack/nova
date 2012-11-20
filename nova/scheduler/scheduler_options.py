@@ -26,7 +26,6 @@ import datetime
 import json
 import os
 
-from nova import config
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -37,7 +36,7 @@ scheduler_json_config_location_opt = cfg.StrOpt(
         default='',
         help='Absolute path to scheduler configuration JSON file.')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(scheduler_json_config_location_opt)
 
 LOG = logging.getLogger(__name__)

@@ -19,7 +19,6 @@
 
 import os.path
 
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import policy
@@ -35,7 +34,7 @@ policy_opts = [
                help=_('Rule checked when requested rule is not found')),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(policy_opts)
 
 _POLICY_PATH = None

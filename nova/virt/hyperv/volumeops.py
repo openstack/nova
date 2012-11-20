@@ -40,7 +40,7 @@ hyper_volumeops_opts = [
         help='The seconds to wait between an volume attachment attempt'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(hyper_volumeops_opts)
 
 

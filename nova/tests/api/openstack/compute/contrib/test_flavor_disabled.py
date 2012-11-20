@@ -17,7 +17,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import flavor_disabled
 from nova.compute import instance_types
-from nova import config
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -15,10 +15,10 @@
 import webob
 
 import nova.api.sizelimit
-from nova import config
+from nova.openstack.common import cfg
 from nova import test
 
-CONF = config.CONF
+CONF = cfg.CONF
 MAX_REQUEST_BODY_SIZE = CONF.osapi_max_request_body_size
 
 

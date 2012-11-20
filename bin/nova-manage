@@ -88,7 +88,7 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.import_opt('flat_network_bridge', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('multi_host', 'nova.network.manager')

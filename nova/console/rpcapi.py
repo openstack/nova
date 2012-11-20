@@ -19,9 +19,10 @@ Client side of the console RPC API.
 """
 
 from nova import config
+from nova.openstack.common import cfg
 import nova.openstack.common.rpc.proxy
 
-CONF = config.CONF
+CONF = cfg.CONF
 
 
 class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):

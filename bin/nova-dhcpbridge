@@ -40,12 +40,13 @@ from nova import context
 from nova import db
 from nova.network import linux_net
 from nova.network import rpcapi as network_rpcapi
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import utils
 
-CONF = config.CONF
+CONF = cfg.CONF
 LOG = logging.getLogger('nova.dhcpbridge')
 
 

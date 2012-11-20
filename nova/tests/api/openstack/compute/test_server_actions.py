@@ -27,6 +27,7 @@ from nova import config
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -34,7 +35,7 @@ from nova.tests.image import fake
 from nova.tests import matchers
 
 
-CONF = config.CONF
+CONF = cfg.CONF
 FAKE_UUID = fakes.FAKE_UUID
 INSTANCE_IDS = {FAKE_UUID: 1}
 

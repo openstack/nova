@@ -22,7 +22,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import api
-from nova import config
 from nova import exception
 from nova.openstack.common import timeutils
 

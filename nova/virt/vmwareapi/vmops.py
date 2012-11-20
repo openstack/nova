@@ -27,7 +27,6 @@ import urllib2
 import uuid
 
 from nova.compute import power_state
-from nova import config
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -42,7 +41,7 @@ vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
         default='nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
         help='The VMWare VIF driver to configure the VIFs.')
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opt(vmware_vif_driver_opt)
 
 LOG = logging.getLogger(__name__)

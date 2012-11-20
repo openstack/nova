@@ -39,7 +39,7 @@ xenapi_pool_opts = [
                 help='To use for hosts with different CPUs'),
     ]
 
-CONF = config.CONF
+CONF = cfg.CONF
 CONF.register_opts(xenapi_pool_opts)
 
 
