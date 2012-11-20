@@ -163,7 +163,12 @@ There are some things which it is best to avoid:
 import re
 import time
 
+from eventlet import db_pool
 from eventlet import greenthread
+try:
+    import MySQLdb
+except ImportError:
+    MySQLdb = None
 from sqlalchemy.exc import DisconnectionError, OperationalError
 import sqlalchemy.interfaces
 import sqlalchemy.orm
@@ -188,6 +193,10 @@ sql_opts = [
     cfg.BoolOpt('sqlite_synchronous',
                 default=True,
                 help='If passed, use synchronous mode for sqlite'),
+    cfg.IntOpt('sql_min_pool_size',
+               default=1,
+               help='Minimum number of SQL connections to keep open in a '
+                     'pool'),
     cfg.IntOpt('sql_max_pool_size',
                default=5,
                help='Maximum number of SQL connections to keep open in a '
@@ -209,6 +218,9 @@ sql_opts = [
     cfg.BoolOpt('sql_connection_trace',
                default=False,
                help='Add python stack traces to SQL as comment strings'),
+    cfg.IntOpt('sql_dbpool_enable',
+               default=False,
+               help="enable the use of eventlet's db_pool for MySQL"),
 ]
 
 CONF = cfg.CONF
@@ -323,6 +335,21 @@ def create_engine(sql_connection):
         if CONF.sql_connection == "sqlite://":
             engine_args["poolclass"] = StaticPool
             engine_args["connect_args"] = {'check_same_thread': False}
+    elif all((CONF.sql_dbpool_enable, MySQLdb,
+            "mysql" in connection_dict.drivername)):
+        LOG.info(_("Using mysql/eventlet db_pool."))
+        # MySQLdb won't accept 'None' in the password field
+        password = connection_dict.password or ''
+        pool_args = {
+                'db': connection_dict.database,
+                'passwd': password,
+                'host': connection_dict.host,
+                'user': connection_dict.username,
+                'min_size': CONF.sql_min_pool_size,
+                'max_size': CONF.sql_max_pool_size,
+                'max_idle': CONF.sql_idle_timeout}
+        creator = db_pool.ConnectionPool(MySQLdb, **pool_args)
+        engine_args['creator'] = creator.create
     else:
         engine_args['pool_size'] = CONF.sql_max_pool_size
         if CONF.sql_max_overflow is not None:
@@ -342,9 +369,7 @@ def create_engine(sql_connection):
 
     if (CONF.sql_connection_trace and
             engine.dialect.dbapi.__name__ == 'MySQLdb'):
-        import MySQLdb.cursors
-        _do_query = debug_mysql_do_query()
-        setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
+        patch_mysqldb_with_stacktrace_comments()
 
     try:
         engine.connect()
@@ -378,8 +403,10 @@ def get_maker(engine, autocommit=True, expire_on_commit=False):
                                        expire_on_commit=expire_on_commit)
 
 
-def debug_mysql_do_query():
-    """Return a debug version of MySQLdb.cursors._do_query"""
+def patch_mysqldb_with_stacktrace_comments():
+    """Adds current stack trace as a comment in queries by patching
+    MySQLdb.cursors.BaseCursor._do_query.
+    """
     import MySQLdb.cursors
     import traceback
 
@@ -415,5 +442,4 @@ def debug_mysql_do_query():
             qq = q
         old_mysql_do_query(self, qq)
 
-    # return the new _do_query method
-    return _do_query
+    setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
