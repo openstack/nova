@@ -39,5 +39,4 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(context,
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
-                                       updates=updates),
-                         topic=self.topic)
+                                       updates=updates))
