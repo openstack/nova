@@ -283,7 +283,7 @@ class ProxyCallback(object):
             # This final None tells multicall that it is done.
             ctxt.reply(ending=True, connection_pool=self.connection_pool)
         except Exception as e:
-            LOG.exception('Exception during message handling')
+            LOG.exception(_('Exception during message handling'))
             ctxt.reply(None, sys.exc_info(),
                        connection_pool=self.connection_pool)
 

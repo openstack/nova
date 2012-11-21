@@ -74,7 +74,7 @@ def update_instance_cache_with_nw_info(api, context, instance,
         cache = {'network_info': nw_info.json()}
         api.db.instance_info_cache_update(context, instance['uuid'], cache)
     except Exception as e:
-        LOG.exception('Failed storing info cache', instance=instance)
+        LOG.exception(_('Failed storing info cache'), instance=instance)
         LOG.debug(_('args: %s') % (args or {}))
         LOG.debug(_('kwargs: %s') % (kwargs or {}))
 

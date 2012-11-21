@@ -1033,7 +1033,7 @@ def _create_veth_pair(dev1_name, dev2_name):
                 utils.execute('ip', 'link', 'delete', dev1_name,
                               run_as_root=True, check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
-                LOG.exception("Error clearing stale veth %s" % dev)
+                LOG.exception(_("Error clearing stale veth %s") % dev)
 
     utils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
                   'name', dev2_name, run_as_root=True)
