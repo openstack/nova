@@ -43,10 +43,6 @@ def _get_my_ip():
 
 
 core_opts = [
-    cfg.StrOpt('sql_connection',
-               default='sqlite:///$state_path/$sqlite_db',
-               help='The SQLAlchemy connection string used to connect to the '
-                    'database'),
     cfg.StrOpt('api_paste_config',
                default="api-paste.ini",
                help='File name for the paste.deploy config for nova-api'),
@@ -66,13 +62,6 @@ debug_opts = [
     cfg.BoolOpt('fake_network',
                 default=False,
                 help='If passed, use fake network devices and addresses'),
-    cfg.IntOpt('sql_connection_debug',
-               default=0,
-               help='Verbosity of SQL debugging information. 0=None, '
-                    '100=Everything'),
-    cfg.BoolOpt('sql_connection_trace',
-               default=False,
-               help='Add python stack traces to SQL as comment strings'),
 ]
 
 cfg.CONF.register_cli_opts(core_opts)
@@ -205,30 +194,6 @@ global_opts = [
     cfg.StrOpt('vpn_key_suffix',
                default='-vpn',
                help='Suffix to add to project name for vpn key and secgroups'),
-    cfg.StrOpt('sqlite_db',
-               default='nova.sqlite',
-               help='the filename to use with sqlite'),
-    cfg.BoolOpt('sqlite_synchronous',
-                default=True,
-                help='If passed, use synchronous mode for sqlite'),
-    cfg.IntOpt('sql_idle_timeout',
-               default=3600,
-               help='timeout before idle sql connections are reaped'),
-    cfg.IntOpt('sql_max_retries',
-               default=10,
-               help='maximum db connection retries during startup. '
-                    '(setting -1 implies an infinite retry count)'),
-    cfg.IntOpt('sql_retry_interval',
-               default=10,
-               help='interval between retries of opening a sql connection'),
-    cfg.IntOpt('sql_max_pool_size',
-               default=5,
-               help='Maximum number of SQL connections to keep open in a '
-                     'pool'),
-    cfg.IntOpt('sql_max_overflow',
-               default=None,
-               help='If set, use this value for max_overflow with '
-                    'sqlalchemy'),
     cfg.StrOpt('compute_manager',
                default='nova.compute.manager.ComputeManager',
                help='full class name for the Manager for compute'),

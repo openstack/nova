@@ -41,8 +41,8 @@ import eventlet
 eventlet.monkey_patch(os=False)
 
 CONF = cfg.CONF
-CONF.import_opt('sql_connection', 'nova.config')
-CONF.import_opt('sqlite_db', 'nova.config')
+CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
+CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
 CONF.import_opt('state_path', 'nova.config')
 CONF.set_override('use_stderr', False)
 
