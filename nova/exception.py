@@ -412,6 +412,10 @@ class NotFound(NovaException):
     code = 404
 
 
+class AgentBuildNotFound(NotFound):
+    message = _("No agent-build associated with id %(id)s.")
+
+
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 

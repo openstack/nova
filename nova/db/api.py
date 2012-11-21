@@ -1372,9 +1372,9 @@ def agent_build_get_by_triple(context, hypervisor, os, architecture):
             architecture)
 
 
-def agent_build_get_all(context):
+def agent_build_get_all(context, hypervisor=None):
     """Get all agent builds."""
-    return IMPL.agent_build_get_all(context)
+    return IMPL.agent_build_get_all(context, hypervisor)
 
 
 def agent_build_destroy(context, agent_update_id):

@@ -158,6 +158,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "AdminActions",
             "Aggregates",
             "AvailabilityZone",
+            "Agents",
             "Certificates",
             "Cloudpipe",
             "CloudpipeUpdate",

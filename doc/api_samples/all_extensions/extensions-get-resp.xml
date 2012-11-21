@@ -28,6 +28,9 @@
     resetNetwork, injectNetworkInfo, lock, unlock, createBackup
     </description>
   </extension>
+  <extension alias="os-agents" updated="2012-10-28T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/agents/api/v2" name="Agents">
+    <description>Agents support</description>
+  </extension>
   <extension alias="os-aggregates" updated="2012-01-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/aggregates/api/v1.1" name="Aggregates">
     <description>Admin-only aggregate administration</description>
   </extension>

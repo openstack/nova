@@ -65,6 +65,14 @@
             "updated": "2011-09-20T00:00:00+00:00"
         },
         {
+            "alias": "os-agents",
+            "description": "Agents support",
+            "links": [],
+            "name": "Agents",
+            "namespace": "http://docs.openstack.org/compute/ext/agents/api/v2",
+            "updated": "2012-10-28T00:00:00-00:00"
+        },
+        {
             "alias": "os-aggregates",
             "description": "Admin-only aggregate administration",
             "links": [],
