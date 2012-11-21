@@ -16,19 +16,31 @@
 """
 Cells Service Manager
 """
+import datetime
+import time
 
 from nova.cells import messaging
 from nova.cells import state as cells_state
+from nova.cells import utils as cells_utils
 from nova import context
+from nova import exception
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 
 cell_manager_opts = [
         cfg.StrOpt('driver',
                 default='nova.cells.rpc_driver.CellsRPCDriver',
                 help='Cells communication driver to use'),
+        cfg.IntOpt("instance_updated_at_threshold",
+                default=3600,
+                help="Number of seconds after an instance was updated "
+                        "or deleted to continue to update cells"),
+        cfg.IntOpt("instance_update_num_instances",
+                default=1,
+                help="Number of instances to update per periodic task run")
 ]
 
 
@@ -66,6 +78,7 @@ class CellsManager(manager.Manager):
         cells_driver_cls = importutils.import_class(
                 CONF.cells.driver)
         self.driver = cells_driver_cls()
+        self.instances_to_heal = iter([])
 
     def post_start_hook(self):
         """Have the driver start its consumers for inter-cell communication.
@@ -92,6 +105,77 @@ class CellsManager(manager.Manager):
         """
         self.msg_runner.tell_parents_our_capabilities(ctxt)
         self.msg_runner.tell_parents_our_capacities(ctxt)
+
+    @manager.periodic_task
+    def _heal_instances(self, ctxt):
+        """Periodic task to send updates for a number of instances to
+        parent cells.
+
+        On every run of the periodic task, we will attempt to sync
+        'CONF.cells.instance_update_num_instances' number of instances.
+        When we get the list of instances, we shuffle them so that multiple
+        nova-cells services aren't attempting to sync the same instances
+        in lockstep.
+
+        If CONF.cells.instance_update_at_threshold is set, only attempt
+        to sync instances that have been updated recently.  The CONF
+        setting defines the maximum number of seconds old the updated_at
+        can be.  Ie, a threshold of 3600 means to only update instances
+        that have modified in the last hour.
+        """
+
+        if not self.state_manager.get_parent_cells():
+            # No need to sync up if we have no parents.
+            return
+
+        info = {'updated_list': False}
+
+        def _next_instance():
+            try:
+                instance = self.instances_to_heal.next()
+            except StopIteration:
+                if info['updated_list']:
+                    return
+                threshold = CONF.cells.instance_updated_at_threshold
+                updated_since = None
+                if threshold > 0:
+                    updated_since = timeutils.utcnow() - datetime.timedelta(
+                            seconds=threshold)
+                self.instances_to_heal = cells_utils.get_instances_to_sync(
+                        ctxt, updated_since=updated_since, shuffle=True,
+                        uuids_only=True)
+                info['updated_list'] = True
+                try:
+                    instance = self.instances_to_heal.next()
+                except StopIteration:
+                    return
+            return instance
+
+        rd_context = ctxt.elevated(read_deleted='yes')
+
+        for i in xrange(CONF.cells.instance_update_num_instances):
+            while True:
+                # Yield to other greenthreads
+                time.sleep(0)
+                instance_uuid = _next_instance()
+                if not instance_uuid:
+                    return
+                try:
+                    instance = self.db.instance_get_by_uuid(rd_context,
+                            instance_uuid)
+                except exception.InstanceNotFound:
+                    continue
+                self._sync_instance(ctxt, instance)
+                break
+
+    def _sync_instance(self, ctxt, instance):
+        """Broadcast an instance_update or instance_destroy message up to
+        parent cells.
+        """
+        if instance['deleted']:
+            self.instance_destroy_at_top(ctxt, instance)
+        else:
+            self.instance_update_at_top(ctxt, instance)
 
     def schedule_run_instance(self, ctxt, host_sched_kwargs):
         """Pick a cell (possibly ourselves) to build new instance(s)
