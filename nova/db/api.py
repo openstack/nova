@@ -700,15 +700,6 @@ def instance_remove_security_group(context, instance_id, security_group_id):
 ###################
 
 
-def instance_info_cache_create(context, values):
-    """Create a new instance cache record in the table.
-
-    :param context: = request context object
-    :param values: = dict containing column values
-    """
-    return IMPL.instance_info_cache_create(context, values)
-
-
 def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
