@@ -50,7 +50,6 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_image', 'nova.config')
 CONF.import_opt('default_instance_type', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 LOG = logging.getLogger(__name__)
@@ -1570,7 +1569,7 @@ class CloudTestCase(test.TestCase):
                           self.context, **kwargs)
 
     def test_run_instances_image_status_active(self):
-        kwargs = {'image_id': CONF.default_image,
+        kwargs = {'image_id': 'ami-00000001',
                   'instance_type': CONF.default_instance_type,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
