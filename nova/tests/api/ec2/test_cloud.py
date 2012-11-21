@@ -302,6 +302,18 @@ class CloudTestCase(test.TestCase):
                           self.cloud.disassociate_address,
                           self.context, public_ip=address)
 
+    def test_disassociate_unassociated_address(self):
+        address = "10.10.10.10"
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'pool': 'nova'})
+        self.cloud.allocate_address(self.context)
+        self.cloud.describe_addresses(self.context)
+        self.assertRaises(exception.InstanceNotFound,
+                          self.cloud.disassociate_address,
+                          self.context, public_ip=address)
+        db.floating_ip_destroy(self.context, address)
+
     def test_describe_security_groups(self):
         """Makes sure describe_security_groups works and filters results."""
         sec = db.security_group_create(self.context,

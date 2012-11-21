@@ -127,7 +127,9 @@ def id_to_ec2_id(instance_id, template='i-%08x'):
 
 def id_to_ec2_inst_id(instance_id):
     """Get or create an ec2 instance ID (i-[base 16 number]) from uuid."""
-    if uuidutils.is_uuid_like(instance_id):
+    if instance_id is None:
+        return None
+    elif uuidutils.is_uuid_like(instance_id):
         ctxt = context.get_admin_context()
         int_id = get_int_id_from_instance_uuid(ctxt, instance_id)
         return id_to_ec2_id(int_id)
