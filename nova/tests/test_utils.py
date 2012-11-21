@@ -774,3 +774,30 @@ class MkfsTestCase(test.TestCase):
         utils.mkfs('ext4', '/my/block/dev', 'ext4-vol')
         utils.mkfs('msdos', '/my/msdos/block/dev', 'msdos-vol')
         utils.mkfs('swap', '/my/swap/block/dev', 'swap-vol')
+
+
+class LastBytesTestCase(test.TestCase):
+    """Test the last_bytes() utility method."""
+
+    def setUp(self):
+        super(LastBytesTestCase, self).setUp()
+        self.f = StringIO.StringIO('1234567890')
+
+    def test_truncated(self):
+        self.f.seek(0, os.SEEK_SET)
+        out, remaining = utils.last_bytes(self.f, 5)
+        self.assertEqual(out, '67890')
+        self.assertTrue(remaining > 0)
+
+    def test_read_all(self):
+        self.f.seek(0, os.SEEK_SET)
+        out, remaining = utils.last_bytes(self.f, 1000)
+        self.assertEqual(out, '1234567890')
+        self.assertFalse(remaining > 0)
+
+    def test_seek_too_far_real_file(self):
+        # StringIO doesn't raise IOError if you see past the start of the file.
+        flo = tempfile.TemporaryFile()
+        content = '1234567890'
+        flo.write(content)
+        self.assertEqual((content, 0), utils.last_bytes(flo, 1000))

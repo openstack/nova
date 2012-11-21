@@ -14,8 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import __builtin__
 import base64
+import mox
 import netaddr
+import StringIO
 import sys
 import traceback
 
@@ -25,6 +28,7 @@ from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
+from nova.tests import fake_libvirt_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.virt import fake
@@ -428,6 +432,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_console_output(self):
+        fake_libvirt_utils.files['dummy.log'] = ''
         instance_ref, network_info = self._get_running_instance()
         console_output = self.connection.get_console_output(instance_ref)
         self.assertTrue(isinstance(console_output, basestring))

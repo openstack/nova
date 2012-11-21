@@ -1180,3 +1180,24 @@ def mkfs(fs, path, label=None):
         args.extend([label_opt, label])
     args.append(path)
     execute(*args)
+
+
+def last_bytes(file_like_object, num):
+    """Return num bytes from the end of the file, and remaining byte count.
+
+    :param file_like_object: The file to read
+    :param num: The number of bytes to return
+
+    :returns (data, remaining)
+    """
+
+    try:
+        file_like_object.seek(-num, os.SEEK_END)
+    except IOError, e:
+        if e.errno == 22:
+            file_like_object.seek(0, os.SEEK_SET)
+        else:
+            raise
+
+    remaining = file_like_object.tell()
+    return (file_like_object.read(), remaining)
