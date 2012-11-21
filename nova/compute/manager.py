@@ -73,6 +73,7 @@ from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
+from nova.virt import storage_users
 from nova.virt import virtapi
 from nova import volume
 
@@ -3249,4 +3250,19 @@ class ComputeManager(manager.SchedulerDependentManager):
             return
 
         all_instances = self.db.instance_get_all(context)
-        self.driver.manage_image_cache(context, all_instances)
+
+        # Determine what other nodes use this storage
+        storage_users.register_storage_use(CONF.instances_path, CONF.host)
+        nodes = storage_users.get_storage_users(CONF.instances_path)
+
+        # Filter all_instances to only include those nodes which share this
+        # storage path.
+        # TODO(mikal): this should be further refactored so that the cache
+        # cleanup code doesn't know what those instances are, just a remote
+        # count, and then this logic should be pushed up the stack.
+        filtered_instances = []
+        for instance in all_instances:
+            if instance['host'] in nodes:
+                filtered_instances.append(instance)
+
+        self.driver.manage_image_cache(context, filtered_instances)

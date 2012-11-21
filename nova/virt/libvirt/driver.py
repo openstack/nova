@@ -2388,7 +2388,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InvalidCPUInfo(reason=m % locals())
 
     def _create_shared_storage_test_file(self):
-        """Makes tmpfile under CONF.instance_path."""
+        """Makes tmpfile under CONF.instances_path."""
         dirpath = CONF.instances_path
         fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug(_("Creating tmpfile %s to notify to other "

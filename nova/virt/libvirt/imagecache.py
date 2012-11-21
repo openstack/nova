@@ -258,8 +258,8 @@ class ImageCacheManager(object):
                     current_checksum = utils.hash_file(f)
 
                 if current_checksum != stored_checksum:
-                    LOG.error(_('%(id)s (%(base_file)s): image verification '
-                                'failed'),
+                    LOG.error(_('image %(id)s at (%(base_file)s): image '
+                                'verification failed'),
                               {'id': img_id,
                                'base_file': base_file})
                     return False
@@ -268,8 +268,8 @@ class ImageCacheManager(object):
                     return True
 
             else:
-                LOG.info(_('%(id)s (%(base_file)s): image verification '
-                           'skipped, no hash stored'),
+                LOG.info(_('image %(id)s at (%(base_file)s): image '
+                           'verification skipped, no hash stored'),
                          {'id': img_id,
                           'base_file': base_file})
 
@@ -325,7 +325,7 @@ class ImageCacheManager(object):
         image_bad = False
         image_in_use = False
 
-        LOG.info(_('%(id)s (%(base_file)s): checking'),
+        LOG.info(_('image %(id)s at (%(base_file)s): checking'),
                  {'id': img_id,
                   'base_file': base_file})
 
@@ -346,44 +346,42 @@ class ImageCacheManager(object):
         instances = []
         if img_id in self.used_images:
             local, remote, instances = self.used_images[img_id]
-            if local > 0:
-                LOG.debug(_('%(id)s (%(base_file)s): '
-                            'in use: on this node %(local)d local, '
-                            '%(remote)d on other nodes'),
-                          {'id': img_id,
-                           'base_file': base_file,
-                           'local': local,
-                           'remote': remote})
 
+            if local > 0 or remote > 0:
                 image_in_use = True
+                LOG.info(_('image %(id)s at (%(base_file)s): '
+                           'in use: on this node %(local)d local, '
+                           '%(remote)d on other nodes sharing this instance '
+                           'storage'),
+                         {'id': img_id,
+                          'base_file': base_file,
+                          'local': local,
+                          'remote': remote})
+
                 self.active_base_files.append(base_file)
 
                 if not base_file:
-                    LOG.warning(_('%(id)s (%(base_file)s): warning -- an '
-                                  'absent base file is in use! instances: '
-                                  '%(instance_list)s'),
+                    LOG.warning(_('image %(id)s at (%(base_file)s): warning '
+                                  '-- an absent base file is in use! '
+                                  'instances: %(instance_list)s'),
                                 {'id': img_id,
                                  'base_file': base_file,
                                  'instance_list': ' '.join(instances)})
 
-            else:
-                LOG.debug(_('%(id)s (%(base_file)s): in use on (%(remote)d on '
-                            'other nodes)'),
-                          {'id': img_id,
-                           'base_file': base_file,
-                           'remote': remote})
         if image_bad:
             self.corrupt_base_files.append(base_file)
 
         if base_file:
             if not image_in_use:
-                LOG.debug(_('%(id)s (%(base_file)s): image is not in use'),
+                LOG.debug(_('image %(id)s at (%(base_file)s): image is not in '
+                            'use'),
                           {'id': img_id,
                            'base_file': base_file})
                 self.removable_base_files.append(base_file)
 
             else:
-                LOG.debug(_('%(id)s (%(base_file)s): image is in use'),
+                LOG.debug(_('image %(id)s at (%(base_file)s): image is in '
+                            'use'),
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
