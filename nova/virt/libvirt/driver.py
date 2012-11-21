@@ -180,6 +180,9 @@ libvirt_opts = [
                default='$instances_path/snapshots',
                help='Location where libvirt driver will store snapshots '
                     'before uploading them to image service'),
+    cfg.StrOpt('xen_hvmloader_path',
+                default='/usr/lib/xen/boot/hvmloader',
+                help='Location where the Xen hvmloader is kept'),
     ]
 
 CONF = cfg.CONF
@@ -1721,7 +1724,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_type = vm_mode.HVM
 
         if CONF.libvirt_type == "xen" and guest.os_type == vm_mode.HVM:
-            guest.os_loader = '/usr/lib/xen/boot/hvmloader'
+            guest.os_loader = CONF.xen_hvmloader_path
 
         if CONF.libvirt_type == "lxc":
             guest.os_type = vm_mode.EXE
