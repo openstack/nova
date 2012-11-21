@@ -72,11 +72,13 @@ class SmokeTestCase(unittest.TestCase):
         else:
             return False
 
-    def wait_for_not_running(self, instance, tries=60, wait=1):
-        """Wait for instance to not be running"""
+    def wait_for_deleted(self, instance, tries=60, wait=1):
+        """Wait for instance to be deleted"""
         for x in xrange(tries):
-            instance.update()
-            if not instance.state.startswith('running'):
+            try:
+                #NOTE(dprince): raises exception when instance id disappears
+                instance.update(validate=True)
+            except ValueError:
                 return True
             time.sleep(wait)
         else:
