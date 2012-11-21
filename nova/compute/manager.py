@@ -139,23 +139,39 @@ compute_opts = [
     cfg.BoolOpt('instance_usage_audit',
                default=False,
                help="Generate periodic compute.instance.exists notifications"),
+    cfg.IntOpt('bandwidth_poll_interval',
+               default=600,
+               help='interval to pull bandwidth usage info'),
+    cfg.BoolOpt('resume_guests_state_on_host_boot',
+                default=False,
+                help='Whether to start guests that were running before the '
+                     'host rebooted'),
+    cfg.BoolOpt('start_guests_on_host_boot',
+                default=False,
+                help='Whether to restart guests when the host reboots'),
+    cfg.StrOpt('default_access_ip_network_name',
+               default=None,
+               help='Name of network to use to set access ips for instances'),
+    cfg.BoolOpt('defer_iptables_apply',
+                default=False,
+                help='Whether to batch up the application of IPTables rules'
+                     ' during a host restart and apply all at the end of the'
+                     ' init phase'),
+    cfg.IntOpt('reclaim_instance_interval',
+               default=0,
+               help='Interval in seconds for reclaiming deleted instances'),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
-CONF.import_opt('allow_resize_to_same_host', 'nova.config')
-CONF.import_opt('bandwidth_poll_interval', 'nova.config')
+CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('compute_driver', 'nova.config')
 CONF.import_opt('console_topic', 'nova.config')
-CONF.import_opt('default_access_ip_network_name', 'nova.config')
-CONF.import_opt('defer_iptables_apply', 'nova.config')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('network_manager', 'nova.config')
 CONF.import_opt('password_length', 'nova.config')
 CONF.import_opt('reclaim_instance_interval', 'nova.config')
-CONF.import_opt('resume_guests_state_on_host_boot', 'nova.config')
-CONF.import_opt('start_guests_on_host_boot', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('state_path', 'nova.config')

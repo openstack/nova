@@ -45,7 +45,7 @@ CONF = cfg.CONF
 CONF.import_opt('enable_instance_password', 'nova.config')
 CONF.import_opt('network_api_class', 'nova.config')
 CONF.import_opt('password_length', 'nova.config')
-CONF.import_opt('reclaim_instance_interval', 'nova.config')
+CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 
 def make_fault(elem):

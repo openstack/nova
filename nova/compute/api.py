@@ -59,13 +59,32 @@ from nova import volume
 
 LOG = logging.getLogger(__name__)
 
+compute_opts = [
+    cfg.BoolOpt('allow_resize_to_same_host',
+                default=False,
+                help='Allow destination machine to match source for resize. '
+                     'Useful when testing in single-host environments.'),
+    cfg.StrOpt('default_schedule_zone',
+               default=None,
+               help='availability zone to use when user doesn\'t specify one'),
+    cfg.ListOpt('non_inheritable_image_properties',
+                default=['cache_in_nova',
+                         'bittorrent'],
+                help='These are image properties which a snapshot should not'
+                     ' inherit from an instance'),
+    cfg.StrOpt('null_kernel',
+               default='nokernel',
+               help='kernel image that indicates not to use a kernel, but to '
+                    'use a raw disk image instead'),
+    cfg.StrOpt('security_group_handler',
+               default='nova.network.sg.NullSecurityGroupHandler',
+               help='The full class name of the security group handler class'),
+]
+
+
 CONF = cfg.CONF
-CONF.import_opt('allow_resize_to_same_host', 'nova.config')
+CONF.register_opts(compute_opts)
 CONF.import_opt('compute_topic', 'nova.config')
-CONF.import_opt('default_schedule_zone', 'nova.config')
-CONF.import_opt('non_inheritable_image_properties', 'nova.config')
-CONF.import_opt('null_kernel', 'nova.config')
-CONF.import_opt('security_group_handler', 'nova.config')
 CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
 
 MAX_USERDATA_SIZE = 65535

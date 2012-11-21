@@ -29,7 +29,7 @@ from nova.openstack.common import log as logging
 
 
 CONF = cfg.CONF
-CONF.import_opt('null_kernel', 'nova.config')
+CONF.import_opt('null_kernel', 'nova.compute.api')
 LOG = logging.getLogger(__name__)
 
 

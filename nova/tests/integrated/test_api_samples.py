@@ -39,7 +39,7 @@ from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 
 CONF = cfg.CONF
-CONF.import_opt('allow_resize_to_same_host', 'nova.config')
+CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('osapi_compute_extension', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 LOG = logging.getLogger(__name__)
