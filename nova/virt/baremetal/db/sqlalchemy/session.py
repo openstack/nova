@@ -31,7 +31,8 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-CONF.import_opt('sqlite_db', 'nova.config')
+CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
+CONF.import_opt('state_path', 'nova.config')
 
 _ENGINE = None
 _MAKER = None
