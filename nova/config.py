@@ -221,9 +221,10 @@ global_opts = [
     cfg.IntOpt('sql_retry_interval',
                default=10,
                help='interval between retries of opening a sql connection'),
-    cfg.IntOpt('sql_pool_size',
-               default=None,
-               help='If set, use this value for pool_size with sqlalchemy'),
+    cfg.IntOpt('sql_max_pool_size',
+               default=5,
+               help='Maximum number of SQL connections to keep open in a '
+                     'pool'),
     cfg.IntOpt('sql_max_overflow',
                default=None,
                help='If set, use this value for max_overflow with '

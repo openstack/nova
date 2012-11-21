@@ -180,6 +180,7 @@ CONF.import_opt('sql_idle_timeout', 'nova.config')
 CONF.import_opt('sqlite_synchronous', 'nova.config')
 CONF.import_opt('sql_max_retries', 'nova.config')
 CONF.import_opt('sql_retry_interval', 'nova.config')
+CONF.import_opt('sql_max_pool_size', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None
@@ -277,11 +278,6 @@ def create_engine(sql_connection):
         'convert_unicode': True,
     }
 
-    if CONF.sql_pool_size is not None:
-        engine_args['pool_size'] = CONF.sql_pool_size
-    if CONF.sql_max_overflow is not None:
-        engine_args['max_overflow'] = CONF.sql_max_overflow
-
     # Map our SQL debug level to SQLAlchemy's options
     if CONF.sql_connection_debug >= 100:
         engine_args['echo'] = 'debug'
@@ -294,6 +290,10 @@ def create_engine(sql_connection):
         if CONF.sql_connection == "sqlite://":
             engine_args["poolclass"] = StaticPool
             engine_args["connect_args"] = {'check_same_thread': False}
+    else:
+        engine_args['pool_size'] = CONF.sql_max_pool_size
+        if CONF.sql_max_overflow is not None:
+            engine_args['max_overflow'] = CONF.sql_max_overflow
 
     engine = sqlalchemy.create_engine(sql_connection, **engine_args)
 
