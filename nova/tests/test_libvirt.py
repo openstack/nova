@@ -73,6 +73,7 @@ CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.config')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 LOG = logging.getLogger(__name__)
 
 _fake_network_info = fake_network.fake_get_instance_nw_info

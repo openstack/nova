@@ -23,6 +23,7 @@ http://wiki.openstack.org/nova-image-cache-management.
 """
 
 import hashlib
+import json
 import os
 import re
 import time
@@ -30,6 +31,8 @@ import time
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.openstack.common import cfg
+from nova.openstack.common import fileutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -39,6 +42,15 @@ from nova.virt.libvirt import utils as virtutils
 LOG = logging.getLogger(__name__)
 
 imagecache_opts = [
+    cfg.StrOpt('base_dir_name',
+               default='_base',
+               help="Where cached images are stored under $instances_path."
+                    "This is NOT the full path - just a folder name."
+                    "For per-compute-host cached images, set to _base_$my_ip"),
+    cfg.StrOpt('image_info_filename_pattern',
+               default='$instances_path/$base_dir_name/%(image)s.info',
+               help='Allows image information files to be stored in '
+                    'non-standard locations'),
     cfg.BoolOpt('remove_unused_base_images',
                 default=True,
                 help='Should unused base images be removed?'),
@@ -62,7 +74,124 @@ CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('instances_path', 'nova.compute.manager')
-CONF.import_opt('base_dir_name', 'nova.compute.manager')
+
+
+def get_info_filename(base_path):
+    """Construct a filename for storing addtional information about a base
+    image.
+
+    Returns a filename.
+    """
+
+    base_file = os.path.basename(base_path)
+    return (CONF.image_info_filename_pattern
+            % {'image': base_file})
+
+
+def is_valid_info_file(path):
+    """Test if a given path matches the pattern for info files."""
+
+    digest_size = hashlib.sha1().digestsize * 2
+    regexp = (CONF.image_info_filename_pattern
+              % {'image': ('([0-9a-f]{%(digest_size)d}|'
+                           '[0-9a-f]{%(digest_size)d}_sm|'
+                           '[0-9a-f]{%(digest_size)d}_[0-9]+)'
+                           % {'digest_size': digest_size})})
+    m = re.match(regexp, path)
+    if m:
+        return True
+    return False
+
+
+def _read_possible_json(serialized, info_file):
+    try:
+        d = jsonutils.loads(serialized)
+
+    except ValueError, e:
+        LOG.error(_('Error reading image info file %(filename)s: '
+                    '%(error)s'),
+                  {'filename': info_file,
+                   'error': e})
+        d = {}
+
+    return d
+
+
+def read_stored_info(target, field=None, timestamped=False):
+    """Read information about an image.
+
+    Returns an empty dictionary if there is no info, just the field value if
+    a field is requested, or the entire dictionary otherwise.
+    """
+
+    info_file = get_info_filename(target)
+    if not os.path.exists(info_file):
+        # NOTE(mikal): Special case to handle essex checksums being converted.
+        # There is an assumption here that target is a base image filename.
+        old_filename = target + '.sha1'
+        if field == 'sha1' and os.path.exists(old_filename):
+            hash_file = open(old_filename)
+            hash_value = hash_file.read()
+            hash_file.close()
+
+            write_stored_info(target, field=field, value=hash_value)
+            os.remove(old_filename)
+            d = {field: hash_value}
+
+        else:
+            d = {}
+
+    else:
+        lock_name = 'info-%s' % os.path.split(target)[-1]
+        lock_path = os.path.join(CONF.instances_path, 'locks')
+
+        @lockutils.synchronized(lock_name, 'nova-', external=True,
+                                lock_path=lock_path)
+        def read_file(info_file):
+            LOG.debug(_('Reading image info file: %s'), info_file)
+            with open(info_file, 'r') as f:
+                return f.read().rstrip()
+
+        serialized = read_file(info_file)
+        d = _read_possible_json(serialized, info_file)
+
+    if field:
+        if timestamped:
+            return (d.get(field, None), d.get('%s-timestamp' % field, None))
+        else:
+            return d.get(field, None)
+    return d
+
+
+def write_stored_info(target, field=None, value=None):
+    """Write information about an image."""
+
+    if not field:
+        return
+
+    info_file = get_info_filename(target)
+    LOG.info(_('Writing stored info to %s'), info_file)
+    fileutils.ensure_tree(os.path.dirname(info_file))
+
+    lock_name = 'info-%s' % os.path.split(target)[-1]
+    lock_path = os.path.join(CONF.instances_path, 'locks')
+
+    @lockutils.synchronized(lock_name, 'nova-', external=True,
+                            lock_path=lock_path)
+    def write_file(info_file, field, value):
+        d = {}
+
+        if os.path.exists(info_file):
+            with open(info_file, 'r') as f:
+                d = _read_possible_json(f.read(), info_file)
+
+        d[field] = value
+        d['%s-timestamp' % field] = time.time()
+
+        with open(info_file, 'w') as f:
+            f.write(json.dumps(d))
+
+    write_file(info_file, field, value)
 
 
 def read_stored_checksum(target, timestamped=True):
@@ -70,8 +199,7 @@ def read_stored_checksum(target, timestamped=True):
 
     Returns the checksum (as hex) or None.
     """
-    return virtutils.read_stored_info(target, field='sha1',
-                                      timestamped=timestamped)
+    return read_stored_info(target, field='sha1', timestamped=timestamped)
 
 
 def write_stored_checksum(target):
@@ -79,7 +207,7 @@ def write_stored_checksum(target):
 
     with open(target, 'r') as img_file:
         checksum = utils.hash_file(img_file)
-    virtutils.write_stored_info(target, field='sha1', value=checksum)
+    write_stored_info(target, field='sha1', value=checksum)
 
 
 class ImageCacheManager(object):
@@ -125,8 +253,7 @@ class ImageCacheManager(object):
 
             elif (len(ent) > digest_size + 2 and
                   ent[digest_size] == '_' and
-                  not virtutils.is_valid_info_file(os.path.join(base_dir,
-                                                                ent))):
+                  not is_valid_info_file(os.path.join(base_dir, ent))):
                 self._store_image(base_dir, ent, original=False)
 
     def _list_running_instances(self, context, all_instances):
@@ -251,8 +378,8 @@ class ImageCacheManager(object):
                 # NOTE(mikal): If there is no timestamp, then the checksum was
                 # performed by a previous version of the code.
                 if not stored_timestamp:
-                    virtutils.write_stored_info(base_file, field='sha1',
-                                                value=stored_checksum)
+                    write_stored_info(base_file, field='sha1',
+                                      value=stored_checksum)
 
                 with open(base_file, 'r') as f:
                     current_checksum = utils.hash_file(f)
@@ -310,7 +437,7 @@ class ImageCacheManager(object):
             LOG.info(_('Removing base file: %s'), base_file)
             try:
                 os.remove(base_file)
-                signature = virtutils.get_info_filename(base_file)
+                signature = get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
             except OSError, e:

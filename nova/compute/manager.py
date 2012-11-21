@@ -28,7 +28,6 @@ terminating it.
 **Related Flags**
 
 :instances_path:  Where instances are kept on disk
-:base_dir_name:  Where cached images are stored under instances_path
 
 """
 
@@ -78,11 +77,6 @@ from nova import volume
 
 
 compute_opts = [
-    cfg.StrOpt('base_dir_name',
-               default='_base',
-               help="Where cached images are stored under $instances_path."
-                    "This is NOT the full path - just a folder name."
-                    "For per-compute-host cached images, set to _base_$my_ip"),
     cfg.StrOpt('console_host',
                default=socket.getfqdn(),
                help='Console proxy host to use to connect '
