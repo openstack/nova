@@ -1528,9 +1528,9 @@ def get_instance_uuid_by_ec2_id(context, ec2_id):
     return IMPL.get_instance_uuid_by_ec2_id(context, ec2_id)
 
 
-def ec2_instance_create(context, instance_ec2_id):
+def ec2_instance_create(context, instance_uuid, id=None):
     """Create the ec2 id to instance uuid mapping on demand"""
-    return IMPL.ec2_instance_create(context, instance_ec2_id)
+    return IMPL.ec2_instance_create(context, instance_uuid, id)
 
 
 ####################

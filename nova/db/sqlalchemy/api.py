@@ -1430,7 +1430,7 @@ def instance_create(context, values):
         instance_ref.instance_type
 
     # create the instance uuid to ec2_id mapping entry for instance
-    ec2_instance_create(context, instance_ref['uuid'])
+    db.ec2_instance_create(context, instance_ref['uuid'])
 
     return instance_ref
 
