@@ -79,9 +79,6 @@ from nova import volume
 
 
 compute_opts = [
-    cfg.StrOpt('instances_path',
-               default='$state_path/instances',
-               help='where instances are stored on disk'),
     cfg.StrOpt('base_dir_name',
                default='_base',
                help="Where cached images are stored under $instances_path."
@@ -91,9 +88,53 @@ compute_opts = [
                default=socket.getfqdn(),
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
+    cfg.StrOpt('default_access_ip_network_name',
+               default=None,
+               help='Name of network to use to set access ips for instances'),
+    cfg.BoolOpt('defer_iptables_apply',
+                default=False,
+                help='Whether to batch up the application of IPTables rules'
+                     ' during a host restart and apply all at the end of the'
+                     ' init phase'),
+    cfg.StrOpt('instances_path',
+               default='$state_path/instances',
+               help='where instances are stored on disk'),
+    cfg.BoolOpt('instance_usage_audit',
+               default=False,
+               help="Generate periodic compute.instance.exists notifications"),
     cfg.IntOpt('live_migration_retry_count',
                default=30,
                help="Number of 1 second retries needed in live_migration"),
+    cfg.BoolOpt('resume_guests_state_on_host_boot',
+                default=False,
+                help='Whether to start guests that were running before the '
+                     'host rebooted'),
+    cfg.BoolOpt('start_guests_on_host_boot',
+                default=False,
+                help='Whether to restart guests when the host reboots'),
+    ]
+
+interval_opts = [
+    cfg.IntOpt('bandwidth_poll_interval',
+               default=600,
+               help='interval to pull bandwidth usage info'),
+    cfg.IntOpt("heal_instance_info_cache_interval",
+               default=60,
+               help="Number of seconds between instance info_cache self "
+                        "healing updates"),
+    cfg.IntOpt('host_state_interval',
+               default=120,
+               help='Interval in seconds for querying the host status'),
+    cfg.IntOpt("image_cache_manager_interval",
+               default=40,
+               help="Number of periodic scheduler ticks to wait between "
+                    "runs of the image cache manager."),
+    cfg.IntOpt('reclaim_instance_interval',
+               default=0,
+               help='Interval in seconds for reclaiming deleted instances'),
+]
+
+timeout_opts = [
     cfg.IntOpt("reboot_timeout",
                default=0,
                help="Automatically hard reboot an instance if it has been "
@@ -112,58 +153,29 @@ compute_opts = [
                default=0,
                help="Automatically confirm resizes after N seconds. "
                     "Set to 0 to disable."),
-    cfg.IntOpt('host_state_interval',
-               default=120,
-               help='Interval in seconds for querying the host status'),
-    cfg.IntOpt("running_deleted_instance_timeout",
-               default=0,
-               help="Number of seconds after being deleted when a running "
-                    "instance should be considered eligible for cleanup."),
-    cfg.IntOpt("running_deleted_instance_poll_interval",
-               default=30,
-               help="Number of periodic scheduler ticks to wait between "
-                    "runs of the cleanup task."),
+]
+
+running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
                default="log",
                help="Action to take if a running deleted instance is detected."
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
-    cfg.IntOpt("image_cache_manager_interval",
-               default=40,
+    cfg.IntOpt("running_deleted_instance_poll_interval",
+               default=30,
                help="Number of periodic scheduler ticks to wait between "
-                    "runs of the image cache manager."),
-    cfg.IntOpt("heal_instance_info_cache_interval",
-               default=60,
-               help="Number of seconds between instance info_cache self "
-                        "healing updates"),
-    cfg.BoolOpt('instance_usage_audit',
-               default=False,
-               help="Generate periodic compute.instance.exists notifications"),
-    cfg.IntOpt('bandwidth_poll_interval',
-               default=600,
-               help='interval to pull bandwidth usage info'),
-    cfg.BoolOpt('resume_guests_state_on_host_boot',
-                default=False,
-                help='Whether to start guests that were running before the '
-                     'host rebooted'),
-    cfg.BoolOpt('start_guests_on_host_boot',
-                default=False,
-                help='Whether to restart guests when the host reboots'),
-    cfg.StrOpt('default_access_ip_network_name',
-               default=None,
-               help='Name of network to use to set access ips for instances'),
-    cfg.BoolOpt('defer_iptables_apply',
-                default=False,
-                help='Whether to batch up the application of IPTables rules'
-                     ' during a host restart and apply all at the end of the'
-                     ' init phase'),
-    cfg.IntOpt('reclaim_instance_interval',
+                    "runs of the cleanup task."),
+    cfg.IntOpt("running_deleted_instance_timeout",
                default=0,
-               help='Interval in seconds for reclaiming deleted instances'),
-    ]
+               help="Number of seconds after being deleted when a running "
+                    "instance should be considered eligible for cleanup."),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
+CONF.register_opts(interval_opts)
+CONF.register_opts(timeout_opts)
+CONF.register_opts(running_deleted_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('compute_driver', 'nova.config')
 CONF.import_opt('console_topic', 'nova.config')
