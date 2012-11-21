@@ -2568,15 +2568,15 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.list_instances().AndReturn(['herp', 'derp'])
         self.compute.host = 'host'
 
-        instance1 = mox.MockAnything()
-        instance1.name = 'herp'
-        instance1.deleted = True
-        instance1.deleted_at = "sometimeago"
+        instance1 = {}
+        instance1['name'] = 'herp'
+        instance1['deleted'] = True
+        instance1['deleted_at'] = "sometimeago"
 
-        instance2 = mox.MockAnything()
-        instance2.name = 'derp'
-        instance2.deleted = False
-        instance2.deleted_at = None
+        instance2 = {}
+        instance2['name'] = 'derp'
+        instance2['deleted'] = False
+        instance2['deleted_at'] = None
 
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
         timeutils.is_older_than('sometimeago',

@@ -734,7 +734,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     if ip['version'] == 6:
                         update_info['access_ip_v6'] = ip['address']
         if update_info:
-            self.db.instance_update(context, instance.uuid, update_info)
+            self.db.instance_update(context, instance['uuid'], update_info)
             notifications.send_update(context, instance, instance)
 
     def _check_instance_not_already_created(self, context, instance):
@@ -1225,7 +1225,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       REBUILD_BLOCK_DEVICE_MAPPING,
                                   expected_task_state=task_states.REBUILDING)
 
-            instance.injected_files = injected_files
+            instance['injected_files'] = injected_files
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
             if bdms is None:
@@ -3091,10 +3091,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instances = self.db.instance_get_all_by_host(context, self.host)
         for instance in instances:
-            old_enough = (not instance.deleted_at or
-                          timeutils.is_older_than(instance.deleted_at,
+            old_enough = (not instance['deleted_at'] or
+                          timeutils.is_older_than(instance['deleted_at'],
                                                   interval))
-            soft_deleted = instance.vm_state == vm_states.SOFT_DELETED
+            soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
 
             if soft_deleted and old_enough:
                 bdms = self.db.block_device_mapping_get_all_by_instance(
@@ -3180,10 +3180,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         def deleted_instance(instance):
             timeout = CONF.running_deleted_instance_timeout
-            present = instance.name in present_name_labels
-            erroneously_running = instance.deleted and present
-            old_enough = (not instance.deleted_at or
-                          timeutils.is_older_than(instance.deleted_at,
+            present = instance['name'] in present_name_labels
+            erroneously_running = instance['deleted'] and present
+            old_enough = (not instance['deleted_at'] or
+                          timeutils.is_older_than(instance['deleted_at'],
                                                   timeout))
             if erroneously_running and old_enough:
                 return True
