@@ -294,11 +294,6 @@ global_opts = [
     cfg.StrOpt('auth_strategy',
                default='noauth',
                help='The strategy to use for auth: noauth or keystone.'),
-    cfg.StrOpt('compute_driver',
-               help='Driver to use for controlling virtualization. Options '
-                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
-                   'fake.FakeDriver, baremetal.BareMetalDriver, '
-                   'vmwareapi.VMWareESXDriver'),
 ]
 
 cfg.CONF.register_opts(global_opts)

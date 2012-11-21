@@ -22,8 +22,23 @@ Driver base-classes:
     types that support that contract
 """
 
-from nova.openstack.common import log as logging
+import sys
 
+from nova.openstack.common import cfg
+from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
+from nova import utils
+
+driver_opts = [
+    cfg.StrOpt('compute_driver',
+               help='Driver to use for controlling virtualization. Options '
+                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
+                   'fake.FakeDriver, baremetal.BareMetalDriver, '
+                   'vmwareapi.VMWareESXDriver'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(driver_opts)
 LOG = logging.getLogger(__name__)
 
 
@@ -751,3 +766,39 @@ class ComputeDriver(object):
         if not isinstance(stats, list):
             stats = [stats]
         return [s['hypervisor_hostname'] for s in stats]
+
+
+def load_compute_driver(virtapi, compute_driver=None):
+    """Load a compute driver module.
+
+    Load the compute driver module specified by the compute_driver
+    configuration option or, if supplied, the driver name supplied as an
+    argument.
+
+    Compute drivers constructors take a VirtAPI object as their first object
+    and this must be supplied.
+
+    :param virtapi: a VirtAPI instance
+    :param compute_driver: a compute driver name to override the config opt
+    :returns: a ComputeDriver instance
+    """
+    if not compute_driver:
+        compute_driver = CONF.compute_driver
+
+    if not compute_driver:
+        LOG.error(_("Compute driver option required, but not specified"))
+        sys.exit(1)
+
+    LOG.info(_("Loading compute driver '%s'") % compute_driver)
+    try:
+        driver = importutils.import_object_ns('nova.virt',
+                                              compute_driver,
+                                              virtapi)
+        return utils.check_isinstance(driver, ComputeDriver)
+    except ImportError as e:
+        LOG.error(_("Unable to load the virtualization driver: %s") % (e))
+        sys.exit(1)
+
+
+def compute_driver_matches(match):
+    return CONF.compute_driver.endswith(match)

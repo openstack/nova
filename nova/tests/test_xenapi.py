@@ -58,6 +58,7 @@ LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('network_manager', 'nova.config')
 CONF.import_opt('node_availability_zone', 'nova.config')

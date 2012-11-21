@@ -33,6 +33,7 @@ from nova.tests import fake_network
 from nova.tests.image import fake
 
 CONF = cfg.CONF
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
 

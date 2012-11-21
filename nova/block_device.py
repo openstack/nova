@@ -17,10 +17,7 @@
 
 import re
 
-from nova.openstack.common import cfg
-
-CONF = cfg.CONF
-CONF.import_opt('compute_driver', 'nova.config')
+from nova.virt import driver
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
 _DEFAULT_MAPPINGS = {'ami': 'sda1',
@@ -95,7 +92,7 @@ def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
     # NOTE(clayg): remove this when xenapi is setting default_root_device
     if root_device_name is None:
-        if CONF.compute_driver.endswith('xenapi.XenAPIDriver'):
+        if driver.compute_driver_matches('xenapi.XenAPIDriver'):
             root_device_name = '/dev/xvda'
         else:
             return _DEFAULT_MAPPINGS

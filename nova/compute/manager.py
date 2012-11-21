@@ -29,8 +29,6 @@ terminating it.
 
 :instances_path:  Where instances are kept on disk
 :base_dir_name:  Where cached images are stored under instances_path
-:compute_driver:  Name of class that is used to handle virtualization, loaded
-                  by :func:`nova.openstack.common.importutils.import_object`
 
 """
 
@@ -177,7 +175,6 @@ CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
-CONF.import_opt('compute_driver', 'nova.config')
 CONF.import_opt('console_topic', 'nova.config')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
@@ -313,27 +310,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
-        # TODO(vish): sync driver creation logic with the rest of the system
-        #             and re-document the module docstring
-        if not compute_driver:
-            compute_driver = CONF.compute_driver
-
-        if not compute_driver:
-            LOG.error(_("Compute driver option required, but not specified"))
-            sys.exit(1)
-
         self.virtapi = ComputeVirtAPI(self)
-
-        LOG.info(_("Loading compute driver '%s'") % compute_driver)
-        try:
-            self.driver = utils.check_isinstance(
-                    importutils.import_object_ns('nova.virt', compute_driver,
-                                                 self.virtapi),
-                    driver.ComputeDriver)
-        except ImportError as e:
-            LOG.error(_("Unable to load the virtualization driver: %s") % (e))
-            sys.exit(1)
-
+        self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.network_api = network.API()
         self.volume_api = volume.API()
         self.network_manager = importutils.import_object(

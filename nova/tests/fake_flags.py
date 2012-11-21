@@ -20,12 +20,12 @@ from nova.openstack.common import cfg
 
 CONF = cfg.CONF
 CONF.import_opt('state_path', 'nova.config')
-
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')
 CONF.import_opt('network_size', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('policy_file', 'nova.policy')
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
 def set_defaults(conf):

@@ -38,6 +38,7 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
 class ComputeValidateDeviceTestCase(test.TestCase):

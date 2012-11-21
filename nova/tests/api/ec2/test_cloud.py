@@ -49,6 +49,7 @@ from nova.virt import fake as fake_virt
 from nova import volume
 
 CONF = cfg.CONF
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('default_image', 'nova.config')
 CONF.import_opt('default_instance_type', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')

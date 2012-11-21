@@ -30,9 +30,9 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova import utils
+from nova.virt import driver
 
 CONF = cfg.CONF
-CONF.import_opt('compute_driver', 'nova.config')
 CONF.import_opt('host', 'nova.config')
 LOG = log.getLogger(__name__)
 
@@ -88,7 +88,7 @@ def get_device_name_for_instance(context, instance, device):
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
     # NOTE(vish): remove this when xenapi is setting default_root_device
-    if CONF.compute_driver.endswith('xenapi.XenAPIDriver'):
+    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
@@ -103,7 +103,7 @@ def get_device_name_for_instance(context, instance, device):
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
-    if CONF.compute_driver.endswith('xenapi.XenAPIDriver'):
+    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
         if instance_type['ephemeral_gb']:
