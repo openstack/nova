@@ -1128,11 +1128,8 @@ class API(base.Base):
         filters = {}
 
         def _remap_flavor_filter(flavor_id):
-            try:
-                instance_type = instance_types.get_instance_type_by_flavor_id(
-                        flavor_id)
-            except exception.FlavorNotFound:
-                raise ValueError()
+            instance_type = instance_types.get_instance_type_by_flavor_id(
+                    flavor_id)
 
             filters['instance_type_id'] = instance_type['id']
 

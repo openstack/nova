@@ -540,6 +540,9 @@ class Controller(wsgi.Controller):
         except exception.MarkerNotFound as e:
             msg = _('marker [%s] not found') % marker
             raise webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.FlavorNotFound as e:
+            msg = _("Flavor could not be found")
+            raise webob.exc.HTTPUnprocessableEntity(explanation=msg)
 
         if is_detail:
             self._add_instance_faults(context, instance_list)

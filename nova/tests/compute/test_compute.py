@@ -4254,9 +4254,10 @@ class ComputeAPITestCase(BaseTestCase):
                 search_opts={'flavor': 5})
         self.assertEqual(len(instances), 0)
 
-        # ensure unknown filter maps to an empty list, not an exception
-        instances = self.compute_api.get_all(c, search_opts={'flavor': 99})
-        self.assertEqual(instances, [])
+        # ensure unknown filter maps to an exception
+        self.assertRaises(exception.FlavorNotFound,
+                          self.compute_api.get_all, c,
+                          search_opts={'flavor': 99})
 
         instances = self.compute_api.get_all(c, search_opts={'flavor': 3})
         self.assertEqual(len(instances), 1)
