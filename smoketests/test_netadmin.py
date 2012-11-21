@@ -196,7 +196,7 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         self.conn.disassociate_address(self.data['public_ip'])
         self.conn.delete_key_pair(TEST_KEY)
         self.conn.terminate_instances([self.data['instance'].id])
-        self.wait_for_not_running(self.data['instance'])
+        self.wait_for_deleted(self.data['instance'])
         self.conn.delete_security_group(TEST_GROUP)
         groups = self.conn.get_all_security_groups()
         self.assertFalse(TEST_GROUP in [group.name for group in groups])
