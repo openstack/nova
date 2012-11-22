@@ -1171,8 +1171,9 @@ class Fault(webob.exc.HTTPException):
                 'code': code,
                 'message': self.wrapped_exc.explanation}}
         if code == 413:
-            retry = self.wrapped_exc.headers['Retry-After']
-            fault_data[fault_name]['retryAfter'] = retry
+            retry = self.wrapped_exc.headers.get('Retry-After', None)
+            if retry:
+                fault_data[fault_name]['retryAfter'] = retry
 
         # 'code' is an attribute on the fault tag itself
         metadata = {'attributes': {fault_name: 'code'}}
