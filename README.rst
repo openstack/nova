@@ -50,9 +50,7 @@ developer focused documentation is available at:
 
    http://nova.openstack.org/
 
-Changes to OpenStack Nova should be submitted for review via
-the Gerrit tool, following the workflow documented at:
-
-   http://wiki.openstack.org/GerritWorkflow
+For information on how to contribute to Nova, please see the
+contents of the CONTRIBUTING.rst file.
 
 -- End of broadcast
