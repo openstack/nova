@@ -66,11 +66,11 @@ class ConsoleAuthManager(manager.Manager):
                       'internal_access_path': internal_access_path,
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
-        self.mc.set(token, data, CONF.console_token_ttl)
+        self.mc.set(token.encode('UTF-8'), data, CONF.console_token_ttl)
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
 
     def check_token(self, context, token):
-        token_str = self.mc.get(token)
+        token_str = self.mc.get(token.encode('UTF-8'))
         token_valid = (token_str is not None)
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
         if token_valid:
