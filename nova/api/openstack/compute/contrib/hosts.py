@@ -70,7 +70,7 @@ class HostShowTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class HostDeserializer(wsgi.XMLDeserializer):
+class HostUpdateDeserializer(wsgi.XMLDeserializer):
     def default(self, string):
         try:
             node = minidom.parseString(string)
@@ -79,8 +79,16 @@ class HostDeserializer(wsgi.XMLDeserializer):
             raise exception.MalformedRequestBody(reason=msg)
 
         updates = {}
-        for child in node.childNodes[0].childNodes:
-            updates[child.tagName] = self.extract_text(child)
+        updates_node = self.find_first_child_named(node, 'updates')
+        if updates_node is not None:
+            maintenance = self.find_first_child_named(updates_node,
+                                                      'maintenance_mode')
+            if maintenance is not None:
+                updates[maintenance.tagName] = self.extract_text(maintenance)
+
+            status = self.find_first_child_named(updates_node, 'status')
+            if status is not None:
+                updates[status.tagName] = self.extract_text(status)
 
         return dict(body=updates)
 
@@ -131,7 +139,7 @@ class HostController(object):
         return {'hosts': _list_hosts(req)}
 
     @wsgi.serializers(xml=HostUpdateTemplate)
-    @wsgi.deserializers(xml=HostDeserializer)
+    @wsgi.deserializers(xml=HostUpdateDeserializer)
     @check_host
     def update(self, req, id, body):
         authorize(req.environ['nova.context'])
