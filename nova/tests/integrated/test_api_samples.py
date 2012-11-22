@@ -462,13 +462,41 @@ class FlavorsSampleXmlTest(FlavorsSampleJsonTest):
 class HostsSampleJsonTest(ApiSampleTestBase):
     extension_name = "nova.api.openstack.compute.contrib.hosts.Hosts"
 
+    def test_host_startup(self):
+        response = self._do_get('os-hosts/%s/startup' % self.compute.host)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('host-get-startup', subs, response)
+
+    def test_host_reboot(self):
+        response = self._do_get('os-hosts/%s/reboot' % self.compute.host)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('host-get-reboot', subs, response)
+
+    def test_host_shutdown(self):
+        response = self._do_get('os-hosts/%s/shutdown' % self.compute.host)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('host-get-shutdown', subs, response)
+
+    def test_host_maintenance(self):
+        response = self._do_put('os-hosts/%s' % self.compute.host,
+                                'host-put-maintenance-req', {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('host-put-maintenance-resp', subs,
+                                     response)
+
     def test_host_get(self):
         response = self._do_get('os-hosts/%s' % self.compute.host)
+        self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         return self._verify_response('host-get-resp', subs, response)
 
     def test_hosts_list(self):
         response = self._do_get('os-hosts')
+        self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         return self._verify_response('hosts-list-resp', subs, response)
 
