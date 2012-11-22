@@ -947,6 +947,9 @@
 # quantum_auth_strategy=keystone
 #### (StrOpt) auth strategy for connecting to quantum in admin context
 
+# quantum_region_name=RegionOne
+#### (StrOpt) region name for connecting to quantum in admin context
+
 
 ######## defined in nova.objectstore.s3server ########
 

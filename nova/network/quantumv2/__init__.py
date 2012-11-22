@@ -34,6 +34,7 @@ def _get_auth_token():
             password=CONF.quantum_admin_password,
             auth_url=CONF.quantum_admin_auth_url,
             timeout=CONF.quantum_url_timeout,
+            region_name=FLAGS.quantum_region_name,
             auth_strategy=CONF.quantum_auth_strategy)
         httpclient.authenticate()
     except Exception:
