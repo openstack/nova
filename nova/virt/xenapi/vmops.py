@@ -770,8 +770,10 @@ class VMOps(object):
         """
         vm_ref = self._get_vm_opaque_ref(instance)
         sr_path = vm_utils.get_sr_path(self._session)
-        resize_down = (instance['auto_disk_config'] and
-                       instance['root_gb'] > instance_type['root_gb'])
+        resize_down = instance['root_gb'] > instance_type['root_gb']
+        if resize_down and not instance['auto_disk_config']:
+            reason = _('Resize down not allowed without auto_disk_config')
+            raise exception.ResizeError(reason=reason)
 
         # 0. Zero out the progress to begin
         self._update_instance_progress(context, instance,

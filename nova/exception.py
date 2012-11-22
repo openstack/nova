@@ -865,6 +865,10 @@ class CannotResizeToSameFlavor(NovaException):
     message = _("When resizing, instances must change flavor!")
 
 
+class ResizeError(NovaException):
+    message = _("Resize error: %(reason)s")
+
+
 class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
 
