@@ -1768,6 +1768,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not filter_properties:
             filter_properties = {}
 
+        if not instance['host']:
+            self._set_instance_error_state(context, instance['uuid'])
+            msg = _('Instance has no source host')
+            raise exception.MigrationError(msg)
+
         same_host = instance['host'] == self.host
         if same_host and not CONF.allow_resize_to_same_host:
             self._set_instance_error_state(context, instance['uuid'])
