@@ -20,12 +20,12 @@ LOG = logging.getLogger(__name__)
 
 
 class RetryFilter(filters.BaseHostFilter):
-    """Filter out hosts that have already been attempted for scheduling
+    """Filter out nodes that have already been attempted for scheduling
     purposes
     """
 
     def host_passes(self, host_state, filter_properties):
-        """Skip hosts that have already been attempted"""
+        """Skip nodes that have already been attempted"""
         retry = filter_properties.get('retry', None)
         if not retry:
             # Re-scheduling is disabled
@@ -33,7 +33,7 @@ class RetryFilter(filters.BaseHostFilter):
             return True
 
         hosts = retry.get('hosts', [])
-        host = host_state.host
+        host = (host_state.host, host_state.nodename)
 
         LOG.debug(_("Previously tried hosts: %(hosts)s.  (host=%(host)s)") %
                 locals())

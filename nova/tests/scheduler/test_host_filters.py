@@ -1269,18 +1269,22 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_retry_filter_pass(self):
-        """Host not previously tried"""
+        """Node not previously tried"""
         filt_cls = self.class_map['RetryFilter']()
-        host = fakes.FakeHostState('host1', 'node1', {})
-        retry = dict(num_attempts=1, hosts=['host2', 'host3'])
+        host = fakes.FakeHostState('host1', 'nodeX', {})
+        retry = dict(num_attempts=2,
+                     hosts=[('host1', 'node1'),  # same host, different node
+                            ('host2', 'node2'),  # different host and node
+                            ])
         filter_properties = dict(retry=retry)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_retry_filter_fail(self):
-        """Host was already tried"""
+        """Node was already tried"""
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
-        retry = dict(num_attempts=1, hosts=['host3', 'host1'])
+        retry = dict(num_attempts=1,
+                     hosts=[('host1', 'node1')])
         filter_properties = dict(retry=retry)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 

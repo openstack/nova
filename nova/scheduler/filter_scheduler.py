@@ -146,24 +146,25 @@ class FilterScheduler(driver.Scheduler):
 
     def _post_select_populate_filter_properties(self, filter_properties,
             host_state):
-        """Add additional information to the filter properties after a host has
+        """Add additional information to the filter properties after a node has
         been selected by the scheduling process.
         """
-        # Add a retry entry for the selected compute host:
-        self._add_retry_host(filter_properties, host_state.host)
+        # Add a retry entry for the selected compute host and node:
+        self._add_retry_host(filter_properties, host_state.host,
+                             host_state.nodename)
 
         self._add_oversubscription_policy(filter_properties, host_state)
 
-    def _add_retry_host(self, filter_properties, host):
-        """Add a retry entry for the selected compute host.  In the event that
+    def _add_retry_host(self, filter_properties, host, node):
+        """Add a retry entry for the selected compute node. In the event that
         the request gets re-scheduled, this entry will signal that the given
-        host has already been tried.
+        node has already been tried.
         """
         retry = filter_properties.get('retry', None)
         if not retry:
             return
         hosts = retry['hosts']
-        hosts.append(host)
+        hosts.append((host, node))
 
     def _add_oversubscription_policy(self, filter_properties, host_state):
         filter_properties['limits'] = host_state.limits
