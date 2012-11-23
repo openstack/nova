@@ -708,7 +708,6 @@ class API(base.Base):
         instance['launch_index'] = 0
         instance['vm_state'] = vm_states.BUILDING
         instance['task_state'] = task_states.SCHEDULING
-        instance['architecture'] = image['properties'].get('architecture')
         instance['info_cache'] = {'network_info': '[]'}
 
         # Store image properties so we can use them later
