@@ -1660,5 +1660,5 @@ class ConsolesSampleJsonTests(ServersSampleBase):
                                        subs, response)
 
 
-class ConsoleOutputSampleXmlTests(ConsoleOutputSampleJsonTest):
+class ConsolesSampleXmlTests(ConsolesSampleJsonTests):
         ctype = 'xml'
