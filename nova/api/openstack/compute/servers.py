@@ -520,12 +520,7 @@ class Controller(wsgi.Controller):
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPBadRequest(explanation=msg)
 
-        # NOTE(dprince) This prevents computes' get_all() from returning
-        # instances from multiple tenants when an admin accounts is used.
-        # By default non-admin accounts are always limited to project/user
-        # both here and in the compute API.
-        if not context.is_admin or (context.is_admin and 'all_tenants'
-            not in search_opts):
+        if 'all_tenants' not in search_opts:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
             else:
@@ -1347,7 +1342,7 @@ class Controller(wsgi.Controller):
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin."""
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
-                'changes-since')
+                'changes-since', 'all_tenants')
 
 
 def create_resource(ext_mgr):

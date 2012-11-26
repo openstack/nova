@@ -43,7 +43,9 @@ from nova.network import manager
 from nova.network.quantumv2 import api as quantum_api
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
+from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
@@ -170,7 +172,8 @@ class ServersControllerTest(test.TestCase):
         self.ext_mgr.extensions = {}
         self.controller = servers.Controller(self.ext_mgr)
         self.ips_controller = ips.Controller()
-
+        policy.reset()
+        policy.init()
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
 
@@ -743,7 +746,7 @@ class ServersControllerTest(test.TestCase):
 
         self.assertTrue('servers' in res)
 
-    def test_admin_all_tenants(self):
+    def test_all_tenants_pass_policy(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None):
             self.assertNotEqual(filters, None)
@@ -753,26 +756,40 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/servers?all_tenants=1',
-                                      use_admin_context=True)
-        res = self.controller.index(req)
+        rules = {
+            "compute:get_all_tenants":
+                common_policy.parse_rule("project_id:fake"),
+            "compute:get_all":
+                common_policy.parse_rule("project_id:fake"),
+        }
 
-        self.assertTrue('servers' in res)
-
-    def test_all_tenants(self):
-        def fake_get_all(context, filters=None, sort_key=None,
-                         sort_dir='desc', limit=None, marker=None):
-            self.assertNotEqual(filters, None)
-            self.assertEqual(filters['project_id'], 'fake')
-            return [fakes.stub_instance(100)]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                       fake_get_all)
+        common_policy.set_rules(common_policy.Rules(rules))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?all_tenants=1')
         res = self.controller.index(req)
 
         self.assertTrue('servers' in res)
+
+    def test_all_tenants_fail_policy(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None):
+            self.assertNotEqual(filters, None)
+            return [fakes.stub_instance(100)]
+
+        rules = {
+            "compute:get_all_tenants":
+                common_policy.parse_rule("project_id:non_fake"),
+            "compute:get_all":
+                common_policy.parse_rule("project_id:fake"),
+        }
+
+        common_policy.set_rules(common_policy.Rules(rules))
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?all_tenants=1')
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.index, req)
 
     def test_get_servers_allows_flavor(self):
         server_uuid = str(uuid.uuid4())

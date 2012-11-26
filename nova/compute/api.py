@@ -1140,6 +1140,9 @@ class API(base.Base):
         if search_opts is None:
             search_opts = {}
 
+        if 'all_tenants' in search_opts:
+            check_policy(context, "get_all_tenants", target)
+
         LOG.debug(_("Searching by: %s") % str(search_opts))
 
         # Fixups for the DB call

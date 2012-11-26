@@ -8,6 +8,7 @@
 
     "compute:get": "",
     "compute:get_all": "",
+    "compute:get_all_tenants": "",
 
     "compute:update": "",
 
