@@ -44,6 +44,30 @@ REQ_POWER_STATE = {
     'Suspended': HYPERV_VM_STATE_SUSPENDED,
 }
 
+WMI_WIN32_PROCESSOR_ARCHITECTURE = {
+    0: 'x86',
+    1: 'MIPS',
+    2: 'Alpha',
+    3: 'PowerPC',
+    5: 'ARM',
+    6: 'Itanium-based systems',
+    9: 'x64',
+}
+
+PROCESSOR_FEATURE = {
+    7: '3dnow',
+    3: 'mmx',
+    12: 'nx',
+    9: 'pae',
+    8: 'rdtsc',
+    20: 'slat',
+    13: 'sse3',
+    21: 'vmx',
+    6: 'sse',
+    10: 'sse2',
+    17: 'xsave',
+}
+
 WMI_JOB_STATUS_STARTED = 4096
 WMI_JOB_STATE_RUNNING = 4
 WMI_JOB_STATE_COMPLETED = 7

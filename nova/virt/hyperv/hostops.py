@@ -18,13 +18,16 @@
 """
 Management class for host operations.
 """
+import ctypes
 import multiprocessing
 import os
 import platform
 
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import baseops
+from nova.virt.hyperv import constants
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -34,6 +37,35 @@ class HostOps(baseops.BaseOps):
     def __init__(self):
         super(HostOps, self).__init__()
         self._stats = None
+
+    def _get_cpu_info(self):
+        """ Get the CPU information.
+        :returns: A dictionary containing the main properties
+        of the central processor in the hypervisor.
+        """
+        cpu_info = dict()
+        processor = self._conn_cimv2.query(
+            "SELECT * FROM Win32_Processor WHERE ProcessorType = 3")
+
+        cpu_info['arch'] = constants.WMI_WIN32_PROCESSOR_ARCHITECTURE\
+            .get(processor[0].Architecture, 'Unknown')
+        cpu_info['model'] = processor[0].Name
+        cpu_info['vendor'] = processor[0].Manufacturer
+
+        topology = dict()
+        topology['sockets'] = len(processor)
+        topology['cores'] = processor[0].NumberOfCores
+        topology['threads'] = processor[0].NumberOfLogicalProcessors\
+            / processor[0].NumberOfCores
+        cpu_info['topology'] = topology
+
+        features = list()
+        for fkey, fname in constants.PROCESSOR_FEATURE.items():
+            if ctypes.windll.kernel32.IsProcessorFeaturePresent(fkey):
+                features.append(fname)
+        cpu_info['features'] = features
+
+        return jsonutils.dumps(cpu_info)
 
     def _get_vcpu_total(self):
         """Get vcpu number of physical computer.
@@ -114,7 +146,6 @@ class HostOps(baseops.BaseOps):
         LOG.info(_('get_available_resource called'))
 
         local_gb, used_gb = self._get_local_hdd_info_gb()
-        # TODO(alexpilotti) implemented cpu_info
         dic = {'vcpus': self._get_vcpu_total(),
                'memory_mb': self._get_memory_mb_total(),
                'local_gb': local_gb,
@@ -124,7 +155,7 @@ class HostOps(baseops.BaseOps):
                'hypervisor_type': "hyperv",
                'hypervisor_version': self._get_hypervisor_version(),
                'hypervisor_hostname': platform.node(),
-               'cpu_info': 'unknown'}
+               'cpu_info': self._get_cpu_info()}
 
         return dic
 
