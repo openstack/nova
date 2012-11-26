@@ -63,6 +63,9 @@
   <extension alias="os-deferred-delete" updated="2011-09-01T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/deferred-delete/api/v1.1" name="DeferredDelete">
     <description>Instance deferred delete</description>
   </extension>
+  <extension alias="os-fixed-ips" updated="2012-10-18T13:25:27-06:00" namespace="http://docs.openstack.org/compute/ext/fixed_ips/api/v2" name="FixedIPs">
+    <description>Fixed IPs support</description>
+  </extension>
   <extension alias="os-flavor-access" updated="2012-08-01T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_access/api/v2" name="FlavorAccess">
     <description>Flavor access supprt</description>
   </extension>
@@ -88,6 +91,12 @@
   </extension>
   <extension alias="os-floating-ips" updated="2011-06-16T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/floating_ips/api/v1.1" name="FloatingIps">
     <description>Floating IPs support</description>
+  </extension>
+  <extension alias="os-floating-ips-bulk" updated="2012-10-29T13:25:27-06:00" namespace="http://docs.openstack.org/compute/ext/floating_ips_bulk/api/v2" name="FloatingIpsBulk">
+    <description>Bulk handling of Floating IPs</description>
+  </extension>
+  <extension alias="os-fping" updated="2012-07-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/fping/api/v1.1" name="Fping">
+    <description>Fping Management Extension.</description>
   </extension>
   <extension alias="os-hosts" updated="2011-06-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/hosts/api/v1.1" name="Hosts">
     <description>Admin-only host administration</description>

@@ -1,15 +1,13 @@
 {
     "cloudpipes": [
         {
-            "cloudpipe": {
-                "created_at": "2012-09-25T18:18:55Z",
-                "instance_id": "72afecab-24b0-437e-b1d9-88a83be701b3",
-                "internal_ip": "192.168.0.3",
-                "project_id": "cloudpipe-059f21e3-c20e-4efc-9e7a-eba2ab3c6f9a",
-                "public_ip": "127.0.0.1",
-                "public_port": 22,
-                "state": "down"
-            }
+            "created_at": "2012-11-27T17:18:01Z",
+            "instance_id": "27deecdb-baa3-4a26-9c82-32994b815b01",
+            "internal_ip": "192.168.0.3",
+            "project_id": "cloudpipe-fa1765bd-a352-49c7-a6b7-8ee108a3cb0c",
+            "public_ip": "127.0.0.1",
+            "public_port": 22,
+            "state": "down"
         }
     ]
 }

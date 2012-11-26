@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <hosts>
-  <host host_name="e5e145b49d244d97982c922e101859fd" service="compute"/>
-  <host host_name="6d85457c4d884047b41999540c2bf454" service="cert"/>
-  <host host_name="1f9a3cef66bd450aa004655ef239ddee" service="network"/>
-  <host host_name="c6fd14f8e3be44628e76ae4a6e88cffb" service="scheduler"/>
+  <host host_name="461697a871354212908d82bbb0f9f5ee" service="compute"/>
+  <host host_name="272ab5d262994ebdaf228935c8ecf57e" service="cert"/>
+  <host host_name="2d1bdd671b5d41fd89dec74be5770c63" service="network"/>
+  <host host_name="7c2dd5ecb7494dd1bf4240b7f7f9bf3a" service="scheduler"/>
+  <host host_name="f9c273d8e03141a2a01def0ad18e5be4" service="conductor"/>
 </hosts>
