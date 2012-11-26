@@ -2159,7 +2159,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Resume the given suspended instance."""
         context = context.elevated()
         LOG.audit(_('Resuming'), context=context, instance=instance)
-        self.driver.resume(instance)
+
+        network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance['uuid'])
+
+        self.driver.resume(instance, self._legacy_nw_info(network_info),
+                           block_device_info)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

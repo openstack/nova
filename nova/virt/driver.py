@@ -325,7 +325,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def resume(self, instance):
+    def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance"""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
