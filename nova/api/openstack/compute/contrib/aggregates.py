@@ -71,11 +71,12 @@ class AggregateController(object):
 
         try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)
-        except (exception.AggregateNameExists,
-                exception.InvalidAggregateAction):
-            LOG.info(_("Cannot create aggregate with name %(name)s and "
-                            "availability zone %(avail_zone)s") % locals())
+        except exception.AggregateNameExists as e:
+            LOG.info(e)
             raise exc.HTTPConflict
+        except exception.InvalidAggregateAction as e:
+            LOG.info(e)
+            raise
         return self._marshall_aggregate(aggregate)
 
     def show(self, req, id):
