@@ -38,10 +38,10 @@ from nova.openstack.common import eventlet_backdoor
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova import servicegroup
 from nova import utils
 from nova import version
 from nova import wsgi
-
 
 LOG = logging.getLogger(__name__)
 
@@ -385,6 +385,7 @@ class Service(object):
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
         self.backdoor_port = None
+        self.servicegroup_api = servicegroup.API()
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
@@ -425,10 +426,11 @@ class Service(object):
 
         self.manager.post_start_hook()
 
-        if self.report_interval:
-            pulse = utils.LoopingCall(self.report_state)
-            pulse.start(interval=self.report_interval,
-                        initial_delay=self.report_interval)
+        LOG.debug(_("Join ServiceGroup membership for this service %s")
+                  % self.topic)
+        # Add service to the ServiceGroup membership group.
+        pulse = self.servicegroup_api.join(self.host, self.topic, self)
+        if pulse:
             self.timers.append(pulse)
 
         if self.periodic_interval:
@@ -528,38 +530,6 @@ class Service(object):
         """Tasks to be run at a periodic interval."""
         ctxt = context.get_admin_context()
         self.manager.periodic_tasks(ctxt, raise_on_error=raise_on_error)
-
-    def report_state(self):
-        """Update the state of this service in the datastore."""
-        ctxt = context.get_admin_context()
-        zone = CONF.node_availability_zone
-        state_catalog = {}
-        try:
-            try:
-                service_ref = db.service_get(ctxt, self.service_id)
-            except exception.NotFound:
-                LOG.debug(_('The service database object disappeared, '
-                            'Recreating it.'))
-                self._create_service_ref(ctxt)
-                service_ref = db.service_get(ctxt, self.service_id)
-
-            state_catalog['report_count'] = service_ref['report_count'] + 1
-            if zone != service_ref['availability_zone']:
-                state_catalog['availability_zone'] = zone
-
-            db.service_update(ctxt,
-                             self.service_id, state_catalog)
-
-            # TODO(termie): make this pattern be more elegant.
-            if getattr(self, 'model_disconnected', False):
-                self.model_disconnected = False
-                LOG.error(_('Recovered model server connection!'))
-
-        # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable=W0702
-            if not getattr(self, 'model_disconnected', False):
-                self.model_disconnected = True
-                LOG.exception(_('model server went away'))
 
 
 class WSGIService(object):

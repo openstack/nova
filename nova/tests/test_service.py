@@ -171,40 +171,6 @@ class ServiceTestCase(test.TestCase):
                                'nova.tests.test_service.FakeManager')
         serv.start()
 
-    def test_report_state_newly_disconnected(self):
-        self._service_start_mocks()
-
-        service.db.service_get(mox.IgnoreArg(),
-                               mox.IgnoreArg()).AndRaise(Exception())
-
-        self.mox.ReplayAll()
-        serv = service.Service(self.host,
-                               self.binary,
-                               self.topic,
-                               'nova.tests.test_service.FakeManager')
-        serv.start()
-        serv.report_state()
-        self.assert_(serv.model_disconnected)
-
-    def test_report_state_newly_connected(self):
-        service_ref = self._service_start_mocks()
-
-        service.db.service_get(mox.IgnoreArg(),
-                               service_ref['id']).AndReturn(service_ref)
-        service.db.service_update(mox.IgnoreArg(), service_ref['id'],
-                                  mox.ContainsKeyValue('report_count', 1))
-
-        self.mox.ReplayAll()
-        serv = service.Service(self.host,
-                               self.binary,
-                               self.topic,
-                               'nova.tests.test_service.FakeManager')
-        serv.start()
-        serv.model_disconnected = True
-        serv.report_state()
-
-        self.assert_(not serv.model_disconnected)
-
 
 class TestWSGIService(test.TestCase):
 

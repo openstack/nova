@@ -72,6 +72,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
+from nova import servicegroup
 from nova import utils
 
 
@@ -177,6 +178,9 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
+
+    servicegroup_api = None
+
     def _allocate_fixed_ips(self, context, instance_id, host, networks,
                             **kwargs):
         """Calls allocate_fixed_ip once for each network."""
@@ -239,7 +243,7 @@ class RPCAllocateFixedIP(object):
             service = self.db.service_get_by_host_and_topic(context,
                                                             host,
                                                             'network')
-            if not service or not utils.service_is_up(service):
+            if not service or not self.servicegroup_api.service_is_up(service):
                 # NOTE(vish): deallocate the fixed ip locally but don't
                 #             teardown network devices
                 return super(RPCAllocateFixedIP, self).deallocate_fixed_ip(
@@ -271,6 +275,9 @@ def check_policy(context, action):
 
 class FloatingIP(object):
     """Mixin class for adding floating IP functionality to a manager."""
+
+    servicegroup_api = None
+
     def init_host_floating_ips(self):
         """Configures floating ips owned by host."""
 
@@ -597,7 +604,7 @@ class FloatingIP(object):
                                                     fixed_ip['instance_uuid'])
             service = self.db.service_get_by_host_and_topic(
                     context.elevated(), instance['host'], 'network')
-            if service and utils.service_is_up(service):
+            if service and self.servicegroup_api.service_is_up(service):
                 host = instance['host']
             else:
                 # NOTE(vish): if the service is down just deallocate the data
@@ -882,6 +889,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.security_group_api = compute_api.SecurityGroupAPI()
         self.compute_api = compute_api.API(
                                    security_group_api=self.security_group_api)
+        self.servicegroup_api = servicegroup.API()
 
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has
         #                 already imported ipam, import nova ipam here

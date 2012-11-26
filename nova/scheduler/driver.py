@@ -37,8 +37,8 @@ from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
+from nova import servicegroup
 from nova import utils
-
 
 LOG = logging.getLogger(__name__)
 
@@ -151,6 +151,7 @@ class Scheduler(object):
                 CONF.scheduler_host_manager)
         self.compute_api = compute_api.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.servicegroup_api = servicegroup.API()
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Process a capability update from a service node."""
@@ -163,7 +164,7 @@ class Scheduler(object):
         services = db.service_get_all_by_topic(context, topic)
         return [service['host']
                 for service in services
-                if utils.service_is_up(service)]
+                if self.servicegroup_api.service_is_up(service)]
 
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,
@@ -230,7 +231,7 @@ class Scheduler(object):
             raise exception.ComputeServiceUnavailable(host=src)
 
         # Checking src host is alive.
-        if not utils.service_is_up(services[0]):
+        if not self.servicegroup_api.service_is_up(services[0]):
             raise exception.ComputeServiceUnavailable(host=src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest):
@@ -246,7 +247,7 @@ class Scheduler(object):
         dservice_ref = dservice_refs[0]
 
         # Checking dest host is alive.
-        if not utils.service_is_up(dservice_ref):
+        if not self.servicegroup_api.service_is_up(dservice_ref):
             raise exception.ComputeServiceUnavailable(host=dest)
 
         # Checking whether The host where instance is running
