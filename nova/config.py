@@ -86,6 +86,10 @@ global_opts = [
     cfg.IntOpt('glance_port',
                default=9292,
                help='default glance port'),
+    cfg.StrOpt('glance_protocol',
+                default='http',
+                help='Default protocol to use when connecting to glance. '
+                     'Set to https for SSL.'),
     cfg.ListOpt('glance_api_servers',
                 default=['$glance_host:$glance_port'],
                 help='A list of the glance api servers available to nova. '
