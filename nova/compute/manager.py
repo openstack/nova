@@ -51,6 +51,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import conductor
 import nova.context
 from nova import exception
 from nova.image import glance
@@ -258,9 +259,9 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         self._compute = compute
 
     def instance_update(self, context, instance_uuid, updates):
-        return self._compute.db.instance_update_and_get_original(context,
-                                                                 instance_uuid,
-                                                                 updates)
+        return self._compute._instance_update(context,
+                                              instance_uuid,
+                                              **updates)
 
     def instance_get_by_uuid(self, context, instance_uuid):
         return self._compute.db.instance_get_by_uuid(context, instance_uuid)
@@ -322,6 +323,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.conductor_api = conductor.API()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -340,11 +342,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
-        (old_ref, instance_ref) = self.db.instance_update_and_get_original(
-                context, instance_uuid, kwargs)
+        instance_ref = self.conductor_api.instance_update(context,
+                                                          instance_uuid,
+                                                          **kwargs)
         rt = self._get_resource_tracker(instance_ref.get('node'))
         rt.update_usage(context, instance_ref)
-        notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
 
@@ -747,8 +749,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     if ip['version'] == 6:
                         update_info['access_ip_v6'] = ip['address']
         if update_info:
-            self.db.instance_update(context, instance['uuid'], update_info)
-            notifications.send_update(context, instance, instance)
+            self._instance_update(context, instance['uuid'], **update_info)
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""

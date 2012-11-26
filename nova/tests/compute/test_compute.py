@@ -108,6 +108,7 @@ class BaseTestCase(test.TestCase):
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
         fake.set_nodes([NODENAME])
+        self.flags(use_local=True, group='conductor')
         self.compute = importutils.import_object(CONF.compute_manager)
 
         # override tracker with a version that doesn't need the database:
@@ -1416,7 +1417,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertTrue('deleted_at' in payload)
-        self.assertEqual(payload['deleted_at'], str(cur_time))
+        self.assertEqual(payload['deleted_at'], timeutils.strtime(cur_time))
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
@@ -1764,7 +1765,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEqual(payload['launched_at'], str(cur_time))
+        self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         self.assertEquals(payload['image_ref_url'], new_image_ref_url)
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
@@ -1815,7 +1816,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEqual(payload['launched_at'], str(cur_time))
+        self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context,
@@ -2286,6 +2287,12 @@ class ComputeTestCase(BaseTestCase):
             return {'id': volume_id}
 
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
+
+        def fake_instance_update(context, instance_uuid, **updates):
+            return db.instance_update_and_get_original(context, instance_uuid,
+                                                       updates)
+        self.stubs.Set(self.compute, '_instance_update',
+                       fake_instance_update)
 
         # creating mocks
         self.mox.StubOutWithMock(rpc, 'call')

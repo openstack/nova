@@ -85,33 +85,27 @@ class Host(object):
 
                     dest = _host_find(ctxt, self._session, aggregate[0],
                                       host_ref)
-                    (old_ref, new_ref) = self._virtapi.instance_update(
-                                    ctxt,
-                                    instance['uuid'],
-                                    {'host': dest,
-                                     'task_state': task_states.MIGRATING})
-                    notifications.send_update(ctxt, old_ref, new_ref)
+                    self._virtapi.instance_update(
+                        ctxt, instance['uuid'],
+                        {'host': dest,
+                         'task_state': task_states.MIGRATING})
 
                     self._session.call_xenapi('VM.pool_migrate',
                                               vm_ref, host_ref, {})
                     migrations_counter = migrations_counter + 1
 
-                    (old_ref, new_ref) = self._virtapi.instance_update(
-                                ctxt,
-                                instance['uuid'],
-                                {'vm_state': vm_states.ACTIVE})
-                    notifications.send_update(ctxt, old_ref, new_ref)
+                    self._virtapi.instance_update(
+                        ctxt, instance['uuid'],
+                        {'vm_state': vm_states.ACTIVE})
 
                     break
                 except self._session.XenAPI.Failure:
                     LOG.exception(_('Unable to migrate VM %(vm_ref)s'
-                                  'from %(host)s') % locals())
-                    (old_ref, new_ref) = self._virtapi.instance_update(
-                                ctxt,
-                                instance['uuid'],
-                                {'host': host,
-                                 'vm_state': vm_states.ACTIVE})
-                    notifications.send_update(ctxt, old_ref, new_ref)
+                                    'from %(host)s') % locals())
+                    self._virtapi.instance_update(
+                        ctxt, instance['uuid'],
+                        {'host': host,
+                         'vm_state': vm_states.ACTIVE})
 
         if vm_counter == migrations_counter:
             return 'on_maintenance'

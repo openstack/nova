@@ -77,6 +77,8 @@ class _IntegratedTestBase(test.TestCase):
         self.scheduler = self.start_service('cert')
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
+        self.conductor = self.start_service(
+            'conductor', manager='nova.conductor.manager.ConductorManager')
 
         self._start_api_service()
 
