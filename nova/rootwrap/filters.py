@@ -72,9 +72,11 @@ class RegExpFilter(CommandFilter):
 class DnsmasqFilter(CommandFilter):
     """Specific filter for the dnsmasq call (which includes env)"""
 
+    CONFIG_FILE_ARG = 'CONFIG_FILE'
+
     def match(self, userargs):
         if (userargs[0] == 'env' and
-            userargs[1].startswith('FLAGFILE=') and
+            userargs[1].startswith(self.CONFIG_FILE_ARG) and
             userargs[2].startswith('NETWORK_ID=') and
             userargs[3] == 'dnsmasq'):
             return True
@@ -86,9 +88,14 @@ class DnsmasqFilter(CommandFilter):
 
     def get_environment(self, userargs):
         env = os.environ.copy()
-        env['FLAGFILE'] = userargs[1].split('=')[-1]
+        env[self.CONFIG_FILE_ARG] = userargs[1].split('=')[-1]
         env['NETWORK_ID'] = userargs[2].split('=')[-1]
         return env
+
+
+class DeprecatedDnsmasqFilter(DnsmasqFilter):
+    """Variant of dnsmasq filter to support old-style FLAGFILE"""
+    CONFIG_FILE_ARG = 'FLAGFILE'
 
 
 class KillFilter(CommandFilter):

@@ -54,14 +54,21 @@ class RootwrapTestCase(test.TestCase):
         filtermatch = wrapper.match_filter(self.filters, invalid)
         self.assertTrue(filtermatch is None)
 
-    def test_DnsmasqFilter(self):
-        usercmd = ['env', 'FLAGFILE=A', 'NETWORK_ID=foobar', 'dnsmasq', 'foo']
-        f = filters.DnsmasqFilter("/usr/bin/dnsmasq", "root")
+    def _test_DnsmasqFilter(self, filter_class, config_file_arg):
+        usercmd = ['env', config_file_arg + '=A', 'NETWORK_ID=foobar',
+                   'dnsmasq', 'foo']
+        f = filter_class("/usr/bin/dnsmasq", "root")
         self.assertTrue(f.match(usercmd))
         self.assertEqual(f.get_command(usercmd), ['/usr/bin/dnsmasq', 'foo'])
         env = f.get_environment(usercmd)
-        self.assertEqual(env.get('FLAGFILE'), 'A')
+        self.assertEqual(env.get(config_file_arg), 'A')
         self.assertEqual(env.get('NETWORK_ID'), 'foobar')
+
+    def test_DnsmasqFilter(self):
+        self._test_DnsmasqFilter(filters.DnsmasqFilter, 'CONFIG_FILE')
+
+    def test_DeprecatedDnsmasqFilter(self):
+        self._test_DnsmasqFilter(filters.DeprecatedDnsmasqFilter, 'FLAGFILE')
 
     def test_KillFilter(self):
         if not os.path.exists("/proc/%d" % os.getpid()):
