@@ -1432,12 +1432,12 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
 
         if FLAGS.libvirt_type == 'lxc':
-            disk.setup_container(basepath('disk'),
+            disk.setup_container(image('disk').path,
                                  container_dir=container_dir,
                                  use_cow=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
-            libvirt_utils.chown(basepath('disk'), 'root')
+            libvirt_utils.chown(image('disk').path, 'root')
 
     @staticmethod
     def _volume_in_mapping(mount_device, block_device_info):
