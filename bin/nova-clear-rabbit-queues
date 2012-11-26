@@ -48,12 +48,18 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 
 
-delete_exchange_opt = cfg.BoolOpt('delete_exchange',
-                                  default=False,
-                                  help='delete nova exchange too.')
+opts = [
+    cfg.MultiStrOpt('queues',
+                    default=[],
+                    positional=True,
+                    help='Queues to delete'),
+    cfg.BoolOpt('delete_exchange',
+                default=False,
+                help='delete nova exchange too.'),
+]
 
 CONF = cfg.CONF
-CONF.register_cli_opt(delete_exchange_opt)
+CONF.register_cli_opts(opts)
 
 
 def delete_exchange(exch):
@@ -69,8 +75,8 @@ def delete_queues(queues):
         x.queue_delete(q)
 
 if __name__ == '__main__':
-    args = config.parse_args(sys.argv)
+    config.parse_args(sys.argv)
     logging.setup("nova")
-    delete_queues(args[1:])
+    delete_queues(CONF.queues)
     if CONF.delete_exchange:
         delete_exchange(CONF.control_exchange)

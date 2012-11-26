@@ -35,8 +35,8 @@ class MiniDNS(object):
         A proper implementation will need some manner of locking."""
 
     def __init__(self):
-        if CONF.logdir:
-            self.filename = os.path.join(CONF.logdir, "dnstest.txt")
+        if CONF.log_dir:
+            self.filename = os.path.join(CONF.log_dir, "dnstest.txt")
             self.tempdir = None
         else:
             self.tempdir = tempfile.mkdtemp()

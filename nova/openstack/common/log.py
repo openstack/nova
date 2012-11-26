@@ -95,12 +95,6 @@ log_opts = [
 
 
 generic_log_opts = [
-    cfg.StrOpt('logdir',
-               default=None,
-               help='Log output to a per-service log file in named directory'),
-    cfg.StrOpt('logfile',
-               default=None,
-               help='Log output to a named file'),
     cfg.BoolOpt('use_stderr',
                 default=True,
                 help='Log output to standard error'),
@@ -148,18 +142,15 @@ def _get_binary_name():
 
 
 def _get_log_file_path(binary=None):
-    logfile = CONF.log_file or CONF.logfile
-    logdir = CONF.log_dir or CONF.logdir
+    if CONF.log_file and not CONF.log_dir:
+        return CONF.log_file
 
-    if logfile and not logdir:
-        return logfile
+    if CONF.log_file and CONF.log_dir:
+        return os.path.join(CONF.log_dir, CONF.log_file)
 
-    if logfile and logdir:
-        return os.path.join(logdir, logfile)
-
-    if logdir:
+    if CONF.log_dir:
         binary = binary or _get_binary_name()
-        return '%s.log' % (os.path.join(logdir, binary),)
+        return '%s.log' % (os.path.join(CONF.log_dir, binary),)
 
 
 class ContextAdapter(logging.LoggerAdapter):
