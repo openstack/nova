@@ -1,0 +1,8 @@
+{
+    "floating_ips_bulk_create" : 
+    {
+	"ip_range": "192.168.1.0/24",
+	"pool": "nova",
+	"interface": "eth0"
+     }
+}
