@@ -296,6 +296,9 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+        db.instance_get(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -328,6 +331,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+        db.instance_get(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
+
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -394,6 +401,9 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+        db.instance_get(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
