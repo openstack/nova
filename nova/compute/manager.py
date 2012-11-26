@@ -306,7 +306,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.18'
+    RPC_API_VERSION = '2.19'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -576,13 +576,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _run_instance(self, context, request_spec,
                       filter_properties, requested_networks, injected_files,
-                      admin_password, is_first_time, instance):
+                      admin_password, is_first_time, node, instance):
         """Launch a new instance with specified options."""
         context = context.elevated()
 
         try:
             self._check_instance_not_already_created(context, instance)
             image_meta = self._check_image_size(context, instance)
+
+            if node is None:
+                node = self.driver.get_available_nodes()[0]
+                LOG.debug(_("No node specified, defaulting to %(node)s") %
+                          locals())
+
             extra_usage_info = {"image_name": image_meta['name']}
             self._start_building(context, instance)
             self._notify_about_instance_usage(
@@ -591,7 +597,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = None
             bdms = self.db.block_device_mapping_get_all_by_instance(
                         context, instance['uuid'])
-            rt = self._get_resource_tracker(instance.get('node'))
+            rt = self._get_resource_tracker(node)
             try:
                 limits = filter_properties.get('limits', {})
                 with rt.instance_claim(context, instance, limits):
@@ -941,7 +947,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def run_instance(self, context, instance, request_spec=None,
                      filter_properties=None, requested_networks=None,
                      injected_files=None, admin_password=None,
-                     is_first_time=False):
+                     is_first_time=False, node=None):
 
         if filter_properties is None:
             filter_properties = {}
@@ -952,7 +958,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         def do_run_instance():
             self._run_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
-                    admin_password, is_first_time, instance)
+                    admin_password, is_first_time, node, instance)
         do_run_instance()
 
     def _shutdown_instance(self, context, instance, bdms):

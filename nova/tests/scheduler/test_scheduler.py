@@ -653,7 +653,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
 
         timeutils.utcnow().AndReturn('fake-now')
         db.instance_update(self.context, 'fake_uuid',
-                {'host': None, 'scheduled_at': 'fake-now'})
+                {'host': None, 'node': None, 'scheduled_at': 'fake-now'})
         rpc.queue_get_for(self.context, 'compute', host).AndReturn(queue)
         rpc.cast(self.context, queue,
                 {'method': method,

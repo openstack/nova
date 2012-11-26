@@ -87,21 +87,12 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
 
 
 def instance_update_db(context, instance_uuid):
-    '''Clear the host and set the scheduled_at field of an Instance.
+    '''Clear the host and node - set the scheduled_at field of an Instance.
 
     :returns: An Instance with the updated fields set properly.
     '''
     now = timeutils.utcnow()
-    values = {'host': None, 'scheduled_at': now}
-    return db.instance_update(context, instance_uuid, values)
-
-
-def db_instance_node_set(context, instance_uuid, node):
-    '''Set the node field of an Instance.
-
-    :returns: An Instance with the updated fields set properly.
-    '''
-    values = {'node': node}
+    values = {'host': None, 'node': None, 'scheduled_at': now}
     return db.instance_update(context, instance_uuid, values)
 
 

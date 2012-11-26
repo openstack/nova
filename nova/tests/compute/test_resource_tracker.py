@@ -154,6 +154,7 @@ class BaseTestCase(test.TestCase):
             'project_id': '123456',
             'vcpus': 1,
             'host': None,
+            'node': None,
             'instance_type_id': 1,
             'launched_on': None,
         }
