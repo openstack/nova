@@ -686,6 +686,7 @@ class VlanNetworkTestCase(test.TestCase):
         def fake5(*args, **kwargs):
             return {'address': '10.0.0.1',
                     'pool': 'nova',
+                    'instance_uuid': FAKEUUID,
                     'interface': 'eth0',
                     'network_id': 'blahblah'}
 
@@ -714,6 +715,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(exception.NoFloatingIpInterface,
                           self.network._associate_floating_ip,
                           ctxt,
+                          mox.IgnoreArg(),
                           mox.IgnoreArg(),
                           mox.IgnoreArg(),
                           mox.IgnoreArg())
@@ -832,6 +834,7 @@ class VlanNetworkTestCase(test.TestCase):
         def fake5(*args, **kwargs):
             return {'address': '10.0.0.1',
                     'pool': 'nova',
+                    'instance_uuid': FAKEUUID,
                     'interface': 'eth0',
                     'network_id': 'blahblah'}
 
