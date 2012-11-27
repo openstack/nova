@@ -64,7 +64,7 @@ class LiveMigrationOps(baseops.BaseOps):
                 _('Live migration networks are not configured on this host'))
 
     def live_migration(self, context, instance_ref, dest, post_method,
-        recover_method, block_migration=False):
+        recover_method, block_migration=False, migrate_data=None):
         LOG.debug(_("live_migration called"), instance=instance_ref)
         instance_name = instance_ref["name"]
 
