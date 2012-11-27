@@ -17,6 +17,9 @@
 
 import re
 
+from nova import flags
+
+FLAGS = flags.FLAGS
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
 _DEFAULT_MAPPINGS = {'ami': 'sda1',
@@ -89,8 +92,12 @@ def strip_prefix(device_name):
 
 def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
+    # NOTE(clayg): remove this when xenapi is setting default_root_device
     if root_device_name is None:
-        return _DEFAULT_MAPPINGS
+        if FLAGS.compute_driver.endswith('xenapi.XenAPIDriver'):
+            root_device_name = '/dev/xvda'
+        else:
+            return _DEFAULT_MAPPINGS
 
     mappings = {}
     mappings['ami'] = strip_dev(root_device_name)
