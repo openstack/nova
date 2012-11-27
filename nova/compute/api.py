@@ -378,7 +378,7 @@ class API(base.Base):
             return value
 
         options_from_image = {'os_type': prop('os_type'),
-                              'architecture': prop('arch'),
+                              'architecture': prop('architecture'),
                               'vm_mode': prop('vm_mode')}
 
         # If instance doesn't have auto_disk_config overridden by request, use
