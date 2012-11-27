@@ -181,9 +181,9 @@ class GlanceImageService(object):
                 _params[param] = params.get(param)
 
         # ensure filters is a dict
-        params.setdefault('filters', {})
+        _params.setdefault('filters', {})
         # NOTE(vish): don't filter out private images
-        params['filters'].setdefault('is_public', 'none')
+        _params['filters'].setdefault('is_public', 'none')
 
         return _params
 
