@@ -987,7 +987,7 @@ class CloudController(object):
             # TODO(yamahata): volume attach time
             ebs = {'volumeId': volume_id,
                    'deleteOnTermination': bdm['delete_on_termination'],
-                   'attachTime': vol['attach_time'] or '-',
+                   'attachTime': vol['attach_time'] or '',
                    'status': vol['status'], }
             res = {'deviceName': bdm['device_name'],
                    'ebs': ebs, }
