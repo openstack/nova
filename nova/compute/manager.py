@@ -494,7 +494,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            injected_files, admin_password)
 
             except exception.InstanceNotFound:
-                raise  # the instance got deleted during the spawn
+                # the instance got deleted during the spawn
+                try:
+                    self._deallocate_network(context, instance)
+                except Exception:
+                    msg = _('Failed to dealloc network for deleted instance')
+                    LOG.exception(msg, instance=instance)
+                raise
             except Exception:
                 # try to re-schedule instance:
                 self._reschedule_or_reraise(context, instance,
