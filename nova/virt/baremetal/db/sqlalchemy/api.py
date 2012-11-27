@@ -35,6 +35,7 @@ from nova.db.sqlalchemy.api import require_admin_context
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova.virt.baremetal.db.sqlalchemy import models
 from nova.virt.baremetal.db.sqlalchemy.session import get_session
 
@@ -114,17 +115,30 @@ def bm_node_find_free(context, service_host=None,
 
 @require_admin_context
 def bm_node_get(context, bm_node_id):
+    # bm_node_id may be passed as a string. Convert to INT to improve DB perf.
+    bm_node_id = int(bm_node_id)
     result = model_query(context, models.BareMetalNode, read_deleted="no").\
                      filter_by(id=bm_node_id).\
                      first()
+
+    if not result:
+        raise exception.InstanceNotFound(instance_id=bm_node_id)
+
     return result
 
 
 @require_admin_context
 def bm_node_get_by_instance_uuid(context, instance_uuid):
+    if not uuidutils.is_uuid_like(instance_uuid):
+        raise exception.InstanceNotFound(instance_id=instance_uuid)
+
     result = model_query(context, models.BareMetalNode, read_deleted="no").\
                      filter_by(instance_uuid=instance_uuid).\
                      first()
+
+    if not result:
+        raise exception.InstanceNotFound(instance_id=instance_uuid)
+
     return result
 
 
@@ -137,7 +151,7 @@ def bm_node_create(context, values):
 
 
 @require_admin_context
-def bm_node_update(context, bm_node_id, values, ):
+def bm_node_update(context, bm_node_id, values):
     model_query(context, models.BareMetalNode, read_deleted="no").\
             filter_by(id=bm_node_id).\
             update(values)
@@ -153,7 +167,7 @@ def bm_node_destroy(context, bm_node_id):
 
 
 @require_admin_context
-def bm_pxe_ip_get_all(context, session=None):
+def bm_pxe_ip_get_all(context):
     query = model_query(context, models.BareMetalPxeIp, read_deleted="no")
     return query.all()
 
@@ -193,18 +207,23 @@ def bm_pxe_ip_destroy_by_address(context, address):
 
 @require_admin_context
 def bm_pxe_ip_get(context, ip_id):
-    ref = model_query(context, models.BareMetalPxeIp, read_deleted="no").\
+    result = model_query(context, models.BareMetalPxeIp, read_deleted="no").\
             filter_by(id=ip_id).\
             first()
-    return ref
+
+    return result
 
 
 @require_admin_context
 def bm_pxe_ip_get_by_bm_node_id(context, bm_node_id):
-    ref = model_query(context, models.BareMetalPxeIp, read_deleted="no").\
+    result = model_query(context, models.BareMetalPxeIp, read_deleted="no").\
             filter_by(bm_node_id=bm_node_id).\
             first()
-    return ref
+
+    if not result:
+        raise exception.InstanceNotFound(instance_id=bm_node_id)
+
+    return result
 
 
 @require_admin_context
@@ -217,7 +236,8 @@ def bm_pxe_ip_associate(context, bm_node_id):
                      filter_by(id=bm_node_id).\
                      first()
         if not node_ref:
-            raise exception.NovaException("bm_node %s not found" % bm_node_id)
+            raise exception.InstanceNotFound(instance_id=bm_node_id)
+
         # Check if the node already has a pxe_ip
         ip_ref = model_query(context, models.BareMetalPxeIp,
                              read_deleted="no", session=session).\
@@ -225,6 +245,7 @@ def bm_pxe_ip_associate(context, bm_node_id):
                          first()
         if ip_ref:
             return ip_ref.id
+
         # with_lockmode('update') and filter_by(bm_node_id=None) will lock all
         # records. It may cause a performance problem in high-concurrency
         # environment.
@@ -233,8 +254,11 @@ def bm_pxe_ip_associate(context, bm_node_id):
                          filter_by(bm_node_id=None).\
                          with_lockmode('update').\
                          first()
+
+        # this exception is not caught in nova/compute/manager
         if not ip_ref:
-            raise exception.NovaException("free bm_pxe_ip not found")
+            raise exception.NovaException(_("No more PXE IPs available"))
+
         ip_ref.bm_node_id = bm_node_id
         session.add(ip_ref)
         return ip_ref.id
@@ -253,6 +277,11 @@ def bm_interface_get(context, if_id):
                          read_deleted="no").\
                      filter_by(id=if_id).\
                      first()
+
+    if not result:
+        raise exception.NovaException(_("Baremetal interface %s "
+                        "not found") % if_id)
+
     return result
 
 
@@ -285,21 +314,26 @@ def bm_interface_create(context, bm_node_id, address, datapath_id, port_no):
 def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
     session = get_session()
     with session.begin():
-        ref = model_query(context, models.BareMetalInterface,
-                          read_deleted="no", session=session).\
+        bm_interface = model_query(context, models.BareMetalInterface,
+                                read_deleted="no", session=session).\
                          filter_by(id=if_id).\
                          with_lockmode('update').\
                          first()
-        if not ref:
-            raise exception.NovaException('interface id=%s is not found' %
-                                          if_id)
-        ref.vif_uuid = vif_uuid
+        if not bm_interface:
+            raise exception.NovaException(_("Baremetal interface %s "
+                        "not found") % if_id)
+
+        bm_interface.vif_uuid = vif_uuid
         try:
-            session.add(ref)
+            session.add(bm_interface)
             session.flush()
-        except IntegrityError:
-            raise exception.NovaException('vif_uuid %s is already assigned' %
-                                          vif_uuid)
+        except exception.DBError, e:
+            # TODO(deva): clean up when db layer raises DuplicateKeyError
+            if str(e).find('IntegrityError') != -1:
+                raise exception.NovaException(_("Baremetal interface %s "
+                        "already in use") % vif_uuid)
+            else:
+                raise e
 
 
 @require_admin_context
@@ -308,6 +342,11 @@ def bm_interface_get_by_vif_uuid(context, vif_uuid):
                          read_deleted="no").\
                 filter_by(vif_uuid=vif_uuid).\
                 first()
+
+    if not result:
+        raise exception.NovaException(_("Baremetal virtual interface %s "
+                        "not found") % vif_uuid)
+
     return result
 
 
@@ -317,6 +356,10 @@ def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
                          read_deleted="no").\
                  filter_by(bm_node_id=bm_node_id).\
                  all()
+
+    if not result:
+        raise exception.InstanceNotFound(instance_id=bm_node_id)
+
     return result
 
 

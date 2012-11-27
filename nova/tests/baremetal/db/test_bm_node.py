@@ -17,6 +17,7 @@
 Bare-Metal DB testcase for BareMetalNode
 """
 
+from nova import exception
 from nova.tests.baremetal.db import base
 from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import db
@@ -67,8 +68,10 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         r = db.bm_node_get(self.context, self.ids[1])
         self.assertEquals(r['pm_address'], '1')
 
-        r = db.bm_node_get(self.context, -1)
-        self.assertTrue(r is None)
+        self.assertRaises(
+              exception.InstanceNotFound,
+              db.bm_node_get,
+              self.context, -1)
 
     def test_get_by_service_host(self):
         self._create_nodes()
@@ -97,8 +100,10 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
 
         db.bm_node_destroy(self.context, self.ids[0])
 
-        r = db.bm_node_get(self.context, self.ids[0])
-        self.assertTrue(r is None)
+        self.assertRaises(
+              exception.InstanceNotFound,
+              db.bm_node_get,
+              self.context, self.ids[0])
 
         r = db.bm_node_get_all(self.context)
         self.assertEquals(len(r), 5)
