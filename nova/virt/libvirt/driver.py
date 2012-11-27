@@ -1692,7 +1692,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
-        inst_type = instance_types.get_instance_type(inst_type_id)
+        inst_type = instance_types.get_instance_type(inst_type_id,
+                                                     inactive=True)
 
         guest = config.LibvirtConfigGuest()
         guest.virt_type = FLAGS.libvirt_type

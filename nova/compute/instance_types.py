@@ -128,13 +128,16 @@ def get_default_instance_type():
     return get_instance_type_by_name(name)
 
 
-def get_instance_type(instance_type_id, ctxt=None):
+def get_instance_type(instance_type_id, ctxt=None, inactive=False):
     """Retrieves single instance type by id."""
     if instance_type_id is None:
         return get_default_instance_type()
 
     if ctxt is None:
         ctxt = context.get_admin_context()
+
+    if inactive:
+        ctxt = ctxt.elevated(read_deleted="yes")
 
     return db.instance_type_get(ctxt, instance_type_id)
 
