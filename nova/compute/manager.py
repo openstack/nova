@@ -1873,9 +1873,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         reservations=None, migration=None, migration_id=None,
                         instance_type=None):
         """Starts the migration of a running instance to another host."""
-        elevated = context.elevated()
         if not migration:
-            migration = self.db.migration_get(elevated, migration_id)
+            migration = self.db.migration_get(context.elevated(), migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             if not instance_type:
@@ -1884,9 +1883,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             network_info = self._get_instance_nw_info(context, instance)
 
-            self.db.migration_update(elevated,
-                                     migration['id'],
-                                     {'status': 'migrating'})
+            migration = self.conductor_api.migration_update(context,
+                    migration, 'migrating')
 
             instance = self._instance_update(context, instance['uuid'],
                     task_state=task_states.RESIZE_MIGRATING,
@@ -1908,9 +1906,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.migrate_instance_start(context, instance,
                                                     migration)
 
-            migration = self.db.migration_update(elevated,
-                                                 migration['id'],
-                                                 {'status': 'post-migrating'})
+            migration = self.conductor_api.migration_update(context,
+                    migration, 'post-migrating')
 
             instance = self._instance_update(context, instance['uuid'],
                     host=migration['dest_compute'],
@@ -1994,8 +1991,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          expected_task_state=task_states.
                                              RESIZE_FINISH)
 
-        self.db.migration_update(context.elevated(), migration['id'],
-                                 {'status': 'finished'})
+        migration = self.conductor_api.migration_update(context,
+                migration, 'finished')
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
@@ -2801,12 +2798,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                            "older than %(confirm_window)d seconds"),
                          migrations_info)
 
-            def _set_migration_to_error(migration_id, reason, **kwargs):
+            def _set_migration_to_error(migration, reason, **kwargs):
+                migration_id = migration['id']
                 msg = _("Setting migration %(migration_id)s to error: "
                        "%(reason)s") % locals()
                 LOG.warn(msg, **kwargs)
-                self.db.migration_update(context, migration_id,
-                                        {'status': 'error'})
+                self.conductor_api.migration_update(context, migration,
+                                                    'error')
 
             for migration in migrations:
                 migration_id = migration['id']
@@ -2819,11 +2817,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                             instance_uuid)
                 except exception.InstanceNotFound:
                     reason = _("Instance %(instance_uuid)s not found")
-                    _set_migration_to_error(migration_id, reason % locals())
+                    _set_migration_to_error(migration, reason % locals())
                     continue
                 if instance['vm_state'] == vm_states.ERROR:
                     reason = _("In ERROR state")
-                    _set_migration_to_error(migration_id, reason % locals(),
+                    _set_migration_to_error(migration, reason % locals(),
                                             instance=instance)
                     continue
                 vm_state = instance['vm_state']
@@ -2831,7 +2829,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 if vm_state != vm_states.RESIZED or task_state is not None:
                     reason = _("In states %(vm_state)s/%(task_state)s, not"
                             "RESIZED/None")
-                    _set_migration_to_error(migration_id, reason % locals(),
+                    _set_migration_to_error(migration, reason % locals(),
                                             instance=instance)
                     continue
                 try:

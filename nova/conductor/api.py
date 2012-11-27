@@ -47,6 +47,9 @@ class LocalAPI(object):
         """Perform an instance update in the database"""
         return self._manager.instance_update(context, instance_uuid, updates)
 
+    def migration_update(self, context, migration, status):
+        return self._manager.migration_update(context, migration, status)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -58,3 +61,7 @@ class API(object):
         """Perform an instance update in the database"""
         return self.conductor_rpcapi.instance_update(context, instance_uuid,
                                                      updates)
+
+    def migration_update(self, context, migration, status):
+        return self.conductor_rpcapi.migration_update(context, migration,
+                                                      status)
