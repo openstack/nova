@@ -809,6 +809,10 @@ def network_get_all_by_uuids(context, network_uuids,
 
 # pylint: disable=C0103
 
+def network_in_use_on_host(context, network_id, host=None):
+    """Indicates if a network is currently in use on host."""
+    return IMPL.network_in_use_on_host(context, network_id, host)
+
 
 def network_get_associated_fixed_ips(context, network_id, host=None):
     """Get all network's ips that have been associated."""

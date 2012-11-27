@@ -494,6 +494,33 @@ class LinuxNetworkTestCase(test.TestCase):
         for inp in expected_inputs:
             self.assertTrue(inp in inputs[0])
 
+        executes = []
+        inputs = []
+
+        @classmethod
+        def fake_remove(_self, bridge, gateway):
+            return
+
+        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
+                       'remove_bridge', fake_remove)
+
+        driver.unplug(network)
+        expected = [
+            ('ebtables', '-D', 'INPUT', '-p', 'ARP', '-i', iface,
+             '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-D', 'OUTPUT', '-p', 'ARP', '-o', iface,
+             '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('iptables-save', '-c', '-t', 'filter'),
+            ('iptables-restore', '-c'),
+            ('iptables-save', '-c', '-t', 'nat'),
+            ('iptables-restore', '-c'),
+            ('ip6tables-save', '-c', '-t', 'filter'),
+            ('ip6tables-restore', '-c'),
+        ]
+        self.assertEqual(executes, expected)
+        for inp in expected_inputs:
+            self.assertFalse(inp in inputs[0])
+
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)
         executes = []
