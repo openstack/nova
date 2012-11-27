@@ -753,6 +753,10 @@ class FlavorAccessNotFound(NotFound):
                 "%(project_id) combination.")
 
 
+class CellNotFound(NotFound):
+    message = _("Cell %(cell_id)s could not be found.")
+
+
 class SchedulerHostFilterNotFound(NotFound):
     message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
