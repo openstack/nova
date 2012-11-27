@@ -130,6 +130,7 @@ class BaseTestCase(test.TestCase):
             'project_id': '123456',
             'vcpus': 1,
             'host': None,
+            'launched_on': None,
         }
         instance.update(kwargs)
 
