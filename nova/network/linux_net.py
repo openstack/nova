@@ -753,6 +753,7 @@ def get_dhcp_opts(context, network_ref):
                 default_gw_vif[instance_uuid] = vifs[0]['id']
 
         for datum in data:
+            instance_uuid = datum['instance_uuid']
             if instance_uuid in default_gw_vif:
                 # we don't want default gateway for this fixed ip
                 if default_gw_vif[instance_uuid] != datum['vif_id']:
