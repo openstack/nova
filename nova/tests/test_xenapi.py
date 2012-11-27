@@ -982,6 +982,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance_values = {
             'id': instance_id,
             'uuid': '00000000-0000-0000-0000-00000000000%d' % instance_id,
+            'display_name': 'host-%d' % instance_id,
             'project_id': self.project_id,
             'user_id': self.user_id,
             'image_ref': 1,

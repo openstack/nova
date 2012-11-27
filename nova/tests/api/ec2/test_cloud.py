@@ -54,6 +54,8 @@ CONF.import_opt('default_instance_type', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 LOG = logging.getLogger(__name__)
 
+HOST = "testhost"
+
 
 def get_fake_cache():
     def _ip(ip, fixed=True, floats=None):
@@ -248,6 +250,7 @@ class CloudTestCase(test.TestCase):
         # TODO(jkoelker) Probably need to query for instance_type_id and
         #                make sure we get a valid one
         inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'display_name': HOST,
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
         for network in networks:

@@ -19,6 +19,7 @@ import platform
 import nova.context
 import nova.db
 from nova.image import glance
+from nova.network import minidns
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
@@ -102,3 +103,20 @@ def get_test_network_info(count=1):
 
 def is_osx():
     return platform.mac_ver()[0] != ''
+
+
+test_dns_managers = []
+
+
+def dns_manager():
+    global test_dns_managers
+    manager = minidns.MiniDNS()
+    test_dns_managers.append(manager)
+    return manager
+
+
+def cleanup_dns_managers():
+    global test_dns_managers
+    for manager in test_dns_managers:
+        manager.delete_dns_file()
+    test_dns_managers = []
