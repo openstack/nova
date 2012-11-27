@@ -47,6 +47,12 @@ class LocalAPI(object):
         """Perform an instance update in the database"""
         return self._manager.instance_update(context, instance_uuid, updates)
 
+    def instance_get_by_uuid(self, context, instance_uuid):
+        return self._manager.instance_get_by_uuid(context, instance_uuid)
+
+    def instance_get_all_by_host(self, context, host):
+        return self._manager.instance_get_all_by_host(context, host)
+
     def migration_update(self, context, migration, status):
         return self._manager.migration_update(context, migration, status)
 
@@ -61,6 +67,13 @@ class API(object):
         """Perform an instance update in the database"""
         return self.conductor_rpcapi.instance_update(context, instance_uuid,
                                                      updates)
+
+    def instance_get_by_uuid(self, context, instance_uuid):
+        return self.conductor_rpcapi.instance_get_by_uuid(context,
+                                                          instance_uuid)
+
+    def instance_get_all_by_host(self, context, host):
+        return self.conductor_rpcapi.instance_get_all_by_host(context, host)
 
     def migration_update(self, context, migration, status):
         return self.conductor_rpcapi.migration_update(context, migration,
