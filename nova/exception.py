@@ -678,6 +678,10 @@ class NoFloatingIpInterface(NotFound):
     message = _("Interface %(interface)s not found.")
 
 
+class CannotDisassociateAutoAssignedFloatingIP(NovaException):
+    message = _("Cannot disassociate auto assigined floating ip")
+
+
 class KeypairNotFound(NotFound):
     message = _("Keypair %(name)s not found for user %(user_id)s")
 

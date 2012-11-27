@@ -589,7 +589,7 @@ class FloatingIP(object):
 
         # handle auto assigned
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
-            return
+            raise exception.CannotDisassociateAutoAssignedFloatingIP()
 
         # make sure project ownz this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
