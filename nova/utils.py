@@ -59,7 +59,9 @@ CONF = cfg.CONF
 CONF.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
+CONF.import_opt('glance_host', 'nova.config')
 CONF.import_opt('glance_port', 'nova.config')
+CONF.import_opt('glance_protocol', 'nova.config')
 CONF.import_opt('instance_usage_audit_period', 'nova.config')
 CONF.import_opt('monkey_patch', 'nova.config')
 CONF.import_opt('rootwrap_config', 'nova.config')
@@ -905,9 +907,8 @@ def timefunc(func):
 
 def generate_glance_url():
     """Generate the URL to glance."""
-    # TODO(jk0): This will eventually need to take SSL into consideration
-    # when supported in glance.
-    return "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
+    return "%s://%s:%d" % (CONF.glance_protocol, CONF.glance_host,
+                           CONF.glance_port)
 
 
 def generate_image_url(image_ref):
