@@ -90,8 +90,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.5)
-        driver.instance_update_db(ctxt, instance1['uuid'],
-                'host3').WithSideEffects(inc_launch_index).AndReturn(instance1)
+        driver.instance_update_db(ctxt, instance1['uuid']).WithSideEffects(
+                inc_launch_index).AndReturn(instance1)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host3',
                 instance=instance1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
@@ -102,8 +102,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.2)
-        driver.instance_update_db(ctxt, instance2['uuid'],
-                'host1').WithSideEffects(inc_launch_index).AndReturn(instance2)
+        driver.instance_update_db(ctxt, instance2['uuid']).WithSideEffects(
+                inc_launch_index).AndReturn(instance2)
         compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host1',
                 instance=instance2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
