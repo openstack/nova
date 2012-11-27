@@ -96,7 +96,7 @@ def init_leases(network_id):
 def main():
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
-    argv = flags.parse_args(sys.argv)
+    argv = flags.parse_args(sys.argv, default_config_files=[flagfile])
     logging.setup("nova")
 
     if int(os.environ.get('TESTING', '0')):
