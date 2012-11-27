@@ -85,7 +85,10 @@ def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
 
 class File(object):
     def __init__(self, path, mode=None):
-        self.fp = StringIO.StringIO(files[path])
+        if path in files:
+            self.fp = StringIO.StringIO(files[path])
+        else:
+            self.fp = StringIO.StringIO(files[os.path.split(path)[-1]])
 
     def __enter__(self):
         return self.fp

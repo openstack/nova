@@ -2214,6 +2214,7 @@ class LibvirtConnTestCase(test.TestCase):
                                        FLAGS.base_dir_name))
 
     def test_get_console_output_file(self):
+        fake_libvirt_utils.files['console.log'] = '01234567890'
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -2223,11 +2224,7 @@ class LibvirtConnTestCase(test.TestCase):
             instance = db.instance_create(self.context, instance_ref)
 
             console_dir = (os.path.join(tmpdir, instance['name']))
-            os.mkdir(console_dir)
             console_log = '%s/console.log' % (console_dir)
-            f = open(console_log, "w")
-            f.write("foo")
-            f.close()
             fake_dom_xml = """
                 <domain type='kvm'>
                     <devices>
@@ -2250,10 +2247,18 @@ class LibvirtConnTestCase(test.TestCase):
             libvirt_driver.libvirt_utils = fake_libvirt_utils
 
             conn = libvirt_driver.LibvirtDriver(False)
-            output = conn.get_console_output(instance)
-            self.assertEquals("foo", output)
+
+            try:
+                prev_max = libvirt_driver.MAX_CONSOLE_BYTES
+                libvirt_driver.MAX_CONSOLE_BYTES = 5
+                output = conn.get_console_output(instance)
+            finally:
+                libvirt_driver.MAX_CONSOLE_BYTES = prev_max
+
+            self.assertEquals('67890', output)
 
     def test_get_console_output_pty(self):
+        fake_libvirt_utils.files['pty'] = '01234567890'
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -2263,11 +2268,7 @@ class LibvirtConnTestCase(test.TestCase):
             instance = db.instance_create(self.context, instance_ref)
 
             console_dir = (os.path.join(tmpdir, instance['name']))
-            os.mkdir(console_dir)
             pty_file = '%s/fake_pty' % (console_dir)
-            f = open(pty_file, "w")
-            f.write("foo")
-            f.close()
             fake_dom_xml = """
                 <domain type='kvm'>
                     <devices>
@@ -2286,17 +2287,27 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain(fake_dom_xml)
 
             def _fake_flush(self, fake_pty):
-                with open(fake_pty, 'r') as fp:
-                    return fp.read()
+                return 'foo'
+
+            def _fake_append_to_file(self, data, fpath):
+                return 'pty'
 
             self.create_fake_libvirt_mock()
             libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
             libvirt_driver.LibvirtDriver._flush_libvirt_console = _fake_flush
+            libvirt_driver.LibvirtDriver._append_to_file = _fake_append_to_file
             libvirt_driver.libvirt_utils = fake_libvirt_utils
 
             conn = libvirt_driver.LibvirtDriver(False)
-            output = conn.get_console_output(instance)
-            self.assertEquals("foo", output)
+
+            try:
+                prev_max = libvirt_driver.MAX_CONSOLE_BYTES
+                libvirt_driver.MAX_CONSOLE_BYTES = 5
+                output = conn.get_console_output(instance)
+            finally:
+                libvirt_driver.MAX_CONSOLE_BYTES = prev_max
+
+            self.assertEquals('67890', output)
 
     def test_get_host_ip_addr(self):
         conn = libvirt_driver.LibvirtDriver(False)

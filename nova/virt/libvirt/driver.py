@@ -200,6 +200,8 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
     libvirt_firewall.IptablesFirewallDriver.__name__)
 
+MAX_CONSOLE_BYTES = 102400
+
 
 def patch_tpool_proxy():
     """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
@@ -1126,7 +1128,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not path:
                     continue
                 libvirt_utils.chown(path, os.getuid())
-                return libvirt_utils.load_file(path)
+
+                with libvirt_utils.file_open(path, 'rb') as fp:
+                    log_data, remaining = utils.last_bytes(fp,
+                                                           MAX_CONSOLE_BYTES)
+                    if remaining > 0:
+                        LOG.info(_('Truncated console log returned, %d bytes '
+                                   'ignored'), remaining, instance=instance)
+                    return log_data
 
         # Try 'pty' types
         if console_types.get('pty'):
@@ -1147,7 +1156,12 @@ class LibvirtDriver(driver.ComputeDriver):
         console_log = self._get_console_log_path(instance['name'])
         fpath = self._append_to_file(data, console_log)
 
-        return libvirt_utils.load_file(fpath)
+        with libvirt_utils.file_open(fpath, 'rb') as fp:
+            log_data, remaining = utils.last_bytes(fp, MAX_CONSOLE_BYTES)
+            if remaining > 0:
+                LOG.info(_('Truncated console log returned, %d bytes ignored'),
+                         remaining, instance=instance)
+            return log_data
 
     @staticmethod
     def get_host_ip_addr():
