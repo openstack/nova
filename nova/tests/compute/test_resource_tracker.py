@@ -321,8 +321,8 @@ class BaseTrackerTestCase(BaseTestCase):
                 self._fake_compute_node_update)
         self.stubs.Set(db, 'migration_update',
                 self._fake_migration_update)
-        self.stubs.Set(db, 'migration_get_in_progress_by_host',
-                self._fake_migration_get_in_progress_by_host)
+        self.stubs.Set(db, 'migration_get_in_progress_by_host_and_node',
+                self._fake_migration_get_in_progress_by_host_and_node)
 
         self.tracker.update_available_resource(self.context)
         self.limits = self._limits()
@@ -352,7 +352,8 @@ class BaseTrackerTestCase(BaseTestCase):
         self.compute.update(values)
         return self.compute
 
-    def _fake_migration_get_in_progress_by_host(self, ctxt, host):
+    def _fake_migration_get_in_progress_by_host_and_node(self, ctxt, host,
+                                                         node):
         status = ['confirmed', 'reverted']
         migrations = []
 
@@ -615,7 +616,9 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         migration = {
             'id': 1,
             'source_compute': 'host1',
+            'source_node': 'fakenode',
             'dest_compute': 'host2',
+            'dest_node': 'fakenode',
             'dest_host': '127.0.0.1',
             'old_instance_type_id': 1,
             'new_instance_type_id': 2,
@@ -722,7 +725,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def test_revert_reserve_source(self):
         # if a revert has started at the API and audit runs on
         # the source compute before the instance flips back to source,
-        # resources should still be help at the source based on the
+        # resources should still be held at the source based on the
         # migration:
         dest = "desthost"
         dest_tracker = self._tracker(host=dest)

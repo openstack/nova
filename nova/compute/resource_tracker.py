@@ -167,7 +167,9 @@ class ResourceTracker(object):
         return db.migration_create(context.elevated(),
                 {'instance_uuid': instance['uuid'],
                  'source_compute': instance['host'],
+                 'source_node': instance['node'],
                  'dest_compute': self.host,
+                 'dest_node': self.nodename,
                  'dest_host': self.driver.get_host_ip_addr(),
                  'old_instance_type_id': old_instance_type['id'],
                  'new_instance_type_id': instance_type['id'],
@@ -258,7 +260,8 @@ class ResourceTracker(object):
         self._update_usage_from_instances(resources, instances)
 
         # Grab all in-progress migrations:
-        migrations = db.migration_get_in_progress_by_host(context, self.host)
+        migrations = db.migration_get_in_progress_by_host_and_node(context,
+                self.host, self.nodename)
 
         self._update_usage_from_migrations(resources, migrations)
 
@@ -377,15 +380,17 @@ class ResourceTracker(object):
         uuid = migration['instance_uuid']
         LOG.audit(_("Updating from migration %s") % uuid)
 
-        incoming = (migration['dest_compute'] == self.host)
-        outbound = (migration['source_compute'] == self.host)
-        same_host = (incoming and outbound)
+        incoming = (migration['dest_compute'] == self.host and
+                    migration['dest_node'] == self.nodename)
+        outbound = (migration['source_compute'] == self.host and
+                    migration['source_node'] == self.nodename)
+        same_node = (incoming and outbound)
 
         instance = self.tracked_instances.get(uuid, None)
         itype = None
 
-        if same_host:
-            # same host resize. record usage for whichever instance type the
+        if same_node:
+            # same node resize. record usage for whichever instance type the
             # instance is *not* in:
             if (instance['instance_type_id'] ==
                 migration['old_instance_type_id']):

@@ -228,7 +228,8 @@ class ComputeRpcAPITestCase(test.TestCase):
                 reservations=list('fake_res'),
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
-                version='2.10')
+                node='node',
+                version='2.20')
 
     def test_reboot_instance(self):
         self.maxDiff = None

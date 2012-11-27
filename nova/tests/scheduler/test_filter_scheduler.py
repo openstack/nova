@@ -329,7 +329,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 [instance['uuid']]).AndReturn(weighed_hosts)
         sched.compute_rpcapi.prep_resize(self.context, image, instance,
                 instance_type, 'host', reservations, request_spec=request_spec,
-                filter_properties=filter_properties)
+                filter_properties=filter_properties, node='node')
 
         self.mox.ReplayAll()
         sched.schedule_prep_resize(self.context, image, request_spec,
