@@ -272,7 +272,7 @@ class API(base.Base):
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
 
-        args = {'instance_id': instance['id'],
+        args = {'instance_id': instance['uuid'],
                 'host': instance['host'],
                 'address': address}
         rpc.call(context, FLAGS.network_topic,
