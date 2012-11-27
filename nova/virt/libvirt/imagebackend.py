@@ -47,6 +47,7 @@ __imagebackend_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
+CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 
 
 class Image(object):
@@ -120,7 +121,7 @@ class Image(object):
                 fetch_func(target=target, *args, **kwargs)
 
         if not os.path.exists(self.path):
-            base_dir = os.path.join(CONF.instances_path, '_base')
+            base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
             if not os.path.exists(base_dir):
                 fileutils.ensure_tree(base_dir)
             base = os.path.join(base_dir, filename)
