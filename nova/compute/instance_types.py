@@ -46,7 +46,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
     if swap is None:
         swap = 0
     if rxtx_factor is None:
-        rxtx_factor = 1
+        rxtx_factor = 1.0
     if ephemeral_gb is None:
         ephemeral_gb = 0
 
@@ -66,20 +66,28 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
         raise exception.InvalidInput(reason=msg)
 
     # ensure some attributes are integers and greater than or equal to 0
-    for option in kwargs:
+    for option in ['memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb', 'swap']:
         try:
             kwargs[option] = int(kwargs[option])
             assert kwargs[option] >= 0
         except (ValueError, AssertionError):
-            msg = _("create arguments must be positive integers")
+            msg = _("'%s' argument must be a positive integer") % option
             raise exception.InvalidInput(reason=msg)
+
+    # rxtx_factor should be a positive float
+    try:
+        kwargs['rxtx_factor'] = float(kwargs['rxtx_factor'])
+        assert kwargs['rxtx_factor'] > 0
+    except (ValueError, AssertionError):
+        msg = _("'rxtx_factor' argument must be a positive float")
+        raise exception.InvalidInput(reason=msg)
 
     # some value are required to be nonzero, not just positive
     for option in ['memory_mb', 'vcpus']:
         try:
             assert kwargs[option] > 0
         except AssertionError:
-            msg = _("create arguments must be positive integers")
+            msg = _("'%s' argument must be greater than 0") % option
             raise exception.InvalidInput(reason=msg)
 
     kwargs['name'] = name

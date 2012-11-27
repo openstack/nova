@@ -7,5 +7,5 @@
     disk="10"
     id="666"
     swap="5"
-    rxtx_factor="2"
+    rxtx_factor="2.0"
     OS-FLV-EXT-DATA:ephemeral="30" />

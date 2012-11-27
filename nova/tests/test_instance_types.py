@@ -71,7 +71,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['root_gb'], 120)
         self.assertEqual(inst_type['ephemeral_gb'], 0)
         self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1)
+        self.assertEqual(inst_type['rxtx_factor'], 1.0)
 
         # make sure new type shows up in list
         new_list = instance_types.get_all_types()
@@ -95,7 +95,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['root_gb'], 120)
         self.assertEqual(inst_type['ephemeral_gb'], 100)
         self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1)
+        self.assertEqual(inst_type['rxtx_factor'], 1.0)
 
         # make sure new type shows up in list
         new_list = instance_types.get_all_types()
@@ -120,7 +120,20 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['root_gb'], 120)
         self.assertEqual(inst_type['ephemeral_gb'], 100)
         self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_factor'], 1)
+        self.assertEqual(inst_type['rxtx_factor'], 1.0)
+
+    def test_instance_type_create_with_custom_rxtx_factor(self):
+        name = 'Custom RXTX Factor'
+        inst_type = instance_types.create(name, 256, 1, 120, 100,
+                                          rxtx_factor=9.9)
+        self.assertNotEqual(inst_type['flavorid'], None)
+        self.assertEqual(inst_type['name'], name)
+        self.assertEqual(inst_type['memory_mb'], 256)
+        self.assertEqual(inst_type['vcpus'], 1)
+        self.assertEqual(inst_type['root_gb'], 120)
+        self.assertEqual(inst_type['ephemeral_gb'], 100)
+        self.assertEqual(inst_type['swap'], 0)
+        self.assertEqual(inst_type['rxtx_factor'], 9.9)
 
     def test_instance_type_create_with_special_characters(self):
         """Ensure instance types raises InvalidInput for invalid characters"""

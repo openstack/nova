@@ -808,7 +808,7 @@ class InstanceTypeCommands(object):
     @args('--is_public', dest="is_public", metavar='<is_public>',
             help='Make flavor accessible to the public')
     def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
-               flavorid=None, swap=0, rxtx_factor=1, is_public=True):
+               flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
         """Creates instance types / flavors"""
         try:
             instance_types.create(name, memory, vcpus, root_gb,
