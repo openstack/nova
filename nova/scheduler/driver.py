@@ -96,35 +96,6 @@ def instance_update_db(context, instance_uuid):
     return db.instance_update(context, instance_uuid, values)
 
 
-def cast_to_compute_host(context, host, method, **kwargs):
-    """Cast request to a compute host queue"""
-
-    instance_uuid = kwargs.get('instance_uuid', None)
-    if instance_uuid:
-        instance_update_db(context, instance_uuid)
-
-    rpc.cast(context,
-             rpc.queue_get_for(context, CONF.compute_topic, host),
-             {"method": method, "args": kwargs})
-    LOG.debug(_("Casted '%(method)s' to compute '%(host)s'") % locals())
-
-
-def cast_to_host(context, topic, host, method, **kwargs):
-    """Generic cast to host"""
-
-    topic_mapping = {CONF.compute_topic: cast_to_compute_host}
-
-    func = topic_mapping.get(topic)
-    if func:
-        cast_to_compute_host(context, host, method, **kwargs)
-    else:
-        rpc.cast(context,
-                 rpc.queue_get_for(context, topic, host),
-                 {"method": method, "args": kwargs})
-        LOG.debug(_("Casted '%(method)s' to %(topic)s '%(host)s'")
-                % locals())
-
-
 def encode_instance(instance, local=True):
     """Encode locally created instance for return via RPC"""
     # TODO(comstud): I would love to be able to return the full
