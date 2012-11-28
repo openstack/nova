@@ -2159,7 +2159,11 @@ class AggregateAPI(base.Base):
             values = {"name": aggregate_name,
                       "availability_zone": availability_zone}
             aggregate = self.db.aggregate_create(context, values)
-            return dict(aggregate.iteritems())
+            aggregate = self._get_aggregate_info(context, aggregate)
+            # To maintain the same API result as before.
+            del aggregate['hosts']
+            del aggregate['metadata']
+            return aggregate
         else:
             raise exception.InvalidAggregateAction(action='create_aggregate',
                                                    aggregate_id="'N/A'",
@@ -2236,6 +2240,9 @@ class AggregateAPI(base.Base):
         metadata = self.db.aggregate_metadata_get(context, aggregate.id)
         hosts = self.db.aggregate_host_get_all(context, aggregate.id)
         result = dict(aggregate.iteritems())
+        # metadetails was not originally included here.  We need to pull it
+        # back out to maintain API stability.
+        del result['metadetails']
         result["metadata"] = metadata
         result["hosts"] = hosts
         return result

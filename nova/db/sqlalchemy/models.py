@@ -900,6 +900,9 @@ class Aggregate(BASE, NovaBase):
                              'Aggregate.deleted == False)',
                          backref='aggregates')
 
+    def _extra_keys(self):
+        return ['hosts', 'metadetails']
+
     @property
     def hosts(self):
         return [h.host for h in self._hosts]
