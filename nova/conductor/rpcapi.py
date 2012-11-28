@@ -29,6 +29,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.0 - Initial version.
     1.1 - Added migration_update
     1.2 - Added instance_get_by_uuid and instance_get_all_by_host
+    1.3 - Added aggregate_host_add and aggregate_host_delete
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -59,3 +60,15 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('migration_update', migration=migration_p,
                             status=status)
         return self.call(context, msg, version='1.1')
+
+    def aggregate_host_add(self, context, aggregate, host):
+        aggregate_p = jsonutils.to_primitive(aggregate)
+        msg = self.make_msg('aggregate_host_add', aggregate=aggregate_p,
+                            host=host)
+        return self.call(context, msg, version='1.3')
+
+    def aggregate_host_delete(self, context, aggregate, host):
+        aggregate_p = jsonutils.to_primitive(aggregate)
+        msg = self.make_msg('aggregate_host_delete', aggregate=aggregate_p,
+                            host=host)
+        return self.call(context, msg, version='1.3')

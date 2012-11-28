@@ -3241,9 +3241,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          slave_info=slave_info)
         except exception.AggregateError:
             with excutils.save_and_reraise_exception():
-                self.driver.undo_aggregate_operation(context,
-                                               self.db.aggregate_host_delete,
-                                               aggregate['id'], host)
+                self.driver.undo_aggregate_operation(
+                                    context,
+                                    self.conductor_api.aggregate_host_delete,
+                                    aggregate, host)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_aggregate_host(self, context, host, slave_info=None,
@@ -3259,8 +3260,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 exception.InvalidAggregateAction) as e:
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
-                                    context, self.db.aggregate_host_add,
-                                    aggregate['id'], host,
+                                    context,
+                                    self.conductor_api.aggregate_host_add,
+                                    aggregate, host,
                                     isinstance(e, exception.AggregateError))
 
     @manager.periodic_task(

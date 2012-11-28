@@ -3029,7 +3029,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Remove a compute host from an aggregate."""
         pass
 
-    def undo_aggregate_operation(self, context, op, aggregate_id,
+    def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error=True):
         """only used for Resource Pools"""
         pass

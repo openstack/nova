@@ -56,6 +56,12 @@ class LocalAPI(object):
     def migration_update(self, context, migration, status):
         return self._manager.migration_update(context, migration, status)
 
+    def aggregate_host_add(self, context, aggregate, host):
+        return self._manager.aggregate_host_add(context, aggregate, host)
+
+    def aggregate_host_delete(self, context, aggregate, host):
+        return self._manager.aggregate_host_delete(context, aggregate, host)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -78,3 +84,11 @@ class API(object):
     def migration_update(self, context, migration, status):
         return self.conductor_rpcapi.migration_update(context, migration,
                                                       status)
+
+    def aggregate_host_add(self, context, aggregate, host):
+        return self.conductor_rpcapi.aggregate_host_add(context, aggregate,
+                                                        host)
+
+    def aggregate_host_delete(self, context, aggregate, host):
+        return self.conductor_rpcapi.aggregate_host_delete(context, aggregate,
+                                                           host)
