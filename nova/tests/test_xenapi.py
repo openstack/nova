@@ -2334,7 +2334,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     def test_add_aggregate_host_raise_err(self):
         """Ensure the undo operation works correctly on add."""
         def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):
-            raise exception.AggregateError
+            raise exception.AggregateError(
+                    aggregate_id='', action='', reason='')
         self.stubs.Set(self.compute.driver, "add_to_aggregate",
                        fake_driver_add_to_aggregate)
         metadata = {pool_states.POOL_FLAG: "XenAPI",
