@@ -166,6 +166,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Createserverext",
             "DeferredDelete",
             "DiskConfig",
+            "ExtendedAvailabilityZone",
             "ExtendedStatus",
             "ExtendedServerAttributes",
             "FixedIPs",

@@ -2,7 +2,9 @@
     "servers": [
         {
             "OS-DCF:diskConfig": "AUTO",
-            "OS-EXT-SRV-ATTR:host": "f2df66e47d1f427cbd106cf9058360cc",
+            "OS-EXT-AZ:availability_zone": null,
+            "OS-EXT-AZ:host_availability_zone": "nova",
+            "OS-EXT-SRV-ATTR:host": "94d2ccc30d73475ab987661158405463",
             "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
             "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             "OS-EXT-STS:power_state": 1,
@@ -19,7 +21,7 @@
                 ]
             },
             "config_drive": "",
-            "created": "2012-11-15T19:28:29Z",
+            "created": "2013-01-30T14:03:44Z",
             "flavor": {
                 "id": "1",
                 "links": [
@@ -29,8 +31,8 @@
                     }
                 ]
             },
-            "hostId": "7eedbc35a14388e24ec12917b1eb0bd5dc969619a0e367591d55d9ef",
-            "id": "7d7b3dfc-3423-446f-b4b0-7fba038bf8b2",
+            "hostId": "f74e355ecde489405dfc0a1a48f2a85a5e2564e2ac6633d2b3e1b525",
+            "id": "033cc72d-708b-473b-ae8e-41064ea3fa21",
             "image": {
                 "id": "70a599e0-31e7-49b7-b260-868f441e862b",
                 "links": [
@@ -43,11 +45,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/servers/7d7b3dfc-3423-446f-b4b0-7fba038bf8b2",
+                    "href": "http://openstack.example.com/v2/openstack/servers/033cc72d-708b-473b-ae8e-41064ea3fa21",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/servers/7d7b3dfc-3423-446f-b4b0-7fba038bf8b2",
+                    "href": "http://openstack.example.com/openstack/servers/033cc72d-708b-473b-ae8e-41064ea3fa21",
                     "rel": "bookmark"
                 }
             ],
@@ -63,7 +65,7 @@
             ],
             "status": "ACTIVE",
             "tenant_id": "openstack",
-            "updated": "2012-11-15T19:28:30Z",
+            "updated": "2013-01-30T14:03:50Z",
             "user_id": "fake"
         }
     ]

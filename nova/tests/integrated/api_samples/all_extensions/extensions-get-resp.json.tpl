@@ -17,6 +17,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-EXT-AZ",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedAvailabilityZone",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "%(text)s",
             "links": [],

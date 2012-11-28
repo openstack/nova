@@ -6,6 +6,9 @@
   <extension alias="OS-DCF" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" name="DiskConfig">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-EXT-AZ" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" name="ExtendedAvailabilityZone">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="OS-EXT-SRV-ATTR" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedServerAttributes">
     <description>%(text)s</description>
   </extension>

@@ -2799,3 +2799,29 @@ class FpingSampleJsonTests(ServersSampleBase):
 
 class FpingSampleXmlTests(FpingSampleJsonTests):
     ctype = 'xml'
+
+
+class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                                ".extended_availability_zone"
+                                ".Extended_availability_zone")
+
+    def test_get(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-get-resp', subs, response)
+
+    def test_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('servers-detail-resp', subs, response)
+
+
+class ExtendedAvailabilityZoneXmlTests(ExtendedAvailabilityZoneJsonTests):
+    ctype = 'xml'
