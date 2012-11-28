@@ -38,10 +38,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             default_version=self.BASE_RPC_API_VERSION)
 
     def instance_update(self, context, instance_uuid, updates):
+        updates_p = jsonutils.to_primitive(updates)
         return self.call(context,
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
-                                       updates=updates))
+                                       updates=updates_p))
 
     def migration_update(self, context, migration, status):
         migration_p = jsonutils.to_primitive(migration)
