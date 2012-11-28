@@ -662,7 +662,7 @@
 ####          detected.Valid options are 'noop', 'log' and 'reap'. Set to
 ####          'noop' to disable.
 
-# image_cache_manager_interval=40
+# image_cache_manager_interval=0
 #### (IntOpt) Number of periodic scheduler ticks to wait between runs of
 ####          the image cache manager.
 
