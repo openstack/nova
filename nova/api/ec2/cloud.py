@@ -45,13 +45,31 @@ from nova import servicegroup
 from nova import utils
 from nova import volume
 
+ec2_opts = [
+    cfg.StrOpt('ec2_host',
+               default='$my_ip',
+               help='the ip of the ec2 api server'),
+    cfg.StrOpt('ec2_dmz_host',
+               default='$my_ip',
+               help='the internal ip of the ec2 api server'),
+    cfg.IntOpt('ec2_port',
+               default=8773,
+               help='the port of the ec2 api server'),
+    cfg.StrOpt('ec2_scheme',
+               default='http',
+               help='the protocol to use when connecting to the ec2 api '
+                    'server (http, https)'),
+    cfg.StrOpt('ec2_path',
+               default='/services/Cloud',
+               help='the path prefix used to call the ec2 api server'),
+    cfg.ListOpt('region_list',
+                default=[],
+                help='list of region=fqdn pairs separated by commas'),
+]
 
 CONF = cfg.CONF
-CONF.import_opt('ec2_host', 'nova.config')
-CONF.import_opt('ec2_path', 'nova.config')
-CONF.import_opt('ec2_port', 'nova.config')
-CONF.import_opt('ec2_scheme', 'nova.config')
-CONF.import_opt('region_list', 'nova.config')
+CONF.register_opts(ec2_opts)
+CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('vpn_key_suffix', 'nova.config')
 
