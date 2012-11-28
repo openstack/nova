@@ -77,8 +77,8 @@ def _map_nodes(meta):
 
     q = select([services.c.host, c_nodes.c.hypervisor_hostname],
 
-               whereclause=and_(c_nodes.c.deleted == 0,
-                                services.c.deleted == 0),
+               whereclause=and_(c_nodes.c.deleted == False,
+                                services.c.deleted == False),
 
                from_obj=c_nodes.join(services,
                                      c_nodes.c.service_id == services.c.id)
