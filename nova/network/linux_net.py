@@ -1092,14 +1092,16 @@ class LinuxNetInterfaceDriver(object):
 class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network, mac_address, gateway=True):
-        if network.get('vlan', None) is not None:
+        vlan = network.get('vlan')
+        if vlan is not None:
             iface = CONF.vlan_interface or network['bridge_interface']
             LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
-                           network['vlan'],
+                           vlan,
                            network['bridge'],
                            iface,
                            network,
                            mac_address)
+            iface = 'vlan%s' % vlan
         else:
             iface = CONF.flat_interface or network['bridge_interface']
             LinuxBridgeInterfaceDriver.ensure_bridge(
@@ -1107,6 +1109,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                           iface,
                           network, gateway)
 
+        if CONF.share_dhcp_address:
+            isolate_dhcp_address(iface, network['dhcp_server'])
         # NOTE(vish): applying here so we don't get a lock conflict
         iptables_manager.apply()
         return network['bridge']
@@ -1232,6 +1236,41 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                      '--in-interface %s -j DROP' % bridge)
                 ipv4_filter.add_rule('FORWARD',
                                      '--out-interface %s -j DROP' % bridge)
+
+
+@lockutils.synchronized('ebtables', 'nova-', external=True)
+def ensure_ebtables_rules(rules):
+    for rule in rules:
+        cmd = ['ebtables', '-D'] + rule.split()
+        _execute(*cmd, check_exit_code=False, run_as_root=True)
+        cmd[1] = '-I'
+        _execute(*cmd, run_as_root=True)
+
+
+def isolate_dhcp_address(interface, address):
+    # block arp traffic to address accross the interface
+    rules = []
+    rules.append('INPUT -p ARP -i %s --arp-ip-dst %s -j DROP'
+                 % (interface, address))
+    rules.append('OUTPUT -p ARP -o %s --arp-ip-src %s -j DROP'
+                 % (interface, address))
+    # NOTE(vish): the above is not possible with iptables/arptables
+    ensure_ebtables_rules(rules)
+    # block dhcp broadcast traffic across the interface
+    ipv4_filter = iptables_manager.ipv4['filter']
+    ipv4_filter.add_rule('FORWARD',
+                         '-m physdev --physdev-in %s -d 255.255.255.255 '
+                         '-p udp --dport 67 -j DROP' % interface, top=True)
+    ipv4_filter.add_rule('FORWARD',
+                         '-m physdev --physdev-out %s -d 255.255.255.255 '
+                         '-p udp --dport 67 -j DROP' % interface, top=True)
+    # block ip traffic to address accross the interface
+    ipv4_filter.add_rule('FORWARD',
+                         '-m physdev --physdev-in %s -d %s -j DROP'
+                         % (interface, address), top=True)
+    ipv4_filter.add_rule('FORWARD',
+                         '-m physdev --physdev-out %s -s %s -j DROP'
+                         % (interface, address), top=True)
 
 
 # plugs interfaces using Open vSwitch

@@ -555,6 +555,33 @@ class DbApiTestCase(test.TestCase):
         data = db.network_get_associated_fixed_ips(ctxt, 1, 'nothing')
         self.assertEqual(len(data), 0)
 
+    def test_network_get_all_by_host(self):
+        ctxt = context.get_admin_context()
+        data = db.network_get_all_by_host(ctxt, 'foo')
+        self.assertEqual(len(data), 0)
+        # dummy network
+        net = db.network_create_safe(ctxt, {})
+        # network with host set
+        net = db.network_create_safe(ctxt, {'host': 'foo'})
+        data = db.network_get_all_by_host(ctxt, 'foo')
+        self.assertEqual(len(data), 1)
+        # network with fixed ip with host set
+        net = db.network_create_safe(ctxt, {})
+        values = {'host': 'foo', 'network_id': net['id']}
+        fixed_address = db.fixed_ip_create(ctxt, values)
+        data = db.network_get_all_by_host(ctxt, 'foo')
+        self.assertEqual(len(data), 2)
+        # network with instance with host set
+        net = db.network_create_safe(ctxt, {})
+        instance = db.instance_create(ctxt, {'host': 'foo'})
+        values = {'instance_uuid': instance['uuid']}
+        vif = db.virtual_interface_create(ctxt, values)
+        values = {'network_id': net['id'],
+                  'virtual_interface_id': vif['id']}
+        fixed_address = db.fixed_ip_create(ctxt, values)
+        data = db.network_get_all_by_host(ctxt, 'foo')
+        self.assertEqual(len(data), 3)
+
     def _timeout_test(self, ctxt, timeout, multi_host):
         values = {'host': 'foo'}
         instance = db.instance_create(ctxt, values)

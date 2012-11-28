@@ -153,6 +153,10 @@ network_opts = [
     cfg.BoolOpt('force_dhcp_release',
                 default=False,
                 help='If True, send a dhcp release on instance termination'),
+    cfg.BoolOpt('share_dhcp_address',
+                default=False,
+                help='If True in multi_host mode, all compute hosts share '
+                     'the same dhcp address.'),
     cfg.StrOpt('dhcp_domain',
                default='novalocal',
                help='domain to use for building the hostnames'),
@@ -915,7 +919,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
         # NOTE(vish): this is for compatibility
-        if not network_ref.get('multi_host'):
+        if not network_ref.get('multi_host') or CONF.share_dhcp_address:
             return network_ref['gateway']
 
         if not host:

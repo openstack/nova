@@ -2304,11 +2304,20 @@ def network_get_all_by_instance(context, instance_id):
 @require_admin_context
 def network_get_all_by_host(context, host):
     session = get_session()
+    fixed_host_filter = or_(models.FixedIp.host == host,
+                            models.Instance.host == host)
     fixed_ip_query = model_query(context, models.FixedIp.network_id,
                                  session=session).\
-                        filter(models.FixedIp.host == host)
+                     outerjoin((models.VirtualInterface,
+                           models.VirtualInterface.id ==
+                           models.FixedIp.virtual_interface_id)).\
+                     outerjoin((models.Instance,
+                           models.Instance.uuid ==
+                               models.VirtualInterface.instance_uuid)).\
+                     filter(fixed_host_filter)
     # NOTE(vish): return networks that have host set
     #             or that have a fixed ip with host set
+    #             or that have an instance with host set
     host_filter = or_(models.Network.host == host,
                       models.Network.id.in_(fixed_ip_query.subquery()))
     return _network_get_query(context, session=session).\
