@@ -1,23 +1,28 @@
 {
     "hosts": [
         {
-            "host_name": "c5a4acad61bc463ab5f60d164d942516",
+            "host_name": "787f4f6dda1b409bb8b2f9082349690e",
             "service": "compute",
             "zone": "nova"
         },
         {
-            "host_name": "9112426abe5f4934a81b494fcdee8c5b",
+            "host_name": "a98b433151084aee8b1a986e28823b36",
             "service": "cert",
             "zone": "nova"
         },
         {
-            "host_name": "d483b9e6124d47f2a6ad14e57716a778",
+            "host_name": "c56158d13a884a87abf9171efb7de9d8",
             "service": "network",
             "zone": "nova"
         },
         {
-            "host_name": "3f9c73ba6d634092a70d6640f53930c8",
+            "host_name": "81d5cdcda0014918b3ebd3503a2e5c9a",
             "service": "scheduler",
+            "zone": "nova"
+        },
+        {
+            "host_name": "6e48bfe1a3304b7b86154326328750ae",
+            "service": "conductor",
             "zone": "nova"
         }
     ]

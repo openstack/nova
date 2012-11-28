@@ -22,21 +22,21 @@
             {
                 "limit": [
                     {
-                        "next-available": "2012-10-04T15:38:20Z",
+                        "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 10,
                         "unit": "MINUTE",
                         "value": 10,
                         "verb": "POST"
                     },
                     {
-                        "next-available": "2012-10-04T15:38:20Z",
+                        "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 10,
                         "unit": "MINUTE",
                         "value": 10,
                         "verb": "PUT"
                     },
                     {
-                        "next-available": "2012-10-04T15:38:20Z",
+                        "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 100,
                         "unit": "MINUTE",
                         "value": 100,
@@ -49,7 +49,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "2012-10-04T15:38:20Z",
+                        "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 50,
                         "unit": "DAY",
                         "value": 50,
@@ -62,7 +62,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "2012-10-04T15:38:20Z",
+                        "next-available": "2012-11-27T17:24:52Z",
                         "remaining": 3,
                         "unit": "MINUTE",
                         "value": 3,
@@ -71,6 +71,19 @@
                 ],
                 "regex": ".*changes-since.*",
                 "uri": "*changes-since*"
+            },
+            {
+                "limit": [
+                    {
+                        "next-available": "2012-11-27T17:24:52Z",
+                        "remaining": 12,
+                        "unit": "HOUR",
+                        "value": 12,
+                        "verb": "GET"
+                    }
+                ],
+                "regex": "^/os-fping",
+                "uri": "*/os-fping"
             }
         ]
     }

@@ -4,34 +4,34 @@
             "maxImageMeta": 128,
             "maxPersonality": 5,
             "maxPersonalitySize": 10240,
+            "maxSecurityGroupRules": 20,
+            "maxSecurityGroups": 10,
             "maxServerMeta": 128,
             "maxTotalCores": 20,
             "maxTotalFloatingIps": 10,
             "maxTotalInstances": 10,
             "maxTotalKeypairs": 100,
-            "maxTotalRAMSize": 51200,
-            "maxSecurityGroups": 10,
-            "maxSecurityGroupRules": 20
+            "maxTotalRAMSize": 51200
         },
         "rate": [
             {
                 "limit": [
                     {
-                        "next-available": "2012-08-31T22:36:27Z",
+                        "next-available": "2012-11-27T17:22:18Z",
                         "remaining": 10,
                         "unit": "MINUTE",
                         "value": 10,
                         "verb": "POST"
                     },
                     {
-                        "next-available": "2012-08-31T22:36:27Z",
+                        "next-available": "2012-11-27T17:22:18Z",
                         "remaining": 10,
                         "unit": "MINUTE",
                         "value": 10,
                         "verb": "PUT"
                     },
                     {
-                        "next-available": "2012-08-31T22:36:27Z",
+                        "next-available": "2012-11-27T17:22:18Z",
                         "remaining": 100,
                         "unit": "MINUTE",
                         "value": 100,
@@ -44,7 +44,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "2012-08-31T22:36:27Z",
+                        "next-available": "2012-11-27T17:22:18Z",
                         "remaining": 50,
                         "unit": "DAY",
                         "value": 50,
@@ -57,7 +57,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "2012-08-31T22:36:27Z",
+                        "next-available": "2012-11-27T17:22:18Z",
                         "remaining": 3,
                         "unit": "MINUTE",
                         "value": 3,
@@ -66,6 +66,19 @@
                 ],
                 "regex": ".*changes-since.*",
                 "uri": "*changes-since*"
+            },
+            {
+                "limit": [
+                    {
+                        "next-available": "2012-11-27T17:22:18Z",
+                        "remaining": 12,
+                        "unit": "HOUR",
+                        "value": 12,
+                        "verb": "GET"
+                    }
+                ],
+                "regex": "^/os-fping",
+                "uri": "*/os-fping"
             }
         ]
     }

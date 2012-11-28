@@ -201,14 +201,46 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         '%(expected)s\n%(result)s') % locals())
         return matched_value
 
+    def _verify_something(self, subs, expected, data):
+        result = self._pretty_data(data)
+        result = self._objectify(result)
+        return self._compare_result(subs, expected, result)
+
+    def generalize_subs(self, subs, vanilla_regexes):
+        """Give the test a chance to modify subs after the server response
+        was verified, and before the on-disk doc/api_samples file is checked.
+        This may be needed by some tests to convert exact matches expected
+        from the server into pattern matches to verify what is in the
+        sample file.
+
+        If there are no changes to be made, subs is returned unharmed.
+        """
+        return subs
+
     def _verify_response(self, name, subs, response):
         expected = self._read_template(name)
         expected = self._objectify(expected)
-        result = self._pretty_data(response.read())
-        if self.generate_samples:
-            self._write_sample(name, result)
-        result = self._objectify(result)
-        return self._compare_result(subs, expected, result)
+        with file(self._get_sample(name)) as sample:
+            sample_data = sample.read()
+        response_data = response.read()
+
+        try:
+            response_result = self._verify_something(subs, expected,
+                                                     response_data)
+            # NOTE(danms): replace some of the subs with patterns for the
+            # doc/api_samples check, which won't have things like the
+            # correct compute host name. Also let the test do some of its
+            # own generalization, if necessary
+            vanilla_regexes = self._get_regexes()
+            subs['compute_host'] = vanilla_regexes['host_name']
+            subs['id'] = vanilla_regexes['id']
+            subs = self.generalize_subs(subs, vanilla_regexes)
+            self._verify_something(subs, expected, sample_data)
+            return response_result
+        except NoMatch:
+            if self.generate_samples:
+                self._write_sample(name, self._pretty_data(response_data))
+            raise
 
     def _get_host(self):
         return 'http://openstack.example.com'
@@ -264,8 +296,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _do_post(self, url, name, subs, method='POST'):
         body = self._read_template(name) % subs
-        if self.generate_samples:
-            self._write_sample(name, body)
+        sample = self._get_sample(name)
+        if self.generate_samples and not os.path.exists(sample):
+                self._write_sample(name, body)
         return self._get_response(url, method, body)
 
     def _do_put(self, url, name, subs):
@@ -352,6 +385,10 @@ class ServersMetadataJsonTest(ServersSampleBase):
         self._verify_response('server-metadata-all-resp', subs, response)
 
         return uuid
+
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['value'] = '(Foo|Bar) Value'
+        return subs
 
     def test_metadata_put_all(self):
         """Test setting all metadata for a server"""
@@ -1021,6 +1058,10 @@ class FloatingIpsBulkXmlTest(FloatingIpsBulkJsonTest):
 class KeyPairsSampleJsonTest(ApiSampleTestBase):
     extension_name = "nova.api.openstack.compute.contrib.keypairs.Keypairs"
 
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['keypair_name'] = 'keypair-[0-9a-f-]+'
+        return subs
+
     def test_keypairs_post(self, public_key=None):
         """Get api sample of key pairs post request"""
         key_name = 'keypair-' + str(uuid.uuid4())
@@ -1154,6 +1195,10 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
 
         self.stubs.Set(CloudPipe, 'get_encoded_zip', get_user_data)
         self.stubs.Set(NetworkManager, "get_network", network_api_get)
+
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['project_id'] = 'cloudpipe-[0-9a-f-]+'
+        return subs
 
     def test_cloud_pipe_create(self):
         """Get api samples of cloud pipe extension creation"""
