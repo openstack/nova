@@ -125,8 +125,9 @@ class ManagerMeta(type):
             if getattr(value, '_periodic_task', False):
                 task = value
                 name = task.__name__
-                cls._periodic_tasks.append((name, task))
-                cls._ticks_to_skip[name] = task._ticks_between_runs
+                if task._ticks_between_runs >= 0:
+                    cls._periodic_tasks.append((name, task))
+                    cls._ticks_to_skip[name] = task._ticks_between_runs
 
 
 class Manager(base.Base):
