@@ -65,7 +65,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
             csum_input = '{"sha1": "fdghkfhkgjjksfdgjksjkghsdf"}\n'
             fname = os.path.join(tmpdir, 'aaa')
-            info_fname = virtutils.get_info_filename(fname)
+            info_fname = imagecache.get_info_filename(fname)
             f = open(info_fname, 'w')
             f.write(csum_input)
             f.close()
@@ -91,7 +91,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                                                           timestamped=False)
             self.assertEquals(csum_output, 'fdghkfhkgjjksfdgjksjkghsdf')
             self.assertFalse(os.path.exists(old_fname))
-            self.assertTrue(os.path.exists(virtutils.get_info_filename(fname)))
+            info_fname = imagecache.get_info_filename(fname)
+            self.assertTrue(os.path.exists(info_fname))
 
     def test_list_base_images(self):
         listing = ['00000001',
@@ -352,7 +353,7 @@ class ImageCacheManagerTestCase(test.TestCase):
                     'operating system.')
 
         fname = os.path.join(tmpdir, 'aaa')
-        info_fname = virtutils.get_info_filename(fname)
+        info_fname = imagecache.get_info_filename(fname)
 
         with open(fname, 'w') as f:
             f.write(testdata)
@@ -525,7 +526,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager._remove_base_file(fname)
-            info_fname = virtutils.get_info_filename(fname)
+            info_fname = imagecache.get_info_filename(fname)
 
             # Files are initially too new to delete
             self.assertTrue(os.path.exists(fname))
@@ -543,7 +544,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.originals = [fname]
             image_cache_manager._remove_base_file(fname)
-            info_fname = virtutils.get_info_filename(fname)
+            info_fname = imagecache.get_info_filename(fname)
 
             # Files are initially too new to delete
             self.assertTrue(os.path.exists(fname))
@@ -873,12 +874,13 @@ class ImageCacheManagerTestCase(test.TestCase):
                                                 '%(image)s.info'))
         base_filename = os.path.join(CONF.instances_path, '_base', hashed)
 
-        self.assertFalse(virtutils.is_valid_info_file('banana'))
-        self.assertFalse(virtutils.is_valid_info_file(
+        is_valid_info_file = imagecache.is_valid_info_file
+        self.assertFalse(is_valid_info_file('banana'))
+        self.assertFalse(is_valid_info_file(
                 os.path.join(CONF.instances_path, '_base', '00000001')))
-        self.assertFalse(virtutils.is_valid_info_file(base_filename))
-        self.assertFalse(virtutils.is_valid_info_file(base_filename + '.sha1'))
-        self.assertTrue(virtutils.is_valid_info_file(base_filename + '.info'))
+        self.assertFalse(is_valid_info_file(base_filename))
+        self.assertFalse(is_valid_info_file(base_filename + '.sha1'))
+        self.assertTrue(is_valid_info_file(base_filename + '.info'))
 
     def test_configured_checksum_path(self):
         with utils.tempdir() as tmpdir:
