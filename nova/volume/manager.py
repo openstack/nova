@@ -313,7 +313,8 @@ class VolumeManager(manager.SchedulerDependentManager):
 
         # Check for https://bugs.launchpad.net/nova/+bug/1065702
         volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['name'] not in volume_ref['provider_location']:
+        if (volume_ref['provider_location'] and
+            volume_ref['name'] not in volume_ref['provider_location']):
             self.driver.ensure_export(context, volume_ref)
 
     def _copy_image_to_volume(self, context, volume, image_id):
