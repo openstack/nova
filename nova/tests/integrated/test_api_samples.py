@@ -613,7 +613,7 @@ class ServersActionsJsonTest(ServersSampleBase):
                                  'server-action-rebuild-resp')
 
     def test_server_resize(self):
-        CONF.allow_resize_to_same_host = True
+        self.flags(allow_resize_to_same_host=True)
         uuid = self._post_server()
         self._test_server_action(uuid, "resize",
                                  {"id": 2,
@@ -1157,7 +1157,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
 
     def test_cloud_pipe_create(self):
         """Get api samples of cloud pipe extension creation"""
-        CONF.vpn_image_id = fake.get_valid_image_id()
+        self.flags(vpn_image_id=fake.get_valid_image_id())
         project = {'project_id': 'cloudpipe-' + str(uuid.uuid4())}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
                                  project)
