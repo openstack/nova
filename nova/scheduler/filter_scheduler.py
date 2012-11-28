@@ -117,7 +117,8 @@ class FilterScheduler(driver.Scheduler):
         # Forward off to the host
         self.compute_rpcapi.prep_resize(context, image, instance,
                 instance_type, weighed_host.obj.host, reservations,
-                request_spec=request_spec, filter_properties=filter_properties)
+                request_spec=request_spec, filter_properties=filter_properties,
+                node=weighed_host.obj.nodename)
 
     def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,

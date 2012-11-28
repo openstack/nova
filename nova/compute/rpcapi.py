@@ -147,6 +147,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.17 - Add get_backdoor_port()
         2.18 - Add bdms to rebuild_instance
         2.19 - Add node to run_instance
+        2.20 - Add node to prep_resize
     '''
 
     #
@@ -357,16 +358,17 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
-                    filter_properties=None):
+                    filter_properties=None, node=None):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
                 image=image, reservations=reservations,
                 request_spec=request_spec,
-                filter_properties=filter_properties),
+                filter_properties=filter_properties,
+                node=node),
                 _compute_topic(self.topic, ctxt, host, None),
-                version='2.10')
+                version='2.20')
 
     def reboot_instance(self, ctxt, instance,
                         block_device_info, network_info, reboot_type):

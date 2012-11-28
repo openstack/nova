@@ -404,11 +404,11 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
             confirm_window, dest_compute)
 
 
-def migration_get_in_progress_by_host(context, host):
-    """Finds all migrations for the given host that are not yet confirmed or
-    reverted.
+def migration_get_in_progress_by_host_and_node(context, host, node):
+    """Finds all migrations for the given host + node  that are not yet
+    confirmed or reverted.
     """
-    return IMPL.migration_get_in_progress_by_host(context, host)
+    return IMPL.migration_get_in_progress_by_host_and_node(context, host, node)
 
 
 ####################

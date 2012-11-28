@@ -307,7 +307,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.19'
+    RPC_API_VERSION = '2.20'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1770,7 +1770,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             QUOTAS.rollback(context, reservations)
 
     def _prep_resize(self, context, image, instance, instance_type,
-            reservations, request_spec, filter_properties):
+            reservations, request_spec, filter_properties, node):
 
         if not filter_properties:
             filter_properties = {}
@@ -1787,7 +1787,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.MigrationError(msg)
 
         limits = filter_properties.get('limits', {})
-        rt = self._get_resource_tracker(instance.get('node'))
+        rt = self._get_resource_tracker(node)
         with rt.resize_claim(context, instance, instance_type, limits=limits) \
                 as claim:
             migration_ref = claim.migration
@@ -1802,12 +1802,17 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
                     reservations=None, request_spec=None,
-                    filter_properties=None):
+                    filter_properties=None, node=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
 
         """
+        if node is None:
+            node = self.driver.get_available_nodes()[0]
+            LOG.debug(_("No node specified, defaulting to %(node)s") %
+                      locals())
+
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             compute_utils.notify_usage_exists(
@@ -1816,7 +1821,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, "resize.prep.start")
             try:
                 self._prep_resize(context, image, instance, instance_type,
-                        reservations, request_spec, filter_properties)
+                        reservations, request_spec, filter_properties, node)
             except Exception:
                 # try to re-schedule the resize elsewhere:
                 self._reschedule_resize_or_reraise(context, image, instance,
@@ -1911,6 +1916,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             instance = self._instance_update(context, instance['uuid'],
                     host=migration['dest_compute'],
+                    node=migration['dest_node'],
                     task_state=task_states.RESIZE_MIGRATED,
                     expected_task_state=task_states.
                     RESIZE_MIGRATING)

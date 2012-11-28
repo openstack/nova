@@ -1164,19 +1164,20 @@ class MigrationTestCase(test.TestCase):
         self._create()
         self._create(status='reverted')
         self._create(status='confirmed')
-        self._create(source_compute='host2', dest_compute='host1')
+        self._create(source_compute='host2', source_node='b',
+                dest_compute='host1', dest_node='a')
         self._create(source_compute='host2', dest_compute='host3')
         self._create(source_compute='host3', dest_compute='host4')
 
     def _create(self, status='migrating', source_compute='host1',
-                dest_compute='host2'):
+                source_node='a', dest_compute='host2', dest_node='b'):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
 
         values = {'status': status, 'source_compute': source_compute,
-                  'dest_compute': dest_compute,
-                  'instance_uuid': instance['uuid']}
+                  'source_node': source_node, 'dest_compute': dest_compute,
+                  'dest_node': dest_node, 'instance_uuid': instance['uuid']}
         db.migration_create(self.ctxt, values)
 
     def _assert_in_progress(self, migrations):
@@ -1184,20 +1185,29 @@ class MigrationTestCase(test.TestCase):
             self.assertNotEqual('confirmed', migration.status)
             self.assertNotEqual('reverted', migration.status)
 
-    def test_in_progress_host1(self):
-        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host1')
+    def test_in_progress_host1_nodea(self):
+        migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
+                'host1', 'a')
         # 2 as source + 1 as dest
         self.assertEqual(3, len(migrations))
         self._assert_in_progress(migrations)
 
-    def test_in_progress_host2(self):
-        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host2')
-        # 2 as dest, 2 as source
-        self.assertEqual(4, len(migrations))
+    def test_in_progress_host1_nodeb(self):
+        migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
+                'host1', 'b')
+        # some migrations are to/from host1, but none with a node 'b'
+        self.assertEqual(0, len(migrations))
+
+    def test_in_progress_host2_nodeb(self):
+        migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
+                'host2', 'b')
+        # 2 as dest, 1 as source
+        self.assertEqual(3, len(migrations))
         self._assert_in_progress(migrations)
 
     def test_instance_join(self):
-        migrations = db.migration_get_in_progress_by_host(self.ctxt, 'host2')
+        migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
+                'host2', 'b')
         for migration in migrations:
             instance = migration['instance']
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
