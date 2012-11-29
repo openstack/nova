@@ -102,9 +102,6 @@ compute_opts = [
                 default=False,
                 help='Whether to start guests that were running before the '
                      'host rebooted'),
-    cfg.BoolOpt('start_guests_on_host_boot',
-                default=False,
-                help='Whether to restart guests when the host reboots'),
     ]
 
 interval_opts = [
@@ -389,8 +386,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 legacy_net_info = self._legacy_nw_info(net_info)
                 self.driver.plug_vifs(instance, legacy_net_info)
 
-                if ((expect_running and CONF.resume_guests_state_on_host_boot)
-                     or CONF.start_guests_on_host_boot):
+                if expect_running and CONF.resume_guests_state_on_host_boot:
                     LOG.info(
                            _('Rebooting instance after nova-compute restart.'),
                            locals(), instance=instance)
