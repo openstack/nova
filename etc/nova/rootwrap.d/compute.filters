@@ -2,64 +2,49 @@
 # This file should be owned by (and only-writeable by) the root user
 
 [Filters]
-# nova/virt/disk/mount.py: 'kpartx', '-a', device
-# nova/virt/disk/mount.py: 'kpartx', '-d', device
+# nova/virt/disk/mount/api.py: 'kpartx', '-a', device
+# nova/virt/disk/mount/api.py: 'kpartx', '-d', device
 kpartx: CommandFilter, /sbin/kpartx, root
 
-# nova/virt/disk/mount.py: 'tune2fs', '-c', 0, '-i', 0, mapped_device
 # nova/virt/xenapi/vm_utils.py: tune2fs, -O ^has_journal, part_path
 # nova/virt/xenapi/vm_utils.py: tune2fs, -j, partition_path
 tune2fs: CommandFilter, /sbin/tune2fs, root
 
-# nova/virt/disk/mount.py: 'mount', mapped_device, mount_dir
+# nova/virt/disk/mount/api.py: 'mount', mapped_device
+# nova/virt/disk/api.py: 'mount', '-o', 'bind', src, target
 # nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
 # nova/virt/configdrive.py: 'mount', device, mountdir
 mount: CommandFilter, /bin/mount, root
 
-# nova/virt/disk/mount.py: 'umount', mapped_device
+# nova/virt/disk/mount/api.py: 'umount', mapped_device
+# nova/virt/disk/api.py: 'umount' target
 # nova/virt/xenapi/vm_utils.py: 'umount', dev_path
 # nova/virt/configdrive.py: 'umount', mountdir
 umount: CommandFilter, /bin/umount, root
 
-# nova/virt/disk/nbd.py: 'qemu-nbd', '-c', device, image
-# nova/virt/disk/nbd.py: 'qemu-nbd', '-d', device
+# nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-c', device, image
+# nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
 qemu-nbd: CommandFilter, /usr/bin/qemu-nbd, root
 
-# nova/virt/disk/loop.py: 'losetup', '--find', '--show', image
-# nova/virt/disk/loop.py: 'losetup', '--detach', device
+# nova/virt/disk/mount/loop.py: 'losetup', '--find', '--show', image
+# nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
 losetup: CommandFilter, /sbin/losetup, root
 
-# nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-i'
-# nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-m' dev
-guestmount: CommandFilter, /usr/bin/guestmount, root
-
-# nova/virt/disk/guestfs.py: 'fusermount', 'u', mount_dir
-fusermount: CommandFilter, /bin/fusermount, root
-fusermount_usr: CommandFilter, /usr/bin/fusermount, root
-
-# nova/virt/disk/api.py: 'tee', metadata_path
-# nova/virt/disk/api.py: 'tee', '-a', keyfile
-# nova/virt/disk/api.py: 'tee', netfile
+# nova/virt/disk/vfs/localfs.py: 'tee', canonpath
 tee: CommandFilter, /usr/bin/tee, root
 
-# nova/virt/disk/api.py: 'mkdir', '-p', sshdir
-# nova/virt/disk/api.py: 'mkdir', '-p', netdir
+# nova/virt/disk/vfs/localfs.py: 'mkdir', canonpath
 mkdir: CommandFilter, /bin/mkdir, root
 
-# nova/virt/disk/api.py: 'chown', 'root', sshdir
-# nova/virt/disk/api.py: 'chown', 'root:root', netdir
+# nova/virt/disk/vfs/localfs.py: 'chown'
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
 # nova/utils.py: 'chown', owner_uid, path
 chown: CommandFilter, /bin/chown, root
 
-# nova/virt/disk/api.py: 'chmod', '700', sshdir
-# nova/virt/disk/api.py: 'chmod', 755, netdir
+# nova/virt/disk/vfs/localfs.py: 'chmod'
 chmod: CommandFilter, /bin/chmod, root
-
-# nova/virt/disk/api.py: 'cp', os.path.join(fs...
-cp: CommandFilter, /bin/cp, root
 
 # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
@@ -170,7 +155,7 @@ mkfs: CommandFilter, /sbin/mkfs, root
 # nova/virt/libvirt/utils.py: 'qemu-img'
 qemu-img: CommandFilter, /usr/bin/qemu-img, root
 
-# nova/virt/disk/api.py: 'readlink', '-e'
+# nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
 readlink: CommandFilter, /bin/readlink, root
 readlink_usr: CommandFilter, /usr/bin/readlink, root
 
