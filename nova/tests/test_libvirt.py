@@ -3719,7 +3719,7 @@ class LibvirtUtilsTestCase(test.TestCase):
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
                     'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'xen': ([True, 'phy'], [False, 'tap'], [None, 'tap']),
+                    'xen': ([True, 'phy'], [False, 'file'], [None, 'file']),
                     'uml': ([True, None], [False, None], [None, None]),
                     'lxc': ([True, None], [False, None], [None, None])}
 
