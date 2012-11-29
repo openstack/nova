@@ -25,6 +25,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import notifications
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import test
 
 
@@ -156,7 +157,10 @@ class ConductorPolicyTest(test.TestCase):
         conductor = conductor_api.LocalAPI()
         updates = {}
         for key in conductor_manager.allowed_updates:
-            updates[key] = 'foo'
+            if key in conductor_manager.datetime_fields:
+                updates[key] = timeutils.utcnow()
+            else:
+                updates[key] = 'foo'
         conductor.instance_update(ctxt, 'fake-instance', **updates)
 
     def test_allowed_keys_are_real(self):
