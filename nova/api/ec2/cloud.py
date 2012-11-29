@@ -242,7 +242,7 @@ class CloudController(object):
         disabled_services = db.service_get_all(context, True)
 
         available_zones = []
-        for zone in [service.availability_zone for service
+        for zone in [service['availability_zone'] for service
                      in enabled_services]:
             if not zone in available_zones:
                 available_zones.append(zone)
@@ -277,12 +277,13 @@ class CloudController(object):
         zone_hosts = {}
         host_services = {}
         for service in enabled_services:
-            zone_hosts.setdefault(service.availability_zone, [])
-            if not service.host in zone_hosts[service.availability_zone]:
-                zone_hosts[service.availability_zone].append(service.host)
+            zone_hosts.setdefault(service['availability_zone'], [])
+            if not service['host'] in zone_hosts[service['availability_zone']]:
+                zone_hosts[service['availability_zone']].append(
+                    service['host'])
 
-            host_services.setdefault(service.host, [])
-            host_services[service.host].append(service)
+            host_services.setdefault(service['host'], [])
+            host_services[service['host']].append(service)
 
         result = []
         for zone in available_zones:
@@ -475,11 +476,11 @@ class CloudController(object):
 
     def _format_security_group(self, context, group):
         g = {}
-        g['groupDescription'] = group.description
-        g['groupName'] = group.name
-        g['ownerId'] = group.project_id
+        g['groupDescription'] = group['description']
+        g['groupName'] = group['name']
+        g['ownerId'] = group['project_id']
         g['ipPermissions'] = []
-        for rule in group.rules:
+        for rule in group['rules']:
             r = {}
             r['groups'] = []
             r['ipRanges'] = []
@@ -612,7 +613,7 @@ class CloudController(object):
             rulesvalues = self._rule_args_to_dict(context, values)
             self._validate_rulevalues(rulesvalues)
             for values_for_rule in rulesvalues:
-                values_for_rule['parent_group_id'] = security_group.id
+                values_for_rule['parent_group_id'] = security_group['id']
 
                 rule_ids.append(self.security_group_api.rule_exists(
                                              security_group, values_for_rule))
@@ -645,7 +646,7 @@ class CloudController(object):
             rulesvalues = self._rule_args_to_dict(context, values)
             self._validate_rulevalues(rulesvalues)
             for values_for_rule in rulesvalues:
-                values_for_rule['parent_group_id'] = security_group.id
+                values_for_rule['parent_group_id'] = security_group['id']
                 if self.security_group_api.rule_exists(security_group,
                                                        values_for_rule):
                     err = _('%s - This rule already exists in group')

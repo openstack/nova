@@ -660,9 +660,9 @@ class CloudTestCase(test.TestCase):
                                                self.project_id, 'testgrp1')
         get_rules = db.security_group_rule_get_by_security_group
 
-        self.assertTrue(get_rules(self.context, group1.id))
+        self.assertTrue(get_rules(self.context, group1['id']))
         self.cloud.delete_security_group(self.context, 'testgrp2')
-        self.assertFalse(get_rules(self.context, group1.id))
+        self.assertFalse(get_rules(self.context, group1['id']))
 
     def test_delete_security_group_in_use_by_instance(self):
         """Ensure that a group can not be deleted if in use by an instance."""
@@ -680,7 +680,7 @@ class CloudTestCase(test.TestCase):
                 'description': 'Test group'}
         group = db.security_group_create(self.context, args)
 
-        db.instance_add_security_group(self.context, inst.uuid, group.id)
+        db.instance_add_security_group(self.context, inst['uuid'], group['id'])
 
         self.assertRaises(exception.InvalidGroup,
                           self.cloud.delete_security_group,

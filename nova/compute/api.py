@@ -2152,7 +2152,7 @@ class AggregateAPI(base.Base):
 
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
-        zones = [s.availability_zone for s in
+        zones = [s['availability_zone'] for s in
                  self.db.service_get_all_by_topic(context,
                                                   CONF.compute_topic)]
         if availability_zone in zones:
@@ -2214,7 +2214,7 @@ class AggregateAPI(base.Base):
         # validates the host; ComputeHostNotFound is raised if invalid
         service = self.db.service_get_all_compute_by_host(context, host)[0]
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        if service.availability_zone != aggregate.availability_zone:
+        if service['availability_zone'] != aggregate['availability_zone']:
             raise exception.InvalidAggregateAction(
                     action='add host',
                     aggregate_id=aggregate_id,
@@ -2237,8 +2237,8 @@ class AggregateAPI(base.Base):
 
     def _get_aggregate_info(self, context, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""
-        metadata = self.db.aggregate_metadata_get(context, aggregate.id)
-        hosts = self.db.aggregate_host_get_all(context, aggregate.id)
+        metadata = self.db.aggregate_metadata_get(context, aggregate['id'])
+        hosts = self.db.aggregate_host_get_all(context, aggregate['id'])
         result = dict(aggregate.iteritems())
         # metadetails was not originally included here.  We need to pull it
         # back out to maintain API stability.
@@ -2473,7 +2473,7 @@ class SecurityGroupAPI(base.Base):
         return groups
 
     def destroy(self, context, security_group):
-        if self.db.security_group_in_use(context, security_group.id):
+        if self.db.security_group_in_use(context, security_group['id']):
             msg = _("Security group is still in use")
             self.raise_invalid_group(msg)
 
@@ -2485,12 +2485,12 @@ class SecurityGroupAPI(base.Base):
             LOG.exception(_("Failed to update usages deallocating "
                             "security group"))
 
-        LOG.audit(_("Delete security group %s"), security_group.name,
+        LOG.audit(_("Delete security group %s"), security_group['name'],
                   context=context)
-        self.db.security_group_destroy(context, security_group.id)
+        self.db.security_group_destroy(context, security_group['id'])
 
         self.sgh.trigger_security_group_destroy_refresh(context,
-                                                        security_group.id)
+                                                        security_group['id'])
 
         # Commit the reservations
         if reservations:
@@ -2726,7 +2726,7 @@ class SecurityGroupAPI(base.Base):
         """Indicates whether the specified rule values are already
            defined in the given security group.
         """
-        for rule in security_group.rules:
+        for rule in security_group['rules']:
             is_duplicate = True
             keys = ('group_id', 'cidr', 'from_port', 'to_port', 'protocol')
             for key in keys:
