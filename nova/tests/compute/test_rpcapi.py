@@ -219,7 +219,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                disk='disk', host='host')
+                disk='disk', host='host', migrate_data=None,
+                version='2.21')
 
     def test_prep_resize(self):
         self._test_compute_api('prep_resize', 'cast',

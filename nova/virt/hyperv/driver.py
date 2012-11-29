@@ -165,7 +165,7 @@ class HyperVDriver(driver.ComputeDriver):
         return self._livemigrationops.compare_cpu(cpu_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
-        network_info):
+        network_info, migrate_data=None):
         self._livemigrationops.pre_live_migration(context, instance,
             block_device_info, network_info)
 

@@ -2113,24 +2113,29 @@ class ComputeTestCase(BaseTestCase):
 
     def test_check_can_live_migrate_source_works_correctly(self):
         """Confirm check_can_live_migrate_source works on positive path"""
+        def fake_method(*args, **kwargs):
+            return {}
+        self.stubs.Set(self.compute.driver, 'check_can_live_migrate_source',
+                       fake_method)
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_source')
-
         dest_check_data = {"test": "data"}
-        self.compute.driver.check_can_live_migrate_source(self.context,
-                                                          inst_ref,
-                                                          dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_source(self.context,
-                dest_check_data=dest_check_data, instance=inst_ref)
+        ret = self.compute.check_can_live_migrate_source(self.context,
+                                              dest_check_data=dest_check_data,
+                                              instance=inst_ref)
+        self.assertTrue(type(ret) == dict)
 
     def test_check_can_live_migrate_destination_works_correctly(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
+        def fake_method(*args, **kwargs):
+            return {}
+        self.stubs.Set(self.compute.compute_rpcapi,
+                       'check_can_live_migrate_source',
+                       fake_method)
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         compute_info = {"compute": "info"}
@@ -2139,12 +2144,10 @@ class ComputeTestCase(BaseTestCase):
                                  '_get_compute_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'check_can_live_migrate_source')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination_cleanup')
 
-        dest_check_data = {"test": "data"}
+        dest_check_data = {"test": "data", "migrate_data": {"test": "data"}}
         self.compute._get_compute_info(
             self.context, inst_ref['host']).AndReturn(compute_info)
         self.compute._get_compute_info(
@@ -2159,12 +2162,13 @@ class ComputeTestCase(BaseTestCase):
                 self.context, dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_destination(self.context,
+        ret = self.compute.check_can_live_migrate_destination(self.context,
                 block_migration=True, disk_over_commit=False,
                 instance=inst_ref)
+        self.assertTrue(type(ret) == dict)
+        self.assertTrue("test" in ret)
 
     def test_check_can_live_migrate_destination_fails_dest_check(self):
-        """Confirm check_can_live_migrate_destination works on positive path"""
         inst_ref = jsonutils.to_primitive(self._create_fake_instance(
                                           {'host': 'fake_host_2'}))
         compute_info = {"compute": "info"}
@@ -2252,6 +2256,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
         self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
                                                {'block_device_mapping': []},
+                                               mox.IgnoreArg(),
                                                mox.IgnoreArg())
         self.mox.StubOutWithMock(self.compute.driver,
                                  'ensure_filtering_rules_for_instance')
@@ -2260,7 +2265,10 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, instance=instance)
+        migrate_data = {'is_shared_storage': False}
+        ret = self.compute.pre_live_migration(c, instance=instance,
+                                              block_migration=False,
+                                              migrate_data=migrate_data)
         self.assertEqual(ret, None)
 
         # cleanup
@@ -2304,8 +2312,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.compute.compute_rpcapi.pre_live_migration(c,
-                mox.IsA(instance), True, None, instance['host']).AndRaise(
-                                        rpc.common.RemoteError('', '', ''))
+                mox.IsA(instance), True, None, instance['host'],
+                None).AndRaise(rpc.common.RemoteError('', '', ''))
 
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.MIGRATING})
@@ -2350,26 +2358,67 @@ class ComputeTestCase(BaseTestCase):
         inst_id = instance_ref['id']
 
         instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
-
-        # create
-        self.mox.StubOutWithMock(rpc, 'call')
-        topic = rpc.queue_get_for(c, CONF.compute_topic, instance['host'])
-        rpc.call(c, topic,
-                {"method": "pre_live_migration",
-                 "args": {'instance': instance,
-                          'block_migration': False,
-                          'disk': None},
-                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None)
-
         # start test
         self.mox.ReplayAll()
+        migrate_data = {'is_shared_storage': False}
         ret = self.compute.live_migration(c, dest=instance['host'],
-                instance=instance)
+                                          instance=instance,
+                                          migrate_data=migrate_data)
         self.assertEqual(ret, None)
 
         # cleanup
         db.instance_destroy(c, inst_uuid)
+
+    def test_post_live_migration_no_shared_storage_working_correctly(self):
+        """Confirm post_live_migration() works as expected correctly
+           for non shared storage migration.
+        """
+        # Create stubs
+        result = {}
+
+        def fakedestroy(*args, **kwargs):
+            result['destroyed'] = True
+        self.stubs.Set(self.compute.driver, 'destroy', fakedestroy)
+        dest = 'desthost'
+        srchost = self.compute.host
+
+        # creating testdata
+        c = context.get_admin_context()
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
+                                          'host': srchost,
+                                          'state_description': 'migrating',
+                                          'state': power_state.PAUSED}))
+        inst_uuid = inst_ref['uuid']
+        inst_id = inst_ref['id']
+
+        db.instance_update(c, inst_uuid,
+                           {'task_state': task_states.MIGRATING,
+                            'power_state': power_state.PAUSED})
+        # creating mocks
+        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
+        self.compute.driver.unfilter_instance(inst_ref, [])
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_start')
+        migration = {'source_compute': srchost, 'dest_compute': dest, }
+        self.compute.network_api.migrate_instance_start(c, inst_ref, migration)
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, rpc.queue_get_for(c, CONF.compute_topic, dest),
+            {"method": "post_live_migration_at_destination",
+             "args": {'instance': inst_ref, 'block_migration': False},
+             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+            None)
+        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'args': {'instance_id': inst_id,
+                                         'host': self.compute.host,
+                                         'teardown': True},
+                                'version': '1.0'}, None)
+        # start test
+        self.mox.ReplayAll()
+        migrate_data = {'is_shared_storage': False}
+        self.compute._post_live_migration(c, inst_ref, dest,
+                                          migrate_data=migrate_data)
+        self.assertTrue('destroyed' in result)
+        self.assertTrue(result['destroyed'] == True)
 
     def test_post_live_migration_working_correctly(self):
         """Confirm post_live_migration() works as expected correctly."""

@@ -2019,6 +2019,37 @@ class LibvirtConnTestCase(test.TestCase):
         conn.check_can_live_migrate_source(self.context, instance_ref,
                                            dest_check_data)
 
+    def test_check_can_live_migrate_source_vol_backed_works_correctly(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dest_check_data = {"filename": "file",
+                           "block_migration": False,
+                           "disk_over_commit": False,
+                           "disk_available_mb": 1024,
+                           "is_volume_backed": True}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
+        conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.ReplayAll()
+        ret = conn.check_can_live_migrate_source(self.context, instance_ref,
+                                                 dest_check_data)
+        self.assertTrue(type(ret) == dict)
+        self.assertTrue('is_shared_storage' in ret)
+
+    def test_check_can_live_migrate_source_vol_backed_fails(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dest_check_data = {"filename": "file",
+                           "block_migration": False,
+                           "disk_over_commit": False,
+                           "disk_available_mb": 1024,
+                           "is_volume_backed": False}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
+        conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InvalidSharedStorage,
+                          conn.check_can_live_migrate_source, self.context,
+                          instance_ref, dest_check_data)
+
     def test_check_can_live_migrate_dest_fail_shared_storage_with_blockm(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
         dest_check_data = {"filename": "file",
@@ -2146,6 +2177,42 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         result = conn.pre_live_migration(c, inst_ref, vol, nw_info)
         self.assertEqual(result, None)
+
+    def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
+        # Creating testdata, using temp dir.
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            vol = {'block_device_mapping': [
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+            class FakeNetworkInfo():
+                def fixed_ips(self):
+                    return ["test_ip_addr"]
+            inst_ref = db.instance_create(self.context, self.test_instance)
+            c = context.get_admin_context()
+            nw_info = FakeNetworkInfo()
+            # Creating mocks
+            self.mox.StubOutWithMock(conn, "volume_driver_method")
+            for v in vol['block_device_mapping']:
+                conn.volume_driver_method('connect_volume',
+                                          v['connection_info'],
+                                          v['mount_device'].
+                                                    rpartition("/")[2])
+            self.mox.StubOutWithMock(conn, 'plug_vifs')
+            conn.plug_vifs(mox.IsA(inst_ref), nw_info)
+            self.mox.ReplayAll()
+            migrate_data = {'is_shared_storage': False,
+                            'is_volume_backed': True,
+                            'block_migration': False
+                            }
+            ret = conn.pre_live_migration(c, inst_ref, vol, nw_info,
+                                          migrate_data)
+            self.assertEqual(ret, None)
+            self.assertTrue(os.path.exists('%s/%s/' %
+                           (tmpdir, inst_ref.name)))
+        db.instance_destroy(self.context, inst_ref['uuid'])
 
     def test_pre_block_migration_works_correctly(self):
         # Replace instances_path since this testcase creates tmpfile

@@ -18,7 +18,7 @@ import os
 import StringIO
 
 
-files = {}
+files = {'console.log': True}
 disk_sizes = {}
 disk_backing_files = {}
 disk_type = "qcow2"
@@ -96,6 +96,9 @@ class File(object):
 
     def __exit__(self, *args):
         return
+
+    def close(self, *args, **kwargs):
+        self.fp.close()
 
 
 def file_open(path, mode=None):
