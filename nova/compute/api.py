@@ -1764,7 +1764,7 @@ class API(base.Base):
 
             pid = context.project_id
             LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                       " tried to resize instance. %(msg)s"), locals())
+                       " tried to resize instance."), locals())
             raise exception.TooManyInstances(overs=overs,
                                              req=deltas[resource],
                                              used=used, allowed=total_allowed,
