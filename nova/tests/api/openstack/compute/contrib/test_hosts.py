@@ -272,7 +272,7 @@ class HostTestCase(test.TestCase):
 class HostSerializerTest(test.TestCase):
     def setUp(self):
         super(HostSerializerTest, self).setUp()
-        self.deserializer = os_hosts.HostDeserializer()
+        self.deserializer = os_hosts.HostUpdateDeserializer()
 
     def test_index_serializer(self):
         serializer = os_hosts.HostIndexTemplate()
@@ -336,9 +336,12 @@ class HostSerializerTest(test.TestCase):
             self.assertEqual(value, tree.get(key))
 
     def test_update_deserializer(self):
-        exemplar = dict(status='enabled', foo='bar')
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<updates><status>enabled</status><foo>bar</foo></updates>')
+        exemplar = dict(status='enabled', maintenance_mode='disable')
+        intext = """<?xml version='1.0' encoding='UTF-8'?>
+    <updates>
+        <status>enabled</status>
+        <maintenance_mode>disable</maintenance_mode>
+    </updates>"""
         result = self.deserializer.deserialize(intext)
 
         self.assertEqual(dict(body=exemplar), result)
