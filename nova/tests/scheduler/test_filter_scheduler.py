@@ -280,16 +280,17 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         retry = dict(num_attempts=1, hosts=[])
         filter_properties = dict(retry=retry)
         host = "fakehost"
+        node = "fakenode"
 
         sched = fakes.FakeFilterScheduler()
-        sched._add_retry_host(filter_properties, host)
+        sched._add_retry_host(filter_properties, host, node)
 
         hosts = filter_properties['retry']['hosts']
         self.assertEqual(1, len(hosts))
-        self.assertEqual(host, hosts[0])
+        self.assertEqual((host, node), hosts[0])
 
     def test_post_select_populate(self):
-        """Test addition of certain filter props after a host is selected"""
+        """Test addition of certain filter props after a node is selected"""
         retry = {'hosts': [], 'num_attempts': 1}
         filter_properties = {'retry': retry}
         sched = fakes.FakeFilterScheduler()
@@ -299,12 +300,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched._post_select_populate_filter_properties(filter_properties,
                 host_state)
 
-        self.assertEqual('host', filter_properties['retry']['hosts'][0])
+        self.assertEqual(('host', 'node'),
+                         filter_properties['retry']['hosts'][0])
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
     def test_prep_resize_post_populates_retry(self):
-        """Prep resize should add a 'host' entry to the retry dict"""
+        """Prep resize should add a ('host', 'node') entry to the retry dict"""
         sched = fakes.FakeFilterScheduler()
 
         image = 'image'
@@ -335,4 +337,5 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched.schedule_prep_resize(self.context, image, request_spec,
                 filter_properties, instance, instance_type, reservations)
 
-        self.assertEqual(['host'], filter_properties['retry']['hosts'])
+        self.assertEqual([('host', 'node')],
+                         filter_properties['retry']['hosts'])
