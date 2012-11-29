@@ -734,7 +734,7 @@ class ComputeDriver(object):
         """Remove a compute host from an aggregate."""
         raise NotImplementedError()
 
-    def undo_aggregate_operation(self, context, op, aggregate_id,
+    def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error=True):
         """Undo for  Resource Pools"""
         raise NotImplementedError()

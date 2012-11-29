@@ -593,11 +593,11 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._pool.remove_from_aggregate(context,
                                                 aggregate, host, **kwargs)
 
-    def undo_aggregate_operation(self, context, op, aggregate_id,
+    def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error=True):
         """Undo aggregate operation when pool error raised"""
         return self._pool.undo_aggregate_operation(context, op,
-                aggregate_id, host, set_error)
+                aggregate, host, set_error)
 
     def legacy_nwinfo(self):
         """

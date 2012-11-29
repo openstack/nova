@@ -2096,6 +2096,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                    host='host',
                    compute_driver='xenapi.XenAPIDriver',
                    node_availability_zone='avail_zone1')
+        self.flags(use_local=True, group='conductor')
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()

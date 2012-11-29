@@ -113,6 +113,39 @@ class ConductorTestCase(BaseTestCase):
         self.assertEqual(orig_instance['name'],
                          all_instances[0]['name'])
 
+    def _setup_aggregate_with_host(self):
+        aggregate_ref = db.aggregate_create(self.context.elevated(),
+                {'name': 'foo', 'availability_zone': 'foo'})
+
+        self.conductor.aggregate_host_add(self.context, aggregate_ref, 'bar')
+
+        aggregate_ref = db.aggregate_get(self.context.elevated(),
+                                         aggregate_ref['id'])
+
+        return aggregate_ref
+
+    def test_aggregate_host_add(self):
+        aggregate_ref = self._setup_aggregate_with_host()
+
+        self.assertTrue(any([host == 'bar'
+                             for host in aggregate_ref['hosts']]))
+
+        db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
+
+    def test_aggregate_host_delete(self):
+        aggregate_ref = self._setup_aggregate_with_host()
+
+        self.conductor.aggregate_host_delete(self.context, aggregate_ref,
+                'bar')
+
+        aggregate_ref = db.aggregate_get(self.context.elevated(),
+                aggregate_ref['id'])
+
+        self.assertFalse(any([host == 'bar'
+                              for host in aggregate_ref['hosts']]))
+
+        db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
+
 
 class ConductorRPCAPITestCase(ConductorTestCase):
     """Conductor RPC API Tests"""

@@ -64,16 +64,17 @@ class ResourcePool(object):
     def _get_metadata(self, context, aggregate_id):
         return self._virtapi.aggregate_metadata_get(context, aggregate_id)
 
-    def undo_aggregate_operation(self, context, op, aggregate_id,
+    def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error):
         """Undo aggregate operation when pool error raised"""
         try:
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
-                self._virtapi.aggregate_metadata_add(context, aggregate_id,
+                self._virtapi.aggregate_metadata_add(context, aggregate['id'],
                                                      metadata)
-            op(context, aggregate_id, host)
+            op(context, aggregate, host)
         except Exception:
+            aggregate_id = aggregate['id']
             LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
                             'during operation on %(host)s') % locals())
 
