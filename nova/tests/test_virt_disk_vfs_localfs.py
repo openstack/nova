@@ -18,7 +18,7 @@ import sys
 
 from nova import exception
 from nova import test
-from nova import tests
+from nova.tests import utils as tests_utils
 from nova import utils
 
 from nova.virt.disk.vfs import localfs as vfsimpl
@@ -133,7 +133,7 @@ class VirtDiskVFSLocalFSTestPaths(test.TestCase):
         self.stubs.Set(utils, 'execute', nonroot_execute)
 
     def test_check_safe_path(self):
-        if tests.utils.is_osx():
+        if tests_utils.is_osx():
             self.skipTest("Unable to test on OSX")
         vfs = vfsimpl.VFSLocalFS("dummy.img")
         vfs.imgdir = "/foo"
@@ -141,7 +141,7 @@ class VirtDiskVFSLocalFSTestPaths(test.TestCase):
         self.assertEquals(ret, '/foo/etc/something.conf')
 
     def test_check_unsafe_path(self):
-        if tests.utils.is_osx():
+        if tests_utils.is_osx():
             self.skipTest("Unable to test on OSX")
         vfs = vfsimpl.VFSLocalFS("dummy.img")
         vfs.imgdir = "/foo"
