@@ -17,7 +17,6 @@
 import sys
 
 from nova import test
-
 from nova.tests import fakeguestfs
 from nova.virt.disk import api as diskapi
 from nova.virt.disk.vfs import api as vfsapi
@@ -151,13 +150,28 @@ class VirtDiskTest(test.TestCase):
                            'isdir': False,
                            'mode': 0700,
                            'uid': 100})
-        self.assertEquals(vfs.handle.files["/etc/shadow"],
-                          {'content': "root:$1$12345678$a4ge4d5iJ5vw" +
-                                      "vbFS88TEN0:14917:0:99999:7:::\n" +
-                                      "bin:*:14495:0:99999:7:::\n" +
-                                      "daemon:*:14495:0:99999:7:::\n",
-                           'gid': 100,
-                           'isdir': False,
-                           'mode': 0700,
-                           'uid': 100})
+        shadow = vfs.handle.files["/etc/shadow"]
+
+        # if the encrypted password is only 13 characters long, then
+        # nova.virt.disk.api:_set_password fell back to DES.
+        if len(shadow['content']) == 91:
+            self.assertEquals(shadow,
+                              {'content': "root:12tir.zIbWQ3c" +
+                                          ":14917:0:99999:7:::\n" +
+                                          "bin:*:14495:0:99999:7:::\n" +
+                                          "daemon:*:14495:0:99999:7:::\n",
+                               'gid': 100,
+                               'isdir': False,
+                               'mode': 0700,
+                               'uid': 100})
+        else:
+            self.assertEquals(shadow,
+                              {'content': "root:$1$12345678$a4ge4d5iJ5vw" +
+                                          "vbFS88TEN0:14917:0:99999:7:::\n" +
+                                          "bin:*:14495:0:99999:7:::\n" +
+                                          "daemon:*:14495:0:99999:7:::\n",
+                               'gid': 100,
+                               'isdir': False,
+                               'mode': 0700,
+                               'uid': 100})
         vfs.teardown()
