@@ -99,6 +99,20 @@ class ConductorTestCase(BaseTestCase):
                                                     'finished')
         self.assertEqual(migration['status'], 'finished')
 
+    def test_instance_get_by_uuid(self):
+        orig_instance = self._create_fake_instance()
+        copy_instance = self.conductor.instance_get_by_uuid(
+            self.context, orig_instance['uuid'])
+        self.assertEqual(orig_instance['name'],
+                         copy_instance['name'])
+
+    def test_instance_get_all_by_host(self):
+        orig_instance = jsonutils.to_primitive(self._create_fake_instance())
+        all_instances = self.conductor.instance_get_all_by_host(
+            self.context, orig_instance['host'])
+        self.assertEqual(orig_instance['name'],
+                         all_instances[0]['name'])
+
 
 class ConductorRPCAPITestCase(ConductorTestCase):
     """Conductor RPC API Tests"""

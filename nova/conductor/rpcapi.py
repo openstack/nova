@@ -28,6 +28,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     1.0 - Initial version.
     1.1 - Added migration_update
+    1.2 - Added instance_get_by_uuid and instance_get_all_by_host
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -43,6 +44,15 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
                                        updates=updates_p))
+
+    def instance_get_by_uuid(self, context, instance_uuid):
+        msg = self.make_msg('instance_get_by_uuid',
+                            instance_uuid=instance_uuid)
+        return self.call(context, msg, version='1.2')
+
+    def instance_get_all_by_host(self, context, host):
+        msg = self.make_msg('instance_get_all_by_host', host=host)
+        return self.call(context, msg, version='1.2')
 
     def migration_update(self, context, migration, status):
         migration_p = jsonutils.to_primitive(migration)

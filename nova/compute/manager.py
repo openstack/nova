@@ -258,10 +258,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                                               **updates)
 
     def instance_get_by_uuid(self, context, instance_uuid):
-        return self._compute.db.instance_get_by_uuid(context, instance_uuid)
+        return self._compute.conductor_api.instance_get_by_uuid(
+            context, instance_uuid)
 
     def instance_get_all_by_host(self, context, host):
-        return self._compute.db.instance_get_all_by_host(context, host)
+        return self._compute.conductor_api.instance_get_all_by_host(
+            context, host)
 
     def aggregate_get_by_host(self, context, host, key=None):
         return self._compute.db.aggregate_get_by_host(context, host, key=key)
@@ -2744,7 +2746,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         while not instance or instance['host'] != self.host:
             if instance_uuids:
                 try:
-                    instance = self.db.instance_get_by_uuid(context,
+                    instance = self.conductor_api.instance_get_by_uuid(context,
                         instance_uuids.pop(0))
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
@@ -2813,8 +2815,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                            "%(migration_id)s for instance %(instance_uuid)s"),
                            locals())
                 try:
-                    instance = self.db.instance_get_by_uuid(context,
-                                                            instance_uuid)
+                    instance = self.conductor_api.instance_get_by_uuid(
+                        context, instance_uuid)
                 except exception.InstanceNotFound:
                     reason = _("Instance %(instance_uuid)s not found")
                     _set_migration_to_error(migration, reason % locals())
@@ -3006,8 +3008,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # for example, because of a broken libvirt driver.
             # We re-query the DB to get the latest instance info to minimize
             # (not eliminate) race condition.
-            u = self.db.instance_get_by_uuid(context,
-                                             db_instance['uuid'])
+            u = self.conductor_api.instance_get_by_uuid(context,
+                                                        db_instance['uuid'])
             db_power_state = u["power_state"]
             vm_state = u['vm_state']
             if self.host != u['host']:
