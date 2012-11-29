@@ -24,6 +24,7 @@ from nova.network import api as network_api
 from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.libvirt import config as libvirt_config
@@ -146,6 +147,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
         self.db = self.FakeDB()
         self.deallocate_called = None
         self.deallocate_fixed_ip_calls = []
+        self.network_rpcapi = network_rpcapi.NetworkAPI()
 
     # TODO(matelakat) method signature should align with the faked one's
     def deallocate_fixed_ip(self, context, address=None, host=None):

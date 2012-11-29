@@ -729,6 +729,15 @@ def get_dhcp_hosts(context, network_ref):
     return '\n'.join(hosts)
 
 
+def get_dns_hosts(context, network_ref):
+    """Get network's DNS hosts in hosts format."""
+    hosts = []
+    for data in db.network_get_associated_fixed_ips(context,
+                                                    network_ref['id']):
+        hosts.append(_host_dns(data))
+    return '\n'.join(hosts)
+
+
 def _add_dnsmasq_accept_rules(dev):
     """Allow DHCP and DNS traffic through to dnsmasq."""
     table = iptables_manager.ipv4['filter']
@@ -777,6 +786,12 @@ def release_dhcp(dev, address, mac_address):
 def update_dhcp(context, dev, network_ref):
     conffile = _dhcp_file(dev, 'conf')
     write_to_file(conffile, get_dhcp_hosts(context, network_ref))
+    restart_dhcp(context, dev, network_ref)
+
+
+def update_dns(context, dev, network_ref):
+    hostsfile = _dhcp_file(dev, 'hosts')
+    write_to_file(hostsfile, get_dns_hosts(context, network_ref))
     restart_dhcp(context, dev, network_ref)
 
 
@@ -858,6 +873,8 @@ def restart_dhcp(context, dev, network_ref):
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % CONF.dhcpbridge,
            '--leasefile-ro']
+    if network_ref['multi_host'] and not CONF.dns_server:
+        cmd += ['--no-hosts', '--addn-hosts=%s' % _dhcp_file(dev, 'hosts')]
     if CONF.dns_server:
         cmd += ['-h', '-R', '--server=%s' % CONF.dns_server]
 
@@ -945,6 +962,12 @@ def _host_dhcp(data):
                                data['address'])
 
 
+def _host_dns(data):
+    return '%s\t%s.%s' % (data['address'],
+                          data['instance_hostname'],
+                          CONF.dhcp_domain)
+
+
 def _host_dhcp_opts(data):
     """Return an empty gateway option."""
     return '%s,%s' % (_host_dhcp_network(data), 3)
@@ -967,7 +990,7 @@ def device_exists(device):
 
 
 def _dhcp_file(dev, kind):
-    """Return path to a pid, leases or conf file for a bridge/device."""
+    """Return path to a pid, leases, hosts or conf file for a bridge/device."""
     fileutils.ensure_tree(CONF.networks_path)
     return os.path.abspath('%s/nova-%s.%s' % (CONF.networks_path,
                                               dev,

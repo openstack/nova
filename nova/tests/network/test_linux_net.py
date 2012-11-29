@@ -306,6 +306,24 @@ class LinuxNetworkTestCase(test.TestCase):
 
         self.assertEquals(actual_hosts, expected)
 
+    def test_get_dns_hosts_for_nw00(self):
+        expected = (
+                "192.168.0.100\tfake_instance00.novalocal\n"
+                "192.168.1.101\tfake_instance01.novalocal\n"
+                "192.168.0.102\tfake_instance00.novalocal"
+        )
+        actual_hosts = self.driver.get_dns_hosts(self.context, networks[0])
+        self.assertEquals(actual_hosts, expected)
+
+    def test_get_dns_hosts_for_nw01(self):
+        expected = (
+                "192.168.1.100\tfake_instance00.novalocal\n"
+                "192.168.0.101\tfake_instance01.novalocal\n"
+                "192.168.1.102\tfake_instance01.novalocal"
+        )
+        actual_hosts = self.driver.get_dns_hosts(self.context, networks[1])
+        self.assertEquals(actual_hosts, expected)
+
     def test_get_dhcp_opts_for_nw00(self):
         expected_opts = 'NW-3,3\nNW-4,3'
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
@@ -331,6 +349,12 @@ class LinuxNetworkTestCase(test.TestCase):
                              '192.168.0.100'])
         data = get_associated(self.context, 0)[0]
         actual = self.driver._host_dhcp(data)
+        self.assertEquals(actual, expected)
+
+    def test_host_dns_without_default_gateway_network(self):
+        expected = "192.168.0.100\tfake_instance00.novalocal"
+        data = get_associated(self.context, 0)[0]
+        actual = self.driver._host_dns(data)
         self.assertEquals(actual, expected)
 
     def test_linux_bridge_driver_plug(self):
