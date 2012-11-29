@@ -320,10 +320,12 @@ class API(base.Base):
         client.update_floatingip(fip['id'], {'floatingip': param})
 
     def get_all(self, context):
-        raise NotImplementedError()
+        client = quantumv2.get_client(context)
+        return client.list_networks()
 
     def get(self, context, network_uuid):
-        raise NotImplementedError()
+        client = quantumv2.get_client(context)
+        return client.show_network(network_uuid)
 
     def delete(self, context, network_uuid):
         raise NotImplementedError()
