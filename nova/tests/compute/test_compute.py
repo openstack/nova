@@ -297,7 +297,7 @@ class ComputeTestCase(BaseTestCase):
             instances = db.instance_get_all(self.context)
             instance = instances[0]
 
-            self.assertTrue(instance.config_drive)
+            self.assertTrue(instance['config_drive'])
         finally:
             db.instance_destroy(self.context, instance['uuid'])
 
@@ -312,7 +312,7 @@ class ComputeTestCase(BaseTestCase):
             instances = db.instance_get_all(self.context)
             instance = instances[0]
 
-            self.assertTrue(instance.config_drive)
+            self.assertTrue(instance['config_drive'])
         finally:
             db.instance_destroy(self.context, instance['uuid'])
 
@@ -532,8 +532,8 @@ class ComputeTestCase(BaseTestCase):
             instances = db.instance_get_all(self.context)
             instance = instances[0]
 
-            self.assertEqual(instance.access_ip_v4, '192.168.1.100')
-            self.assertEqual(instance.access_ip_v6, '2001:db8:0:1::1')
+            self.assertEqual(instance['access_ip_v4'], '192.168.1.100')
+            self.assertEqual(instance['access_ip_v6'], '2001:db8:0:1::1')
         finally:
             db.instance_destroy(self.context, instance['uuid'])
 
@@ -546,8 +546,8 @@ class ComputeTestCase(BaseTestCase):
             instances = db.instance_get_all(self.context)
             instance = instances[0]
 
-            self.assertFalse(instance.access_ip_v4)
-            self.assertFalse(instance.access_ip_v6)
+            self.assertFalse(instance['access_ip_v4'])
+            self.assertFalse(instance['access_ip_v6'])
         finally:
             db.instance_destroy(self.context, instance['uuid'])
 
@@ -1368,7 +1368,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['image_name'], 'fake_name')
         self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], inst_ref.uuid)
+        self.assertEquals(payload['instance_id'], inst_ref['uuid'])
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
@@ -2462,7 +2462,7 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
-        instance_name = instances[0].name
+        instance_name = instances[0]['name']
         self.compute.driver.test_remove_vm(instance_name)
 
         # Force the compute manager to do its periodic poll
@@ -3048,7 +3048,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(len(db.security_group_get_by_instance(
                              self.context, ref[0]['id'])), 1)
             group = db.security_group_get(self.context, group['id'])
-            self.assert_(len(group.instances) == 1)
+            self.assert_(len(group['instances']) == 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['uuid'])
@@ -3152,7 +3152,7 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             db.instance_destroy(self.context, ref[0]['uuid'])
             group = db.security_group_get(self.context, group['id'])
-            self.assert_(len(group.instances) == 0)
+            self.assert_(len(group['instances']) == 0)
         finally:
             db.security_group_destroy(self.context, group['id'])
 
@@ -3171,7 +3171,7 @@ class ComputeAPITestCase(BaseTestCase):
             admin_deleted_context = context.get_admin_context(
                     read_deleted="only")
             group = db.security_group_get(admin_deleted_context, group['id'])
-            self.assert_(len(group.instances) == 0)
+            self.assert_(len(group['instances']) == 0)
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 
@@ -5294,7 +5294,7 @@ class ComputeAggrTestCase(BaseTestCase):
     def test_add_aggregate_host_passes_slave_info_to_driver(self):
         def driver_add_to_aggregate(context, aggregate, host, **kwargs):
             self.assertEquals(self.context, context)
-            self.assertEquals(aggregate['id'], self.aggr.id)
+            self.assertEquals(aggregate['id'], self.aggr['id'])
             self.assertEquals(host, "the_host")
             self.assertEquals("SLAVE_INFO", kwargs.get("slave_info"))
 
@@ -5308,7 +5308,7 @@ class ComputeAggrTestCase(BaseTestCase):
     def test_remove_from_aggregate_passes_slave_info_to_driver(self):
         def driver_remove_from_aggregate(context, aggregate, host, **kwargs):
             self.assertEquals(self.context, context)
-            self.assertEquals(aggregate['id'], self.aggr.id)
+            self.assertEquals(aggregate['id'], self.aggr['id'])
             self.assertEquals(host, "the_host")
             self.assertEquals("SLAVE_INFO", kwargs.get("slave_info"))
 
