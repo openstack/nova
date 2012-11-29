@@ -74,7 +74,8 @@ class PowerVMOperator(object):
         """
         lpar_instance = self._get_instance(instance_name)
 
-        state = constants.POWERVM_POWER_STATE[lpar_instance['state']]
+        state = constants.POWERVM_POWER_STATE.get(
+                lpar_instance['state'], power_state.NOSTATE)
         return {'state': state,
                 'max_mem': lpar_instance['max_mem'],
                 'mem': lpar_instance['desired_mem'],
