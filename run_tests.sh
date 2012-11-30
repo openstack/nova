@@ -18,6 +18,7 @@ function usage {
   echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
   echo "  -v, --verbose            Display nosetests in the console"
+  echo "  -d, --debug              Enable pdb's prompt to be displayed during tests. This will run nosetests with --pdb option"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
@@ -40,6 +41,7 @@ function process_option {
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
     -c|--coverage) coverage=1;;
+    -d|--debug) debug=1;;
     -v|--verbose) verbose=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
@@ -62,6 +64,7 @@ coverage=0
 recreate_db=1
 patch_migrate=1
 verbose=0
+debug=0
 
 export NOSE_WITH_OPENSTACK=1
 export NOSE_OPENSTACK_COLOR=1
@@ -90,34 +93,40 @@ fi
 function run_tests {
   # Cleanup *pyc
   ${wrapper} find . -type f -name "*.pyc" -delete
-  # Just run the test suites in current environment
-  if [ "$verbose" -eq 1 ];
+  if [ "$debug" -eq 0 ];
   then
-     ${wrapper} $NOSETESTS 2>&1 | tee nosetests.log
-  else
-     ${wrapper} $NOSETESTS | tee nosetests.log
-  fi
+    # Just run the test suites in current environment
+    if [ "$verbose" -eq 1 ];
+    then
+       ${wrapper} $NOSETESTS 2>&1 | tee nosetests.log
+    else
+       ${wrapper} $NOSETESTS | tee nosetests.log
+    fi
 
-  # If we get some short import error right away, print the error log directly
-  RESULT=$?
-  if [ "$RESULT" -ne "0" ];
-  then
-    ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
-    if [ "$ERRSIZE" -lt "40" ];
+    # If we get some short import error right away, print the error log directly
+    RESULT=$?
+    if [ "$RESULT" -ne "0" ];
     then
-        cat run_tests.log
+      ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
+      if [ "$ERRSIZE" -lt "40" ];
+      then
+          cat run_tests.log
+      fi
+    else
+      tests_run=$(awk '/^Ran/ {print $2}' nosetests.log)
+      if [ -z "$tests_run" ] || [ "$tests_run" -eq 0 ];
+      then
+          echo "ERROR: Zero tests ran, something is wrong!"
+          echo "This is usually caused by a parse error in some python"
+          echo "file or a failure to set up the environment (i.e. during"
+          echo "temporary database preparation). Running nosetests directly"
+          echo "may offer more clues."
+          return 1
+      fi
     fi
   else
-    tests_run=$(awk '/^Ran/ {print $2}' nosetests.log)
-    if [ -z "$tests_run" ] || [ "$tests_run" -eq 0 ];
-    then
-        echo "ERROR: Zero tests ran, something is wrong!"
-        echo "This is usually caused by a parse error in some python"
-        echo "file or a failure to set up the environment (i.e. during"
-        echo "temporary database preparation). Running nosetests directly"
-        echo "may offer more clues."
-        return 1
-    fi
+    ${wrapper} $NOSETESTS --pdb
+    RESULT=$?
   fi
   return $RESULT
 }
