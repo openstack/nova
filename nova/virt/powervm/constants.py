@@ -18,11 +18,13 @@ from nova.compute import power_state
 
 POWERVM_NOSTATE = ''
 POWERVM_RUNNING = 'Running'
+POWERVM_STARTING = 'Starting'
 POWERVM_SHUTDOWN = 'Not Activated'
 POWERVM_POWER_STATE = {
     POWERVM_NOSTATE: power_state.NOSTATE,
     POWERVM_RUNNING: power_state.RUNNING,
     POWERVM_SHUTDOWN: power_state.SHUTDOWN,
+    POWERVM_STARTING: power_state.RUNNING
 }
 
 POWERVM_CPU_INFO = ('ppc64', 'powervm', '3940')
