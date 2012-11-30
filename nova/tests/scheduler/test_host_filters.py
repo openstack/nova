@@ -771,7 +771,7 @@ class HostFiltersTestCase(test.TestCase):
                     'availability_zone': 'fake_avail_zone', }
         result = db.aggregate_create(self.context.elevated(), values, metadata)
         for host in hosts:
-            db.aggregate_host_add(self.context.elevated(), result.id, host)
+            db.aggregate_host_add(self.context.elevated(), result['id'], host)
         return result
 
     def _do_test_aggregate_filter_extra_specs(self, emeta, especs, passes):
@@ -797,7 +797,7 @@ class HostFiltersTestCase(test.TestCase):
                 {'memory_mb': 1024, 'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'free_ram_mb': 1024})
-        db.aggregate_host_delete(self.context.elevated(), agg2.id, 'host1')
+        db.aggregate_host_delete(self.context.elevated(), agg2['id'], 'host1')
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_aggregate_filter_passes_extra_specs_simple(self):
