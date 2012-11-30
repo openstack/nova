@@ -18,6 +18,7 @@
 import copy
 import errno
 import eventlet
+import fixtures
 import json
 import mox
 import os
@@ -474,11 +475,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         self.stubs.Set(os.path, 'exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(imagebackend.disk, 'extend', fake_extend)
-        imagebackend.libvirt_utils = fake_libvirt_utils
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.imagebackend.libvirt_utils',
+            fake_libvirt_utils))
 
     def tearDown(self):
-        imagebackend.libvirt_utils = libvirt_utils
-
         # Make sure the lock_path for this test is cleaned up
         if os.path.exists(self.lock_path):
             shutil.rmtree(self.lock_path)
@@ -559,8 +560,12 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(instances_path='')
         self.flags(libvirt_snapshots_directory='')
         self.call_libvirt_dependant_setup = False
-        libvirt_driver.libvirt_utils = fake_libvirt_utils
-        snapshots.libvirt_utils = fake_libvirt_utils
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.libvirt_utils',
+            fake_libvirt_utils))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.snapshots.libvirt_utils',
+            fake_libvirt_utils))
 
         def fake_extend(image, size):
             pass
@@ -581,7 +586,6 @@ class LibvirtConnTestCase(test.TestCase):
                 'instance_type_id': '5'}  # m1.small
 
     def tearDown(self):
-        libvirt_driver.libvirt_utils = libvirt_utils
         nova.tests.image.fake.FakeImageService_reset()
         super(LibvirtConnTestCase, self).tearDown()
 
@@ -2335,7 +2339,6 @@ class LibvirtConnTestCase(test.TestCase):
 
             self.create_fake_libvirt_mock()
             libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
-            libvirt_driver.libvirt_utils = fake_libvirt_utils
 
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -2387,7 +2390,6 @@ class LibvirtConnTestCase(test.TestCase):
             libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
             libvirt_driver.LibvirtDriver._flush_libvirt_console = _fake_flush
             libvirt_driver.LibvirtDriver._append_to_file = _fake_append_to_file
-            libvirt_driver.libvirt_utils = fake_libvirt_utils
 
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 

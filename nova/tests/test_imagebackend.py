@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import os
 
 from nova.openstack.common import cfg
@@ -48,7 +49,9 @@ class _ImageTestCase(test.TestCase):
                                          '_base')
         self.TEMPLATE_PATH = os.path.join(self.TEMPLATE_DIR, 'template')
 
-        imagebackend.libvirt_utils = fake_libvirt_utils
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.imagebackend.libvirt_utils',
+            fake_libvirt_utils))
 
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')

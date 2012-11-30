@@ -16,6 +16,7 @@
 
 import __builtin__
 import base64
+import fixtures
 import mox
 import netaddr
 import StringIO
@@ -77,12 +78,21 @@ class _FakeDriverBackendTestCase(test.TestCase):
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
 
-        self.saved_libvirt_imagebackend = nova.virt.libvirt.driver.imagebackend
-        nova.virt.libvirt.driver.imagebackend = fake_imagebackend
-        nova.virt.libvirt.driver.libvirt = fakelibvirt
-        nova.virt.libvirt.driver.libvirt_utils = fake_libvirt_utils
-        nova.virt.libvirt.snapshots.libvirt_utils = fake_libvirt_utils
-        nova.virt.libvirt.firewall.libvirt = fakelibvirt
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.imagebackend',
+            fake_imagebackend))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.libvirt',
+            fakelibvirt))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.libvirt_utils',
+            fake_libvirt_utils))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.snapshots.libvirt_utils',
+            fake_libvirt_utils))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.firewall.libvirt',
+            fakelibvirt))
 
         self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
@@ -115,12 +125,8 @@ class _FakeDriverBackendTestCase(test.TestCase):
         # Restore libvirt
         import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
-        nova.virt.libvirt.driver.imagebackend = self.saved_libvirt_imagebackend
         if self.saved_libvirt:
             sys.modules['libvirt'] = self.saved_libvirt
-            nova.virt.libvirt.driver.libvirt = self.saved_libvirt
-            nova.virt.libvirt.driver.libvirt_utils = self.saved_libvirt
-            nova.virt.libvirt.firewall.libvirt = self.saved_libvirt
 
     def setUp(self):
         super(_FakeDriverBackendTestCase, self).setUp()
