@@ -55,12 +55,12 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def _build_tcp_udp_rule(self, rule, version):
-        if rule.from_port == rule.to_port:
-            return ['--dport', '%s' % (rule.from_port,)]
+        if rule['from_port'] == rule['to_port']:
+            return ['--dport', '%s' % (rule['from_port'],)]
         else:
             #  No multiport needed for XS!
-            return ['--dport', '%s:%s' % (rule.from_port,
-                                           rule.to_port)]
+            return ['--dport', '%s:%s' % (rule['from_port'],
+                                           rule['to_port'])]
 
     def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6.
