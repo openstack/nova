@@ -1501,8 +1501,8 @@ def _instance_get_by_uuid(context, uuid, session=None):
 
 
 @require_context
-def instance_get(context, instance_id, session=None):
-    result = _build_instance_get(context, session=session).\
+def instance_get(context, instance_id):
+    result = _build_instance_get(context).\
                 filter_by(id=instance_id).\
                 first()
 
