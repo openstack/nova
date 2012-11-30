@@ -135,6 +135,9 @@
   <extension alias="os-server-diagnostics" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1" name="ServerDiagnostics">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-password" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/server-password/api/v2" name="ServerPassword">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-server-start-stop" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/servers/api/v1.1" name="ServerStartStop">
     <description>%(text)s</description>
   </extension>

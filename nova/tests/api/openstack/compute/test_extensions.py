@@ -193,6 +193,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "SchedulerHints",
             "SecurityGroups",
             "ServerDiagnostics",
+            "ServerPassword",
             "ServerStartStop",
             "Services",
             "SimpleTenantUsage",
