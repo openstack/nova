@@ -82,4 +82,5 @@ class SchedulerRpcAPITestCase(test.TestCase):
     def test_update_service_capabilities(self):
         self._test_scheduler_api('update_service_capabilities',
                 rpc_method='fanout_cast', service_name='fake_name',
-                host='fake_host', capabilities='fake_capabilities')
+                host='fake_host', capabilities='fake_capabilities',
+                version='2.4')

@@ -54,7 +54,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.3'
+    RPC_API_VERSION = '2.4'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -72,10 +72,13 @@ class SchedulerManager(manager.Manager):
     def update_service_capabilities(self, context, service_name,
                                     host, capabilities):
         """Process a capability update from a service node."""
-        if capabilities is None:
-            capabilities = {}
-        self.driver.update_service_capabilities(service_name, host,
-                capabilities)
+        if not isinstance(capabilities, list):
+            capabilities = [capabilities]
+        for capability in capabilities:
+            if capability is None:
+                capability = {}
+            self.driver.update_service_capabilities(service_name, host,
+                                                    capability)
 
     def create_volume(self, context, volume_id, snapshot_id,
                       reservations=None, image_id=None):

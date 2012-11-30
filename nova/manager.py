@@ -255,8 +255,5 @@ class SchedulerDependentManager(Manager):
         """
         if self.last_capabilities:
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            for capability_item in self.last_capabilities:
-                self.scheduler_rpcapi.update_service_capabilities(context,
-                        self.service_name, self.host, capability_item)
-        # TODO(NTTdocomo): Make update_service_capabilities() accept a list
-        #                  of capabilities
+            self.scheduler_rpcapi.update_service_capabilities(context,
+                    self.service_name, self.host, self.last_capabilities)
