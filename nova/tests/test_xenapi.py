@@ -345,7 +345,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_get_diagnostics(self):
         def fake_get_rrd(host, vm_uuid):
-            with open('xenapi/vm_rrd.xml') as f:
+            path = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(path, 'xenapi/vm_rrd.xml')) as f:
                 return re.sub(r'\s', '', f.read())
         self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
 
