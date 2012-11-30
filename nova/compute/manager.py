@@ -352,6 +352,60 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
+    def _init_instance(self, context, instance):
+        '''Initialize this instance during service init.'''
+        db_state = instance['power_state']
+        drv_state = self._get_power_state(context, instance)
+        closing_vm_states = (vm_states.DELETED,
+                             vm_states.SOFT_DELETED)
+
+        # instance was supposed to shut down - don't attempt
+        # recovery in any case
+        if instance['vm_state'] in closing_vm_states:
+            return
+
+        expect_running = (db_state == power_state.RUNNING and
+                          drv_state != db_state)
+
+        LOG.debug(_('Current state is %(drv_state)s, state in DB is '
+                    '%(db_state)s.'), locals(), instance=instance)
+
+        net_info = compute_utils.get_nw_info_for_instance(instance)
+
+        # We're calling plug_vifs to ensure bridge and iptables
+        # rules exist. This needs to be called for each instance.
+        legacy_net_info = self._legacy_nw_info(net_info)
+        self.driver.plug_vifs(instance, legacy_net_info)
+
+        if expect_running and CONF.resume_guests_state_on_host_boot:
+            LOG.info(
+                   _('Rebooting instance after nova-compute restart.'),
+                   locals(), instance=instance)
+
+            block_device_info = \
+                self._get_instance_volume_block_device_info(
+                    context, instance['uuid'])
+
+            try:
+                self.driver.resume_state_on_host_boot(
+                        context,
+                        instance,
+                        self._legacy_nw_info(net_info),
+                        block_device_info)
+            except NotImplementedError:
+                LOG.warning(_('Hypervisor driver does not support '
+                              'resume guests'), instance=instance)
+
+        elif drv_state == power_state.RUNNING:
+            # VMWareAPI drivers will raise an exception
+            try:
+                self.driver.ensure_filtering_rules_for_instance(
+                                       instance,
+                                       self._legacy_nw_info(net_info))
+            except NotImplementedError:
+                LOG.warning(_('Hypervisor driver does not support '
+                              'firewall rules'), instance=instance)
+
     def init_host(self):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
@@ -363,58 +417,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             for instance in instances:
-                db_state = instance['power_state']
-                drv_state = self._get_power_state(context, instance)
-                closing_vm_states = (vm_states.DELETED,
-                                     vm_states.SOFT_DELETED)
-
-                # instance was supposed to shut down - don't attempt
-                # recovery in any case
-                if instance['vm_state'] in closing_vm_states:
-                    continue
-
-                expect_running = (db_state == power_state.RUNNING and
-                                  drv_state != db_state)
-
-                LOG.debug(_('Current state is %(drv_state)s, state in DB is '
-                            '%(db_state)s.'), locals(), instance=instance)
-
-                net_info = compute_utils.get_nw_info_for_instance(instance)
-
-                # We're calling plug_vifs to ensure bridge and iptables
-                # rules exist. This needs to be called for each instance.
-                legacy_net_info = self._legacy_nw_info(net_info)
-                self.driver.plug_vifs(instance, legacy_net_info)
-
-                if expect_running and CONF.resume_guests_state_on_host_boot:
-                    LOG.info(
-                           _('Rebooting instance after nova-compute restart.'),
-                           locals(), instance=instance)
-
-                    block_device_info = \
-                        self._get_instance_volume_block_device_info(
-                            context, instance['uuid'])
-
-                    try:
-                        self.driver.resume_state_on_host_boot(
-                                context,
-                                instance,
-                                self._legacy_nw_info(net_info),
-                                block_device_info)
-                    except NotImplementedError:
-                        LOG.warning(_('Hypervisor driver does not support '
-                                      'resume guests'), instance=instance)
-
-                elif drv_state == power_state.RUNNING:
-                    # VMWareAPI drivers will raise an exception
-                    try:
-                        self.driver.ensure_filtering_rules_for_instance(
-                                               instance,
-                                               self._legacy_nw_info(net_info))
-                    except NotImplementedError:
-                        LOG.warning(_('Hypervisor driver does not support '
-                                      'firewall rules'), instance=instance)
-
+                self._init_instance(context, instance)
         finally:
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
