@@ -425,6 +425,9 @@ global_opts = [
                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
                    'vmwareapi.VMWareESXDriver'),
+    cfg.StrOpt('control_exchange',
+               default='nova',
+               help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
 ]
 
 FLAGS.register_opts(global_opts)
