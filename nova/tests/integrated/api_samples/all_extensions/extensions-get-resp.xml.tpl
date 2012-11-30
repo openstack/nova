@@ -36,6 +36,9 @@
   <extension alias="os-cloudpipe" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/cloudpipe/api/v1.1" name="Cloudpipe">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-cloudpipe-update" updated="%(timestamp)s" name="CloudpipeUpdate" namespace="http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-config-drive" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/config_drive/api/v1.1" name="ConfigDrive">
     <description>%(text)s</description>
   </extension>

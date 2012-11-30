@@ -48,6 +48,9 @@
     a SSH Bastion host is forthcoming.
     </description>
   </extension>
+  <extension alias="os-cloudpipe-update" updated="2012-11-14T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2" name="CloudpipeUpdate">
+    <description>Adds the ability to set the vpn ip/port for cloudpipe instances.</description>
+  </extension>
   <extension alias="os-config-drive" updated="2012-07-16T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/config_drive/api/v1.1" name="ConfigDrive">
     <description>Config Drive Extension</description>
   </extension>

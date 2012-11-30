@@ -160,6 +160,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "AvailabilityZone",
             "Certificates",
             "Cloudpipe",
+            "CloudpipeUpdate",
             "ConsoleOutput",
             "Consoles",
             "Createserverext",

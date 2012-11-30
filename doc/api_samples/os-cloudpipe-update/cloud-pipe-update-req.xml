@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<configure_project>
+  <vpn_ip>192.168.1.1</vpn_ip>
+  <vpn_port>2000</vpn_port>
+</configure_project>
