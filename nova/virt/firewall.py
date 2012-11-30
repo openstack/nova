@@ -360,20 +360,20 @@ class IptablesFirewallDriver(FirewallDriver):
                 LOG.debug(_('Adding security group rule: %r'), rule,
                           instance=instance)
 
-                if not rule.cidr:
+                if not rule['cidr']:
                     version = 4
                 else:
-                    version = netutils.get_ip_version(rule.cidr)
+                    version = netutils.get_ip_version(rule['cidr'])
 
                 if version == 4:
                     fw_rules = ipv4_rules
                 else:
                     fw_rules = ipv6_rules
 
-                protocol = rule.protocol
+                protocol = rule['protocol']
 
                 if protocol:
-                    protocol = rule.protocol.lower()
+                    protocol = rule['protocol'].lower()
 
                 if version == 6 and protocol == 'icmp':
                     protocol = 'icmpv6'
@@ -386,9 +386,9 @@ class IptablesFirewallDriver(FirewallDriver):
                     args += self._build_tcp_udp_rule(rule, version)
                 elif protocol == 'icmp':
                     args += self._build_icmp_rule(rule, version)
-                if rule.cidr:
-                    LOG.debug('Using cidr %r', rule.cidr, instance=instance)
-                    args += ['-s', rule.cidr]
+                if rule['cidr']:
+                    LOG.debug('Using cidr %r', rule['cidr'], instance=instance)
+                    args += ['-s', rule['cidr']]
                     fw_rules += [' '.join(args)]
                 else:
                     if rule['grantee_group']:

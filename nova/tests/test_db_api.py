@@ -145,12 +145,12 @@ class DbApiTestCase(test.TestCase):
         db.instance_destroy(self.context, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
-        self.assertIn(inst1.id, [result[0].id, result[1].id])
-        self.assertIn(inst2.id, [result[0].id, result[1].id])
-        if inst1.id == result[0].id:
-            self.assertTrue(result[0].deleted)
+        self.assertIn(inst1['id'], [result[0]['id'], result[1]['id']])
+        self.assertIn(inst2['id'], [result[0]['id'], result[1]['id']])
+        if inst1['id'] == result[0]['id']:
+            self.assertTrue(result[0]['deleted'])
         else:
-            self.assertTrue(result[1].deleted)
+            self.assertTrue(result[1]['deleted'])
 
     def test_instance_get_all_by_filters_paginate(self):
         self.flags(sql_connection="notdb://")
@@ -210,7 +210,7 @@ class DbApiTestCase(test.TestCase):
         results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
                 'fake_host2')
         self.assertEqual(1, len(results))
-        db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
+        db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
 
         # Ensure the new migration is not returned.
         updated_at = timeutils.utcnow()
@@ -220,7 +220,7 @@ class DbApiTestCase(test.TestCase):
         results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
                 "fake_host2")
         self.assertEqual(0, len(results))
-        db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
+        db.migration_update(ctxt, migration['id'], {"status": "CONFIRMED"})
 
     def test_instance_get_all_hung_in_rebooting(self):
         ctxt = context.get_admin_context()
@@ -250,16 +250,16 @@ class DbApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'host': 'localhost', 'project_id': 'project1'}
         network = db.network_create_safe(ctxt, values)
-        self.assertNotEqual(None, network.uuid)
-        self.assertEqual(36, len(network.uuid))
-        db_network = db.network_get(ctxt, network.id)
-        self.assertEqual(network.uuid, db_network.uuid)
+        self.assertNotEqual(None, network['uuid'])
+        self.assertEqual(36, len(network['uuid']))
+        db_network = db.network_get(ctxt, network['id'])
+        self.assertEqual(network['uuid'], db_network['uuid'])
 
     def test_network_delete_safe(self):
         ctxt = context.get_admin_context()
         values = {'host': 'localhost', 'project_id': 'project1'}
         network = db.network_create_safe(ctxt, values)
-        db_network = db.network_get(ctxt, network.id)
+        db_network = db.network_get(ctxt, network['id'])
         values = {'network_id': network['id'], 'address': 'fake1'}
         address1 = db.fixed_ip_create(ctxt, values)
         values = {'network_id': network['id'],
@@ -300,11 +300,11 @@ class DbApiTestCase(test.TestCase):
 
         # Retrieve the user-provided metadata to ensure it was successfully
         # updated
-        instance_meta = db.instance_metadata_get(ctxt, instance.uuid)
+        instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('bar', instance_meta['host'])
 
         # Retrieve the system metadata to ensure it was successfully updated
-        system_meta = db.instance_system_metadata_get(ctxt, instance.uuid)
+        system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('baz', system_meta['original_image_ref'])
 
     def test_instance_update_of_instance_type_id(self):
@@ -509,16 +509,16 @@ class DbApiTestCase(test.TestCase):
 
         db.dnsdomain_register_for_zone(ctxt, domain1, testzone)
         domain_ref = db.dnsdomain_get(ctxt, domain1)
-        zone = domain_ref.availability_zone
-        scope = domain_ref.scope
+        zone = domain_ref['availability_zone']
+        scope = domain_ref['scope']
         self.assertEqual(scope, 'private')
         self.assertEqual(zone, testzone)
 
         db.dnsdomain_register_for_project(ctxt, domain2,
                                            self.project_id)
         domain_ref = db.dnsdomain_get(ctxt, domain2)
-        project = domain_ref.project_id
-        scope = domain_ref.scope
+        project = domain_ref['project_id']
+        scope = domain_ref['scope']
         self.assertEqual(project, self.project_id)
         self.assertEqual(scope, 'public')
 
@@ -736,7 +736,7 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
     result = _create_aggregate(context=context,
                                values=values, metadata=metadata)
     for host in hosts:
-        db.aggregate_host_add(context, result.id, host)
+        db.aggregate_host_add(context, result['id'], host)
     return result
 
 
@@ -750,16 +750,16 @@ class AggregateDBApiTestCase(test.TestCase):
     def test_aggregate_create(self):
         """Ensure aggregate can be created with no metadata."""
         result = _create_aggregate(metadata=None)
-        self.assertEquals(result.name, 'fake_aggregate')
+        self.assertEquals(result['name'], 'fake_aggregate')
 
     def test_aggregate_create_avoid_name_conflict(self):
         """Test we can avoid conflict on deleted aggregates."""
         r1 = _create_aggregate(metadata=None)
-        db.aggregate_delete(context.get_admin_context(), r1.id)
-        values = {'name': r1.name, 'availability_zone': 'new_zone'}
+        db.aggregate_delete(context.get_admin_context(), r1['id'])
+        values = {'name': r1['name'], 'availability_zone': 'new_zone'}
         r2 = _create_aggregate(values=values)
-        self.assertEqual(r2.name, values['name'])
-        self.assertEqual(r2.availability_zone, values['availability_zone'])
+        self.assertEqual(r2['name'], values['name'])
+        self.assertEqual(r2['availability_zone'], values['availability_zone'])
 
     def test_aggregate_create_raise_exist_exc(self):
         """Ensure aggregate names are distinct."""
@@ -815,9 +815,9 @@ class AggregateDBApiTestCase(test.TestCase):
         """Ensure we can get aggregate with all its relations."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt)
-        expected = db.aggregate_get(ctxt, result.id)
-        self.assertEqual(_get_fake_aggr_hosts(), expected.hosts)
-        self.assertEqual(_get_fake_aggr_metadata(), expected.metadetails)
+        expected = db.aggregate_get(ctxt, result['id'])
+        self.assertEqual(_get_fake_aggr_hosts(), expected['hosts'])
+        self.assertEqual(_get_fake_aggr_metadata(), expected['metadetails'])
 
     def test_aggregate_get_by_host(self):
         """Ensure we can get aggregates by host."""
@@ -827,7 +827,7 @@ class AggregateDBApiTestCase(test.TestCase):
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
-        self.assertEqual([a1.id, a2.id], [x.id for x in r1])
+        self.assertEqual([a1['id'], a2['id']], [x['id'] for x in r1])
 
     def test_aggregate_get_by_host_with_key(self):
         """Ensure we can get aggregates by host."""
@@ -839,7 +839,7 @@ class AggregateDBApiTestCase(test.TestCase):
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
         # filter result by key
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
-        self.assertEqual([a1.id], [x.id for x in r1])
+        self.assertEqual([a1['id']], [x['id'] for x in r1])
 
     def test_aggregate_metdata_get_by_host(self):
         """Ensure we can get aggregates by host."""
@@ -872,7 +872,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(r1['good'], set(['value']))
         self.assertFalse('fake_key1' in r1)
         # Delete metadata
-        db.aggregate_metadata_delete(ctxt, a3.id, 'good')
+        db.aggregate_metadata_delete(ctxt, a3['id'], 'good')
         r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
                                                key='good')
         self.assertFalse('good' in r2)
@@ -901,7 +901,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(0, len(expected))
         aggregate = db.aggregate_get(ctxt.elevated(read_deleted='yes'),
                                      result['id'])
-        self.assertEqual(aggregate.deleted, True)
+        self.assertEqual(aggregate['deleted'], True)
 
     def test_aggregate_update(self):
         """Ensure an aggregate can be updated."""
@@ -910,8 +910,8 @@ class AggregateDBApiTestCase(test.TestCase):
         new_values = _get_fake_aggr_values()
         new_values['availability_zone'] = 'different_avail_zone'
         updated = db.aggregate_update(ctxt, 1, new_values)
-        self.assertNotEqual(result.availability_zone,
-                            updated.availability_zone)
+        self.assertNotEqual(result['availability_zone'],
+                            updated['availability_zone'])
 
     def test_aggregate_update_with_metadata(self):
         """Ensure an aggregate can be updated with metadata."""
@@ -920,7 +920,7 @@ class AggregateDBApiTestCase(test.TestCase):
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
         db.aggregate_update(ctxt, 1, values)
-        expected = db.aggregate_metadata_get(ctxt, result.id)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(_get_fake_aggr_metadata(),
                         matchers.DictMatches(expected))
 
@@ -932,7 +932,7 @@ class AggregateDBApiTestCase(test.TestCase):
         values['metadata'] = _get_fake_aggr_metadata()
         values['metadata']['fake_key1'] = 'foo'
         db.aggregate_update(ctxt, 1, values)
-        expected = db.aggregate_metadata_get(ctxt, result.id)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(values['metadata'], matchers.DictMatches(expected))
 
     def test_aggregate_update_raise_not_found(self):
@@ -968,7 +968,7 @@ class AggregateDBApiTestCase(test.TestCase):
             aggregates.append(_create_aggregate(context=ctxt,
                                                 values=values, metadata=None))
         for c in xrange(1, remove_counter):
-            db.aggregate_delete(ctxt, aggregates[c - 1].id)
+            db.aggregate_delete(ctxt, aggregates[c - 1]['id'])
         results = db.aggregate_get_all(ctxt)
         self.assertEqual(len(results), add_counter - remove_counter)
 
@@ -977,8 +977,8 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         metadata = _get_fake_aggr_metadata()
-        db.aggregate_metadata_add(ctxt, result.id, metadata)
-        expected = db.aggregate_metadata_get(ctxt, result.id)
+        db.aggregate_metadata_add(ctxt, result['id'], metadata)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_update(self):
@@ -987,10 +987,10 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(context=ctxt)
         metadata = _get_fake_aggr_metadata()
         key = metadata.keys()[0]
-        db.aggregate_metadata_delete(ctxt, result.id, key)
+        db.aggregate_metadata_delete(ctxt, result['id'], key)
         new_metadata = {key: 'foo'}
-        db.aggregate_metadata_add(ctxt, result.id, new_metadata)
-        expected = db.aggregate_metadata_get(ctxt, result.id)
+        db.aggregate_metadata_add(ctxt, result['id'], new_metadata)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
         metadata[key] = 'foo'
         self.assertThat(metadata, matchers.DictMatches(expected))
 
@@ -999,9 +999,9 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         metadata = _get_fake_aggr_metadata()
-        db.aggregate_metadata_add(ctxt, result.id, metadata)
-        db.aggregate_metadata_delete(ctxt, result.id, metadata.keys()[0])
-        expected = db.aggregate_metadata_get(ctxt, result.id)
+        db.aggregate_metadata_add(ctxt, result['id'], metadata)
+        db.aggregate_metadata_delete(ctxt, result['id'], metadata.keys()[0])
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
         del metadata[metadata.keys()[0]]
         self.assertThat(metadata, matchers.DictMatches(expected))
 
@@ -1011,13 +1011,13 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(context=ctxt)
         self.assertRaises(exception.AggregateMetadataNotFound,
                           db.aggregate_metadata_delete,
-                          ctxt, result.id, 'foo_key')
+                          ctxt, result['id'], 'foo_key')
 
     def test_aggregate_host_add(self):
         """Ensure we can add host to the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
-        expected = db.aggregate_host_get_all(ctxt, result.id)
+        expected = db.aggregate_host_get_all(ctxt, result['id'])
         self.assertEqual(_get_fake_aggr_hosts(), expected)
 
     def test_aggregate_host_add_deleted(self):
@@ -1025,9 +1025,9 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         host = _get_fake_aggr_hosts()[0]
-        db.aggregate_host_delete(ctxt, result.id, host)
-        db.aggregate_host_add(ctxt, result.id, host)
-        expected = db.aggregate_host_get_all(ctxt, result.id)
+        db.aggregate_host_delete(ctxt, result['id'], host)
+        db.aggregate_host_add(ctxt, result['id'], host)
+        expected = db.aggregate_host_get_all(ctxt, result['id'])
         self.assertEqual(len(expected), 1)
 
     def test_aggregate_host_add_duplicate_works(self):
@@ -1038,8 +1038,8 @@ class AggregateDBApiTestCase(test.TestCase):
                           values={'name': 'fake_aggregate2',
                                   'availability_zone': 'fake_avail_zone2', },
                           metadata=None)
-        h1 = db.aggregate_host_get_all(ctxt, r1.id)
-        h2 = db.aggregate_host_get_all(ctxt, r2.id)
+        h1 = db.aggregate_host_get_all(ctxt, r1['id'])
+        h2 = db.aggregate_host_get_all(ctxt, r2['id'])
         self.assertEqual(h1, h2)
 
     def test_aggregate_host_add_duplicate_raise_exist_exc(self):
@@ -1048,7 +1048,7 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         self.assertRaises(exception.AggregateHostExists,
                           db.aggregate_host_add,
-                          ctxt, result.id, _get_fake_aggr_hosts()[0])
+                          ctxt, result['id'], _get_fake_aggr_hosts()[0])
 
     def test_aggregate_host_add_raise_not_found(self):
         """Ensure AggregateFound when adding a host."""
@@ -1064,9 +1064,9 @@ class AggregateDBApiTestCase(test.TestCase):
         """Ensure we can add host to the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
-        db.aggregate_host_delete(ctxt, result.id,
+        db.aggregate_host_delete(ctxt, result['id'],
                                  _get_fake_aggr_hosts()[0])
-        expected = db.aggregate_host_get_all(ctxt, result.id)
+        expected = db.aggregate_host_get_all(ctxt, result['id'])
         self.assertEqual(0, len(expected))
 
     def test_aggregate_host_delete_raise_not_found(self):
@@ -1075,7 +1075,7 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(context=ctxt)
         self.assertRaises(exception.AggregateHostNotFound,
                           db.aggregate_host_delete,
-                          ctxt, result.id, _get_fake_aggr_hosts()[0])
+                          ctxt, result['id'], _get_fake_aggr_hosts()[0])
 
 
 class CapacityTestCase(test.TestCase):
@@ -1095,7 +1095,7 @@ class CapacityTestCase(test.TestCase):
                                  free_disk_gb=2048, hypervisor_type="xen",
                                  hypervisor_version=1, cpu_info="",
                                  running_vms=0, current_workload=0,
-                                 service_id=self.service.id)
+                                 service_id=self.service['id'])
         # add some random stats
         stats = dict(num_instances=3, num_proj_12345=2,
                      num_proj_23456=2, num_vm_building=3)
@@ -1117,10 +1117,10 @@ class CapacityTestCase(test.TestCase):
 
     def test_compute_node_create(self):
         item = self._create_helper('host1')
-        self.assertEquals(item.free_ram_mb, 1024)
-        self.assertEquals(item.free_disk_gb, 2048)
-        self.assertEquals(item.running_vms, 0)
-        self.assertEquals(item.current_workload, 0)
+        self.assertEquals(item['free_ram_mb'], 1024)
+        self.assertEquals(item['free_disk_gb'], 2048)
+        self.assertEquals(item['running_vms'], 0)
+        self.assertEquals(item['current_workload'], 0)
 
         stats = self._stats_as_dict(item['stats'])
         self.assertEqual(3, stats['num_instances'])
@@ -1209,8 +1209,8 @@ class MigrationTestCase(test.TestCase):
 
     def _assert_in_progress(self, migrations):
         for migration in migrations:
-            self.assertNotEqual('confirmed', migration.status)
-            self.assertNotEqual('reverted', migration.status)
+            self.assertNotEqual('confirmed', migration['status'])
+            self.assertNotEqual('reverted', migration['status'])
 
     def test_in_progress_host1_nodea(self):
         migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
@@ -1256,28 +1256,28 @@ class TestIpAllocation(test.TestCase):
     def test_fixed_ip_associate_fails_if_ip_not_in_network(self):
         self.assertRaises(exception.FixedIpNotFoundForNetwork,
                           db.fixed_ip_associate,
-                          self.ctxt, None, self.instance.uuid)
+                          self.ctxt, None, self.instance['uuid'])
 
     def test_fixed_ip_associate_fails_if_ip_in_use(self):
-        address = self.create_fixed_ip(instance_uuid=self.instance.uuid)
+        address = self.create_fixed_ip(instance_uuid=self.instance['uuid'])
         self.assertRaises(exception.FixedIpAlreadyInUse,
                           db.fixed_ip_associate,
-                          self.ctxt, address, self.instance.uuid)
+                          self.ctxt, address, self.instance['uuid'])
 
     def test_fixed_ip_associate_succeeds(self):
-        address = self.create_fixed_ip(network_id=self.network.id)
-        db.fixed_ip_associate(self.ctxt, address, self.instance.uuid,
-                              network_id=self.network.id)
+        address = self.create_fixed_ip(network_id=self.network['id'])
+        db.fixed_ip_associate(self.ctxt, address, self.instance['uuid'],
+                              network_id=self.network['id'])
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
-        self.assertEqual(fixed_ip.instance_uuid, self.instance.uuid)
+        self.assertEqual(fixed_ip['instance_uuid'], self.instance['uuid'])
 
     def test_fixed_ip_associate_succeeds_and_sets_network(self):
         address = self.create_fixed_ip()
-        db.fixed_ip_associate(self.ctxt, address, self.instance.uuid,
-                              network_id=self.network.id)
+        db.fixed_ip_associate(self.ctxt, address, self.instance['uuid'],
+                              network_id=self.network['id'])
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
-        self.assertEqual(fixed_ip.instance_uuid, self.instance.uuid)
-        self.assertEqual(fixed_ip.network_id, self.network.id)
+        self.assertEqual(fixed_ip['instance_uuid'], self.instance['uuid'])
+        self.assertEqual(fixed_ip['network_id'], self.network['id'])
 
 
 class InstanceDestroyConstraints(test.TestCase):

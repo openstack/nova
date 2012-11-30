@@ -99,7 +99,7 @@ class ConsoleTestCase(test.TestCase):
                 instance['host'], self.console.host,
                 self.console.driver.console_type)
 
-        console_instances = [con['instance_uuid'] for con in pool.consoles]
+        console_instances = [con['instance_uuid'] for con in pool['consoles']]
         self.assert_(instance['uuid'] in console_instances)
         db.instance_destroy(self.context, instance['uuid'])
 

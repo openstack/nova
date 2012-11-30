@@ -181,30 +181,30 @@ class SecurityGroupControllerBase(object):
 
     def _format_security_group_rule(self, context, rule):
         sg_rule = {}
-        sg_rule['id'] = rule.id
-        sg_rule['parent_group_id'] = rule.parent_group_id
-        sg_rule['ip_protocol'] = rule.protocol
-        sg_rule['from_port'] = rule.from_port
-        sg_rule['to_port'] = rule.to_port
+        sg_rule['id'] = rule['id']
+        sg_rule['parent_group_id'] = rule['parent_group_id']
+        sg_rule['ip_protocol'] = rule['protocol']
+        sg_rule['from_port'] = rule['from_port']
+        sg_rule['to_port'] = rule['to_port']
         sg_rule['group'] = {}
         sg_rule['ip_range'] = {}
-        if rule.group_id:
+        if rule['group_id']:
             source_group = self.security_group_api.get(context,
-                                                       id=rule.group_id)
+                                                       id=rule['group_id'])
             sg_rule['group'] = {'name': source_group.name,
                              'tenant_id': source_group.project_id}
         else:
-            sg_rule['ip_range'] = {'cidr': rule.cidr}
+            sg_rule['ip_range'] = {'cidr': rule['cidr']}
         return sg_rule
 
     def _format_security_group(self, context, group):
         security_group = {}
-        security_group['id'] = group.id
-        security_group['description'] = group.description
-        security_group['name'] = group.name
-        security_group['tenant_id'] = group.project_id
+        security_group['id'] = group['id']
+        security_group['description'] = group['description']
+        security_group['name'] = group['name']
+        security_group['tenant_id'] = group['project_id']
         security_group['rules'] = []
-        for rule in group.rules:
+        for rule in group['rules']:
             security_group['rules'] += [self._format_security_group_rule(
                     context, rule)]
         return security_group

@@ -765,14 +765,14 @@ class FloatingIP(object):
 
     def _prepare_domain_entry(self, context, domain):
         domainref = self.db.dnsdomain_get(context, domain)
-        scope = domainref.scope
+        scope = domainref['scope']
         if scope == 'private':
-            av_zone = domainref.availability_zone
+            av_zone = domainref['availability_zone']
             this_domain = {'domain': domain,
                          'scope': scope,
                          'availability_zone': av_zone}
         else:
-            project = domainref.project_id
+            project = domainref['project_id']
             this_domain = {'domain': domain,
                          'scope': scope,
                          'project': project}
