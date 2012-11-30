@@ -177,29 +177,23 @@ class TestMigrations(test.TestCase):
                 user = auth_pieces[0]
                 password = ""
                 if len(auth_pieces) > 1:
-                    if auth_pieces[1].strip():
-                        password = auth_pieces[1]
-                cmd = ("touch ~/.pgpass;"
-                       "chmod 0600 ~/.pgpass;"
-                       "sed -i -e"
-                       "'1{s/^.*$/\*:\*:\*:%(user)s:%(password)s/};"
-                       "1!d' ~/.pgpass") % locals()
-                execute_cmd(cmd)
-                sql = ("UPDATE pg_catalog.pg_database SET datallowconn=false "
-                       "WHERE datname='%(database)s';") % locals()
-                cmd = ("psql -U%(user)s -h%(host)s -c\"%(sql)s\"") % locals()
-                execute_cmd(cmd)
-                sql = ("SELECT pg_catalog.pg_terminate_backend(procpid) "
-                       "FROM pg_catalog.pg_stat_activity "
-                       "WHERE datname='%(database)s';") % locals()
-                cmd = ("psql -U%(user)s -h%(host)s -c\"%(sql)s\"") % locals()
-                execute_cmd(cmd)
+                    password = auth_pieces[1].strip()
+                # note(boris-42): This file is used for authentication
+                # without password prompt.
+                createpgpass = ("echo '*:*:*:%(user)s:%(password)s' > "
+                                "~/.pgpass && chmod 0600 ~/.pgpass" % locals())
+                execute_cmd(createpgpass)
+                # note(boris-42): We must create and drop database, we can't
+                # drop database wich we have connected to, so for such
+                # operations there is a special database template1.
+                sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
+                                     " '%(sql)s' -d template1")
                 sql = ("drop database if exists %(database)s;") % locals()
-                cmd = ("psql -U%(user)s -h%(host)s -c\"%(sql)s\"") % locals()
-                execute_cmd(cmd)
+                droptable = sqlcmd % locals()
+                execute_cmd(droptable)
                 sql = ("create database %(database)s;") % locals()
-                cmd = ("psql -U%(user)s -h%(host)s -c\"%(sql)s\"") % locals()
-                execute_cmd(cmd)
+                createtable = sqlcmd % locals()
+                execute_cmd(createtable)
 
     def test_walk_versions(self):
         """
