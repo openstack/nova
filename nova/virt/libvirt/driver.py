@@ -43,7 +43,6 @@ import errno
 import functools
 import glob
 import hashlib
-import multiprocessing
 import os
 import shutil
 import sys
@@ -1995,21 +1994,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return interfaces
 
-    @staticmethod
-    def get_vcpu_total():
+    def get_vcpu_total(self):
         """Get vcpu number of physical computer.
 
         :returns: the number of cpu core.
 
         """
 
-        # On certain platforms, this will raise a NotImplementedError.
         try:
-            return multiprocessing.cpu_count()
-        except NotImplementedError:
+            return self._conn.getInfo()[2]
+        except libvirt.libvirtError:
             LOG.warn(_("Cannot get the number of cpu, because this "
-                       "function is not implemented for this platform. "
-                       "This error can be safely ignored for now."))
+                       "function is not implemented for this platform. "))
             return 0
 
     def get_memory_mb_total(self):
