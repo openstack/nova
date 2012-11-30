@@ -145,7 +145,8 @@ class ResourceTracker(object):
             # Mark the resources in-use for the resize landing on this
             # compute host:
             self._update_usage_from_migration(self.compute_node, migration_ref)
-            self._update(context, self.compute_node)
+            elevated = context.elevated()
+            self._update(elevated, self.compute_node)
 
             return claim
 
