@@ -54,6 +54,7 @@ class NotificationsTestCase(test.TestCase):
                 fake_get_nw_info)
         fake_network.set_stub_network_methods(self.stubs)
 
+        notifier_api._reset_drivers()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager',
