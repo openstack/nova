@@ -133,6 +133,7 @@ class CinderCloudTestCase(test.TestCase):
                                               self.project_id,
                                               is_admin=True)
         self.volume_api = volume.API()
+        self.volume_api.reset_fake_api(self.context)
 
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
