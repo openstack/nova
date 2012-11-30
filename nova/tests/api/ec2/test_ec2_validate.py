@@ -52,6 +52,8 @@ class EC2ValidateTestCase(test.TestCase):
         self.cloud = cloud.CloudController()
 
         # set up services
+        self.conductor = self.start_service('conductor',
+                manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
         self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')

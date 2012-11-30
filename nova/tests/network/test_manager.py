@@ -27,6 +27,7 @@ from nova import exception
 from nova import ipv6
 from nova.network import linux_net
 from nova.network import manager as network_manager
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -39,6 +40,7 @@ from nova.tests import matchers
 from nova import utils
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -1585,6 +1587,8 @@ class AllocateTestCase(test.TestCase):
     def test_allocate_for_instance(self):
         address = "10.10.10.10"
         self.flags(auto_assign_floating_ip=True)
+        self.conductor = self.start_service(
+            'conductor', manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
         self.network = self.start_service('network')
 

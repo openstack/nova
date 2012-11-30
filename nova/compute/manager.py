@@ -66,6 +66,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -359,6 +360,32 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
+    def _get_instances_at_startup(self, context):
+        '''Get instances for this host during service init.'''
+        attempt = 0
+        timeout = 10
+        while True:
+            # NOTE(danms): Try ten times with a short timeout, and then punt
+            # to the configured RPC timeout after that
+            if attempt == 10:
+                timeout = None
+            attempt += 1
+
+            # NOTE(russellb): This is running during service startup. If we
+            # allow an exception to be raised, the service will shut down.
+            # This may fail the first time around if nova-conductor wasn't
+            # running when nova-compute started.
+            try:
+                self.conductor_api.ping(context, '1.21 GigaWatts',
+                                        timeout=timeout)
+                break
+            except rpc_common.Timeout as e:
+                LOG.exception(_('Timed out waiting for nova-conductor. '
+                                'Is it running? Or did nova-compute start '
+                                'before nova-conductor?'))
+
+        return self.conductor_api.instance_get_all_by_host(context, self.host)
+
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
         db_state = instance['power_state']
@@ -417,10 +444,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
-
-        # NOTE(danms): this requires some care since conductor
-        # may not be up and fielding requests by the time compute is
-        instances = self.db.instance_get_all_by_host(context, self.host)
+        instances = self._get_instances_at_startup(context)
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()
