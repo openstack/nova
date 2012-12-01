@@ -27,6 +27,7 @@ import webob
 
 from nova.api.metadata import base
 from nova.api.metadata import handler
+from nova.api.metadata import password
 from nova import block_device
 from nova import db
 from nova.db.sqlalchemy import api
@@ -319,6 +320,14 @@ class OpenStackMetadataTestCase(test.TestCase):
         for key, val in extra.iteritems():
             self.assertEqual(mddict[key], val)
 
+    def test_password(self):
+        # make sure extra_md makes it through to metadata
+        inst = copy(self.instance)
+        mdinst = fake_InstanceMetadata(self.stubs, inst)
+
+        result = mdinst.lookup("/openstack/latest/password")
+        self.assertEqual(result, password.handle_password)
+
     def test_userdata(self):
         inst = copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
@@ -350,6 +359,20 @@ class MetadataHandlerTestCase(test.TestCase):
         self.instance = INSTANCES[0]
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
+
+    def test_callable(self):
+
+        def verify(req, meta_data):
+            self.assertTrue(isinstance(meta_data, CallableMD))
+            return "foo"
+
+        class CallableMD(object):
+            def lookup(self, path_info):
+                return verify
+
+        response = fake_request(self.stubs, CallableMD(), "/bar")
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.body, "foo")
 
     def test_root(self):
         expected = "\n".join(base.VERSIONS) + "\nlatest"
@@ -469,3 +492,47 @@ class MetadataHandlerTestCase(test.TestCase):
                                                 '8387b96cbc5bd2474665192d2ec28'
                                                 '8ffb67'})
         self.assertEqual(response.status_int, 500)
+
+
+class MetadataPasswordTestCase(test.TestCase):
+    def setUp(self):
+        super(MetadataPasswordTestCase, self).setUp()
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
+        self.instance = copy(INSTANCES[0])
+        self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
+            address=None, sgroups=None)
+
+    def test_get_password(self):
+        request = webob.Request.blank('')
+        self.mdinst.password = 'foo'
+        result = password.handle_password(request, self.mdinst)
+        self.assertEqual(result, 'foo')
+
+    def test_bad_method(self):
+        request = webob.Request.blank('')
+        request.method = 'PUT'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          password.handle_password, request, self.mdinst)
+
+    def _try_set_password(self, val='bar'):
+        request = webob.Request.blank('')
+        request.method = 'POST'
+        request.body = val
+        self.stubs.Set(db, 'instance_system_metadata_update',
+                       lambda *a, **kw: None)
+        password.handle_password(request, self.mdinst)
+
+    def test_set_password(self):
+        self.mdinst.password = ''
+        self._try_set_password()
+
+    def test_conflict(self):
+        self.mdinst.password = 'foo'
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._try_set_password)
+
+    def test_too_large(self):
+        self.mdinst.password = ''
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._try_set_password, 'a' * 257)

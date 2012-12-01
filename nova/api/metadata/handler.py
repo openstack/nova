@@ -120,6 +120,9 @@ class MetadataRequestHandler(wsgi.Application):
         except base.InvalidMetadataPath:
             raise webob.exc.HTTPNotFound()
 
+        if callable(data):
+            return data(req, meta_data)
+
         return base.ec2_md_print(data)
 
     def _handle_remote_ip_request(self, req):
