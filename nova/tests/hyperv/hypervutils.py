@@ -23,7 +23,7 @@ import time
 
 from nova import exception
 from nova.virt.hyperv import constants
-from nova.virt.hyperv import volumeutils
+from nova.virt.hyperv import volumeutilsV2
 from xml.etree import ElementTree
 
 # Check needed for unit testing on Unix
@@ -37,7 +37,9 @@ class HyperVUtils(object):
         self.__conn_v2 = None
         self.__conn_cimv2 = None
         self.__conn_wmi = None
-        self._volumeutils = volumeutils.VolumeUtils()
+        self.__conn_storage = None
+        self._volumeutils = volumeutilsV2.VolumeUtilsV2(
+                                        self._conn_storage, self._conn_wmi)
 
     @property
     def _conn(self):
@@ -62,6 +64,13 @@ class HyperVUtils(object):
         if self.__conn_wmi is None:
             self.__conn_wmi = wmi.WMI(moniker='//./root/wmi')
         return self.__conn_wmi
+
+    @property
+    def _conn_storage(self):
+        if self.__conn_storage is None:
+            storage_namespace = '//./Root/Microsoft/Windows/Storage'
+            self.__conn_storage = wmi.WMI(moniker=storage_namespace)
+        return self.__conn_storage
 
     def create_vhd(self, path):
         image_service = self._conn.query(
@@ -210,7 +219,8 @@ class HyperVUtils(object):
 
     def logout_iscsi_volume_sessions(self, volume_id):
         target_iqn = self._get_target_iqn(volume_id)
-        self._volumeutils.logout_storage_target(self._conn_wmi, target_iqn)
+        if (self.iscsi_volume_sessions_exist(volume_id)):
+            self._volumeutils.logout_storage_target(target_iqn)
 
     def iscsi_volume_sessions_exist(self, volume_id):
         target_iqn = self._get_target_iqn(volume_id)

@@ -27,6 +27,7 @@ from nova.virt import driver
 from nova.virt.hyperv import baseops
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeutils
+from nova.virt.hyperv import volumeutilsV2
 
 LOG = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ hyper_volumeops_opts = [
     cfg.IntOpt('hyperv_wait_between_attach_retry',
         default=5,
         help='The seconds to wait between an volume attachment attempt'),
+    cfg.BoolOpt('force_volumeutils_v1',
+        default=False,
+        help='Force volumeutils v1'),
     ]
 
 CONF = cfg.CONF
@@ -62,7 +66,24 @@ class VolumeOps(baseops.BaseOps):
             CONF.hyperv_attaching_volume_retry_count
         self._wait_between_attach_retry = \
             CONF.hyperv_wait_between_attach_retry
-        self._volutils = volumeutils.VolumeUtils()
+        self._volutils = self._get_volume_utils()
+
+    def _get_volume_utils(self):
+        if(not CONF.force_volumeutils_v1) and \
+        (self._get_hypervisor_version() >= 6.2):
+            return volumeutilsV2.VolumeUtilsV2(
+                                self._conn_storage, self._conn_wmi)
+        else:
+            return volumeutils.VolumeUtils(self._conn_wmi)
+
+    def _get_hypervisor_version(self):
+        """Get hypervisor version.
+        :returns: hypervisor version (ex. 12003)
+        """
+        version = self._conn_cimv2.Win32_OperatingSystem()[0]\
+            .Version
+        LOG.info(_('Windows version: %s ') % version)
+        return version
 
     def attach_boot_volume(self, block_device_info, vm_name):
         """Attach the boot volume to the IDE controller"""
@@ -95,7 +116,7 @@ class VolumeOps(baseops.BaseOps):
             self._attach_volume_to_controller(ctrller, 0, mounted_disk, vm)
         except Exception as exn:
             LOG.exception(_('Attach boot from volume failed: %s'), exn)
-            self._volutils.logout_storage_target(self._conn_wmi, target_iqn)
+            self._volutils.logout_storage_target(target_iqn)
             raise vmutils.HyperVException(
                 _('Unable to attach boot volume to instance %s')
                     % vm_name)
@@ -132,7 +153,7 @@ class VolumeOps(baseops.BaseOps):
                     mounted_disk, vm)
         except Exception as exn:
             LOG.exception(_('Attach volume failed: %s'), exn)
-            self._volutils.logout_storage_target(self._conn_wmi, target_iqn)
+            self._volutils.logout_storage_target(target_iqn)
             raise vmutils.HyperVException(
                 _('Unable to attach volume to instance %s')
                     % instance_name)
@@ -198,7 +219,7 @@ class VolumeOps(baseops.BaseOps):
                 _('Failed to remove volume from VM %s') %
                 instance_name)
         #Sending logout
-        self._volutils.logout_storage_target(self._conn_wmi, target_iqn)
+        self._volutils.logout_storage_target(target_iqn)
 
     def get_volume_connector(self, instance):
         if not self._initiator:
