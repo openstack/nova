@@ -1896,3 +1896,78 @@ class FlavorManageSampleJsonTests(ApiSampleTestBase):
 
 class FlavorManageSampleXmlTests(FlavorManageSampleJsonTests):
     ctype = "xml"
+
+
+class DiskConfigJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.disk_config."
+                      "Disk_config")
+
+    def test_list_servers_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        return self._verify_response('list-servers-detail-get',
+                                     subs, response)
+
+    def test_get_server(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-get-resp', subs, response)
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-put-req', {})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-update-put-resp',
+                                      subs, response)
+
+    def test_resize_server(self):
+        self.flags(allow_resize_to_same_host=True)
+        uuid = self._post_server()
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-resize-post-req', {})
+        self.assertEqual(response.status, 202)
+        # NOTE(tmello): Resize does not return response body
+        # Bug #1085213.
+        self.assertEqual(response.read(), "")
+
+    def test_rebuild_server(self):
+        uuid = self._post_server()
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'host': self._get_host(),
+        }
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-rebuild-req', subs)
+        self.assertEqual(response.status, 202)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-action-rebuild-resp',
+                                      subs, response)
+
+    def test_get_image(self):
+        image_id = fake.get_valid_image_id()
+        response = self._do_get('images/%s' % image_id)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['image_id'] = image_id
+        return self._verify_response('image-get-resp', subs, response)
+
+    def test_list_images(self):
+        response = self._do_get('images/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('image-list-resp', subs, response)
+
+
+class DiskConfigXmlTest(DiskConfigJsonTest):
+        ctype = 'xml'
