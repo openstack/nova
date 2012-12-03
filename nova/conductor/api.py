@@ -14,9 +14,12 @@
 
 """Handles all requests to the conductor service"""
 
+import functools
+
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova.openstack.common import cfg
+from nova.openstack.common.rpc import common as rpc_common
 
 conductor_opts = [
     cfg.BoolOpt('use_local',
@@ -36,12 +39,33 @@ CONF.register_group(conductor_group)
 CONF.register_opts(conductor_opts, conductor_group)
 
 
+class ExceptionHelper(object):
+    """Class to wrap another and translate the ClientExceptions raised by its
+    function calls to the actual ones"""
+
+    def __init__(self, target):
+        self._target = target
+
+    def __getattr__(self, name):
+        func = getattr(self._target, name)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except rpc_common.ClientException, e:
+                raise e._exc_info
+        return wrapper
+
+
 class LocalAPI(object):
     """A local version of the conductor API that does database updates
     locally instead of via RPC"""
 
     def __init__(self):
-        self._manager = manager.ConductorManager()
+        # TODO(danms): This needs to be something more generic for
+        # other/future users of this sort of functionality.
+        self._manager = ExceptionHelper(manager.ConductorManager())
 
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database"""

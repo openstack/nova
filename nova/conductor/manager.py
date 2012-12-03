@@ -14,10 +14,12 @@
 
 """Handles database requests from other nova services"""
 
+from nova import exception
 from nova import manager
 from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 
 
@@ -47,6 +49,10 @@ class ConductorManager(manager.SchedulerDependentManager):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
 
+    @rpc_common.client_exceptions(KeyError, ValueError,
+                                  exception.InvalidUUID,
+                                  exception.InstanceNotFound,
+                                  exception.UnexpectedTaskStateError)
     def instance_update(self, context, instance_uuid, updates):
         for key, value in updates.iteritems():
             if key not in allowed_updates:
@@ -61,6 +67,7 @@ class ConductorManager(manager.SchedulerDependentManager):
         notifications.send_update(context, old_ref, instance_ref)
         return jsonutils.to_primitive(instance_ref)
 
+    @rpc_common.client_exceptions(exception.InstanceNotFound)
     def instance_get_by_uuid(self, context, instance_uuid):
         return jsonutils.to_primitive(
             self.db.instance_get_by_uuid(context, instance_uuid))
@@ -69,23 +76,27 @@ class ConductorManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(
             self.db.instance_get_all_by_host(context.elevated(), host))
 
+    @rpc_common.client_exceptions(exception.MigrationNotFound)
     def migration_get(self, context, migration_id):
         migration_ref = self.db.migration_get(context.elevated(),
                                               migration_id)
         return jsonutils.to_primitive(migration_ref)
 
+    @rpc_common.client_exceptions(exception.MigrationNotFound)
     def migration_update(self, context, migration, status):
         migration_ref = self.db.migration_update(context.elevated(),
                                                  migration['id'],
                                                  {'status': status})
         return jsonutils.to_primitive(migration_ref)
 
+    @rpc_common.client_exceptions(exception.AggregateHostExists)
     def aggregate_host_add(self, context, aggregate, host):
         host_ref = self.db.aggregate_host_add(context.elevated(),
                 aggregate['id'], host)
 
         return jsonutils.to_primitive(host_ref)
 
+    @rpc_common.client_exceptions(exception.AggregateHostNotFound)
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)

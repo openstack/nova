@@ -25,6 +25,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import notifications
 from nova.openstack.common import jsonutils
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import test
 
@@ -32,13 +33,20 @@ from nova import test
 FAKE_IMAGE_REF = 'fake-image-ref'
 
 
-class BaseTestCase(test.TestCase):
+class _BaseTestCase(test.TestCase):
     def setUp(self):
-        super(BaseTestCase, self).setUp()
+        super(_BaseTestCase, self).setUp()
+        self.db = None
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
+
+    def stub_out_client_exceptions(self):
+        def passthru(exceptions, func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
@@ -63,14 +71,6 @@ class BaseTestCase(test.TestCase):
         inst['os_type'] = 'Linux'
         inst.update(params)
         return db.instance_create(self.context, inst)
-
-
-class ConductorTestCase(BaseTestCase):
-    """Conductor Manager Tests"""
-    def setUp(self):
-        super(ConductorTestCase, self).setUp()
-        self.conductor = conductor_manager.ConductorManager()
-        self.db = None
 
     def _do_update(self, instance_uuid, **updates):
         return self.conductor.instance_update(self.context, instance_uuid,
@@ -169,7 +169,15 @@ class ConductorTestCase(BaseTestCase):
         self.assertEqual(result, 'foo')
 
 
-class ConductorRPCAPITestCase(ConductorTestCase):
+class ConductorTestCase(_BaseTestCase):
+    """Conductor Manager Tests"""
+    def setUp(self):
+        super(ConductorTestCase, self).setUp()
+        self.conductor = conductor_manager.ConductorManager()
+        self.stub_out_client_exceptions()
+
+
+class ConductorRPCAPITestCase(_BaseTestCase):
     """Conductor RPC API Tests"""
     def setUp(self):
         super(ConductorRPCAPITestCase, self).setUp()
@@ -178,12 +186,14 @@ class ConductorRPCAPITestCase(ConductorTestCase):
         self.conductor = conductor_rpcapi.ConductorAPI()
 
 
-class ConductorLocalAPITestCase(ConductorTestCase):
-    """Conductor LocalAPI Tests"""
+class ConductorAPITestCase(_BaseTestCase):
+    """Conductor API Tests"""
     def setUp(self):
-        super(ConductorLocalAPITestCase, self).setUp()
-        self.conductor = conductor_api.LocalAPI()
-        self.db = db
+        super(ConductorAPITestCase, self).setUp()
+        self.conductor_service = self.start_service(
+            'conductor', manager='nova.conductor.manager.ConductorManager')
+        self.conductor = conductor_api.API()
+        self.db = None
 
     def _do_update(self, instance_uuid, **updates):
         # NOTE(danms): the public API takes actual keyword arguments,
@@ -204,14 +214,21 @@ class ConductorLocalAPITestCase(ConductorTestCase):
         self.assertEqual(result, 'foo')
 
 
-class ConductorAPITestCase(ConductorLocalAPITestCase):
-    """Conductor API Tests"""
+class ConductorLocalAPITestCase(ConductorAPITestCase):
+    """Conductor LocalAPI Tests"""
     def setUp(self):
-        super(ConductorAPITestCase, self).setUp()
-        self.conductor_service = self.start_service(
-            'conductor', manager='nova.conductor.manager.ConductorManager')
-        self.conductor = conductor_api.API()
-        self.db = None
+        super(ConductorLocalAPITestCase, self).setUp()
+        self.conductor = conductor_api.LocalAPI()
+        self.db = db
+        self.stub_out_client_exceptions()
+
+    def test_client_exceptions(self):
+        instance = self._create_fake_instance()
+        # NOTE(danms): The LocalAPI should not raise exceptions wrapped
+        # in ClientException. KeyError should be raised if an invalid
+        # update key is passed, so use that to validate.
+        self.assertRaises(KeyError,
+                          self._do_update, instance['uuid'], foo='bar')
 
 
 class ConductorImportTest(test.TestCase):
