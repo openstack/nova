@@ -45,3 +45,5 @@ def set_defaults(conf):
     conf.set_default('rpc_response_timeout', 5)
     conf.set_default('rpc_cast_timeout', 5)
     conf.set_default('lock_path', None)
+    conf.set_default('floating_ip_dns_manager', 'nova.tests.utils.dns_manager')
+    conf.set_default('instance_dns_manager', 'nova.tests.utils.dns_manager')

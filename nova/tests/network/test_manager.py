@@ -139,8 +139,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = network_manager.FlatManager(host=HOST)
-        self.network.instance_dns_manager = importutils.import_object(
-                'nova.network.minidns.MiniDNS')
         self.network.instance_dns_domain = ''
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
@@ -1573,6 +1571,7 @@ class AllocateTestCase(test.TestCase):
                               {'address': address,
                                'pool': 'nova'})
         inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'display_name': HOST,
                                                  'instance_type_id': 1})
         networks = db.network_get_all(self.context)
         for network in networks:
@@ -1600,8 +1599,6 @@ class FloatingIPTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
-        self.network.floating_dns_manager = importutils.import_object(
-                'nova.network.minidns.MiniDNS')
         self.network.db = db
         self.project_id = 'testproject'
         self.context = context.RequestContext('testuser', self.project_id,
@@ -1952,10 +1949,6 @@ class InstanceDNSTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
-        self.network.instance_dns_manager = importutils.import_object(
-                'nova.network.minidns.MiniDNS')
-        self.network.floating_dns_manager = importutils.import_object(
-                'nova.network.dns_driver.DNSDriver')
         self.network.db = db
         self.project_id = 'testproject'
         self.context = context.RequestContext('testuser', self.project_id,
