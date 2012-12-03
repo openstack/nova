@@ -40,21 +40,16 @@ ebtables: CommandFilter, /sbin/ebtables, root
 ebtables_usr: CommandFilter, /usr/sbin/ebtables, root
 
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
-iptables-save: CommandFilter, /sbin/iptables-save, root
-iptables-save_usr: CommandFilter, /usr/sbin/iptables-save, root
-ip6tables-save: CommandFilter, /sbin/ip6tables-save, root
-ip6tables-save_usr: CommandFilter, /usr/sbin/ip6tables-save, root
+iptables-save: CommandFilter, iptables-save, root
+ip6tables-save: CommandFilter, ip6tables-save, root
 
 # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
-iptables-restore: CommandFilter, /sbin/iptables-restore, root
-iptables-restore_usr: CommandFilter, /usr/sbin/iptables-restore, root
-ip6tables-restore: CommandFilter, /sbin/ip6tables-restore, root
-ip6tables-restore_usr: CommandFilter, /usr/sbin/ip6tables-restore, root
+iptables-restore: CommandFilter, iptables-restore, root
+ip6tables-restore: CommandFilter, ip6tables-restore, root
 
 # nova/network/linux_net.py: 'arping', '-U', floating_ip, '-A', '-I', ...
 # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
-arping: CommandFilter, /usr/bin/arping, root
-arping_sbin: CommandFilter, /sbin/arping, root
+arping: CommandFilter, arping, root
 
 # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
 dhcp_release: CommandFilter, /usr/bin/dhcp_release, root
@@ -77,8 +72,7 @@ radvd: CommandFilter, /usr/sbin/radvd, root
 # nova/network/linux_net.py: 'brctl', 'setfd', bridge, 0
 # nova/network/linux_net.py: 'brctl', 'stp', bridge, 'off'
 # nova/network/linux_net.py: 'brctl', 'addif', bridge, interface
-brctl: CommandFilter, /sbin/brctl, root
-brctl_usr: CommandFilter, /usr/sbin/brctl, root
+brctl: CommandFilter, brctl, root
 
 # nova/network/linux_net.py: 'sysctl', ....
 sysctl: CommandFilter, /sbin/sysctl, root

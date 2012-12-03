@@ -43,16 +43,16 @@ class RootwrapTestCase(test.TestCase):
 
     def test_RegExpFilter_reject(self):
         usercmd = ["ls", "root"]
-        filtermatch = wrapper.match_filter(self.filters, usercmd)
-        self.assertTrue(filtermatch is None)
+        self.assertRaises(wrapper.NoFilterMatched,
+            wrapper.match_filter, self.filters, usercmd)
 
     def test_missing_command(self):
         valid_but_missing = ["foo_bar_not_exist"]
         invalid = ["foo_bar_not_exist_and_not_matched"]
-        filtermatch = wrapper.match_filter(self.filters, valid_but_missing)
-        self.assertTrue(filtermatch is not None)
-        filtermatch = wrapper.match_filter(self.filters, invalid)
-        self.assertTrue(filtermatch is None)
+        self.assertRaises(wrapper.FilterMatchNotExecutable,
+            wrapper.match_filter, self.filters, valid_but_missing)
+        self.assertRaises(wrapper.NoFilterMatched,
+            wrapper.match_filter, self.filters, invalid)
 
     def _test_DnsmasqFilter(self, filter_class, config_file_arg):
         usercmd = ['env', config_file_arg + '=A', 'NETWORK_ID=foobar',
@@ -135,6 +135,14 @@ class RootwrapTestCase(test.TestCase):
         usercmd = ['cat', goodfn]
         self.assertEqual(f.get_command(usercmd), ['/bin/cat', goodfn])
         self.assertTrue(f.match(usercmd))
+
+    def test_exec_dirs_search(self):
+        # This test supposes you have /bin/cat or /usr/bin/cat locally
+        f = filters.CommandFilter("cat", "root")
+        usercmd = ['cat', '/f']
+        self.assertTrue(f.match(usercmd))
+        self.assertTrue(f.get_command(usercmd, exec_dirs=['/bin',
+            '/usr/bin']) in (['/bin/cat', '/f'], ['/usr/bin/cat', '/f']))
 
     def test_skips(self):
         # Check that all filters are skipped and that the last matches

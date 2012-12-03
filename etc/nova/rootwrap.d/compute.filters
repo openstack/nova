@@ -72,8 +72,7 @@ ip: CommandFilter, /sbin/ip, root
 
 # nova/virt/libvirt/vif.py: 'tunctl', '-b', '-t', dev
 # nova/network/linux_net.py: 'tunctl', '-b', '-t', dev
-tunctl: CommandFilter, /bin/tunctl, root
-tunctl_usr: CommandFilter, /usr/sbin/tunctl, root
+tunctl: CommandFilter, tunctl, root
 
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
@@ -87,13 +86,11 @@ ovs-ofctl: CommandFilter, /usr/bin/ovs-ofctl, root
 dd: CommandFilter, /bin/dd, root
 
 # nova/virt/xenapi/volume_utils.py: 'iscsiadm', '-m', ...
-iscsiadm: CommandFilter, /sbin/iscsiadm, root
-iscsiadm_usr: CommandFilter, /usr/bin/iscsiadm, root
+iscsiadm: CommandFilter, iscsiadm, root
 
 # nova/virt/xenapi/vm_utils.py: parted, --script, ...
 # nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
-parted: CommandFilter, /sbin/parted, root
-parted_usr: CommandFilter, /usr/sbin/parted, root
+parted: CommandFilter, parted, root
 
 # nova/virt/xenapi/vm_utils.py: fdisk %(dev_path)s
 fdisk: CommandFilter, /sbin/fdisk, root
@@ -105,21 +102,16 @@ e2fsck: CommandFilter, /sbin/e2fsck, root
 resize2fs: CommandFilter, /sbin/resize2fs, root
 
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
-iptables-save: CommandFilter, /sbin/iptables-save, root
-iptables-save_usr: CommandFilter, /usr/sbin/iptables-save, root
-ip6tables-save: CommandFilter, /sbin/ip6tables-save, root
-ip6tables-save_usr: CommandFilter, /usr/sbin/ip6tables-save, root
+iptables-save: CommandFilter, iptables-save, root
+ip6tables-save: CommandFilter, ip6tables-save, root
 
 # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
-iptables-restore: CommandFilter, /sbin/iptables-restore, root
-iptables-restore_usr: CommandFilter, /usr/sbin/iptables-restore, root
-ip6tables-restore: CommandFilter, /sbin/ip6tables-restore, root
-ip6tables-restore_usr: CommandFilter, /usr/sbin/ip6tables-restore, root
+iptables-restore: CommandFilter, iptables-restore, root
+ip6tables-restore: CommandFilter, ip6tables-restore, root
 
 # nova/network/linux_net.py: 'arping', '-U', floating_ip, '-A', '-I', ...
 # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
-arping: CommandFilter, /usr/bin/arping, root
-arping_sbin: CommandFilter, /sbin/arping, root
+arping: CommandFilter, arping, root
 
 # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
 dhcp_release: CommandFilter, /usr/bin/dhcp_release, root
@@ -142,8 +134,7 @@ radvd: CommandFilter, /usr/sbin/radvd, root
 # nova/network/linux_net.py: 'brctl', 'setfd', bridge, 0
 # nova/network/linux_net.py: 'brctl', 'stp', bridge, 'off'
 # nova/network/linux_net.py: 'brctl', 'addif', bridge, interface
-brctl: CommandFilter, /sbin/brctl, root
-brctl_usr: CommandFilter, /usr/sbin/brctl, root
+brctl: CommandFilter, brctl, root
 
 # nova/virt/libvirt/utils.py: 'mkswap'
 # nova/virt/xenapi/vm_utils.py: 'mkswap'
@@ -156,8 +147,7 @@ mkfs: CommandFilter, /sbin/mkfs, root
 qemu-img: CommandFilter, /usr/bin/qemu-img, root
 
 # nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
-readlink: CommandFilter, /bin/readlink, root
-readlink_usr: CommandFilter, /usr/bin/readlink, root
+readlink: CommandFilter, readlink, root
 
 # nova/virt/disk/api.py: 'touch', target
 touch: CommandFilter, /usr/bin/touch, root

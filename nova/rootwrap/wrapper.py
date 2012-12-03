@@ -23,6 +23,20 @@ import string
 from nova.rootwrap import filters
 
 
+class NoFilterMatched(Exception):
+    """This exception is raised when no filter matched."""
+    pass
+
+
+class FilterMatchNotExecutable(Exception):
+    """
+    This exception is raised when a filter matched but no executable was
+    found.
+    """
+    def __init__(self, match=None, **kwargs):
+        self.match = match
+
+
 def build_filter(class_name, *args):
     """Returns a filter object of class class_name"""
     if not hasattr(filters, class_name):
@@ -50,23 +64,29 @@ def load_filters(filters_path):
     return filterlist
 
 
-def match_filter(filters, userargs):
+def match_filter(filters, userargs, exec_dirs=[]):
     """
     Checks user command and arguments through command filters and
-    returns the first matching filter, or None is none matched.
+    returns the first matching filter.
+    Raises NoFilterMatched if no filter matched.
+    Raises FilterMatchNotExecutable if no executable was found for the
+    best filter match.
     """
-
-    found_filter = None
+    first_not_executable_filter = None
 
     for f in filters:
         if f.match(userargs):
             # Try other filters if executable is absent
-            if not os.access(f.exec_path, os.X_OK):
-                if not found_filter:
-                    found_filter = f
+            if not f.get_exec(exec_dirs=exec_dirs):
+                if not first_not_executable_filter:
+                    first_not_executable_filter = f
                 continue
             # Otherwise return matching filter for execution
             return f
 
-    # No filter matched or first missing executable
-    return found_filter
+    if first_not_executable_filter:
+        # A filter matched, but no executable was found for it
+        raise FilterMatchNotExecutable(match=first_not_executable_filter)
+
+    # No filter matched
+    raise NoFilterMatched()
