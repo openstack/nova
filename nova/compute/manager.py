@@ -1625,7 +1625,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.confirm_migration(migration, instance,
                                           self._legacy_nw_info(network_info))
 
-            rt = self._get_resource_tracker(instance.get('node'))
+            rt = self._get_resource_tracker(migration['source_node'])
             rt.confirm_resize(context, migration)
 
             self._notify_about_instance_usage(
