@@ -67,6 +67,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -399,10 +400,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 _connect_auth_cb,
                 None]
 
-        if read_only:
-            return libvirt.openReadOnly(uri)
-        else:
-            return libvirt.openAuth(uri, auth, 0)
+        try:
+            if read_only:
+                return libvirt.openReadOnly(uri)
+            else:
+                return libvirt.openAuth(uri, auth, 0)
+        except libvirt.libvirtError as ex:
+            LOG.exception(_("Connection to libvirt failed: %s"), ex)
+            payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
+                           method='_connect',
+                           reason=ex)
+            notifier.notify(nova_context.get_admin_context(),
+                            notifier.publisher_id('compute'),
+                            'compute.libvirt.error',
+                            notifier.ERROR,
+                            payload)
+            pass
 
     def get_num_instances(self):
         """Efficient override of base instance_exists method."""
