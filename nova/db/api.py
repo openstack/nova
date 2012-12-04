@@ -1433,6 +1433,24 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
 ###################
 
 
+def vol_get_usage_by_time(context, begin):
+    """Return volumes usage that have been updated after a specified time"""
+    return IMPL.vol_get_usage_by_time(context, begin)
+
+
+def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
+                     instance_id, last_refreshed=None, update_totals=False):
+    """Update cached volume usage for a volume
+       Creates new record if needed."""
+    return IMPL.vol_usage_update(context, id, rd_req, rd_bytes, wr_req,
+                                 wr_bytes, instance_id,
+                                 last_refreshed=last_refreshed,
+                                 update_totals=update_totals)
+
+
+###################
+
+
 def s3_image_get(context, image_id):
     """Find local s3 image represented by the provided id"""
     return IMPL.s3_image_get(context, image_id)

@@ -2203,12 +2203,50 @@ class LibvirtDriver(driver.ComputeDriver):
         # data format needs to be standardized across drivers
         return jsonutils.dumps(cpu_info)
 
+    def get_all_volume_usage(self, context, compute_host_bdms):
+        """Return usage info for volumes attached to vms on
+           a given host"""
+        vol_usage = []
+
+        for instance_bdms in compute_host_bdms:
+            instance = instance_bdms['instance']
+
+            for bdm in instance_bdms['instance_bdms']:
+                vol_stats = []
+                mountpoint = bdm['device_name']
+                if mountpoint.startswith('/dev/'):
+                    mountpoint = mountpoint[5:]
+
+                LOG.debug(_("Trying to get stats for the volume %s"),
+                            bdm['volume_id'])
+                vol_stats = self.block_stats(instance['name'], mountpoint)
+
+                if vol_stats:
+                    rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
+                    vol_usage.append(dict(volume=bdm['volume_id'],
+                                          instance_id=instance['id'],
+                                          rd_req=rd_req,
+                                          rd_bytes=rd_bytes,
+                                          wr_req=wr_req,
+                                          wr_bytes=wr_bytes,
+                                          flush_operations=flush_ops))
+        return vol_usage
+
     def block_stats(self, instance_name, disk):
         """
         Note that this function takes an instance name.
         """
-        domain = self._lookup_by_name(instance_name)
-        return domain.blockStats(disk)
+        try:
+            domain = self._lookup_by_name(instance_name)
+            return domain.blockStats(disk)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            LOG.info(_("Getting block stats failed, device might have "
+                       "been detached. Code=%(errcode)s Error=%(e)s")
+                       % locals())
+        except exception.InstanceNotFound:
+            LOG.info(_("Could not find domain in libvirt for instance %s. "
+                       "Cannot get block stats for device") % instance_name)
 
     def interface_stats(self, instance_name, interface):
         """

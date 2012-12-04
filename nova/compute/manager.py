@@ -122,6 +122,9 @@ interval_opts = [
     cfg.IntOpt('reclaim_instance_interval',
                default=0,
                help='Interval in seconds for reclaiming deleted instances'),
+    cfg.IntOpt('volume_usage_poll_interval',
+               default=0,
+               help='Interval in seconds for gathering volume usages'),
 ]
 
 timeout_opts = [
@@ -312,6 +315,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             CONF.network_manager, host=kwargs.get('host', None))
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
+        self._last_vol_usage_poll = 0
         self._last_info_cache_heal = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -2389,6 +2393,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Detach a volume from an instance."""
         bdm = self._get_instance_volume_bdm(context, instance['uuid'],
                                             volume_id)
+        if CONF.volume_usage_poll_interval > 0:
+            vol_stats = []
+            mp = bdm['device_name']
+            # Handle bootable volumes which will not contain /dev/
+            if '/dev/' in mp:
+                mp = mp[5:]
+            try:
+                vol_stats = self.driver.block_stats(instance['name'], mp)
+            except NotImplementedError:
+                pass
+
+            if vol_stats:
+                LOG.debug(_("Updating volume usage cache with totals"))
+                rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
+                self.db.vol_usage_update(context, volume_id, rd_req, rd_bytes,
+                                         wr_req, wr_bytes, instance['id'],
+                                         update_totals=True)
+
         self._detach_volume(context, instance, bdm)
         volume = self.volume_api.get(context, volume_id)
         connector = self.driver.get_volume_connector(instance)
@@ -2953,6 +2975,72 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         bw_ctr['bw_in'],
                                         bw_ctr['bw_out'],
                                         last_refreshed=refreshed)
+
+    def _get_host_volume_bdms(self, context, host):
+        """Return all block device mappings on a compute host"""
+        compute_host_bdms = []
+        instances = self.db.instance_get_all_by_host(context, self.host)
+        for instance in instances:
+            instance_bdms = self._get_instance_volume_bdms(context,
+                                                           instance['uuid'])
+            compute_host_bdms.append(dict(instance=instance,
+                                          instance_bdms=instance_bdms))
+
+        return compute_host_bdms
+
+    def _update_volume_usage_cache(self, context, vol_usages, refreshed):
+        """Updates the volume usage cache table with a list of stats"""
+        for usage in vol_usages:
+            # Allow switching of greenthreads between queries.
+            greenthread.sleep(0)
+            self.db.vol_usage_update(context, usage['volume'], usage['rd_req'],
+                                     usage['rd_bytes'], usage['wr_req'],
+                                     usage['wr_bytes'], usage['instance_id'],
+                                     last_refreshed=refreshed)
+
+    def _send_volume_usage_notifications(self, context, start_time):
+        """Queries vol usage cache table and sends a vol usage notification"""
+        # We might have had a quick attach/detach that we missed in
+        # the last run of get_all_volume_usage and this one
+        # but detach stats will be recorded in db and returned from
+        # vol_get_usage_by_time
+        vol_usages = self.db.vol_get_usage_by_time(context, start_time)
+        for vol_usage in vol_usages:
+            notifier.notify(context, 'volume.%s' % self.host, 'volume.usage',
+                            notifier.INFO,
+                            compute_utils.usage_volume_info(vol_usage))
+
+    @manager.periodic_task
+    def _poll_volume_usage(self, context, start_time=None):
+        if CONF.volume_usage_poll_interval == 0:
+            return
+        else:
+            if not start_time:
+                start_time = utils.last_completed_audit_period()[1]
+
+            curr_time = time.time()
+            if (curr_time - self._last_vol_usage_poll) < \
+                    CONF.volume_usage_poll_interval:
+                return
+            else:
+                self._last_vol_usage_poll = curr_time
+                compute_host_bdms = self._get_host_volume_bdms(context,
+                                                               self.host)
+                if not compute_host_bdms:
+                    return
+                else:
+                    LOG.debug(_("Updating volume usage cache"))
+                    try:
+                        vol_usages = self.driver.get_all_volume_usage(context,
+                              compute_host_bdms)
+                    except NotImplementedError:
+                        return
+
+                    refreshed = timeutils.utcnow()
+                    self._update_volume_usage_cache(context, vol_usages,
+                                                    refreshed)
+
+                self._send_volume_usage_notifications(context, start_time)
 
     @manager.periodic_task
     def _report_driver_status(self, context):

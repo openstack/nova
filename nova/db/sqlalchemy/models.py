@@ -938,6 +938,24 @@ class BandwidthUsage(BASE, NovaBase):
     last_ctr_out = Column(BigInteger)
 
 
+class VolumeUsage(BASE, NovaBase):
+    """Cache for volume usage data pulled from the hypervisor"""
+    __tablename__ = 'volume_usage_cache'
+    id = Column(Integer, primary_key=True, nullable=False)
+    volume_id = Column(String(36), nullable=False)
+    instance_id = Column(Integer)
+    tot_last_refreshed = Column(DateTime)
+    tot_reads = Column(BigInteger, default=0)
+    tot_read_bytes = Column(BigInteger, default=0)
+    tot_writes = Column(BigInteger, default=0)
+    tot_write_bytes = Column(BigInteger, default=0)
+    curr_last_refreshed = Column(DateTime)
+    curr_reads = Column(BigInteger, default=0)
+    curr_read_bytes = Column(BigInteger, default=0)
+    curr_writes = Column(BigInteger, default=0)
+    curr_write_bytes = Column(BigInteger, default=0)
+
+
 class S3Image(BASE, NovaBase):
     """Compatibility layer for the S3 image service talking to Glance"""
     __tablename__ = 's3_images'

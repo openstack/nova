@@ -227,3 +227,26 @@ def start_instance_usage_audit(context, begin, end, host, num_instances):
 def finish_instance_usage_audit(context, begin, end, host, errors, message):
     db.task_log_end_task(context, "instance_usage_audit", begin, end, host,
                          errors, message)
+
+
+def usage_volume_info(vol_usage):
+    def null_safe_str(s):
+        return str(s) if s else ''
+
+    tot_refreshed = vol_usage['tot_last_refreshed']
+    curr_refreshed = vol_usage['curr_last_refreshed']
+    last_refreshed_time = (tot_refreshed if tot_refreshed > curr_refreshed
+                           else curr_refreshed)
+
+    usage_info = dict(
+          volume_id=vol_usage['volume_id'],
+          instance_id=vol_usage['instance_id'],
+          last_refreshed=null_safe_str(last_refreshed_time),
+          reads=vol_usage['tot_reads'] + vol_usage['curr_reads'],
+          read_bytes=vol_usage['tot_read_bytes'] +
+                vol_usage['curr_read_bytes'],
+          writes=vol_usage['tot_writes'] + vol_usage['curr_writes'],
+          write_bytes=vol_usage['tot_write_bytes'] +
+                vol_usage['curr_write_bytes'])
+
+    return usage_info
