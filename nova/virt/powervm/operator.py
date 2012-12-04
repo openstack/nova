@@ -15,8 +15,6 @@
 #    under the License.
 
 import decimal
-import hashlib
-import os
 import re
 import time
 
@@ -28,7 +26,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 
-from nova.virt import images
+from nova.virt.powervm import blockdev
 from nova.virt.powervm import command
 from nova.virt.powervm import common
 from nova.virt.powervm import constants
@@ -47,6 +45,13 @@ def get_powervm_operator():
                                              CONF.powervm_mgr_passwd))
 
 
+def get_powervm_disk_adapter():
+    return blockdev.PowerVMLocalVolumeAdapter(
+            common.Connection(CONF.powervm_mgr,
+                              CONF.powervm_mgr_user,
+                              CONF.powervm_mgr_passwd))
+
+
 class PowerVMOperator(object):
     """PowerVM main operator.
 
@@ -56,6 +61,7 @@ class PowerVMOperator(object):
 
     def __init__(self):
         self._operator = get_powervm_operator()
+        self._disk_adapter = get_powervm_disk_adapter()
         self._host_stats = {}
         self._update_host_stats()
 
@@ -219,28 +225,20 @@ class PowerVMOperator(object):
         def _create_image(context, instance, image_id):
             """Fetch image from glance and copy it to the remote system."""
             try:
-                file_name = '.'.join([image_id, 'gz'])
-                file_path = os.path.join(CONF.powervm_img_local_path,
-                                         file_name)
-                LOG.debug(_("Fetching image '%s' from glance") % image_id)
-                images.fetch_to_raw(context, image_id, file_path,
-                                    instance['user_id'],
-                                    project_id=instance['project_id'])
-                LOG.debug(_("Copying image '%s' to IVM") % file_path)
-                remote_path = CONF.powervm_img_remote_path
-                remote_file_name, size = self._operator.copy_image_file(
-                                                        file_path, remote_path)
-                # Logical volume
-                LOG.debug(_("Creating logical volume"))
+                root_volume = self._disk_adapter.create_volume_from_image(
+                        context, instance, image_id)
+
+                self._disk_adapter.attach_volume_to_host(root_volume)
+
                 lpar_id = self._operator.get_lpar(instance['name'])['lpar_id']
                 vhost = self._operator.get_vhost_by_instance_id(lpar_id)
-                disk_name = self._operator.create_logical_volume(size)
-                self._operator.attach_disk_to_vhost(disk_name, vhost)
-                LOG.debug(_("Copying image to the device '%s'") % disk_name)
-                self._operator.copy_file_to_device(remote_file_name, disk_name)
+                self._operator.attach_disk_to_vhost(
+                        root_volume['device_name'], vhost)
             except Exception, e:
                 LOG.exception(_("PowerVM image creation failed: %s") % str(e))
                 raise exception.PowerVMImageCreationFailed()
+
+        spawn_start = time.time()
 
         try:
             _create_lpar_instance(instance)
@@ -274,6 +272,10 @@ class PowerVMOperator(object):
                     LOG.exception(_('Error while attempting to '
                                     'clean up failed instance launch.'))
 
+        spawn_time = time.time() - spawn_start
+        LOG.info(_("Instance spawned in %s seconds") % spawn_time,
+                 instance=instance)
+
     def destroy(self, instance_name):
         """Destroy (shutdown and delete) the specified instance.
 
@@ -295,8 +297,10 @@ class PowerVMOperator(object):
             self._operator.stop_lpar(instance_name)
 
             if disk_name:
-                LOG.debug(_("Removing the logical volume '%s'") % disk_name)
-                self._operator.remove_logical_volume(disk_name)
+                # TODO(mrodden): we should also detach from the instance
+                # before we start deleting things...
+                self._disk_adapter.detach_volume_from_host(disk_name)
+                self._disk_adapter.delete_volume(disk_name)
 
             LOG.debug(_("Deleting the LPAR instance '%s'") % instance_name)
             self._operator.remove_lpar(instance_name)
@@ -439,20 +443,6 @@ class BaseOperator(object):
 
         return None
 
-    def get_disk_name_by_vhost(self, vhost):
-        """Returns the disk name attached to a vhost.
-
-        :param vhost: a vhost name
-        :returns: string -- disk name
-        """
-        cmd = self.command.lsmap('-vadapter %s -field backing -fmt :'
-                                 % vhost)
-        output = self.run_command(cmd)
-        if output:
-            return output[0]
-
-        return None
-
     def get_hostname(self):
         """Returns the managed system hostname.
 
@@ -461,148 +451,18 @@ class BaseOperator(object):
         output = self.run_command(self.command.hostname())
         return output[0]
 
-    def remove_disk(self, disk_name):
-        """Removes a disk.
+    def get_disk_name_by_vhost(self, vhost):
+        """Returns the disk name attached to a vhost.
 
-        :param disk: a disk name
+        :param vhost: a vhost name
+        :returns: string -- disk name
         """
-        self.run_command(self.command.rmdev('-dev %s' % disk_name))
-
-    def create_logical_volume(self, size):
-        """Creates a logical volume with a minimum size.
-
-        :param size: size of the logical volume in bytes
-        :returns: string -- the name of the new logical volume.
-        :raises: PowerVMNoSpaceLeftOnVolumeGroup
-        """
-        vgs = self.run_command(self.command.lsvg())
-        cmd = self.command.lsvg('%s -field vgname freepps -fmt :'
-                                    % ' '.join(vgs))
+        cmd = self.command.lsmap('-vadapter %s -field backing -fmt :' % vhost)
         output = self.run_command(cmd)
-        found_vg = None
+        if output:
+            return output[0]
 
-        # If it's not a multiple of 1MB we get the next
-        # multiple and use it as the megabyte_size.
-        megabyte = 1024 * 1024
-        if (size % megabyte) != 0:
-            megabyte_size = int(size / megabyte) + 1
-        else:
-            megabyte_size = size / megabyte
-
-        # Search for a volume group with enough free space for
-        # the new logical volume.
-        for vg in output:
-            # Returned output example: 'rootvg:396 (25344 megabytes)'
-            match = re.search(r'^(\w+):\d+\s\((\d+).+$', vg)
-            if match is None:
-                continue
-            vg_name, avail_size = match.groups()
-            if megabyte_size <= int(avail_size):
-                found_vg = vg_name
-                break
-
-        if not found_vg:
-            LOG.error(_('Could not create logical volume. '
-                        'No space left on any volume group.'))
-            raise exception.PowerVMNoSpaceLeftOnVolumeGroup()
-
-        cmd = self.command.mklv('%s %sB' % (found_vg, size / 512))
-        lv_name, = self.run_command(cmd)
-        return lv_name
-
-    def remove_logical_volume(self, lv_name):
-        """Removes the lv and the connection between its associated vscsi.
-
-        :param lv_name: a logical volume name
-        """
-        cmd = self.command.rmvdev('-vdev %s -rmlv' % lv_name)
-        self.run_command(cmd)
-
-    def copy_file_to_device(self, source_path, device):
-        """Copy file to device.
-
-        :param source_path: path to input source file
-        :param device: output device name
-        """
-        cmd = 'dd if=%s of=/dev/%s bs=1024k' % (source_path, device)
-        self.run_command_as_root(cmd)
-
-    def copy_image_file(self, source_path, remote_path):
-        """Copy file to VIOS, decompress it, and return its new size and name.
-
-        :param source_path: source file path
-        :param remote_path remote file path
-        """
-        # Calculate source image checksum
-        hasher = hashlib.md5()
-        block_size = 0x10000
-        img_file = file(source_path, 'r')
-        buf = img_file.read(block_size)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = img_file.read(block_size)
-        source_cksum = hasher.hexdigest()
-
-        comp_path = remote_path + os.path.basename(source_path)
-        uncomp_path = comp_path.rstrip(".gz")
-        final_path = "%s.%s" % (uncomp_path, source_cksum)
-
-        # Check whether the uncompressed image is already on IVM
-        output = self.run_command("ls %s" % final_path, check_exit_code=False)
-
-        # If the image does not exist already
-        if not len(output):
-            # Copy file to IVM
-            common.ftp_put_command(self.connection_data, source_path,
-                                   remote_path)
-
-            # Verify image file checksums match
-            cmd = ("/usr/bin/csum -h MD5 %s |"
-                   "/usr/bin/awk '{print $1}'" % comp_path)
-            output = self.run_command_as_root(cmd)
-            if not len(output):
-                LOG.error(_("Unable to get checksum"))
-                raise exception.PowerVMFileTransferFailed()
-            if source_cksum != output[0]:
-                LOG.error(_("Image checksums do not match"))
-                raise exception.PowerVMFileTransferFailed()
-
-            # Unzip the image
-            cmd = "/usr/bin/gunzip %s" % comp_path
-            output = self.run_command_as_root(cmd)
-
-            # Remove existing image file
-            cmd = "/usr/bin/rm -f %s.*" % uncomp_path
-            output = self.run_command_as_root(cmd)
-
-            # Rename unzipped image
-            cmd = "/usr/bin/mv %s %s" % (uncomp_path, final_path)
-            output = self.run_command_as_root(cmd)
-
-            # Remove compressed image file
-            cmd = "/usr/bin/rm -f %s" % comp_path
-            output = self.run_command_as_root(cmd)
-
-        # Calculate file size in multiples of 512 bytes
-        output = self.run_command("ls -o %s|awk '{print $4}'"
-                                  % final_path, check_exit_code=False)
-        if len(output):
-            size = int(output[0])
-        else:
-            LOG.error(_("Uncompressed image file not found"))
-            raise exception.PowerVMFileTransferFailed()
-        if (size % 512 != 0):
-            size = (int(size / 512) + 1) * 512
-
-        return final_path, size
-
-    def run_cfg_dev(self, device_name):
-        """Run cfgdev command for a specific device.
-
-        :param device_name: device name the cfgdev command will run.
-        """
-        cmd = self.command.cfgdev('-dev %s' % device_name)
-        self.run_command(cmd)
+        return None
 
     def attach_disk_to_vhost(self, disk, vhost):
         """Attach disk name to a specific vhost.
