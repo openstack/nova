@@ -29,7 +29,7 @@ allowed_updates = ['task_state', 'vm_state', 'expected_task_state',
                    'power_state', 'access_ip_v4', 'access_ip_v6',
                    'launched_at', 'terminated_at', 'host', 'node',
                    'memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb',
-                   'instance_type_id', 'root_device_name', 'host',
+                   'instance_type_id', 'root_device_name', 'launched_on',
                    'progress', 'vm_mode', 'default_ephemeral_device',
                    'default_swap_device', 'root_device_name',
                    ]

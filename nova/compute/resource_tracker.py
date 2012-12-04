@@ -23,6 +23,7 @@ from nova.compute import claims
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import conductor
 from nova import context
 from nova import db
 from nova import exception
@@ -63,6 +64,7 @@ class ResourceTracker(object):
         self.stats = importutils.import_object(CONF.compute_stats_class)
         self.tracked_instances = {}
         self.tracked_migrations = {}
+        self.conductor_api = conductor.API()
 
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
     def instance_claim(self, context, instance_ref, limits=None):
@@ -183,9 +185,8 @@ class ResourceTracker(object):
         """
         values = {'host': self.host, 'node': self.nodename,
                   'launched_on': self.host}
-        (old_ref, new_ref) = db.instance_update_and_get_original(context,
-                instance_ref['uuid'], values)
-        notifications.send_update(context, old_ref, new_ref)
+        self.conductor_api.instance_update(context, instance_ref['uuid'],
+                                           **values)
         instance_ref['host'] = self.host
         instance_ref['launched_on'] = self.host
 
