@@ -1795,6 +1795,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt_type != "lxc" and CONF.libvirt_type != "uml":
             guest.acpi = True
+            guest.apic = True
 
         clk = vconfig.LibvirtConfigGuestClock()
         clk.offset = "utc"

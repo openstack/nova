@@ -632,6 +632,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_loader = '/usr/lib/xen/boot/hvmloader'
         obj.os_root = "root=xvda"
         obj.os_cmdline = "console=xvc0"
+        obj.acpi = True
+        obj.apic = True
 
         disk = config.LibvirtConfigGuestDisk()
         disk.source_type = "file"
@@ -654,6 +656,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <cmdline>console=xvc0</cmdline>
                 <root>root=xvda</root>
               </os>
+              <features>
+                <acpi/>
+                <apic/>
+              </features>
               <devices>
                 <disk type="file" device="disk">
                   <source file="/tmp/img"/>
@@ -671,6 +677,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
         obj.os_boot_dev = "hd"
+        obj.acpi = True
+        obj.apic = True
 
         disk = config.LibvirtConfigGuestDisk()
         disk.source_type = "file"
@@ -691,6 +699,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <type>linux</type>
                 <boot dev="hd"/>
               </os>
+              <features>
+                <acpi/>
+                <apic/>
+              </features>
               <devices>
                 <disk type="file" device="disk">
                   <source file="/tmp/img"/>
