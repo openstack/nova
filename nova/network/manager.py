@@ -170,6 +170,10 @@ network_opts = [
                 help='If True, when a DNS entry must be updated, it sends a '
                      'fanout cast to all network hosts to update their DNS '
                      'entries in multi host mode'),
+    cfg.IntOpt("dns_update_periodic_interval",
+               default=-1,
+               help='Number of periodic scheduler ticks to wait between '
+                    'runs of updates to DNS entries.'),
     cfg.StrOpt('dhcp_domain',
                default='novalocal',
                help='domain to use for building the hostnames'),
@@ -1942,6 +1946,15 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Returns the vifs record for the mac_address"""
         return self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
+
+    @manager.periodic_task(
+        ticks_between_runs=CONF.dns_update_periodic_interval)
+    def _periodic_update_dns(self, context):
+        """Update local DNS entries of all networks on this host"""
+        networks = self.db.network_get_all_by_host(context, self.host)
+        for network in networks:
+            dev = self.driver.get_dev(network)
+            self.driver.update_dns(context, dev, network)
 
     def update_dns(self, context, network_ids):
         """Called when fixed IP is allocated or deallocated"""
