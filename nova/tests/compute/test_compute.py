@@ -48,7 +48,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
-from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
@@ -5324,19 +5323,8 @@ class ComputePolicyTestCase(BaseTestCase):
 
     def setUp(self):
         super(ComputePolicyTestCase, self).setUp()
-        nova.policy.reset()
-        nova.policy.init()
 
         self.compute_api = compute.API()
-
-    def tearDown(self):
-        super(ComputePolicyTestCase, self).tearDown()
-        nova.policy.reset()
-
-    def _set_rules(self, rules):
-        common_policy.set_rules(common_policy.Rules(
-                dict((k, common_policy.parse_rule(v))
-                     for k, v in rules.items())))
 
     def test_actions_are_prefixed(self):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
@@ -5349,20 +5337,20 @@ class ComputePolicyTestCase(BaseTestCase):
 
         # force delete to fail
         rules = {"compute:delete": [["false:false"]]}
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.delete, self.context, instance)
 
         # reset rules to allow deletion
         rules = {"compute:delete": []}
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.compute_api.delete(self.context, instance)
 
     def test_create_fail(self):
         rules = {"compute:create": [["false:false"]]}
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.create, self.context, '1', '1')
@@ -5373,7 +5361,7 @@ class ComputePolicyTestCase(BaseTestCase):
             "compute:create:attach_network": [["false:false"]],
             "compute:create:attach_volume": [],
         }
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.create, self.context, '1', '1',
@@ -5386,7 +5374,7 @@ class ComputePolicyTestCase(BaseTestCase):
             "compute:create:attach_network": [],
             "compute:create:attach_volume": [["false:false"]],
         }
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.create, self.context, '1', '1',
@@ -5399,7 +5387,7 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {
             "compute:get": [["false:false"]],
         }
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get, self.context, instance['uuid'])
@@ -5408,7 +5396,7 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {
             "compute:get_all": [["false:false"]],
         }
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get_all, self.context)
@@ -5421,7 +5409,7 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {
             "compute:get_instance_faults": [["false:false"]],
         }
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get_instance_faults,
@@ -5430,7 +5418,7 @@ class ComputePolicyTestCase(BaseTestCase):
     def test_force_host_fail(self):
         rules = {"compute:create": [],
                  "compute:create:forced_host": [["role:fake"]]}
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.create, self.context, None, '1',
@@ -5439,7 +5427,7 @@ class ComputePolicyTestCase(BaseTestCase):
     def test_force_host_pass(self):
         rules = {"compute:create": [],
                  "compute:create:forced_host": []}
-        self._set_rules(rules)
+        self.policy.set_rules(rules)
 
         self.compute_api.create(self.context, None, '1',
                                 availability_zone='1:1')
