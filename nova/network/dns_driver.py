@@ -20,25 +20,25 @@ class DNSDriver(object):
         pass
 
     def get_domains(self):
-        return []
+        raise NotImplementedError()
 
     def create_entry(self, _name, _address, _type, _domain):
-        pass
+        raise NotImplementedError()
 
     def delete_entry(self, _name, _domain):
-        pass
+        raise NotImplementedError()
 
     def modify_address(self, _name, _address, _domain):
-        pass
+        raise NotImplementedError()
 
     def get_entries_by_address(self, _address, _domain):
-        return []
+        raise NotImplementedError()
 
     def get_entries_by_name(self, _name, _domain):
-        return []
+        raise NotImplementedError()
 
     def create_domain(self, _fqdomain):
-        pass
+        raise NotImplementedError()
 
     def delete_domain(self, _fqdomain):
-        pass
+        raise NotImplementedError()
