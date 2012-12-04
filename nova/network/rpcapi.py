@@ -36,6 +36,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.1 - Adds migrate_instance_[start|finish]
         1.2 - Make migrate_instance_[start|finish] a little more flexible
         1.3 - Adds fanout cast update_dns for multi_host networks
+        1.4 - Add get_backdoor_port()
     '''
 
     #
@@ -105,8 +106,10 @@ class NetworkAPI(rpc_proxy.RpcProxy):
                 'get_instance_id_by_floating_address',
                 address=address))
 
-    def get_backdoor_port(self, ctxt):
-        return self.call(ctxt, self.make_msg('get_backdoor_port'))
+    def get_backdoor_port(self, ctxt, host):
+        return self.call(ctxt, self.make_msg('get_backdoor_port'),
+                         topic=rpc.queue_get_for(ctxt, self.topic, host),
+                         version='1.4')
 
     def get_vifs_by_instance(self, ctxt, instance_id):
         # NOTE(vish): When the db calls are converted to store network

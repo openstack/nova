@@ -876,7 +876,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.3'
+    RPC_API_VERSION = '1.4'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False

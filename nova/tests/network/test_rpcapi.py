@@ -46,7 +46,7 @@ class NetworkRpcAPITestCase(test.TestCase):
             '_rpc_allocate_fixed_ip', 'deallocate_fixed_ip', 'update_dns',
             '_associate_floating_ip', '_disassociate_floating_ip',
             'lease_fixed_ip', 'release_fixed_ip', 'migrate_instance_start',
-            'migrate_instance_finish',
+            'migrate_instance_finish', 'get_backdoor_port'
         ]
         if method in targeted_methods and 'host' in kwargs:
             if method != 'deallocate_fixed_ip':
@@ -122,7 +122,8 @@ class NetworkRpcAPITestCase(test.TestCase):
                 rpc_method='call', address='w.x.y.z')
 
     def test_get_backdoor_port(self):
-        self._test_network_api('get_backdoor_port', rpc_method='call')
+        self._test_network_api('get_backdoor_port', rpc_method='call',
+                               host='fake_host', version='1.4')
 
     def test_get_vifs_by_instance(self):
         self._test_network_api('get_vifs_by_instance',
