@@ -1693,3 +1693,32 @@ class DeferredDeleteSampleJsonTests(ServersSampleBase):
 
 class DeferredDeleteSampleXmlTests(DeferredDeleteSampleJsonTests):
         ctype = 'xml'
+
+
+class QuotasSampleJsonTests(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
+
+    def test_show_quotas(self):
+        """Get api sample to show quotas"""
+        response = self._do_get('os-quota-sets/fake_tenant')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('quotas-show-get-resp', {}, response)
+
+    def test_show_quotas_defaults(self):
+        """Get api sample to show quotas defaults"""
+        response = self._do_get('os-quota-sets/fake_tenant/defaults')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('quotas-show-defaults-get-resp',
+                                     {}, response)
+
+    def test_update_quotas(self):
+        """Get api sample to update quotas"""
+        response = self._do_put('os-quota-sets/fake_tenant',
+                                'quotas-update-post-req',
+                                {})
+        self.assertEqual(response.status, 200)
+        return self._verify_response('quotas-update-post-resp', {}, response)
+
+
+class QuotasSampleXmlTests(QuotasSampleJsonTests):
+    ctype = "xml"
