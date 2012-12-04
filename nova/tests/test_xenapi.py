@@ -242,9 +242,9 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         instance = db.instance_create(self.context, self.instance_values)
-        vm = xenapi_fake.create_vm(instance.name, 'Running')
+        vm = xenapi_fake.create_vm(instance['name'], 'Running')
         result = conn.attach_volume(self._make_connection_info(),
-                                    instance.name, '/dev/sdc')
+                                    instance['name'], '/dev/sdc')
 
         # check that the VM has a VBD attached to it
         # Get XenAPI record for VBD
@@ -259,11 +259,11 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         instance = db.instance_create(self.context, self.instance_values)
-        xenapi_fake.create_vm(instance.name, 'Running')
+        xenapi_fake.create_vm(instance['name'], 'Running')
         self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
                           {'driver_volume_type': 'nonexist'},
-                          instance.name,
+                          instance['name'],
                           '/dev/sdc')
 
 
@@ -410,7 +410,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             if not vm_rec["is_control_domain"]:
                 vm_labels.append(vm_rec["name_label"])
 
-        self.assertEquals(vm_labels, [instance.name])
+        self.assertEquals(vm_labels, [instance['name']])
 
         # Ensure VBDs were torn down
         vbd_labels = []
@@ -418,7 +418,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
             vbd_labels.append(vbd_rec["vm_name_label"])
 
-        self.assertEquals(vbd_labels, [instance.name])
+        self.assertEquals(vbd_labels, [instance['name']])
 
         # Ensure VDIs were torn down
         for vdi_ref in xenapi_fake.get_all('VDI'):
@@ -588,8 +588,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                         'herp', network_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, check_injection)
-        self.assertTrue(instance.os_type)
-        self.assertTrue(instance.architecture)
+        self.assertTrue(instance['os_type'])
+        self.assertTrue(instance['architecture'])
 
     def test_spawn_empty_dns(self):
         """Test spawning with an empty dns list"""
@@ -826,7 +826,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = self._create_instance()
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
-        vm_ref = vm_utils.lookup(session, instance.name)
+        vm_ref = vm_utils.lookup(session, instance['name'])
 
         swap_vdi_ref = xenapi_fake.create_vdi('swap', None)
         root_vdi_ref = xenapi_fake.create_vdi('root', None)
@@ -854,7 +854,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         # Unrescue expects the original instance to be powered off
         conn.power_off(instance)
-        rescue_vm = xenapi_fake.create_vm(instance.name + '-rescue', 'Running')
+        rescue_vm = xenapi_fake.create_vm(instance['name'] + '-rescue',
+                'Running')
         conn.unrescue(instance, None)
 
     def test_unrescue_not_in_rescue(self):
@@ -895,16 +896,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                                             fake.FakeVirtAPI())
         instance = self._create_instance(spawn=False)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        xenapi_fake.create_vm(instance.name, 'Halted')
+        xenapi_fake.create_vm(instance['name'], 'Halted')
         conn.reboot(instance, None, "SOFT")
-        vm_ref = vm_utils.lookup(session, instance.name)
+        vm_ref = vm_utils.lookup(session, instance['name'])
         vm = xenapi_fake.get_record('VM', vm_ref)
         self.assertEquals(vm['power_state'], 'Running')
 
     def test_reboot_unknown_state(self):
         instance = self._create_instance(spawn=False)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        xenapi_fake.create_vm(instance.name, 'Unknown')
+        xenapi_fake.create_vm(instance['name'], 'Unknown')
         self.assertRaises(xenapi_fake.Failure, conn.reboot, instance,
                 None, "SOFT")
 
@@ -1130,7 +1131,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
-        xenapi_fake.create_vm(instance.name, 'Running')
+        xenapi_fake.create_vm(instance['name'], 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn.migrate_disk_and_power_off(self.context, instance,
@@ -1138,7 +1139,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
-        xenapi_fake.create_vm(instance.name, 'Running')
+        xenapi_fake.create_vm(instance['name'], 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
 
         def fake_raise(*args, **kwargs):
@@ -1178,7 +1179,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
-        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
+        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
         base = xenapi_fake.create_vdi('hurr', 'fake')
         base_uuid = xenapi_fake.get_record('VDI', base)['uuid']
         cow = xenapi_fake.create_vdi('durr', 'fake')
@@ -1213,7 +1214,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
-        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
+        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=True)
@@ -1235,7 +1236,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
-        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
+        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=True)
@@ -1252,7 +1253,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         # Resize instance would be determined by the compute call
-        image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
+        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=False)
@@ -1263,7 +1264,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance_values['root_gb'] = 40
         instance_values['auto_disk_config'] = False
         instance = db.instance_create(self.context, instance_values)
-        xenapi_fake.create_vm(instance.name, 'Running')
+        xenapi_fake.create_vm(instance['name'], 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.small')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ResizeError,
@@ -2161,10 +2162,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup()
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate.id)
+        result = db.aggregate_get(self.context, aggregate['id'])
         self.assertTrue(fake_init_pool.called)
         self.assertThat(self.fake_metadata,
-                        matchers.DictMatches(result.metadetails))
+                        matchers.DictMatches(result['metadetails']))
 
     def test_join_slave(self):
         """Ensure join_slave gets called when the request gets to master."""
@@ -2194,12 +2195,12 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         result = db.aggregate_create(self.context, values)
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.CREATED}
-        db.aggregate_metadata_add(self.context, result.id, metadata)
+        db.aggregate_metadata_add(self.context, result['id'], metadata)
 
-        db.aggregate_host_add(self.context, result.id, "host")
-        aggregate = db.aggregate_get(self.context, result.id)
-        self.assertEqual(["host"], aggregate.hosts)
-        self.assertEqual(metadata, aggregate.metadetails)
+        db.aggregate_host_add(self.context, result['id'], "host")
+        aggregate = db.aggregate_get(self.context, result['id'])
+        self.assertEqual(["host"], aggregate['hosts'])
+        self.assertEqual(metadata, aggregate['metadetails'])
 
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
         self.assertTrue(fake_pool_set_name_label.called)
@@ -2240,11 +2241,11 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup(metadata=self.fake_metadata)
         self.conn._pool.remove_from_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate.id)
+        result = db.aggregate_get(self.context, aggregate['id'])
         self.assertTrue(fake_clear_pool.called)
         self.assertThat({pool_states.POOL_FLAG: 'XenAPI',
                 pool_states.KEY: pool_states.ACTIVE},
-                matchers.DictMatches(result.metadetails))
+                matchers.DictMatches(result['metadetails']))
 
     def test_remote_master_non_empty_pool(self):
         """Ensure AggregateError is raised if removing the master."""
@@ -2264,13 +2265,13 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         result = db.aggregate_create(self.context, values)
         pool_flag = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: aggr_state}
-        db.aggregate_metadata_add(self.context, result.id, pool_flag)
+        db.aggregate_metadata_add(self.context, result['id'], pool_flag)
 
         for host in hosts:
-            db.aggregate_host_add(self.context, result.id, host)
+            db.aggregate_host_add(self.context, result['id'], host)
         if metadata:
-            db.aggregate_metadata_add(self.context, result.id, metadata)
-        return db.aggregate_get(self.context, result.id)
+            db.aggregate_metadata_add(self.context, result['id'], metadata)
+        return db.aggregate_get(self.context, result['id'])
 
     def test_add_host_to_aggregate_invalid_changing_status(self):
         """Ensure InvalidAggregateAction is raised when adding host while
@@ -2343,23 +2344,17 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                        fake_driver_add_to_aggregate)
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
-        db.aggregate_metadata_add(self.context, self.aggr.id, metadata)
-        db.aggregate_host_add(self.context, self.aggr.id, 'fake_host')
+        db.aggregate_metadata_add(self.context, self.aggr['id'], metadata)
+        db.aggregate_host_add(self.context, self.aggr['id'], 'fake_host')
 
         self.assertRaises(exception.AggregateError,
                           self.compute.add_aggregate_host,
                           self.context, "fake_host",
                           aggregate=jsonutils.to_primitive(self.aggr))
-        excepted = db.aggregate_get(self.context, self.aggr.id)
-        self.assertEqual(excepted.metadetails[pool_states.KEY],
+        excepted = db.aggregate_get(self.context, self.aggr['id'])
+        self.assertEqual(excepted['metadetails'][pool_states.KEY],
                 pool_states.ERROR)
-        self.assertEqual(excepted.hosts, [])
-
-
-class Aggregate(object):
-    def __init__(self, id=None, hosts=None):
-        self.id = id
-        self.hosts = hosts or []
+        self.assertEqual(excepted['hosts'], [])
 
 
 class MockComputeAPI(object):
@@ -2406,7 +2401,7 @@ class HypervisorPoolTestCase(test.TestCase):
 
     def test_slave_asks_master_to_add_slave_to_pool(self):
         slave = ResourcePoolWithStubs()
-        aggregate = Aggregate(id=98, hosts=[])
+        aggregate = {'id': 98, 'hosts': []}
 
         slave.add_to_aggregate("CONTEXT", aggregate, "slave")
 
@@ -2418,7 +2413,7 @@ class HypervisorPoolTestCase(test.TestCase):
 
     def test_slave_asks_master_to_remove_slave_from_pool(self):
         slave = ResourcePoolWithStubs()
-        aggregate = Aggregate(id=98, hosts=[])
+        aggregate = {'id': 98, 'hosts': []}
 
         slave.remove_from_aggregate("CONTEXT", aggregate, "slave")
 

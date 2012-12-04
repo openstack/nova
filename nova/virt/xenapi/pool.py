@@ -80,51 +80,51 @@ class ResourcePool(object):
 
     def add_to_aggregate(self, context, aggregate, host, slave_info=None):
         """Add a compute host to an aggregate."""
-        if not self._is_hv_pool(context, aggregate.id):
+        if not self._is_hv_pool(context, aggregate['id']):
             return
 
         invalid = {pool_states.CHANGING: 'setup in progress',
                    pool_states.DISMISSED: 'aggregate deleted',
                    pool_states.ERROR: 'aggregate in error'}
 
-        if (self._get_metadata(context, aggregate.id)[pool_states.KEY]
+        if (self._get_metadata(context, aggregate['id'])[pool_states.KEY]
                 in invalid.keys()):
             raise exception.InvalidAggregateAction(
                     action='add host',
-                    aggregate_id=aggregate.id,
+                    aggregate_id=aggregate['id'],
                     reason=invalid[self._get_metadata(context,
-                            aggregate.id)
+                            aggregate['id'])
                     [pool_states.KEY]])
 
-        if (self._get_metadata(context, aggregate.id)[pool_states.KEY]
+        if (self._get_metadata(context, aggregate['id'])[pool_states.KEY]
                 == pool_states.CREATED):
-            self._virtapi.aggregate_metadata_add(context, aggregate.id,
+            self._virtapi.aggregate_metadata_add(context, aggregate['id'],
                                                  {pool_states.KEY:
                                                       pool_states.CHANGING})
-        if len(aggregate.hosts) == 1:
+        if len(aggregate['hosts']) == 1:
             # this is the first host of the pool -> make it master
-            self._init_pool(aggregate.id, aggregate.name)
+            self._init_pool(aggregate['id'], aggregate['name'])
             # save metadata so that we can find the master again
             metadata = {'master_compute': host,
                         host: self._host_uuid,
                         pool_states.KEY: pool_states.ACTIVE}
-            self._virtapi.aggregate_metadata_add(context, aggregate.id,
+            self._virtapi.aggregate_metadata_add(context, aggregate['id'],
                                                  metadata)
         else:
             # the pool is already up and running, we need to figure out
             # whether we can serve the request from this host or not.
             master_compute = self._get_metadata(context,
-                    aggregate.id)['master_compute']
+                    aggregate['id'])['master_compute']
             if master_compute == CONF.host and master_compute != host:
                 # this is the master ->  do a pool-join
                 # To this aim, nova compute on the slave has to go down.
                 # NOTE: it is assumed that ONLY nova compute is running now
-                self._join_slave(aggregate.id, host,
+                self._join_slave(aggregate['id'], host,
                                  slave_info.get('compute_uuid'),
                                  slave_info.get('url'), slave_info.get('user'),
                                  slave_info.get('passwd'))
                 metadata = {host: slave_info.get('xenhost_uuid'), }
-                self._virtapi.aggregate_metadata_add(context, aggregate.id,
+                self._virtapi.aggregate_metadata_add(context, aggregate['id'],
                                                      metadata)
             elif master_compute and master_compute != host:
                 # send rpc cast to master, asking to add the following
@@ -137,55 +137,55 @@ class ResourcePool(object):
     def remove_from_aggregate(self, context, aggregate, host, slave_info=None):
         """Remove a compute host from an aggregate."""
         slave_info = slave_info or dict()
-        if not self._is_hv_pool(context, aggregate.id):
+        if not self._is_hv_pool(context, aggregate['id']):
             return
 
         invalid = {pool_states.CREATED: 'no hosts to remove',
                    pool_states.CHANGING: 'setup in progress',
                    pool_states.DISMISSED: 'aggregate deleted', }
-        if (self._get_metadata(context, aggregate.id)[pool_states.KEY]
+        if (self._get_metadata(context, aggregate['id'])[pool_states.KEY]
                 in invalid.keys()):
             raise exception.InvalidAggregateAction(
                     action='remove host',
-                    aggregate_id=aggregate.id,
+                    aggregate_id=aggregate['id'],
                     reason=invalid[self._get_metadata(context,
-                            aggregate.id)[pool_states.KEY]])
+                            aggregate['id'])[pool_states.KEY]])
 
         master_compute = self._get_metadata(context,
-                aggregate.id)['master_compute']
+                aggregate['id'])['master_compute']
         if master_compute == CONF.host and master_compute != host:
             # this is the master -> instruct it to eject a host from the pool
-            host_uuid = self._get_metadata(context, aggregate.id)[host]
-            self._eject_slave(aggregate.id,
+            host_uuid = self._get_metadata(context, aggregate['id'])[host]
+            self._eject_slave(aggregate['id'],
                               slave_info.get('compute_uuid'), host_uuid)
-            self._virtapi.aggregate_metadata_delete(context, aggregate.id,
+            self._virtapi.aggregate_metadata_delete(context, aggregate['id'],
                                                     host)
         elif master_compute == host:
             # Remove master from its own pool -> destroy pool only if the
             # master is on its own, otherwise raise fault. Destroying a
             # pool made only by master is fictional
-            if len(aggregate.hosts) > 1:
+            if len(aggregate['hosts']) > 1:
                 # NOTE: this could be avoided by doing a master
                 # re-election, but this is simpler for now.
                 raise exception.InvalidAggregateAction(
-                                    aggregate_id=aggregate.id,
+                                    aggregate_id=aggregate['id'],
                                     action='remove_from_aggregate',
                                     reason=_('Unable to eject %(host)s '
                                              'from the pool; pool not empty')
                                              % locals())
-            self._clear_pool(aggregate.id)
+            self._clear_pool(aggregate['id'])
             for key in ['master_compute', host]:
-                self._virtapi.aggregate_metadata_delete(context, aggregate.id,
-                                                        key)
+                self._virtapi.aggregate_metadata_delete(context,
+                        aggregate['id'], key)
         elif master_compute and master_compute != host:
             # A master exists -> forward pool-eject request to master
             slave_info = self._create_slave_info()
 
             self.compute_rpcapi.remove_aggregate_host(
-                context, aggregate.id, host, master_compute, slave_info)
+                context, aggregate['id'], host, master_compute, slave_info)
         else:
             # this shouldn't have happened
-            raise exception.AggregateError(aggregate_id=aggregate.id,
+            raise exception.AggregateError(aggregate_id=aggregate['id'],
                                            action='remove_from_aggregate',
                                            reason=_('Unable to eject %(host)s '
                                            'from the pool; No master found')

@@ -297,8 +297,8 @@ class IptablesFirewallDriver(FirewallDriver):
                     '-s %s/128 -p icmpv6 -j ACCEPT' % (gateway_v6,))
 
     def _build_icmp_rule(self, rule, version):
-        icmp_type = rule.from_port
-        icmp_code = rule.to_port
+        icmp_type = rule['from_port']
+        icmp_code = rule['to_port']
 
         if icmp_type == -1:
             icmp_type_arg = None
