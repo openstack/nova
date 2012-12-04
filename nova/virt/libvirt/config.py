@@ -585,6 +585,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.vcpus = 1
         self.cpu = None
         self.acpi = False
+        self.apic = False
         self.clock = None
         self.os_type = None
         self.os_loader = None
@@ -622,9 +623,12 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(os)
 
     def _format_features(self, root):
-        if self.acpi:
+        if self.acpi or self.apic:
             features = etree.Element("features")
-            features.append(etree.Element("acpi"))
+            if self.acpi:
+                features.append(etree.Element("acpi"))
+            if self.apic:
+                features.append(etree.Element("apic"))
             root.append(features)
 
     def _format_devices(self, root):
