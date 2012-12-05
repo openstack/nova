@@ -18,11 +18,15 @@ queues.  Casts will block, but this is very useful for tests.
 """
 
 import inspect
+# NOTE(russellb): We specifically want to use json, not our own jsonutils.
+# jsonutils has some extra logic to automatically convert objects to primitive
+# types so that they can be serialized.  We want to catch all cases where
+# non-primitive types make it into this code and treat it as an error.
+import json
 import time
 
 import eventlet
 
-from nova.openstack.common import jsonutils
 from nova.openstack.common.rpc import common as rpc_common
 
 CONSUMERS = {}
@@ -121,7 +125,7 @@ def create_connection(conf, new=True):
 
 def check_serialize(msg):
     """Make sure a message intended for rpc can be serialized."""
-    jsonutils.dumps(msg)
+    json.dumps(msg)
 
 
 def multicall(conf, context, topic, msg, timeout=None):
@@ -154,6 +158,7 @@ def call(conf, context, topic, msg, timeout=None):
 
 
 def cast(conf, context, topic, msg):
+    check_serialize(msg)
     try:
         call(conf, context, topic, msg)
     except Exception:

@@ -17,7 +17,6 @@
 
 import functools
 import itertools
-import logging
 import time
 import uuid
 
@@ -29,6 +28,7 @@ import qpid.messaging.exceptions
 from nova.openstack.common import cfg
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import amqp as rpc_amqp
 from nova.openstack.common.rpc import common as rpc_common
 
@@ -41,6 +41,9 @@ qpid_opts = [
     cfg.StrOpt('qpid_port',
                default='5672',
                help='Qpid broker port'),
+    cfg.ListOpt('qpid_hosts',
+                default=['$qpid_hostname:$qpid_port'],
+                help='Qpid HA cluster host:port pairs'),
     cfg.StrOpt('qpid_username',
                default='',
                help='Username for qpid connection'),
@@ -277,22 +280,21 @@ class Connection(object):
         self.conf = conf
 
         params = {
-            'hostname': self.conf.qpid_hostname,
-            'port': self.conf.qpid_port,
+            'qpid_hosts': self.conf.qpid_hosts,
             'username': self.conf.qpid_username,
             'password': self.conf.qpid_password,
         }
         params.update(server_params or {})
 
-        self.broker = params['hostname'] + ":" + str(params['port'])
+        self.brokers = params['qpid_hosts']
         self.username = params['username']
         self.password = params['password']
-        self.connection_create()
+        self.connection_create(self.brokers[0])
         self.reconnect()
 
-    def connection_create(self):
+    def connection_create(self, broker):
         # Create the connection - this does not open the connection
-        self.connection = qpid.messaging.Connection(self.broker)
+        self.connection = qpid.messaging.Connection(broker)
 
         # Check if flags are set and if so set them for the connection
         # before we call open
@@ -320,10 +322,14 @@ class Connection(object):
             except qpid.messaging.exceptions.ConnectionError:
                 pass
 
+        attempt = 0
         delay = 1
         while True:
+            broker = self.brokers[attempt % len(self.brokers)]
+            attempt += 1
+
             try:
-                self.connection_create()
+                self.connection_create(broker)
                 self.connection.open()
             except qpid.messaging.exceptions.ConnectionError, e:
                 msg_dict = dict(e=e, delay=delay)
@@ -333,9 +339,8 @@ class Connection(object):
                 time.sleep(delay)
                 delay = min(2 * delay, 60)
             else:
+                LOG.info(_('Connected to AMQP server on %s'), broker)
                 break
-
-        LOG.info(_('Connected to AMQP server on %s'), self.broker)
 
         self.session = self.connection.session()
 

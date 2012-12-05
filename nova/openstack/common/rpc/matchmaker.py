@@ -21,10 +21,10 @@ return keys for direct exchanges, per (approximate) AMQP parlance.
 import contextlib
 import itertools
 import json
-import logging
 
 from nova.openstack.common import cfg
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 
 
 matchmaker_opts = [

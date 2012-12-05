@@ -57,6 +57,11 @@ class Service(service.Service):
 
         self.conn.create_consumer(self.topic, dispatcher, fanout=True)
 
+        # Hook to allow the manager to do other initializations after
+        # the rpc connection is created.
+        if callable(getattr(self.manager, 'initialize_service_hook', None)):
+            self.manager.initialize_service_hook(self)
+
         # Consume from all consumers in a thread
         self.conn.consume_in_thread()
 
