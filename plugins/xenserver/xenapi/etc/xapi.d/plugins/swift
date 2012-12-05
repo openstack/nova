@@ -55,6 +55,13 @@ class ChunkReader(object):
         self.checksum.update(result)
         return result
 
+def hashfile(afile, hasher, blocksize=65536):
+    buf = afile.read(blocksize)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = afile.read(blocksize)
+    return hasher.hexdigest()
+
 
 def create_container_if_missing(swift_conn, container):
     """
@@ -256,6 +263,7 @@ def _upload_tarball(staging_path, image_id, **params):
 
 def upload_vhd(session, vdi_uuids, sr_path, image_id, **params):
     staging_path = utils.make_staging_area(sr_path)
+    print staging_path
     try:
         utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
         etag, image_size = _upload_tarball(staging_path, image_id,
