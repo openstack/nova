@@ -17,6 +17,8 @@
 
 
 import ConfigParser
+import logging
+import logging.handlers
 import os
 import string
 
@@ -37,10 +39,64 @@ class FilterMatchNotExecutable(Exception):
         self.match = match
 
 
+class RootwrapConfig(object):
+
+    def __init__(self, config):
+        # filters_path
+        self.filters_path = config.get("DEFAULT", "filters_path").split(",")
+
+        # exec_dirs
+        if config.has_option("DEFAULT", "exec_dirs"):
+            self.exec_dirs = config.get("DEFAULT", "exec_dirs").split(",")
+        else:
+            # Use system PATH if exec_dirs is not specified
+            self.exec_dirs = os.environ["PATH"].split(':')
+
+        # syslog_log_facility
+        if config.has_option("DEFAULT", "syslog_log_facility"):
+            v = config.get("DEFAULT", "syslog_log_facility")
+            facility_names = logging.handlers.SysLogHandler.facility_names
+            self.syslog_log_facility = getattr(logging.handlers.SysLogHandler,
+                                               v, None)
+            if self.syslog_log_facility is None and v in facility_names:
+                self.syslog_log_facility = facility_names.get(v)
+            if self.syslog_log_facility is None:
+                raise ValueError('Unexpected syslog_log_facility: %s' % v)
+        else:
+            default_facility = logging.handlers.SysLogHandler.LOG_SYSLOG
+            self.syslog_log_facility = default_facility
+
+        # syslog_log_level
+        if config.has_option("DEFAULT", "syslog_log_level"):
+            v = config.get("DEFAULT", "syslog_log_level")
+            self.syslog_log_level = logging.getLevelName(v.upper())
+            if (self.syslog_log_level == "Level %s" % v.upper()):
+                raise ValueError('Unexepected syslog_log_level: %s' % v)
+        else:
+            self.syslog_log_level = logging.ERROR
+
+        # use_syslog
+        if config.has_option("DEFAULT", "use_syslog"):
+            self.use_syslog = config.getboolean("DEFAULT", "use_syslog")
+        else:
+            self.use_syslog = False
+
+
+def setup_syslog(execname, facility, level):
+    rootwrap_logger = logging.getLogger()
+    rootwrap_logger.setLevel(level)
+    handler = logging.handlers.SysLogHandler(address='/dev/log',
+                                             facility=facility)
+    handler.setFormatter(logging.Formatter(
+                         os.path.basename(execname) + ': %(message)s'))
+    rootwrap_logger.addHandler(handler)
+
+
 def build_filter(class_name, *args):
     """Returns a filter object of class class_name"""
     if not hasattr(filters, class_name):
-        # TODO(ttx): Log the error (whenever nova-rootwrap has a log file)
+        logging.warning("Skipping unknown filter class (%s) specified "
+                        "in filter definitions" % class_name)
         return None
     filterclass = getattr(filters, class_name)
     return filterclass(*args)
@@ -60,6 +116,7 @@ def load_filters(filters_path):
                 newfilter = build_filter(*filterdefinition)
                 if newfilter is None:
                     continue
+                newfilter.name = name
                 filterlist.append(newfilter)
     return filterlist
 

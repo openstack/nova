@@ -23,6 +23,7 @@ class CommandFilter(object):
     """Command filter only checking that the 1st argument matches exec_path"""
 
     def __init__(self, exec_path, run_as, *args):
+        self.name = ''
         self.exec_path = exec_path
         self.run_as = run_as
         self.args = args

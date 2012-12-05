@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ConfigParser
+import logging
+import logging.handlers
 import os
 import subprocess
 
@@ -149,3 +152,47 @@ class RootwrapTestCase(test.TestCase):
         usercmd = ["cat", "/"]
         filtermatch = wrapper.match_filter(self.filters, usercmd)
         self.assertTrue(filtermatch is self.filters[-1])
+
+    def test_RootwrapConfig(self):
+        raw = ConfigParser.RawConfigParser()
+
+        # Empty config should raise ConfigParser.Error
+        self.assertRaises(ConfigParser.Error, wrapper.RootwrapConfig, raw)
+
+        # Check default values
+        raw.set('DEFAULT', 'filters_path', '/a,/b')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertEqual(config.filters_path, ['/a', '/b'])
+        self.assertEqual(config.exec_dirs, os.environ["PATH"].split(':'))
+        self.assertFalse(config.use_syslog)
+        self.assertEqual(config.syslog_log_facility,
+                         logging.handlers.SysLogHandler.LOG_SYSLOG)
+        self.assertEqual(config.syslog_log_level, logging.ERROR)
+
+        # Check general values
+        raw.set('DEFAULT', 'exec_dirs', '/a,/x')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertEqual(config.exec_dirs, ['/a', '/x'])
+
+        raw.set('DEFAULT', 'use_syslog', 'oui')
+        self.assertRaises(ValueError, wrapper.RootwrapConfig, raw)
+        raw.set('DEFAULT', 'use_syslog', 'true')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertTrue(config.use_syslog)
+
+        raw.set('DEFAULT', 'syslog_log_facility', 'moo')
+        self.assertRaises(ValueError, wrapper.RootwrapConfig, raw)
+        raw.set('DEFAULT', 'syslog_log_facility', 'local0')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertEqual(config.syslog_log_facility,
+                         logging.handlers.SysLogHandler.LOG_LOCAL0)
+        raw.set('DEFAULT', 'syslog_log_facility', 'LOG_AUTH')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertEqual(config.syslog_log_facility,
+                         logging.handlers.SysLogHandler.LOG_AUTH)
+
+        raw.set('DEFAULT', 'syslog_log_level', 'bar')
+        self.assertRaises(ValueError, wrapper.RootwrapConfig, raw)
+        raw.set('DEFAULT', 'syslog_log_level', 'INFO')
+        config = wrapper.RootwrapConfig(raw)
+        self.assertEqual(config.syslog_log_level, logging.INFO)
