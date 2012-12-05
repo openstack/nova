@@ -2083,7 +2083,9 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
         if not CONF.fake_network:
             dev = self.driver.get_dev(network)
-            self.driver.update_dhcp(context, dev, network)
+            # NOTE(dprince): dhcp DB queries require elevated context
+            elevated = context.elevated()
+            self.driver.update_dhcp(elevated, dev, network)
             if(CONF.use_ipv6):
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
@@ -2094,7 +2096,9 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
-            self.driver.update_dhcp(context, dev, network)
+            # NOTE(dprince): dhcp DB queries require elevated context
+            elevated = context.elevated()
+            self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
         """Returns the dict representing necessary and meta network fields"""
@@ -2262,7 +2266,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                     network['vpn_private_address'])
         if not CONF.fake_network:
             dev = self.driver.get_dev(network)
-            self.driver.update_dhcp(context, dev, network)
+            # NOTE(dprince): dhcp DB queries require elevated context
+            elevated = context.elevated()
+            self.driver.update_dhcp(elevated, dev, network)
             if(CONF.use_ipv6):
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
@@ -2273,7 +2279,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
-            self.driver.update_dhcp(context, dev, network)
+            # NOTE(dprince): dhcp DB queries require elevated context
+            elevated = context.elevated()
+            self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
         """Returns the dict representing necessary and meta network fields"""
