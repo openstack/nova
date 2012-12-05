@@ -35,6 +35,7 @@ class BaseOps(object):
         self.__conn_v2 = None
         self.__conn_cimv2 = None
         self.__conn_wmi = None
+        self.__conn_storage = None
 
     @property
     def _conn(self):
@@ -59,3 +60,10 @@ class BaseOps(object):
         if self.__conn_wmi is None:
             self.__conn_wmi = wmi.WMI(moniker='//./root/wmi')
         return self.__conn_wmi
+
+    @property
+    def _conn_storage(self):
+        if self.__conn_storage is None:
+            storage_namespace = '//./Root/Microsoft/Windows/Storage'
+            self.__conn_storage = wmi.WMI(moniker=storage_namespace)
+        return self.__conn_storage

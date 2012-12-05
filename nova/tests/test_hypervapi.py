@@ -60,7 +60,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._post_method_called = False
         self._recover_method_called = False
         self._volume_target_portal = 'testtargetportal:3260'
-        self._volume_id = 'd3f99512-af51-4a75-aee1-79875e016159'
+        self._volume_id = '8957e088-dbee-4216-8056-978353a3e737'
         self._context = context.RequestContext(self._user_id, self._project_id)
 
         self._setup_stubs()
@@ -104,7 +104,6 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             'shutil',
             'uuid',
             'time',
-            'subprocess',
             'multiprocessing',
             '_winreg',
             'nova.virt.configdrive',
@@ -114,21 +113,25 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
 
         # Modules in which the mocks are going to be injected
         from nova.virt.hyperv import baseops
+        from nova.virt.hyperv import basevolumeutils
         from nova.virt.hyperv import hostops
         from nova.virt.hyperv import livemigrationops
         from nova.virt.hyperv import snapshotops
         from nova.virt.hyperv import vmops
         from nova.virt.hyperv import volumeops
         from nova.virt.hyperv import volumeutils
+        from nova.virt.hyperv import volumeutilsV2
 
         modules_to_test = [
             driver_hyperv,
+            basevolumeutils,
             baseops,
             hostops,
             vmops,
             vmutils,
             volumeops,
             volumeutils,
+            volumeutilsV2,
             snapshotops,
             livemigrationops,
             hypervutils,
@@ -514,13 +517,3 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         sessions_exist = self._hypervutils.iscsi_volume_sessions_exist(
             self._volume_id)
         self.assertTrue(sessions_exist)
-
-    def test_attach_volume_with_target_connection_failure(self):
-        self._spawn_instance(True)
-
-        target = 'nonexistingtarget:3260'
-        connection_info = db_fakes.get_fake_volume_info_data(target,
-            self._volume_id)
-
-        self.assertRaises(vmutils.HyperVException, self._conn.attach_volume,
-            connection_info, self._instance_data["name"], '/dev/sdc')
