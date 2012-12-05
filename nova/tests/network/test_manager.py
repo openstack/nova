@@ -376,6 +376,17 @@ class FlatNetworkTestCase(test.TestCase):
                 "invalidtype",
                 zone1)
 
+    def test_mini_dns_driver_with_mixed_case(self):
+        zone1 = "example.org"
+        driver = self.network.instance_dns_manager
+        driver.create_entry("HostTen", "10.0.0.10", "A", zone1)
+        addresses = driver.get_entries_by_address("10.0.0.10", zone1)
+        self.assertEqual(len(addresses), 1)
+        for n in addresses:
+            driver.delete_entry(n, zone1)
+        addresses = driver.get_entries_by_address("10.0.0.10", zone1)
+        self.assertEqual(len(addresses), 0)
+
     def test_instance_dns(self):
         fixedip = '192.168.0.101'
         self.mox.StubOutWithMock(db, 'network_get')
