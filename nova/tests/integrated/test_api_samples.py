@@ -1722,3 +1722,29 @@ class QuotasSampleJsonTests(ApiSampleTestBase):
 
 class QuotasSampleXmlTests(QuotasSampleJsonTests):
     ctype = "xml"
+
+
+class ExtendedStatusSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                                     ".extended_status.Extended_status")
+
+    def test_show(self):
+        uuid = self._post_server()
+        response = self._do_get('servers')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        return self._verify_response('servers-list-resp', subs, response)
+
+    def test_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('servers-detail-resp', subs, response)
+
+
+class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
+        ctype = 'xml'
