@@ -136,6 +136,12 @@ class ConfigDriveBuilder(object):
             shutil.rmtree(mountdir)
 
     def make_drive(self, path):
+        """Make the config drive.
+
+        :param path: the path to place the config drive image at
+
+        :raises ProcessExecuteError if a helper process has failed.
+        """
         if CONF.config_drive_format == 'iso9660':
             self._make_iso9660(path)
         elif CONF.config_drive_format == 'vfat':
