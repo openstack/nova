@@ -46,6 +46,8 @@ def stub_service_get_all(self, req):
 
 
 def stub_set_host_enabled(context, host, enabled):
+    if host == "notimplemented":
+        raise NotImplementedError()
     # We'll simulate success and failure by assuming
     # that 'host_c1' always succeeds, and 'host_c2'
     # always fails
@@ -55,6 +57,8 @@ def stub_set_host_enabled(context, host, enabled):
 
 
 def stub_set_host_maintenance(context, host, mode):
+    if host == "notimplemented":
+        raise NotImplementedError()
     # We'll simulate success and failure by assuming
     # that 'host_c1' always succeeds, and 'host_c2'
     # always fails
@@ -64,6 +68,8 @@ def stub_set_host_maintenance(context, host, mode):
 
 
 def stub_host_power_action(context, host, action):
+    if host == "notimplemented":
+        raise NotImplementedError()
     return action
 
 
@@ -153,6 +159,23 @@ class HostTestCase(test.TestCase):
         self._test_host_update('host_c1', 'maintenance_mode',
                                'disable', 'off_maintenance')
 
+    def _test_host_update_notimpl(self, key, val):
+        def stub_service_get_all_notimpl(self, req):
+            return [{'host': 'notimplemented', 'topic': None,
+                     'availability_zone': None}]
+        self.stubs.Set(db, 'service_get_all',
+                       stub_service_get_all_notimpl)
+        body = {key: val}
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          self.controller.update,
+                          self.req, 'notimplemented', body=body)
+
+    def test_disable_host_notimpl(self):
+        self._test_host_update_notimpl('status', 'disable')
+
+    def test_enable_maintenance_notimpl(self):
+        self._test_host_update_notimpl('maintenance_mode', 'enable')
+
     def test_host_startup(self):
         result = self.controller.startup(self.req, "host_c1")
         self.assertEqual(result["power_action"], "startup")
@@ -164,6 +187,19 @@ class HostTestCase(test.TestCase):
     def test_host_reboot(self):
         result = self.controller.reboot(self.req, "host_c1")
         self.assertEqual(result["power_action"], "reboot")
+
+    def _test_host_power_action_notimpl(self, method):
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          method, self.req, "notimplemented")
+
+    def test_host_startup_notimpl(self):
+        self._test_host_power_action_notimpl(self.controller.startup)
+
+    def test_host_shutdown_notimpl(self):
+        self._test_host_power_action_notimpl(self.controller.shutdown)
+
+    def test_host_reboot_notimpl(self):
+        self._test_host_power_action_notimpl(self.controller.reboot)
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}

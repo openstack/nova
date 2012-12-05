@@ -176,9 +176,11 @@ class HostController(object):
         context = req.environ['nova.context']
         LOG.audit(_("Putting host %(host)s in maintenance "
                     "mode %(mode)s.") % locals())
-        result = self.api.set_host_maintenance(context, host, mode)
-        if result not in ("on_maintenance", "off_maintenance"):
-            raise webob.exc.HTTPBadRequest(explanation=result)
+        try:
+            result = self.api.set_host_maintenance(context, host, mode)
+        except NotImplementedError:
+            msg = _("Virt driver does not implement host maintenance mode.")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
         return {"host": host, "maintenance_mode": result}
 
     def _set_enabled_status(self, req, host, enabled):
@@ -186,11 +188,12 @@ class HostController(object):
         context = req.environ['nova.context']
         state = "enabled" if enabled else "disabled"
         LOG.audit(_("Setting host %(host)s to %(state)s.") % locals())
-        result = self.api.set_host_enabled(context, host=host,
-                enabled=enabled)
-        if result not in ("enabled", "disabled"):
-            # An error message was returned
-            raise webob.exc.HTTPBadRequest(explanation=result)
+        try:
+            result = self.api.set_host_enabled(context, host=host,
+                                               enabled=enabled)
+        except NotImplementedError:
+            msg = _("Virt driver does not implement host disabled status.")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
         return {"host": host, "status": result}
 
     def _host_power_action(self, req, host, action):
@@ -200,8 +203,9 @@ class HostController(object):
         try:
             result = self.api.host_power_action(context, host=host,
                     action=action)
-        except NotImplementedError as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.msg)
+        except NotImplementedError:
+            msg = _("Virt driver does not implement host power management.")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
         return {"host": host, "power_action": result}
 
     @wsgi.serializers(xml=HostActionTemplate)

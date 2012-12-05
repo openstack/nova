@@ -2819,19 +2819,6 @@ class LibvirtDriver(driver.ComputeDriver):
         If 'refresh' is True, run update the stats first."""
         return self.host_state.get_host_stats(refresh=refresh)
 
-    def host_power_action(self, host, action):
-        """Reboots, shuts down or powers up the host."""
-        raise NotImplementedError()
-
-    def host_maintenance_mode(self, host, mode):
-        """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation."""
-        raise NotImplementedError()
-
-    def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        pass
-
     def get_host_uptime(self, host):
         """Returns the result of calling "uptime"."""
         #NOTE(dprince): host seems to be ignored for this call and in

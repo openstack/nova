@@ -131,10 +131,6 @@ class HyperVDriver(driver.ComputeDriver):
     def host_power_action(self, host, action):
         return self._hostops.host_power_action(host, action)
 
-    def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        pass
-
     def snapshot(self, context, instance, name):
         self._snapshotops.snapshot(context, instance, name)
 
