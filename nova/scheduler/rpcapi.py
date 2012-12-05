@@ -77,11 +77,13 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             request_spec, filter_properties, reservations):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
+        reservations_p = jsonutils.to_primitive(reservations)
+        image_p = jsonutils.to_primitive(image)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
-                image=image, request_spec=request_spec,
+                image=image_p, request_spec=request_spec,
                 filter_properties=filter_properties,
-                reservations=reservations))
+                reservations=reservations_p))
 
     def show_host_resources(self, ctxt, host):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))
