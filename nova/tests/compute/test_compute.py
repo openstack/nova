@@ -124,12 +124,15 @@ class BaseTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
-            return {'id': id, 'min_disk': None, 'min_ram': None,
-                    'name': 'fake_name',
-                    'status': 'active',
-                    'properties': {'kernel_id': 'fake_kernel_id',
-                                   'ramdisk_id': 'fake_ramdisk_id',
-                                   'something_else': 'meow'}}
+            if id:
+                return {'id': id, 'min_disk': None, 'min_ram': None,
+                        'name': 'fake_name',
+                        'status': 'active',
+                        'properties': {'kernel_id': 'fake_kernel_id',
+                                       'ramdisk_id': 'fake_ramdisk_id',
+                                       'something_else': 'meow'}}
+            else:
+                raise exception.ImageNotFound(image_id=id)
 
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
@@ -520,6 +523,14 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(NODENAME, instance['node'])
 
+    def test_create_instance_no_image(self):
+        """Create instance with no image provided"""
+        params = {'image_ref': ''}
+        instance = self._create_fake_instance(params)
+        self.compute.run_instance(self.context, instance=instance)
+        self._assert_state({'vm_state': vm_states.ACTIVE,
+                            'task_state': None})
+
     def test_default_access_ip(self):
         self.flags(default_access_ip_network_name='test1')
         fake_network.unset_stub_network_methods(self.stubs)
@@ -681,6 +692,21 @@ class ComputeTestCase(BaseTestCase):
                                                            instance['uuid'])
         self.assertEqual(len(bdms), 0)
 
+    def test_run_terminate_no_image(self):
+        """
+        Make sure instance started without image (from volume)
+        can be termintad without issues
+        """
+        params = {'image_ref': ''}
+        instance = self._create_fake_instance(params)
+        self.compute.run_instance(self.context, instance=instance)
+        self._assert_state({'vm_state': vm_states.ACTIVE,
+                            'task_state': None})
+
+        self.compute.terminate_instance(self.context, instance=instance)
+        instances = db.instance_get_all(self.context)
+        self.assertEqual(len(instances), 0)
+
     def test_terminate_no_network(self):
         # This is as reported in LP bug 1008875
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -774,6 +800,18 @@ class ComputeTestCase(BaseTestCase):
         self.compute.start_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_stop_start_no_image(self):
+        params = {'image_ref': ''}
+        instance = self._create_fake_instance(params)
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.POWERING_OFF})
+        self.compute.stop_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.POWERING_ON})
+        self.compute.start_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_rescue(self):
         """Ensure instance can be rescued and unrescued"""
 
@@ -806,6 +844,18 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['unrescued'])
 
         self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_rescue_no_image(self):
+        params = {'image_ref': ''}
+        instance = self._create_fake_instance(params)
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": task_states.RESCUING})
+        self.compute.rescue_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": task_states.UNRESCUING})
+        self.compute.unrescue_instance(self.context, instance=instance)
 
     def test_power_on(self):
         """Ensure instance can be powered on"""
@@ -901,6 +951,21 @@ class ComputeTestCase(BaseTestCase):
                                       new_pass="new_password",
                                       orig_sys_metadata=sys_metadata,
                                       bdms=[])
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_rebuild_no_image(self):
+        """Ensure instance can be rebuilt when started with no image"""
+        params = {'image_ref': ''}
+        instance = self._create_fake_instance(params)
+        sys_metadata = db.instance_system_metadata_get(self.context,
+                        instance['uuid'])
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.REBUILDING})
+        self.compute.rebuild_instance(self.context, instance,
+                                      '', '', injected_files=[],
+                                      new_pass="new_password",
+                                      orig_sys_metadata=sys_metadata)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rebuild_launch_time(self):
@@ -1183,6 +1248,16 @@ class ComputeTestCase(BaseTestCase):
         """Ensure instance can be snapshotted"""
         instance = jsonutils.to_primitive(self._create_fake_instance())
         name = "myfakesnapshot"
+        self.compute.run_instance(self.context, instance=instance)
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.IMAGE_SNAPSHOT})
+        self.compute.snapshot_instance(self.context, name, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_snapshot_no_image(self):
+        params = {'image_ref': ''}
+        name = "myfakesnapshot"
+        instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.IMAGE_SNAPSHOT})
@@ -2919,6 +2994,14 @@ class ComputeAPITestCase(BaseTestCase):
                            'ramdisk_id': 'fake_ramdisk_id'},
         }
 
+        def fake_show(obj, context, image_id):
+            if image_id:
+                return self.fake_image
+            else:
+                raise exception.ImageNotFound(image_id=image_id)
+
+        self.fake_show = fake_show
+
     def _run_instance(self, params=None):
         instance = jsonutils.to_primitive(self._create_fake_instance(params))
         instance_uuid = instance['uuid']
@@ -2934,19 +3017,17 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type = instance_types.get_default_instance_type()
         inst_type['memory_mb'] = 1
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_ram'] = 2
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_ram'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         self.assertRaises(exception.InstanceTypeMemoryTooSmall,
-            self.compute_api.create, self.context, inst_type, None)
+            self.compute_api.create, self.context,
+            inst_type, self.fake_image['id'])
 
         # Now increase the inst_type memory and make sure all is fine.
         inst_type['memory_mb'] = 2
         (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, None)
+                inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_create_with_too_little_disk(self):
@@ -2955,19 +3036,17 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type = instance_types.get_default_instance_type()
         inst_type['root_gb'] = 1
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_disk'] = 2
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_disk'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         self.assertRaises(exception.InstanceTypeDiskTooSmall,
-            self.compute_api.create, self.context, inst_type, None)
+            self.compute_api.create, self.context,
+            inst_type, self.fake_image['id'])
 
         # Now increase the inst_type disk space and make sure all is fine.
         inst_type['root_gb'] = 2
         (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, None)
+                inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_create_just_enough_ram_and_disk(self):
@@ -2977,16 +3056,13 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 2
         inst_type['memory_mb'] = 2
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_ram'] = 2
-            img['min_disk'] = 2
-            img['name'] = 'fake_name'
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_ram'] = 2
+        self.fake_image['min_disk'] = 2
+        self.fake_image['name'] = 'fake_name'
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, None)
+                inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_create_with_no_ram_and_disk_reqs(self):
@@ -2996,12 +3072,10 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
-        def fake_show(*args):
-            return copy.copy(self.fake_image)
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, None)
+                inst_type, self.fake_image['id'])
         db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_create_instance_defaults_display_name(self):
@@ -3009,7 +3083,8 @@ class ComputeAPITestCase(BaseTestCase):
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             (ref, resv_id) = self.compute_api.create(self.context,
-                instance_types.get_default_instance_type(), None, **instance)
+                instance_types.get_default_instance_type(),
+                'fake-image-uuid', **instance)
             try:
                 self.assertNotEqual(ref[0]['display_name'], None)
             finally:
@@ -3020,7 +3095,7 @@ class ComputeAPITestCase(BaseTestCase):
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_href=None)
+                image_href='fake-image-uuid')
         try:
             sys_metadata = db.instance_system_metadata_get(self.context,
                     ref[0]['uuid'])
@@ -3070,46 +3145,37 @@ class ComputeAPITestCase(BaseTestCase):
 
         inst_type = instance_types.get_default_instance_type()
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_ram'] = 2
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_ram'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataTooLarge,
-            self.compute_api.create, self.context, inst_type, None,
-                          user_data=('1' * 65536))
+            self.compute_api.create, self.context, inst_type,
+            self.fake_image['id'], user_data=('1' * 65536))
 
     def test_create_with_malformed_user_data(self):
         """Test an instance type with malformed user data."""
 
         inst_type = instance_types.get_default_instance_type()
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_ram'] = 2
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_ram'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataMalformed,
-            self.compute_api.create, self.context, inst_type, None,
-                          user_data='banana')
+            self.compute_api.create, self.context, inst_type,
+            self.fake_image['id'], user_data='banana')
 
     def test_create_with_base64_user_data(self):
         """Test an instance type with ok much user data."""
 
         inst_type = instance_types.get_default_instance_type()
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['min_ram'] = 2
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['min_ram'] = 2
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         # NOTE(mikal): a string of length 48510 encodes to 65532 characters of
         # base64
         (refs, resv_id) = self.compute_api.create(
-            self.context, inst_type, None,
+            self.context, inst_type, self.fake_image['id'],
             user_data=base64.encodestring('1' * 48510))
         db.instance_destroy(self.context, refs[0]['uuid'])
 
@@ -3563,6 +3629,17 @@ class ComputeAPITestCase(BaseTestCase):
                 'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_rebuild_no_image(self):
+        instance = jsonutils.to_primitive(
+            self._create_fake_instance(params={'image_ref': ''}))
+        instance_uuid = instance['uuid']
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.compute.run_instance(self.context, instance=instance)
+        self.compute_api.rebuild(self.context, instance, '', 'new_password')
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.REBUILDING)
+
     def _stub_out_reboot(self, device_name):
         def fake_reboot_instance(rpcapi, context, instance,
                                  block_device_info,
@@ -3751,11 +3828,8 @@ class ComputeAPITestCase(BaseTestCase):
         and min_disk set to that of the original instances flavor.
         """
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['disk_format'] = 'vhd'
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['disk_format'] = 'vhd'
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         instance = self._create_fake_instance()
         inst_params = {'root_gb': 2, 'memory_mb': 256}
@@ -3783,13 +3857,10 @@ class ComputeAPITestCase(BaseTestCase):
         image had a disk format of vhd.
         """
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['disk_format'] = 'raw'
-            img['min_ram'] = 512
-            img['min_disk'] = 1
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['disk_format'] = 'raw'
+        self.fake_image['min_ram'] = 512
+        self.fake_image['min_disk'] = 1
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         instance = self._create_fake_instance()
 
@@ -3813,12 +3884,9 @@ class ComputeAPITestCase(BaseTestCase):
         Do not show an attribute that the orig img did not have.
         """
 
-        def fake_show(*args):
-            img = copy.copy(self.fake_image)
-            img['disk_format'] = 'raw'
-            img['min_disk'] = 1
-            return img
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.fake_image['disk_format'] = 'raw'
+        self.fake_image['min_disk'] = 1
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
         instance = self._create_fake_instance()
 
@@ -5642,7 +5710,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
 
     def test_can_rebuild_instance_from_visible_instance_type(self):
         instance = self._create_fake_instance()
-        image_href = None
+        image_href = 'fake-image-id'
         admin_password = 'blah'
 
         instance['instance_type']['disabled'] = True
@@ -5658,7 +5726,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         when the slice is on disabled type already.
         """
         instance = self._create_fake_instance()
-        image_href = None
+        image_href = 'fake-image-id'
         admin_password = 'blah'
 
         instance['instance_type']['disabled'] = True
@@ -6056,4 +6124,4 @@ class ComputeInactiveImageTestCase(BaseTestCase):
         inst_type = instance_types.get_instance_type_by_name('m1.tiny')
         self.assertRaises(exception.ImageNotActive,
                           self.compute_api.create,
-                          self.context, inst_type, None)
+                          self.context, inst_type, 'fake-image-uuid')

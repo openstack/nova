@@ -2006,9 +2006,11 @@ class ServersControllerCreateTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance()
 
-    def _test_create_extra(self, params):
+    def _test_create_extra(self, params, no_image=False):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
+        if no_image:
+            server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
@@ -2108,6 +2110,40 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
+
+    def test_create_instance_with_volumes_enabled_no_image(self):
+        """
+        Test that the create will fail if there is no image
+        and no bdms supplied in the request
+        """
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertNotIn('imageRef', kwargs)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, {}, no_image=True)
+
+    def test_create_instance_with_volumes_enabled_and_bdms_no_image(self):
+        """
+        Test that the create works if there is no image supplied but
+        os-volumes extension is enabled and bdms are supplied
+        """
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'device_name': 'foo'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            self.assertNotIn('imageRef', kwargs)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self._test_create_extra(params, no_image=True)
 
     def test_create_instance_with_volumes_disabled(self):
         bdm = [{'device_name': 'foo'}]
@@ -3800,6 +3836,11 @@ class ServersViewBuilderTest(test.TestCase):
 
         output = self.view_builder.show(self.request, self.instance)
         self.assertThat(output, matchers.DictMatches(expected_server))
+
+    def test_build_server_no_image(self):
+        self.instance["image_ref"] = ""
+        output = self.view_builder.show(self.request, self.instance)
+        self.assertEqual(output['server']['image'], "")
 
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR

@@ -589,7 +589,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.debug(_("No node specified, defaulting to %(node)s") %
                           locals())
 
-            extra_usage_info = {"image_name": image_meta['name']}
+            if image_meta:
+                extra_usage_info = {"image_name": image_meta['name']}
+            else:
+                extra_usage_info = {}
+
             self._start_building(context, instance)
             self._notify_about_instance_usage(
                     context, instance, "create.start",
@@ -770,7 +774,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                image, but is accurate because it reflects the image's
                actual size.
         """
-        image_meta = _get_image_meta(context, instance['image_ref'])
+        if instance['image_ref']:
+            image_meta = _get_image_meta(context, instance['image_ref'])
+        else:  # Instance was started from volume - so no image ref
+            return {}
 
         try:
             size_bytes = image_meta['size']
@@ -1205,7 +1212,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.audit(_("Rebuilding instance"), context=context,
                       instance=instance)
 
-            image_meta = _get_image_meta(context, image_ref)
+            if image_ref:
+                image_meta = _get_image_meta(context, image_ref)
+            else:
+                image_meta = {}
 
             # This instance.exists message should contain the original
             # image_ref, not the new one.  Since the DB has been updated
@@ -1217,7 +1227,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
 
             # This message should contain the new image_ref
-            extra_usage_info = {'image_name': image_meta['name']}
+            extra_usage_info = {'image_name': image_meta.get('name', '')}
             self._notify_about_instance_usage(context, instance,
                     "rebuild.start", extra_usage_info=extra_usage_info)
 
@@ -1558,10 +1568,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance)
 
-        # Boot the instance using the 'base' image instead of the user's
-        # current (possibly broken) image
         rescue_image_ref = self._get_rescue_image_ref(context, instance)
-        rescue_image_meta = _get_image_meta(context, rescue_image_ref)
+
+        if rescue_image_ref:
+            rescue_image_meta = _get_image_meta(context, rescue_image_ref)
+        else:
+            rescue_image_meta = {}
 
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.rescue(context, instance,

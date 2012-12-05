@@ -317,8 +317,7 @@ class API(base.Base):
         self.network_api.validate_networks(context, requested_networks)
 
     @staticmethod
-    def _handle_kernel_and_ramdisk(context, kernel_id, ramdisk_id, image,
-                                   image_service):
+    def _handle_kernel_and_ramdisk(context, kernel_id, ramdisk_id, image):
         """Choose kernel and ramdisk appropriate for the instance.
 
         The kernel and ramdisk can be chosen in one of three ways:
@@ -330,11 +329,13 @@ class API(base.Base):
             3. Forced to None by using `null_kernel` FLAG.
         """
         # Inherit from image if not specified
+        image_properties = image.get('properties', {})
+
         if kernel_id is None:
-            kernel_id = image['properties'].get('kernel_id')
+            kernel_id = image_properties.get('kernel_id')
 
         if ramdisk_id is None:
-            ramdisk_id = image['properties'].get('ramdisk_id')
+            ramdisk_id = image_properties.get('ramdisk_id')
 
         # Force to None if using null_kernel
         if kernel_id == str(CONF.null_kernel):
@@ -343,9 +344,13 @@ class API(base.Base):
 
         # Verify kernel and ramdisk exist (fail-fast)
         if kernel_id is not None:
+            image_service, kernel_id = glance.get_remote_image_service(
+                context, kernel_id)
             image_service.show(context, kernel_id)
 
         if ramdisk_id is not None:
+            image_service, ramdisk_id = glance.get_remote_image_service(
+                context, ramdisk_id)
             image_service.show(context, ramdisk_id)
 
         return kernel_id, ramdisk_id
@@ -367,9 +372,11 @@ class API(base.Base):
 
     @staticmethod
     def _inherit_properties_from_image(image, auto_disk_config):
+        image_properties = image.get('properties', {})
+
         def prop(prop_, prop_type=None):
             """Return the value of an image property."""
-            value = image['properties'].get(prop_)
+            value = image_properties.get(prop_)
 
             if value is not None:
                 if prop_type == 'bool':
@@ -435,16 +442,22 @@ class API(base.Base):
             self._check_injected_file_quota(context, injected_files)
             self._check_requested_networks(context, requested_networks)
 
-            (image_service, image_id) = glance.get_remote_image_service(
-                    context, image_href)
-            image = image_service.show(context, image_id)
-            if image['status'] != 'active':
-                raise exception.ImageNotActive(image_id=image_id)
+            if image_href:
+                (image_service, image_id) = glance.get_remote_image_service(
+                        context, image_href)
+                image = image_service.show(context, image_id)
+                if image['status'] != 'active':
+                    raise exception.ImageNotActive(image_id=image_id)
+            else:
+                image = {}
 
             if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
                 raise exception.InstanceTypeMemoryTooSmall()
             if instance_type['root_gb'] < int(image.get('min_disk') or 0):
                 raise exception.InstanceTypeDiskTooSmall()
+
+            kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
+                    context, kernel_id, ramdisk_id, image)
 
             # Handle config_drive
             config_drive_id = None
@@ -454,10 +467,9 @@ class API(base.Base):
                 config_drive = None
 
                 # Ensure config_drive image exists
-                image_service.show(context, config_drive_id)
-
-            kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
-                    context, kernel_id, ramdisk_id, image, image_service)
+                cd_image_service, config_drive_id = \
+                    glance.get_remote_image_service(context, config_drive_id)
+                cd_image_service.show(context, config_drive_id)
 
             if key_data is None and key_name:
                 key_pair = self.db.key_pair_get(context, context.user_id,
@@ -467,11 +479,8 @@ class API(base.Base):
             if reservation_id is None:
                 reservation_id = utils.generate_uid('r')
 
-            # grab the architecture from glance
-            architecture = image['properties'].get('architecture', 'Unknown')
-
             root_device_name = block_device.properties_root_device_name(
-                image['properties'])
+                image.get('properties', {}))
 
             availability_zone, forced_host = self._handle_availability_zone(
                     availability_zone)
@@ -505,7 +514,6 @@ class API(base.Base):
                 'access_ip_v6': access_ip_v6,
                 'availability_zone': availability_zone,
                 'root_device_name': root_device_name,
-                'architecture': architecture,
                 'progress': 0}
 
             if user_data:
@@ -663,12 +671,13 @@ class API(base.Base):
         # require elevated context?
         elevated = context.elevated()
         instance_uuid = instance['uuid']
-        mappings = image['properties'].get('mappings', [])
+        image_properties = image.get('properties', {})
+        mappings = image_properties.get('mappings', [])
         if mappings:
             self._update_image_block_device_mapping(elevated,
                     instance_type, instance_uuid, mappings)
 
-        image_bdm = image['properties'].get('block_device_mapping', [])
+        image_bdm = image_properties.get('block_device_mapping', [])
         for mapping in (image_bdm, block_device_mapping):
             if not mapping:
                 continue
@@ -678,9 +687,10 @@ class API(base.Base):
     def _populate_instance_shutdown_terminate(self, instance, image,
                                               block_device_mapping):
         """Populate instance shutdown_terminate information."""
+        image_properties = image.get('properties', {})
         if (block_device_mapping or
-            image['properties'].get('mappings') or
-            image['properties'].get('block_device_mapping')):
+            image_properties.get('mappings') or
+            image_properties.get('block_device_mapping')):
             instance['shutdown_terminate'] = False
 
     def _populate_instance_names(self, instance):
@@ -701,6 +711,7 @@ class API(base.Base):
     def _populate_instance_for_create(self, base_options, image,
             security_groups):
         """Build the beginning of a new instance."""
+        image_properties = image.get('properties', {})
 
         instance = base_options
         if not instance.get('uuid'):
@@ -716,13 +727,13 @@ class API(base.Base):
         # Store image properties so we can use them later
         # (for notifications, etc).  Only store what we can.
         instance.setdefault('system_metadata', {})
-        for key, value in image['properties'].iteritems():
+        for key, value in image_properties.iteritems():
             new_value = str(value)[:255]
             instance['system_metadata']['image_%s' % key] = new_value
 
         # Keep a record of the original base image that this
         # image's instance is derived from:
-        base_image_ref = image['properties'].get('base_image_ref')
+        base_image_ref = image_properties.get('base_image_ref')
         if not base_image_ref:
             # base image ref property not previously set through a snapshot.
             # default to using the image ref as the base:
@@ -1509,8 +1520,12 @@ class API(base.Base):
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
 
-        orig_image_ref = instance['image_ref']
-        image = self._get_image(context, image_href)
+        if instance['image_ref']:
+            orig_image_ref = instance['image_ref']
+            image = self._get_image(context, image_href)
+        else:
+            orig_image_ref = ''
+            image = {}
 
         files_to_inject = kwargs.pop('files_to_inject', [])
         self._check_injected_file_quota(context, files_to_inject)
@@ -1524,11 +1539,14 @@ class API(base.Base):
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
             raise exception.InstanceTypeDiskTooSmall()
 
-        (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                 image_href)
-        image = image_service.show(context, image_id)
+        if image_href:
+            (image_service, image_id) = glance.get_remote_image_service(
+                context, image_href)
+            image = image_service.show(context, image_id)
+        else:
+            image = {}
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
-                context, None, None, image, image_service)
+                context, None, None, image)
 
         def _reset_image_metadata():
             """
@@ -1551,7 +1569,7 @@ class API(base.Base):
                 if key.startswith('image_'):
                     del sys_metadata[key]
             # Add the new ones
-            for key, value in image['properties'].iteritems():
+            for key, value in image.get('properties', {}).iteritems():
                 new_value = str(value)[:255]
                 sys_metadata['image_%s' % key] = new_value
             self.db.instance_system_metadata_update(context,

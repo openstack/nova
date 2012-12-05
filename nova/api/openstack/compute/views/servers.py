@@ -164,17 +164,20 @@ class ViewBuilder(common.ViewBuilder):
 
     def _get_image(self, request, instance):
         image_ref = instance["image_ref"]
-        image_id = str(common.get_id_from_href(image_ref))
-        bookmark = self._image_builder._get_bookmark_link(request,
-                                                          image_id,
-                                                          "images")
-        return {
-            "id": image_id,
-            "links": [{
-                "rel": "bookmark",
-                "href": bookmark,
-            }],
-        }
+        if image_ref:
+            image_id = str(common.get_id_from_href(image_ref))
+            bookmark = self._image_builder._get_bookmark_link(request,
+                                                              image_id,
+                                                              "images")
+            return {
+                "id": image_id,
+                "links": [{
+                    "rel": "bookmark",
+                    "href": bookmark,
+                }],
+            }
+        else:
+            return ""
 
     def _get_flavor(self, request, instance):
         instance_type = instance["instance_type"]
