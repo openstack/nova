@@ -93,7 +93,7 @@ class HostUpdateDeserializer(wsgi.XMLDeserializer):
         return dict(body=updates)
 
 
-def _list_hosts(req, service=None):
+def _list_hosts(req):
     """Returns a summary list of hosts, optionally filtering
     by service type.
     """
@@ -108,16 +108,13 @@ def _list_hosts(req, service=None):
     for host in services:
         hosts.append({"host_name": host['host'], 'service': host['topic'],
                       'zone': host['availability_zone']})
-    if service:
-        hosts = [host for host in hosts
-                 if host["service"] == service]
     return hosts
 
 
 def check_host(fn):
     """Makes sure that the host exists."""
-    def wrapped(self, req, id, service=None, *args, **kwargs):
-        listed_hosts = _list_hosts(req, service)
+    def wrapped(self, req, id, *args, **kwargs):
+        listed_hosts = _list_hosts(req)
         hosts = [h["host_name"] for h in listed_hosts]
         if id in hosts:
             return fn(self, req, id, *args, **kwargs)

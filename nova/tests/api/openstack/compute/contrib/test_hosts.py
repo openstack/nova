@@ -124,18 +124,13 @@ class HostTestCase(test.TestCase):
 
     def _test_host_update(self, host, key, val, expected_value):
         body = {key: val}
-        result = self.controller.update(self.req, host, body=body)
+        result = self.controller.update(self.req, host, body)
         self.assertEqual(result[key], expected_value)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
         hosts = os_hosts._list_hosts(self.req)
         self.assertEqual(hosts, HOST_LIST['hosts'])
-
-        compute_hosts = os_hosts._list_hosts(self.req, "compute")
-        expected = [host for host in HOST_LIST['hosts']
-                if host["service"] == "compute"]
-        self.assertEqual(compute_hosts, expected)
 
     def test_list_hosts_with_zone(self):
         req = FakeRequestWithNovaZone()
@@ -173,31 +168,31 @@ class HostTestCase(test.TestCase):
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+                self.req, "host_c1", bad_body)
         bad_body2 = {"status": "disablabc"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body2)
+                self.req, "host_c1", bad_body2)
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+                self.req, "host_c1", bad_body)
 
     def test_bad_update_key_and_correct_udpate_key(self):
         bad_body = {"status": "disable", "crazy": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", body=bad_body)
+                self.req, "host_c1", bad_body)
 
     def test_good_udpate_keys(self):
         body = {"status": "disable", "maintenance_mode": "enable"}
-        result = self.controller.update(self.req, 'host_c1', body=body)
+        result = self.controller.update(self.req, 'host_c1', body)
         self.assertEqual(result["host"], "host_c1")
         self.assertEqual(result["status"], "disabled")
         self.assertEqual(result["maintenance_mode"], "on_maintenance")
 
     def test_bad_host(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
-                self.req, "bogus_host_name", body={"status": "disable"})
+                self.req, "bogus_host_name", {"status": "disable"})
 
     def test_show_forbidden(self):
         self.req.environ["nova.context"].is_admin = False
