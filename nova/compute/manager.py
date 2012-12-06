@@ -1720,15 +1720,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
-            instance = self._instance_update(context,
-                                        instance['uuid'],
-                                        host=migration['source_compute'],
-                                        node=migration['source_node'])
-            self.network_api.setup_networks_on_host(context, instance,
-                                            migration['source_compute'])
-
             old_instance_type = migration['old_instance_type_id']
             instance_type = instance_types.get_instance_type(old_instance_type)
+
+            instance = self._instance_update(context,
+                                  instance['uuid'],
+                                  memory_mb=instance_type['memory_mb'],
+                                  vcpus=instance_type['vcpus'],
+                                  root_gb=instance_type['root_gb'],
+                                  ephemeral_gb=instance_type['ephemeral_gb'],
+                                  instance_type_id=instance_type['id'],
+                                  host=migration['source_compute'],
+                                  node=migration['source_node'])
+            self.network_api.setup_networks_on_host(context, instance,
+                                            migration['source_compute'])
 
             bdms = self._get_instance_volume_bdms(context, instance['uuid'])
             block_device_info = self._get_instance_volume_block_device_info(
@@ -1748,11 +1753,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             # the 'old' VM already has the preferred attributes
             self._instance_update(context,
                                   instance['uuid'],
-                                  memory_mb=instance_type['memory_mb'],
-                                  vcpus=instance_type['vcpus'],
-                                  root_gb=instance_type['root_gb'],
-                                  ephemeral_gb=instance_type['ephemeral_gb'],
-                                  instance_type_id=instance_type['id'],
                                   launched_at=timeutils.utcnow(),
                                   expected_task_state=task_states.
                                       RESIZE_REVERTING)

@@ -2051,8 +2051,14 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             pass
 
+        def fake_finish_revert_migration_driver(*args, **kwargs):
+            # Confirm the instance uses the old type in finish_revert_resize
+            inst = args[0]
+            self.assertEqual(inst['instance_type']['flavorid'], '1')
+
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.driver, 'finish_revert_migration', fake)
+        self.stubs.Set(self.compute.driver, 'finish_revert_migration',
+                       fake_finish_revert_migration_driver)
 
         reservations = self._ensure_quota_reservations_committed()
 
