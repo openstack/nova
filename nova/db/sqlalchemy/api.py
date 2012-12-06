@@ -584,8 +584,8 @@ def compute_node_statistics(context):
 
 
 @require_admin_context
-def certificate_get(context, certificate_id, session=None):
-    result = model_query(context, models.Certificate, session=session).\
+def certificate_get(context, certificate_id):
+    result = model_query(context, models.Certificate).\
                      filter_by(id=certificate_id).\
                      first()
 
