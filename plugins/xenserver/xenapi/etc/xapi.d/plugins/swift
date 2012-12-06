@@ -260,6 +260,8 @@ def _upload_tarball(staging_path, image_id, **params):
 
     return etag, tar_size
 
+    return (local_md5, swift_md5)
+
 
 def upload_vhd(session, vdi_uuids, sr_path, image_id, **params):
     staging_path = utils.make_staging_area(sr_path)
