@@ -150,7 +150,7 @@ class ConnectionContext(rpc_common.Connection):
 
 
 def msg_reply(conf, msg_id, connection_pool, reply=None, failure=None,
-              ending=False):
+              ending=False, log_failure=True):
     """Sends a reply or an error on the channel signified by msg_id.
 
     Failure should be a sys.exc_info() tuple.
@@ -158,7 +158,8 @@ def msg_reply(conf, msg_id, connection_pool, reply=None, failure=None,
     """
     with ConnectionContext(conf, connection_pool) as conn:
         if failure:
-            failure = rpc_common.serialize_remote_exception(failure)
+            failure = rpc_common.serialize_remote_exception(failure,
+                                                            log_failure)
 
         try:
             msg = {'result': reply, 'failure': failure}
@@ -185,10 +186,10 @@ class RpcContext(rpc_common.CommonRpcContext):
         return self.__class__(**values)
 
     def reply(self, reply=None, failure=None, ending=False,
-              connection_pool=None):
+              connection_pool=None, log_failure=True):
         if self.msg_id:
             msg_reply(self.conf, self.msg_id, connection_pool, reply, failure,
-                      ending)
+                      ending, log_failure)
             if ending:
                 self.msg_id = None
 
@@ -282,6 +283,12 @@ class ProxyCallback(object):
                 ctxt.reply(rval, None, connection_pool=self.connection_pool)
             # This final None tells multicall that it is done.
             ctxt.reply(ending=True, connection_pool=self.connection_pool)
+        except rpc_common.ClientException as e:
+            LOG.debug(_('Expected exception during message handling (%s)') %
+                      e._exc_info[1])
+            ctxt.reply(None, e._exc_info,
+                       connection_pool=self.connection_pool,
+                       log_failure=False)
         except Exception:
             LOG.exception(_('Exception during message handling'))
             ctxt.reply(None, sys.exc_info(),
