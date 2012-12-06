@@ -145,10 +145,10 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         :returns: string -- the name of the new logical volume.
         :raises: PowerVMNoSpaceLeftOnVolumeGroup
         """
-        vgs = self.run_command(self.command.lsvg())
+        vgs = self.run_vios_command(self.command.lsvg())
         cmd = self.command.lsvg('%s -field vgname freepps -fmt :' %
                                 ' '.join(vgs))
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         found_vg = None
 
         # If it's not a multiple of 1MB we get the next
@@ -177,7 +177,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             raise exception.PowerVMNoSpaceLeftOnVolumeGroup()
 
         cmd = self.command.mklv('%s %sB' % (found_vg, size / 512))
-        lv_name = self.run_command(cmd)[0]
+        lv_name = self.run_vios_command(cmd)[0]
         return lv_name
 
     def _remove_logical_volume(self, lv_name):
@@ -186,7 +186,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         :param lv_name: a logical volume name
         """
         cmd = self.command.rmvdev('-vdev %s -rmlv' % lv_name)
-        self.run_command(cmd)
+        self.run_vios_command(cmd)
 
     def _copy_file_to_device(self, source_path, device, decompress=True):
         """Copy file to device.
@@ -201,7 +201,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
                    (source_path, device))
         else:
             cmd = 'dd if=%s of=/dev/%s bs=1024k' % (source_path, device)
-        self.run_command_as_root(cmd)
+        self.run_vios_command_as_root(cmd)
 
     def _copy_image_file(self, source_path, remote_path, decompress=False):
         """Copy file to VIOS, decompress it, and return its new size and name.
@@ -229,7 +229,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             final_path = "%s.%s" % (uncomp_path, source_cksum)
 
         # Check whether the image is already on IVM
-        output = self.run_command("ls %s" % final_path, check_exit_code=False)
+        output = self.run_vios_command("ls %s" % final_path,
+                                       check_exit_code=False)
 
         # If the image does not exist already
         if not len(output):
@@ -240,7 +241,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             # Verify image file checksums match
             cmd = ("/usr/bin/csum -h MD5 %s |"
                    "/usr/bin/awk '{print $1}'" % comp_path)
-            output = self.run_command_as_root(cmd)
+            output = self.run_vios_command_as_root(cmd)
             if not len(output):
                 LOG.error(_("Unable to get checksum"))
                 raise exception.PowerVMFileTransferFailed()
@@ -251,25 +252,25 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             if decompress:
                 # Unzip the image
                 cmd = "/usr/bin/gunzip %s" % comp_path
-                output = self.run_command_as_root(cmd)
+                output = self.run_vios_command_as_root(cmd)
 
                 # Remove existing image file
                 cmd = "/usr/bin/rm -f %s.*" % uncomp_path
-                output = self.run_command_as_root(cmd)
+                output = self.run_vios_command_as_root(cmd)
 
                 # Rename unzipped image
                 cmd = "/usr/bin/mv %s %s" % (uncomp_path, final_path)
-                output = self.run_command_as_root(cmd)
+                output = self.run_vios_command_as_root(cmd)
 
                 # Remove compressed image file
                 cmd = "/usr/bin/rm -f %s" % comp_path
-                output = self.run_command_as_root(cmd)
+                output = self.run_vios_command_as_root(cmd)
 
         else:
             LOG.debug(_("Image found on host at '%s'") % final_path)
 
         # Calculate file size in multiples of 512 bytes
-        output = self.run_command("ls -o %s|awk '{print $4}'" %
+        output = self.run_vios_command("ls -o %s|awk '{print $4}'" %
                                   final_path, check_exit_code=False)
         if len(output):
             size = int(output[0])
@@ -281,7 +282,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         return final_path, size
 
-    def run_command(self, cmd, check_exit_code=True):
+    def run_vios_command(self, cmd, check_exit_code=True):
         """Run a remote command using an active ssh connection.
 
         :param command: String with the command to run.
@@ -291,7 +292,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
                                            check_exit_code=check_exit_code)
         return stdout.strip().splitlines()
 
-    def run_command_as_root(self, command, check_exit_code=True):
+    def run_vios_command_as_root(self, command, check_exit_code=True):
         """Run a remote command as root using an active ssh connection.
 
         :param command: List of commands.
