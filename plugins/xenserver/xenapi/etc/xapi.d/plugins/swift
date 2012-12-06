@@ -276,5 +276,6 @@ def upload_vhd(session, vdi_uuids, sr_path, image_id, **params):
             'disk_format': 'vhd',
             'container_format': 'ovf'}
 
+
 if __name__ == '__main__':
     utils.register_plugin_calls(upload_vhd)
