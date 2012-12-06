@@ -221,6 +221,10 @@ def _db_error(caught_exception):
 class ProjectCommands(object):
     """Class for managing projects."""
 
+    @args('--project', dest="project_id", metavar='<Project name>',
+            help='Project name')
+    @args('--key', dest="key", metavar='<key>', help='Key')
+    @args('--value', dest="value", metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
         """Set or display quotas for project"""
         ctxt = context.get_admin_context()
