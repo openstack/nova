@@ -79,7 +79,6 @@ def _have_mysql():
 class TestMigrations(test.TestCase):
     """Test sqlalchemy-migrate migrations"""
 
-    TEST_DATABASES = {}
     DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
                                        'test_migrations.conf')
     # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
@@ -94,28 +93,28 @@ class TestMigrations(test.TestCase):
         super(TestMigrations, self).setUp()
 
         self.snake_walk = False
+        self.test_databases = {}
 
         # Load test databases from the config file. Only do this
         # once. No need to re-run this on each test...
         LOG.debug('config_path is %s' % TestMigrations.CONFIG_FILE_PATH)
-        if not TestMigrations.TEST_DATABASES:
-            if os.path.exists(TestMigrations.CONFIG_FILE_PATH):
-                cp = ConfigParser.RawConfigParser()
-                try:
-                    cp.read(TestMigrations.CONFIG_FILE_PATH)
-                    defaults = cp.defaults()
-                    for key, value in defaults.items():
-                        TestMigrations.TEST_DATABASES[key] = value
-                    self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
-                except ConfigParser.ParsingError, e:
-                    self.fail("Failed to read test_migrations.conf config "
-                              "file. Got error: %s" % e)
-            else:
-                self.fail("Failed to find test_migrations.conf config "
-                          "file.")
+        if os.path.exists(TestMigrations.CONFIG_FILE_PATH):
+            cp = ConfigParser.RawConfigParser()
+            try:
+                cp.read(TestMigrations.CONFIG_FILE_PATH)
+                defaults = cp.defaults()
+                for key, value in defaults.items():
+                    self.test_databases[key] = value
+                self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
+            except ConfigParser.ParsingError, e:
+                self.fail("Failed to read test_migrations.conf config "
+                          "file. Got error: %s" % e)
+        else:
+            self.fail("Failed to find test_migrations.conf config "
+                      "file.")
 
         self.engines = {}
-        for key, value in TestMigrations.TEST_DATABASES.items():
+        for key, value in self.test_databases.items():
             self.engines[key] = sqlalchemy.create_engine(value)
 
         # We start each test case with a completely blank slate.
@@ -131,8 +130,8 @@ class TestMigrations(test.TestCase):
         # remove these from the list so they aren't used in the migration tests
         if "mysqlcitest" in self.engines:
             del self.engines["mysqlcitest"]
-        if "mysqlcitest" in TestMigrations.TEST_DATABASES:
-            del TestMigrations.TEST_DATABASES["mysqlcitest"]
+        if "mysqlcitest" in self.test_databases:
+            del self.test_databases["mysqlcitest"]
         super(TestMigrations, self).tearDown()
 
     def _reset_databases(self):
@@ -141,7 +140,7 @@ class TestMigrations(test.TestCase):
             LOG.debug(output)
             self.assertEqual(0, status)
         for key, engine in self.engines.items():
-            conn_string = TestMigrations.TEST_DATABASES[key]
+            conn_string = self.test_databases[key]
             conn_pieces = urlparse.urlparse(conn_string)
             if conn_string.startswith('sqlite'):
                 # We can just delete the SQLite database, which is
@@ -222,7 +221,7 @@ class TestMigrations(test.TestCase):
         connect_string = _mysql_get_connect_string()
         engine = sqlalchemy.create_engine(connect_string)
         self.engines["mysqlcitest"] = engine
-        TestMigrations.TEST_DATABASES["mysqlcitest"] = connect_string
+        self.test_databases["mysqlcitest"] = connect_string
 
         # build a fully populated mysql database with all the tables
         self._reset_databases()
@@ -268,19 +267,19 @@ class TestMigrations(test.TestCase):
             # upgrade -> downgrade -> upgrade
             self._migrate_up(engine, version)
             if snake_walk:
-                self._migrate_down(engine, version - 1)
+                self._migrate_down(engine, version)
                 self._migrate_up(engine, version)
 
         if downgrade:
             # Now walk it back down to 0 from the latest, testing
             # the downgrade paths.
             for version in reversed(
-                xrange(migration.INIT_VERSION + 1,
-                       TestMigrations.REPOSITORY.latest)):
+                xrange(migration.INIT_VERSION + 2,
+                       TestMigrations.REPOSITORY.latest + 1)):
                 # downgrade -> upgrade -> downgrade
                 self._migrate_down(engine, version)
                 if snake_walk:
-                    self._migrate_up(engine, version + 1)
+                    self._migrate_up(engine, version)
                     self._migrate_down(engine, version)
 
     def _migrate_down(self, engine, version):
