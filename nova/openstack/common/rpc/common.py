@@ -18,13 +18,13 @@
 #    under the License.
 
 import copy
-import logging
 import traceback
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class RPCException(Exception):
             try:
                 message = self.message % kwargs
 
-            except Exception as e:
+            except Exception:
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
                 LOG.exception(_('Exception in string format operation'))
@@ -258,7 +258,7 @@ def deserialize_remote_exception(conf, data):
         # we cannot necessarily change an exception message so we must override
         # the __str__ method.
         failure.__class__ = new_ex_type
-    except TypeError as e:
+    except TypeError:
         # NOTE(ameade): If a core exception then just add the traceback to the
         # first exception argument.
         failure.args = (message,) + failure.args[1:]

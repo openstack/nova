@@ -26,7 +26,6 @@ AMQP, but is deprecated and predates this code.
 """
 
 import inspect
-import logging
 import sys
 import uuid
 
@@ -38,6 +37,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import local
+from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 
 
@@ -55,7 +55,7 @@ class Pool(pools.Pool):
 
     # TODO(comstud): Timeout connections not used in a while
     def create(self):
-        LOG.debug('Pool creating new connection')
+        LOG.debug(_('Pool creating new connection'))
         return self.connection_cls(self.conf)
 
     def empty(self):
@@ -282,7 +282,7 @@ class ProxyCallback(object):
                 ctxt.reply(rval, None, connection_pool=self.connection_pool)
             # This final None tells multicall that it is done.
             ctxt.reply(ending=True, connection_pool=self.connection_pool)
-        except Exception as e:
+        except Exception:
             LOG.exception(_('Exception during message handling'))
             ctxt.reply(None, sys.exc_info(),
                        connection_pool=self.connection_pool)
@@ -407,8 +407,9 @@ def fanout_cast_to_server(conf, context, server_params, topic, msg,
 
 def notify(conf, context, topic, msg, connection_pool):
     """Sends a notification event on a topic."""
-    event_type = msg.get('event_type')
-    LOG.debug(_('Sending %(event_type)s on %(topic)s'), locals())
+    LOG.debug(_('Sending %(event_type)s on %(topic)s'),
+              dict(event_type=msg.get('event_type'),
+                   topic=topic))
     pack_context(msg, context)
     with ConnectionContext(conf, connection_pool) as conn:
         conn.notify_send(topic, msg)

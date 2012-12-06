@@ -41,8 +41,8 @@ server side of the API at the same time.  However, as the code stands today,
 there can be both versioned and unversioned APIs implemented in the same code
 base.
 
-
-EXAMPLES:
+EXAMPLES
+========
 
 Nova was the first project to use versioned rpc APIs.  Consider the compute rpc
 API as an example.  The client side is in nova/compute/rpcapi.py and the server
@@ -50,12 +50,13 @@ side is in nova/compute/manager.py.
 
 
 Example 1) Adding a new method.
+-------------------------------
 
 Adding a new method is a backwards compatible change.  It should be added to
 nova/compute/manager.py, and RPC_API_VERSION should be bumped from X.Y to
 X.Y+1.  On the client side, the new method in nova/compute/rpcapi.py should
 have a specific version specified to indicate the minimum API version that must
-be implemented for the method to be supported.  For example:
+be implemented for the method to be supported.  For example::
 
     def get_host_uptime(self, ctxt, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
@@ -67,10 +68,11 @@ get_host_uptime() method.
 
 
 Example 2) Adding a new parameter.
+----------------------------------
 
 Adding a new parameter to an rpc method can be made backwards compatible.  The
 RPC_API_VERSION on the server side (nova/compute/manager.py) should be bumped.
-The implementation of the method must not expect the parameter to be present.
+The implementation of the method must not expect the parameter to be present.::
 
     def some_remote_method(self, arg1, arg2, newarg=None):
         # The code needs to deal with newarg=None for cases
