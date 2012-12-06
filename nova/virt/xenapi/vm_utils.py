@@ -719,28 +719,18 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
     LOG.debug(_("Asking xapi to upload to swift %(vdi_uuids)s as"
                 " ID %(image_id)s"), locals(), instance=instance)
 
-    swift_store_auth_version = "2"
-    swift_store_auth_address = "http://10.4.192.110:5000/v2.0/"
-    swift_store_user = "service:glance"
-    swift_store_key = "openstack"
-    swift_store_container = "glance"
-    swift_store_create_container_on_put = True
-    swift_store_large_object_size = 5120
-    swift_store_large_object_chunk_size = 200
-    swift_enable_snet = False
-
     params = {'vdi_uuids': vdi_uuids,
               'image_id': image_id,
               'sr_path': get_sr_path(session),
-              'swift_enable_snet': swift_enable_snet,
-              'swift_store_user': swift_store_user,
-              'swift_store_key': swift_store_key,
-              'swift_store_auth_version': swift_store_auth_version,
-              'swift_store_container': swift_store_container,
-              'swift_store_large_object_size': swift_store_large_object_size,
-              'swift_store_large_object_chunk_size': swift_store_large_object_chunk_size,
-              'swift_store_create_container_on_put': swift_store_create_container_on_put,
-              'full_auth_address': swift_store_auth_address,
+              'swift_enable_snet': CONF.swift_enable_snet,
+              'swift_store_user': CONF.swift_store_user,
+              'swift_store_key': CONF.swift_store_key,
+              'swift_store_auth_version': CONF.swift_store_auth_version,
+              'swift_store_container': CONF.swift_store_container,
+              'swift_store_large_object_size': CONF.swift_store_large_object_size,
+              'swift_store_large_object_chunk_size': CONF.swift_store_large_object_chunk_size,
+              'swift_store_create_container_on_put': CONF.swift_store_create_container_on_put,
+              'full_auth_address': CONF.swift_store_auth_address,
              }
 
     session.call_plugin_serialized('swift', 'upload_vhd', **params)

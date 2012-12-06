@@ -165,11 +165,33 @@ running_deleted_opts = [
                     "instance should be considered eligible for cleanup."),
 ]
 
+swift_opts = [
+    cfg.StrOpt("swift_store_auth_version",
+               default="2"),
+    cfg.StrOpt("swift_store_auth_address",
+               default="http://10.4.192.110:5000/v2.0/"),
+    cfg.StrOpt("swift_store_user",
+               default="service:glance"),
+    cfg.StrOpt("swift_store_key",
+               default="openstack"),
+    cfg.StrOpt("swift_store_container",
+               default="glance"),
+    cfg.BoolOpt("swift_store_create_container_on_put",
+                default=True),
+    cfg.IntOpt("swift_store_large_object_size",
+               default=5 * 1024 * 1024 * 1024),
+    cfg.IntOpt("swift_store_large_object_chunk_size",
+               default=4 * 1024 * 1024 * 1024),
+    cfg.BoolOpt("swift_enable_snet",
+                default=False)
+]
+
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
+CONF.register_opts(swift_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.config')
 CONF.import_opt('host', 'nova.config')
