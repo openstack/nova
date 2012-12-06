@@ -2197,6 +2197,74 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_device_name_not_string(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'delete_on_termination': 1,
+                'device_name': 123,
+                'volume_size': 1,
+                'volume_id': '11111111-1111-1111-1111-111111111111'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_with_device_name_empty(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'delete_on_termination': 1,
+                'device_name': '',
+                'volume_size': 1,
+                'volume_id': '11111111-1111-1111-1111-111111111111'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_with_device_name_too_long(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'delete_on_termination': 1,
+                'device_name': 'a' * 256,
+                'volume_size': 1,
+                'volume_id': '11111111-1111-1111-1111-111111111111'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_with_space_in_device_name(self):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{'delete_on_termination': 1,
+                'device_name': 'vd a',
+                'volume_size': 1,
+                'volume_id': '11111111-1111-1111-1111-111111111111'}]
+        params = {'block_device_mapping': bdm}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
     def test_create_instance_with_bdm_delete_on_termination(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         bdm = [{'device_name': 'foo1', 'delete_on_termination': 1},

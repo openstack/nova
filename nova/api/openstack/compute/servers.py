@@ -561,17 +561,28 @@ class Controller(wsgi.Controller):
         req.cache_db_instance(instance)
         return instance
 
-    def _validate_server_name(self, value):
+    def _check_string_length(self, value, name, max_length=None):
         if not isinstance(value, basestring):
-            msg = _("Server name is not a string or unicode")
+            msg = _("%s is not a string or unicode") % name
             raise exc.HTTPBadRequest(explanation=msg)
 
         if not value.strip():
-            msg = _("Server name is an empty string")
+            msg = _("%s is an empty string") % name
             raise exc.HTTPBadRequest(explanation=msg)
 
-        if not len(value) < 256:
-            msg = _("Server name must be less than 256 characters.")
+        if max_length and len(value) > max_length:
+            msg = _("%(name)s can be at most %(max_length)s "
+                    "characters.") % locals()
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    def _validate_server_name(self, value):
+        self._check_string_length(value, 'Server name', max_length=255)
+
+    def _validate_device_name(self, value):
+        self._check_string_length(value, 'Device name', max_length=255)
+
+        if ' ' in value:
+            msg = _("Device name cannot include spaces.")
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _get_injected_files(self, personality):
@@ -809,6 +820,7 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-volumes'):
             block_device_mapping = server_dict.get('block_device_mapping', [])
             for bdm in block_device_mapping:
+                self._validate_device_name(bdm["device_name"])
                 if 'delete_on_termination' in bdm:
                     bdm['delete_on_termination'] = utils.bool_from_str(
                         bdm['delete_on_termination'])
