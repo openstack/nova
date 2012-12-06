@@ -51,48 +51,38 @@ VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
 
 
 # Monkey patch broken excluded filter in pep8
-def filename_match(filename, patterns, default=True):
-    """
-    Check if patterns contains a pattern that matches filename.
-    If patterns is unspecified, this always returns True.
-    """
-    if not patterns:
-        return default
-    return any(fnmatch.fnmatch(filename, pattern) for pattern in patterns)
-
-
-def excluded(filename):
+# See https://github.com/jcrocholl/pep8/pull/111
+def excluded(self, filename):
     """
     Check if options.exclude contains a pattern that matches filename.
     """
     basename = os.path.basename(filename)
-    return any((filename_match(filename, pep8.options.exclude,
+    return any((pep8.filename_match(filename, self.options.exclude,
                                default=False),
-                filename_match(basename, pep8.options.exclude,
+                pep8.filename_match(basename, self.options.exclude,
                                default=False)))
 
 
-def input_dir(dirname, runner=None):
-    """
-    Check all Python source files in this directory and all subdirectories.
-    """
+def input_dir(self, dirname):
+    """Check all files in this directory and all subdirectories."""
     dirname = dirname.rstrip('/')
-    if excluded(dirname):
-        return
-    if runner is None:
-        runner = pep8.input_file
+    if self.excluded(dirname):
+        return 0
+    counters = self.options.report.counters
+    verbose = self.options.verbose
+    filepatterns = self.options.filename
+    runner = self.runner
     for root, dirs, files in os.walk(dirname):
-        if pep8.options.verbose:
+        if verbose:
             print('directory ' + root)
-        pep8.options.counters['directories'] += 1
-        dirs.sort()
-        for subdir in dirs[:]:
-            if excluded(os.path.join(root, subdir)):
+        counters['directories'] += 1
+        for subdir in sorted(dirs):
+            if self.excluded(os.path.join(root, subdir)):
                 dirs.remove(subdir)
-        files.sort()
-        for filename in files:
-            if pep8.filename_match(filename) and not excluded(filename):
-                pep8.options.counters['files'] += 1
+        for filename in sorted(files):
+            # contain a pattern that matches?
+            if ((pep8.filename_match(filename, filepatterns) and
+                 not self.excluded(filename))):
                 runner(os.path.join(root, filename))
 
 
@@ -242,7 +232,7 @@ def nova_import_module_only(logical_line):
             (len(split_line) == 4 and split_line[2] == "as"))):
         mod = split_line[1]
         rval = importModuleCheck(mod)
-        if rval != None:
+        if rval is not None:
             yield rval
 
     # TODO(jogo) handle "from x import *"
@@ -481,8 +471,8 @@ if __name__ == "__main__":
     add_nova()
     pep8.current_file = current_file
     pep8.readlines = readlines
-    pep8.excluded = excluded
-    pep8.input_dir = input_dir
+    pep8.StyleGuide.excluded = excluded
+    pep8.StyleGuide.input_dir = input_dir
     try:
         pep8._main()
         sys.exit(once_error)
