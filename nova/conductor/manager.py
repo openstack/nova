@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.24'
+    RPC_API_VERSION = '1.25'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -260,3 +260,9 @@ class ConductorManager(manager.SchedulerDependentManager):
             result = self.db.service_get_all_by_host(context, host)
 
         return jsonutils.to_primitive(result)
+
+    def action_event_start(self, context, values):
+        return self.db.action_event_start(context, values)
+
+    def action_event_finish(self, context, values):
+        return self.db.action_event_finish(context, values)

@@ -4552,6 +4552,125 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 ##################
 
 
+def action_start(context, values):
+    action_ref = models.InstanceAction()
+    action_ref.update(values)
+    action_ref.save()
+    return action_ref
+
+
+def action_finish(context, values):
+    session = get_session()
+    with session.begin():
+        action_ref = model_query(context, models.InstanceAction,
+                                 session=session).\
+                           filter_by(instance_uuid=values['instance_uuid']).\
+                           filter_by(request_id=values['request_id']).\
+                           first()
+
+        if not action_ref:
+            raise exception.InstanceActionNotFound(
+                                        request_id=values['request_id'],
+                                        instance_uuid=values['instance_uuid'])
+
+        action_ref.update(values)
+    return action_ref
+
+
+def actions_get(context, instance_uuid):
+    """Get all instance actions for the provided uuid."""
+    actions = model_query(context, models.InstanceAction).\
+                          filter_by(instance_uuid=instance_uuid).\
+                          order_by(desc("created_at")).\
+                          all()
+    return actions
+
+
+def action_get_by_id(context, instance_uuid, action_id):
+    """Get the action by id and given instance"""
+    action = model_query(context, models.InstanceAction).\
+                         filter_by(instance_uuid=instance_uuid).\
+                         filter_by(id=action_id).\
+                         first()
+
+    return action
+
+
+def _action_get_by_request_id(context, instance_uuid, request_id,
+                                                                session=None):
+    result = model_query(context, models.InstanceAction, session=session).\
+                         filter_by(instance_uuid=instance_uuid).\
+                         filter_by(request_id=request_id).\
+                         first()
+    return result
+
+
+def action_event_start(context, values):
+    """Start an event on an instance action"""
+    session = get_session()
+    with session.begin():
+        action = _action_get_by_request_id(context, values['instance_uuid'],
+                                           values['request_id'], session)
+
+        if not action:
+            raise exception.InstanceActionNotFound(
+                                        request_id=values['request_id'],
+                                        instance_uuid=values['instance_uuid'])
+
+        values['action_id'] = action['id']
+
+        event_ref = models.InstanceActionEvent()
+        event_ref.update(values)
+        event_ref.save(session=session)
+    return event_ref
+
+
+def action_event_finish(context, values):
+    """Finish an event on an instance action"""
+    session = get_session()
+    with session.begin():
+        action = _action_get_by_request_id(context, values['instance_uuid'],
+                                           values['request_id'], session)
+
+        if not action:
+            raise exception.InstanceActionNotFound(
+                                        request_id=values['request_id'],
+                                        instance_uuid=values['instance_uuid'])
+
+        event_ref = model_query(context, models.InstanceActionEvent,
+                                session=session).\
+                            filter_by(action_id=action['id']).\
+                            filter_by(event=values['event']).\
+                            first()
+
+        if not event_ref:
+            raise exception.InstanceActionEventNotFound(action_id=action['id'],
+                                                        event=values['event'])
+        event_ref.update(values)
+    return event_ref
+
+
+def action_events_get(context, action_id):
+    events = model_query(context, models.InstanceActionEvent).\
+                         filter_by(action_id=action_id).\
+                         order_by(desc("created_at")).\
+                         all()
+
+    return events
+
+
+def action_event_get_by_id(context, action_id, event_id):
+    event = model_query(context, models.InstanceActionEvent).\
+                        filter_by(action_id=action_id).\
+                        filter_by(id=event_id).\
+                        first()
+
+    return event
+
+
+##################
+
+
 @require_context
 def ec2_instance_create(context, instance_uuid, id=None):
     """Create ec2 compatable instance by provided uuid"""

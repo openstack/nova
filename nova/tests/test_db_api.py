@@ -539,6 +539,225 @@ class DbApiTestCase(test.TestCase):
         expected = {uuids[0]: [], uuids[1]: []}
         self.assertEqual(expected, instance_faults)
 
+    def test_instance_action_start(self):
+        """Create an instance action"""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid,
+                         'request_id': ctxt.request_id,
+                         'user_id': ctxt.user_id,
+                         'project_id': ctxt.project_id,
+                         'start_time': start_time}
+        db.action_start(ctxt, action_values)
+
+        # Retrieve the action to ensure it was successfully added
+        actions = db.actions_get(ctxt, uuid)
+        self.assertEqual(1, len(actions))
+        self.assertEqual('run_instance', actions[0]['action'])
+        self.assertEqual(start_time, actions[0]['start_time'])
+        self.assertEqual(ctxt.request_id, actions[0]['request_id'])
+        self.assertEqual(ctxt.user_id, actions[0]['user_id'])
+        self.assertEqual(ctxt.project_id, actions[0]['project_id'])
+
+    def test_instance_action_finish(self):
+        """Create an instance action"""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        action_start_values = {'action': 'run_instance',
+                               'instance_uuid': uuid,
+                               'request_id': ctxt.request_id,
+                               'user_id': ctxt.user_id,
+                               'project_id': ctxt.project_id,
+                               'start_time': start_time}
+        db.action_start(ctxt, action_start_values)
+
+        finish_time = timeutils.utcnow() + datetime.timedelta(seconds=5)
+        action_finish_values = {'instance_uuid': uuid,
+                                'request_id': ctxt.request_id,
+                                'finish_time': finish_time}
+        db.action_finish(ctxt, action_finish_values)
+
+        # Retrieve the action to ensure it was successfully added
+        actions = db.actions_get(ctxt, uuid)
+        self.assertEqual(1, len(actions))
+        self.assertEqual('run_instance', actions[0]['action'])
+        self.assertEqual(start_time, actions[0]['start_time'])
+        self.assertEqual(finish_time, actions[0]['finish_time'])
+        self.assertEqual(ctxt.request_id, actions[0]['request_id'])
+        self.assertEqual(ctxt.user_id, actions[0]['user_id'])
+        self.assertEqual(ctxt.project_id, actions[0]['project_id'])
+
+    def test_instance_actions_get_by_instance(self):
+        """Ensure we can get actions by UUID"""
+        ctxt1 = context.get_admin_context()
+        ctxt2 = context.get_admin_context()
+        uuid1 = str(stdlib_uuid.uuid4())
+        uuid2 = str(stdlib_uuid.uuid4())
+
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid1,
+                         'request_id': ctxt1.request_id,
+                         'user_id': ctxt1.user_id,
+                         'project_id': ctxt1.project_id,
+                         'start_time': timeutils.utcnow()}
+        db.action_start(ctxt1, action_values)
+        action_values['action'] = 'resize'
+        db.action_start(ctxt1, action_values)
+
+        action_values = {'action': 'reboot',
+                         'instance_uuid': uuid2,
+                         'request_id': ctxt2.request_id,
+                         'user_id': ctxt2.user_id,
+                         'project_id': ctxt2.project_id,
+                         'start_time': timeutils.utcnow()}
+        db.action_start(ctxt2, action_values)
+        db.action_start(ctxt2, action_values)
+
+        # Retrieve the action to ensure it was successfully added
+        actions = db.actions_get(ctxt1, uuid1)
+        self.assertEqual(2, len(actions))
+        self.assertEqual('resize', actions[0]['action'])
+        self.assertEqual('run_instance', actions[1]['action'])
+
+    def test_instance_action_get_by_instance_and_action(self):
+        """Ensure we can get an action by instance UUID and action id"""
+        ctxt1 = context.get_admin_context()
+        ctxt2 = context.get_admin_context()
+        uuid1 = str(stdlib_uuid.uuid4())
+        uuid2 = str(stdlib_uuid.uuid4())
+
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid1,
+                         'request_id': ctxt1.request_id,
+                         'user_id': ctxt1.user_id,
+                         'project_id': ctxt1.project_id,
+                         'start_time': timeutils.utcnow()}
+        db.action_start(ctxt1, action_values)
+        action_values['action'] = 'resize'
+        db.action_start(ctxt1, action_values)
+
+        action_values = {'action': 'reboot',
+                         'instance_uuid': uuid2,
+                         'request_id': ctxt2.request_id,
+                         'user_id': ctxt2.user_id,
+                         'project_id': ctxt2.project_id,
+                         'start_time': timeutils.utcnow()}
+        db.action_start(ctxt2, action_values)
+        db.action_start(ctxt2, action_values)
+
+        actions = db.actions_get(ctxt1, uuid1)
+        action_id = actions[0]['id']
+        action = db.action_get_by_id(ctxt1, uuid1, action_id)
+        self.assertEqual('resize', action['action'])
+        self.assertEqual(ctxt1.request_id, action['request_id'])
+
+    def test_instance_action_event_start(self):
+        """Create an instance action event"""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid,
+                         'request_id': ctxt.request_id,
+                         'user_id': ctxt.user_id,
+                         'project_id': ctxt.project_id,
+                         'start_time': start_time}
+        action = db.action_start(ctxt, action_values)
+
+        event_values = {'event': 'schedule',
+                        'instance_uuid': uuid,
+                        'request_id': ctxt.request_id,
+                        'start_time': start_time}
+        db.action_event_start(ctxt, event_values)
+
+        # Retrieve the event to ensure it was successfully added
+        events = db.action_events_get(ctxt, action['id'])
+        self.assertEqual(1, len(events))
+        self.assertEqual('schedule', events[0]['event'])
+        self.assertEqual(start_time, events[0]['start_time'])
+
+    def test_instance_action_event_finish(self):
+        """Finish an instance action event"""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid,
+                         'request_id': ctxt.request_id,
+                         'user_id': ctxt.user_id,
+                         'project_id': ctxt.project_id,
+                         'start_time': start_time}
+        action = db.action_start(ctxt, action_values)
+
+        event_values = {'event': 'schedule',
+                        'request_id': ctxt.request_id,
+                        'instance_uuid': uuid,
+                        'start_time': start_time}
+        db.action_event_start(ctxt, event_values)
+
+        finish_time = timeutils.utcnow() + datetime.timedelta(seconds=5)
+        event_finish_values = {'event': 'schedule',
+                                'request_id': ctxt.request_id,
+                                'instance_uuid': uuid,
+                                'finish_time': finish_time}
+        db.action_event_finish(ctxt, event_finish_values)
+
+        # Retrieve the event to ensure it was successfully added
+        events = db.action_events_get(ctxt, action['id'])
+        self.assertEqual(1, len(events))
+        self.assertEqual('schedule', events[0]['event'])
+        self.assertEqual(start_time, events[0]['start_time'])
+        self.assertEqual(finish_time, events[0]['finish_time'])
+
+    def test_instance_action_event_get_by_id(self):
+        """Get a specific instance action event"""
+        ctxt1 = context.get_admin_context()
+        ctxt2 = context.get_admin_context()
+        uuid1 = str(stdlib_uuid.uuid4())
+        uuid2 = str(stdlib_uuid.uuid4())
+
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid1,
+                         'request_id': ctxt1.request_id,
+                         'user_id': ctxt1.user_id,
+                         'project_id': ctxt1.project_id,
+                         'start_time': timeutils.utcnow()}
+        added_action = db.action_start(ctxt1, action_values)
+
+        action_values = {'action': 'reboot',
+                         'instance_uuid': uuid2,
+                         'request_id': ctxt2.request_id,
+                         'user_id': ctxt2.user_id,
+                         'project_id': ctxt2.project_id,
+                         'start_time': timeutils.utcnow()}
+        db.action_start(ctxt2, action_values)
+
+        start_time = timeutils.utcnow()
+        event_values = {'event': 'schedule',
+                        'instance_uuid': uuid1,
+                        'request_id': ctxt1.request_id,
+                        'start_time': start_time}
+        added_event = db.action_event_start(ctxt1, event_values)
+
+        event_values = {'event': 'reboot',
+                        'instance_uuid': uuid2,
+                        'request_id': ctxt2.request_id,
+                        'start_time': timeutils.utcnow()}
+        db.action_event_start(ctxt2, event_values)
+
+        # Retrieve the event to ensure it was successfully added
+        event = db.action_event_get_by_id(ctxt1, added_action['id'],
+                                                     added_event['id'])
+        self.assertEqual('schedule', event['event'])
+        self.assertEqual(start_time, event['start_time'])
+
     def test_dns_registration(self):
         domain1 = 'test.domain.one'
         domain2 = 'test.domain.two'

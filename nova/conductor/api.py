@@ -237,6 +237,12 @@ class LocalAPI(object):
     def service_get_all_compute_by_host(self, context, host):
         return self._manager.service_get_all_by(context, 'compute', host)
 
+    def action_event_start(self, context, values):
+        return self._manager.action_event_start(context, values)
+
+    def action_event_finish(self, context, values):
+        return self._manager.action_event_finish(context, values)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -428,3 +434,9 @@ class API(object):
     def service_get_all_compute_by_host(self, context, host):
         return self.conductor_rpcapi.service_get_all_by(context, 'compute',
                                                         host)
+
+    def action_event_start(self, context, values):
+        return self.conductor_rpcapi.action_event_start(context, values)
+
+    def action_event_finish(self, context, values):
+        return self.conductor_rpcapi.action_event_finish(context, values)

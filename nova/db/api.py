@@ -1621,6 +1621,47 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 ####################
 
 
+def action_start(context, values):
+    """Start an action for an instance"""
+    return IMPL.action_start(context, values)
+
+
+def action_finish(context, values):
+    """Finish an action for an instance"""
+    return IMPL.action_finish(context, values)
+
+
+def actions_get(context, uuid):
+    """Get all instance actions for the provided instance"""
+    return IMPL.actions_get(context, uuid)
+
+
+def action_get_by_id(context, uuid, action_id):
+    """Get the action by id and given instance"""
+    return IMPL.action_get_by_id(context, uuid, action_id)
+
+
+def action_event_start(context, values):
+    """Start an event on an instance action"""
+    return IMPL.action_event_start(context, values)
+
+
+def action_event_finish(context, values):
+    """Finish an event on an instance action"""
+    return IMPL.action_event_finish(context, values)
+
+
+def action_events_get(context, action_id):
+    return IMPL.action_events_get(context, action_id)
+
+
+def action_event_get_by_id(context, action_id, event_id):
+    return IMPL.action_event_get_by_id(context, action_id, event_id)
+
+
+####################
+
+
 def get_ec2_instance_id_by_uuid(context, instance_id):
     """Get ec2 id through uuid from instance_id_mappings table"""
     return IMPL.get_ec2_instance_id_by_uuid(context, instance_id)
