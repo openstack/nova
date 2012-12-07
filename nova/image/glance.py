@@ -275,12 +275,15 @@ class GlanceImageService(object):
 
         :raises: ImageNotFound if the image does not exist.
         :raises: NotAuthorized if the user is not an owner.
+        :raises: ImageNotAuthorized if the user is not authorized.
 
         """
         try:
             self._client.call(context, 1, 'delete', image_id)
         except glanceclient.exc.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
+        except glanceclient.exc.HTTPForbidden:
+            raise exception.ImageNotAuthorized(image_id=image_id)
         return True
 
     @staticmethod
