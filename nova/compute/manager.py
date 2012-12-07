@@ -1704,7 +1704,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             instance = self._instance_update(context,
                                         instance['uuid'],
-                                        host=migration['source_compute'])
+                                        host=migration['source_compute'],
+                                        node=migration['source_node'])
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
