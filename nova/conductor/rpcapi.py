@@ -31,6 +31,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.2 - Added instance_get_by_uuid and instance_get_all_by_host
     1.3 - Added aggregate_host_add and aggregate_host_delete
     1.4 - Added migration_get
+    1.5 - Added bw_usage_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -77,3 +78,14 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('aggregate_host_delete', aggregate=aggregate_p,
                             host=host)
         return self.call(context, msg, version='1.3')
+
+    def bw_usage_update(self, context, uuid, mac, start_period,
+                        bw_in=None, bw_out=None,
+                        last_ctr_in=None, last_ctr_out=None,
+                        last_refreshed=None):
+        msg = self.make_msg('bw_usage_update',
+                            uuid=uuid, mac=mac, start_period=start_period,
+                            bw_in=bw_in, bw_out=bw_out,
+                            last_ctr_in=last_ctr_in, last_ctr_out=last_ctr_out,
+                            last_refreshed=last_refreshed)
+        return self.call(context, msg, version='1.5')

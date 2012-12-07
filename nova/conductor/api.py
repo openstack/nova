@@ -65,6 +65,17 @@ class LocalAPI(object):
     def aggregate_host_delete(self, context, aggregate, host):
         return self._manager.aggregate_host_delete(context, aggregate, host)
 
+    def bw_usage_get(self, context, uuid, start_period, mac):
+        return self._manager.bw_usage_update(context, uuid, start_period, mac)
+
+    def bw_usage_update(self, context, uuid, mac, start_period,
+                        bw_in, bw_out, last_ctr_in, last_ctr_out,
+                        last_refreshed=None):
+        return self._manager.bw_usage_update(context, uuid, mac, start_period,
+                                             bw_in, bw_out,
+                                             last_ctr_in, last_ctr_out,
+                                             last_refreshed)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -98,3 +109,15 @@ class API(object):
     def aggregate_host_delete(self, context, aggregate, host):
         return self.conductor_rpcapi.aggregate_host_delete(context, aggregate,
                                                            host)
+
+    def bw_usage_get(self, context, uuid, start_period, mac):
+        return self.conductor_rpcapi.bw_usage_update(context, uuid, mac,
+                                                     start_period)
+
+    def bw_usage_update(self, context, uuid, mac, start_period,
+                        bw_in, bw_out, last_ctr_in, last_ctr_out,
+                        last_refreshed=None):
+        return self.conductor_rpcapi.bw_usage_update(
+            context, uuid, mac, start_period,
+            bw_in, bw_out, last_ctr_in, last_ctr_out,
+            last_refreshed)
