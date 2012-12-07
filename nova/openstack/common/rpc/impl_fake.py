@@ -79,6 +79,8 @@ class Consumer(object):
                     else:
                         res.append(rval)
                 done.send(res)
+            except rpc_common.ClientException as e:
+                done.send_exception(e._exc_info[1])
             except Exception as e:
                 done.send_exception(e)
 
