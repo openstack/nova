@@ -330,6 +330,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
+            if nodename not in self.driver.get_available_nodes():
+                msg = _("%(nodename)s is not a valid node managed by this "
+                        "compute host.") % locals()
+                raise exception.NovaException(msg)
+
             rt = resource_tracker.ResourceTracker(self.host,
                                                   self.driver,
                                                   nodename)
@@ -342,8 +347,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.conductor_api.instance_update(context,
                                                           instance_uuid,
                                                           **kwargs)
-        rt = self._get_resource_tracker(instance_ref.get('node'))
-        rt.update_usage(context, instance_ref)
+        if (instance_ref['host'] == self.host and
+            instance_ref['node'] in self.driver.get_available_nodes()):
+
+            rt = self._get_resource_tracker(instance_ref.get('node'))
+            rt.update_usage(context, instance_ref)
 
         return instance_ref
 
