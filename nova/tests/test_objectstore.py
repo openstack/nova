@@ -35,7 +35,6 @@ from nova import wsgi
 
 CONF = cfg.CONF
 CONF.import_opt('s3_host', 'nova.config')
-CONF.import_opt('s3_port', 'nova.config')
 
 # Create a unique temporary directory. We don't delete after test to
 # allow checking the contents after running tests. Users and/or tools
@@ -63,7 +62,7 @@ class S3APITestCase(test.TestCase):
         self.server = wsgi.Server("S3 Objectstore",
                                   router,
                                   host=CONF.s3_host,
-                                  port=CONF.s3_port)
+                                  port=0)
         self.server.start()
 
         if not boto.config.has_section('Boto'):
@@ -73,7 +72,7 @@ class S3APITestCase(test.TestCase):
         conn = s3.S3Connection(aws_access_key_id='fake',
                                aws_secret_access_key='fake',
                                host=CONF.s3_host,
-                               port=CONF.s3_port,
+                               port=self.server.port,
                                is_secure=False,
                                calling_format=s3.OrdinaryCallingFormat())
         self.conn = conn
