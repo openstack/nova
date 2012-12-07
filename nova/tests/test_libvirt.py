@@ -82,7 +82,8 @@ _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like
 
 
-def _concurrency(wait, done, target):
+def _concurrency(signal, wait, done, target):
+    signal.send()
     wait.wait()
     done.send()
 
@@ -491,12 +492,21 @@ class CacheConcurrencyTestCase(test.TestCase):
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
+        sig1 = eventlet.event.Event()
         thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
-                _concurrency, 'fname', None, wait=wait1, done=done1)
+                _concurrency, 'fname', None,
+                signal=sig1, wait=wait1, done=done1)
+        eventlet.sleep(0)
+        # Thread 1 should run before thread 2.
+        sig1.wait()
+
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
+        sig2 = eventlet.event.Event()
         thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
-                _concurrency, 'fname', None, wait=wait2, done=done2)
+                _concurrency, 'fname', None,
+                signal=sig2, wait=wait2, done=done2)
+
         wait2.send()
         eventlet.sleep(0)
         try:
@@ -516,12 +526,24 @@ class CacheConcurrencyTestCase(test.TestCase):
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
+        sig1 = eventlet.event.Event()
         thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
-                _concurrency, 'fname2', None, wait=wait1, done=done1)
+                _concurrency, 'fname2', None,
+                signal=sig1, wait=wait1, done=done1)
+        eventlet.sleep(0)
+        # Thread 1 should run before thread 2.
+        sig1.wait()
+
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
+        sig2 = eventlet.event.Event()
         thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
-                _concurrency, 'fname1', None, wait=wait2, done=done2)
+                _concurrency, 'fname1', None,
+                signal=sig2, wait=wait2, done=done2)
+        eventlet.sleep(0)
+        # Wait for thread 2 to start.
+        sig2.wait()
+
         wait2.send()
         eventlet.sleep(0)
         try:
