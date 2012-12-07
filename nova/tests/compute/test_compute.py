@@ -2971,6 +2971,27 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['get_all'])
         self.assertEqual(called['set_error_state'], 4)
 
+    def test_get_resource_tracker_fail(self):
+        self.assertRaises(exception.NovaException,
+                          self.compute._get_resource_tracker,
+                          'invalidnodename')
+
+    def test_instance_update_host_check(self):
+        # make sure rt usage doesn't happen if the host or node is different
+        def fail_get(nodename):
+            raise test.TestingException(_("wrong host/node"))
+        self.stubs.Set(self.compute, '_get_resource_tracker', fail_get)
+
+        instance = self._create_fake_instance({'host': 'someotherhost'})
+        self.compute._instance_update(self.context, instance['uuid'])
+
+        instance = self._create_fake_instance({'node': 'someothernode'})
+        self.compute._instance_update(self.context, instance['uuid'])
+
+        params = {'host': 'someotherhost', 'node': 'someothernode'}
+        instance = self._create_fake_instance(params)
+        self.compute._instance_update(self.context, instance['uuid'])
+
 
 class ComputeAPITestCase(BaseTestCase):
 
