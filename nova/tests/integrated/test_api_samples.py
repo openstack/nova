@@ -1852,3 +1852,36 @@ class ExtendedStatusSampleJsonTests(ServersSampleBase):
 
 class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
         ctype = 'xml'
+
+
+class FlavorManageSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.flavormanage."
+                      "Flavormanage")
+
+    def _create_flavor(self):
+        """Create a flavor"""
+        subs = {
+            'flavor_id': 10,
+            'flavor_name': "test_flavor"
+        }
+        response = self._do_post("flavors",
+                                 "flavor-create-post-req",
+                                 subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response("flavor-create-post-resp", subs, response)
+
+    def test_create_flavor(self):
+        """Get api sample to create a flavor"""
+        self._create_flavor()
+
+    def test_delete_flavor(self):
+        """Get api sample to delete a flavor"""
+        self._create_flavor()
+        response = self._do_delete("flavors/10")
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class FlavorManageSampleXmlTests(FlavorManageSampleJsonTests):
+    ctype = "xml"
