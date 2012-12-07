@@ -67,8 +67,9 @@ def create_sr(session, label, params):
 
 def introduce_sr(session, sr_uuid, label, params):
     LOG.debug(_("introducing sr within volume_utils"))
-    type = params['sr_type']
-    del params['sr_type']
+    # If the sr_type is missing, we assume we are
+    # using the default iscsi back-end
+    type = params.pop('sr_type', 'iscsi')
     LOG.debug(_('type is = %s') % type)
     if 'name_description' in params:
         desc = params['name_description']
@@ -283,18 +284,29 @@ def get_device_number(mountpoint):
     return device_number
 
 
+def parse_sr_info(connection_data, description=''):
+    label = connection_data.pop('name_label',
+                                'tempSR-%s' % connection_data.get('volume_id'))
+    params = {}
+    if 'sr_uuid' not in connection_data:
+        params = parse_volume_info(connection_data)
+        # This magic label sounds a lot like 'False Disc' in leet-speak
+        uuid = "FA15E-D15C-" + str(params['id'])
+    else:
+        uuid = connection_data['sr_uuid']
+        for k in connection_data.get('introduce_sr_keys', {}):
+            params[k] = connection_data[k]
+    params['name_description'] = connection_data.get('name_description',
+                                                     description)
+
+    return (uuid, label, params)
+
+
 def parse_volume_info(connection_data):
     """
     Parse device_path and mountpoint as they can be used by XenAPI.
     In particular, the mountpoint (e.g. /dev/sdc) must be translated
     into a numeric literal.
-    FIXME(armando):
-    As for device_path, currently cannot be used as it is,
-    because it does not contain target information. As for interim
-    solution, target details are passed either via Flags or obtained
-    by iscsiadm. Long-term solution is to add a few more fields to the
-    db in the iscsi_target table with the necessary info and modify
-    the iscsi driver to set them.
     """
     volume_id = connection_data['volume_id']
     target_portal = connection_data['target_portal']
@@ -369,12 +381,3 @@ def _get_target_port(iscsi_string):
         return iscsi_string[iscsi_string.find(':') + 1:]
     elif iscsi_string is None or CONF.target_port:
         return CONF.target_port
-
-
-def _get_iqn(iscsi_string, id):
-    """Retrieve target IQN"""
-    if iscsi_string:
-        return iscsi_string
-    elif iscsi_string is None or CONF.iqn_prefix:
-        volume_id = _get_volume_id(id)
-        return '%s:%s' % (CONF.iqn_prefix, volume_id)
