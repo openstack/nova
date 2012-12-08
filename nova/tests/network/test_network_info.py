@@ -259,6 +259,19 @@ class VIFTests(test.TestCase):
         self.assertEqual(vif['network'],
                 fake_network_cache_model.new_network())
 
+    def test_create_vif_with_type(self):
+        vif_dict = dict(
+            id=1,
+            address='aa:aa:aa:aa:aa:aa',
+            network=fake_network_cache_model.new_network(),
+            type='bridge')
+        vif = fake_network_cache_model.new_vif(vif_dict)
+        self.assertEqual(vif['id'], 1)
+        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
+        self.assertEqual(vif['type'], 'bridge')
+        self.assertEqual(vif['network'],
+                fake_network_cache_model.new_network())
+
     def test_vif_get_fixed_ips(self):
         vif = fake_network_cache_model.new_vif()
         fixed_ips = vif.fixed_ips()
@@ -293,6 +306,19 @@ class VIFTests(test.TestCase):
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif())
         self.assertEqual(vif['id'], 1)
         self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
+        self.assertEqual(vif['network'],
+                fake_network_cache_model.new_network())
+
+    def test_hydrate_vif_with_type(self):
+        vif_dict = dict(
+            id=1,
+            address='aa:aa:aa:aa:aa:aa',
+            network=fake_network_cache_model.new_network(),
+            type='bridge')
+        vif = model.VIF.hydrate(fake_network_cache_model.new_vif(vif_dict))
+        self.assertEqual(vif['id'], 1)
+        self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')
+        self.assertEqual(vif['type'], 'bridge')
         self.assertEqual(vif['network'],
                 fake_network_cache_model.new_network())
 
