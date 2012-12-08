@@ -23,6 +23,7 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova import ipv6
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.openstack.common import importutils
@@ -1118,6 +1119,8 @@ class CommonNetworkTestCase(test.TestCase):
     def setUp(self):
         super(CommonNetworkTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
+        self.flags(ipv6_backend='rfc2462')
+        ipv6.reset_backend()
 
     def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
         return None
