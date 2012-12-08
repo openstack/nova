@@ -294,30 +294,44 @@ class HostManager(object):
     def get_filtered_hosts(self, hosts, filter_properties,
             filter_class_names=None):
         """Filter hosts and return only ones passing all filters"""
-        filter_classes = self._choose_host_filters(filter_class_names)
 
-        hosts = set(hosts)
-        ignore_hosts = set(filter_properties.get('ignore_hosts', []))
-        ignore_hosts = hosts & ignore_hosts
-        if ignore_hosts:
-            ignored_hosts = ', '.join(ignore_hosts)
-            msg = _('Host filter ignoring hosts: %(ignored_hosts)s')
+        def _strip_ignore_hosts(host_map, hosts_to_ignore):
+            ignored_hosts = []
+            for host in hosts_to_ignore:
+                if host in host_map:
+                    del host_map[host]
+                    ignored_hosts.append(host)
+            ignored_hosts_str = ', '.join(ignored_hosts)
+            msg = _('Host filter ignoring hosts: %(ignored_hosts_str)s')
             LOG.debug(msg, locals())
-            hosts = hosts - ignore_hosts
 
-        force_hosts = set(filter_properties.get('force_hosts', []))
-        if force_hosts:
-            matching_force_hosts = hosts & force_hosts
-            if not matching_force_hosts:
-                forced_hosts = ', '.join(force_hosts)
+        def _match_forced_hosts(host_map, hosts_to_force):
+            for host in host_map.keys():
+                if host not in hosts_to_force:
+                    del host_map[host]
+            if not host_map:
+                forced_hosts_str = ', '.join(hosts_to_force)
                 msg = _("No hosts matched due to not matching 'force_hosts'"
-                        "value of '%(forced_hosts)s'")
+                        "value of '%(forced_hosts_str)s'")
                 LOG.debug(msg, locals())
-                return []
-            forced_hosts = ', '.join(matching_force_hosts)
-            msg = _('Host filter forcing available hosts to %(forced_hosts)s')
+                return
+            forced_hosts_str = ', '.join(host_map.iterkeys())
+            msg = _('Host filter forcing available hosts to '
+                    '%(forced_hosts_str)s')
             LOG.debug(msg, locals())
-            hosts = matching_force_hosts
+
+        filter_classes = self._choose_host_filters(filter_class_names)
+        ignore_hosts = filter_properties.get('ignore_hosts', [])
+        force_hosts = filter_properties.get('force_hosts', [])
+        if ignore_hosts or force_hosts:
+            name_to_cls_map = dict([(x.host, x) for x in hosts])
+            if ignore_hosts:
+                _strip_ignore_hosts(name_to_cls_map, ignore_hosts)
+            if force_hosts:
+                _match_forced_hosts(name_to_cls_map, force_hosts)
+            if not name_to_cls_map:
+                return []
+            hosts = name_to_cls_map.itervalues()
 
         return self.filter_handler.get_filtered_objects(filter_classes,
                 hosts, filter_properties)

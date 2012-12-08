@@ -15,26 +15,27 @@
 """
 Tests For HostManager
 """
-
+import sys
 
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.openstack.common import timeutils
+from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
 
 
-class ComputeFilterClass1(object):
-    def host_passes(self, *args, **kwargs):
+class FakeFilterClass1(filters.BaseHostFilter):
+    def host_passes(self, host_state, filter_properties):
         pass
 
 
-class ComputeFilterClass2(object):
-    def host_passes(self, *args, **kwargs):
+class FakeFilterClass2(filters.BaseHostFilter):
+    def host_passes(self, host_state, filter_properties):
         pass
 
 
@@ -44,164 +45,136 @@ class HostManagerTestCase(test.TestCase):
     def setUp(self):
         super(HostManagerTestCase, self).setUp()
         self.host_manager = host_manager.HostManager()
+        self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
+                'fake-node') for x in xrange(1, 5)]
 
     def tearDown(self):
         timeutils.clear_time_override()
         super(HostManagerTestCase, self).tearDown()
 
     def test_choose_host_filters_not_found(self):
-        self.flags(scheduler_default_filters='ComputeFilterClass3')
-        self.host_manager.filter_classes = [ComputeFilterClass1,
-                ComputeFilterClass2]
+        self.flags(scheduler_default_filters='FakeFilterClass3')
+        self.host_manager.filter_classes = [FakeFilterClass1,
+                FakeFilterClass2]
         self.assertRaises(exception.SchedulerHostFilterNotFound,
                 self.host_manager._choose_host_filters, None)
 
     def test_choose_host_filters(self):
-        self.flags(scheduler_default_filters=['ComputeFilterClass2'])
-        self.host_manager.filter_classes = [ComputeFilterClass1,
-                ComputeFilterClass2]
+        self.flags(scheduler_default_filters=['FakeFilterClass2'])
+        self.host_manager.filter_classes = [FakeFilterClass1,
+                FakeFilterClass2]
 
         # Test we returns 1 correct function
         filter_classes = self.host_manager._choose_host_filters(None)
         self.assertEqual(len(filter_classes), 1)
-        self.assertEqual(filter_classes[0].__name__, 'ComputeFilterClass2')
+        self.assertEqual(filter_classes[0].__name__, 'FakeFilterClass2')
+
+    def _mock_get_filtered_hosts(self, info, specified_filters=None):
+        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
+
+        info['got_objs'] = []
+        info['got_fprops'] = []
+
+        def fake_filter_one(_self, obj, filter_props):
+            info['got_objs'].append(obj)
+            info['got_fprops'].append(filter_props)
+            return True
+
+        self.stubs.Set(FakeFilterClass1, '_filter_one', fake_filter_one)
+        self.host_manager._choose_host_filters(specified_filters).AndReturn(
+                [FakeFilterClass1])
+
+    def _verify_result(self, info, result):
+        for x in info['got_fprops']:
+            self.assertEqual(x, info['expected_fprops'])
+        self.assertEqual(set(info['expected_objs']), set(info['got_objs']))
+        self.assertEqual(set(result), set(info['got_objs']))
 
     def test_get_filtered_hosts(self):
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1']
-        fake_classes = 'fake_classes'
         fake_properties = {'moo': 1, 'cow': 2}
-        expected_hosts = set(fake_hosts)
-        fake_result = 'fake_result'
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
+        info = {'expected_objs': self.fake_hosts,
+                'expected_fprops': fake_properties}
 
-        self.host_manager._choose_host_filters(None).AndReturn(fake_classes)
-        self.host_manager.filter_handler.get_filtered_objects(fake_classes,
-                expected_hosts, fake_properties).AndReturn(fake_result)
+        self._mock_get_filtered_hosts(info)
 
         self.mox.ReplayAll()
-
-        result = self.host_manager. get_filtered_hosts(fake_hosts,
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self.assertEqual(result, fake_result)
+        self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_specificed_filters(self):
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1']
-        fake_classes = 'fake_classes'
         fake_properties = {'moo': 1, 'cow': 2}
-        fake_filters = 'fake_filters'
-        expected_hosts = set(fake_hosts)
-        fake_result = 'fake_result'
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
-
-        self.host_manager._choose_host_filters(fake_filters).AndReturn(
-                fake_classes)
-        self.host_manager.filter_handler.get_filtered_objects(fake_classes,
-                expected_hosts, fake_properties).AndReturn(fake_result)
+        specified_filters = ['FakeFilterClass1', 'FakeFilterClass2']
+        info = {'expected_objs': self.fake_hosts,
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info, specified_filters)
 
         self.mox.ReplayAll()
 
-        result = self.host_manager.get_filtered_hosts(fake_hosts,
-                fake_properties, filter_class_names=fake_filters)
-        self.assertEqual(result, fake_result)
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                fake_properties, filter_class_names=specified_filters)
+        self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_ignore(self):
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1', 'fake_host3', 'fake_host4']
-        fake_classes = 'fake_classes'
         fake_properties = {'ignore_hosts': ['fake_host1', 'fake_host3',
             'fake_host5']}
-        expected_hosts = set(['fake_host2', 'fake_host4'])
-        fake_result = 'fake_result'
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
-
-        self.host_manager._choose_host_filters(None).AndReturn(fake_classes)
-        self.host_manager.filter_handler.get_filtered_objects(fake_classes,
-                expected_hosts, fake_properties).AndReturn(fake_result)
+        # [1] and [3] are host2 and host4
+        info = {'expected_objs': [self.fake_hosts[1], self.fake_hosts[3]],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
 
         self.mox.ReplayAll()
 
-        result = self.host_manager.get_filtered_hosts(fake_hosts,
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self.assertEqual(result, fake_result)
+        self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_force_hosts(self):
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1', 'fake_host3', 'fake_host4']
-        fake_classes = 'fake_classes'
         fake_properties = {'force_hosts': ['fake_host1', 'fake_host3',
             'fake_host5']}
-        expected_hosts = set(['fake_host1', 'fake_host3'])
-        fake_result = 'fake_result'
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
-
-        self.host_manager._choose_host_filters(None).AndReturn(fake_classes)
-        self.host_manager.filter_handler.get_filtered_objects(fake_classes,
-                expected_hosts, fake_properties).AndReturn(fake_result)
+        # [0] and [2] are host1 and host3
+        info = {'expected_objs': [self.fake_hosts[0], self.fake_hosts[2]],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
 
         self.mox.ReplayAll()
 
-        result = self.host_manager.get_filtered_hosts(fake_hosts,
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self.assertEqual(result, fake_result)
+        self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_no_matching_force_hosts(self):
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1', 'fake_host3', 'fake_host4']
-        fake_classes = 'fake_classes'
         fake_properties = {'force_hosts': ['fake_host5', 'fake_host6']}
-        expected_result = []
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        # Make sure this is not called.
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
-
-        self.host_manager._choose_host_filters(None).AndReturn(fake_classes)
+        info = {'expected_objs': [],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
 
         self.mox.ReplayAll()
 
-        result = self.host_manager.get_filtered_hosts(fake_hosts,
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self.assertEqual(result, expected_result)
+        self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_ignore_and_force(self):
         """Ensure ignore_hosts processed before force_hosts in host filters"""
-        fake_hosts = ['fake_host1', 'fake_host2', 'fake_host1',
-                'fake_host1', 'fake_host3', 'fake_host4']
-        fake_classes = 'fake_classes'
         fake_properties = {'force_hosts': ['fake_host3', 'fake_host1'],
                            'ignore_hosts': ['fake_host1']}
-        expected_hosts = set(['fake_host3'])
-        fake_result = 'fake_result'
 
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
-        # Make sure this is not called.
-        self.mox.StubOutWithMock(self.host_manager.filter_handler,
-                'get_filtered_objects')
-        self.host_manager.filter_handler.get_filtered_objects(fake_classes,
-                expected_hosts, fake_properties).AndReturn(fake_result)
-
-        self.host_manager._choose_host_filters(None).AndReturn(fake_classes)
+        # only fake_host3 should be left.
+        info = {'expected_objs': [self.fake_hosts[2]],
+                'expected_fprops': fake_properties}
+        self._mock_get_filtered_hosts(info)
 
         self.mox.ReplayAll()
 
-        result = self.host_manager.get_filtered_hosts(fake_hosts,
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self.assertEqual(result, fake_result)
+        self._verify_result(info, result)
 
     def test_update_service_capabilities(self):
         service_states = self.host_manager.service_states
