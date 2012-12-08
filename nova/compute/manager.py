@@ -3110,7 +3110,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_instance = self.driver.get_info(db_instance)
                 vm_power_state = vm_instance['state']
             except exception.InstanceNotFound:
-                vm_power_state = power_state.NOSTATE
+                vm_power_state = power_state.SHUTDOWN
             # Note(maoy): the above get_info call might take a long time,
             # for example, because of a broken libvirt driver.
             # We re-query the DB to get the latest instance info to minimize
@@ -3161,9 +3161,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 pass
             elif vm_state == vm_states.ACTIVE:
                 # The only rational power state should be RUNNING
-                if vm_power_state in (power_state.NOSTATE,
-                                       power_state.SHUTDOWN,
-                                       power_state.CRASHED):
+                if vm_power_state in (power_state.SHUTDOWN,
+                                      power_state.CRASHED):
                     LOG.warn(_("Instance shutdown by itself. Calling "
                                "the stop API."), instance=db_instance)
                     try:
