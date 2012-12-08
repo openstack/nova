@@ -52,17 +52,33 @@ class NbdMount(api.Mount):
     # are no free devices. Note that patch currently hardcodes 16 devices.
     # We might be able to alleviate problem 2. by scanning /proc/partitions
     # like the aformentioned patch does.
-    _DEVICES = ['/dev/nbd%s' % i for i in range(CONF.max_nbd_devices)]
+
+    _DEVICES_INITIALIZED = False
+    _DEVICES = None
+
+    def __init__(self, image, mount_dir, partition=None, device=None):
+        super(NbdMount, self).__init__(image, mount_dir, partition=partition,
+                                       device=device)
+
+        # NOTE(mikal): this must be done here, because we need configuration
+        # to have been parsed before we initialize. Note the scoping to ensure
+        # we're updating the class scoped variables.
+        if not self._DEVICES_INITIALIZED:
+            NbdMount._DEVICES = ['/dev/nbd%s' % i for
+                                 i in range(CONF.max_nbd_devices)]
+            NbdMount._DEVICES_INITIALIZED = True
 
     def _allocate_nbd(self):
         if not os.path.exists("/sys/block/nbd0"):
             self.error = _('nbd unavailable: module not loaded')
             return None
+
         while True:
             if not self._DEVICES:
                 # really want to log this info, not raise
                 self.error = _('No free nbd devices')
                 return None
+
             device = self._DEVICES.pop()
             if not os.path.exists("/sys/block/%s/pid" %
                                   os.path.basename(device)):
@@ -80,6 +96,7 @@ class NbdMount(api.Mount):
         device = self._allocate_nbd()
         if not device:
             return False
+
         LOG.debug(_("Get nbd device %(dev)s for %(imgfile)s") %
                   {'dev': device, 'imgfile': self.image})
         _out, err = utils.trycmd('qemu-nbd', '-c', device, self.image,
