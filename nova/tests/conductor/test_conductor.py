@@ -90,6 +90,14 @@ class ConductorTestCase(BaseTestCase):
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
 
+    def test_migration_get(self):
+        migration = db.migration_create(self.context.elevated(),
+                {'instance_uuid': 'fake-uuid',
+                 'status': 'migrating'})
+        self.assertEqual(jsonutils.to_primitive(migration),
+                         self.conductor.migration_get(self.context,
+                                                      migration['id']))
+
     def test_migration_update(self):
         migration = db.migration_create(self.context.elevated(),
                 {'instance_uuid': 'fake-uuid',

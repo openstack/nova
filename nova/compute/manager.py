@@ -1633,8 +1633,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                        migration=None, migration_id=None):
         """Destroys the source instance."""
         if not migration:
-            migration = self.db.migration_get(context.elevated(),
-                    migration_id)
+            migration = self.conductor_api.migration_get(context, migration_id)
 
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
@@ -1670,8 +1669,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.db.migration_get(context.elevated(),
-                                                  migration_id)
+            migration = self.conductor_api.migration_get(context, migration_id)
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
@@ -1714,10 +1712,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         in the database.
 
         """
-        elevated = context.elevated()
-
         if not migration:
-            migration = self.db.migration_get(elevated, migration_id)
+            migration = self.conductor_api.migration_get(context, migration_id)
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
@@ -1898,7 +1894,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         instance_type=None):
         """Starts the migration of a running instance to another host."""
         if not migration:
-            migration = self.db.migration_get(context.elevated(), migration_id)
+            migration = self.conductor_api.migration_get(context, migration_id)
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             if not instance_type:
@@ -2035,8 +2031,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.db.migration_get(context.elevated(),
-                    migration_id)
+            migration = self.conductor_api.migration_get(context, migration_id)
         try:
             self._finish_resize(context, instance, migration,
                                 disk_info, image)
