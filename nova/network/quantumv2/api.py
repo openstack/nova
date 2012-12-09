@@ -533,7 +533,8 @@ class API(base.Base):
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
-        data = quantumv2.get_client(context).list_ports(**search_opts)
+        data = quantumv2.get_client(context,
+                                    admin=True).list_ports(**search_opts)
         ports = data.get('ports', [])
         if not networks:
             networks = self._get_available_networks(context,
