@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova 2013.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2012-12-08 00:02+0000\n"
+"POT-Creation-Date: 2012-12-09 00:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2582,41 +2582,41 @@ msgstr ""
 msgid "fping utility is not found."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:125
+#: nova/api/openstack/compute/contrib/hosts.py:122
 #, python-format
 msgid "Host '%s' could not be found."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:154
+#: nova/api/openstack/compute/contrib/hosts.py:151
 #, python-format
 msgid "Invalid status: '%s'"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:158
+#: nova/api/openstack/compute/contrib/hosts.py:155
 #, python-format
 msgid "Invalid mode: '%s'"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:162
+#: nova/api/openstack/compute/contrib/hosts.py:159
 #, python-format
 msgid "Invalid update setting: '%s'"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:180
+#: nova/api/openstack/compute/contrib/hosts.py:177
 #, python-format
 msgid "Putting host %(host)s in maintenance mode %(mode)s."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:191
+#: nova/api/openstack/compute/contrib/hosts.py:188
 #, python-format
 msgid "Setting host %(host)s to %(state)s."
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:238
+#: nova/api/openstack/compute/contrib/hosts.py:235
 msgid "Describe-resource is admin only functionality"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/hosts.py:246
+#: nova/api/openstack/compute/contrib/hosts.py:243
 msgid "Host not found"
 msgstr ""
 
@@ -3240,7 +3240,7 @@ msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
 #: nova/compute/manager.py:1086 nova/compute/manager.py:2052
-#: nova/compute/manager.py:3335
+#: nova/compute/manager.py:3334
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr ""
@@ -3555,50 +3555,50 @@ msgid ""
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:3167
+#: nova/compute/manager.py:3166
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3179 nova/compute/manager.py:3190
-#: nova/compute/manager.py:3204
+#: nova/compute/manager.py:3178 nova/compute/manager.py:3189
+#: nova/compute/manager.py:3203
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:3184
+#: nova/compute/manager.py:3183
 msgid "Instance is paused or suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3197
+#: nova/compute/manager.py:3196
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3213
+#: nova/compute/manager.py:3212
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:3221
+#: nova/compute/manager.py:3220
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr ""
 
-#: nova/compute/manager.py:3234
+#: nova/compute/manager.py:3233
 msgid "Reclaiming deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:3289
+#: nova/compute/manager.py:3288
 #, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
 "but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3296
+#: nova/compute/manager.py:3295
 #, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3303
+#: nova/compute/manager.py:3302
 #, python-format
 msgid "Unrecognized value '%(action)s' for CONF.running_deleted_instance_action"
 msgstr ""
@@ -4774,34 +4774,34 @@ msgstr ""
 msgid "Choosing host %(best_host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:304
+#: nova/scheduler/host_manager.py:305
 #, python-format
-msgid "Host filter ignoring hosts: %(ignored_hosts)s"
+msgid "Host filter ignoring hosts: %(ignored_hosts_str)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:313
+#: nova/scheduler/host_manager.py:314
 #, python-format
 msgid ""
 "No hosts matched due to not matching 'force_hosts'value of "
-"'%(forced_hosts)s'"
+"'%(forced_hosts_str)s'"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:318
+#: nova/scheduler/host_manager.py:319
 #, python-format
-msgid "Host filter forcing available hosts to %(forced_hosts)s"
+msgid "Host filter forcing available hosts to %(forced_hosts_str)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:334
+#: nova/scheduler/host_manager.py:348
 #, python-format
 msgid "Ignoring %(service_name)s service update from %(host)s"
 msgstr ""
 
-#: nova/scheduler/host_manager.py:339
+#: nova/scheduler/host_manager.py:353
 #, python-format
 msgid "Received %(service_name)s service update from %(state_key)s."
 msgstr ""
 
-#: nova/scheduler/host_manager.py:357
+#: nova/scheduler/host_manager.py:371
 #, python-format
 msgid "No service for compute ID %s"
 msgstr ""
