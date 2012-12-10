@@ -733,8 +733,9 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
               'full_auth_address': CONF.swift_store_auth_address,
              }
 
-    session.call_plugin_serialized('swift', 'upload_vhd', **params)
-
+    ret_val = session.call_plugin_serialized('swift', 'upload_vhd', **params)
+    LOG.debug(_("xen output: %s") %ret_val)
+    return ret_val
 
 def upload_image_2(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and

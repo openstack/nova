@@ -1411,8 +1411,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        self.driver.snapshot(context, instance, image_id)
-
+        ret_val = self.driver.snapshot(context, instance, image_id)
+        LOG.debug("computer manager: %s" %ret_val)
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
 
