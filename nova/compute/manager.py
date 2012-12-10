@@ -1412,6 +1412,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "snapshot.start")
 
         ret_val = self.driver.snapshot(context, instance, image_id)
+        self._update_image_glance(context, image_id, ret_val['etag'],
+                                  ret_val['image_size'])
         LOG.debug("computer manager: %s" %ret_val)
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
@@ -1433,6 +1435,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(
                 context, instance, "snapshot.end")
+
+    def _update_image_glance(self, context, image_id, checksum, image_size,
+                             location=None):
+        image_service = glance.get_default_image_service()
+        image_meta ={'checksum': checksum,
+                     'size': image_size}
+        image_service.update(context, image_id, image_meta)
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
