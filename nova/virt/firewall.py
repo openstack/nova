@@ -316,12 +316,12 @@ class IptablesFirewallDriver(FirewallDriver):
         return []
 
     def _build_tcp_udp_rule(self, rule, version):
-        if rule.from_port == rule.to_port:
-            return ['--dport', '%s' % (rule.from_port,)]
+        if rule['from_port'] == rule['to_port']:
+            return ['--dport', '%s' % (rule['from_port'],)]
         else:
             return ['-m', 'multiport',
-                    '--dports', '%s:%s' % (rule.from_port,
-                                           rule.to_port)]
+                    '--dports', '%s:%s' % (rule['from_port'],
+                                           rule['to_port'])]
 
     def instance_rules(self, instance, network_info):
         # make sure this is legacy nw_info

@@ -484,14 +484,14 @@ class CloudController(object):
             r = {}
             r['groups'] = []
             r['ipRanges'] = []
-            if rule.group_id:
-                source_group = rule.grantee_group
-                r['groups'] += [{'groupName': source_group.name,
-                                 'userId': source_group.project_id}]
-                if rule.protocol:
-                    r['ipProtocol'] = rule.protocol.lower()
-                    r['fromPort'] = rule.from_port
-                    r['toPort'] = rule.to_port
+            if rule['group_id']:
+                source_group = rule['grantee_group']
+                r['groups'] += [{'groupName': source_group['name'],
+                                 'userId': source_group['project_id']}]
+                if rule['protocol']:
+                    r['ipProtocol'] = rule['protocol'].lower()
+                    r['fromPort'] = rule['from_port']
+                    r['toPort'] = rule['to_port']
                     g['ipPermissions'] += [dict(r)]
                 else:
                     for protocol, min_port, max_port in (('icmp', -1, -1),
@@ -502,10 +502,10 @@ class CloudController(object):
                         r['toPort'] = max_port
                         g['ipPermissions'] += [dict(r)]
             else:
-                r['ipProtocol'] = rule.protocol
-                r['fromPort'] = rule.from_port
-                r['toPort'] = rule.to_port
-                r['ipRanges'] += [{'cidrIp': rule.cidr}]
+                r['ipProtocol'] = rule['protocol']
+                r['fromPort'] = rule['from_port']
+                r['toPort'] = rule['to_port']
+                r['ipRanges'] += [{'cidrIp': rule['cidr']}]
                 g['ipPermissions'] += [r]
         return g
 
