@@ -23,12 +23,25 @@ from testtools.matchers import MatchesListwise
 
 from nova import test
 
-from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.disk.mount import nbd
 
-CONF = cfg.CONF
-CONF.import_opt('max_nbd_devices', 'nova.virt.disk.mount.nbd')
+ORIG_EXISTS = os.path.exists
+ORIG_LISTDIR = os.listdir
+
+
+def _fake_exists_no_users(path):
+    if path.startswith('/sys/block/nbd'):
+        if path.endswith('pid'):
+            return False
+        return True
+    return ORIG_EXISTS(path)
+
+
+def _fake_listdir_nbd_devices(path):
+    if path.startswith('/sys/block'):
+        return ['nbd0', 'nbd1']
+    return ORIG_LISTDIR(path)
 
 ORIG_EXISTS = os.path.exists
 
@@ -44,17 +57,18 @@ def _fake_exists_no_users(path):
 class NbdTestCase(test.TestCase):
     def setUp(self):
         super(NbdTestCase, self).setUp()
-        self.flags(max_nbd_devices=2)
         nbd.NbdMount._DEVICES_INITIALIZED = False
         nbd.NbdMount._DEVICES = []
+        self.useFixture(fixtures.MonkeyPatch('os.listdir',
+                                             _fake_listdir_nbd_devices))
 
     def test_nbd_initialize(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
         self.assertTrue(n._DEVICES_INITIALIZED)
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1')]))
 
     def test_nbd_no_free_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -81,8 +95,8 @@ class NbdTestCase(test.TestCase):
 
         # And no device should be consumed
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1')]))
 
     def test_nbd_all_allocated(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -103,7 +117,7 @@ class NbdTestCase(test.TestCase):
 
         # Allocate a nbd device
         self.assertEquals('/dev/nbd1', n._allocate_nbd())
-        self.assertEquals(['/dev/nbd0'], nbd.NbdMount._DEVICES)
+        self.assertEquals(['nbd0'], nbd.NbdMount._DEVICES)
 
         # Allocate another
         self.assertEquals('/dev/nbd0', n._allocate_nbd())
@@ -130,28 +144,28 @@ class NbdTestCase(test.TestCase):
         # re-added. I will fix this in a later patch.
         self.assertEquals('/dev/nbd0', n._allocate_nbd())
         self.assertEquals([], nbd.NbdMount._DEVICES)
-        self.assertTrue('/dev/nbd0' not in nbd.NbdMount._DEVICES)
+        self.assertTrue('nbd0' not in nbd.NbdMount._DEVICES)
 
     def test_free(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        d = '/dev/nosuch'
+        d = 'nosuch'
         self.assertFalse(d in nbd.NbdMount._DEVICES)
 
         # Now free it
         n._free_nbd(d)
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1'),
-                                         Equals('/dev/nosuch')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1'),
+                                         Equals(d)]))
         self.assertTrue(d in nbd.NbdMount._DEVICES)
 
         # Double free
         n._free_nbd(d)
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1'),
-                                         Equals('/dev/nosuch')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1'),
+                                         Equals(d)]))
         self.assertTrue(d in nbd.NbdMount._DEVICES)
 
     def test_get_dev_no_devices(self):
@@ -175,8 +189,8 @@ class NbdTestCase(test.TestCase):
         self.assertFalse(n.get_dev())
         self.assertTrue(n.error.startswith('qemu-nbd error'))
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1')]))
 
     def test_get_dev_qemu_timeout(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -198,8 +212,8 @@ class NbdTestCase(test.TestCase):
         self.assertFalse(n.get_dev())
         self.assertTrue(n.error.endswith('did not show up'))
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1')]))
 
     def test_get_dev_works(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -242,7 +256,7 @@ class NbdTestCase(test.TestCase):
         self.assertTrue(n.get_dev())
         self.assertTrue(n.linked)
         self.assertEquals('', n.error)
-        self.assertEquals(['/dev/nbd0'], nbd.NbdMount._DEVICES)
+        self.assertEquals(['nbd0'], nbd.NbdMount._DEVICES)
         self.assertEquals('/dev/nbd1', n.device)
 
         # Free
@@ -250,8 +264,8 @@ class NbdTestCase(test.TestCase):
         self.assertFalse(n.linked)
         self.assertEquals('', n.error)
         self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('/dev/nbd0'),
-                                         Equals('/dev/nbd1')]))
+                        MatchesListwise([Equals('nbd0'),
+                                         Equals('nbd1')]))
         self.assertEquals(None, n.device)
 
     def test_unget_dev_simple(self):

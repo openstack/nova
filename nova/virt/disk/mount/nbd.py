@@ -16,6 +16,7 @@
 """Support for mounting images with qemu-nbd"""
 
 import os
+import re
 import time
 
 from nova.openstack.common import cfg
@@ -29,23 +30,21 @@ nbd_opts = [
     cfg.IntOpt('timeout_nbd',
                default=10,
                help='time to wait for a NBD device coming up'),
-    cfg.IntOpt('max_nbd_devices',
-               default=16,
-               help='maximum number of possible nbd devices'),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(nbd_opts)
+
+NBD_DEVICE_RE = re.compile('nbd[0-9]+')
 
 
 class NbdMount(api.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
 
-    # NOTE(padraig): There are three issues with this nbd device handling
-    #  1. max_nbd_devices should be inferred (#861504)
-    #  2. We assume nothing else on the system uses nbd devices
-    #  3. Multiple workers on a system can race against each other
+    # NOTE(padraig): There are two issues with this nbd device handling
+    #  1. We assume nothing else on the system uses nbd devices
+    #  2. Multiple workers on a system can race against each other
     # A patch has been proposed in Nov 2011, to add add a -f option to
     # qemu-nbd, akin to losetup -f. One could test for this by running qemu-nbd
     # with just the -f option, where it will fail if not supported, or if there
@@ -64,9 +63,12 @@ class NbdMount(api.Mount):
         # to have been parsed before we initialize. Note the scoping to ensure
         # we're updating the class scoped variables.
         if not self._DEVICES_INITIALIZED:
-            NbdMount._DEVICES = ['/dev/nbd%s' % i for
-                                 i in range(CONF.max_nbd_devices)]
+            NbdMount._DEVICES = list(self._detect_nbd_devices())
             NbdMount._DEVICES_INITIALIZED = True
+
+    def _detect_nbd_devices(self):
+        """Detect nbd device files."""
+        return filter(NBD_DEVICE_RE.match, os.listdir('/sys/block/'))
 
     def _allocate_nbd(self):
         if not os.path.exists("/sys/block/nbd0"):
@@ -80,15 +82,15 @@ class NbdMount(api.Mount):
                 return None
 
             device = self._DEVICES.pop()
-            if not os.path.exists("/sys/block/%s/pid" %
-                                  os.path.basename(device)):
+            if not os.path.exists('/sys/block/%s/pid' % device):
                 break
-        return device
+        return os.path.join('/dev', device)
 
     def _free_nbd(self, device):
         # The device could already be present if unget_dev
         # is called right after a nova restart
         # (when destroying an LXC container for example).
+        device = os.path.basename(device)
         if not device in self._DEVICES:
             self._DEVICES.append(device)
 
