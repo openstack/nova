@@ -352,6 +352,6 @@ class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
 
-        self.stub_module('XenAPI', fake)
+        self.useFixture(test.ReplaceModule('XenAPI', fake))
 
         fake.reset()

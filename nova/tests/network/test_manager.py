@@ -15,9 +15,10 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import mox
 import shutil
 import tempfile
+
+import mox
 
 from nova import context
 from nova import db
@@ -2001,7 +2002,7 @@ class LdapDNSTestCase(test.TestCase):
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 
-        self.stub_module('ldap', fake_ldap)
+        self.useFixture(test.ReplaceModule('ldap', fake_ldap))
         dns_class = 'nova.network.ldapdns.LdapDNS'
         self.driver = importutils.import_object(dns_class)
 

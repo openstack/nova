@@ -30,7 +30,7 @@ class IsolationTestCase(test.TestCase):
 
     """
     def test_service_isolation(self):
-        self.start_service('compute')
+        self.useFixture(test.ServiceFixture('compute'))
 
     def test_rpc_consumer_isolation(self):
         class NeverCalled(object):

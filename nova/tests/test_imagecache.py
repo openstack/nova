@@ -763,7 +763,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         def listdir(path):
             # The python coverage tool got angry with my overly broad mocks
             if not path.startswith('/instance_path'):
-                return orig_list(path)
+                return orig_listdir(path)
 
             if path == '/instance_path':
                 return ['instance-1', 'instance-2', 'instance-3', '_base']

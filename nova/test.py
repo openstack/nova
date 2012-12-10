@@ -29,12 +29,11 @@ import sys
 import uuid
 
 import eventlet
-from fixtures import EnvironmentVariable
+import fixtures
 import mox
 import stubout
 import testtools
 
-from nova import config
 from nova import context
 from nova import db
 from nova.db import migration
@@ -45,7 +44,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import service
 from nova import tests
-from nova.tests import fake_flags
+from nova.tests import conf_fixture
 from nova.tests import policy_fixture
 from nova.tests import utils
 
@@ -71,63 +70,112 @@ LOG = logging.getLogger(__name__)
 
 eventlet.monkey_patch(os=False)
 
-_DB = None
+_DB_CACHE = None
 
 
-def reset_db():
-    if CONF.sql_connection == "sqlite://":
-        engine = get_engine()
-        engine.dispose()
-        conn = engine.connect()
-        if _DB:
-            conn.connection.executescript(_DB)
+class Database(fixtures.Fixture):
+
+    def __init__(self):
+        self.engine = get_engine()
+        self.engine.dispose()
+        conn = self.engine.connect()
+        if CONF.sql_connection == "sqlite://":
+            if migration.db_version() > migration.INIT_VERSION:
+                return
         else:
-            setup()
-    else:
-        shutil.copyfile(os.path.join(CONF.state_path, CONF.sqlite_clean_db),
-                        os.path.join(CONF.state_path, CONF.sqlite_db))
+            testdb = os.path.join(CONF.state_path, CONF.sqlite_db)
+            if os.path.exists(testdb):
+                return
+        migration.db_sync()
+        ctxt = context.get_admin_context()
+        network = network_manager.VlanManager()
+        bridge_interface = CONF.flat_interface or CONF.vlan_interface
+        network.create_networks(ctxt,
+                                label='test',
+                                cidr=CONF.fixed_range,
+                                multi_host=CONF.multi_host,
+                                num_networks=CONF.num_networks,
+                                network_size=CONF.network_size,
+                                cidr_v6=CONF.fixed_range_v6,
+                                gateway=CONF.gateway,
+                                gateway_v6=CONF.gateway_v6,
+                                bridge=CONF.flat_network_bridge,
+                                bridge_interface=bridge_interface,
+                                vpn_start=CONF.vpn_start,
+                                vlan_start=CONF.vlan_start,
+                                dns1=CONF.flat_network_dns)
+        for net in db.network_get_all(ctxt):
+            network.set_network_host(ctxt, net)
+
+        if CONF.sql_connection == "sqlite://":
+            conn = self.engine.connect()
+            self._DB = "".join(line for line in conn.connection.iterdump())
+            self.engine.dispose()
+        else:
+            cleandb = os.path.join(CONF.state_path, CONF.sqlite_clean_db)
+            shutil.copyfile(testdb, cleandb)
+
+    def setUp(self):
+        super(Database, self).setUp()
+
+        if CONF.sql_connection == "sqlite://":
+            conn = self.engine.connect()
+            conn.connection.executescript(self._DB)
+            self.addCleanup(self.engine.dispose)
+        else:
+            shutil.copyfile(os.path.join(CONF.state_path,
+                                         CONF.sqlite_clean_db),
+                            os.path.join(CONF.state_path,
+                                         CONF.sqlite_db))
 
 
-def setup():
+class ReplaceModule(fixtures.Fixture):
+    """Replace a module with a fake module."""
 
-    fake_flags.set_defaults(CONF)
+    def __init__(self, name, new_value):
+        self.name = name
+        self.new_value = new_value
 
-    if CONF.sql_connection == "sqlite://":
-        if migration.db_version() > migration.INIT_VERSION:
-            return
-    else:
-        testdb = os.path.join(CONF.state_path, CONF.sqlite_db)
-        if os.path.exists(testdb):
-            return
-    migration.db_sync()
-    ctxt = context.get_admin_context()
-    network = network_manager.VlanManager()
-    bridge_interface = CONF.flat_interface or CONF.vlan_interface
-    network.create_networks(ctxt,
-                            label='test',
-                            cidr=CONF.fixed_range,
-                            multi_host=CONF.multi_host,
-                            num_networks=CONF.num_networks,
-                            network_size=CONF.network_size,
-                            cidr_v6=CONF.fixed_range_v6,
-                            gateway=CONF.gateway,
-                            gateway_v6=CONF.gateway_v6,
-                            bridge=CONF.flat_network_bridge,
-                            bridge_interface=bridge_interface,
-                            vpn_start=CONF.vpn_start,
-                            vlan_start=CONF.vlan_start,
-                            dns1=CONF.flat_network_dns)
-    for net in db.network_get_all(ctxt):
-        network.set_network_host(ctxt, net)
+    def _restore(self, old_value):
+        sys.modules[self.name] = old_value
 
-    if CONF.sql_connection == "sqlite://":
-        global _DB
-        engine = get_engine()
-        conn = engine.connect()
-        _DB = "".join(line for line in conn.connection.iterdump())
-    else:
-        cleandb = os.path.join(CONF.state_path, CONF.sqlite_clean_db)
-        shutil.copyfile(testdb, cleandb)
+    def setUp(self):
+        super(ReplaceModule, self).setUp()
+        old_value = sys.modules.get(self.name)
+        sys.modules[self.name] = self.new_value
+        self.addCleanup(self._restore, old_value)
+
+
+class ServiceFixture(fixtures.Fixture):
+    """Run a service as a test fixture."""
+
+    def __init__(self, name, host=None, **kwargs):
+        name = name
+        host = host and host or uuid.uuid4().hex
+        kwargs.setdefault('host', host)
+        kwargs.setdefault('binary', 'nova-%s' % name)
+        self.kwargs = kwargs
+
+    def setUp(self):
+        super(ServiceFixture, self).setUp()
+        self.service = service.Service.create(**self.kwargs)
+        self.service.start()
+        self.addCleanup(self.service.kill)
+
+
+class MoxStubout(fixtures.Fixture):
+    """Deal with code around mox and stubout as a fixture."""
+
+    def setUp(self):
+        super(MoxStubout, self).setUp()
+        # emulate some of the mox stuff, we can't use the metaclass
+        # because it screws with our generators
+        self.mox = mox.Mox()
+        self.stubs = stubout.StubOutForTesting()
+        self.addCleanup(self.mox.UnsetStubs)
+        self.addCleanup(self.stubs.UnsetAll)
+        self.addCleanup(self.stubs.SmartUnsetAll)
+        self.addCleanup(self.mox.VerifyAll)
 
 
 class TestingException(Exception):
@@ -141,70 +189,27 @@ class TestCase(testtools.TestCase):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
 
-        fake_flags.set_defaults(CONF)
-        config.parse_args([], default_config_files=[])
+        self.log_fixture = self.useFixture(fixtures.FakeLogger('nova'))
+        self.useFixture(conf_fixture.ConfFixture(CONF))
 
-        # NOTE(vish): We need a better method for creating fixtures for tests
-        #             now that we have some required db setup for the system
-        #             to work properly.
-        self.start = timeutils.utcnow()
-        reset_db()
+        global _DB_CACHE
+        if not _DB_CACHE:
+            _DB_CACHE = Database()
+        self.useFixture(_DB_CACHE)
 
-        # emulate some of the mox stuff, we can't use the metaclass
-        # because it screws with our generators
-        self.mox = mox.Mox()
-        self.stubs = stubout.StubOutForTesting()
-        self.injected = []
-        self._services = []
-        self._modules = {}
-        self.useFixture(EnvironmentVariable('http_proxy'))
+        mox_fixture = self.useFixture(MoxStubout())
+        self.mox = mox_fixture.mox
+        self.stubs = mox_fixture.stubs
+        self.addCleanup(self._clear_attrs)
+        self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
 
-    def tearDown(self):
-        """Runs after each test method to tear down test environment."""
-        try:
-            utils.cleanup_dns_managers()
-            self.mox.UnsetStubs()
-            self.stubs.UnsetAll()
-            self.stubs.SmartUnsetAll()
-            self.mox.VerifyAll()
-            super(TestCase, self).tearDown()
-        finally:
-            # Reset any overridden flags
-            CONF.reset()
-
-            # Unstub modules
-            for name, mod in self._modules.iteritems():
-                if mod is not None:
-                    sys.modules[name] = mod
-                else:
-                    sys.modules.pop(name)
-            self._modules = {}
-
-            # Stop any timers
-            for x in self.injected:
-                try:
-                    x.stop()
-                except AssertionError:
-                    pass
-
-            # Kill any services
-            for x in self._services:
-                try:
-                    x.kill()
-                except Exception:
-                    pass
-
-            # Delete attributes that don't start with _ so they don't pin
-            # memory around unnecessarily for the duration of the test
-            # suite
-            for key in [k for k in self.__dict__.keys() if k[0] != '_']:
-                del self.__dict__[key]
-
-    def stub_module(self, name, mod):
-        if name not in self._modules:
-            self._modules[name] = sys.modules.get(name)
-        sys.modules[name] = mod
+    def _clear_attrs(self):
+        # Delete attributes that don't start with _ so they don't pin
+        # memory around unnecessarily for the duration of the test
+        # suite
+        for key in [k for k in self.__dict__.keys() if k[0] != '_']:
+            del self.__dict__[key]
 
     def flags(self, **kw):
         """Override flag variables for a test."""
@@ -213,10 +218,5 @@ class TestCase(testtools.TestCase):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
-        host = host and host or uuid.uuid4().hex
-        kwargs.setdefault('host', host)
-        kwargs.setdefault('binary', 'nova-%s' % name)
-        svc = service.Service.create(**kwargs)
-        svc.start()
-        self._services.append(svc)
-        return svc
+        svc = self.useFixture(ServiceFixture(name, host, **kwargs))
+        return svc.service

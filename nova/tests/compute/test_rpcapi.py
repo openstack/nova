@@ -33,11 +33,11 @@ CONF.import_opt('compute_topic', 'nova.config')
 class ComputeRpcAPITestCase(test.TestCase):
 
     def setUp(self):
+        super(ComputeRpcAPITestCase, self).setUp()
         self.context = context.get_admin_context()
         inst = db.instance_create(self.context, {'host': 'fake_host',
                                                  'instance_type_id': 1})
         self.fake_instance = jsonutils.to_primitive(inst)
-        super(ComputeRpcAPITestCase, self).setUp()
 
     def test_serialized_instance_has_name(self):
         self.assertTrue('name' in self.fake_instance)
