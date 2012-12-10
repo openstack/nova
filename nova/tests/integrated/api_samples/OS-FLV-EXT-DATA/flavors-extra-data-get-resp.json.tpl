@@ -2,18 +2,18 @@
     "flavor": {
         "OS-FLV-EXT-DATA:ephemeral": 0,
         "disk": 0,
-        "id": "1",
+        "id": "%(flavor_id)s",
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/flavors/1",
+                "href": "%(host)s/v2/openstack/flavors/%(flavor_id)s",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/flavors/1",
+                "href": "%(host)s/openstack/flavors/%(flavor_id)s",
                 "rel": "bookmark"
             }
         ],
-        "name": "m1.tiny",
+        "name": "%(flavor_name)s",
         "ram": 512,
         "vcpus": 1
     }

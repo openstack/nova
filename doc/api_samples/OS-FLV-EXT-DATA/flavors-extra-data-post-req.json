@@ -1,12 +1,12 @@
 {
     "flavor": {
-        "OS-FLV-EXT-DATA:ephemeral": 30,
-        "disk": 10,
-        "id": "666",
         "name": "flavortest",
         "ram": 1024,
+        "vcpus": 2,
+        "disk": 10,
+        "id": "666",
         "rxtx_factor": 2.0,
-        "swap": 5,
-        "vcpus": 2
+        "OS-FLV-EXT-DATA:ephemeral": 30,
+        "swap": 5
     }
 }

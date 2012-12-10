@@ -6,11 +6,11 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/flavors/1",
+                    "href": "%(host)s/v2/openstack/flavors/1",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "href": "%(host)s/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ],
@@ -24,11 +24,11 @@
             "id": "2",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/flavors/2",
+                    "href": "%(host)s/v2/openstack/flavors/2",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/2",
+                    "href": "%(host)s/openstack/flavors/2",
                     "rel": "bookmark"
                 }
             ],
@@ -42,11 +42,11 @@
             "id": "3",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/flavors/3",
+                    "href": "%(host)s/v2/openstack/flavors/3",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/3",
+                    "href": "%(host)s/openstack/flavors/3",
                     "rel": "bookmark"
                 }
             ],
@@ -60,11 +60,11 @@
             "id": "4",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/flavors/4",
+                    "href": "%(host)s/v2/openstack/flavors/4",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/4",
+                    "href": "%(host)s/openstack/flavors/4",
                     "rel": "bookmark"
                 }
             ],
@@ -78,11 +78,11 @@
             "id": "5",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/openstack/flavors/5",
+                    "href": "%(host)s/v2/openstack/flavors/5",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/openstack/flavors/5",
+                    "href": "%(host)s/openstack/flavors/5",
                     "rel": "bookmark"
                 }
             ],

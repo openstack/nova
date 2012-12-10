@@ -5,9 +5,5 @@
         "vcpus": 2,
         "disk": 10,
         "id": "10",
-        "os-flavor-access:is_public": true,
-        "rxtx_factor": 1,
-        "OS-FLV-EXT-DATA:ephemeral": 0,
-        "swap": 0
     }
 }
