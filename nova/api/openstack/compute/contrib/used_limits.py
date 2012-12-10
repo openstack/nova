@@ -39,6 +39,13 @@ class UsedLimitsTemplate(xmlutil.TemplateBuilder):
 
 class UsedLimitsController(wsgi.Controller):
 
+    @staticmethod
+    def _reserved(req):
+        try:
+            return int(req.GET['reserved'])
+        except (ValueError, KeyError):
+            return False
+
     @wsgi.extends
     def index(self, req, resp_obj):
         resp_obj.attach(xml=UsedLimitsTemplate())
@@ -57,7 +64,9 @@ class UsedLimitsController(wsgi.Controller):
         used_limits = {}
         for display_name, quota in quota_map.iteritems():
             if quota in quotas:
-                used_limits[display_name] = quotas[quota]['in_use']
+                reserved = (quotas[quota]['reserved']
+                            if self._reserved(req) else 0)
+                used_limits[display_name] = quotas[quota]['in_use'] + reserved
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 

@@ -24,8 +24,10 @@ from nova import test
 
 
 class FakeRequest(object):
-    def __init__(self, context):
+    def __init__(self, context, reserved=False):
         self.environ = {'nova.context': context}
+        self.reserved = reserved
+        self.GET = {'reserved': 1} if reserved else {}
 
 
 class UsedLimitsTestCase(test.TestCase):
@@ -36,9 +38,9 @@ class UsedLimitsTestCase(test.TestCase):
         self.controller = used_limits.UsedLimitsController()
 
         self.fake_context = nova.context.RequestContext('fake', 'fake')
-        self.fake_req = FakeRequest(self.fake_context)
 
-    def test_used_limits(self):
+    def _do_test_used_limits(self, reserved):
+        fake_req = FakeRequest(self.fake_context, reserved=reserved)
         obj = {
             "limits": {
                 "rate": [],
@@ -57,19 +59,30 @@ class UsedLimitsTestCase(test.TestCase):
         }
         limits = {}
         for display_name, q in quota_map.iteritems():
-            limits[q] = {'limit': 10, 'in_use': 2}
+            limits[q] = {'limit': len(display_name),
+                         'in_use': len(display_name) / 2,
+                         'reserved': len(display_name) / 3}
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return limits
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
 
-        self.controller.index(self.fake_req, res)
+        self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         for used_limit, value in abs_limits.iteritems():
-            self.assertEqual(value, limits[quota_map[used_limit]]['in_use'])
+            r = limits[quota_map[used_limit]]['reserved'] if reserved else 0
+            self.assertEqual(value,
+                             limits[quota_map[used_limit]]['in_use'] + r)
+
+    def test_used_limits_basic(self):
+        self._do_test_used_limits(False)
+
+    def test_used_limits_with_reserved(self):
+        self._do_test_used_limits(True)
 
     def test_used_ram_added(self):
+        fake_req = FakeRequest(self.fake_context)
         obj = {
             "limits": {
                 "rate": [],
@@ -84,12 +97,13 @@ class UsedLimitsTestCase(test.TestCase):
             return {'ram': {'limit': 512, 'in_use': 256}}
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
-        self.controller.index(self.fake_req, res)
+        self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertTrue('totalRAMUsed' in abs_limits)
         self.assertEqual(abs_limits['totalRAMUsed'], 256)
 
     def test_no_ram_quota(self):
+        fake_req = FakeRequest(self.fake_context)
         obj = {
             "limits": {
                 "rate": [],
@@ -102,11 +116,12 @@ class UsedLimitsTestCase(test.TestCase):
             return {}
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
-        self.controller.index(self.fake_req, res)
+        self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertFalse('totalRAMUsed' in abs_limits)
 
     def test_used_limits_xmlns(self):
+        fake_req = FakeRequest(self.fake_context)
         obj = {
             "limits": {
                 "rate": [],
@@ -120,6 +135,6 @@ class UsedLimitsTestCase(test.TestCase):
             return {}
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
-        self.controller.index(self.fake_req, res)
+        self.controller.index(fake_req, res)
         response = res.serialize(None, 'xml')
         self.assertTrue(used_limits.XMLNS in response.body)
