@@ -652,6 +652,7 @@ class LibvirtConnTestCase(test.TestCase):
                                     _fake_network_info(self.stubs, 1),
                                     None, None)
         self.assertEquals(cfg.acpi, True)
+        self.assertEquals(cfg.apic, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, vm_mode.HVM)
