@@ -89,3 +89,14 @@ class ConductorManager(manager.SchedulerDependentManager):
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
+
+    def bw_usage_update(self, context, uuid, mac, start_period,
+                        bw_in=None, bw_out=None,
+                        last_ctr_in=None, last_ctr_out=None,
+                        last_refreshed=None):
+        if all((None, bw_in, bw_out, last_ctr_in, last_ctr_out)):
+            self.db.bw_usage_update(context, uuid, mac, start_period,
+                                    bw_in, bw_out, last_ctr_in, last_ctr_out,
+                                    last_refreshed)
+        usage = self.db.bw_usage_get(context, uuid, start_period, mac)
+        return jsonutils.to_primitive(usage)

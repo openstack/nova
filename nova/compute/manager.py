@@ -2952,20 +2952,19 @@ class ComputeManager(manager.SchedulerDependentManager):
                 bw_out = 0
                 last_ctr_in = None
                 last_ctr_out = None
-                usage = self.db.bw_usage_get(context,
-                                             bw_ctr['uuid'],
-                                             start_time,
-                                             bw_ctr['mac_address'])
+                usage = self.conductor_api.bw_usage_get(context,
+                                                        bw_ctr['uuid'],
+                                                        start_time,
+                                                        bw_ctr['mac_address'])
                 if usage:
                     bw_in = usage['bw_in']
                     bw_out = usage['bw_out']
                     last_ctr_in = usage['last_ctr_in']
                     last_ctr_out = usage['last_ctr_out']
                 else:
-                    usage = self.db.bw_usage_get(context,
-                                             bw_ctr['uuid'],
-                                             prev_time,
-                                             bw_ctr['mac_address'])
+                    usage = self.conductor_api.bw_usage_get(
+                        context, bw_ctr['uuid'], prev_time,
+                        bw_ctr['mac_address'])
                     if usage:
                         last_ctr_in = usage['last_ctr_in']
                         last_ctr_out = usage['last_ctr_out']
@@ -2984,15 +2983,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                     else:
                         bw_out += (bw_ctr['bw_out'] - last_ctr_out)
 
-                self.db.bw_usage_update(context,
-                                        bw_ctr['uuid'],
-                                        bw_ctr['mac_address'],
-                                        start_time,
-                                        bw_in,
-                                        bw_out,
-                                        bw_ctr['bw_in'],
-                                        bw_ctr['bw_out'],
-                                        last_refreshed=refreshed)
+                self.conductor_api.bw_usage_update(context,
+                                                   bw_ctr['uuid'],
+                                                   bw_ctr['mac_address'],
+                                                   start_time,
+                                                   bw_in,
+                                                   bw_out,
+                                                   bw_ctr['bw_in'],
+                                                   bw_ctr['bw_out'],
+                                                   last_refreshed=refreshed)
 
     def _get_host_volume_bdms(self, context, host):
         """Return all block device mappings on a compute host"""
