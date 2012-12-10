@@ -1,0 +1,19 @@
+{
+    "flavor": {
+        "disk": 10,
+        "id": "10",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/flavors/10",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/flavors/10",
+                "rel": "bookmark"
+            }
+        ],
+        "name": "test_flavor",
+        "ram": 1024,
+        "vcpus": 2
+    }
+}
