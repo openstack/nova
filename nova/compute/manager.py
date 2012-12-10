@@ -104,6 +104,8 @@ compute_opts = [
                 default=False,
                 help='Whether to start guests that were running before the '
                      'host rebooted'),
+    cfg.StrOpt('image_store',
+                default=None),
     ]
 
 interval_opts = [
@@ -1413,10 +1415,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "snapshot.start")
 
         ret_val = self.driver.snapshot(context, instance, image_id)
-        self._update_image_glance(context, image_id, ret_val['etag'],
-                                  ret_val['image_size'],
-                                  ret_val['disk_format'],
-                                  ret_val['container_format'])
+        if CONF.image_store:
+            self._update_image_glance(context, image_id, ret_val['etag'],
+                                      ret_val['image_size'],
+                                      ret_val['disk_format'],
+                                      ret_val['container_format'])
         LOG.debug("computer manager: %s" %ret_val)
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
@@ -1449,7 +1452,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      'location': location,
                      'disk_format': disk_format,
                      'container_format': container_format}
-        image_service.update(context, image_id, image_meta)
+        image_service.update(context, image_id, image_meta, purge_props=False)
 
     def _get_location_uri(self, image_id):
         auth_or_store_url = CONF.swift_store_auth_address

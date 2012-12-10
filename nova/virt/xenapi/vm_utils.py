@@ -710,7 +710,7 @@ def _find_cached_image(session, image_id, sr_ref):
     return cached_images.get(image_id)
 
 
-def upload_image(context, session, instance, vdi_uuids, image_id):
+def upload_image_swift(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and
     push them into Glance using the specified human-friendly name.
     """
@@ -737,7 +737,7 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
     LOG.debug(_("xen output: %s") %ret_val)
     return ret_val
 
-def upload_image_2(context, session, instance, vdi_uuids, image_id):
+def upload_image_glance(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and
     push them into Glance using the specified human-friendly name.
     """

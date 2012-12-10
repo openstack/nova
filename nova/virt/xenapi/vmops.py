@@ -635,48 +635,18 @@ class VMOps(object):
 
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label) as vdi_uuids:
-            ret_val = vm_utils.upload_image(
-                    context, self._session, instance, vdi_uuids, image_id)
+            if CONF.image_store == 'swift':
+                ret_val = vm_utils.upload_image_swift(
+                        context, self._session, instance, vdi_uuids, image_id)
+            else:
+                ret_val = vm_utils.upload_image_glance(
+                        context, self._session, instance, vdi_uuids, image_id)
+                
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
         LOG.debug("xen vmops %s" %ret_val)
         return ret_val
-
-    def snapshot_glance(self, context, instance, image_id):
-        """Create snapshot from a running VM instance.
-
-        :param context: request context
-        :param instance: instance to be snapshotted
-        :param image_id: id of image to upload to
-
-        Steps involved in a XenServer snapshot:
-
-        1. XAPI-Snapshot: Snapshotting the instance using XenAPI. This
-           creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-           Snapshot VHD
-
-        2. Wait-for-coalesce: The Snapshot VDI and Instance VDI both point to
-           a 'base-copy' VDI.  The base_copy is immutable and may be chained
-           with other base_copies.  If chained, the base_copies
-           coalesce together, so, we must wait for this coalescing to occur to
-           get a stable representation of the data on disk.
-
-        3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
-           that will bundle the VHDs together and then push the bundle into
-           Glance.
-
-        """
-        vm_ref = self._get_vm_opaque_ref(instance)
-        label = "%s-snapshot" % instance['name']
-
-        with vm_utils.snapshot_attached_here(
-                self._session, instance, vm_ref, label) as vdi_uuids:
-            vm_utils.upload_image(
-                    context, self._session, instance, vdi_uuids, image_id)
-
-        LOG.debug(_("Finished snapshot and upload for VM"),
-                  instance=instance)
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
         LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
