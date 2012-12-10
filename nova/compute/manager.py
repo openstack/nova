@@ -37,6 +37,7 @@ import socket
 import sys
 import time
 import traceback
+import urllib
 import uuid
 
 from eventlet import greenthread
@@ -1413,7 +1414,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         ret_val = self.driver.snapshot(context, instance, image_id)
         self._update_image_glance(context, image_id, ret_val['etag'],
-                                  ret_val['image_size'])
+                                  ret_val['image_size'],
+                                  ret_val['disk_format'],
+                                  ret_val['container_format'])
         LOG.debug("computer manager: %s" %ret_val)
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
@@ -1437,11 +1440,39 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "snapshot.end")
 
     def _update_image_glance(self, context, image_id, checksum, image_size,
-                             location=None):
+                             disk_format, container_format):
         image_service = glance.get_default_image_service()
+        location = self._get_location_uri(image_id)
+        LOG.info('location %s' %location)
         image_meta ={'checksum': checksum,
-                     'size': image_size}
+                     'size': image_size,
+                     'location': location,
+                     'disk_format': disk_format,
+                     'container_format': container_format}
         image_service.update(context, image_id, image_meta)
+
+    def _get_location_uri(self, image_id):
+        auth_or_store_url = CONF.swift_store_auth_address
+        scheme = 'swift+https'
+        if auth_or_store_url.startswith('http://'):
+            scheme = 'swift+http'
+        if auth_or_store_url.startswith('http://'):
+            auth_or_store_url = auth_or_store_url[len('http://'):]
+        elif auth_or_store_url.startswith('https://'):
+            auth_or_store_url = auth_or_store_url[len('https://'):]
+
+        credstring = self._get_credstring()
+        auth_or_store_url = auth_or_store_url.strip('/')
+        container = CONF.swift_store_container.strip('/')
+        obj = str(image_id).strip('/')
+
+        return '%s://%s%s/%s/%s' % (scheme, credstring, auth_or_store_url,
+                                    container, obj)
+
+    def _get_credstring(self):
+        if CONF.swift_store_user and CONF.swift_store_key:
+            return '%s:%s@' % (urllib.quote(CONF.swift_store_user), urllib.quote(CONF.swift_store_key))
+        return ''
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
