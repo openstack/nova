@@ -193,17 +193,17 @@ class BaseTestCase(test.TestCase):
         # only used in the subsequent notification:
         return (instance, instance)
 
-    def _tracker(self, host=None, unsupported=False):
+    def _driver(self):
+        return FakeVirtDriver()
+
+    def _tracker(self, host=None):
 
         if host is None:
             host = self.host
 
         node = "fakenode"
 
-        if unsupported:
-            driver = UnsupportedVirtDriver()
-        else:
-            driver = FakeVirtDriver()
+        driver = self._driver()
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
         return tracker
@@ -215,9 +215,12 @@ class UnsupportedDriverTestCase(BaseTestCase):
     """
     def setUp(self):
         super(UnsupportedDriverTestCase, self).setUp()
-        self.tracker = self._tracker(unsupported=True)
+        self.tracker = self._tracker()
         # seed tracker with data:
         self.tracker.update_available_resource(self.context)
+
+    def _driver(self):
+        return UnsupportedVirtDriver()
 
     def test_disabled(self):
         # disabled = no compute node stats
@@ -248,7 +251,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
                 root_gb=10)
         self.tracker.update_usage(self.context, instance)
 
-    def testDisabledResizeClaim(self):
+    def test_disabled_resize_claim(self):
         instance = self._fake_instance()
         instance_type = self._fake_instance_type_create()
         claim = self.tracker.resize_claim(self.context, instance,
@@ -258,7 +261,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
         self.assertEqual(instance_type['id'],
                 claim.migration['new_instance_type_id'])
 
-    def testDisabledResizeContextClaim(self):
+    def test_disabled_resize_context_claim(self):
         instance = self._fake_instance()
         instance_type = self._fake_instance_type_create()
         with self.tracker.resize_claim(self.context, instance, instance_type) \
@@ -326,18 +329,6 @@ class BaseTrackerTestCase(BaseTestCase):
 
         self.tracker.update_available_resource(self.context)
         self.limits = self._limits()
-
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
-        self._assert(FAKE_VIRT_VCPUS, 'vcpus')
-        self._assert(0, 'memory_mb_used')
-        self._assert(0, 'local_gb_used')
-        self._assert(0, 'vcpus_used')
-        self._assert(0, 'running_vms')
-        self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
-        self.assertFalse(self.tracker.disabled)
-        self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
     def _fake_service_get_all_compute_by_host(self, ctx, host):
         self.compute = self._create_compute_node()
@@ -411,6 +402,19 @@ class TrackerTestCase(BaseTrackerTestCase):
     def test_update_compute_node(self):
         self.assertFalse(self.tracker.disabled)
         self.assertTrue(self.updated)
+
+    def test_init(self):
+        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
+        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
+        self._assert(FAKE_VIRT_VCPUS, 'vcpus')
+        self._assert(0, 'memory_mb_used')
+        self._assert(0, 'local_gb_used')
+        self._assert(0, 'vcpus_used')
+        self._assert(0, 'running_vms')
+        self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
+        self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
+        self.assertFalse(self.tracker.disabled)
+        self.assertEqual(0, self.tracker.compute_node['current_workload'])
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
@@ -817,3 +821,31 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.assertEqual('fakehost', instance['host'])
         self.assertEqual('fakehost', instance['launched_on'])
         self.assertEqual('fakenode', instance['node'])
+
+
+class OrphanTestCase(BaseTrackerTestCase):
+
+    def setUp(self):
+        super(OrphanTestCase, self).setUp()
+
+    def _driver(self):
+        class OrphanVirtDriver(FakeVirtDriver):
+            def get_per_instance_usage(self):
+                return {
+                    '1-2-3-4-5': {'memory_mb': 4, 'uuid': '1-2-3-4-5'},
+                    '2-3-4-5-6': {'memory_mb': 4, 'uuid': '2-3-4-5-6'},
+
+                }
+
+        return OrphanVirtDriver()
+
+    def test_usage(self):
+        # 2 instances, 4 mb each
+        self.assertEqual(8, self.tracker.compute_node['memory_mb_used'])
+
+    def test_find(self):
+        # create one legit instance and verify the 2 orphans remain
+        self._fake_instance()
+        orphans = self.tracker._find_orphaned_instances()
+
+        self.assertEqual(2, len(orphans))

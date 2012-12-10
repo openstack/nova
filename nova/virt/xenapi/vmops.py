@@ -1639,3 +1639,24 @@ class VMOps(object):
             with excutils.save_and_reraise_exception():
                 recover_method(context, instance, destination_hostname,
                                block_migration)
+
+    def get_per_instance_usage(self):
+        """Get usage info about each active instance."""
+        usage = {}
+
+        def _is_active(vm_rec):
+            power_state = vm_rec['power_state'].lower()
+            return power_state in ['running', 'paused']
+
+        def _get_uuid(vm_rec):
+            other_config = vm_rec['other_config']
+            return other_config.get('nova_uuid', None)
+
+        for vm_ref, vm_rec in vm_utils.list_vms(self._session):
+            uuid = _get_uuid(vm_rec)
+
+            if _is_active(vm_rec) and uuid is not None:
+                memory_mb = int(vm_rec['memory_static_max']) / 1024 / 1024
+                usage[uuid] = {'memory_mb': memory_mb, 'uuid': uuid}
+
+        return usage

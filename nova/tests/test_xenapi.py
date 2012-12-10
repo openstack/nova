@@ -1016,6 +1016,33 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             pass
         self.assertTrue(was['called'])
 
+    def test_per_instance_usage_running(self):
+        instance = self._create_instance(spawn=True)
+        instance_type = instance_types.get_instance_type(3)
+
+        expected = {instance['uuid']: {'memory_mb': instance_type['memory_mb'],
+                                       'uuid': instance['uuid']}}
+        actual = self.conn.get_per_instance_usage()
+        self.assertEqual(expected, actual)
+
+        # Paused instances still consume resources:
+        self.conn.pause(instance)
+        actual = self.conn.get_per_instance_usage()
+        self.assertEqual(expected, actual)
+
+    def test_per_instance_usage_suspended(self):
+        # Suspended instances do not consume memory:
+        instance = self._create_instance(spawn=True)
+        self.conn.suspend(instance)
+        actual = self.conn.get_per_instance_usage()
+        self.assertEqual({}, actual)
+
+    def test_per_instance_usage_halted(self):
+        instance = self._create_instance(spawn=True)
+        self.conn.power_off(instance)
+        actual = self.conn.get_per_instance_usage()
+        self.assertEqual({}, actual)
+
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
         instance_values = {

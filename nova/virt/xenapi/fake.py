@@ -635,6 +635,14 @@ class SessionBase(object):
         db_ref['power_state'] = 'Halted'
     VM_clean_shutdown = VM_hard_shutdown
 
+    def VM_suspend(self, session, vm_ref):
+        db_ref = _db_content['VM'][vm_ref]
+        db_ref['power_state'] = 'Suspended'
+
+    def VM_pause(self, session, vm_ref):
+        db_ref = _db_content['VM'][vm_ref]
+        db_ref['power_state'] = 'Paused'
+
     def pool_eject(self, session, host_ref):
         pass
 

@@ -767,6 +767,13 @@ class ComputeDriver(object):
             stats = [stats]
         return [s['hypervisor_hostname'] for s in stats]
 
+    def get_per_instance_usage(self):
+        """Get information about instance resource usage.
+
+        :returns: dict of  nova uuid => dict of usage info
+        """
+        return {}
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.
