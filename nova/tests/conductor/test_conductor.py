@@ -23,6 +23,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
+from nova import exception as exc
 from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
@@ -167,6 +168,30 @@ class ConductorTestCase(BaseTestCase):
         self.mox.ReplayAll()
         result = self.conductor.bw_usage_update(*update_args)
         self.assertEqual(result, 'foo')
+
+    def test_get_backdoor_port(self):
+        backdoor_port = 59697
+
+        def fake_get_backdoor_port(self, context):
+            return backdoor_port
+
+        if isinstance(self.conductor, conductor_api.API):
+            self.stubs.Set(conductor_manager.ConductorManager,
+                          'get_backdoor_port', fake_get_backdoor_port)
+            port = self.conductor.get_backdoor_port(self.context, 'fake_host')
+        elif isinstance(self.conductor, conductor_api.LocalAPI):
+            try:
+                self.conductor.get_backdoor_port(self.context, 'fake_host')
+            except exc.InvalidRequest:
+                port = backdoor_port
+        else:
+            if isinstance(self.conductor, conductor_rpcapi.ConductorAPI):
+                self.stubs.Set(conductor_manager.ConductorManager,
+                              'get_backdoor_port', fake_get_backdoor_port)
+            self.conductor.backdoor_port = backdoor_port
+            port = self.conductor.get_backdoor_port(self.context)
+
+        self.assertEqual(port, backdoor_port)
 
 
 class ConductorRPCAPITestCase(ConductorTestCase):
