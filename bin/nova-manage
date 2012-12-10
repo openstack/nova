@@ -523,15 +523,16 @@ class NetworkCommands(object):
         """Deletes a network"""
 
         if fixed_range is None and uuid is None:
-            raise Exception("Please specify either fixed_range or uuid")
+            raise Exception(_("Please specify either fixed_range or uuid"))
 
         net_manager = importutils.import_object(CONF.network_manager)
         if "QuantumManager" in CONF.network_manager:
             if uuid is None:
-                raise Exception("UUID is required to delete Quantum Networks")
+                raise Exception(_("UUID is required to delete "
+                                  "Quantum Networks"))
             if fixed_range:
-                raise Exception("Deleting by fixed_range is not supported "
-                                "with the QuantumManager")
+                raise Exception(_("Deleting by fixed_range is not supported "
+                                "with the QuantumManager"))
         # delete the network
         net_manager.delete_network(context.get_admin_context(),
             fixed_range, uuid)
