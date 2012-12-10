@@ -48,14 +48,6 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def aggregate_metadata_get(self, context, aggregate_id):
-        """Get metadata for the specified aggregate
-        :param context: security context
-        :param aggregate_id: id of aggregate for which metadata is to
-                             be returned
-        """
-        raise NotImplementedError()
-
     def aggregate_metadata_add(self, context, aggregate_id, metadata,
                                set_delete=False):
         """Add/update metadata for specified aggregate
