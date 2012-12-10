@@ -40,6 +40,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
 from nova import exception
+from nova import hooks
 from nova.image import glance
 from nova import network
 from nova import notifications
@@ -799,6 +800,7 @@ class API(base.Base):
         if block_device_mapping:
             check_policy(context, 'create:attach_volume', target)
 
+    @hooks.add_hook("create_instance")
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,

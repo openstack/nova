@@ -53,6 +53,7 @@ from nova.compute import vm_states
 from nova import conductor
 import nova.context
 from nova import exception
+from nova import hooks
 from nova.image import glance
 from nova import manager
 from nova import network
@@ -1026,6 +1027,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.volume_api.delete(context, volume)
             # NOTE(vish): bdms will be deleted on instance destroy
 
+    @hooks.add_hook("delete_instance")
     def _delete_instance(self, context, instance, bdms):
         """Delete an instance on this host."""
         instance_uuid = instance['uuid']

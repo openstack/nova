@@ -43,6 +43,7 @@ Background Concepts for Nova
    filter_scheduler
    multinic
    rpc
+   hooks
 
 Other Resources
 ---------------
