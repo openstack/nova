@@ -19,7 +19,6 @@
 import ast
 import base64
 import contextlib
-import cPickle as pickle
 import functools
 import os
 import re
@@ -48,6 +47,7 @@ from nova.virt.xenapi import agent
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import host
+from nova.virt.xenapi.imageupload import glance
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
@@ -431,15 +431,29 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                  {'task_state': task_states.IMAGE_UPLOADING,
                   'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
         func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
+        image_id = "my_snapshot_id"
 
         stubs.stubout_instance_snapshot(self.stubs)
         stubs.stubout_is_snapshot(self.stubs)
         # Stubbing out firewall driver as previous stub sets alters
         # xml rpc result parsing
         stubs.stubout_firewall_driver(self.stubs, self.conn)
+
         instance = self._create_instance()
 
-        image_id = "my_snapshot_id"
+        self.fake_upload_called = False
+
+        def fake_image_upload(_self, ctx, session, inst, vdi_uuids,
+                              img_id):
+            self.fake_upload_called = True
+            self.assertEqual(ctx, self.context)
+            self.assertEqual(inst, instance)
+            self.assertTrue(isinstance(vdi_uuids, list))
+            self.assertEqual(img_id, image_id)
+
+        self.stubs.Set(glance.GlanceStore, 'upload_image',
+                       fake_image_upload)
+
         self.conn.snapshot(self.context, instance, image_id,
                            func_call_matcher.call)
 
@@ -468,6 +482,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
             name_label = vdi_rec["name_label"]
             self.assert_(not name_label.endswith('snapshot'))
+
+        self.assertTrue(self.fake_upload_called)
 
     def create_vm_record(self, conn, os_type, name):
         instances = conn.list_instances()
@@ -2572,54 +2588,6 @@ class SwapXapiHostTestCase(test.TestCase):
             "http://otherserver",
             pool.swap_xapi_host(
                 "http://someserver", 'otherserver'))
-
-
-class VmUtilsTestCase(test.TestCase):
-    """Unit tests for xenapi utils."""
-
-    def test_upload_image(self):
-        def fake_instance_system_metadata_get(context, uuid):
-            return dict(image_a=1, image_b=2, image_c='c', d='d')
-
-        def fake_get_sr_path(session):
-            return "foo"
-
-        class FakeInstance(dict):
-            def __init__(self):
-                super(FakeInstance, self).__init__({
-                        'auto_disk_config': 'auto disk config',
-                        'os_type': 'os type'})
-
-            def __missing__(self, item):
-                return "whatever"
-
-        class FakeSession(object):
-            def call_plugin(session_self, service, command, kwargs):
-                self.kwargs = kwargs
-
-            def call_plugin_serialized(session_self, service, command, *args,
-                            **kwargs):
-                self.kwargs = kwargs
-
-        def fake_dumps(thing):
-            return thing
-
-        self.stubs.Set(db, "instance_system_metadata_get",
-                                             fake_instance_system_metadata_get)
-        self.stubs.Set(vm_utils, "get_sr_path", fake_get_sr_path)
-        self.stubs.Set(pickle, "dumps", fake_dumps)
-
-        ctx = context.get_admin_context()
-
-        instance = FakeInstance()
-        session = FakeSession()
-        vm_utils.upload_image(ctx, session, instance, "vmi uuids", "image id")
-
-        actual = self.kwargs['properties']
-        # Inheritance happens in another place, now
-        expected = dict(auto_disk_config='auto disk config',
-                        os_type='os type')
-        self.assertEquals(expected, actual)
 
 
 class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
