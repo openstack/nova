@@ -120,8 +120,9 @@ def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
                              large_object_size=FIVE_GIGABYTES,
                              large_object_chunk_size=TWO_HUNDRED_MEGABYTES,
                              container='images'):
+
     if tar_size > 0 and tar_size < large_object_size:
-        # Image size is known, and is less than large_object_size.
+        # Tar size is known, and is less than large_object_size.
         # Send to Swift with regular PUT.
         obj_etag = swift_conn.put_object(container, obj_name, tar_file,
                                          content_length=tar_size)
@@ -133,7 +134,7 @@ def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
                 math.ceil(float(tar_size) /
                           float(large_object_chunk_size))))
         else:
-            # image_size == 0 is when we don't know the size
+            # tar_size == 0 is when we don't know the size
             # of the image. This can occur with older clients
             # that don't inspect the payload size.
             logging.debug("Cannot determine image size. Adding as a "
@@ -179,7 +180,7 @@ def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
         # In the case we have been given an unknown image size,
         # set the image_size to the total size of the combined chunks.
         if tar_size == 0:
-            image_size = combined_chunks_size
+            tar_size = combined_chunks_size
 
         # Now we write the object manifest and return the
         # manifest's etag...
@@ -263,7 +264,6 @@ def _upload_tarball(staging_path, image_id, **params):
 
 def upload_vhd(session, vdi_uuids, sr_path, image_id, **params):
     staging_path = utils.make_staging_area(sr_path)
-    print staging_path
     try:
         utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
         etag, image_size = _upload_tarball(staging_path, image_id,
