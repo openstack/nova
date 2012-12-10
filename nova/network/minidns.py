@@ -17,14 +17,16 @@ import shutil
 import tempfile
 
 from nova import exception
+from nova.network import dns_driver
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MiniDNS(object):
+class MiniDNS(dns_driver.DNSDriver):
     """ Trivial DNS driver. This will read/write to a local, flat file
         and have no effect on your actual DNS system. This class is
         strictly for testing purposes, and should keep you out of dependency
