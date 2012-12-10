@@ -2094,7 +2094,7 @@ class LibvirtConnTestCase(test.TestCase):
                             _bandwidth).AndRaise(libvirt.libvirtError('ERR'))
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref.name:
+            if instance_name == instance_ref['name']:
                 return vdmock
 
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
@@ -2180,7 +2180,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      dummyjson)
 
             self.assertTrue(os.path.exists('%s/%s/' %
-                                           (tmpdir, instance_ref.name)))
+                                           (tmpdir, instance_ref['name'])))
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
@@ -2203,7 +2203,7 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref.name:
+            if instance_name == instance_ref['name']:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
@@ -2229,7 +2229,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        info = conn.get_instance_disk_info(instance_ref.name)
+        info = conn.get_instance_disk_info(instance_ref['name'])
         info = jsonutils.loads(info)
         self.assertEquals(info[0]['type'], 'raw')
         self.assertEquals(info[0]['path'], '/test/disk')
@@ -2302,7 +2302,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.spawn(self.context, instance, None, [], 'herp',
                        network_info=network_info)
 
-        path = os.path.join(CONF.instances_path, instance.name)
+        path = os.path.join(CONF.instances_path, instance['name'])
         if os.path.isdir(path):
             shutil.rmtree(path)
 
@@ -3638,7 +3638,7 @@ class NWFilterTestCase(test.TestCase):
         self.security_group = self.setup_and_return_security_group()
 
         db.instance_add_security_group(self.context, inst_uuid,
-                                       self.security_group.id)
+                                       self.security_group['id'])
         instance = db.instance_get(self.context, inst_id)
 
         network_info = _fake_network_info(self.stubs, 1)
@@ -3655,7 +3655,7 @@ class NWFilterTestCase(test.TestCase):
                 break
         _ensure_all_called(mac, allow_dhcp)
         db.instance_remove_security_group(self.context, inst_uuid,
-                                          self.security_group.id)
+                                          self.security_group['id'])
         self.teardown_security_group()
         db.instance_destroy(context.get_admin_context(), instance_ref['uuid'])
 
@@ -3673,7 +3673,7 @@ class NWFilterTestCase(test.TestCase):
         self.security_group = self.setup_and_return_security_group()
 
         db.instance_add_security_group(self.context, inst_uuid,
-                                       self.security_group.id)
+                                       self.security_group['id'])
 
         instance = db.instance_get(self.context, inst_id)
 
