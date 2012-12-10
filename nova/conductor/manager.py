@@ -41,7 +41,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.4'
+    RPC_API_VERSION = '1.5'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -94,7 +94,7 @@ class ConductorManager(manager.SchedulerDependentManager):
                         bw_in=None, bw_out=None,
                         last_ctr_in=None, last_ctr_out=None,
                         last_refreshed=None):
-        if all((None, bw_in, bw_out, last_ctr_in, last_ctr_out)):
+        if [bw_in, bw_out, last_ctr_in, last_ctr_out].count(None) != 4:
             self.db.bw_usage_update(context, uuid, mac, start_period,
                                     bw_in, bw_out, last_ctr_in, last_ctr_out,
                                     last_refreshed)

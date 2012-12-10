@@ -66,7 +66,7 @@ class LocalAPI(object):
         return self._manager.aggregate_host_delete(context, aggregate, host)
 
     def bw_usage_get(self, context, uuid, start_period, mac):
-        return self._manager.bw_usage_update(context, uuid, start_period, mac)
+        return self._manager.bw_usage_update(context, uuid, mac, start_period)
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in, bw_out, last_ctr_in, last_ctr_out,
