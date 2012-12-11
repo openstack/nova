@@ -1,0 +1,18 @@
+{
+    "servers": [
+        {
+            "id": "120eed64-e7db-409c-b565-38ce2bc90021",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/openstack/servers/120eed64-e7db-409c-b565-38ce2bc90021",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/openstack/servers/120eed64-e7db-409c-b565-38ce2bc90021",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "new-server-test"
+        }
+    ]
+}

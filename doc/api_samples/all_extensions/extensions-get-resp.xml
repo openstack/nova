@@ -107,6 +107,9 @@
   <extension alias="os-fping" updated="2012-07-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/fping/api/v1.1" name="Fping">
     <description>Fping Management Extension.</description>
   </extension>
+  <extension alias="os-hide-server-addresses" updated="2012-12-11T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/hide_server_addresses/api/v1.1" name="HideServerAddresses">
+    <description>Support hiding server addresses in certain states.</description>
+  </extension>
   <extension alias="os-hosts" updated="2011-06-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/hosts/api/v1.1" name="Hosts">
     <description>Admin-only host administration</description>
   </extension>

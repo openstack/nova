@@ -457,6 +457,16 @@ class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
 
 
+class ServersSampleHideAddressesJsonTest(ServersSampleJsonTest):
+    extension_name = '.'.join(('nova.api.openstack.compute.contrib',
+                               'hide_server_addresses',
+                               'Hide_server_addresses'))
+
+
+class ServersSampleHideAddressesXMLTest(ServersSampleHideAddressesJsonTest):
+    ctype = 'xml'
+
+
 class ServersMetadataJsonTest(ServersSampleBase):
     def _create_and_set(self, subs):
         uuid = self._post_server()

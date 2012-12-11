@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<servers xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
+  <server status="ACTIVE" updated="2012-12-19T20:32:42Z" hostId="120a7c150d2ad92ce84590d0780c67b9e8be59b7084d0bc292ec0378" name="new-server-test" created="2012-12-19T20:32:40Z" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="55db7849-8ec4-46dd-8897-492d82282f29">
+    <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+      <atom:link href="http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+    </image>
+    <flavor id="1">
+      <atom:link href="http://openstack.example.com/openstack/flavors/1" rel="bookmark"/>
+    </flavor>
+    <metadata>
+      <meta key="My Server Name">Apache1</meta>
+    </metadata>
+    <addresses>
+      <network id="private">
+        <ip version="4" addr="192.168.0.3"/>
+      </network>
+    </addresses>
+    <atom:link href="http://openstack.example.com/v2/openstack/servers/55db7849-8ec4-46dd-8897-492d82282f29" rel="self"/>
+    <atom:link href="http://openstack.example.com/openstack/servers/55db7849-8ec4-46dd-8897-492d82282f29" rel="bookmark"/>
+  </server>
+</servers>
