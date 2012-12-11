@@ -50,6 +50,7 @@ rpc_opts = [
                 default=['nova.openstack.common.exception',
                          'nova.exception',
                          'cinder.exception',
+                         'exceptions',
                          ],
                 help='Modules of exceptions that are permitted to be recreated'
                      'upon receiving exception data from an rpc call.'),
