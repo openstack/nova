@@ -805,13 +805,15 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.tracker.update_available_resource(self.context)
         self.assertEqual(1, len(self.tracker.tracked_migrations))
 
-    def test_set_instance_host(self):
+    def test_set_instance_host_and_node(self):
         instance = self._fake_instance()
         self.assertEqual(None, instance['host'])
         self.assertEqual(None, instance['launched_on'])
+        self.assertEqual(None, instance['node'])
 
         claim = self.tracker.instance_claim(self.context, instance)
         self.assertNotEqual(0, claim.memory_mb)
 
         self.assertEqual('fakehost', instance['host'])
         self.assertEqual('fakehost', instance['launched_on'])
+        self.assertEqual('fakenode', instance['node'])

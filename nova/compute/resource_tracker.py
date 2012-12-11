@@ -189,6 +189,7 @@ class ResourceTracker(object):
                                            **values)
         instance_ref['host'] = self.host
         instance_ref['launched_on'] = self.host
+        instance_ref['node'] = self.nodename
 
     def abort_instance_claim(self, instance):
         """Remove usage from the given instance"""
