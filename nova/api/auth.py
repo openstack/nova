@@ -28,15 +28,22 @@ from nova.openstack.common import log as logging
 from nova import wsgi
 
 
-use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
-        default=False,
-        help='Treat X-Forwarded-For as the canonical remote address. '
-             'Only enable this if you have a sanitizing proxy.')
+auth_opts = [
+    cfg.BoolOpt('api_rate_limit',
+                default=True,
+                help='whether to rate limit the api'),
+    cfg.StrOpt('auth_strategy',
+               default='noauth',
+               help='The strategy to use for auth: noauth or keystone.'),
+    cfg.BoolOpt('use_forwarded_for',
+                default=False,
+                help='Treat X-Forwarded-For as the canonical remote address. '
+                     'Only enable this if you have a sanitizing proxy.'),
+]
 
 CONF = cfg.CONF
-CONF.register_opt(use_forwarded_for_opt)
-CONF.import_opt('api_rate_limit', 'nova.config')
-CONF.import_opt('auth_strategy', 'nova.config')
+CONF.register_opts(auth_opts)
+
 LOG = logging.getLogger(__name__)
 
 
