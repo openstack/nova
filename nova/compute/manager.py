@@ -1414,13 +1414,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        ret_val = self.driver.snapshot(context, instance, image_id)
-        if CONF.image_store:
-            self._update_image_glance(context, image_id, ret_val['etag'],
-                                      ret_val['image_size'],
-                                      ret_val['disk_format'],
-                                      ret_val['container_format'])
-        LOG.debug("computer manager: %s" %ret_val)
+        image_metadata = self.driver.snapshot(context, instance, image_id)
+        if image_metadata:
+            self._update_image_glance(context, image_id, image_metadata)
         if image_type == 'snapshot':
             expected_task_state = task_states.IMAGE_SNAPSHOT
 
@@ -1442,16 +1438,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.end")
 
-    def _update_image_glance(self, context, image_id, checksum, image_size,
-                             disk_format, container_format):
+    def _update_image_glance(self, context, image_id, image_metadata):
         image_service = glance.get_default_image_service()
         location = self._get_location_uri(image_id)
-        LOG.info('location %s' %location)
-        image_meta ={'checksum': checksum,
-                     'size': image_size,
+        image_meta ={'checksum': image_metadata['etag'],
+                     'size': image_metadata['image_size'],
                      'location': location,
-                     'disk_format': disk_format,
-                     'container_format': container_format}
+                     'disk_format': image_metadata['disk_format'],
+                     'container_format': image_metadata['container_format']}
         image_service.update(context, image_id, image_meta, purge_props=False)
 
     def _get_location_uri(self, image_id):

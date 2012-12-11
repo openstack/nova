@@ -710,6 +710,15 @@ def _find_cached_image(session, image_id, sr_ref):
     return cached_images.get(image_id)
 
 
+def upload_image(context, session, instance, vdi_uuids, image_id):
+    if CONF.image_store == 'swift':
+        return upload_image_swift(context, session, instance, vdi_uuids,
+                                  image_id)
+    else:
+        # TODO: log that we are defaulting to glance
+        upload_image_glance(context, session, instance, vdi_uuids, image_id)
+
+
 def upload_image_swift(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and
     push them into Glance using the specified human-friendly name.

@@ -635,14 +635,9 @@ class VMOps(object):
 
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label) as vdi_uuids:
-            if CONF.image_store == 'swift':
-                ret_val = vm_utils.upload_image_swift(
-                        context, self._session, instance, vdi_uuids, image_id)
-            else:
-                ret_val = vm_utils.upload_image_glance(
+                ret_val = vm_utils.upload_image(
                         context, self._session, instance, vdi_uuids, image_id)
                 
-
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
         LOG.debug("xen vmops %s" %ret_val)
