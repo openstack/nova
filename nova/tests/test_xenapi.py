@@ -2399,23 +2399,31 @@ class ResourcePoolWithStubs(StubDependencies, pool.ResourcePool):
 
 class HypervisorPoolTestCase(test.TestCase):
 
+    fake_aggregate = {
+        'id': 98,
+        'hosts': [],
+        'metadetails': {
+            'master_compute': 'master',
+            pool_states.POOL_FLAG: {},
+            pool_states.KEY: {}
+            }
+        }
+
     def test_slave_asks_master_to_add_slave_to_pool(self):
         slave = ResourcePoolWithStubs()
-        aggregate = {'id': 98, 'hosts': []}
 
-        slave.add_to_aggregate("CONTEXT", aggregate, "slave")
+        slave.add_to_aggregate("CONTEXT", self.fake_aggregate, "slave")
 
         self.assertIn(
             (slave.compute_rpcapi.add_aggregate_host,
-            "CONTEXT", jsonutils.to_primitive(aggregate),
+            "CONTEXT", jsonutils.to_primitive(self.fake_aggregate),
             "slave", "master", "SLAVE_INFO"),
             slave.compute_rpcapi._mock_calls)
 
     def test_slave_asks_master_to_remove_slave_from_pool(self):
         slave = ResourcePoolWithStubs()
-        aggregate = {'id': 98, 'hosts': []}
 
-        slave.remove_from_aggregate("CONTEXT", aggregate, "slave")
+        slave.remove_from_aggregate("CONTEXT", self.fake_aggregate, "slave")
 
         self.assertIn(
             (slave.compute_rpcapi.remove_aggregate_host,
