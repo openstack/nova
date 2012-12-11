@@ -15,7 +15,10 @@
 # under the License.
 
 
-class NoopDNSDriver(object):
+from nova.network import dns_driver
+
+
+class NoopDNSDriver(dns_driver.DNSDriver):
     """ No-op DNS manager. Does nothing. """
 
     def __init__(self):

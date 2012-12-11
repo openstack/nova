@@ -16,6 +16,7 @@ import ldap
 import time
 
 from nova import exception
+from nova.network import dns_driver
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
@@ -300,7 +301,7 @@ class HostEntry(DNSEntry):
     parent = property(_parent)
 
 
-class LdapDNS(object):
+class LdapDNS(dns_driver.DNSDriver):
     """Driver for PowerDNS using ldap as a back end.
 
        This driver assumes ldap-method=strict, with all domains
