@@ -18,15 +18,13 @@ from lxml import etree
 from lxml import objectify
 
 from nova import test
-
+from nova.tests import matchers
 from nova.virt.libvirt import config
 
 
 class LibvirtConfigBaseTest(test.TestCase):
     def assertXmlEqual(self, expectedXmlstr, actualXmlstr):
-        expected = etree.tostring(objectify.fromstring(expectedXmlstr))
-        actual = etree.tostring(objectify.fromstring(actualXmlstr))
-        self.assertEqual(expected, actual)
+        self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
 
 
 class LibvirtConfigTest(LibvirtConfigBaseTest):

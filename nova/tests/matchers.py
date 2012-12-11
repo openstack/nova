@@ -20,6 +20,8 @@
 
 import pprint
 
+from lxml import etree
+
 
 class DictKeysMismatch(object):
     def __init__(self, d1only, d2only):
@@ -194,3 +196,244 @@ class IsSubDictOf(object):
             else:
                 if sub_value != super_value:
                     return SubDictMismatch(k, sub_value, super_value)
+
+
+class XMLMismatch(object):
+    """Superclass for XML mismatch."""
+
+    def __init__(self, state):
+        self.path = str(state)
+        self.expected = state.expected
+        self.actual = state.actual
+
+    def describe(self):
+        return "%(path)s: XML does not match" % self.__dict__
+
+    def get_details(self):
+        return {
+            'expected': self.expected,
+            'actual': self.actual,
+        }
+
+
+class XMLTagMismatch(XMLMismatch):
+    """XML tags don't match."""
+
+    def __init__(self, state, idx, expected_tag, actual_tag):
+        super(XMLTagMismatch, self).__init__(state)
+        self.idx = idx
+        self.expected_tag = expected_tag
+        self.actual_tag = actual_tag
+
+    def describe(self):
+        return ("%(path)s: XML tag mismatch at index %(idx)d: "
+                "expected tag <%(expected_tag)s>; "
+                "actual tag <%(actual_tag)s>" % self.__dict__)
+
+
+class XMLAttrKeysMismatch(XMLMismatch):
+    """XML attribute keys don't match."""
+
+    def __init__(self, state, expected_only, actual_only):
+        super(XMLAttrKeysMismatch, self).__init__(state)
+        self.expected_only = ', '.join(sorted(expected_only))
+        self.actual_only = ', '.join(sorted(actual_only))
+
+    def describe(self):
+        return ("%(path)s: XML attributes mismatch: "
+                "keys only in expected: %(expected_only)s; "
+                "keys only in actual: %(actual_only)s" % self.__dict__)
+
+
+class XMLAttrValueMismatch(XMLMismatch):
+    """XML attribute values don't match."""
+
+    def __init__(self, state, key, expected_value, actual_value):
+        super(XMLAttrValueMismatch, self).__init__(state)
+        self.key = key
+        self.expected_value = expected_value
+        self.actual_value = actual_value
+
+    def describe(self):
+        return ("%(path)s: XML attribute value mismatch: "
+                "expected value of attribute %(key)s: %(expected_value)r; "
+                "actual value: %(actual_value)r" % self.__dict__)
+
+
+class XMLTextValueMismatch(XMLMismatch):
+    """XML text values don't match."""
+
+    def __init__(self, state, expected_text, actual_text):
+        super(XMLTextValueMismatch, self).__init__(state)
+        self.expected_text = expected_text
+        self.actual_text = actual_text
+
+    def describe(self):
+        return ("%(path)s: XML text value mismatch: "
+                "expected text value: %(expected_text)r; "
+                "actual value: %(actual_text)r" % self.__dict__)
+
+
+class XMLUnexpectedChild(XMLMismatch):
+    """Unexpected child present in XML."""
+
+    def __init__(self, state, tag, idx):
+        super(XMLUnexpectedChild, self).__init__(state)
+        self.tag = tag
+        self.idx = idx
+
+    def describe(self):
+        return ("%(path)s: XML unexpected child element <%(tag)s> "
+                "present at index %(idx)d" % self.__dict__)
+
+
+class XMLExpectedChild(XMLMismatch):
+    """Expected child not present in XML."""
+
+    def __init__(self, state, tag, idx):
+        super(XMLExpectedChild, self).__init__(state)
+        self.tag = tag
+        self.idx = idx
+
+    def describe(self):
+        return ("%(path)s: XML expected child element <%(tag)s> "
+                "not present at index %(idx)d" % self.__dict__)
+
+
+class XMLMatchState(object):
+    """
+    Maintain some state for matching.
+
+    Tracks the XML node path and saves the expected and actual full
+    XML text, for use by the XMLMismatch subclasses.
+    """
+
+    def __init__(self, expected, actual):
+        self.path = []
+        self.expected = expected
+        self.actual = actual
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.path.pop()
+        return False
+
+    def __str__(self):
+        return '/' + '/'.join(self.path)
+
+    def node(self, tag, idx):
+        """
+        Adds tag and index to the path; they will be popped off when
+        the corresponding 'with' statement exits.
+
+        :param tag: The element tag
+        :param idx: If not None, the integer index of the element
+                    within its parent.  Not included in the path
+                    element if None.
+        """
+
+        if idx is not None:
+            self.path.append("%s[%d]" % (tag, idx))
+        else:
+            self.path.append(tag)
+        return self
+
+
+class XMLMatches(object):
+    """Compare XML strings.  More complete than string comparison."""
+
+    def __init__(self, expected):
+        self.expected_xml = expected
+        self.expected = etree.fromstring(expected)
+
+    def __str__(self):
+        return 'XMLMatches(%r)' % self.expected_xml
+
+    def match(self, actual_xml):
+        actual = etree.fromstring(actual_xml)
+
+        state = XMLMatchState(self.expected_xml, actual_xml)
+        result = self._compare_node(self.expected, actual, state, None)
+
+        if result is False:
+            return XMLMismatch(state)
+        elif result is not True:
+            return result
+
+    def _compare_node(self, expected, actual, state, idx):
+        """Recursively compares nodes within the XML tree."""
+
+        # Start by comparing the tags
+        if expected.tag != actual.tag:
+            return XMLTagMismatch(state, idx, expected.tag, actual.tag)
+
+        with state.node(expected.tag, idx):
+            # Compare the attribute keys
+            expected_attrs = set(expected.attrib.keys())
+            actual_attrs = set(actual.attrib.keys())
+            if expected_attrs != actual_attrs:
+                expected_only = expected_attrs - actual_attrs
+                actual_only = actual_attrs - expected_attrs
+                return XMLAttrKeysMismatch(state, expected_only, actual_only)
+
+            # Compare the attribute values
+            for key in expected_attrs:
+                expected_value = expected.attrib[key]
+                actual_value = actual.attrib[key]
+
+                if 'DONTCARE' in (expected_value, actual_value):
+                    continue
+                elif expected_value != actual_value:
+                    return XMLAttrValueMismatch(state, key, expected_value,
+                                                actual_value)
+
+            # Compare the contents of the node
+            if len(expected) == 0 and len(actual) == 0:
+                # No children, compare text values
+                if ('DONTCARE' not in (expected.text, actual.text) and
+                    expected.text != actual.text):
+                    return XMLTextValueMismatch(state, expected.text,
+                                                actual.text)
+            else:
+                expected_idx = 0
+                actual_idx = 0
+                while (expected_idx < len(expected) and
+                       actual_idx < len(actual)):
+                    # Ignore comments and processing instructions
+                    # TODO(Vek): may interpret PIs in the future, to
+                    # allow for, say, arbitrary ordering of some
+                    # elements
+                    if (expected[expected_idx].tag in
+                        (etree.Comment, etree.ProcessingInstruction)):
+                        expected_idx += 1
+                        continue
+
+                    # Compare the nodes
+                    result = self._compare_node(expected[expected_idx],
+                                                actual[actual_idx], state,
+                                                actual_idx)
+                    if result is not True:
+                        return result
+
+                    # Step on to comparing the next nodes...
+                    expected_idx += 1
+                    actual_idx += 1
+
+                # Make sure we consumed all nodes in actual
+                if actual_idx < len(actual):
+                    return XMLUnexpectedChild(state, actual[actual_idx].tag,
+                                              actual_idx)
+
+                # Make sure we consumed all nodes in expected
+                if expected_idx < len(expected):
+                    for node in expected[expected_idx:]:
+                        if (node.tag in
+                            (etree.Comment, etree.ProcessingInstruction)):
+                            continue
+
+                        return XMLExpectedChild(state, node.tag, actual_idx)
+
+        # The nodes match
+        return True

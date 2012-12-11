@@ -142,3 +142,210 @@ class TestDictMatches(testtools.TestCase, helpers.TestMatchersInterface):
          {'foo': 'bop', 'baz': 'quux',
           'cat': {'tabby': True, 'fluffy': False}}, matches_matcher),
          ]
+
+
+class TestXMLMatches(testtools.TestCase, helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="DONTCARE"/>
+  <children>
+    <!--This is a comment-->
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>DONTCARE</child3>
+    <?spam processing instruction?>
+  </children>
+</root>""")
+
+    matches_matches = ["""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key2="spam" key1="spam"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+                       """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children><child1>child 1</child1>
+<child2>child 2</child2>
+<child3>blah</child3>
+  </children>
+</root>""",
+    ]
+
+    matches_mismatches = ["""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>mismatch text</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key3="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="quux" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child4>child 4</child4>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+  </children>
+</root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+    <child4>child 4</child4>
+  </children>
+</root>""",
+    ]
+
+    str_examples = [
+        ("XMLMatches('<?xml version=\"1.0\"?>\\n"
+         "<root>\\n"
+         "  <text>some text here</text>\\n"
+         "  <text>some other text here</text>\\n"
+         "  <attrs key1=\"spam\" key2=\"DONTCARE\"/>\\n"
+         "  <children>\\n"
+         "    <!--This is a comment-->\\n"
+         "    <child1>child 1</child1>\\n"
+         "    <child2>child 2</child2>\\n"
+         "    <child3>DONTCARE</child3>\\n"
+         "    <?spam processing instruction?>\\n"
+         "  </children>\\n"
+         "</root>')", matches_matcher),
+    ]
+
+    describe_examples = [
+        ("/root/text[1]: XML text value mismatch: expected text value: "
+         "'some other text here'; actual value: 'mismatch text'",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>mismatch text</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+        ("/root/attrs[2]: XML attributes mismatch: keys only in expected: "
+         "key2; keys only in actual: key3",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key3="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+        ("/root/attrs[2]: XML attribute value mismatch: expected value of "
+         "attribute key1: 'spam'; actual value: 'quux'",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="quux" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+        ("/root/children[3]: XML tag mismatch at index 1: expected tag "
+         "<child2>; actual tag <child4>",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child4>child 4</child4>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+        ("/root/children[3]: XML expected child element <child3> not "
+         "present at index 2",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+  </children>
+</root>""", matches_matcher),
+        ("/root/children[3]: XML unexpected child element <child4> "
+         "present at index 3",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+    <child4>child 4</child4>
+  </children>
+</root>""", matches_matcher),
+    ]
