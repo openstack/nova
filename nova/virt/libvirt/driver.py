@@ -252,8 +252,6 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 # delete it & corresponding code using it
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 
-ONE_GIGABYTE = 1024 * 1024 * 1024
-
 
 def _get_eph_disk(ephemeral):
     return 'disk.eph' + str(ephemeral['num'])
@@ -1272,15 +1270,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if fs_format:
             utils.mkfs(fs_format, target, label)
 
-    def _create_ephemeral(self, instance, disk_name, size_in_gb, number):
-        fname = os.path.join(CONF.instances_path, instance['name'],
-                             disk_name)
-
-        LOG.info(_('Creating ephemeral disk named %(disk_name)s of size '
-                   '%(size_in_gb)s gb at %(fname)s'), locals(),
-                 instance=instance)
-        self._create_local(fname, size_in_gb)
-        disk.mkfs(instance['os_type'], 'ephemeral%d' % number, fname)
+    def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type):
+        self._create_local(target, ephemeral_size)
+        disk.mkfs(os_type, fs_label, target)
 
     @staticmethod
     def _create_swap(target, swap_mb):
@@ -1358,7 +1350,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      project_id=instance['project_id'])
 
         root_fname = hashlib.sha1(str(disk_images['image_id'])).hexdigest()
-        size = instance['root_gb'] * ONE_GIGABYTE
+        size = instance['root_gb'] * 1024 * 1024 * 1024
 
         inst_type = instance['instance_type']
         if size == 0 or suffix == '.rescue':
@@ -1374,19 +1366,36 @@ class LibvirtDriver(driver.ComputeDriver):
                                 user_id=instance['user_id'],
                                 project_id=instance['project_id'])
 
-        # NOTE(mikal): we don't go through imagebackend here, as ephemeral
-        # disks aren't cached in _base, they're new images each time
         ephemeral_gb = instance['ephemeral_gb']
         if ephemeral_gb and not self._volume_in_mapping(
                 self.default_second_device, block_device_info):
             swap_device = self.default_third_device
-            self._create_ephemeral(instance, 'disk.local', ephemeral_gb, 0)
+            fn = functools.partial(self._create_ephemeral,
+                                   fs_label='ephemeral0',
+                                   os_type=instance["os_type"])
+            fname = "ephemeral_%s_%s_%s" % ("0",
+                                            ephemeral_gb,
+                                            instance["os_type"])
+            size = ephemeral_gb * 1024 * 1024 * 1024
+            image('disk.local').cache(fetch_func=fn,
+                                      filename=fname,
+                                      size=size,
+                                      ephemeral_size=ephemeral_gb)
         else:
             swap_device = self.default_second_device
 
         for eph in driver.block_device_info_get_ephemerals(block_device_info):
-            self._create_ephemeral(instance, _get_eph_disk(eph), eph['size'],
-                                   eph['num'])
+            fn = functools.partial(self._create_ephemeral,
+                                   fs_label='ephemeral%d' % eph['num'],
+                                   os_type=instance["os_type"])
+            size = eph['size'] * 1024 * 1024 * 1024
+            fname = "ephemeral_%s_%s_%s" % (eph['num'],
+                                            eph['size'],
+                                            instance["os_type"])
+            image(_get_eph_disk(eph)).cache(fetch_func=fn,
+                                            filename=fname,
+                                            size=size,
+                                            ephemeral_size=eph['size'])
 
         swap_mb = 0
 
@@ -2928,7 +2937,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 size = instance['ephemeral_gb']
             else:
                 size = 0
-            size *= ONE_GIGABYTE
+            size *= 1024 * 1024 * 1024
 
             # If we have a non partitioned image that we can extend
             # then ensure we're in 'raw' format so we can extend file system.

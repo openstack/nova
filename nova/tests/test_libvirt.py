@@ -2318,9 +2318,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(imagebackend.Image,
                        'cache',
                        fake_none)
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       '_create_ephemeral',
-                       fake_none)
 
         conn.spawn(self.context, instance, None, [], 'herp',
                        network_info=network_info)

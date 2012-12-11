@@ -49,8 +49,6 @@ CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 
-ONE_GIGABYTE = 1024 * 1024 * 1024
-
 
 class Image(object):
     __metaclass__ = abc.ABCMeta
@@ -105,9 +103,9 @@ class Image(object):
         return info
 
     def cache(self, fetch_func, filename, size=None, *args, **kwargs):
-        """Creates an image from a template.
+        """Creates image from template.
 
-        Ensures that template and image do not already exist.
+        Ensures that template and image not already exists.
         Ensures that base directory exists.
         Synchronizes on template fetching.
 
@@ -181,7 +179,7 @@ class Qcow2(Image):
         def copy_qcow2_image(base, target, size):
             qcow2_base = base
             if size:
-                size_gb = size / (ONE_GIGABYTE)
+                size_gb = size / (1024 * 1024 * 1024)
                 qcow2_base += '_%d' % size_gb
                 if not os.path.exists(qcow2_base):
                     with utils.remove_path_on_error(qcow2_base):
