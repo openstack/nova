@@ -68,6 +68,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 import nova.policy
@@ -459,6 +460,7 @@ class FloatingIP(object):
 
         return floating_ip
 
+    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
     @wrap_check_policy
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
@@ -505,6 +507,7 @@ class FloatingIP(object):
         if reservations:
             QUOTAS.commit(context, reservations)
 
+    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
     @wrap_check_policy
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
@@ -584,6 +587,7 @@ class FloatingIP(object):
                         'network.floating_ip.associate',
                         notifier.INFO, payload=payload)
 
+    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
     @wrap_check_policy
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
@@ -654,6 +658,7 @@ class FloatingIP(object):
                         'network.floating_ip.disassociate',
                         notifier.INFO, payload=payload)
 
+    @rpc_common.client_exceptions(exception.FloatingIpNotFound)
     @wrap_check_policy
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict"""
