@@ -65,6 +65,7 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
         xmlin = """
         <capabilities>
           <host>
+            <uuid>c7a5fdbd-edaf-9455-926a-d65c16db1809</uuid>
             <cpu>
               <arch>x86_64</arch>
               <model>Opteron_G3</model>
@@ -88,6 +89,7 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
         obj.parse_str(xmlin)
 
         self.assertEqual(type(obj.host), config.LibvirtConfigCapsHost)
+        self.assertEqual(obj.host.uuid, "c7a5fdbd-edaf-9455-926a-d65c16db1809")
 
         xmlout = obj.to_xml()
 

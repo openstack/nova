@@ -106,6 +106,7 @@ class LibvirtConfigCapsHost(LibvirtConfigObject):
                                                     **kwargs)
 
         self.cpu = None
+        self.uuid = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCapsHost, self).parse_dom(xmldoc)
@@ -115,10 +116,14 @@ class LibvirtConfigCapsHost(LibvirtConfigObject):
                 cpu = LibvirtConfigCPU()
                 cpu.parse_dom(c)
                 self.cpu = cpu
+            elif c.tag == "uuid":
+                self.uuid = c.text
 
     def format_dom(self):
         caps = super(LibvirtConfigCapsHost, self).format_dom()
 
+        if self.uuid:
+            caps.append(self._text_node("uuid", self.uuid))
         if self.cpu:
             caps.append(self.cpu.format_dom())
 
