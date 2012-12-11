@@ -16,6 +16,7 @@
 
 from nova.conductor import manager
 from nova.conductor import rpcapi
+from nova import exception as exc
 from nova.openstack.common import cfg
 
 conductor_opts = [
@@ -76,6 +77,9 @@ class LocalAPI(object):
                                              last_ctr_in, last_ctr_out,
                                              last_refreshed)
 
+    def get_backdoor_port(self, context, host):
+        raise exc.InvalidRequest
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -121,3 +125,9 @@ class API(object):
             context, uuid, mac, start_period,
             bw_in, bw_out, last_ctr_in, last_ctr_out,
             last_refreshed)
+
+    #NOTE(mtreinish): This doesn't work on multiple conductors without any
+    # topic calculation in conductor_rpcapi. So the host param isn't used
+    # currently.
+    def get_backdoor_port(self, context, host):
+        return self.conductor_rpcapi.get_backdoor_port(context)

@@ -41,7 +41,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.5'
+    RPC_API_VERSION = '1.6'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -100,3 +100,6 @@ class ConductorManager(manager.SchedulerDependentManager):
                                     last_refreshed)
         usage = self.db.bw_usage_get(context, uuid, start_period, mac)
         return jsonutils.to_primitive(usage)
+
+    def get_backdoor_port(self, context):
+        return self.backdoor_port

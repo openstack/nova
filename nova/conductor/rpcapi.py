@@ -32,6 +32,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.3 - Added aggregate_host_add and aggregate_host_delete
     1.4 - Added migration_get
     1.5 - Added bw_usage_update
+    1.6 - Added get_backdoor_port()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -89,3 +90,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             last_ctr_in=last_ctr_in, last_ctr_out=last_ctr_out,
                             last_refreshed=last_refreshed)
         return self.call(context, msg, version='1.5')
+
+    def get_backdoor_port(self, context):
+        msg = self.make_msg('get_backdoor_port')
+        return self.call(context, msg, version='1.6')
