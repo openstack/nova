@@ -337,6 +337,21 @@ class LibvirtConfigGuestCPU(LibvirtConfigCPU):
         return cpu
 
 
+class LibvirtConfigGuestSMBIOS(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSMBIOS, self).__init__(root_name="smbios",
+                                                       **kwargs)
+
+        self.mode = "sysinfo"
+
+    def format_dom(self):
+        smbios = super(LibvirtConfigGuestSMBIOS, self).format_dom()
+        smbios.set("mode", self.mode)
+
+        return smbios
+
+
 class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -678,6 +693,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_root = None
         self.os_init_path = None
         self.os_boot_dev = None
+        self.os_smbios = None
         self.devices = []
 
     def _format_basic_props(self, root):
@@ -703,6 +719,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             os.append(self._text_node("init", self.os_init_path))
         if self.os_boot_dev is not None:
             os.append(etree.Element("boot", dev=self.os_boot_dev))
+        if self.os_smbios is not None:
+            os.append(self.os_smbios.format_dom())
         root.append(os)
 
     def _format_features(self, root):

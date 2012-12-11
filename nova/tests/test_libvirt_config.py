@@ -303,6 +303,17 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         """)
 
 
+class LibvirtConfigGuestSMBIOSTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigGuestSMBIOS()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <smbios mode="sysinfo"/>
+        """)
+
+
 class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
 
     def test_config_simple(self):
@@ -745,6 +756,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
         obj.os_boot_dev = "hd"
+        obj.os_smbios = config.LibvirtConfigGuestSMBIOS()
         obj.acpi = True
         obj.apic = True
 
@@ -778,6 +790,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os>
                 <type>linux</type>
                 <boot dev="hd"/>
+                <smbios mode="sysinfo"/>
               </os>
               <features>
                 <acpi/>
