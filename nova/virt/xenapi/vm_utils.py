@@ -39,6 +39,7 @@ from nova.compute import power_state
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -711,17 +712,19 @@ def _find_cached_image(session, image_id, sr_ref):
 
 
 def upload_image(context, session, instance, vdi_uuids, image_id):
-    if CONF.image_store == 'swift':
+    image_store = None
+    if CONF.image_store:
+        image_store = importutils.import_object(CONF.image_store)
+    if image_store and  image_store.get_store_name() == 'swift':
         return upload_image_swift(context, session, instance, vdi_uuids,
                                   image_id)
     else:
-        # TODO: log that we are defaulting to glance
         upload_image_glance(context, session, instance, vdi_uuids, image_id)
 
 
 def upload_image_swift(context, session, instance, vdi_uuids, image_id):
-    """Requests that the Glance plugin bundle the specified VDIs and
-    push them into Glance using the specified human-friendly name.
+    """Requests that the Swift plugin bundle the specified VDIs and
+    push them into Swift.
     """
     # NOTE(sirp): Currently we only support uploading images as VHD, there
     # is no RAW equivalent (yet)
@@ -742,9 +745,7 @@ def upload_image_swift(context, session, instance, vdi_uuids, image_id):
               'full_auth_address': CONF.swift_store_auth_address,
              }
 
-    ret_val = session.call_plugin_serialized('swift', 'upload_vhd', **params)
-    LOG.debug(_("xen output: %s") %ret_val)
-    return ret_val
+    return session.call_plugin_serialized('swift', 'upload_vhd', **params)
 
 def upload_image_glance(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and
@@ -752,7 +753,7 @@ def upload_image_glance(context, session, instance, vdi_uuids, image_id):
     """
     # NOTE(sirp): Currently we only support uploading images as VHD, there
     # is no RAW equivalent (yet)
-    LOG.debug(_("Asking xapi to upload %(vdi_uuids)s as"
+    LOG.debug(_("Asking xapi to upload to glance %(vdi_uuids)s as"
                 " ID %(image_id)s"), locals(), instance=instance)
 
     glance_api_servers = glance.get_api_servers()

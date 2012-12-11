@@ -37,7 +37,6 @@ import socket
 import sys
 import time
 import traceback
-import urllib
 import uuid
 
 from eventlet import greenthread
@@ -168,33 +167,11 @@ running_deleted_opts = [
                     "instance should be considered eligible for cleanup."),
 ]
 
-swift_opts = [
-    cfg.StrOpt("swift_store_auth_version",
-               default="2"),
-    cfg.StrOpt("swift_store_auth_address",
-               default="http://localhost:5000/v2.0/"),
-    cfg.StrOpt("swift_store_user",
-               default="tenant:user"),
-    cfg.StrOpt("swift_store_key",
-               default="openstack"),
-    cfg.StrOpt("swift_store_container",
-               default="glance"),
-    cfg.BoolOpt("swift_store_create_container_on_put",
-                default=True),
-    cfg.IntOpt("swift_store_large_object_size",
-               default=5 * 1024 * 1024 * 1024),
-    cfg.IntOpt("swift_store_large_object_chunk_size",
-               default=4 * 1024 * 1024 * 1024),
-    cfg.BoolOpt("swift_enable_snet",
-                default=False)
-]
-
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 CONF.register_opts(interval_opts)
 CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
-CONF.register_opts(swift_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.config')
 CONF.import_opt('host', 'nova.config')
@@ -1440,36 +1417,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _update_image_glance(self, context, image_id, image_metadata):
         image_service = glance.get_default_image_service()
-        location = self._get_location_uri(image_id)
+        image_store = importutils.import_object(CONF.image_store)
+        location = image_store.get_location(image_id)
         image_meta ={'checksum': image_metadata['etag'],
                      'size': image_metadata['image_size'],
                      'location': location,
                      'disk_format': image_metadata['disk_format'],
                      'container_format': image_metadata['container_format']}
         image_service.update(context, image_id, image_meta, purge_props=False)
-
-    def _get_location_uri(self, image_id):
-        auth_or_store_url = CONF.swift_store_auth_address
-        scheme = 'swift+https'
-        if auth_or_store_url.startswith('http://'):
-            scheme = 'swift+http'
-        if auth_or_store_url.startswith('http://'):
-            auth_or_store_url = auth_or_store_url[len('http://'):]
-        elif auth_or_store_url.startswith('https://'):
-            auth_or_store_url = auth_or_store_url[len('https://'):]
-
-        credstring = self._get_credstring()
-        auth_or_store_url = auth_or_store_url.strip('/')
-        container = CONF.swift_store_container.strip('/')
-        obj = str(image_id).strip('/')
-
-        return '%s://%s%s/%s/%s' % (scheme, credstring, auth_or_store_url,
-                                    container, obj)
-
-    def _get_credstring(self):
-        if CONF.swift_store_user and CONF.swift_store_key:
-            return '%s:%s@' % (urllib.quote(CONF.swift_store_user), urllib.quote(CONF.swift_store_key))
-        return ''
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):

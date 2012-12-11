@@ -640,7 +640,6 @@ class VMOps(object):
                 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
-        LOG.debug("xen vmops %s" %ret_val)
         return ret_val
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
