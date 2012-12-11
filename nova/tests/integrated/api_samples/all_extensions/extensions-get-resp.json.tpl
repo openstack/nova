@@ -137,6 +137,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-coverage",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Coverage",
+            "namespace": "http://docs.openstack.org/compute/ext/coverage/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-create-server-ext",
             "description": "%(text)s",
             "links": [],
