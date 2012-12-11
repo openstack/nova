@@ -32,6 +32,7 @@ from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
+from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
 
 
@@ -285,7 +286,9 @@ def main():
         raise Exception("`zombie_instance_updated_at_window` has to be longer"
                 " than `resize_confirm_window`.")
 
-    xenapi = xenapi_driver.XenAPIDriver()
+    # NOTE(blamar) This tool does not require DB access, so passing in the
+    # 'abstract' VirtAPI class is acceptable
+    xenapi = xenapi_driver.XenAPIDriver(virtapi.VirtAPI())
 
     if command == "list-vdis":
         if CONF.verbose:
