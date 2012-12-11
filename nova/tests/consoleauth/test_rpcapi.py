@@ -18,6 +18,7 @@
 Unit Tests for nova.consoleauth.rpcapi
 """
 
+from nova.consoleauth import manager as consoleauth_manager
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.openstack.common import cfg
@@ -32,8 +33,12 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         expected_retval = 'foo'
+        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
         expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = rpcapi.BASE_RPC_API_VERSION
+        expected_msg['version'] = expected_version
+
+        if method == 'get_backdoor_port':
+            del expected_msg['args']['host']
 
         self.call_ctxt = None
         self.call_topic = None
@@ -64,3 +69,7 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
 
     def test_check_token(self):
         self._test_consoleauth_api('check_token', token='t')
+
+    def test_get_backdoor_port(self):
+        self._test_consoleauth_api('get_backdoor_port', host='fake_host',
+                                   version='1.1')
