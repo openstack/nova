@@ -20,6 +20,7 @@ import fixtures
 
 from nova import config
 from nova.openstack.common import cfg
+from nova.tests.utils import cleanup_dns_managers
 
 CONF = cfg.CONF
 CONF.import_opt('state_path', 'nova.config')
@@ -64,3 +65,4 @@ class ConfFixture(fixtures.Fixture):
         self.conf.set_default('vlan_interface', 'eth0')
         config.parse_args([], default_config_files=[])
         self.addCleanup(self.conf.reset)
+        self.addCleanup(cleanup_dns_managers)
