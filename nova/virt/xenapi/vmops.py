@@ -637,7 +637,7 @@ class VMOps(object):
                 self._session, instance, vm_ref, label) as vdi_uuids:
                 ret_val = vm_utils.upload_image(
                         context, self._session, instance, vdi_uuids, image_id)
-                
+
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
         return ret_val

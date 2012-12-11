@@ -1424,11 +1424,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_service = glance.get_default_image_service()
         image_store = importutils.import_object(CONF.image_store)
         location = image_store.get_location(image_id)
-        image_meta ={'checksum': image_metadata['etag'],
-                     'size': image_metadata['image_size'],
-                     'location': location,
-                     'disk_format': image_metadata['disk_format'],
-                     'container_format': image_metadata['container_format']}
+        image_meta = {'checksum': image_metadata['etag'],
+                      'size': image_metadata['image_size'],
+                      'location': location,
+                      'disk_format': image_metadata['disk_format'],
+                      'container_format': image_metadata['container_format']}
         image_service.update(context, image_id, image_meta, purge_props=False)
 
     def _delete_image_glance(self, context, image_id):

@@ -731,6 +731,10 @@ def upload_image_swift(context, session, instance, vdi_uuids, image_id):
     LOG.debug(_("Asking xapi to upload to swift %(vdi_uuids)s as"
                 " ID %(image_id)s"), locals(), instance=instance)
 
+    large_object_size = CONF.swift_store_large_object_size
+    large_object_chunk_size = CONF.swift_store_large_object_chunk_size
+    create_container_on_put = CONF.swift_store_create_container_on_put
+
     params = {'vdi_uuids': vdi_uuids,
               'image_id': image_id,
               'sr_path': get_sr_path(session),
@@ -739,13 +743,14 @@ def upload_image_swift(context, session, instance, vdi_uuids, image_id):
               'swift_store_key': CONF.swift_store_key,
               'swift_store_auth_version': CONF.swift_store_auth_version,
               'swift_store_container': CONF.swift_store_container,
-              'swift_store_large_object_size': CONF.swift_store_large_object_size,
-              'swift_store_large_object_chunk_size': CONF.swift_store_large_object_chunk_size,
-              'swift_store_create_container_on_put': CONF.swift_store_create_container_on_put,
+              'swift_store_large_object_size': large_object_size,
+              'swift_store_large_object_chunk_size': large_object_chunk_size,
+              'swift_store_create_container_on_put': create_container_on_put,
               'full_auth_address': CONF.swift_store_auth_address,
              }
 
     return session.call_plugin_serialized('swift', 'upload_vhd', **params)
+
 
 def upload_image_glance(context, session, instance, vdi_uuids, image_id):
     """Requests that the Glance plugin bundle the specified VDIs and
