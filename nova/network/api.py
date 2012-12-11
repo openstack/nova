@@ -210,6 +210,7 @@ class API(base.Base):
         args['host'] = instance['host']
         self.network_rpcapi.deallocate_for_instance(context, **args)
 
+    @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance['id'],
@@ -217,6 +218,7 @@ class API(base.Base):
                 'network_id': network_id}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
 
+    @refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
 
