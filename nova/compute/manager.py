@@ -1391,7 +1391,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        image_metadata = self.driver.snapshot(context, instance, image_id)
+        image_metadata = None
+        try:
+            image_metadata = self.driver.snapshot(context, instance, image_id)
+        except Exception:
+            self._delete_image_glance(context, image_id)
+
         if image_metadata:
             self._update_image_glance(context, image_id, image_metadata)
         if image_type == 'snapshot':
@@ -1425,6 +1430,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                      'disk_format': image_metadata['disk_format'],
                      'container_format': image_metadata['container_format']}
         image_service.update(context, image_id, image_meta, purge_props=False)
+
+    def _delete_image_glance(self, context, image_id):
+        image_service = glance.get_default_image_service()
+        try:
+            image_service.delete(context, image_id)
+        except exception.ImageNotFound:
+            pass
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
