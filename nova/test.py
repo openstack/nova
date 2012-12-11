@@ -188,6 +188,8 @@ class TestCase(testtools.TestCase):
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
+        self.useFixture(fixtures.NestedTempfile())
+        self.useFixture(fixtures.TempHomeDir())
 
         self.log_fixture = self.useFixture(fixtures.FakeLogger('nova'))
         self.useFixture(conf_fixture.ConfFixture(CONF))
