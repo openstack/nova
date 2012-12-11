@@ -406,22 +406,6 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
 
-    def test_libvirt_lxc_volume(self):
-        self.stubs.Set(os.path, 'exists', lambda x: True)
-        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        name = 'volume-00000001'
-        location = '10.0.2.15:3260'
-        iqn = 'iqn.2010-10.org.openstack:%s' % name
-        vol = {'id': 1, 'name': name}
-        connection_info = self.iscsi_connection(vol, location, iqn)
-        mount_device = "vde"
-        conf = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = conf.format_dom()
-        dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)
-        self.assertEqual(tree.get('type'), 'block')
-        self.assertEqual(tree.find('./source').get('dev'), dev_str)
-        libvirt_driver.disconnect_volume(connection_info, mount_device)
-
     def test_libvirt_nfs_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         mnt_base = '/mnt'
