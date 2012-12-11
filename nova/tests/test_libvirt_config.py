@@ -303,6 +303,74 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         """)
 
 
+class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigGuestSysinfo()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <sysinfo type="smbios"/>
+        """)
+
+    def test_config_bios(self):
+        obj = config.LibvirtConfigGuestSysinfo()
+        obj.bios_vendor = "Acme"
+        obj.bios_version = "6.6.6"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <sysinfo type="smbios">
+              <bios>
+                <entry name="vendor">Acme</entry>
+                <entry name="version">6.6.6</entry>
+              </bios>
+            </sysinfo>
+        """)
+
+    def test_config_system(self):
+        obj = config.LibvirtConfigGuestSysinfo()
+        obj.system_manufacturer = "Acme"
+        obj.system_product = "Wile Coyote"
+        obj.system_version = "6.6.6"
+        obj.system_serial = "123456"
+        obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <sysinfo type="smbios">
+              <system>
+                <entry name="manufacturer">Acme</entry>
+                <entry name="product">Wile Coyote</entry>
+                <entry name="version">6.6.6</entry>
+                <entry name="serial">123456</entry>
+                <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+              </system>
+            </sysinfo>
+        """)
+
+    def test_config_mixed(self):
+        obj = config.LibvirtConfigGuestSysinfo()
+        obj.bios_vendor = "Acme"
+        obj.system_manufacturer = "Acme"
+        obj.system_product = "Wile Coyote"
+        obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <sysinfo type="smbios">
+              <bios>
+                <entry name="vendor">Acme</entry>
+              </bios>
+              <system>
+                <entry name="manufacturer">Acme</entry>
+                <entry name="product">Wile Coyote</entry>
+                <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
+              </system>
+            </sysinfo>
+        """)
+
+
 class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
@@ -680,6 +748,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.acpi = True
         obj.apic = True
 
+        obj.sysinfo = config.LibvirtConfigGuestSysinfo()
+        obj.sysinfo.bios_vendor = "Acme"
+        obj.sysinfo.system_version = "1.0.0"
+
         disk = config.LibvirtConfigGuestDisk()
         disk.source_type = "file"
         disk.source_path = "/tmp/img"
@@ -695,6 +767,14 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <name>demo</name>
               <memory>104857600</memory>
               <vcpu>2</vcpu>
+              <sysinfo type='smbios'>
+                 <bios>
+                   <entry name="vendor">Acme</entry>
+                 </bios>
+                 <system>
+                   <entry name="version">1.0.0</entry>
+                 </system>
+              </sysinfo>
               <os>
                 <type>linux</type>
                 <boot dev="hd"/>

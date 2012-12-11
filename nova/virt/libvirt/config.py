@@ -337,6 +337,86 @@ class LibvirtConfigGuestCPU(LibvirtConfigCPU):
         return cpu
 
 
+class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSysinfo, self).__init__(root_name="sysinfo",
+                                                        **kwargs)
+
+        self.type = "smbios"
+        self.bios_vendor = None
+        self.bios_version = None
+        self.system_manufacturer = None
+        self.system_product = None
+        self.system_version = None
+        self.system_serial = None
+        self.system_uuid = None
+
+    def format_dom(self):
+        sysinfo = super(LibvirtConfigGuestSysinfo, self).format_dom()
+
+        sysinfo.set("type", self.type)
+
+        bios = None
+        system = None
+
+        if self.bios_vendor is not None:
+            if bios is None:
+                bios = etree.Element("bios")
+            info = etree.Element("entry", name="vendor")
+            info.text = self.bios_vendor
+            bios.append(info)
+
+        if self.bios_version is not None:
+            if bios is None:
+                bios = etree.Element("bios")
+            info = etree.Element("entry", name="version")
+            info.text = self.bios_version
+            bios.append(info)
+
+        if self.system_manufacturer is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="manufacturer")
+            info.text = self.system_manufacturer
+            system.append(info)
+
+        if self.system_product is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="product")
+            info.text = self.system_product
+            system.append(info)
+
+        if self.system_version is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="version")
+            info.text = self.system_version
+            system.append(info)
+
+        if self.system_serial is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="serial")
+            info.text = self.system_serial
+            system.append(info)
+
+        if self.system_uuid is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="uuid")
+            info.text = self.system_uuid
+            system.append(info)
+
+        if bios is not None:
+            sysinfo.append(bios)
+        if system is not None:
+            sysinfo.append(system)
+
+        return sysinfo
+
+
 class LibvirtConfigGuestDevice(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -589,6 +669,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.acpi = False
         self.apic = False
         self.clock = None
+        self.sysinfo = None
         self.os_type = None
         self.os_loader = None
         self.os_kernel = None
@@ -647,6 +728,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.set("type", self.virt_type)
 
         self._format_basic_props(root)
+
+        if self.sysinfo is not None:
+            root.append(self.sysinfo.format_dom())
+
         self._format_os(root)
         self._format_features(root)
 
