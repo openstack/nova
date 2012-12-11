@@ -410,12 +410,12 @@ class FakeVirtAPI(virtapi.VirtAPI):
         return db.instance_get_all_by_host(context, host)
 
     def aggregate_get_by_host(self, context, host, key=None):
-        return db.aggregate_get_by_host(context, host, key)
+        return db.aggregate_get_by_host(context, host, key=key)
 
     def aggregate_metadata_add(self, context, aggregate, metadata,
                                set_delete=False):
         return db.aggregate_metadata_add(context, aggregate['id'], metadata,
-                                         set_delete)
+                                         set_delete=set_delete)
 
     def aggregate_metadata_delete(self, context, aggregate, key):
         return db.aggregate_metadata_delete(context, aggregate['id'], key)
