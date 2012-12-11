@@ -154,6 +154,20 @@ class ConductorTestCase(BaseTestCase):
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
 
+    def test_bw_usage_update(self):
+        self.mox.StubOutWithMock(db, 'bw_usage_update')
+        self.mox.StubOutWithMock(db, 'bw_usage_get')
+
+        update_args = (self.context, 'uuid', 'mac', 0, 10, 20, 5, 10, 20)
+        get_args = (self.context, 'uuid', 0, 'mac')
+
+        db.bw_usage_update(*update_args)
+        db.bw_usage_get(*get_args).AndReturn('foo')
+
+        self.mox.ReplayAll()
+        result = self.conductor.bw_usage_update(*update_args)
+        self.assertEqual(result, 'foo')
+
 
 class ConductorRPCAPITestCase(ConductorTestCase):
     """Conductor RPC API Tests"""
@@ -176,6 +190,18 @@ class ConductorLocalAPITestCase(ConductorTestCase):
         # so override the base class here to make the call correctly
         return self.conductor.instance_update(self.context, instance_uuid,
                                               **updates)
+
+    def test_bw_usage_get(self):
+        self.mox.StubOutWithMock(db, 'bw_usage_update')
+        self.mox.StubOutWithMock(db, 'bw_usage_get')
+
+        get_args = (self.context, 'uuid', 0, 'mac')
+
+        db.bw_usage_get(*get_args).AndReturn('foo')
+
+        self.mox.ReplayAll()
+        result = self.conductor.bw_usage_get(*get_args)
+        self.assertEqual(result, 'foo')
 
 
 class ConductorAPITestCase(ConductorLocalAPITestCase):
