@@ -35,6 +35,9 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 wsgi_opts = [
+    cfg.StrOpt('api_paste_config',
+               default="api-paste.ini",
+               help='File name for the paste.deploy config for nova-api'),
     cfg.StrOpt('wsgi_log_format',
             default='%(client_ip)s "%(request_line)s" status: %(status_code)s'
                     ' len: %(body_length)s time: %(wall_seconds).7f',
@@ -45,7 +48,6 @@ wsgi_opts = [
     ]
 CONF = cfg.CONF
 CONF.register_opts(wsgi_opts)
-CONF.import_opt('api_paste_config', 'nova.config')
 
 LOG = logging.getLogger(__name__)
 

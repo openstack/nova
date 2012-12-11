@@ -29,6 +29,7 @@ CONF.import_opt('network_size', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('policy_file', 'nova.policy')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
+CONF.import_opt('api_paste_config', 'nova.wsgi')
 
 
 class ConfFixture(fixtures.Fixture):
