@@ -5,6 +5,4 @@
     <vcpus>2</vcpus>
     <disk>10</disk>
     <id>10</id>
-    <rxtx_factor>1</rxtx_factor>
-    <swap>0</swap>
 </flavor>

@@ -774,23 +774,34 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBase):
         return f
 
     def test_flavors_extra_data_get(self):
-        response = self._do_get('flavors/1')
-        subs = self._get_regexes()
+        flavor_id = 1
+        response = self._do_get('flavors/%s' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'flavor_id': flavor_id,
+            'flavor_name': 'm1.tiny'
+        }
+        subs.update(self._get_regexes())
         return self._verify_response('flavors-extra-data-get-resp', subs,
                                      response)
 
     def test_flavors_extra_data_list(self):
         response = self._do_get('flavors/detail')
+        self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         return self._verify_response('flavors-extra-data-list-resp', subs,
                                      response)
 
-    def test_flavors_extra_data_post(self):
+    def test_flavors_extra_data_create(self):
+        subs = {
+            'flavor_id': 666,
+            'flavor_name': 'flavortest'
+        }
         response = self._do_post('flavors',
                                  'flavors-extra-data-post-req',
-                                 {})
+                                 subs)
         self.assertEqual(response.status, 200)
-        subs = self._get_regexes()
+        subs.update(self._get_regexes())
         return self._verify_response('flavors-extra-data-post-resp',
                                      subs, response)
 
