@@ -19,6 +19,7 @@
 
 import copy
 import tempfile
+import uuid
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -256,6 +257,54 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_snapshot(self.context, snap1['snapshotId'])
         self.cloud.delete_snapshot(self.context, snap2['snapshotId'])
         self.cloud.delete_volume(self.context, vol1['volumeId'])
+
+    def test_format_snapshot_maps_status(self):
+        fake_snapshot = {'status': 'new',
+                         'id': 1,
+                         'volume_id': 1,
+                         'created_at': 1353560191.08117,
+                         'progress': 90,
+                         'project_id': str(uuid.uuid4()),
+                         'volume_size': 10000,
+                         'display_description': 'desc'}
+
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'pending')
+
+        fake_snapshot['status'] = 'creating'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'pending')
+
+        fake_snapshot['status'] = 'available'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'completed')
+
+        fake_snapshot['status'] = 'active'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'completed')
+
+        fake_snapshot['status'] = 'deleting'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'pending')
+
+        fake_snapshot['status'] = 'deleted'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot), None)
+
+        fake_snapshot['status'] = 'error'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'error')
+
+        fake_snapshot['status'] = 'banana'
+        self.assertEqual(self.cloud._format_snapshot(self.context,
+                                                     fake_snapshot)['status'],
+                         'banana')
 
     def test_create_snapshot(self):
         """Makes sure create_snapshot works."""

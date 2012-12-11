@@ -345,14 +345,34 @@ class CloudController(object):
                 snapshots.append(snapshot)
         else:
             snapshots = self.volume_api.get_all_snapshots(context)
-        snapshots = [self._format_snapshot(context, s) for s in snapshots]
-        return {'snapshotSet': snapshots}
+
+        formatted_snapshots = []
+        for s in snapshots:
+            formatted = self._format_snapshot(context, s)
+            if formatted:
+                formatted_snapshots.append(formatted)
+        return {'snapshotSet': formatted_snapshots}
 
     def _format_snapshot(self, context, snapshot):
+        # NOTE(mikal): this is just a set of strings in cinder. If they
+        # implement an enum, then we should move this code to use it. The
+        # valid ec2 statuses are "pending", "completed", and "error".
+        status_map = {'new': 'pending',
+                      'creating': 'pending',
+                      'available': 'completed',
+                      'active': 'completed',
+                      'deleting': 'pending',
+                      'deleted': None,
+                      'error': 'error'}
+
+        mapped_status = status_map.get(snapshot['status'], snapshot['status'])
+        if not mapped_status:
+            return None
+
         s = {}
         s['snapshotId'] = ec2utils.id_to_ec2_snap_id(snapshot['id'])
         s['volumeId'] = ec2utils.id_to_ec2_vol_id(snapshot['volume_id'])
-        s['status'] = snapshot['status']
+        s['status'] = mapped_status
         s['startTime'] = snapshot['created_at']
         s['progress'] = snapshot['progress']
         s['ownerId'] = snapshot['project_id']
