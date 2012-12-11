@@ -21,6 +21,7 @@ import os
 import socket
 
 from nova.openstack.common import cfg
+from nova.openstack.common import rpc
 
 
 def _get_my_ip():
@@ -176,15 +177,13 @@ global_opts = [
     cfg.StrOpt('volume_api_class',
                 default='nova.volume.cinder.API',
                 help='The full class name of the volume API class to use'),
-    cfg.StrOpt('control_exchange',
-               default='nova',
-               help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
 ]
 
 cfg.CONF.register_opts(global_opts)
 
 
 def parse_args(argv, default_config_files=None):
+    rpc.set_defaults(control_exchange='nova')
     cfg.CONF(argv[1:],
              project='nova',
              default_config_files=default_config_files)
