@@ -147,7 +147,6 @@ class VMOps(object):
         self.compute_api = compute.API()
         self._session = session
         self._virtapi = virtapi
-        self.poll_rescue_last_ran = None
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             self._virtapi,
@@ -1216,45 +1215,6 @@ class VMOps(object):
         for instance in instances:
             LOG.info(_("Automatically hard rebooting"), instance=instance)
             self.compute_api.reboot(ctxt, instance, "HARD")
-
-    def poll_rescued_instances(self, timeout):
-        """Look for expirable rescued instances.
-
-            - forcibly exit rescue mode for any instances that have been
-              in rescue mode for >= the provided timeout
-
-        """
-        last_ran = self.poll_rescue_last_ran
-        if not last_ran:
-            # We need a base time to start tracking.
-            self.poll_rescue_last_ran = timeutils.utcnow()
-            return
-
-        if not timeutils.is_older_than(last_ran, timeout):
-            # Do not run. Let's bail.
-            return
-
-        # Update the time tracker and proceed.
-        self.poll_rescue_last_ran = timeutils.utcnow()
-
-        rescue_vms = []
-        for instance in self.list_instances():
-            if instance.endswith("-rescue"):
-                rescue_vms.append(dict(name=instance,
-                                       vm_ref=vm_utils.lookup(self._session,
-                                                              instance)))
-
-        for vm in rescue_vms:
-            rescue_vm_ref = vm["vm_ref"]
-
-            original_name = vm["name"].split("-rescue", 1)[0]
-            original_vm_ref = vm_utils.lookup(self._session, original_name)
-
-            self._destroy_rescue_instance(rescue_vm_ref, original_vm_ref)
-
-            self._release_bootlock(original_vm_ref)
-            self._session.call_xenapi("VM.start", original_vm_ref, False,
-                                      False)
 
     def get_info(self, instance, vm_ref=None):
         """Return data about VM instance."""

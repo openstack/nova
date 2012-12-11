@@ -2788,6 +2788,40 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(call_info['get_by_uuid'], 3)
         self.assertEqual(call_info['get_nw_info'], 4)
 
+    def test_poll_rescued_instances(self):
+        timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
+        not_timed_out_time = timeutils.utcnow()
+
+        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESCUED,
+                      'launched_at': timed_out_time},
+                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.ACTIVE,
+                      'launched_at': timed_out_time},
+                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
+                      'launched_at': not_timed_out_time},
+                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.RESCUED,
+                      'launched_at': timed_out_time},
+                     {'uuid': 'fake_uuid5', 'vm_state': vm_states.RESCUED,
+                      'launched_at': not_timed_out_time}]
+        unrescued_instances = {'fake_uuid1': False, 'fake_uuid4': False}
+
+        def fake_instance_get_all_by_host(context, host):
+            return instances
+
+        def fake_unrescue(self, context, instance):
+            unrescued_instances[instance['uuid']] = True
+
+        self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
+                       fake_instance_get_all_by_host)
+        self.stubs.Set(compute_api.API, 'unrescue', fake_unrescue)
+
+        self.flags(rescue_timeout=60)
+        ctxt = context.get_admin_context()
+
+        self.compute._poll_rescued_instances(ctxt)
+
+        for instance in unrescued_instances.values():
+            self.assertTrue(instance)
+
     def test_poll_unconfirmed_resizes(self):
         instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESIZED,
                       'task_state': None},
