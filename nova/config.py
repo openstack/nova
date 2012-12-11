@@ -216,15 +216,6 @@ global_opts = [
     cfg.IntOpt('password_length',
                default=12,
                help='Length of generated instance admin passwords'),
-    cfg.BoolOpt('monkey_patch',
-                default=False,
-                help='Whether to log monkey patching'),
-    cfg.ListOpt('monkey_patch_modules',
-                default=[
-                  'nova.api.ec2.cloud:nova.notifier.api.notify_decorator',
-                  'nova.compute.api:nova.notifier.api.notify_decorator'
-                  ],
-                help='List of modules/decorators to monkey patch'),
     cfg.IntOpt('service_down_time',
                default=60,
                help='maximum time since last check-in for up service'),
