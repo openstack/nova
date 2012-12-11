@@ -17,7 +17,9 @@
 import httplib2
 import urlparse
 
+from cinderclient import exceptions as cinder_exception
 from nova import context
+from nova import exception
 from nova.volume import cinder
 
 from nova import test
@@ -76,6 +78,9 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
     def get_volumes_1234(self, **kw):
         volume = {'volume': _stub_volume(id='1234')}
         return (200, volume)
+
+    def get_volumes_nonexisting(self, **kw):
+        raise cinder_exception.NotFound(code=404, message='Resource not found')
 
 
 class FakeCinderClient(cinder.cinder_client.Client):
@@ -149,3 +154,7 @@ class CinderTestCase(test.TestCase):
         self.assertEquals(
             self.fake_client_factory.client.client.management_url,
             'http://other_host:8776/v1/project_id')
+
+    def test_get_non_existing_volume(self):
+        self.assertRaises(exception.VolumeNotFound, self.api.get, self.context,
+                          'nonexisting')
