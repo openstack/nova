@@ -147,7 +147,7 @@ class API(base.Base):
                     for port_id in touched_port_ids:
                         port_in_server = quantum.show_port(port_id).get('port')
                         if not port_in_server:
-                            raise Exception('Port have already lost')
+                            raise Exception(_('Port not found'))
                         port_req_body = {'port': {'device_id': None}}
                         quantum.update_port(port_id, port_req_body)
 

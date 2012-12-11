@@ -107,7 +107,7 @@ def _get_db_driver_class(db_type):
     elif db_type == "postgres":
         return Postgres
     else:
-        raise Exception("database %s not supported" % db_type)
+        raise Exception(_("database %s not supported") % db_type)
 
 
 ### Migrate

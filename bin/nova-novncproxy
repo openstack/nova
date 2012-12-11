@@ -91,7 +91,7 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
 
         if not connect_info:
             LOG.audit("Invalid Token: %s", token)
-            raise Exception("Invalid Token")
+            raise Exception(_("Invalid Token"))
 
         host = connect_info['host']
         port = int(connect_info['port'])
@@ -110,7 +110,7 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
                 if data.find("\r\n\r\n") != -1:
                     if not data.split("\r\n")[0].find("200"):
                         LOG.audit("Invalid Connection Info %s", token)
-                        raise Exception("Invalid Connection Info")
+                        raise Exception(_("Invalid Connection Info"))
                     tsock.recv(len(data))
                     break
 
