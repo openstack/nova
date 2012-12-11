@@ -266,17 +266,17 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             context, host)
 
     def aggregate_get_by_host(self, context, host, key=None):
-        return self._compute.db.aggregate_get_by_host(context, host, key=key)
+        return self._compute.conductor_api.aggregate_get_by_host(context,
+                                                                 host, key=key)
 
-    def aggregate_metadata_add(self, context, aggregate_id, metadata,
+    def aggregate_metadata_add(self, context, aggregate, metadata,
                                set_delete=False):
-        return self._compute.db.aggregate_metadata_add(context, aggregate_id,
-                                                       metadata,
-                                                       set_delete=set_delete)
+        return self._compute.conductor_api.aggregate_metadata_add(
+            context, aggregate, metadata, set_delete=set_delete)
 
-    def aggregate_metadata_delete(self, context, aggregate_id, key):
-        return self._compute.db.aggregate_metadata_delete(context,
-                                                          aggregate_id, key)
+    def aggregate_metadata_delete(self, context, aggregate, key):
+        return self._compute.conductor_api.aggregate_metadata_delete(
+            context, aggregate, key)
 
     def security_group_get_by_instance(self, context, instance_uuid):
         return self._compute.db.security_group_get_by_instance(context,

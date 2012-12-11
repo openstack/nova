@@ -66,6 +66,20 @@ class LocalAPI(object):
     def aggregate_host_delete(self, context, aggregate, host):
         return self._manager.aggregate_host_delete(context, aggregate, host)
 
+    def aggregate_get_by_host(self, context, host, key=None):
+        return self._manager.aggregate_get_by_host(context, host, key)
+
+    def aggregate_metadata_add(self, context, aggregate, metadata,
+                               set_delete=False):
+        return self._manager.aggregate_metadata_add(context, aggregate,
+                                                    metadata,
+                                                    set_delete)
+
+    def aggregate_metadata_delete(self, context, aggregate, key):
+        return self._manager.aggregate_metadata_delete(context,
+                                                       aggregate,
+                                                       key)
+
     def bw_usage_get(self, context, uuid, start_period, mac):
         return self._manager.bw_usage_update(context, uuid, mac, start_period)
 
@@ -113,6 +127,20 @@ class API(object):
     def aggregate_host_delete(self, context, aggregate, host):
         return self.conductor_rpcapi.aggregate_host_delete(context, aggregate,
                                                            host)
+
+    def aggregate_get_by_host(self, context, host, key=None):
+        return self.conductor_rpcapi.aggregate_get_by_host(context, host, key)
+
+    def aggregate_metadata_add(self, context, aggregate, metadata,
+                               set_delete=False):
+        return self.conductor_rpcapi.aggregate_metadata_add(context, aggregate,
+                                                            metadata,
+                                                            set_delete)
+
+    def aggregate_metadata_delete(self, context, aggregate, key):
+        return self.conductor_rpcapi.aggregate_metadata_delete(context,
+                                                               aggregate,
+                                                               key)
 
     def bw_usage_get(self, context, uuid, start_period, mac):
         return self.conductor_rpcapi.bw_usage_update(context, uuid, mac,
