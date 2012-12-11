@@ -197,6 +197,10 @@ class VMOps(baseops.BaseOps):
         cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
         try:
             cdb.make_drive(configdrive_path_iso)
+        except exception.ProcessExecutionError, e:
+            LOG.error(_('Creating config drive failed with error: %s'),
+                      e, instance=instance)
+            raise
         finally:
             cdb.cleanup()
 
