@@ -216,11 +216,11 @@ sql_opts = [
                help='Verbosity of SQL debugging information. 0=None, '
                     '100=Everything'),
     cfg.BoolOpt('sql_connection_trace',
-               default=False,
-               help='Add python stack traces to SQL as comment strings'),
-    cfg.IntOpt('sql_dbpool_enable',
-               default=False,
-               help="enable the use of eventlet's db_pool for MySQL"),
+                default=False,
+                help='Add python stack traces to SQL as comment strings'),
+    cfg.BoolOpt('sql_dbpool_enable',
+                default=False,
+                help="enable the use of eventlet's db_pool for MySQL"),
 ]
 
 CONF = cfg.CONF
