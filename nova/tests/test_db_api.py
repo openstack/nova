@@ -582,6 +582,23 @@ class DbApiTestCase(test.TestCase):
         data = db.network_get_all_by_host(ctxt, 'foo')
         self.assertEqual(len(data), 3)
 
+    def test_network_in_use_on_host(self):
+        ctxt = context.get_admin_context()
+
+        values = {'host': 'foo', 'hostname': 'myname'}
+        instance = db.instance_create(ctxt, values)
+        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
+        vif = db.virtual_interface_create(ctxt, values)
+        values = {'address': 'baz',
+                  'network_id': 1,
+                  'allocated': True,
+                  'instance_uuid': instance['uuid'],
+                  'virtual_interface_id': vif['id']}
+        db.fixed_ip_create(ctxt, values)
+
+        self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'foo'), True)
+        self.assertEqual(db.network_in_use_on_host(ctxt, 1, 'bar'), False)
+
     def _timeout_test(self, ctxt, timeout, multi_host):
         values = {'host': 'foo'}
         instance = db.instance_create(ctxt, values)

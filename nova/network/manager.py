@@ -152,6 +152,11 @@ network_opts = [
     cfg.BoolOpt('fake_call',
                 default=False,
                 help='If True, skip using the queue and make local calls'),
+    cfg.BoolOpt('teardown_unused_network_gateway',
+                default=False,
+                help='If True, unused gateway devices (VLAN and bridge) are '
+                     'deleted in VLAN network mode with multi hosted '
+                     'networks'),
     cfg.BoolOpt('force_dhcp_release',
                 default=False,
                 help='If True, send a dhcp release on instance termination'),
@@ -1457,7 +1462,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         if teardown:
             network = self._get_network_by_id(context,
                                               fixed_ip_ref['network_id'])
-            self._teardown_network_on_host(context, network)
 
             if CONF.force_dhcp_release:
                 dev = self.driver.get_dev(network)
@@ -1479,6 +1483,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
                 self.driver.release_dhcp(dev, address, vif['address'])
+
+            self._teardown_network_on_host(context, network)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -2250,6 +2256,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         return NetworkManager.create_networks(
             self, context, vpn=True, **kwargs)
 
+    @lockutils.synchronized('setup_network', 'nova-', external=True)
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         if not network['vpn_public_address']:
@@ -2281,6 +2288,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
+    @lockutils.synchronized('setup_network', 'nova-', external=True)
     def _teardown_network_on_host(self, context, network):
         if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
@@ -2288,6 +2296,25 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             # NOTE(dprince): dhcp DB queries require elevated context
             elevated = context.elevated()
             self.driver.update_dhcp(elevated, dev, network)
+
+            # NOTE(ethuleau): For multi hosted networks, if the network is no
+            # more used on this host and if VPN forwarding rule aren't handed
+            # by the host, we delete the network gateway.
+            vpn_address = network['vpn_public_address']
+            if (CONF.teardown_unused_network_gateway and
+                network['multi_host'] and vpn_address != CONF.vpn_ip and
+                not self.db.network_in_use_on_host(context, network['id'],
+                                                   self.host)):
+                LOG.debug("Remove unused gateway %s", network['bridge'])
+                self.driver.kill_dhcp(dev)
+                self.l3driver.remove_gateway(network)
+                if not CONF.share_dhcp_address:
+                    values = {'allocated': False,
+                              'host': None}
+                    self.db.fixed_ip_update(context, network['dhcp_server'],
+                                            values)
+            else:
+                self.driver.update_dhcp(context, dev, network)
 
     def _get_network_dict(self, network):
         """Returns the dict representing necessary and meta network fields"""

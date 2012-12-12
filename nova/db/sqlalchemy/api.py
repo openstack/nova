@@ -2241,6 +2241,11 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     return data
 
 
+def network_in_use_on_host(context, network_id, host):
+    fixed_ips = network_get_associated_fixed_ips(context, network_id, host)
+    return len(fixed_ips) > 0
+
+
 @require_admin_context
 def _network_get_query(context, session=None):
     return model_query(context, models.Network, session=session,
