@@ -222,6 +222,27 @@ class _BaseTestCase(object):
 
         self.assertEqual(port, backdoor_port)
 
+    def test_security_group_get_by_instance(self):
+        fake_instance = {'id': 'fake-instance'}
+        self.mox.StubOutWithMock(db, 'security_group_get_by_instance')
+        db.security_group_get_by_instance(
+            self.context, fake_instance['id']).AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.security_group_get_by_instance(self.context,
+                                                               fake_instance)
+        self.assertEqual(result, 'it worked')
+
+    def test_security_group_rule_get_by_security_group(self):
+        fake_secgroup = {'id': 'fake-secgroup'}
+        self.mox.StubOutWithMock(db,
+                                 'security_group_rule_get_by_security_group')
+        db.security_group_rule_get_by_security_group(
+            self.context, fake_secgroup['id']).AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.security_group_rule_get_by_security_group(
+            self.context, fake_secgroup)
+        self.assertEqual(result, 'it worked')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""

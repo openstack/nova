@@ -63,11 +63,12 @@ class VirtAPIBaseTest(test.TestCase, test.APICoverage):
                             'foo')
 
     def test_security_group_get_by_instance(self):
-        self.assertExpected('security_group_get_by_instance', 'fake-uuid')
+        self.assertExpected('security_group_get_by_instance',
+                            {'id': 'fake-id'})
 
     def test_security_group_rule_get_by_security_group(self):
         self.assertExpected('security_group_rule_get_by_security_group',
-                            'fake-id')
+                            {'id': 'fake-id'})
 
     def test_provider_fw_rule_get_all(self):
         self.assertExpected('provider_fw_rule_get_all')
@@ -93,9 +94,11 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             db_method = method
         self.mox.StubOutWithMock(db, db_method)
 
-        if method in ('aggregate_metadata_add', 'aggregate_metadata_delete'):
-            # NOTE(danms): FakeVirtAPI will convert the aggregate to
-            # aggregate['id'], so expect that in the actual db call
+        if method in ('aggregate_metadata_add', 'aggregate_metadata_delete',
+                      'security_group_rule_get_by_security_group',
+                      'security_group_get_by_instance'):
+            # NOTE(danms): FakeVirtAPI will convert the first argument to
+            # argument['id'], so expect that in the actual db call
             e_args = tuple([args[0]['id']] + list(args[1:]))
         else:
             e_args = args
@@ -135,10 +138,10 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                                   'aggregate_get_by_host',
                                   'aggregate_metadata_add',
                                   'aggregate_metadata_delete',
-                                   ]
-        self.db_methods = ['security_group_get_by_instance',
-                           'security_group_rule_get_by_security_group',
-                           'provider_fw_rule_get_all',
+                                  'security_group_get_by_instance',
+                                  'security_group_rule_get_by_security_group',
+                                  ]
+        self.db_methods = ['provider_fw_rule_get_all',
                            'agent_build_get_by_triple',
                             ]
 

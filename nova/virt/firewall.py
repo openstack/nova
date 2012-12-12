@@ -349,12 +349,12 @@ class IptablesFirewallDriver(FirewallDriver):
             self._do_ra_rules(ipv6_rules, network_info)
 
         security_groups = self._virtapi.security_group_get_by_instance(
-            ctxt, instance['id'])
+            ctxt, instance)
 
         # then, security group chains and rules
         for security_group in security_groups:
             rules = self._virtapi.security_group_rule_get_by_security_group(
-                ctxt, security_group['id'])
+                ctxt, security_group)
 
             for rule in rules:
                 LOG.debug(_('Adding security group rule: %r'), rule,

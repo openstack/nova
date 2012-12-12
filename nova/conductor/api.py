@@ -118,6 +118,13 @@ class LocalAPI(object):
     def get_backdoor_port(self, context, host):
         raise exc.InvalidRequest
 
+    def security_group_get_by_instance(self, context, instance):
+        return self._manager.security_group_get_by_instance(context, instance)
+
+    def security_group_rule_get_by_security_group(self, context, secgroup):
+        return self._manager.security_group_rule_get_by_security_group(
+            context, secgroup)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -183,3 +190,11 @@ class API(object):
     # currently.
     def get_backdoor_port(self, context, host):
         return self.conductor_rpcapi.get_backdoor_port(context)
+
+    def security_group_get_by_instance(self, context, instance):
+        return self.conductor_rpcapi.security_group_get_by_instance(context,
+                                                                    instance)
+
+    def security_group_rule_get_by_security_group(self, context, secgroup):
+        return self.conductor_rpcapi.security_group_rule_get_by_security_group(
+            context, secgroup)

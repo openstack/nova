@@ -35,6 +35,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.6 - Added get_backdoor_port()
     1.7 - Added aggregate_get_by_host, aggregate_metadata_add,
           and aggregate_metadata_delete
+    1.8 - Added security_group_get_by_instance and
+          security_group_rule_get_by_security_group
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -114,3 +116,15 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def get_backdoor_port(self, context):
         msg = self.make_msg('get_backdoor_port')
         return self.call(context, msg, version='1.6')
+
+    def security_group_get_by_instance(self, context, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('security_group_get_by_instance',
+                            instance=instance_p)
+        return self.call(context, msg, version='1.8')
+
+    def security_group_rule_get_by_security_group(self, context, secgroup):
+        secgroup_p = jsonutils.to_primitive(secgroup)
+        msg = self.make_msg('security_group_rule_get_by_security_group',
+                            secgroup=secgroup_p)
+        return self.call(context, msg, version='1.8')

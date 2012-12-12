@@ -66,19 +66,19 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def security_group_get_by_instance(self, context, instance_uuid):
+    def security_group_get_by_instance(self, context, instance):
         """Get the security group for a specified instance
         :param context: security context
-        :param instance_uuid: instance defining the security group we want
+        :param instance: instance defining the security group we want
         """
         raise NotImplementedError()
 
     def security_group_rule_get_by_security_group(self, context,
-                                                  security_group_id):
+                                                  security_group):
         """Get the rules associated with a specified security group
         :param context: security context
-        :param security_group_id: the security group for which the rules
-                                  should be returned
+        :param security_group: the security group for which the rules
+                               should be returned
         """
         raise NotImplementedError()
 
