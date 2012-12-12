@@ -127,10 +127,6 @@ global_opts = [
     cfg.StrOpt('osapi_path',
                default='/v1.1/',
                help='the path prefix used to call the openstack api server'),
-    cfg.IntOpt('osapi_max_limit',
-               default=1000,
-               help='the maximum number of items returned in a single '
-                    'response from a collection resource'),
     cfg.StrOpt('metadata_host',
                default='$my_ip',
                help='the ip for the metadata api server'),

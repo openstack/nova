@@ -34,6 +34,10 @@ from nova.openstack.common import log as logging
 from nova import quota
 
 osapi_opts = [
+    cfg.IntOpt('osapi_max_limit',
+               default=1000,
+               help='the maximum number of items returned in a single '
+                    'response from a collection resource'),
     cfg.StrOpt('osapi_compute_link_prefix',
                default=None,
                help='Base URL that will be presented to users in links '
@@ -45,7 +49,6 @@ osapi_opts = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(osapi_opts)
-CONF.import_opt('osapi_max_limit', 'nova.config')
 
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
