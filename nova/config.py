@@ -191,18 +191,10 @@ global_opts = [
     cfg.ListOpt('memcached_servers',
                 default=None,
                 help='Memcached servers or None for in process cache.'),
-    cfg.StrOpt('instance_usage_audit_period',
-               default='month',
-               help='time period to generate instance usages for.  '
-                    'Time period must be hour, day, month or year'),
     cfg.StrOpt('default_ephemeral_format',
                default=None,
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
-    cfg.StrOpt('rootwrap_config',
-               default="/etc/nova/rootwrap.conf",
-               help='Path to the rootwrap configuration file to use for '
-                    'running commands as root'),
     cfg.StrOpt('network_driver',
                default='nova.network.linux_net',
                help='Driver to use for network creation'),

@@ -71,6 +71,14 @@ utils_opts = [
     cfg.BoolOpt('disable_process_locking',
                 default=False,
                 help='Whether to disable inter-process locks'),
+    cfg.StrOpt('instance_usage_audit_period',
+               default='month',
+               help='time period to generate instance usages for.  '
+                    'Time period must be hour, day, month or year'),
+    cfg.StrOpt('rootwrap_config',
+               default="/etc/nova/rootwrap.conf",
+               help='Path to the rootwrap configuration file to use for '
+                    'running commands as root'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
@@ -78,8 +86,6 @@ CONF.register_opts(utils_opts)
 CONF.import_opt('glance_host', 'nova.config')
 CONF.import_opt('glance_port', 'nova.config')
 CONF.import_opt('glance_protocol', 'nova.config')
-CONF.import_opt('instance_usage_audit_period', 'nova.config')
-CONF.import_opt('rootwrap_config', 'nova.config')
 CONF.import_opt('service_down_time', 'nova.config')
 
 LOG = logging.getLogger(__name__)
