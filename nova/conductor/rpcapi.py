@@ -37,6 +37,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
           and aggregate_metadata_delete
     1.8 - Added security_group_get_by_instance and
           security_group_rule_get_by_security_group
+    1.9 - Added provider_fw_rule_get_all
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -128,3 +129,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('security_group_rule_get_by_security_group',
                             secgroup=secgroup_p)
         return self.call(context, msg, version='1.8')
+
+    def provider_fw_rule_get_all(self, context):
+        msg = self.make_msg('provider_fw_rule_get_all')
+        return self.call(context, msg, version='1.9')

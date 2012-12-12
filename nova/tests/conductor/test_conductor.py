@@ -243,6 +243,14 @@ class _BaseTestCase(object):
             self.context, fake_secgroup)
         self.assertEqual(result, 'it worked')
 
+    def test_provider_fw_rule_get_all(self):
+        fake_rules = ['a', 'b', 'c']
+        self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
+        db.provider_fw_rule_get_all(self.context).AndReturn(fake_rules)
+        self.mox.ReplayAll()
+        result = self.conductor.provider_fw_rule_get_all(self.context)
+        self.assertEqual(result, fake_rules)
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""

@@ -140,9 +140,9 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                                   'aggregate_metadata_delete',
                                   'security_group_get_by_instance',
                                   'security_group_rule_get_by_security_group',
+                                  'provider_fw_rule_get_all',
                                   ]
-        self.db_methods = ['provider_fw_rule_get_all',
-                           'agent_build_get_by_triple',
+        self.db_methods = ['agent_build_get_by_triple',
                             ]
 
     def assertExpected(self, method, *args, **kwargs):

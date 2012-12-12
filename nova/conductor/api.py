@@ -125,6 +125,9 @@ class LocalAPI(object):
         return self._manager.security_group_rule_get_by_security_group(
             context, secgroup)
 
+    def provider_fw_rule_get_all(self, context):
+        return self._manager.provider_fw_rule_get_all(context)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -198,3 +201,6 @@ class API(object):
     def security_group_rule_get_by_security_group(self, context, secgroup):
         return self.conductor_rpcapi.security_group_rule_get_by_security_group(
             context, secgroup)
+
+    def provider_fw_rule_get_all(self, context):
+        return self.conductor_rpcapi.provider_fw_rule_get_all(context)

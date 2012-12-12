@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.8'
+    RPC_API_VERSION = '1.9'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -140,3 +140,7 @@ class ConductorManager(manager.SchedulerDependentManager):
         rule = self.db.security_group_rule_get_by_security_group(
             context, secgroup['id'])
         return jsonutils.to_primitive(rule)
+
+    def provider_fw_rule_get_all(self, context):
+        rules = self.db.provider_fw_rule_get_all(context)
+        return jsonutils.to_primitive(rules)
