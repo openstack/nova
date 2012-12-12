@@ -739,17 +739,54 @@ def upload_image_swift(context, session, instance, vdi_uuids, image_id):
               'image_id': image_id,
               'sr_path': get_sr_path(session),
               'swift_enable_snet': CONF.swift_enable_snet,
-              'swift_store_user': CONF.swift_store_user,
-              'swift_store_key': CONF.swift_store_key,
               'swift_store_auth_version': CONF.swift_store_auth_version,
               'swift_store_container': CONF.swift_store_container,
               'swift_store_large_object_size': large_object_size,
               'swift_store_large_object_chunk_size': large_object_chunk_size,
               'swift_store_create_container_on_put': create_container_on_put,
-              'full_auth_address': CONF.swift_store_auth_address,
              }
+    
+    if CONF.swift_store_multitenant:
+        params['storage_url'] = None
+        if context.service_catalog:
+            service_catalog = context.service_catalog
+            params['storage_url'] = _get_swift_endpoint(service_catalog)
+        params['token'] = context.auth_token
+    else:
+        params['swift_store_user'] = CONF.swift_store_user
+        params['swift_store_key'] = CONF.swift_store_key
+        params['full_auth_address'] = CONF.swift_store_auth_address
+
+    if CONF.swift_store_region:
+        params['region_name'] = CONF.swift_store_region
 
     return session.call_plugin_serialized('swift', 'upload_vhd', **params)
+
+
+def _get_swift_endpoint(service_catalog, service_type='object-store',
+                        endpoint_region=None, endpoint_type='publicURL'):
+    endpoint = None
+    for service in service_catalog:
+        s_type = None
+        try:
+            s_type = service['type']
+        except KeyError:
+            msg = _('Encountered service with no "type": %s') % s_type
+            LOG.warn(msg)
+            continue
+
+        if s_type == service_type:
+            for ep in service['endpoints']:
+                if endpoint_region is None or endpoint_region == ep['region']:
+                    if endpoint is not None:
+                        # This is a second match, abort
+                        raise exception.RegionAmbiguity(region=endpoint_region)
+                    endpoint = ep
+    if endpoint and endpoint.get(endpoint_type):
+        return endpoint[endpoint_type]
+    else:
+        raise exception.NoServiceEndpoint()
+    return
 
 
 def upload_image_glance(context, session, instance, vdi_uuids, image_id):

@@ -39,6 +39,10 @@ swift_opts = [
     cfg.IntOpt("swift_store_large_object_chunk_size",
                default=4 * 1024),
     cfg.BoolOpt("swift_enable_snet",
+                default=False),
+    cfg.StrOpt("swift_store_region",
+                default=None),
+    cfg.BoolOpt("swift_store_multitenant",
                 default=False)
 ]
 
