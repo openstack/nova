@@ -38,7 +38,7 @@ from nova.openstack.common import timeutils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.import_opt('auth_strategy', 'nova.config')
+CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('glance_api_insecure', 'nova.config')
 CONF.import_opt('glance_api_servers', 'nova.config')
 CONF.import_opt('glance_num_retries', 'nova.config')
