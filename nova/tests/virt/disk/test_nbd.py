@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 Michael Still
+# Copyright 2012 Michael Still and Canonical Inc
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -43,8 +43,6 @@ def _fake_listdir_nbd_devices(path):
         return ['nbd0', 'nbd1']
     return ORIG_LISTDIR(path)
 
-ORIG_EXISTS = os.path.exists
-
 
 def _fake_exists_no_users(path):
     if path.startswith('/sys/block/nbd'):
@@ -54,26 +52,41 @@ def _fake_exists_no_users(path):
     return ORIG_EXISTS(path)
 
 
+def _fake_exists_all_used(path):
+    if path.startswith('/sys/block/nbd'):
+        return True
+    return ORIG_EXISTS(path)
+
+
+def _fake_detect_nbd_devices_none(self):
+    return []
+
+
+def _fake_detect_nbd_devices(self):
+    return ['nbd0', 'nbd1']
+
+
+def _fake_noop(*args, **kwargs):
+    return
+
+
 class NbdTestCase(test.TestCase):
     def setUp(self):
         super(NbdTestCase, self).setUp()
-        nbd.NbdMount._DEVICES_INITIALIZED = False
-        nbd.NbdMount._DEVICES = []
         self.useFixture(fixtures.MonkeyPatch('os.listdir',
                                              _fake_listdir_nbd_devices))
 
-    def test_nbd_initialize(self):
+    def test_nbd_no_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        self.assertTrue(n._DEVICES_INITIALIZED)
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1')]))
+        n.detect_nbd_device = _fake_detect_nbd_devices_none
+        self.assertEquals(None, n._allocate_nbd())
 
     def test_nbd_no_free_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        nbd.NbdMount._DEVICES = []
+        self.useFixture(fixtures.MonkeyPatch('os.path.exists',
+                                             _fake_exists_all_used))
         self.assertEquals(None, n._allocate_nbd())
 
     def test_nbd_not_loaded(self):
@@ -93,44 +106,26 @@ class NbdTestCase(test.TestCase):
         self.assertEquals(None, n._allocate_nbd())
         self.assertEquals('nbd unavailable: module not loaded', n.error)
 
-        # And no device should be consumed
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1')]))
-
-    def test_nbd_all_allocated(self):
-        tempdir = self.useFixture(fixtures.TempDir()).path
-        n = nbd.NbdMount(None, tempdir)
-        nbd.NbdMount._DEVICES = []
-        self.useFixture(fixtures.MonkeyPatch('os.path.exists',
-                                             _fake_exists_no_users))
-
-        # Allocate a nbd device, fails
-        self.assertEquals(None, n._allocate_nbd())
-        self.assertEquals('No free nbd devices', n.error)
-
     def test_nbd_allocation(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
+        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              _fake_exists_no_users))
+        self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
 
         # Allocate a nbd device
-        self.assertEquals('/dev/nbd1', n._allocate_nbd())
-        self.assertEquals(['nbd0'], nbd.NbdMount._DEVICES)
-
-        # Allocate another
         self.assertEquals('/dev/nbd0', n._allocate_nbd())
-        self.assertEquals([], nbd.NbdMount._DEVICES)
 
     def test_nbd_allocation_one_in_use(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
+        self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
 
         # Fake out os.path.exists
         def fake_exists(path):
             if path.startswith('/sys/block/nbd'):
-                if path == '/sys/block/nbd1/pid':
+                if path == '/sys/block/nbd0/pid':
                     return True
                 if path.endswith('pid'):
                     return False
@@ -142,36 +137,12 @@ class NbdTestCase(test.TestCase):
         # TODO(mikal): Note that there is a leak here, as the in use nbd device
         # is removed from the list, but not returned so it will never be
         # re-added. I will fix this in a later patch.
-        self.assertEquals('/dev/nbd0', n._allocate_nbd())
-        self.assertEquals([], nbd.NbdMount._DEVICES)
-        self.assertTrue('nbd0' not in nbd.NbdMount._DEVICES)
-
-    def test_free(self):
-        tempdir = self.useFixture(fixtures.TempDir()).path
-        n = nbd.NbdMount(None, tempdir)
-        d = 'nosuch'
-        self.assertFalse(d in nbd.NbdMount._DEVICES)
-
-        # Now free it
-        n._free_nbd(d)
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1'),
-                                         Equals(d)]))
-        self.assertTrue(d in nbd.NbdMount._DEVICES)
-
-        # Double free
-        n._free_nbd(d)
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1'),
-                                         Equals(d)]))
-        self.assertTrue(d in nbd.NbdMount._DEVICES)
+        self.assertEquals('/dev/nbd1', n._allocate_nbd())
 
     def test_get_dev_no_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        nbd.NbdMount._DEVICES = []
+        n.detect_nbd_device = _fake_detect_nbd_devices
         self.assertFalse(n.get_dev())
 
     def test_get_dev_qemu_fails(self):
@@ -188,13 +159,11 @@ class NbdTestCase(test.TestCase):
         # Error logged, no device consumed
         self.assertFalse(n.get_dev())
         self.assertTrue(n.error.startswith('qemu-nbd error'))
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1')]))
 
     def test_get_dev_qemu_timeout(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
+        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              _fake_exists_no_users))
 
@@ -202,22 +171,18 @@ class NbdTestCase(test.TestCase):
         def fake_trycmd(*args, **kwargs):
             return '', ''
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd', fake_trycmd))
-
-        # We steal time.sleep() as well to speed up this test
-        def fake_sleep(duration):
-            return
-        self.useFixture(fixtures.MonkeyPatch('time.sleep', fake_sleep))
+        self.useFixture(fixtures.MonkeyPatch('time.sleep', _fake_noop))
 
         # Error logged, no device consumed
         self.assertFalse(n.get_dev())
         self.assertTrue(n.error.endswith('did not show up'))
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1')]))
 
     def test_get_dev_works(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
+        n.detect_nbd_device = _fake_detect_nbd_devices
+        self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', _fake_noop))
 
         # We need the pid file for the device which is allocated to exist, but
         # only once it is allocated to us
@@ -236,7 +201,7 @@ class NbdTestCase(test.TestCase):
         def fake_trycmd(*args, **kwargs):
             def fake_exists_two(path):
                 if path.startswith('/sys/block/nbd'):
-                    if path == '/sys/block/nbd1/pid':
+                    if path == '/sys/block/nbd0/pid':
                         return True
                     if path.endswith('pid'):
                         return False
@@ -247,25 +212,16 @@ class NbdTestCase(test.TestCase):
             return '', ''
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd', fake_trycmd))
 
-        # Ditto execute
-        def fake_exec(*args, **kwargs):
-            return
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', fake_exec))
-
         # No error logged, device consumed
         self.assertTrue(n.get_dev())
         self.assertTrue(n.linked)
         self.assertEquals('', n.error)
-        self.assertEquals(['nbd0'], nbd.NbdMount._DEVICES)
-        self.assertEquals('/dev/nbd1', n.device)
+        self.assertEquals('/dev/nbd0', n.device)
 
         # Free
         n.unget_dev()
         self.assertFalse(n.linked)
         self.assertEquals('', n.error)
-        self.assertThat(nbd.NbdMount._DEVICES,
-                        MatchesListwise([Equals('nbd0'),
-                                         Equals('nbd1')]))
         self.assertEquals(None, n.device)
 
     def test_unget_dev_simple(self):
