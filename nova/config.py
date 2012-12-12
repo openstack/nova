@@ -84,18 +84,6 @@ global_opts = [
                 default='http',
                 help='Default protocol to use when connecting to glance. '
                      'Set to https for SSL.'),
-    cfg.ListOpt('glance_api_servers',
-                default=['$glance_host:$glance_port'],
-                help='A list of the glance api servers available to nova. '
-                     'Prefix with https:// for ssl-based glance api servers. '
-                     '([hostname|ip]:port)'),
-    cfg.BoolOpt('glance_api_insecure',
-                default=False,
-                help='Allow to perform insecure SSL (https) requests to '
-                     'glance'),
-    cfg.IntOpt('glance_num_retries',
-               default=0,
-               help='Number retries when downloading an image from glance'),
     cfg.IntOpt('s3_port',
                default=3333,
                help='port used when accessing the s3 api'),

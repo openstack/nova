@@ -35,13 +35,25 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
+glance_opts = [
+    cfg.ListOpt('glance_api_servers',
+                default=['$glance_host:$glance_port'],
+                help='A list of the glance api servers available to nova. '
+                     'Prefix with https:// for ssl-based glance api servers. '
+                     '([hostname|ip]:port)'),
+    cfg.BoolOpt('glance_api_insecure',
+                default=False,
+                help='Allow to perform insecure SSL (https) requests to '
+                     'glance'),
+    cfg.IntOpt('glance_num_retries',
+               default=0,
+               help='Number retries when downloading an image from glance'),
+]
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.register_opts(glance_opts)
 CONF.import_opt('auth_strategy', 'nova.api.auth')
-CONF.import_opt('glance_api_insecure', 'nova.config')
-CONF.import_opt('glance_api_servers', 'nova.config')
-CONF.import_opt('glance_num_retries', 'nova.config')
 
 
 def _parse_image_ref(image_href):
