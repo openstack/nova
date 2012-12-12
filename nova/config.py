@@ -43,9 +43,6 @@ def _get_my_ip():
 
 
 core_opts = [
-    cfg.StrOpt('api_paste_config',
-               default="api-paste.ini",
-               help='File name for the paste.deploy config for nova-api'),
     cfg.StrOpt('pybasedir',
                default=os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                     '../')),
