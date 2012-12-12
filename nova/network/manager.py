@@ -174,15 +174,21 @@ network_opts = [
                help='domain to use for building the hostnames'),
     cfg.StrOpt('l3_lib',
                default='nova.network.l3.LinuxNetL3',
-               help="Indicates underlying L3 management library")
+               help="Indicates underlying L3 management library"),
+    cfg.StrOpt('instance_dns_manager',
+               default='nova.network.noop_dns_driver.NoopDNSDriver',
+               help='full class name for the DNS Manager for instance IPs'),
+    cfg.StrOpt('instance_dns_domain',
+               default='',
+               help='full class name for the DNS Zone for instance IPs'),
+    cfg.StrOpt('floating_ip_dns_manager',
+               default='nova.network.noop_dns_driver.NoopDNSDriver',
+               help='full class name for the DNS Manager for floating IPs'),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(network_opts)
 CONF.import_opt('fake_network', 'nova.config')
-CONF.import_opt('floating_ip_dns_manager', 'nova.config')
-CONF.import_opt('instance_dns_domain', 'nova.config')
-CONF.import_opt('instance_dns_manager', 'nova.config')
 CONF.import_opt('network_driver', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
