@@ -65,6 +65,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
@@ -1904,7 +1905,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
             return []
-        return [dict(network.iteritems()) for network in networks]
+        return [jsonutils.to_primitive(network) for network in networks]
 
     @wrap_check_policy
     def disassociate_network(self, context, network_uuid):
@@ -1915,12 +1916,12 @@ class NetworkManager(manager.SchedulerDependentManager):
     def get_fixed_ip(self, context, id):
         """Return a fixed ip"""
         fixed = self.db.fixed_ip_get(context, id)
-        return dict(fixed.iteritems())
+        return jsonutils.to_primitive(fixed)
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
         fixed = self.db.fixed_ip_get_by_address(context, address)
-        return dict(fixed.iteritems())
+        return jsonutils.to_primitive(fixed)
 
     def get_vif_by_mac_address(self, context, mac_address):
         """Returns the vifs record for the mac_address"""
