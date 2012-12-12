@@ -53,9 +53,20 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
-
+monkey_patch_opts = [
+    cfg.BoolOpt('monkey_patch',
+                default=False,
+                help='Whether to log monkey patching'),
+    cfg.ListOpt('monkey_patch_modules',
+                default=[
+                  'nova.api.ec2.cloud:nova.notifier.api.notify_decorator',
+                  'nova.compute.api:nova.notifier.api.notify_decorator'
+                  ],
+                help='List of modules/decorators to monkey patch'),
+]
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.register_opts(monkey_patch_opts)
 CONF.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
@@ -63,7 +74,6 @@ CONF.import_opt('glance_host', 'nova.config')
 CONF.import_opt('glance_port', 'nova.config')
 CONF.import_opt('glance_protocol', 'nova.config')
 CONF.import_opt('instance_usage_audit_period', 'nova.config')
-CONF.import_opt('monkey_patch', 'nova.config')
 CONF.import_opt('rootwrap_config', 'nova.config')
 CONF.import_opt('service_down_time', 'nova.config')
 
