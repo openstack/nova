@@ -52,6 +52,12 @@ from nova.virt.xenapi import volume_utils
 LOG = logging.getLogger(__name__)
 
 xenapi_vm_utils_opts = [
+    cfg.StrOpt('cache_images',
+                default='all',
+                help='Cache glance images locally. `all` will cache all'
+                     ' images, `some` will only cache images that have the'
+                     ' image_property `cache_in_nova=True`, and `none` turns'
+                     ' off caching entirely'),
     cfg.StrOpt('default_os_type',
                default='linux',
                help='Default OS type'),
@@ -116,7 +122,6 @@ xenapi_vm_utils_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vm_utils_opts)
-CONF.import_opt('cache_images', 'nova.config')
 CONF.import_opt('default_ephemeral_format', 'nova.config')
 CONF.import_opt('glance_num_retries', 'nova.config')
 CONF.import_opt('use_cow_images', 'nova.config')
