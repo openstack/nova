@@ -1,0 +1,56 @@
+{
+    "server": {
+        "OS-DCF:diskConfig": "AUTO",
+        "accessIPv4": "",
+        "accessIPv6": "",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "adminPass": "NBjMaJoFL4EF",
+        "created": "2012-12-02T02:11:56Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "c076393ad900d62c4805a42df10d9b364f629842681c00cce035487f",
+        "id": "63a8aa13-60fe-41c4-b079-77f6fdf3c841",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/63a8aa13-60fe-41c4-b079-77f6fdf3c841",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2012-12-02T02:11:56Z",
+        "user_id": "fake"
+    }
+}
