@@ -109,16 +109,6 @@ global_opts = [
     cfg.ListOpt('enabled_apis',
                 default=['ec2', 'osapi_compute', 'metadata'],
                 help='a list of APIs to enable by default'),
-    cfg.ListOpt('osapi_compute_ext_list',
-                default=[],
-                help='Specify list of extensions to load when using osapi_'
-                     'compute_extension option with nova.api.openstack.'
-                     'compute.contrib.select_extensions'),
-    cfg.MultiStrOpt('osapi_compute_extension',
-                    default=[
-                      'nova.api.openstack.compute.contrib.standard_extensions'
-                      ],
-                    help='osapi compute extension to load'),
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
                default='',
                help='When set, compute API will consider duplicate hostnames '
