@@ -1,0 +1,284 @@
+#!/usr/bin/python26 -u
+
+# Copyright (c) 2012 OpenStack, LLC
+# Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""Handle the uploading of images via Swift."""
+
+import hashlib
+import httplib
+import math
+import os
+
+import utils
+
+#FIXME(sirp): should this use pluginlib from 5.6?
+from pluginlib_nova import *
+import swift_client
+
+
+configure_logging('swift')
+
+MEGABYTES_TO_BYTES_FACTOR = 1024 * 1024
+FIVE_GIGABYTES = 5120 * MEGABYTES_TO_BYTES_FACTOR
+TWO_HUNDRED_MEGABYTES = 200 * MEGABYTES_TO_BYTES_FACTOR
+
+
+class ChunkReader(object):
+    def __init__(self, fd, checksum, total):
+        self.fd = fd
+        self.checksum = checksum
+        self.total = total
+        self.bytes_read = 0
+
+    def read(self, i):
+        left = self.total - self.bytes_read
+        if i > left:
+            i = left
+        result = self.fd.read(i)
+        self.bytes_read += len(result)
+        self.checksum.update(result)
+        return result
+
+
+def hashfile(afile, hasher, blocksize=65536):
+    buf = afile.read(blocksize)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = afile.read(blocksize)
+    return hasher.hexdigest()
+
+
+def create_container_if_missing(swift_conn, container):
+    """
+    Creates a missing container in Swift if the
+    ``swift_store_create_container_on_put`` option is set.
+
+    :param container: Name of container to create
+    :param swift_conn: Connection to Swift
+    """
+    try:
+        swift_conn.head_container(container)
+    except swift_client.ClientException, e:
+        if e.http_status == httplib.NOT_FOUND:
+            try:
+                swift_conn.put_container(container)
+            except swift_client.ClientException, e:
+                msg = ("Failed to add container to Swift.\n"
+                       "Got error from Swift: %(e)s" % locals())
+                logging.error(msg)
+                raise Exception(msg)
+        else:
+            msg = "ERROR"
+            raise Exception(msg)
+
+
+def make_swift_connection(snet, auth_url, auth_version, user, key,
+                          os_options={}, storage_url=None, token=None):
+    """
+    Creates a connection using the Swift client library.
+
+    :param auth_url The authentication for v1 style Swift auth or
+                    v2 style Keystone auth.
+    :param user A string containing the tenant:user information.
+    :param key  A string containing the key/password for the connection.
+    :param storage_url A string containing the storage URL.
+    :param token A string containing the token
+    """
+    full_auth_url = (auth_url if not auth_url or auth_url.endswith('/')
+                     else auth_url + '/')
+    logging.debug("Creating Swift connection with "
+                  "(auth_address=%(full_auth_url)s, user=%(user)s, "
+                  "snet=%(snet)s, auth_version=%(auth_version)s)" %
+                  locals())
+
+    if token is not None:
+        #NOTE: multi-tenant supports v2 auth only
+        return swift_client.Connection(
+            None, user, None, preauthurl=storage_url, preauthtoken=token,
+            snet=snet, auth_version='2')
+    else:
+        return swift_client.Connection(full_auth_url, user, key, snet=snet,
+                                       auth_version=auth_version,
+                                       os_options=os_options)
+
+
+def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
+                             large_object_size=FIVE_GIGABYTES,
+                             large_object_chunk_size=TWO_HUNDRED_MEGABYTES,
+                             container='images'):
+
+    if tar_size > 0 and tar_size < large_object_size:
+        # Tar size is known, and is less than large_object_size.
+        # Send to Swift with regular PUT.
+        obj_etag = swift_conn.put_object(container, obj_name, tar_file,
+                                         content_length=tar_size)
+    else:
+        # Write the image into Swift in chunks.
+        chunk_id = 1
+        if tar_size > 0:
+            total_chunks = str(int(
+                math.ceil(float(tar_size) /
+                          float(large_object_chunk_size))))
+        else:
+            # tar_size == 0 is when we don't know the size
+            # of the image. This can occur with older clients
+            # that don't inspect the payload size.
+            logging.debug("Cannot determine image size. Adding as a "
+                          "segmented object to Swift.")
+            total_chunks = '?'
+
+        checksum = hashlib.md5()
+        combined_chunks_size = 0
+        while True:
+            chunk_size = large_object_chunk_size
+            if tar_size == 0:
+                content_length = None
+            else:
+                left = tar_size - combined_chunks_size
+                if left == 0:
+                    break
+                if chunk_size > left:
+                    chunk_size = left
+                content_length = chunk_size
+
+            chunk_name = "%s-%05d" % (obj_name, chunk_id)
+            reader = ChunkReader(tar_file, checksum, chunk_size)
+            chunk_etag = swift_conn.put_object(
+                container, chunk_name, reader,
+                content_length=content_length)
+            bytes_read = reader.bytes_read
+            msg = ("Wrote chunk %(chunk_name)s (%(chunk_id)d/"
+                   "%(total_chunks)s) of length %(bytes_read)d "
+                   "to Swift returning MD5 of content: "
+                   "%(chunk_etag)s")
+            logging.debug(msg % locals())
+
+            if bytes_read == 0:
+                # Delete the last chunk, because it's of zero size.
+                # This will happen if image_size == 0.
+                logging.debug("Deleting final zero-length chunk")
+                swift_conn.delete_object(container, chunk_name)
+                break
+
+            chunk_id += 1
+            combined_chunks_size += bytes_read
+
+        # In the case we have been given an unknown image size,
+        # set the image_size to the total size of the combined chunks.
+        if tar_size == 0:
+            tar_size = combined_chunks_size
+
+        # Now we write the object manifest and return the
+        # manifest's etag...
+        manifest = "%s/%s" % (container, obj_name)
+        headers = {'ETag': hashlib.md5("").hexdigest(),
+                   'X-Object-Manifest': manifest}
+
+        # The ETag returned for the manifest is actually the
+        # MD5 hash of the concatenated checksums of the strings
+        # of each chunk...so we ignore this result in favour of
+        # the MD5 of the entire image file contents, so that
+        # users can verify the image file contents accordingly
+        swift_conn.put_object(container, obj_name,
+            None, headers=headers)
+        obj_etag = checksum.hexdigest()
+
+    return obj_etag
+
+
+def _upload_tarball(staging_path, image_id, **params):
+    """
+    Create a tarball of the image and then stream that into swift
+    using swift_client's chunked-transfer-encoded HTTP.
+    """
+    enable_snet = params['swift_enable_snet']
+    create_container_on_put = params['swift_store_create_container_on_put']
+    container = params['swift_store_container']
+    large_object_size = params['swift_store_large_object_size']
+    large_object_size_bytes = large_object_size * MEGABYTES_TO_BYTES_FACTOR
+    large_object_chunk_size = params['swift_store_large_object_chunk_size']
+    large_object_chunk_size_bytes = large_object_chunk_size * \
+                                     MEGABYTES_TO_BYTES_FACTOR
+
+    # Single Tenant
+    key = params.get('swift_store_key')
+    auth_version = params.get('swift_store_auth_version')
+    full_auth_address = params.get('full_auth_address')
+    user = params.get('swift_store_user')
+
+    # Multi Tenant
+    storage_url = params.get('storage_url')
+    token = params.get('token')
+
+    # Optional
+    os_options = {}
+    if 'region_name' in params:
+        os_options['region_name'] = params['region_name']
+
+    obj_name = str(image_id)
+
+    #TODO(ramielrowe): Currently we compress the image and then split it into
+    #    segments if the tarfile is larger than swift's hard file size limit.
+    #    This creates extra disc IO because we are performing two distinct
+    #    operations on the files (compressing the image, then streaming it to
+    #    swift). We could reduce the IO load if we streamed the compressed
+    #    output directly from the tar operation to Swift. The only issue is
+    #    dealing with Swift's hard file size limit, as we don't know the
+    #    tarfile's size until the compression is complete.
+    swift_fileobj_path = '%s%s' % (staging_path, '_swift')
+    utils.make_dir(swift_fileobj_path)
+    tar_path = '%s/%s' % (swift_fileobj_path, obj_name)
+    with open(tar_path, 'w') as file:
+        utils.create_tarball(file, staging_path)
+    tar_size = os.path.getsize(tar_path)
+
+    swift_conn = make_swift_connection(enable_snet, full_auth_address,
+                                       auth_version, user, key,
+                                       storage_url=storage_url, token=token,
+                                       os_options=os_options)
+
+    if create_container_on_put:
+        create_container_if_missing(swift_conn, container)
+
+    with open(tar_path, 'r') as tar_file:
+        etag = _upload_tarball_to_swift(swift_conn, obj_name, tar_file,
+            tar_size=tar_size, large_object_size=large_object_size_bytes,
+            large_object_chunk_size=large_object_chunk_size_bytes,
+            container=container)
+
+    return etag, tar_size
+
+
+def upload_vhd(session, vdi_uuids, sr_path, image_id, **params):
+    staging_path = utils.make_staging_area(sr_path)
+    try:
+        utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
+        etag, image_size = _upload_tarball(staging_path, image_id,
+            **params)
+    finally:
+        utils.cleanup_staging_area(staging_path)
+
+    return {'etag': etag,
+            'image_size': image_size,
+            'disk_format': 'vhd',
+            'container_format': 'ovf'}
+
+
+if __name__ == '__main__':
+    utils.register_plugin_calls(upload_vhd)

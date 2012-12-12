@@ -635,11 +635,12 @@ class VMOps(object):
 
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label) as vdi_uuids:
-            vm_utils.upload_image(
-                    context, self._session, instance, vdi_uuids, image_id)
+                ret_val = vm_utils.upload_image(
+                        context, self._session, instance, vdi_uuids, image_id)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
+        return ret_val
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
         LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),

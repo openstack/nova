@@ -631,6 +631,10 @@ class ServiceNotFound(NotFound):
     message = _("Service %(service_id)s could not be found.")
 
 
+class NoServiceEndpoint(NotFound):
+    message = _("Service Catalog does not contain object-store endpoint.")
+
+
 class HostNotFound(NotFound):
     message = _("Host %(host)s could not be found.")
 
