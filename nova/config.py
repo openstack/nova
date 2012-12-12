@@ -225,9 +225,6 @@ global_opts = [
                   'nova.compute.api:nova.notifier.api.notify_decorator'
                   ],
                 help='List of modules/decorators to monkey patch'),
-    cfg.IntOpt('zombie_instance_updated_at_window',
-               default=172800,
-               help='Number of seconds zombie instances are cleaned up.'),
     cfg.IntOpt('service_down_time',
                default=60,
                help='maximum time since last check-in for up service'),
