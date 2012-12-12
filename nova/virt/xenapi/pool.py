@@ -63,7 +63,7 @@ class ResourcePool(object):
         try:
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
-                self._virtapi.aggregate_metadata_add(context, aggregate['id'],
+                self._virtapi.aggregate_metadata_add(context, aggregate,
                                                      metadata)
             op(context, aggregate, host)
         except Exception:
@@ -87,7 +87,7 @@ class ResourcePool(object):
                     reason=aggregate['metadetails'][pool_states.KEY])
 
         if (aggregate['metadetails'][pool_states.KEY] == pool_states.CREATED):
-            self._virtapi.aggregate_metadata_add(context, aggregate['id'],
+            self._virtapi.aggregate_metadata_add(context, aggregate,
                                                  {pool_states.KEY:
                                                       pool_states.CHANGING})
         if len(aggregate['hosts']) == 1:
@@ -97,7 +97,7 @@ class ResourcePool(object):
             metadata = {'master_compute': host,
                         host: self._host_uuid,
                         pool_states.KEY: pool_states.ACTIVE}
-            self._virtapi.aggregate_metadata_add(context, aggregate['id'],
+            self._virtapi.aggregate_metadata_add(context, aggregate,
                                                  metadata)
         else:
             # the pool is already up and running, we need to figure out
@@ -112,7 +112,7 @@ class ResourcePool(object):
                                  slave_info.get('url'), slave_info.get('user'),
                                  slave_info.get('passwd'))
                 metadata = {host: slave_info.get('xenhost_uuid'), }
-                self._virtapi.aggregate_metadata_add(context, aggregate['id'],
+                self._virtapi.aggregate_metadata_add(context, aggregate,
                                                      metadata)
             elif master_compute and master_compute != host:
                 # send rpc cast to master, asking to add the following
@@ -143,7 +143,7 @@ class ResourcePool(object):
             host_uuid = aggregate['metadetails'][host]
             self._eject_slave(aggregate['id'],
                               slave_info.get('compute_uuid'), host_uuid)
-            self._virtapi.aggregate_metadata_delete(context, aggregate['id'],
+            self._virtapi.aggregate_metadata_delete(context, aggregate,
                                                     host)
         elif master_compute == host:
             # Remove master from its own pool -> destroy pool only if the
@@ -161,7 +161,7 @@ class ResourcePool(object):
             self._clear_pool(aggregate['id'])
             for key in ['master_compute', host]:
                 self._virtapi.aggregate_metadata_delete(context,
-                        aggregate['id'], key)
+                        aggregate, key)
         elif master_compute and master_compute != host:
             # A master exists -> forward pool-eject request to master
             slave_info = self._create_slave_info()

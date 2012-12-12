@@ -14,6 +14,8 @@
 
 """Tests for the conductor service"""
 
+import mox
+
 from nova.compute import instance_types
 from nova.compute import vm_states
 from nova import conductor
@@ -154,6 +156,33 @@ class _BaseTestCase(test.TestCase):
                               for host in aggregate_ref['hosts']]))
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
+
+    def test_aggregate_get_by_host(self):
+        self._setup_aggregate_with_host()
+        aggregates = self.conductor.aggregate_get_by_host(self.context, 'bar')
+        self.assertEqual(aggregates[0]['availability_zone'], 'foo')
+
+    def test_aggregate_metadata_add(self):
+        aggregate = {'name': 'fake aggregate', 'id': 'fake-id'}
+        metadata = {'foo': 'bar'}
+        self.mox.StubOutWithMock(db, 'aggregate_metadata_add')
+        db.aggregate_metadata_add(
+            mox.IgnoreArg(), aggregate['id'], metadata, False).AndReturn(
+                metadata)
+        self.mox.ReplayAll()
+        result = self.conductor.aggregate_metadata_add(self.context,
+                                                       aggregate,
+                                                       metadata)
+        self.assertEqual(result, metadata)
+
+    def test_aggregate_metadata_delete(self):
+        aggregate = {'name': 'fake aggregate', 'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'aggregate_metadata_delete')
+        db.aggregate_metadata_delete(mox.IgnoreArg(), aggregate['id'], 'fake')
+        self.mox.ReplayAll()
+        result = self.conductor.aggregate_metadata_delete(self.context,
+                                                       aggregate,
+                                                       'fake')
 
     def test_bw_usage_update(self):
         self.mox.StubOutWithMock(db, 'bw_usage_update')

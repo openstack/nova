@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.6'
+    RPC_API_VERSION = '1.7'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -100,6 +100,22 @@ class ConductorManager(manager.SchedulerDependentManager):
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
+
+    def aggregate_get_by_host(self, context, host, key=None):
+        aggregates = self.db.aggregate_get_by_host(context.elevated(),
+                                                   host, key)
+        return jsonutils.to_primitive(aggregates)
+
+    def aggregate_metadata_add(self, context, aggregate, metadata,
+                               set_delete=False):
+        new_metadata = self.db.aggregate_metadata_add(context.elevated(),
+                                                      aggregate['id'],
+                                                      metadata, set_delete)
+        return jsonutils.to_primitive(new_metadata)
+
+    def aggregate_metadata_delete(self, context, aggregate, key):
+        self.db.aggregate_metadata_delete(context.elevated(),
+                                          aggregate['id'], key)
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in=None, bw_out=None,

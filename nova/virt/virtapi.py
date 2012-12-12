@@ -48,20 +48,20 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def aggregate_metadata_add(self, context, aggregate_id, metadata,
+    def aggregate_metadata_add(self, context, aggregate, metadata,
                                set_delete=False):
         """Add/update metadata for specified aggregate
         :param context: security context
-        :param aggregate_id: id of aggregate on which to update metadata
+        :param aggregate: aggregate on which to update metadata
         :param metadata: dict of metadata to add/update
         :param set_delete: if True, only add
         """
         raise NotImplementedError()
 
-    def aggregate_metadata_delete(self, context, aggregate_id, key):
+    def aggregate_metadata_delete(self, context, aggregate, key):
         """Delete the given metadata key from specified aggregate
         :param context: security context
-        :param aggregate_id: id of aggregate from which to delete metadata
+        :param aggregate: aggregate from which to delete metadata
         :param key: metadata key to delete
         """
         raise NotImplementedError()
