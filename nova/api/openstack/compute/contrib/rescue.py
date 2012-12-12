@@ -28,7 +28,6 @@ from nova import utils
 
 
 CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.config')
 LOG = logging.getLogger(__name__)
 authorize = exts.extension_authorizer('compute', 'rescue')
 
@@ -55,7 +54,7 @@ class RescueController(wsgi.Controller):
         if body['rescue'] and 'adminPass' in body['rescue']:
             password = body['rescue']['adminPass']
         else:
-            password = utils.generate_password(CONF.password_length)
+            password = utils.generate_password()
 
         instance = self._get_instance(context, id)
         try:

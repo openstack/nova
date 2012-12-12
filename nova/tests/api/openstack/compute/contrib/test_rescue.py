@@ -22,7 +22,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.config')
+CONF.import_opt('password_length', 'nova.utils')
 
 
 def rescue(self, context, instance, rescue_password=None):

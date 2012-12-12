@@ -32,7 +32,7 @@ from nova.volume import cinder
 from webob import exc
 
 CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.config')
+CONF.import_opt('password_length', 'nova.utils')
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'

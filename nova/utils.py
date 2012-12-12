@@ -64,18 +64,25 @@ monkey_patch_opts = [
                   ],
                 help='List of modules/decorators to monkey patch'),
 ]
-LOG = logging.getLogger(__name__)
+utils_opts = [
+    cfg.IntOpt('password_length',
+               default=12,
+               help='Length of generated instance admin passwords'),
+    cfg.BoolOpt('disable_process_locking',
+                default=False,
+                help='Whether to disable inter-process locks'),
+]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
-CONF.register_opt(
-    cfg.BoolOpt('disable_process_locking', default=False,
-                help='Whether to disable inter-process locks'))
+CONF.register_opts(utils_opts)
 CONF.import_opt('glance_host', 'nova.config')
 CONF.import_opt('glance_port', 'nova.config')
 CONF.import_opt('glance_protocol', 'nova.config')
 CONF.import_opt('instance_usage_audit_period', 'nova.config')
 CONF.import_opt('rootwrap_config', 'nova.config')
 CONF.import_opt('service_down_time', 'nova.config')
+
+LOG = logging.getLogger(__name__)
 
 # Used for looking up extensions of text
 # to their 'multiplied' byte amount
@@ -423,7 +430,7 @@ def last_completed_audit_period(unit=None, before=None):
     return (begin, end)
 
 
-def generate_password(length=20, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
+def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     """Generate a random password from the supplied symbol groups.
 
     At least one symbol from each group will be included. Unpredictable
@@ -432,6 +439,9 @@ def generate_password(length=20, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     Believed to be reasonably secure (with a reasonable password length!)
 
     """
+    if length is None:
+        length = CONF.password_length
+
     r = random.SystemRandom()
 
     # NOTE(jerdfelt): Some password policies require at least one character

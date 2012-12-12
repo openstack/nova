@@ -40,12 +40,18 @@ from nova.openstack.common import uuidutils
 from nova import utils
 
 
-LOG = logging.getLogger(__name__)
+server_opts = [
+    cfg.BoolOpt('enable_instance_password',
+                default=True,
+                help='Allows use of instance password during '
+                     'server creation'),
+]
 CONF = cfg.CONF
-CONF.import_opt('enable_instance_password', 'nova.config')
+CONF.register_opts(server_opts)
 CONF.import_opt('network_api_class', 'nova.config')
-CONF.import_opt('password_length', 'nova.config')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
+
+LOG = logging.getLogger(__name__)
 
 
 def make_fault(elem):
@@ -1204,7 +1210,7 @@ class Controller(wsgi.Controller):
         try:
             password = body['adminPass']
         except (KeyError, TypeError):
-            password = utils.generate_password(CONF.password_length)
+            password = utils.generate_password()
 
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -1346,7 +1352,7 @@ class Controller(wsgi.Controller):
             password = server['adminPass']
             self._validate_admin_password(password)
         except KeyError:
-            password = utils.generate_password(CONF.password_length)
+            password = utils.generate_password()
         except ValueError:
             raise exc.HTTPBadRequest(explanation=_("Invalid adminPass"))
 

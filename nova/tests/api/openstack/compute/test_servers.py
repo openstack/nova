@@ -54,7 +54,7 @@ from nova.tests import matchers
 
 
 CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.config')
+CONF.import_opt('password_length', 'nova.utils')
 CONF.import_opt('scheduler_topic', 'nova.config')
 
 FAKE_UUID = fakes.FAKE_UUID

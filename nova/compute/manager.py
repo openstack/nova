@@ -175,7 +175,6 @@ CONF.import_opt('console_topic', 'nova.config')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('network_manager', 'nova.config')
-CONF.import_opt('password_length', 'nova.config')
 CONF.import_opt('reclaim_instance_interval', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
@@ -1464,7 +1463,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if new_pass is None:
             # Generate a random password
-            new_pass = utils.generate_password(CONF.password_length)
+            new_pass = utils.generate_password()
 
         max_tries = 10
 
@@ -1574,7 +1573,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Rescuing'), context=context, instance=instance)
 
         admin_password = (rescue_password if rescue_password else
-                      utils.generate_password(CONF.password_length))
+                      utils.generate_password())
 
         network_info = self._get_instance_nw_info(context, instance)
 

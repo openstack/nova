@@ -209,13 +209,6 @@ global_opts = [
     cfg.BoolOpt('use_ipv6',
                 default=False,
                 help='use ipv6'),
-    cfg.BoolOpt('enable_instance_password',
-                default=True,
-                help='Allows use of instance password during '
-                     'server creation'),
-    cfg.IntOpt('password_length',
-               default=12,
-               help='Length of generated instance admin passwords'),
     cfg.IntOpt('service_down_time',
                default=60,
                help='maximum time since last check-in for up service'),
