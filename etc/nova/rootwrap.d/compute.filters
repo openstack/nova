@@ -166,3 +166,6 @@ lvs: CommandFilter, /sbin/lvs, root
 
 # nova/virt/libvirt/utils.py:
 vgs: CommandFilter, /sbin/vgs, root
+
+# nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
+tgtadm: CommandFilter, /usr/sbin/tgtadm, root

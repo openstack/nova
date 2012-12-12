@@ -311,46 +311,6 @@ def bm_interface_create(context, bm_node_id, address, datapath_id, port_no):
 
 
 @require_admin_context
-def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
-    session = get_session()
-    with session.begin():
-        bm_interface = model_query(context, models.BareMetalInterface,
-                                read_deleted="no", session=session).\
-                         filter_by(id=if_id).\
-                         with_lockmode('update').\
-                         first()
-        if not bm_interface:
-            raise exception.NovaException(_("Baremetal interface %s "
-                        "not found") % if_id)
-
-        bm_interface.vif_uuid = vif_uuid
-        try:
-            session.add(bm_interface)
-            session.flush()
-        except exception.DBError, e:
-            # TODO(deva): clean up when db layer raises DuplicateKeyError
-            if str(e).find('IntegrityError') != -1:
-                raise exception.NovaException(_("Baremetal interface %s "
-                        "already in use") % vif_uuid)
-            else:
-                raise e
-
-
-@require_admin_context
-def bm_interface_get_by_vif_uuid(context, vif_uuid):
-    result = model_query(context, models.BareMetalInterface,
-                         read_deleted="no").\
-                filter_by(vif_uuid=vif_uuid).\
-                first()
-
-    if not result:
-        raise exception.NovaException(_("Baremetal virtual interface %s "
-                        "not found") % vif_uuid)
-
-    return result
-
-
-@require_admin_context
 def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
     result = model_query(context, models.BareMetalInterface,
                          read_deleted="no").\
