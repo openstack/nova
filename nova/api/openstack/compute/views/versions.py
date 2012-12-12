@@ -19,11 +19,6 @@ import copy
 import os
 
 from nova.api.openstack import common
-from nova.openstack.common import cfg
-
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_link_prefix', 'nova.config')
 
 
 def get_view_builder(req):
@@ -93,8 +88,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def generate_href(self, path=None):
         """Create an url that refers to a specific version_number."""
-        prefix = self._update_link_prefix(self.base_url,
-                                          CONF.osapi_compute_link_prefix)
+        prefix = self._update_compute_link_prefix(self.base_url)
         version_number = 'v2'
         if path:
             path = path.strip('/')
