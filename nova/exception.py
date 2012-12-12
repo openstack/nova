@@ -753,8 +753,8 @@ class FlavorNotFound(NotFound):
 
 
 class FlavorAccessNotFound(NotFound):
-    message = _("Flavor access not found for %(flavor_id) / "
-                "%(project_id) combination.")
+    message = _("Flavor access not found for %(flavor_id)s / "
+                "%(project_id)s combination.")
 
 
 class CellNotFound(NotFound):
