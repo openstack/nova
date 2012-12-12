@@ -574,7 +574,8 @@ class API(base.Base):
             nw_info.append(network_model.VIF(
                 id=port['id'],
                 address=port['mac_address'],
-                network=network))
+                network=network,
+                type=port.get('binding:vif_type')))
         return nw_info
 
     def _get_subnets_from_port(self, context, port):
