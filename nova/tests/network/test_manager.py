@@ -140,7 +140,7 @@ class FlatNetworkTestCase(test.TestCase):
     def setUp(self):
         super(FlatNetworkTestCase, self).setUp()
         self.tempdir = tempfile.mkdtemp()
-        self.flags(logdir=self.tempdir)
+        self.flags(log_dir=self.tempdir)
         self.network = network_manager.FlatManager(host=HOST)
         self.network.instance_dns_domain = ''
         self.network.db = db
@@ -1614,7 +1614,7 @@ class FloatingIPTestCase(test.TestCase):
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
         self.tempdir = tempfile.mkdtemp()
-        self.flags(logdir=self.tempdir)
+        self.flags(log_dir=self.tempdir)
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'
@@ -2004,7 +2004,7 @@ class InstanceDNSTestCase(test.TestCase):
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()
         self.tempdir = tempfile.mkdtemp()
-        self.flags(logdir=self.tempdir)
+        self.flags(log_dir=self.tempdir)
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'

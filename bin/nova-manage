@@ -56,7 +56,6 @@
 
 import gettext
 import netaddr
-import optparse
 import os
 import sys
 
@@ -107,7 +106,7 @@ QUOTAS = quota.QUOTAS
 # Decorators for actions
 def args(*args, **kwargs):
     def _decorator(func):
-        func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
+        func.__dict__.setdefault('args', []).insert(0, (args, kwargs))
         return func
     return _decorator
 
@@ -770,21 +769,6 @@ class DbCommands(object):
         print migration.db_version()
 
 
-class VersionCommands(object):
-    """Class for exposing the codebase version."""
-
-    def __init__(self):
-        pass
-
-    def list(self):
-        print (_("%(version)s (%(vcs)s)") %
-               {'version': version.version_string(),
-                'vcs': version.version_string_with_vcs()})
-
-    def __call__(self):
-        self.list()
-
-
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
@@ -988,10 +972,10 @@ class GetLogCommands(object):
     def errors(self):
         """Get all of the errors from the log files"""
         error_found = 0
-        if CONF.logdir:
-            logs = [x for x in os.listdir(CONF.logdir) if x.endswith('.log')]
+        if CONF.log_dir:
+            logs = [x for x in os.listdir(CONF.log_dir) if x.endswith('.log')]
             for file in logs:
-                log_file = os.path.join(CONF.logdir, file)
+                log_file = os.path.join(CONF.log_dir, file)
                 lines = [line.strip() for line in open(log_file, "r")]
                 lines.reverse()
                 print_name = 0
@@ -1032,45 +1016,23 @@ class GetLogCommands(object):
             print _('No nova entries in syslog!')
 
 
-CATEGORIES = [
-    ('account', AccountCommands),
-    ('agent', AgentBuildCommands),
-    ('db', DbCommands),
-    ('fixed', FixedIpCommands),
-    ('flavor', InstanceTypeCommands),
-    ('floating', FloatingIpCommands),
-    ('host', HostCommands),
-    ('instance_type', InstanceTypeCommands),
-    ('logs', GetLogCommands),
-    ('network', NetworkCommands),
-    ('project', ProjectCommands),
-    ('service', ServiceCommands),
-    ('shell', ShellCommands),
-    ('version', VersionCommands),
-    ('vm', VmCommands),
-    ('vpn', VpnCommands),
-]
-
-
-def lazy_match(name, key_value_tuples):
-    """Finds all objects that have a key that case insensitively contains
-    [name] key_value_tuples is a list of tuples of the form (key, value)
-    returns a list of tuples of the form (key, value)"""
-    result = []
-    for (k, v) in key_value_tuples:
-        if k.lower().find(name.lower()) == 0:
-            result.append((k, v))
-    if len(result) == 0:
-        print _('%s does not match any options:') % name
-        for k, _v in key_value_tuples:
-            print "\t%s" % k
-        sys.exit(2)
-    if len(result) > 1:
-        print _('%s matched multiple options:') % name
-        for k, _v in result:
-            print "\t%s" % k
-        sys.exit(2)
-    return result
+CATEGORIES = {
+    'account': AccountCommands,
+    'agent': AgentBuildCommands,
+    'db': DbCommands,
+    'fixed': FixedIpCommands,
+    'flavor': InstanceTypeCommands,
+    'floating': FloatingIpCommands,
+    'host': HostCommands,
+    'instance_type': InstanceTypeCommands,
+    'logs': GetLogCommands,
+    'network': NetworkCommands,
+    'project': ProjectCommands,
+    'service': ServiceCommands,
+    'shell': ShellCommands,
+    'vm': VmCommands,
+    'vpn': VpnCommands,
+}
 
 
 def methods_of(obj):
@@ -1083,11 +1045,46 @@ def methods_of(obj):
     return result
 
 
+def add_command_parsers(subparsers):
+    parser = subparsers.add_parser('version')
+
+    parser = subparsers.add_parser('bash-completion')
+    parser.add_argument('query_category', nargs='?')
+
+    for category in CATEGORIES:
+        command_object = CATEGORIES[category]()
+
+        parser = subparsers.add_parser(category)
+        parser.set_defaults(command_object=command_object)
+
+        category_subparsers = parser.add_subparsers(dest='action')
+
+        for (action, action_fn) in methods_of(command_object):
+            parser = category_subparsers.add_parser(action)
+
+            action_kwargs = []
+            for args, kwargs in getattr(action_fn, 'args', []):
+                action_kwargs.append(kwargs['dest'])
+                kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
+                parser.add_argument(*args, **kwargs)
+
+            parser.set_defaults(action_fn=action_fn)
+            parser.set_defaults(action_kwargs=action_kwargs)
+
+            parser.add_argument('action_args', nargs='*')
+
+
+category_opt = cfg.SubCommandOpt('category',
+                                 title='Command categories',
+                                 help='Available categories',
+                                 handler=add_command_parsers)
+
+
 def main():
     """Parse options and call the appropriate class/method."""
-
+    CONF.register_cli_opt(category_opt)
     try:
-        argv = config.parse_args(sys.argv)
+        config.parse_args(sys.argv)
         logging.setup("nova")
     except cfg.ConfigFilesNotFoundError:
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
@@ -1102,68 +1099,32 @@ def main():
         print _('Please re-run nova-manage as root.')
         sys.exit(2)
 
-    script_name = argv.pop(0)
-    if len(argv) < 1:
-        print (_("\nOpenStack Nova version: %(version)s (%(vcs)s)\n") %
+    if CONF.category.name == "version":
+        print (_("%(version)s (%(vcs)s)") %
                {'version': version.version_string(),
                 'vcs': version.version_string_with_vcs()})
-        print script_name + " category action [<args>]"
-        print _("Available categories:")
-        for k, _v in CATEGORIES:
-            print "\t%s" % k
-        sys.exit(2)
-    category = argv.pop(0)
-    if category == "bash-completion":
-        if len(argv) < 1:
-            print " ".join([k for (k, v) in CATEGORIES])
-        else:
-            query_category = argv.pop(0)
-            matches = lazy_match(query_category, CATEGORIES)
-            # instantiate the command group object
-            category, fn = matches[0]
+        sys.exit(0)
+
+    if CONF.category.name == "bash-completion":
+        if not CONF.category.query_category:
+            print " ".join(CATEGORIES.keys())
+        elif CONF.category.query_category in CATEGORIES:
+            fn = CATEGORIES[CONF.category.query_category]
             command_object = fn()
             actions = methods_of(command_object)
             print " ".join([k for (k, v) in actions])
         sys.exit(0)
-    matches = lazy_match(category, CATEGORIES)
-    # instantiate the command group object
-    category, fn = matches[0]
-    command_object = fn()
-    actions = methods_of(command_object)
-    if len(argv) < 1:
-        if hasattr(command_object, '__call__'):
-            action = ''
-            fn = command_object.__call__
-        else:
-            print script_name + " category action [<args>]"
-            print _("Available actions for %s category:") % category
-            for k, _v in actions:
-                print "\t%s" % k
-            sys.exit(2)
-    else:
-        action = argv.pop(0)
-        matches = lazy_match(action, actions)
-        action, fn = matches[0]
 
-    # For not decorated methods
-    options = getattr(fn, 'options', [])
-
-    usage = "%%prog %s %s <args> [options]" % (category, action)
-    parser = optparse.OptionParser(usage=usage)
-    for ar, kw in options:
-        parser.add_option(*ar, **kw)
-    (opts, fn_args) = parser.parse_args(argv)
-    fn_kwargs = vars(opts)
-
-    for k, v in fn_kwargs.items():
+    fn = CONF.category.action_fn
+    fn_args = [arg.decode('utf-8') for arg in CONF.category.action_args]
+    fn_kwargs = {}
+    for k in CONF.category.action_kwargs:
+        v = getattr(CONF.category, 'action_kwarg_' + k)
         if v is None:
-            del fn_kwargs[k]
-        elif isinstance(v, basestring):
-            fn_kwargs[k] = v.decode('utf-8')
-        else:
-            fn_kwargs[k] = v
-
-    fn_args = [arg.decode('utf-8') for arg in fn_args]
+            continue
+        if isinstance(v, basestring):
+            v = v.decode('utf-8')
+        fn_kwargs[k] = v
 
     # call the action with the remaining arguments
     # check arguments

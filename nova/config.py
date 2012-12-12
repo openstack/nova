@@ -225,7 +225,6 @@ cfg.CONF.register_opts(global_opts)
 
 
 def parse_args(argv, default_config_files=None):
-    cfg.CONF.disable_interspersed_args()
-    return argv[:1] + cfg.CONF(argv[1:],
-                               project='nova',
-                               default_config_files=default_config_files)
+    cfg.CONF(argv[1:],
+             project='nova',
+             default_config_files=default_config_files)

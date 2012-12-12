@@ -205,27 +205,11 @@ Option values may reference other values using PEP 292 string substitution::
 
 Note that interpolation can be avoided by using '$$'.
 
-For command line utilities that dispatch to other command line utilities, the
-disable_interspersed_args() method is available. If this this method is called,
-then parsing e.g.::
-
-  script --verbose cmd --debug /tmp/mything
-
-will no longer return::
-
-  ['cmd', '/tmp/mything']
-
-as the leftover arguments, but will instead return::
-
-  ['cmd', '--debug', '/tmp/mything']
-
-i.e. argument parsing is stopped at the first non-option argument.
-
 Options may be declared as required so that an error is raised if the user
 does not supply a value for the option.
 
 Options may be declared as secret so that their values are not leaked into
-log files:
+log files::
 
      opts = [
         cfg.StrOpt('s3_store_access_key', secret=True),
@@ -234,28 +218,50 @@ log files:
      ]
 
 This module also contains a global instance of the CommonConfigOpts class
-in order to support a common usage pattern in OpenStack:
+in order to support a common usage pattern in OpenStack::
 
-  from nova.openstack.common import cfg
+    from nova.openstack.common import cfg
 
-  opts = [
-    cfg.StrOpt('bind_host', default='0.0.0.0'),
-    cfg.IntOpt('bind_port', default=9292),
-  ]
+    opts = [
+        cfg.StrOpt('bind_host', default='0.0.0.0'),
+        cfg.IntOpt('bind_port', default=9292),
+    ]
 
-  CONF = cfg.CONF
-  CONF.register_opts(opts)
+    CONF = cfg.CONF
+    CONF.register_opts(opts)
 
-  def start(server, app):
-      server.start(app, CONF.bind_port, CONF.bind_host)
+    def start(server, app):
+        server.start(app, CONF.bind_port, CONF.bind_host)
+
+Positional command line arguments are supported via a 'positional' Opt
+constructor argument::
+
+    >>> CONF.register_cli_opt(MultiStrOpt('bar', positional=True))
+    True
+    >>> CONF(['a', 'b'])
+    >>> CONF.bar
+    ['a', 'b']
+
+It is also possible to use argparse "sub-parsers" to parse additional
+command line arguments using the SubCommandOpt class:
+
+    >>> def add_parsers(subparsers):
+    ...     list_action = subparsers.add_parser('list')
+    ...     list_action.add_argument('id')
+    ...
+    >>> CONF.register_cli_opt(SubCommandOpt('action', handler=add_parsers))
+    True
+    >>> CONF(['list', '10'])
+    >>> CONF.action.name, CONF.action.id
+    ('list', '10')
 
 """
 
+import argparse
 import collections
 import copy
 import functools
 import glob
-import optparse
 import os
 import string
 import sys
@@ -474,6 +480,13 @@ def _is_opt_registered(opts, opt):
         return False
 
 
+def set_defaults(opts, **kwargs):
+    for opt in opts:
+        if opt.dest in kwargs:
+            opt.default = kwargs[opt.dest]
+            break
+
+
 class Opt(object):
 
     """Base class for all configuration options.
@@ -489,6 +502,8 @@ class Opt(object):
         a single character CLI option name
       default:
         the default value of the option
+      positional:
+        True if the option is a positional CLI argument
       metavar:
         the name shown as the argument to a CLI option in --help output
       help:
@@ -497,8 +512,8 @@ class Opt(object):
     multi = False
 
     def __init__(self, name, dest=None, short=None, default=None,
-                 metavar=None, help=None, secret=False, required=False,
-                 deprecated_name=None):
+                 positional=False, metavar=None, help=None,
+                 secret=False, required=False, deprecated_name=None):
         """Construct an Opt object.
 
         The only required parameter is the option's name. However, it is
@@ -508,6 +523,7 @@ class Opt(object):
         :param dest: the name of the corresponding ConfigOpts property
         :param short: a single character CLI option name
         :param default: the default value of the option
+        :param positional: True if the option is a positional CLI argument
         :param metavar: the option argument to show in --help
         :param help: an explanation of how the option is used
         :param secret: true iff the value should be obfuscated in log output
@@ -521,6 +537,7 @@ class Opt(object):
             self.dest = dest
         self.short = short
         self.default = default
+        self.positional = positional
         self.metavar = metavar
         self.help = help
         self.secret = secret
@@ -561,64 +578,73 @@ class Opt(object):
         :param parser: the CLI option parser
         :param group: an optional OptGroup object
         """
-        container = self._get_optparse_container(parser, group)
-        kwargs = self._get_optparse_kwargs(group)
-        prefix = self._get_optparse_prefix('', group)
-        self._add_to_optparse(container, self.name, self.short, kwargs, prefix,
-                              self.deprecated_name)
+        container = self._get_argparse_container(parser, group)
+        kwargs = self._get_argparse_kwargs(group)
+        prefix = self._get_argparse_prefix('', group)
+        self._add_to_argparse(container, self.name, self.short, kwargs, prefix,
+                              self.positional, self.deprecated_name)
 
-    def _add_to_optparse(self, container, name, short, kwargs, prefix='',
-                         deprecated_name=None):
-        """Add an option to an optparse parser or group.
+    def _add_to_argparse(self, container, name, short, kwargs, prefix='',
+                         positional=False, deprecated_name=None):
+        """Add an option to an argparse parser or group.
 
-        :param container: an optparse.OptionContainer object
+        :param container: an argparse._ArgumentGroup object
         :param name: the opt name
         :param short: the short opt name
-        :param kwargs: the keyword arguments for add_option()
+        :param kwargs: the keyword arguments for add_argument()
         :param prefix: an optional prefix to prepend to the opt name
+        :param position: whether the optional is a positional CLI argument
         :raises: DuplicateOptError if a naming confict is detected
         """
-        args = ['--' + prefix + name]
+        def hyphen(arg):
+            return arg if not positional else ''
+
+        args = [hyphen('--') + prefix + name]
         if short:
-            args += ['-' + short]
+            args.append(hyphen('-') + short)
         if deprecated_name:
-            args += ['--' + prefix + deprecated_name]
-        for a in args:
-            if container.has_option(a):
-                raise DuplicateOptError(a)
-        container.add_option(*args, **kwargs)
+            args.append(hyphen('--') + prefix + deprecated_name)
 
-    def _get_optparse_container(self, parser, group):
-        """Returns an optparse.OptionContainer.
+        try:
+            container.add_argument(*args, **kwargs)
+        except argparse.ArgumentError as e:
+            raise DuplicateOptError(e)
 
-        :param parser: an optparse.OptionParser
+    def _get_argparse_container(self, parser, group):
+        """Returns an argparse._ArgumentGroup.
+
+        :param parser: an argparse.ArgumentParser
         :param group: an (optional) OptGroup object
-        :returns: an optparse.OptionGroup if a group is given, else the parser
+        :returns: an argparse._ArgumentGroup if group is given, else parser
         """
         if group is not None:
-            return group._get_optparse_group(parser)
+            return group._get_argparse_group(parser)
         else:
             return parser
 
-    def _get_optparse_kwargs(self, group, **kwargs):
-        """Build a dict of keyword arguments for optparse's add_option().
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Build a dict of keyword arguments for argparse's add_argument().
 
         Most opt types extend this method to customize the behaviour of the
-        options added to optparse.
+        options added to argparse.
 
         :param group: an optional group
         :param kwargs: optional keyword arguments to add to
         :returns: a dict of keyword arguments
         """
-        dest = self.dest
-        if group is not None:
-            dest = group.name + '_' + dest
-        kwargs.update({'dest': dest,
+        if not self.positional:
+            dest = self.dest
+            if group is not None:
+                dest = group.name + '_' + dest
+            kwargs['dest'] = dest
+        else:
+            kwargs['nargs'] = '?'
+        kwargs.update({'default': None,
                        'metavar': self.metavar,
                        'help': self.help, })
         return kwargs
 
-    def _get_optparse_prefix(self, prefix, group):
+    def _get_argparse_prefix(self, prefix, group):
         """Build a prefix for the CLI option name, if required.
 
         CLI options in a group are prefixed with the group's name in order
@@ -656,6 +682,11 @@ class BoolOpt(Opt):
     _boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
                        '0': False, 'no': False, 'false': False, 'off': False}
 
+    def __init__(self, *args, **kwargs):
+        if 'positional' in kwargs:
+            raise ValueError('positional boolean args not supported')
+        super(BoolOpt, self).__init__(*args, **kwargs)
+
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a boolean from ConfigParser."""
         def convert_bool(v):
@@ -671,21 +702,32 @@ class BoolOpt(Opt):
     def _add_to_cli(self, parser, group=None):
         """Extends the base class method to add the --nooptname option."""
         super(BoolOpt, self)._add_to_cli(parser, group)
-        self._add_inverse_to_optparse(parser, group)
+        self._add_inverse_to_argparse(parser, group)
 
-    def _add_inverse_to_optparse(self, parser, group):
+    def _add_inverse_to_argparse(self, parser, group):
         """Add the --nooptname option to the option parser."""
-        container = self._get_optparse_container(parser, group)
-        kwargs = self._get_optparse_kwargs(group, action='store_false')
-        prefix = self._get_optparse_prefix('no', group)
+        container = self._get_argparse_container(parser, group)
+        kwargs = self._get_argparse_kwargs(group, action='store_false')
+        prefix = self._get_argparse_prefix('no', group)
         kwargs["help"] = "The inverse of --" + self.name
-        self._add_to_optparse(container, self.name, None, kwargs, prefix,
-                              self.deprecated_name)
+        self._add_to_argparse(container, self.name, None, kwargs, prefix,
+                              self.positional, self.deprecated_name)
 
-    def _get_optparse_kwargs(self, group, action='store_true', **kwargs):
-        """Extends the base optparse keyword dict for boolean options."""
-        return super(BoolOpt,
-                     self)._get_optparse_kwargs(group, action=action, **kwargs)
+    def _get_argparse_kwargs(self, group, action='store_true', **kwargs):
+        """Extends the base argparse keyword dict for boolean options."""
+
+        kwargs = super(BoolOpt, self)._get_argparse_kwargs(group, **kwargs)
+
+        # metavar has no effect for BoolOpt
+        if 'metavar' in kwargs:
+            del kwargs['metavar']
+
+        if action != 'store_true':
+            action = 'store_false'
+
+        kwargs['action'] = action
+
+        return kwargs
 
 
 class IntOpt(Opt):
@@ -697,10 +739,10 @@ class IntOpt(Opt):
         return [int(v) for v in self._cparser_get_with_deprecated(cparser,
                 section)]
 
-    def _get_optparse_kwargs(self, group, **kwargs):
-        """Extends the base optparse keyword dict for integer options."""
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Extends the base argparse keyword dict for integer options."""
         return super(IntOpt,
-                     self)._get_optparse_kwargs(group, type='int', **kwargs)
+                     self)._get_argparse_kwargs(group, type=int, **kwargs)
 
 
 class FloatOpt(Opt):
@@ -712,10 +754,10 @@ class FloatOpt(Opt):
         return [float(v) for v in
                 self._cparser_get_with_deprecated(cparser, section)]
 
-    def _get_optparse_kwargs(self, group, **kwargs):
-        """Extends the base optparse keyword dict for float options."""
-        return super(FloatOpt,
-                     self)._get_optparse_kwargs(group, type='float', **kwargs)
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Extends the base argparse keyword dict for float options."""
+        return super(FloatOpt, self)._get_argparse_kwargs(group,
+                                                          type=float, **kwargs)
 
 
 class ListOpt(Opt):
@@ -725,23 +767,26 @@ class ListOpt(Opt):
     is a list containing these strings.
     """
 
+    class _StoreListAction(argparse.Action):
+        """
+        An argparse action for parsing an option value into a list.
+        """
+        def __call__(self, parser, namespace, values, option_string=None):
+            if values is not None:
+                values = [a.strip() for a in values.split(',')]
+            setattr(namespace, self.dest, values)
+
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a list from ConfigParser."""
-        return [v.split(',') for v in
+        return [[a.strip() for a in v.split(',')] for v in
                 self._cparser_get_with_deprecated(cparser, section)]
 
-    def _get_optparse_kwargs(self, group, **kwargs):
-        """Extends the base optparse keyword dict for list options."""
-        return super(ListOpt,
-                     self)._get_optparse_kwargs(group,
-                                                type='string',
-                                                action='callback',
-                                                callback=self._parse_list,
-                                                **kwargs)
-
-    def _parse_list(self, option, opt, value, parser):
-        """An optparse callback for parsing an option value into a list."""
-        setattr(parser.values, self.dest, value.split(','))
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Extends the base argparse keyword dict for list options."""
+        return Opt._get_argparse_kwargs(self,
+                                        group,
+                                        action=ListOpt._StoreListAction,
+                                        **kwargs)
 
 
 class MultiStrOpt(Opt):
@@ -752,10 +797,14 @@ class MultiStrOpt(Opt):
     """
     multi = True
 
-    def _get_optparse_kwargs(self, group, **kwargs):
-        """Extends the base optparse keyword dict for multi str options."""
-        return super(MultiStrOpt,
-                     self)._get_optparse_kwargs(group, action='append')
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Extends the base argparse keyword dict for multi str options."""
+        kwargs = super(MultiStrOpt, self)._get_argparse_kwargs(group)
+        if not self.positional:
+            kwargs['action'] = 'append'
+        else:
+            kwargs['nargs'] = '*'
+        return kwargs
 
     def _cparser_get_with_deprecated(self, cparser, section):
         """If cannot find option as dest try deprecated_name alias."""
@@ -763,6 +812,57 @@ class MultiStrOpt(Opt):
             return cparser.get(section, [self.dest, self.deprecated_name],
                                multi=True)
         return cparser.get(section, [self.dest], multi=True)
+
+
+class SubCommandOpt(Opt):
+
+    """
+    Sub-command options allow argparse sub-parsers to be used to parse
+    additional command line arguments.
+
+    The handler argument to the SubCommandOpt contructor is a callable
+    which is supplied an argparse subparsers object. Use this handler
+    callable to add sub-parsers.
+
+    The opt value is SubCommandAttr object with the name of the chosen
+    sub-parser stored in the 'name' attribute and the values of other
+    sub-parser arguments available as additional attributes.
+    """
+
+    def __init__(self, name, dest=None, handler=None,
+                 title=None, description=None, help=None):
+        """Construct an sub-command parsing option.
+
+        This behaves similarly to other Opt sub-classes but adds a
+        'handler' argument. The handler is a callable which is supplied
+        an subparsers object when invoked. The add_parser() method on
+        this subparsers object can be used to register parsers for
+        sub-commands.
+
+        :param name: the option's name
+        :param dest: the name of the corresponding ConfigOpts property
+        :param title: title of the sub-commands group in help output
+        :param description: description of the group in help output
+        :param help: a help string giving an overview of available sub-commands
+        """
+        super(SubCommandOpt, self).__init__(name, dest=dest, help=help)
+        self.handler = handler
+        self.title = title
+        self.description = description
+
+    def _add_to_cli(self, parser, group=None):
+        """Add argparse sub-parsers and invoke the handler method."""
+        dest = self.dest
+        if group is not None:
+            dest = group.name + '_' + dest
+
+        subparsers = parser.add_subparsers(dest=dest,
+                                           title=self.title,
+                                           description=self.description,
+                                           help=self.help)
+
+        if not self.handler is None:
+            self.handler(subparsers)
 
 
 class OptGroup(object):
@@ -800,19 +900,20 @@ class OptGroup(object):
         self.help = help
 
         self._opts = {}  # dict of dicts of (opt:, override:, default:)
-        self._optparse_group = None
+        self._argparse_group = None
 
-    def _register_opt(self, opt):
+    def _register_opt(self, opt, cli=False):
         """Add an opt to this group.
 
         :param opt: an Opt object
+        :param cli: whether this is a CLI option
         :returns: False if previously registered, True otherwise
         :raises: DuplicateOptError if a naming conflict is detected
         """
         if _is_opt_registered(self._opts, opt):
             return False
 
-        self._opts[opt.dest] = {'opt': opt}
+        self._opts[opt.dest] = {'opt': opt, 'cli': cli}
 
         return True
 
@@ -824,16 +925,16 @@ class OptGroup(object):
         if opt.dest in self._opts:
             del self._opts[opt.dest]
 
-    def _get_optparse_group(self, parser):
-        """Build an optparse.OptionGroup for this group."""
-        if self._optparse_group is None:
-            self._optparse_group = optparse.OptionGroup(parser, self.title,
-                                                        self.help)
-        return self._optparse_group
+    def _get_argparse_group(self, parser):
+        if self._argparse_group is None:
+            """Build an argparse._ArgumentGroup for this group."""
+            self._argparse_group = parser.add_argument_group(self.title,
+                                                             self.help)
+        return self._argparse_group
 
     def _clear(self):
         """Clear this group's option parsing state."""
-        self._optparse_group = None
+        self._argparse_group = None
 
 
 class ParseError(iniparser.ParseError):
@@ -928,26 +1029,31 @@ class ConfigOpts(collections.Mapping):
         self._groups = {}
 
         self._args = None
+
         self._oparser = None
         self._cparser = None
         self._cli_values = {}
         self.__cache = {}
         self._config_opts = []
-        self._disable_interspersed_args = False
 
-    def _setup(self, project, prog, version, usage, default_config_files):
-        """Initialize a ConfigOpts object for option parsing."""
+    def _pre_setup(self, project, prog, version, usage, default_config_files):
+        """Initialize a ConfigCliParser object for option parsing."""
+
         if prog is None:
             prog = os.path.basename(sys.argv[0])
 
         if default_config_files is None:
             default_config_files = find_config_files(project, prog)
 
-        self._oparser = optparse.OptionParser(prog=prog,
-                                              version=version,
-                                              usage=usage)
-        if self._disable_interspersed_args:
-            self._oparser.disable_interspersed_args()
+        self._oparser = argparse.ArgumentParser(prog=prog, usage=usage)
+        self._oparser.add_argument('--version',
+                                   action='version',
+                                   version=version)
+
+        return prog, default_config_files
+
+    def _setup(self, project, prog, version, usage, default_config_files):
+        """Initialize a ConfigOpts object for option parsing."""
 
         self._config_opts = [
             MultiStrOpt('config-file',
@@ -1017,17 +1123,22 @@ class ConfigOpts(collections.Mapping):
         :raises: SystemExit, ConfigFilesNotFoundError, ConfigFileParseError,
                  RequiredOptError, DuplicateOptError
         """
+
         self.clear()
+
+        prog, default_config_files = self._pre_setup(project,
+                                                     prog,
+                                                     version,
+                                                     usage,
+                                                     default_config_files)
 
         self._setup(project, prog, version, usage, default_config_files)
 
-        self._cli_values, leftovers = self._parse_cli_opts(args)
+        self._cli_values = self._parse_cli_opts(args)
 
         self._parse_config_files()
 
         self._check_required_opts()
-
-        return leftovers
 
     def __getattr__(self, name):
         """Look up an option value and perform string substitution.
@@ -1062,17 +1173,21 @@ class ConfigOpts(collections.Mapping):
 
     @__clear_cache
     def clear(self):
-        """Clear the state of the object to before it was called."""
+        """Clear the state of the object to before it was called.
+
+        Any subparsers added using the add_cli_subparsers() will also be
+        removed as a side-effect of this method.
+        """
         self._args = None
         self._cli_values.clear()
-        self._oparser = None
+        self._oparser = argparse.ArgumentParser()
         self._cparser = None
         self.unregister_opts(self._config_opts)
         for group in self._groups.values():
             group._clear()
 
     @__clear_cache
-    def register_opt(self, opt, group=None):
+    def register_opt(self, opt, group=None, cli=False):
         """Register an option schema.
 
         Registering an option schema makes any option value which is previously
@@ -1080,17 +1195,19 @@ class ConfigOpts(collections.Mapping):
         as an attribute of this object.
 
         :param opt: an instance of an Opt sub-class
+        :param cli: whether this is a CLI option
         :param group: an optional OptGroup object or group name
         :return: False if the opt was already register, True otherwise
         :raises: DuplicateOptError
         """
         if group is not None:
-            return self._get_group(group, autocreate=True)._register_opt(opt)
+            group = self._get_group(group, autocreate=True)
+            return group._register_opt(opt, cli)
 
         if _is_opt_registered(self._opts, opt):
             return False
 
-        self._opts[opt.dest] = {'opt': opt}
+        self._opts[opt.dest] = {'opt': opt, 'cli': cli}
 
         return True
 
@@ -1116,7 +1233,7 @@ class ConfigOpts(collections.Mapping):
         if self._args is not None:
             raise ArgsAlreadyParsedError("cannot register CLI option")
 
-        return self.register_opt(opt, group, clear_cache=False)
+        return self.register_opt(opt, group, cli=True, clear_cache=False)
 
     @__clear_cache
     def register_cli_opts(self, opts, group=None):
@@ -1243,41 +1360,17 @@ class ConfigOpts(collections.Mapping):
             for info in group._opts.values():
                 yield info, group
 
-    def _all_opts(self):
-        """A generator function for iteration opts."""
+    def _all_cli_opts(self):
+        """A generator function for iterating CLI opts."""
         for info, group in self._all_opt_infos():
-            yield info['opt'], group
+            if info['cli']:
+                yield info['opt'], group
 
     def _unset_defaults_and_overrides(self):
         """Unset any default or override on all options."""
         for info, group in self._all_opt_infos():
             info.pop('default', None)
             info.pop('override', None)
-
-    def disable_interspersed_args(self):
-        """Set parsing to stop on the first non-option.
-
-        If this this method is called, then parsing e.g.
-
-          script --verbose cmd --debug /tmp/mything
-
-        will no longer return:
-
-          ['cmd', '/tmp/mything']
-
-        as the leftover arguments, but will instead return:
-
-          ['cmd', '--debug', '/tmp/mything']
-
-        i.e. argument parsing is stopped at the first non-option argument.
-        """
-        self._disable_interspersed_args = True
-
-    def enable_interspersed_args(self):
-        """Set parsing to not stop on the first non-option.
-
-        This it the default behaviour."""
-        self._disable_interspersed_args = False
 
     def find_file(self, name):
         """Locate a file located alongside the config files.
@@ -1377,6 +1470,9 @@ class ConfigOpts(collections.Mapping):
         info = self._get_opt_info(name, group)
         opt = info['opt']
 
+        if isinstance(opt, SubCommandOpt):
+            return self.SubCommandAttr(self, group, opt.dest)
+
         if 'override' in info:
             return info['override']
 
@@ -1400,6 +1496,10 @@ class ConfigOpts(collections.Mapping):
         if value is not None:
             if not opt.multi:
                 return value
+
+            # argparse ignores default=None for nargs='*'
+            if opt.positional and not value:
+                value = opt.default
 
             return value + values
 
@@ -1523,12 +1623,10 @@ class ConfigOpts(collections.Mapping):
         """
         self._args = args
 
-        for opt, group in self._all_opts():
+        for opt, group in self._all_cli_opts():
             opt._add_to_cli(self._oparser, group)
 
-        values, leftovers = self._oparser.parse_args(args)
-
-        return vars(values), leftovers
+        return vars(self._oparser.parse_args(args))
 
     class GroupAttr(collections.Mapping):
 
@@ -1543,12 +1641,12 @@ class ConfigOpts(collections.Mapping):
             :param conf: a ConfigOpts object
             :param group: an OptGroup object
             """
-            self.conf = conf
-            self.group = group
+            self._conf = conf
+            self._group = group
 
         def __getattr__(self, name):
             """Look up an option value and perform template substitution."""
-            return self.conf._get(name, self.group)
+            return self._conf._get(name, self._group)
 
         def __getitem__(self, key):
             """Look up an option value and perform string substitution."""
@@ -1556,16 +1654,50 @@ class ConfigOpts(collections.Mapping):
 
         def __contains__(self, key):
             """Return True if key is the name of a registered opt or group."""
-            return key in self.group._opts
+            return key in self._group._opts
 
         def __iter__(self):
             """Iterate over all registered opt and group names."""
-            for key in self.group._opts.keys():
+            for key in self._group._opts.keys():
                 yield key
 
         def __len__(self):
             """Return the number of options and option groups."""
-            return len(self.group._opts)
+            return len(self._group._opts)
+
+    class SubCommandAttr(object):
+
+        """
+        A helper class representing the name and arguments of an argparse
+        sub-parser.
+        """
+
+        def __init__(self, conf, group, dest):
+            """Construct a SubCommandAttr object.
+
+            :param conf: a ConfigOpts object
+            :param group: an OptGroup object
+            :param dest: the name of the sub-parser
+            """
+            self._conf = conf
+            self._group = group
+            self._dest = dest
+
+        def __getattr__(self, name):
+            """Look up a sub-parser name or argument value."""
+            if name == 'name':
+                name = self._dest
+                if self._group is not None:
+                    name = self._group.name + '_' + name
+                return self._conf._cli_values[name]
+
+            if name in self._conf:
+                raise DuplicateOptError(name)
+
+            try:
+                return self._conf._cli_values[name]
+            except KeyError:
+                raise NoSuchOptError(name)
 
     class StrSubWrapper(object):
 
@@ -1623,19 +1755,21 @@ class CommonConfigOpts(ConfigOpts):
                metavar='FORMAT',
                help='A logging.Formatter log message format string which may '
                     'use any of the available logging.LogRecord attributes. '
-                    'Default: %default'),
+                    'Default: %(default)s'),
         StrOpt('log-date-format',
                default=DEFAULT_LOG_DATE_FORMAT,
                metavar='DATE_FORMAT',
-               help='Format string for %(asctime)s in log records. '
-                    'Default: %default'),
+               help='Format string for %%(asctime)s in log records. '
+                    'Default: %(default)s'),
         StrOpt('log-file',
                metavar='PATH',
+               deprecated_name='logfile',
                help='(Optional) Name of log file to output to. '
                     'If not set, logging will go to stdout.'),
         StrOpt('log-dir',
+               deprecated_name='logdir',
                help='(Optional) The directory to keep log files in '
-                    '(will be prepended to --logfile)'),
+                    '(will be prepended to --log-file)'),
         BoolOpt('use-syslog',
                 default=False,
                 help='Use syslog for logging.'),
