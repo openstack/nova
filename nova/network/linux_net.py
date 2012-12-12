@@ -84,6 +84,12 @@ linux_net_opts = [
                 default=False,
                 help='Use single default gateway. Only first nic of vm will '
                      'get default gateway from dhcp server'),
+    cfg.StrOpt('metadata_host',
+               default='$my_ip',
+               help='the ip for the metadata api server'),
+    cfg.IntOpt('metadata_port',
+               default=8775,
+               help='the port for the metadata api port'),
     ]
 
 CONF = cfg.CONF
@@ -91,8 +97,6 @@ CONF.register_opts(linux_net_opts)
 CONF.import_opt('bindir', 'nova.config')
 CONF.import_opt('fake_network', 'nova.config')
 CONF.import_opt('host', 'nova.config')
-CONF.import_opt('metadata_host', 'nova.config')
-CONF.import_opt('metadata_port', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('state_path', 'nova.config')
