@@ -1339,9 +1339,6 @@
 # timeout_nbd=10
 #### (IntOpt) time to wait for a NBD device coming up
 
-# max_nbd_devices=16
-#### (IntOpt) maximum number of possible nbd devices
-
 
 ######## defined in nova.virt.firewall ########
 
