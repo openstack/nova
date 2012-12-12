@@ -35,3 +35,20 @@ class BareMetalInterfaceTestCase(base.BMDBTestCase):
         pif2_id = db.bm_interface_create(self.context, 2, '11:11:11:11:11:11',
                                          '0x2', 2)
         self.assertTrue(pif2_id is not None)
+
+    def test_unique_vif_uuid(self):
+        pif1_id = db.bm_interface_create(self.context, 1, '11:11:11:11:11:11',
+                                        '0x1', 1)
+        pif2_id = db.bm_interface_create(self.context, 2, '22:22:22:22:22:22',
+                                         '0x2', 2)
+        db.bm_interface_set_vif_uuid(self.context, pif1_id, 'AAAA')
+        self.assertRaises(exception.NovaException,
+                          db.bm_interface_set_vif_uuid,
+                          self.context, pif2_id, 'AAAA')
+
+    def test_vif_not_found(self):
+        pif_id = db.bm_interface_create(self.context, 1, '11:11:11:11:11:11',
+                                        '0x1', 1)
+        self.assertRaises(exception.NovaException,
+                          db.bm_interface_set_vif_uuid,
+                          self.context, pif_id + 1, 'AAAA')

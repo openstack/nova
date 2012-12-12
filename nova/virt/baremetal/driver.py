@@ -40,6 +40,12 @@ opts = [
     cfg.StrOpt('baremetal_injected_network_template',
                default='$pybasedir/nova/virt/baremetal/interfaces.template',
                help='Template file for injected network'),
+    cfg.StrOpt('baremetal_vif_driver',
+               default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
+               help='Baremetal VIF driver.'),
+    cfg.StrOpt('baremetal_volume_driver',
+               default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
+               help='Baremetal volume driver.'),
     cfg.ListOpt('instance_type_extra_specs',
                default=[],
                help='a list of additional capabilities corresponding to '
@@ -110,8 +116,12 @@ class BareMetalDriver(driver.ComputeDriver):
 
         self.baremetal_nodes = importutils.import_object(
                 CONF.baremetal_driver)
+        self._vif_driver = importutils.import_object(
+                CONF.baremetal_vif_driver)
         self._firewall_driver = firewall.load_driver(
                 default=DEFAULT_FIREWALL_DRIVER)
+        self._volume_driver = importutils.import_object(
+                CONF.baremetal_volume_driver, virtapi)
         self._image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
@@ -177,6 +187,8 @@ class BareMetalDriver(driver.ComputeDriver):
             var = self.baremetal_nodes.define_vars(instance, network_info,
                                                    block_device_info)
 
+            self._plug_vifs(instance, network_info, context=context)
+
             self._firewall_driver.setup_basic_filtering(instance, network_info)
             self._firewall_driver.prepare_instance_filter(instance,
                                                           network_info)
@@ -195,8 +207,15 @@ class BareMetalDriver(driver.ComputeDriver):
             self.baremetal_nodes.activate_node(var, context, node, instance)
             self._firewall_driver.apply_instance_filter(instance, network_info)
 
-            pm.start_console()
+            block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+            for vol in block_device_mapping:
+                connection_info = vol['connection_info']
+                mountpoint = vol['mount_device']
+                self.attach_volume(connection_info, instance['name'],
+                                   mountpoint)
 
+            pm.start_console()
         except Exception, e:
             # TODO(deva): add tooling that can revert a failed spawn
             _update_baremetal_state(context, node, instance,
@@ -235,6 +254,15 @@ class BareMetalDriver(driver.ComputeDriver):
         ## power off the node
         state = pm.deactivate_node()
 
+        ## cleanup volumes
+        # NOTE(vish): we disconnect from volumes regardless
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            self.detach_volume(connection_info, instance['name'], mountpoint)
+
         self.baremetal_nodes.deactivate_bootloader(var, ctx, node, instance)
 
         self.baremetal_nodes.destroy_images(var, ctx, node, instance)
@@ -242,6 +270,8 @@ class BareMetalDriver(driver.ComputeDriver):
         # stop firewall
         self._firewall_driver.unfilter_instance(instance,
                                                 network_info=network_info)
+
+        self._unplug_vifs(instance, network_info)
 
         _update_baremetal_state(ctx, node, None, state)
 
@@ -256,6 +286,18 @@ class BareMetalDriver(driver.ComputeDriver):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node)
         pm.activate_node()
+
+    def get_volume_connector(self, instance):
+        return self._volume_driver.get_volume_connector(instance)
+
+    def attach_volume(self, connection_info, instance_name, mountpoint):
+        return self._volume_driver.attach_volume(connection_info,
+                                                 instance_name, mountpoint)
+
+    @exception.wrap_exception()
+    def detach_volume(self, connection_info, instance_name, mountpoint):
+        return self._volume_driver.detach_volume(connection_info,
+                                                 instance_name, mountpoint)
 
     def get_info(self, instance):
         # NOTE(deva): compute/manager.py expects to get NotFound exception
@@ -354,6 +396,26 @@ class BareMetalDriver(driver.ComputeDriver):
             # TODO(NTTdocomo): put node's extra specs here
             caps.append(data)
         return caps
+
+    def plug_vifs(self, instance, network_info):
+        """Plugin VIFs into networks."""
+        self._plug_vifs(instance, network_info)
+
+    def _plug_vifs(self, instance, network_info, context=None):
+        if not context:
+            context = nova_context.get_admin_context()
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        if node:
+            pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
+            for pif in pifs:
+                if pif['vif_uuid']:
+                    bmdb.bm_interface_set_vif_uuid(context, pif['id'], None)
+        for (network, mapping) in network_info:
+            self._vif_driver.plug(instance, (network, mapping))
+
+    def _unplug_vifs(self, instance, network_info):
+        for (network, mapping) in network_info:
+            self._vif_driver.unplug(instance, (network, mapping))
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""

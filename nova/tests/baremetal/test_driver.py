@@ -31,13 +31,28 @@ from nova.tests import utils as test_utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as bm_driver
+from nova.virt.baremetal import volume_driver
 from nova.virt.firewall import NoopFirewallDriver
 
 
 CONF = cfg.CONF
 
 
+class FakeVifDriver(object):
+
+    def plug(self, instance, vif):
+        pass
+
+    def unplug(self, instance, vif):
+        pass
+
 FakeFirewallDriver = NoopFirewallDriver
+
+
+class FakeVolumeDriver(volume_driver.VolumeDriver):
+    def __init__(self, virtapi):
+        super(FakeVolumeDriver, self).__init__(virtapi)
+        self._initiator = "testtesttest"
 
 
 NODE = utils.new_bm_node(cpus=2, memory_mb=4096, service_host="host1")
@@ -55,7 +70,9 @@ COMMON_FLAGS = dict(
     baremetal_sql_connection='sqlite:///:memory:',
     baremetal_driver='nova.virt.baremetal.fake.Fake',
     power_manager='nova.virt.baremetal.fake.FakePowerManager',
+    baremetal_vif_driver=class_path(FakeVifDriver),
     firewall_driver=class_path(FakeFirewallDriver),
+    baremetal_volume_driver=class_path(FakeVolumeDriver),
     instance_type_extra_specs=['cpu_arch:test'],
     host=NODE['service_host'],
 )
@@ -154,7 +171,9 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase,
         from nova.virt.baremetal import fake
         drv = bm_driver.BareMetalDriver(None)
         self.assertTrue(isinstance(drv.baremetal_nodes, fake.Fake))
+        self.assertTrue(isinstance(drv._vif_driver, FakeVifDriver))
         self.assertTrue(isinstance(drv._firewall_driver, FakeFirewallDriver))
+        self.assertTrue(isinstance(drv._volume_driver, FakeVolumeDriver))
 
     def test_get_host_stats(self):
         self.flags(instance_type_extra_specs=['cpu_arch:x86_64',

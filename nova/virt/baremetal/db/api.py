@@ -148,6 +148,14 @@ def bm_interface_create(context, bm_node_id, address, datapath_id, port_no):
                                     datapath_id, port_no)
 
 
+def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
+    return IMPL.bm_interface_set_vif_uuid(context, if_id, vif_uuid)
+
+
+def bm_interface_get_by_vif_uuid(context, vif_uuid):
+    return IMPL.bm_interface_get_by_vif_uuid(context, vif_uuid)
+
+
 def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
     return IMPL.bm_interface_get_all_by_bm_node_id(context, bm_node_id)
 

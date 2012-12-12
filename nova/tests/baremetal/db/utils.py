@@ -60,6 +60,7 @@ def new_bm_interface(**kwargs):
     x.address = kwargs.pop('address', None)
     x.datapath_id = kwargs.pop('datapath_id', None)
     x.port_no = kwargs.pop('port_no', None)
+    x.vif_uuid = kwargs.pop('vif_uuid', None)
     if len(kwargs) > 0:
         raise test.TestingException("unknown field: %s"
                                     % ','.join(kwargs.keys()))
