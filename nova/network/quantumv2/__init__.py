@@ -42,8 +42,7 @@ def _get_auth_token():
     return httpclient.auth_token
 
 
-def get_client(context):
-    token = context.auth_token
+def _get_client(token=None):
     if not token and CONF.quantum_auth_strategy:
         token = _get_auth_token()
     params = {
@@ -55,3 +54,11 @@ def get_client(context):
     else:
         params['auth_strategy'] = None
     return clientv20.Client(**params)
+
+
+def get_client(context, admin=False):
+    if admin:
+        token = None
+    else:
+        token = context.auth_token
+    return _get_client(token=token)

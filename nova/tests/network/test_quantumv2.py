@@ -270,10 +270,16 @@ class TestQuantumv2(test.TestCase):
 
     def test_get_instance_nw_info_1(self):
         """Test to get one port in one network and subnet."""
+        quantumv2.get_client(mox.IgnoreArg(),
+                             admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
         self._get_instance_nw_info(1)
 
     def test_get_instance_nw_info_2(self):
         """Test to get one port in each of two networks and subnets."""
+        quantumv2.get_client(mox.IgnoreArg(),
+                             admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
         self._get_instance_nw_info(2)
 
     def test_get_instance_nw_info_with_nets(self):
@@ -294,6 +300,9 @@ class TestQuantumv2(test.TestCase):
             network_id='my_netid1',
             device_owner='network:dhcp').AndReturn(
                 {'ports': self.dhcp_port_data1})
+        quantumv2.get_client(mox.IgnoreArg(),
+                             admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
         self.mox.ReplayAll()
         nw_inf = api.get_instance_nw_info(self.context,
                                           self.instance,
@@ -317,6 +326,9 @@ class TestQuantumv2(test.TestCase):
                 {'networks': self.nets1})
         self.moxed_client.list_networks(
             shared=True).AndReturn({'networks': []})
+        quantumv2.get_client(mox.IgnoreArg(),
+                             admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
         self.mox.ReplayAll()
 
         nw_inf = api.get_instance_nw_info(self.context,
