@@ -38,6 +38,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.8 - Added security_group_get_by_instance and
           security_group_rule_get_by_security_group
     1.9 - Added provider_fw_rule_get_all
+    1.10 - Added agent_build_get_by_triple
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -133,3 +134,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def provider_fw_rule_get_all(self, context):
         msg = self.make_msg('provider_fw_rule_get_all')
         return self.call(context, msg, version='1.9')
+
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        msg = self.make_msg('agent_build_get_by_triple',
+                            hypervisor=hypervisor, os=os,
+                            architecture=architecture)
+        return self.call(context, msg, version='1.10')

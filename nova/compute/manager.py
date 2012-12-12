@@ -292,10 +292,8 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return self._compute.conductor_api.provider_fw_rule_get_all(context)
 
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        return self._compute.db.agent_build_get_by_triple(context,
-                                                          hypervisor,
-                                                          os,
-                                                          architecture)
+        return self._compute.conductor_api.agent_build_get_by_triple(
+            context, hypervisor, os, architecture)
 
 
 class ComputeManager(manager.SchedulerDependentManager):

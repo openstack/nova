@@ -251,6 +251,17 @@ class _BaseTestCase(object):
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual(result, fake_rules)
 
+    def test_agent_build_get_by_triple(self):
+        self.mox.StubOutWithMock(db, 'agent_build_get_by_triple')
+        db.agent_build_get_by_triple(self.context, 'fake-hv', 'fake-os',
+                                     'fake-arch').AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.agent_build_get_by_triple(self.context,
+                                                          'fake-hv',
+                                                          'fake-os',
+                                                          'fake-arch')
+        self.assertEqual(result, 'it worked')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""

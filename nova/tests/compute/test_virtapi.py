@@ -129,33 +129,10 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.compute = FakeCompute()
         self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
 
-    def setUp(self):
-        super(ComputeVirtAPITest, self).setUp()
-        # NOTE(danms): Eventually these should all be migrated to the
-        # conductor, but until then, dispatch appropriately.
-        self.conductor_methods = ['instance_update', 'instance_get_by_uuid',
-                                  'instance_get_all_by_host',
-                                  'aggregate_get_by_host',
-                                  'aggregate_metadata_add',
-                                  'aggregate_metadata_delete',
-                                  'security_group_get_by_instance',
-                                  'security_group_rule_get_by_security_group',
-                                  'provider_fw_rule_get_all',
-                                  ]
-        self.db_methods = ['agent_build_get_by_triple',
-                            ]
-
     def assertExpected(self, method, *args, **kwargs):
-        if method in self.conductor_methods:
-            target = self.compute.conductor_api
-        elif method in self.db_methods:
-            target = self.compute.db
-        else:
-            raise Exception('Method "%s" not known to this test!')
-
-        self.mox.StubOutWithMock(target, method)
-        getattr(target, method)(self.context, *args, **kwargs).AndReturn(
-            'it worked')
+        self.mox.StubOutWithMock(self.compute.conductor_api, method)
+        getattr(self.compute.conductor_api, method)(
+            self.context, *args, **kwargs).AndReturn('it worked')
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
         self.assertEqual(result, 'it worked')

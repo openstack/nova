@@ -128,6 +128,10 @@ class LocalAPI(object):
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        return self._manager.agent_build_get_by_triple(context, hypervisor,
+                                                       os, architecture)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -204,3 +208,9 @@ class API(object):
 
     def provider_fw_rule_get_all(self, context):
         return self.conductor_rpcapi.provider_fw_rule_get_all(context)
+
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        return self.conductor_rpcapi.agent_build_get_by_triple(context,
+                                                               hypervisor,
+                                                               os,
+                                                               architecture)
