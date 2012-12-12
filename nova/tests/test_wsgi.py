@@ -21,8 +21,6 @@
 import os.path
 import tempfile
 
-import unittest
-
 import nova.exception
 from nova import test
 import nova.wsgi
@@ -42,7 +40,7 @@ class TestLoaderNothingExists(test.TestCase):
         )
 
 
-class TestLoaderNormalFilesystem(unittest.TestCase):
+class TestLoaderNormalFilesystem(test.TestCase):
     """Loader tests with normal filesystem (unmodified os.path module)."""
 
     _paste_config = """
@@ -52,6 +50,7 @@ document_root = /tmp
     """
 
     def setUp(self):
+        super(TestLoaderNormalFilesystem, self).setUp()
         self.config = tempfile.NamedTemporaryFile(mode="w+t")
         self.config.write(self._paste_config.lstrip())
         self.config.seek(0)
@@ -74,9 +73,10 @@ document_root = /tmp
 
     def tearDown(self):
         self.config.close()
+        super(TestLoaderNormalFilesystem, self).tearDown()
 
 
-class TestWSGIServer(unittest.TestCase):
+class TestWSGIServer(test.TestCase):
     """WSGI server tests."""
 
     def test_no_app(self):

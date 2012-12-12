@@ -16,7 +16,6 @@
 
 from nova import test
 from nova.virt.xenapi import volumeops
-import unittest
 
 
 class VolumeAttachTestCase(test.TestCase):

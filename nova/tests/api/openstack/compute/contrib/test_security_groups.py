@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
 from lxml import etree
 import mox
 import webob
@@ -1014,9 +1012,10 @@ class TestSecurityGroupRules(test.TestCase):
                           req, {'security_group_rule': rule})
 
 
-class TestSecurityGroupRulesXMLDeserializer(unittest.TestCase):
+class TestSecurityGroupRulesXMLDeserializer(test.TestCase):
 
     def setUp(self):
+        super(TestSecurityGroupRulesXMLDeserializer, self).setUp()
         self.deserializer = security_groups.SecurityGroupRulesXMLDeserializer()
 
     def test_create_request(self):
@@ -1064,9 +1063,10 @@ class TestSecurityGroupRulesXMLDeserializer(unittest.TestCase):
         self.assertEquals(request['body'], expected)
 
 
-class TestSecurityGroupXMLDeserializer(unittest.TestCase):
+class TestSecurityGroupXMLDeserializer(test.TestCase):
 
     def setUp(self):
+        super(TestSecurityGroupXMLDeserializer, self).setUp()
         self.deserializer = security_groups.SecurityGroupXMLDeserializer()
 
     def test_create_request(self):
@@ -1109,8 +1109,9 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
         self.assertEquals(request['body'], expected)
 
 
-class TestSecurityGroupXMLSerializer(unittest.TestCase):
+class TestSecurityGroupXMLSerializer(test.TestCase):
     def setUp(self):
+        super(TestSecurityGroupXMLSerializer, self).setUp()
         self.namespace = wsgi.XMLNS_V11
         self.rule_serializer = security_groups.SecurityGroupRuleTemplate()
         self.index_serializer = security_groups.SecurityGroupsTemplate()
