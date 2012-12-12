@@ -1275,7 +1275,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.IMAGE_SNAPSHOT})
-        self.compute.snapshot_instance(self.context, "failing_snapshot", instance=instance)
+        self.compute.snapshot_instance(self.context,
+                                       "failing_snapshot",
+                                       instance=instance)
         self._assert_state({'task_state': None})
         self.compute.terminate_instance(self.context, instance=instance)
 

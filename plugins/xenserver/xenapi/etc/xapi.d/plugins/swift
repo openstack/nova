@@ -55,6 +55,7 @@ class ChunkReader(object):
         self.checksum.update(result)
         return result
 
+
 def hashfile(afile, hasher, blocksize=65536):
     buf = afile.read(blocksize)
     while len(buf) > 0:
@@ -115,6 +116,7 @@ def make_swift_connection(snet, auth_url, auth_version, user, key,
         return swift_client.Connection(full_auth_url, user, key, snet=snet,
                                        auth_version=auth_version,
                                        os_options=os_options)
+
 
 def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
                              large_object_size=FIVE_GIGABYTES,
@@ -199,6 +201,7 @@ def _upload_tarball_to_swift(swift_conn, obj_name, tar_file, tar_size=0,
 
     return obj_etag
 
+
 def _upload_tarball(staging_path, image_id, **params):
     """
     Create a tarball of the image and then stream that into swift
@@ -206,7 +209,7 @@ def _upload_tarball(staging_path, image_id, **params):
     """
     enable_snet = params['swift_enable_snet']
     create_container_on_put = params['swift_store_create_container_on_put']
-    container =  params['swift_store_container']
+    container = params['swift_store_container']
     large_object_size = params['swift_store_large_object_size']
     large_object_size_bytes = large_object_size * MEGABYTES_TO_BYTES_FACTOR
     large_object_chunk_size = params['swift_store_large_object_chunk_size']

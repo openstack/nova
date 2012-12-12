@@ -1395,7 +1395,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             image_metadata = self.driver.snapshot(context, instance, image_id)
         except Exception:
-            LOG.exception(_('Deleting image %s') %image_id)
+            LOG.exception(_('Deleting image %s') % image_id)
             self._delete_image_glance(context, image_id)
 
         if image_metadata:

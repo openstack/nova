@@ -39,8 +39,8 @@ from nova.compute import power_state
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
-from nova.openstack.common import importutils
 from nova.openstack.common import excutils
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
@@ -715,7 +715,8 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
     image_store = None
     if CONF.image_store:
         image_store = importutils.import_object(CONF.image_store)
-    if image_store and  image_store.get_store_name() == 'swift':
+
+    if image_store and image_store.get_store_name() == 'swift':
         return upload_image_swift(context, session, instance, vdi_uuids,
                                   image_id)
     else:
@@ -745,7 +746,7 @@ def upload_image_swift(context, session, instance, vdi_uuids, image_id):
               'swift_store_large_object_chunk_size': large_object_chunk_size,
               'swift_store_create_container_on_put': create_container_on_put,
              }
-    
+
     if CONF.swift_store_multitenant:
         params['storage_url'] = None
         if context.service_catalog:
