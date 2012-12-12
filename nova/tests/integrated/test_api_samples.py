@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import copy
 import datetime
 import inspect
 import json
@@ -48,9 +49,11 @@ from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
 from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.baremetal.db import base as bm_db_base
+from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
+from nova.tests import utils as test_utils
 from nova import utils
 
 CONF = cfg.CONF
@@ -3105,4 +3108,68 @@ class FloatingIpDNSJsonTest(ApiSampleTestBase):
 
 
 class FloatingIpDNSXmlTest(FloatingIpDNSJsonTest):
+    ctype = 'xml'
+
+
+class InstanceActionsSampleJsonTest(ApiSampleTestBase):
+    extension_name = ('nova.api.openstack.compute.contrib.instance_actions.'
+                      'Instance_actions')
+
+    def setUp(self):
+        super(InstanceActionsSampleJsonTest, self).setUp()
+        self.actions = fake_instance_actions.FAKE_ACTIONS
+        self.events = fake_instance_actions.FAKE_EVENTS
+        self.instance = test_utils.get_test_instance()
+
+        def fake_instance_action_get_by_request_id(context, uuid, request_id):
+            return copy.deepcopy(self.actions[uuid][request_id])
+
+        def fake_instance_actions_get(context, uuid):
+            return [copy.deepcopy(value) for value in
+                    self.actions[uuid].itervalues()]
+
+        def fake_instance_action_events_get(context, action_id):
+            return copy.deepcopy(self.events[action_id])
+
+        def fake_instance_get_by_uuid(context, instance_id):
+            return self.instance
+
+        self.stubs.Set(db, 'action_get_by_request_id',
+                       fake_instance_action_get_by_request_id)
+        self.stubs.Set(db, 'actions_get', fake_instance_actions_get)
+        self.stubs.Set(db, 'action_events_get',
+                       fake_instance_action_events_get)
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+
+    def test_instance_action_get(self):
+        fake_uuid = fake_instance_actions.FAKE_UUID
+        fake_request_id = fake_instance_actions.FAKE_REQUEST_ID1
+        fake_action = self.actions[fake_uuid][fake_request_id]
+
+        response = self._do_get('servers/%s/os-instance-actions/%s' %
+                                (fake_uuid, fake_request_id))
+        subs = self._get_regexes()
+        subs['action'] = '(reboot)|(resize)'
+        subs['instance_uuid'] = fake_uuid
+        subs['integer_id'] = '[0-9]+'
+        subs['request_id'] = fake_action['request_id']
+        subs['start_time'] = fake_action['start_time']
+        subs['result'] = '(Success)|(Error)'
+        subs['event'] = '(schedule)|(compute_create)'
+        return self._verify_response('instance-action-get-resp', subs,
+                                     response)
+
+    def test_instance_actions_list(self):
+        fake_uuid = fake_instance_actions.FAKE_UUID
+        response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
+        subs = self._get_regexes()
+        subs['action'] = '(reboot)|(resize)'
+        subs['integer_id'] = '[0-9]+'
+        subs['request_id'] = ('req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
+                              '-[0-9a-f]{4}-[0-9a-f]{12}')
+        return self._verify_response('instance-actions-list-resp', subs,
+                                     response)
+
+
+class InstanceActionsSampleXmlTest(InstanceActionsSampleJsonTest):
     ctype = 'xml'

@@ -685,9 +685,9 @@ class DbApiTestCase(test.TestCase):
         db.action_start(ctxt2, action_values)
 
         actions = db.actions_get(ctxt1, uuid1)
-        action_id = actions[0]['id']
-        action = db.action_get_by_id(ctxt1, uuid1, action_id)
-        self.assertEqual('resize', action['action'])
+        request_id = actions[0]['request_id']
+        action = db.action_get_by_request_id(ctxt1, uuid1, request_id)
+        self.assertEqual('run_instance', action['action'])
         self.assertEqual(ctxt1.request_id, action['request_id'])
 
     def test_instance_action_event_start(self):

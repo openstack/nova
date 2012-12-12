@@ -1630,9 +1630,9 @@ def actions_get(context, uuid):
     return IMPL.actions_get(context, uuid)
 
 
-def action_get_by_id(context, uuid, action_id):
-    """Get the action by id and given instance."""
-    return IMPL.action_get_by_id(context, uuid, action_id)
+def action_get_by_request_id(context, uuid, request_id):
+    """Get the action by request_id and given instance."""
+    return IMPL.action_get_by_request_id(context, uuid, request_id)
 
 
 def action_event_start(context, values):
@@ -1646,6 +1646,7 @@ def action_event_finish(context, values):
 
 
 def action_events_get(context, action_id):
+    """Get the events by action id."""
     return IMPL.action_events_get(context, action_id)
 
 

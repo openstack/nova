@@ -463,6 +463,14 @@
             "name": "Volumes",
             "namespace": "http://docs.openstack.org/compute/ext/volumes/api/v1.1",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-instance-actions",
+            "description": "%(text)s",
+            "links": [],
+            "name": "InstanceActions",
+            "namespace": "http://docs.openstack.org/compute/ext/instance-actions/api/v1.1",
+            "updated": "%(timestamp)s"
         }
     ]
 }
