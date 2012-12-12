@@ -16,9 +16,16 @@
 from nova.openstack.common import cfg
 from nova.scheduler import filters
 
+isolated_opts = [
+    cfg.ListOpt('isolated_images',
+                default=[],
+                help='Images to run on isolated host'),
+    cfg.ListOpt('isolated_hosts',
+                default=[],
+                help='Host reserved for specific images'),
+]
 CONF = cfg.CONF
-CONF.import_opt('isolated_hosts', 'nova.config')
-CONF.import_opt('isolated_images', 'nova.config')
+CONF.register_opts(isolated_opts)
 
 
 class IsolatedHostsFilter(filters.BaseHostFilter):
