@@ -30,6 +30,7 @@ from nova.network import manager as network_manager
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 import nova.policy
 from nova import test
 from nova.tests import fake_ldap
@@ -1929,6 +1930,49 @@ class FloatingIPTestCase(test.TestCase):
         # by the retry loop
         self.network.add_virtual_interface(ctxt, 'fake_uuid', 'fake_net')
         self.assertEqual(macs, [])
+
+    def test_deallocate_client_exceptions(self):
+        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
+        self.network.db.floating_ip_get_by_address(
+            self.context, '1.2.3.4').AndRaise(
+                exception.FloatingIpNotFoundForAddress)
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          self.network.deallocate_floating_ip,
+                          self.context, '1.2.3.4')
+
+    def test_associate_client_exceptions(self):
+        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
+        self.network.db.floating_ip_get_by_address(
+            self.context, '1.2.3.4').AndRaise(
+                exception.FloatingIpNotFoundForAddress)
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          self.network.associate_floating_ip,
+                          self.context, '1.2.3.4', '10.0.0.1')
+
+    def test_disassociate_client_exceptions(self):
+        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
+        self.network.db.floating_ip_get_by_address(
+            self.context, '1.2.3.4').AndRaise(
+                exception.FloatingIpNotFoundForAddress)
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          self.network.disassociate_floating_ip,
+                          self.context, '1.2.3.4')
+
+    def test_get_floating_ip_client_exceptions(self):
+        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        self.mox.StubOutWithMock(self.network.db, 'floating_ip_get')
+        self.network.db.floating_ip_get(self.context, 'fake-id').AndRaise(
+            exception.FloatingIpNotFound)
+        self.mox.ReplayAll()
+        self.assertRaises(rpc_common.ClientException,
+                          self.network.get_floating_ip,
+                          self.context, 'fake-id')
 
 
 class NetworkPolicyTestCase(test.TestCase):
