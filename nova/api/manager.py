@@ -17,11 +17,7 @@
 #    under the License.
 
 from nova import manager
-from nova.openstack.common import cfg
-from nova.openstack.common import importutils
-
-CONF = cfg.CONF
-CONF.import_opt('network_driver', 'nova.config')
+from nova.network import driver
 
 
 class MetadataManager(manager.Manager):
@@ -32,7 +28,7 @@ class MetadataManager(manager.Manager):
     """
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
-        self.network_driver = importutils.import_module(CONF.network_driver)
+        self.network_driver = driver.load_network_driver()
 
     def init_host(self):
         """Perform any initialization.
