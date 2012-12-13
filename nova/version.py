@@ -14,9 +14,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+NOVA_VENDOR = "OpenStack Foundation"
+NOVA_PRODUCT = "OpenStack Nova"
+NOVA_PACKAGE = None  # OS distro package version suffix
 NOVA_VERSION = ['2013', '1', None]
 YEAR, COUNT, REVISION = NOVA_VERSION
 FINAL = False   # This becomes true at Release Candidate time
+
+
+def vendor_string():
+    return NOVA_VENDOR
+
+
+def product_string():
+    return NOVA_PRODUCT
+
+
+def package_string():
+    return NOVA_PACKAGE
 
 
 def canonical_version_string():
