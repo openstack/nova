@@ -16,7 +16,6 @@
 #    under the License.
 
 import time
-import unittest
 
 from nova.openstack.common.log import logging
 from nova.tests import fake_network

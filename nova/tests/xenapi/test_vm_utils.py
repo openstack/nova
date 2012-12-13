@@ -2,12 +2,12 @@ import mox
 from nova import context
 from nova import db
 from nova import exception
+from nova import test
 from nova.tests.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
-import unittest
 
 
 class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
@@ -87,7 +87,7 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
                           driver._session, dev_params)
 
 
-class VMRefOrRaiseVMFoundTestCase(unittest.TestCase):
+class VMRefOrRaiseVMFoundTestCase(test.TestCase):
 
     def test_lookup_call(self):
         mock = mox.Mox()
@@ -111,7 +111,7 @@ class VMRefOrRaiseVMFoundTestCase(unittest.TestCase):
         mock.VerifyAll()
 
 
-class VMRefOrRaiseVMNotFoundTestCase(unittest.TestCase):
+class VMRefOrRaiseVMNotFoundTestCase(test.TestCase):
 
     def test_exception_raised(self):
         mock = mox.Mox()

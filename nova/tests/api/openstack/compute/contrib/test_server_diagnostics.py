@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
 from lxml import etree
 
 from nova.api.openstack import compute
@@ -60,7 +58,7 @@ class ServerDiagnosticsTest(test.TestCase):
         self.assertEqual(output, {'data': 'Some diagnostic info'})
 
 
-class TestServerDiagnosticsXMLSerializer(unittest.TestCase):
+class TestServerDiagnosticsXMLSerializer(test.TestCase):
     namespace = wsgi.XMLNS_V11
 
     def _tag(self, elem):
