@@ -35,8 +35,6 @@ function process_option {
     -s|--no-site-packages) no_site_packages=1;;
     -r|--recreate-db) recreate_db=1;;
     -n|--no-recreate-db) recreate_db=0;;
-    -m|--patch-migrate) patch_migrate=1;;
-    -w|--no-patch-migrate) patch_migrate=0;;
     -f|--force) force=1;;
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
@@ -62,7 +60,6 @@ just_pep8=0
 no_pep8=0
 coverage=0
 recreate_db=1
-patch_migrate=1
 verbose=0
 debug=0
 
