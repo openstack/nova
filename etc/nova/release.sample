@@ -1,0 +1,4 @@
+[Nova]
+vendor = Fedora Project
+product = OpenStack Nova
+package = 1.fc18
