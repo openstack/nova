@@ -415,10 +415,13 @@ def _setup_selinux_for_keys(fs):
     # and so to append there you'd need something like:
     #  utils.execute('sed', '-i', '${/^exit 0$/d}' rclocal, run_as_root=True)
     restorecon = [
-        '#!/bin/sh\n',
+        '\n',
         '# Added by Nova to ensure injected ssh keys have the right context\n',
         'restorecon -RF /root/.ssh/ 2>/dev/null || :\n',
     ]
+
+    if not fs.has_file(rclocal):
+        restorecon.insert(0, '#!/bin/sh')
 
     rclocal_rel = os.path.relpath(rclocal, fs)
     _inject_file_into_fs(fs, rclocal_rel, ''.join(restorecon), append=True)
