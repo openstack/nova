@@ -119,9 +119,6 @@ class HyperVDriver(driver.ComputeDriver):
     def get_volume_connector(self, instance):
         return self._volumeops.get_volume_connector(instance)
 
-    def poll_rescued_instances(self, timeout):
-        pass
-
     def get_available_resource(self, nodename):
         return self._hostops.get_available_resource()
 

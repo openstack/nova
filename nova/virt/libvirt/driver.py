@@ -1083,10 +1083,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def poll_rebooting_instances(self, timeout, instances):
         pass
 
-    @exception.wrap_exception()
-    def poll_rescued_instances(self, timeout):
-        pass
-
     def _enable_hairpin(self, xml):
         interfaces = self.get_interfaces(xml)
         for interface in interfaces:

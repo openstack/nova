@@ -154,9 +154,6 @@ class FakeDriver(driver.ComputeDriver):
     def poll_rebooting_instances(self, timeout, instances):
         pass
 
-    def poll_rescued_instances(self, timeout):
-        pass
-
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
                                    block_device_info=None):

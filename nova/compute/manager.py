@@ -1592,6 +1592,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.RESCUED,
                               task_state=None,
                               power_state=current_power_state,
+                              launched_at=timeutils.utcnow(),
                               expected_task_state=task_states.RESCUING)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2818,7 +2819,22 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_rescued_instances(self, context):
         if CONF.rescue_timeout > 0:
-            self.driver.poll_rescued_instances(CONF.rescue_timeout)
+            instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                    self.host)
+
+            rescued_instances = []
+            for instance in instances:
+                if instance['vm_state'] == vm_states.RESCUED:
+                    rescued_instances.append(instance)
+
+            to_unrescue = []
+            for instance in rescued_instances:
+                if timeutils.is_older_than(instance['launched_at'],
+                                           CONF.rescue_timeout):
+                    to_unrescue.append(instance)
+
+            for instance in to_unrescue:
+                self.compute_api.unrescue(context, instance)
 
     @manager.periodic_task
     def _poll_unconfirmed_resizes(self, context):
