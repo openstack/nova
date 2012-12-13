@@ -33,11 +33,21 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import quota
 
+osapi_opts = [
+    cfg.StrOpt('osapi_compute_link_prefix',
+               default=None,
+               help='Base URL that will be presented to users in links '
+                    'to the OpenStack Compute API'),
+    cfg.StrOpt('osapi_glance_link_prefix',
+               default=None,
+               help='Base URL that will be presented to users in links '
+                    'to glance resources'),
+]
+CONF = cfg.CONF
+CONF.register_opts(osapi_opts)
+CONF.import_opt('osapi_max_limit', 'nova.config')
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_link_prefix', 'nova.config')
-CONF.import_opt('osapi_max_limit', 'nova.config')
 QUOTAS = quota.QUOTAS
 
 
@@ -444,8 +454,7 @@ class ViewBuilder(object):
         """Return href string with proper limit and marker params."""
         params = request.params.copy()
         params["marker"] = identifier
-        prefix = self._update_link_prefix(request.application_url,
-                                          CONF.osapi_compute_link_prefix)
+        prefix = self._update_compute_link_prefix(request.application_url)
         url = os.path.join(prefix,
                            request.environ["nova.context"].project_id,
                            collection_name)
@@ -453,8 +462,7 @@ class ViewBuilder(object):
 
     def _get_href_link(self, request, identifier, collection_name):
         """Return an href string pointing to this object."""
-        prefix = self._update_link_prefix(request.application_url,
-                                          CONF.osapi_compute_link_prefix)
+        prefix = self._update_compute_link_prefix(request.application_url)
         return os.path.join(prefix,
                             request.environ["nova.context"].project_id,
                             collection_name,
@@ -463,8 +471,7 @@ class ViewBuilder(object):
     def _get_bookmark_link(self, request, identifier, collection_name):
         """Create a URL that refers to a specific resource."""
         base_url = remove_version_from_href(request.application_url)
-        base_url = self._update_link_prefix(base_url,
-                                            CONF.osapi_compute_link_prefix)
+        base_url = self._update_compute_link_prefix(base_url)
         return os.path.join(base_url,
                             request.environ["nova.context"].project_id,
                             collection_name,
@@ -501,3 +508,11 @@ class ViewBuilder(object):
         prefix_parts = list(urlparse.urlsplit(prefix))
         url_parts[0:2] = prefix_parts[0:2]
         return urlparse.urlunsplit(url_parts)
+
+    def _update_glance_link_prefix(self, orig_url):
+        return self._update_link_prefix(orig_url,
+                                        CONF.osapi_glance_link_prefix)
+
+    def _update_compute_link_prefix(self, orig_url):
+        return self._update_link_prefix(orig_url,
+                                        CONF.osapi_compute_link_prefix)

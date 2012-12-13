@@ -18,11 +18,7 @@
 import os.path
 
 from nova.api.openstack import common
-from nova.openstack.common import cfg
 from nova import utils
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_glance_link_prefix', 'nova.config')
 
 
 class ViewBuilder(common.ViewBuilder):
@@ -122,8 +118,7 @@ class ViewBuilder(common.ViewBuilder):
     def _get_alternate_link(self, request, identifier):
         """Create an alternate link for a specific image id."""
         glance_url = utils.generate_glance_url()
-        glance_url = self._update_link_prefix(glance_url,
-                                              CONF.osapi_glance_link_prefix)
+        glance_url = self._update_glance_link_prefix(glance_url)
         return os.path.join(glance_url,
                             request.environ["nova.context"].project_id,
                             self._collection_name,
