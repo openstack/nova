@@ -771,6 +771,17 @@ class DbCommands(object):
         """Print the current database version."""
         print migration.db_version()
 
+    @args('--max_rows', dest='max_rows', metavar='<number>',
+            help='Maximum number of deleted rows to archive')
+    def archive_deleted_rows(self, max_rows=None):
+        """Move up to max_rows deleted rows from production tables to shadow
+        tables.
+        """
+        if max_rows is not None:
+            max_rows = int(max_rows)
+        admin_context = context.get_admin_context()
+        db.archive_deleted_rows(admin_context, max_rows)
+
 
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""

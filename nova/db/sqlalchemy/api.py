@@ -26,13 +26,20 @@ import functools
 import uuid
 
 from sqlalchemy import and_
+from sqlalchemy import Boolean
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy import Integer
+from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
+from sqlalchemy.schema import Table
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql import func
+from sqlalchemy import String
 
 from nova import block_device
 from nova.compute import task_states
@@ -63,6 +70,7 @@ CONF.import_opt('sql_connection',
 
 LOG = logging.getLogger(__name__)
 
+get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
@@ -4789,3 +4797,94 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
         if rows == 0:
             #It's not running!
             raise exception.TaskNotRunning(task_name=task_name, host=host)
+
+
+def _get_default_deleted_value(table):
+    # TODO(dripton): It would be better to introspect the actual default value
+    # from the column, but I don't see a way to do that in the low-level APIs
+    # of SQLAlchemy 0.7.  0.8 has better introspection APIs, which we should
+    # use when Nova is ready to require 0.8.
+    deleted_column_type = table.c.deleted.type
+    if isinstance(deleted_column_type, Integer):
+        return 0
+    elif isinstance(deleted_column_type, Boolean):
+        return False
+    elif isinstance(deleted_column_type, String):
+        return ""
+    else:
+        return None
+
+
+@require_admin_context
+def archive_deleted_rows_for_table(context, tablename, max_rows=None):
+    """Move up to max_rows rows from one tables to the corresponding
+    shadow table.
+
+    :returns: number of rows archived
+    """
+    # The context argument is only used for the decorator.
+    if max_rows is None:
+        max_rows = 5000
+    engine = get_engine()
+    conn = engine.connect()
+    metadata = MetaData()
+    metadata.bind = engine
+    table = Table(tablename, metadata, autoload=True)
+    default_deleted_value = _get_default_deleted_value(table)
+    shadow_tablename = "shadow_" + tablename
+    rows_archived = 0
+    try:
+        shadow_table = Table(shadow_tablename, metadata, autoload=True)
+    except NoSuchTableError:
+        # No corresponding shadow table; skip it.
+        return rows_archived
+    # Group the insert and delete in a transaction.
+    with conn.begin():
+        # TODO(dripton): It would be more efficient to insert(select) and then
+        # delete(same select) without ever returning the selected rows back to
+        # Python.  sqlalchemy does not support that directly, but we have
+        # nova.db.sqlalchemy.utils.InsertFromSelect for the insert side.  We
+        # need a corresponding function for the delete side.
+        try:
+            column = table.c.id
+            column_name = "id"
+        except AttributeError:
+            # We have one table (dns_domains) where the key is called
+            # "domain" rather than "id"
+            column = table.c.domain
+            column_name = "domain"
+        query = select([table],
+                       table.c.deleted != default_deleted_value).\
+                       order_by(column).limit(max_rows)
+        rows = conn.execute(query).fetchall()
+        if rows:
+            insert_statement = shadow_table.insert()
+            conn.execute(insert_statement, rows)
+            keys = [getattr(row, column_name) for row in rows]
+            delete_statement = table.delete(column.in_(keys))
+            result = conn.execute(delete_statement)
+            rows_archived = result.rowcount
+    return rows_archived
+
+
+@require_admin_context
+def archive_deleted_rows(context, max_rows=None):
+    """Move up to max_rows rows from production tables to the corresponding
+    shadow tables.
+
+    :returns: Number of rows archived.
+    """
+    # The context argument is only used for the decorator.
+    if max_rows is None:
+        max_rows = 5000
+    tablenames = []
+    for model_class in models.__dict__.itervalues():
+        if hasattr(model_class, "__tablename__"):
+            tablenames.append(model_class.__tablename__)
+    rows_archived = 0
+    for tablename in tablenames:
+        rows_archived += archive_deleted_rows_for_table(context, tablename,
+                                         max_rows=max_rows - rows_archived)
+        if rows_archived >= max_rows:
+            break
+    return rows_archived
