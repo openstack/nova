@@ -20,10 +20,17 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 
+ext_opts = [
+    cfg.MultiStrOpt('osapi_compute_extension',
+                    default=[
+                      'nova.api.openstack.compute.contrib.standard_extensions'
+                      ],
+                    help='osapi compute extension to load'),
+]
+CONF = cfg.CONF
+CONF.register_opts(ext_opts)
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension', 'nova.config')
 
 
 class ExtensionManager(base_extensions.ExtensionManager):
