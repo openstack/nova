@@ -14,9 +14,9 @@
             "maxTotalRAMSize": 51200,
             "totalCoresUsed": 0,
             "totalInstancesUsed": 0,
-            "totalKeyPairsUsed": 0,
             "totalRAMUsed": 0,
-            "totalSecurityGroupsUsed": 0
+            "totalSecurityGroupsUsed": 0,
+            "totalFloatingIpsUsed": 0
         },
         "rate": [
             {

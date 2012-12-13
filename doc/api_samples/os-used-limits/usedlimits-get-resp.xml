@@ -26,10 +26,10 @@
     <limit name="totalRAMUsed" value="0"/>
     <limit name="totalInstancesUsed" value="0"/>
     <limit name="maxSecurityGroups" value="10"/>
+    <limit name="totalFloatingIpsUsed" value="0"/>
     <limit name="maxTotalCores" value="20"/>
     <limit name="totalSecurityGroupsUsed" value="0"/>
     <limit name="maxTotalFloatingIps" value="10"/>
-    <limit name="totalKeyPairsUsed" value="0"/>
     <limit name="maxTotalInstances" value="10"/>
     <limit name="totalCoresUsed" value="0"/>
     <limit name="maxTotalRAMSize" value="51200"/>

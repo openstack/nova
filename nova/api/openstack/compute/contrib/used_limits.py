@@ -56,10 +56,8 @@ class UsedLimitsController(wsgi.Controller):
             'totalRAMUsed': 'ram',
             'totalCoresUsed': 'cores',
             'totalInstancesUsed': 'instances',
-            'totalVolumesUsed': 'volumes',
-            'totalVolumeGigabytesUsed': 'gigabytes',
-            'totalSecurityGroupsUsed': 'floating_ips',
-            'totalKeyPairsUsed': 'key_pairs',
+            'totalFloatingIpsUsed': 'floating_ips',
+            'totalSecurityGroupsUsed': 'security_groups',
         }
         used_limits = {}
         for display_name, quota in quota_map.iteritems():

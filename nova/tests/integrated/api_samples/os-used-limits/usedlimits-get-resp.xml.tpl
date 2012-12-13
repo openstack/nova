@@ -31,7 +31,7 @@
     <limit name="maxTotalCores" value="20"/>
     <limit name="totalSecurityGroupsUsed" value="0"/>
     <limit name="maxTotalFloatingIps" value="10"/>
-    <limit name="totalKeyPairsUsed" value="0"/>
+    <limit name="totalFloatingIpsUsed" value="0"/>
     <limit name="maxTotalRAMSize" value="51200"/>
   </absolute>
 </limits>

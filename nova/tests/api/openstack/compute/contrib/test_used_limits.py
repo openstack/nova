@@ -52,10 +52,8 @@ class UsedLimitsTestCase(test.TestCase):
             'totalRAMUsed': 'ram',
             'totalCoresUsed': 'cores',
             'totalInstancesUsed': 'instances',
-            'totalVolumesUsed': 'volumes',
-            'totalVolumeGigabytesUsed': 'gigabytes',
-            'totalSecurityGroupsUsed': 'floating_ips',
-            'totalKeyPairsUsed': 'key_pairs',
+            'totalFloatingIpsUsed': 'floating_ips',
+            'totalSecurityGroupsUsed': 'security_groups',
         }
         limits = {}
         for display_name, q in quota_map.iteritems():
