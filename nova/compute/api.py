@@ -462,7 +462,7 @@ class API(base.Base):
 
             # Handle config_drive
             config_drive_id = None
-            if config_drive and config_drive is not True:
+            if config_drive and not utils.is_valid_boolstr(config_drive):
                 # config_drive is volume id
                 config_drive_id = config_drive
                 config_drive = None
