@@ -87,6 +87,28 @@ class SchedulerManagerTestCase(test.TestCase):
                 service_name=service_name, host=host,
                 capabilities=capabilities)
 
+    def test_update_service_multiple_capabilities(self):
+        service_name = 'fake_service'
+        host = 'fake_host'
+
+        self.mox.StubOutWithMock(self.manager.driver,
+                                 'update_service_capabilities')
+
+        capab1 = {'fake_capability': 'fake_value1'},
+        capab2 = {'fake_capability': 'fake_value2'},
+        capab3 = None
+        self.manager.driver.update_service_capabilities(
+                service_name, host, capab1)
+        self.manager.driver.update_service_capabilities(
+                service_name, host, capab2)
+        # None is converted to {}
+        self.manager.driver.update_service_capabilities(
+                service_name, host, {})
+        self.mox.ReplayAll()
+        self.manager.update_service_capabilities(self.context,
+                service_name=service_name, host=host,
+                capabilities=[capab1, capab2, capab3])
+
     def test_show_host_resources(self):
         host = 'fake_host'
 

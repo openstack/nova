@@ -47,6 +47,8 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.1 - Add image_id to create_volume()
         2.2 - Remove reservations argument to create_volume()
         2.3 - Remove create_volume()
+        2.4 - Change update_service_capabilities()
+                - accepts a list of capabilities
     '''
 
     #
@@ -102,4 +104,5 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             capabilities):
         self.fanout_cast(ctxt, self.make_msg('update_service_capabilities',
                 service_name=service_name, host=host,
-                capabilities=capabilities))
+                capabilities=capabilities),
+                version='2.4')
