@@ -357,10 +357,13 @@ def _setup_selinux_for_keys(fs, sshdir):
     # and so to append there you'd need something like:
     #  utils.execute('sed', '-i', '${/^exit 0$/d}' rclocal, run_as_root=True)
     restorecon = [
-        '#!/bin/sh\n',
+        '\n',
         '# Added by Nova to ensure injected ssh keys have the right context\n',
         'restorecon -RF %s 2>/dev/null || :\n' % sshdir,
     ]
+
+    if not fs.has_file(rclocal):
+        restorecon.insert(0, '#!/bin/sh')
 
     _inject_file_into_fs(fs, rclocal, ''.join(restorecon), append=True)
     fs.set_permissions(rclocal, 0700)
