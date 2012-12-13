@@ -81,14 +81,19 @@ class ConfigDriveBuilder(object):
                       {'filepath': path})
 
     def _make_iso9660(self, path):
+        publisher = "%(product)s %(version)s" % {
+            'product': version.product_string(),
+            'version': version.version_string_with_package()
+            }
+
         utils.execute(CONF.mkisofs_cmd,
                       '-o', path,
                       '-ldots',
                       '-allow-lowercase',
                       '-allow-multidot',
                       '-l',
-                      '-publisher', ('"OpenStack nova %s"'
-                                     % version.version_string()),
+                      '-publisher',
+                      publisher,
                       '-quiet',
                       '-J',
                       '-r',
