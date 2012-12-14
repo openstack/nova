@@ -15,6 +15,7 @@
 
 import base64
 import datetime
+import inspect
 import os
 import re
 import urllib
@@ -310,6 +311,77 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _do_delete(self, url):
         return self._get_response(url, 'DELETE')
+
+
+class ApiSamplesTrap(ApiSampleTestBase):
+    """Make sure extensions don't get added without tests"""
+
+    all_extensions = True
+
+    def _get_extensions_tested(self):
+        tests = []
+        for attr in globals().values():
+            if not inspect.isclass(attr):
+                continue  # Skip non-class objects
+            if not issubclass(attr, integrated_helpers._IntegratedTestBase):
+                continue  # Skip non-test classes
+            if attr.extension_name is None:
+                continue  # Skip base tests
+            cls = importutils.import_class(attr.extension_name)
+            tests.append(cls.alias)
+        return tests
+
+    def _get_extensions(self):
+        extensions = []
+        response = self._do_get('extensions')
+        for extension in jsonutils.loads(response.read())['extensions']:
+            extensions.append(str(extension['alias']))
+        return extensions
+
+    def test_all_extensions_have_samples(self):
+        # NOTE(danms): This is a list of extensions which are currently
+        # in the tree but that don't (yet) have tests. This list should
+        # NOT be allowed to grow, and should shrink to zero (and be
+        # removed) soon.
+        do_not_approve_additions = []
+        do_not_approve_additions.append('NMN')
+        do_not_approve_additions.append('OS-FLV-DISABLED')
+        do_not_approve_additions.append('os-config-drive')
+        do_not_approve_additions.append('os-coverage')
+        do_not_approve_additions.append('os-create-server-ext')
+        do_not_approve_additions.append('os-fixed-ips')
+        do_not_approve_additions.append('os-flavor-access')
+        do_not_approve_additions.append('os-flavor-extra-specs')
+        do_not_approve_additions.append('os-flavor-rxtx')
+        do_not_approve_additions.append('os-flavor-swap')
+        do_not_approve_additions.append('os-floating-ip-dns')
+        do_not_approve_additions.append('os-floating-ip-pools')
+        do_not_approve_additions.append('os-fping')
+        do_not_approve_additions.append('os-hypervisors')
+        do_not_approve_additions.append('os-instance_usage_audit_log')
+        do_not_approve_additions.append('os-networks')
+        do_not_approve_additions.append('os-quota-class-sets')
+        do_not_approve_additions.append('os-services')
+        do_not_approve_additions.append('os-volumes')
+
+        tests = self._get_extensions_tested()
+        extensions = self._get_extensions()
+        missing_tests = []
+        for extension in extensions:
+            # NOTE(danms): if you add tests, remove it from the
+            # exclusions list
+            self.assertFalse(extension in do_not_approve_additions and
+                             extension in tests)
+
+            # NOTE(danms): if you add an extension, it must come with
+            # api_samples tests!
+            if (extension not in tests and
+                extension not in do_not_approve_additions):
+                missing_tests.append(extension)
+
+        if missing_tests:
+            LOG.error("Extensions are missing tests: %s" % missing_tests)
+        self.assertEqual(missing_tests, [])
 
 
 class VersionsSampleJsonTest(ApiSampleTestBase):
