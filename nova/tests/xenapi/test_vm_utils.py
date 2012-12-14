@@ -10,6 +10,29 @@ from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
 
+XENSM_TYPE = 'xensm'
+ISCSI_TYPE = 'iscsi'
+
+
+def get_fake_dev_params(sr_type):
+    fakes = {XENSM_TYPE: {'sr_uuid': 'falseSR',
+                          'name_label': 'fake_storage',
+                          'name_description': 'test purposes',
+                          'server': 'myserver',
+                          'serverpath': '/local/scratch/myname',
+                          'sr_type': 'nfs',
+                          'introduce_sr_keys': ['server',
+                                                'serverpath',
+                                                'sr_type'],
+                          'vdi_uuid': 'falseVDI'},
+             ISCSI_TYPE: {'volume_id': 'fake_volume_id',
+                          'target_lun': 1,
+                          'target_iqn': 'fake_iqn:volume-fake_volume_id',
+                          'target_portal': u'localhost:3260',
+                          'target_discovered': False}, }
+    return fakes[sr_type]
+
+
 class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(GetInstanceForVdisForSrTestCase, self).setUp()
@@ -50,15 +73,8 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
 
         self.assertEquals([], result)
 
-    def test_get_vdis_for_boot_from_vol(self):
-        dev_params = {'sr_uuid': 'falseSR',
-                      'name_label': 'fake_storage',
-                      'name_description': 'test purposes',
-                      'server': 'myserver',
-                      'serverpath': '/local/scratch/myname',
-                      'sr_type': 'nfs',
-                      'introduce_sr_keys': ['server', 'serverpath', 'sr_type'],
-                      'vdi_uuid': 'falseVDI'}
+    def test_get_vdis_for_boot_from_vol_with_sr_uuid(self):
+        dev_params = get_fake_dev_params(XENSM_TYPE)
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
@@ -74,17 +90,19 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
             return None
 
         self.stubs.Set(volume_utils, 'introduce_sr', bad_introduce_sr)
-        dev_params = {'sr_uuid': 'falseSR',
-                      'name_label': 'fake_storage',
-                      'name_description': 'test purposes',
-                      'server': 'myserver',
-                      'serverpath': '/local/scratch/myname',
-                      'sr_type': 'nfs',
-                      'introduce_sr_keys': ['server', 'serverpath', 'sr_type'],
-                      'vdi_uuid': 'falseVDI'}
+        dev_params = get_fake_dev_params(XENSM_TYPE)
         self.assertRaises(exception.NovaException,
                           vm_utils.get_vdis_for_boot_from_vol,
                           driver._session, dev_params)
+
+    def test_get_vdis_for_boot_from_iscsi_vol_missing_sr_uuid(self):
+        dev_params = get_fake_dev_params(ISCSI_TYPE)
+        stubs.stubout_session(self.stubs, fake.SessionBase)
+        driver = xenapi_conn.XenAPIDriver(False)
+
+        result = vm_utils.get_vdis_for_boot_from_vol(driver._session,
+                                                     dev_params)
+        self.assertNotEquals(result['root']['uuid'], None)
 
 
 class VMRefOrRaiseVMFoundTestCase(test.TestCase):

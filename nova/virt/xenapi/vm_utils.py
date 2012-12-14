@@ -462,35 +462,29 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
 
 def get_vdis_for_boot_from_vol(session, dev_params):
     vdis = {}
-    sr_uuid = dev_params['sr_uuid']
-    sr_ref = volume_utils.find_sr_by_uuid(session,
-                                          sr_uuid)
+    sr_uuid, label, sr_params = volume_utils.parse_sr_info(dev_params)
+    sr_ref = volume_utils.find_sr_by_uuid(session, sr_uuid)
     # Try introducing SR if it is not present
     if not sr_ref:
-        if 'name_label' not in dev_params:
-            label = 'tempSR-%s' % dev_params['volume_id']
-        else:
-            label = dev_params['name_label']
-
-        if 'name_description' not in dev_params:
-            desc = ''
-        else:
-            desc = dev_params.get('name_description')
-        sr_params = {}
-        for k in dev_params['introduce_sr_keys']:
-            sr_params[k] = dev_params[k]
-
-        sr_params['name_description'] = desc
-        sr_ref = volume_utils.introduce_sr(session, sr_uuid, label,
-                                           sr_params)
+        sr_ref = volume_utils.introduce_sr(session, sr_uuid, label, sr_params)
 
     if sr_ref is None:
         raise exception.NovaException(_('SR not present and could not be '
                                         'introduced'))
     else:
-        session.call_xenapi("SR.scan", sr_ref)
-        return {'root': dict(uuid=dev_params['vdi_uuid'],
-                file=None, osvol=True)}
+        if 'vdi_uuid' in dev_params:
+            session.call_xenapi("SR.scan", sr_ref)
+            vdis = {'root': dict(uuid=dev_params['vdi_uuid'],
+                    file=None, osvol=True)}
+        else:
+            try:
+                vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
+                vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
+                vdis = {'root': dict(uuid=vdi_rec['uuid'],
+                                     file=None, osvol=True)}
+            except volume_utils.StorageError, exc:
+                LOG.exception(exc)
+                volume_utils.forget_sr(session, sr_uuid)
     return vdis
 
 
@@ -523,8 +517,7 @@ def get_vdis_for_instance(context, session, instance, name_label, image,
             bdm_root_dev = block_device_info['block_device_mapping'][0]
             dev_params = bdm_root_dev['connection_info']['data']
             LOG.debug(dev_params)
-            return get_vdis_for_boot_from_vol(session,
-                                             dev_params)
+            return get_vdis_for_boot_from_vol(session, dev_params)
     return _create_image(context, session, instance, name_label, image,
                         image_type)
 

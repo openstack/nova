@@ -130,28 +130,9 @@ class VolumeOps(object):
     def connect_volume(self, connection_data, dev_number, instance_name,
                        vm_ref):
 
-        if 'name_label' not in connection_data:
-            label = 'tempSR-%s' % connection_data['volume_id']
-        else:
-            label = connection_data['name_label']
-            del connection_data['name_label']
-
-        if 'name_description' not in connection_data:
-            desc = 'Disk-for:%s' % instance_name
-        else:
-            desc = connection_data['name_description']
-
-        sr_params = {}
-        if u'sr_uuid' not in connection_data:
-            sr_params = volume_utils.parse_volume_info(connection_data)
-            uuid = "FA15E-D15C-" + str(sr_params['id'])
-            sr_params['sr_type'] = 'iscsi'
-        else:
-            uuid = connection_data['sr_uuid']
-            for k in connection_data['introduce_sr_keys']:
-                sr_params[k] = connection_data[k]
-
-        sr_params['name_description'] = desc
+        description = 'Disk-for:%s' % instance_name
+        uuid, label, sr_params = volume_utils.parse_sr_info(connection_data,
+                                                            description)
 
         # Introduce SR
         try:
