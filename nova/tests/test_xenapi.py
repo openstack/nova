@@ -113,6 +113,33 @@ def set_image_fixtures():
         image_service.create(None, image_meta)
 
 
+def get_fake_device_info():
+    # FIXME: 'sr_uuid', 'introduce_sr_keys', sr_type and vdi_uuid
+    # can be removed from the dict when LP bug #1087308 is fixed
+    fake_vdi_ref = xenapi_fake.create_vdi('fake-vdi', None)
+    fake_vdi_uuid = xenapi_fake.get_record('VDI', fake_vdi_ref)['uuid']
+    fake = {'block_device_mapping':
+              [{'connection_info': {'driver_volume_type': 'iscsi',
+                                    'data': {'sr_uuid': 'falseSR',
+                                             'introduce_sr_keys': ['sr_type'],
+                                             'sr_type': 'iscsi',
+                                             'vdi_uuid': fake_vdi_uuid,
+                                             'target_discovered': False,
+                                             'target_iqn': 'foo_iqn:foo_volid',
+                                             'target_portal': 'localhost:3260',
+                                             'volume_id': 'foo_volid',
+                                             'target_lun': 1,
+                                             'auth_password': 'my-p@55w0rd',
+                                             'auth_username': 'johndoe',
+                                             'auth_method': u'CHAP'}, },
+                'mount_device': 'vda',
+                'delete_on_termination': False}, ],
+            'root_device_name': '/dev/sda',
+            'ephemerals': [],
+            'swap': None, }
+    return fake
+
+
 def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
     """
     vm_utils.with_vdi_attached_here needs to be stubbed out because it
@@ -550,7 +577,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                     instance_type_id="3", os_type="linux",
                     hostname="test", architecture="x86-64", instance_id=1,
                     injected_files=None, check_injection=False,
-                    create_record=True, empty_dns=False):
+                    create_record=True, empty_dns=False,
+                    image_meta={'id': IMAGE_VHD,
+                                'disk_format': 'vhd'},
+                    block_device_info=None):
         if injected_files is None:
             injected_files = []
 
@@ -582,10 +612,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             # NOTE(tr3buchet): this is a terrible way to do this...
             network_info[0]['network']['subnets'][0]['dns'] = []
 
-        image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd'}
         self.conn.spawn(self.context, instance, image_meta, injected_files,
-                        'herp', network_info)
+                        'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance['os_type'])
@@ -680,6 +708,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK)
         self.check_vm_params_for_linux_with_external_kernel()
+
+    def test_spawn_boot_from_volume_no_image_meta(self):
+        dev_info = get_fake_device_info()
+        self._test_spawn(None, None, None,
+                         image_meta={}, block_device_info=dev_info)
+
+    def test_spawn_boot_from_volume_with_image_meta(self):
+        dev_info = get_fake_device_info()
+        self._test_spawn(None, None, None,
+                         block_device_info=dev_info)
 
     def test_spawn_netinject_file(self):
         self.flags(flat_injected=True)
@@ -1320,6 +1358,40 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
     def test_vhd(self):
         image_meta = {'id': 'a', 'disk_format': 'vhd'}
         self.assert_disk_type(image_meta, vm_utils.ImageType.DISK_VHD)
+
+    def test_none(self):
+        image_meta = None
+        self.assert_disk_type(image_meta, None)
+
+
+class XenAPIDetermineIsPVTestCase(test.TestCase):
+    """Unit tests for code that detects the PV status based on ImageType."""
+    def assert_pv_status(self, disk_image_type, os_type, expected_pv_status):
+        session = None
+        vdi_ref = None
+        actual = vm_utils.determine_is_pv(session, vdi_ref,
+                                          disk_image_type, os_type)
+        self.assertEqual(expected_pv_status, actual)
+
+    def test_windows_vhd(self):
+        self.assert_pv_status(vm_utils.ImageType.DISK_VHD, 'windows', False)
+
+    def test_linux_vhd(self):
+        self.assert_pv_status(vm_utils.ImageType.DISK_VHD, 'linux', True)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_raw(self):
+        self.assert_pv_status(vm_utils.ImageType.DISK_RAW, 'linux', True)
+
+    def test_disk(self):
+        self.assert_pv_status(vm_utils.ImageType.DISK, None, True)
+
+    def test_iso(self):
+        self.assert_pv_status(vm_utils.ImageType.DISK_ISO, None, False)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_none(self):
+        self.assert_pv_status(None, None, True)
 
 
 class CompareVersionTestCase(test.TestCase):

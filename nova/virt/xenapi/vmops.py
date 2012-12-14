@@ -239,7 +239,7 @@ class VMOps(object):
                       image_meta, block_device_info=None):
         vdis = vm_utils.get_vdis_for_instance(context, self._session,
                                           instance, name_label,
-                                          image_meta['id'],
+                                          image_meta.get('id'),
                                           disk_image_type,
                                           block_device_info=block_device_info)
         # Just get the VDI ref once
