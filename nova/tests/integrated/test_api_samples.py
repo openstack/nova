@@ -348,7 +348,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # removed) soon.
         do_not_approve_additions = []
         do_not_approve_additions.append('NMN')
-        do_not_approve_additions.append('OS-FLV-DISABLED')
         do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-coverage')
         do_not_approve_additions.append('os-create-server-ext')
@@ -2102,3 +2101,30 @@ class NetworksAssociateJsonTests(ApiSampleTestBase):
 
 class NetworksAssociateXmlTests(NetworksAssociateJsonTests):
     ctype = 'xml'
+
+
+class FlavorDisabledSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.flavor_disabled."
+                      "Flavor_disabled")
+
+    def test_show_flavor(self):
+        """Get api sample to show flavor_disabled attr. of a flavor"""
+        flavor_id = 1
+        response = self._do_get('flavors/%s' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['flavor_id'] = flavor_id
+        return self._verify_response('flavor-show-get-resp', subs,
+                                     response)
+
+    def test_detail_flavor(self):
+        """Get api sample to show details of a flavor"""
+        response = self._do_get('flavors/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavor-detail-get-resp', subs,
+                                     response)
+
+
+class FlavorDisabledSampleXmlTests(FlavorDisabledSampleJsonTests):
+    ctype = "xml"
