@@ -24,38 +24,22 @@ from nova.virt import fake
 from nova.virt import virtapi
 
 
-class VirtAPIBaseTest(test.TestCase):
+class VirtAPIBaseTest(test.TestCase, test.APICoverage):
+
+    cover_api = virtapi.VirtAPI
+
     def setUp(self):
         super(VirtAPIBaseTest, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
+        self.set_up_virtapi()
 
-    @classmethod
-    def set_up_virtapi(cls):
-        cls.virtapi = virtapi.VirtAPI()
-
-    @classmethod
-    def setUpClass(cls):
-        super(VirtAPIBaseTest, cls).setUpClass()
-        cls.set_up_virtapi()
-        cls._totest_methods = [x for x in dir(cls.virtapi)
-                               if not x.startswith('_')]
-        cls._tested_methods = [x for x in dir(cls)
-                               if x.startswith('test_')]
-
-    def _tested_method(self, method):
-        self._tested_methods.remove('test_' + method)
-        self._totest_methods.remove(method)
-
-    def run(self, result):
-        super(VirtAPIBaseTest, self).run(result)
-        if not self._tested_methods:
-            self.assertEqual(self._totest_methods, [])
+    def set_up_virtapi(self):
+        self.virtapi = virtapi.VirtAPI()
 
     def assertExpected(self, method, *args, **kwargs):
         self.assertRaises(NotImplementedError,
                           getattr(self.virtapi, method), self.context,
                           *args, **kwargs)
-        self._tested_method(method)
 
     def test_instance_update(self):
         self.assertExpected('instance_update', 'fake-uuid',
@@ -94,9 +78,11 @@ class VirtAPIBaseTest(test.TestCase):
 
 
 class FakeVirtAPITest(VirtAPIBaseTest):
-    @classmethod
-    def set_up_virtapi(cls):
-        cls.virtapi = fake.FakeVirtAPI()
+
+    cover_api = fake.FakeVirtAPI
+
+    def set_up_virtapi(self):
+        self.virtapi = fake.FakeVirtAPI()
 
     def assertExpected(self, method, *args, **kwargs):
         if method == 'instance_update':
@@ -119,7 +105,6 @@ class FakeVirtAPITest(VirtAPIBaseTest):
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
         self.assertEqual(result, 'it worked')
-        self._tested_method(method)
 
 
 class FakeCompute(object):
@@ -134,27 +119,28 @@ class FakeCompute(object):
 
 
 class ComputeVirtAPITest(VirtAPIBaseTest):
-    @classmethod
-    def set_up_virtapi(cls):
-        cls.compute = FakeCompute()
-        cls.virtapi = compute_manager.ComputeVirtAPI(cls.compute)
 
-    @classmethod
-    def setUpClass(cls):
-        super(ComputeVirtAPITest, cls).setUpClass()
+    cover_api = compute_manager.ComputeVirtAPI
+
+    def set_up_virtapi(self):
+        self.compute = FakeCompute()
+        self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
+
+    def setUp(self):
+        super(ComputeVirtAPITest, self).setUp()
         # NOTE(danms): Eventually these should all be migrated to the
         # conductor, but until then, dispatch appropriately.
-        cls.conductor_methods = ['instance_update', 'instance_get_by_uuid',
-                                 'instance_get_all_by_host',
-                                 'aggregate_get_by_host',
-                                 'aggregate_metadata_add',
-                                 'aggregate_metadata_delete',
-                                  ]
-        cls.db_methods = ['security_group_get_by_instance',
-                          'security_group_rule_get_by_security_group',
-                          'provider_fw_rule_get_all',
-                          'agent_build_get_by_triple',
-                           ]
+        self.conductor_methods = ['instance_update', 'instance_get_by_uuid',
+                                  'instance_get_all_by_host',
+                                  'aggregate_get_by_host',
+                                  'aggregate_metadata_add',
+                                  'aggregate_metadata_delete',
+                                   ]
+        self.db_methods = ['security_group_get_by_instance',
+                           'security_group_rule_get_by_security_group',
+                           'provider_fw_rule_get_all',
+                           'agent_build_get_by_triple',
+                            ]
 
     def assertExpected(self, method, *args, **kwargs):
         if method in self.conductor_methods:
@@ -170,4 +156,3 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
         self.assertEqual(result, 'it worked')
-        self._tested_method(method)
