@@ -268,8 +268,8 @@ class NbdTestCase(test.TestCase):
                                              self.fake_exists_one))
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd',
                                              self.fake_trycmd_creates_pid))
-        self.useFixture(fixtures.MonkeyPatch(('nova.virt.disk.mount.nbd.'
-                                              'MAX_NBD_WAIT'), -10))
+        self.useFixture(fixtures.MonkeyPatch(('nova.virt.disk.mount.api.'
+                                              'MAX_DEVICE_WAIT'), -10))
 
         # No error logged, device consumed
         self.assertFalse(n.get_dev())

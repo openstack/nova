@@ -26,11 +26,14 @@ class LoopMount(api.Mount):
     """loop back support for raw images."""
     mode = 'loop'
 
-    def get_dev(self):
+    def _inner_get_dev(self):
         out, err = utils.trycmd('losetup', '--find', '--show', self.image,
                                 run_as_root=True)
         if err:
             self.error = _('Could not attach image to loopback: %s') % err
+            LOG.info(_('Loop mount error: %s'), self.error)
+            self.linked = False
+            self.device = None
             return False
 
         self.device = out.strip()
@@ -38,9 +41,22 @@ class LoopMount(api.Mount):
         self.linked = True
         return True
 
+    def get_dev(self):
+        # NOTE(mikal): the retry is required here in case we are low on loop
+        # devices. Note however that modern kernels will use more loop devices
+        # if they exist. If you're seeing lots of retries, consider adding
+        # more devices.
+        return self._get_dev_retry_helper()
+
     def unget_dev(self):
         if not self.linked:
             return
+
+        # NOTE(mikal): On some kernels, losetup -d will intermittently fail,
+        # thus leaking a loop device unless the losetup --detach is retried:
+        # https://lkml.org/lkml/2012/9/28/62
         LOG.debug(_("Release loop device %s"), self.device)
-        utils.execute('losetup', '--detach', self.device, run_as_root=True)
+        utils.execute('losetup', '--detach', self.device, run_as_root=True,
+                      attempts=3)
         self.linked = False
+        self.device = None
