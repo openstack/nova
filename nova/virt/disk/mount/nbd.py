@@ -37,14 +37,12 @@ CONF = cfg.CONF
 CONF.register_opts(nbd_opts)
 
 NBD_DEVICE_RE = re.compile('nbd[0-9]+')
+MAX_NBD_WAIT = 30
 
 
 class NbdMount(api.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
-
-    # NOTE(padraig): The remaining issue with this code is that multiple
-    # workers on a system can race against each other.
 
     def _detect_nbd_devices(self):
         """Detect nbd device files."""
@@ -78,7 +76,7 @@ class NbdMount(api.Mount):
             pid = int(f.readline())
         return pid
 
-    def get_dev(self):
+    def _inner_get_dev(self):
         device = self._allocate_nbd()
         if not device:
             return False
@@ -102,10 +100,31 @@ class NbdMount(api.Mount):
                 break
             time.sleep(1)
         else:
+            _out, err = utils.trycmd('qemu-nbd', '-d', device,
+                                     run_as_root=True)
+            if err:
+                LOG.warn(_('Detaching from erroneous nbd device returned '
+                           'error: %s'), err)
             self.error = _('nbd device %s did not show up') % device
             return False
 
+        self.error = ''
         self.linked = True
+        return True
+
+    def get_dev(self):
+        """Retry requests for NBD devices."""
+        start_time = time.time()
+        device = self._inner_get_dev()
+        while not device:
+            LOG.info(_('nbd device allocation failed. Will retry in 2 '
+                       'seconds.'))
+            time.sleep(2)
+            if time.time() - start_time > MAX_NBD_WAIT:
+                LOG.warn(_('nbd device allocation failed after repeated '
+                           'retries.'))
+                return False
+            device = self._inner_get_dev()
         return True
 
     def unget_dev(self):
