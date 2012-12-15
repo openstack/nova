@@ -36,7 +36,7 @@ from nova import test
 FAKE_IMAGE_REF = 'fake-image-ref'
 
 
-class _BaseTestCase(test.TestCase):
+class _BaseTestCase(object):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
         self.db = None
@@ -223,7 +223,7 @@ class _BaseTestCase(test.TestCase):
         self.assertEqual(port, backdoor_port)
 
 
-class ConductorTestCase(_BaseTestCase):
+class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
     def setUp(self):
         super(ConductorTestCase, self).setUp()
@@ -231,7 +231,7 @@ class ConductorTestCase(_BaseTestCase):
         self.stub_out_client_exceptions()
 
 
-class ConductorRPCAPITestCase(_BaseTestCase):
+class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests"""
     def setUp(self):
         super(ConductorRPCAPITestCase, self).setUp()
@@ -240,7 +240,7 @@ class ConductorRPCAPITestCase(_BaseTestCase):
         self.conductor = conductor_rpcapi.ConductorAPI()
 
 
-class ConductorAPITestCase(_BaseTestCase):
+class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor API Tests"""
     def setUp(self):
         super(ConductorAPITestCase, self).setUp()

@@ -29,6 +29,7 @@ try:
     from boto.connection import HTTPResponse
 except ImportError:
     from httplib import HTTPResponse
+import fixtures
 import webob
 
 from nova.api import auth
@@ -221,6 +222,7 @@ class ApiEc2TestCase(test.TestCase):
         self.app = auth.InjectContext(ctxt, ec2.FaultWrapper(
                 ec2.RequestLogging(ec2.Requestify(ec2.Authorizer(ec2.Executor()
                                ), 'nova.api.ec2.cloud.CloudController'))))
+        self.useFixture(fixtures.FakeLogger('boto'))
 
     def expect_http(self, host=None, is_secure=False, api_version=None):
         """Returns a new EC2 connection"""

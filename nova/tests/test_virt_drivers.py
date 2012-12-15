@@ -57,7 +57,7 @@ def catch_notimplementederror(f):
     return wrapped_func
 
 
-class _FakeDriverBackendTestCase(test.TestCase):
+class _FakeDriverBackendTestCase(object):
     def _setup_fakelibvirt(self):
         # So that the _supports_direct_io does the test based
         # on the current working directory, instead of the
@@ -142,7 +142,7 @@ class _FakeDriverBackendTestCase(test.TestCase):
         super(_FakeDriverBackendTestCase, self).tearDown()
 
 
-class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
+class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
     """Test that ComputeManager can successfully load both
     old style and new style drivers and end up with the correct
     final class"""
@@ -532,19 +532,19 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.remove_from_aggregate(self.ctxt, 'aggregate', 'host')
 
 
-class AbstractDriverTestCase(_VirtDriverTestCase):
+class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
         self.driver_module = "nova.virt.driver.ComputeDriver"
         super(AbstractDriverTestCase, self).setUp()
 
 
-class FakeConnectionTestCase(_VirtDriverTestCase):
+class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
         self.driver_module = 'nova.virt.fake.FakeDriver'
         super(FakeConnectionTestCase, self).setUp()
 
 
-class LibvirtConnTestCase(_VirtDriverTestCase):
+class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
         # Point _VirtDriverTestCase at the right module
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'

@@ -43,9 +43,16 @@ class BaseTestCase(test.TestCase):
     def tearDown(self):
         super(BaseTestCase, self).tearDown()
 
-        has_errors = len([test for (test, msgs) in self._currentResult.errors
+        # python-subunit will wrap test results with a decorator.
+        # Need to access the decorated member of results to get the
+        # actual test result when using python-subunit.
+        if hasattr(self._currentResult, 'decorated'):
+            result = self._currentResult.decorated
+        else:
+            result = self._currentResult
+        has_errors = len([test for (test, msgs) in result.errors
             if test.id() == self.id()]) > 0
-        failed = len([test for (test, msgs) in self._currentResult.failures
+        failed = len([test for (test, msgs) in result.failures
             if test.id() == self.id()]) > 0
 
         if not has_errors and not failed:

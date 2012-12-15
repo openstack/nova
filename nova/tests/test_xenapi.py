@@ -339,8 +339,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(vm_utils, '_safe_copy_vdi', fake_safe_copy_vdi)
 
     def tearDown(self):
-        super(XenAPIVMTestCase, self).tearDown()
         fake_image.FakeImageService_reset()
+        super(XenAPIVMTestCase, self).tearDown()
 
     def test_init_host(self):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',

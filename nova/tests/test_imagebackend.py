@@ -27,7 +27,7 @@ from nova.virt.libvirt import imagebackend
 CONF = cfg.CONF
 
 
-class _ImageTestCase(test.TestCase):
+class _ImageTestCase(object):
     INSTANCES_PATH = '/fake'
 
     def mock_create_image(self, image):
@@ -111,7 +111,7 @@ class _ImageTestCase(test.TestCase):
         self.mox.VerifyAll()
 
 
-class RawTestCase(_ImageTestCase):
+class RawTestCase(_ImageTestCase, test.TestCase):
 
     SIZE = 1024
 
@@ -161,7 +161,7 @@ class RawTestCase(_ImageTestCase):
         self.mox.VerifyAll()
 
 
-class Qcow2TestCase(_ImageTestCase):
+class Qcow2TestCase(_ImageTestCase, test.TestCase):
     SIZE = 1024 * 1024 * 1024
 
     def setUp(self):
@@ -224,7 +224,7 @@ class Qcow2TestCase(_ImageTestCase):
         self.mox.VerifyAll()
 
 
-class LvmTestCase(_ImageTestCase):
+class LvmTestCase(_ImageTestCase, test.TestCase):
     VG = 'FakeVG'
     TEMPLATE_SIZE = 512
     SIZE = 1024
