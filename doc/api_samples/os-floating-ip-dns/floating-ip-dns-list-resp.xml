@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<domain_entries>
+  <domain_entry project="project1" scope="public" domain="domain1.example.org" availability_zone="None"/>
+</domain_entries>
