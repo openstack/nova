@@ -177,15 +177,9 @@ class Qcow2(Image):
         @lockutils.synchronized(base, 'nova-', external=True,
                                 lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
-            qcow2_base = base
+            libvirt_utils.create_cow_image(base, target)
             if size:
-                size_gb = size / (1024 * 1024 * 1024)
-                qcow2_base += '_%d' % size_gb
-                if not os.path.exists(qcow2_base):
-                    with utils.remove_path_on_error(qcow2_base):
-                        libvirt_utils.copy_image(base, qcow2_base)
-                        disk.extend(qcow2_base, size)
-            libvirt_utils.create_cow_image(qcow2_base, target)
+                disk.extend(target, size)
 
         prepare_template(target=base, *args, **kwargs)
         with utils.remove_path_on_error(self.path):
