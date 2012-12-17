@@ -481,7 +481,7 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri, readonly):
+    def __init__(self, uri, readonly, version=9007):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -506,6 +506,8 @@ class Connection(object):
         self._running_vms = {}
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nwfilters = {}
+        self.fakeLibVersion = version
+        self.fakeVersion = version
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
@@ -576,10 +578,10 @@ class Connection(object):
             return 'QEMU'
 
     def getLibVersion(self):
-        return 9007
+        return self.fakeLibVersion
 
     def getVersion(self):
-        return 14000
+        return self.fakeVersion
 
     def getHostname(self):
         return 'compute1'

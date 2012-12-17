@@ -47,7 +47,7 @@ class FakeIptablesFirewallDriver(object):
 
 class FakeVIFDriver(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         pass
 
     def setattr(self, key, val):
@@ -63,6 +63,9 @@ class FakeVIFDriver(object):
         return conf
 
     def plug(self, instance, vif):
+        pass
+
+    def unplug(self, instance, vif):
         pass
 
 
