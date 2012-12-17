@@ -901,10 +901,6 @@ class NoValidHost(NovaException):
     message = _("No valid host was found. %(reason)s")
 
 
-class WillNotSchedule(NovaException):
-    message = _("Host %(host)s is not up or doesn't exist.")
-
-
 class QuotaError(NovaException):
     message = _("Quota exceeded") + ": code=%(code)s"
     code = 413
