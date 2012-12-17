@@ -193,11 +193,11 @@ class TestCase(testtools.TestCase):
 
         if (os.environ.get('OS_STDOUT_NOCAPTURE') != 'True' and
                 os.environ.get('OS_STDOUT_NOCAPTURE') != '1'):
-            stdout = self.useFixture(fixtures.DetailStream('stdout')).stream
+            stdout = self.useFixture(fixtures.StringStream('stdout')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
         if (os.environ.get('OS_STDERR_NOCAPTURE') != 'True' and
                 os.environ.get('OS_STDERR_NOCAPTURE') != '1'):
-            stderr = self.useFixture(fixtures.DetailStream('stderr')).stream
+            stderr = self.useFixture(fixtures.StringStream('stderr')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
 
         self.log_fixture = self.useFixture(fixtures.FakeLogger('nova'))
