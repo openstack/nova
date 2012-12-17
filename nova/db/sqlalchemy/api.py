@@ -3245,10 +3245,12 @@ def security_group_rule_create(context, values):
 def security_group_rule_destroy(context, security_group_rule_id):
     session = get_session()
     with session.begin():
-        security_group_rule = security_group_rule_get(context,
-                                                      security_group_rule_id,
-                                                      session=session)
-        security_group_rule.delete(session=session)
+        count = _security_group_rule_get_query(context, session=session).\
+                        filter_by(id=security_group_rule_id).\
+                        soft_delete()
+        if count == 0:
+            raise exception.SecurityGroupNotFoundForRule(
+                                               rule_id=security_group_rule_id)
 
 
 @require_context
