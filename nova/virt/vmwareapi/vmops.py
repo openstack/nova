@@ -32,17 +32,13 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import network_utils
+from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
 
 
-vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
-        default='nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
-        help='The VMWare VIF driver to configure the VIFs.')
-
 CONF = cfg.CONF
-CONF.register_opt(vmware_vif_driver_opt)
 
 LOG = logging.getLogger(__name__)
 
@@ -58,7 +54,6 @@ class VMWareVMOps(object):
     def __init__(self, session):
         """Initializer."""
         self._session = session
-        self._vif_driver = importutils.import_object(CONF.vmware_vif_driver)
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
@@ -173,8 +168,8 @@ class VMWareVMOps(object):
                 mac_address = mapping['mac']
                 network_name = network['bridge']
                 if mapping.get('should_create_vlan'):
-                    network_ref = self._vif_driver.ensure_vlan_bridge(
-                                                        self._session, network)
+                    network_ref = vmwarevif.ensure_vlan_bridge(
+                        self._session, network)
                 else:
                     network_ref = _check_if_network_bridge_exists(network_name)
                 vif_infos.append({'network_name': network_name,
@@ -823,10 +818,8 @@ class VMWareVMOps(object):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        for (network, mapping) in network_info:
-            self._vif_driver.plug(instance, (network, mapping))
+        pass
 
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
-        for (network, mapping) in network_info:
-            self._vif_driver.unplug(instance, (network, mapping))
+        pass

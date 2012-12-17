@@ -75,9 +75,6 @@ vmwareapi_opts = [
                     'socket error, etc. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMWareESXDriver.'),
-    cfg.StrOpt('vmwareapi_vlan_interface',
-               default='vmnic0',
-               help='Physical ethernet adapter name for vlan networking'),
     ]
 
 CONF = cfg.CONF
