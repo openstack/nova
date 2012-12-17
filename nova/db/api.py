@@ -785,9 +785,12 @@ def network_delete_safe(context, network_id):
     return IMPL.network_delete_safe(context, network_id)
 
 
-def network_disassociate(context, network_id):
-    """Disassociate the network from project or raise if it does not exist."""
-    return IMPL.network_disassociate(context, network_id)
+def network_disassociate(context, network_id, disassociate_host=True,
+                         disassociate_project=True):
+    """Disassociate the network from project or host and raise if it does
+    not exist."""
+    return IMPL.network_disassociate(context, network_id, disassociate_host,
+                                     disassociate_project)
 
 
 def network_get(context, network_id, project_only="allow_none"):

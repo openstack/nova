@@ -37,6 +37,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.2 - Make migrate_instance_[start|finish] a little more flexible
         1.3 - Adds fanout cast update_dns for multi_host networks
         1.4 - Add get_backdoor_port()
+        1.5 - Adds associate
     '''
 
     #
@@ -162,6 +163,11 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def add_network_to_project(self, ctxt, project_id, network_uuid):
         return self.call(ctxt, self.make_msg('add_network_to_project',
                 project_id=project_id, network_uuid=network_uuid))
+
+    def associate(self, ctxt, network_uuid, associations):
+        return self.call(ctxt, self.make_msg('associate',
+                network_uuid=network_uuid, associations=associations),
+                self.topic, version="1.5")
 
     def get_instance_nw_info(self, ctxt, instance_id, instance_uuid,
                              rxtx_factor, host, project_id):

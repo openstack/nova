@@ -305,6 +305,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-networks-associate",
+            "description": "%(text)s",
+            "links": [],
+            "name": "NetworkAssociationSupport",
+            "namespace": "http://docs.openstack.org/compute/ext/networks_associate/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-quota-class-sets",
             "description": "%(text)s",
             "links": [],

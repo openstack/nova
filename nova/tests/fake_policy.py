@@ -137,6 +137,7 @@ policy_data = """
     "compute_extension:multinic": "",
     "compute_extension:networks": "",
     "compute_extension:networks:view": "",
+    "compute_extension:networks_associate": "",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "",
     "compute_extension:quota_classes": "",

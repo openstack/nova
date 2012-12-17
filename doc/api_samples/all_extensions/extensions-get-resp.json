@@ -297,6 +297,14 @@
             "updated": "2011-12-23T00:00:00+00:00"
         },
         {
+            "alias": "os-networks-associate",
+            "description": "Network association support",
+            "links": [],
+            "name": "NetworkAssociationSupport",
+            "namespace": "http://docs.openstack.org/compute/ext/networks_associate/api/v2",
+            "updated": "2012-11-19T00:00:00+00:00"
+        },
+        {
             "alias": "os-quota-class-sets",
             "description": "Quota classes management support",
             "links": [],
