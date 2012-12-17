@@ -120,6 +120,82 @@ class LibvirtVifTestCase(test.TestCase):
             self.assertEqual(nic['target_dev'],
                              node.find("target").get("dev"))
 
+    def test_model_novirtio(self):
+        self.flags(libvirt_use_virtio_for_bridges=False,
+                   libvirt_type='kvm')
+
+        d = vif.LibvirtBridgeDriver()
+        xml = self._get_instance_xml(d)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+
+        ret = node.findall("model")
+        self.assertEqual(len(ret), 0)
+        ret = node.findall("driver")
+        self.assertEqual(len(ret), 0)
+
+        d.unplug(None, (self.net, self.mapping))
+
+    def test_model_kvm(self):
+        self.flags(libvirt_use_virtio_for_bridges=True,
+                   libvirt_type='kvm')
+
+        d = vif.LibvirtBridgeDriver()
+        xml = self._get_instance_xml(d)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+
+        model = node.find("model").get("type")
+        self.assertEqual(model, "virtio")
+        ret = node.findall("driver")
+        self.assertEqual(len(ret), 0)
+
+        d.unplug(None, (self.net, self.mapping))
+
+    def test_model_qemu(self):
+        self.flags(libvirt_use_virtio_for_bridges=True,
+                   libvirt_type='qemu')
+
+        d = vif.LibvirtBridgeDriver()
+        xml = self._get_instance_xml(d)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+
+        model = node.find("model").get("type")
+        self.assertEqual(model, "virtio")
+        driver = node.find("driver").get("name")
+        self.assertEqual(driver, "qemu")
+
+        d.unplug(None, (self.net, self.mapping))
+
+    def test_model_xen(self):
+        self.flags(libvirt_use_virtio_for_bridges=True,
+                   libvirt_type='xen')
+
+        d = vif.LibvirtBridgeDriver()
+        xml = self._get_instance_xml(d)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+
+        ret = node.findall("model")
+        self.assertEqual(len(ret), 0)
+        ret = node.findall("driver")
+        self.assertEqual(len(ret), 0)
+
+        d.unplug(None, (self.net, self.mapping))
+
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver()
         xml = self._get_instance_xml(d)

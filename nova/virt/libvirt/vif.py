@@ -36,8 +36,8 @@ libvirt_vif_opts = [
         default='br-int',
         help='Name of Integration Bridge used by Open vSwitch'),
     cfg.BoolOpt('libvirt_use_virtio_for_bridges',
-                default=False,
-                help='Use virtio for bridge interfaces'),
+                default=True,
+                help='Use virtio for bridge interfaces with KVM/QEMU'),
 ]
 
 CONF = cfg.CONF
@@ -53,8 +53,13 @@ class LibvirtBaseVIFDriver(vif.VIFDriver):
     def get_config(self, instance, network, mapping):
         conf = vconfig.LibvirtConfigGuestInterface()
         conf.mac_addr = mapping['mac']
-        if CONF.libvirt_use_virtio_for_bridges:
+        if CONF.libvirt_type in ('kvm', 'qemu') and \
+                CONF.libvirt_use_virtio_for_bridges:
             conf.model = "virtio"
+            # Workaround libvirt bug, where it mistakenly
+            # enables vhost mode, even for non-KVM guests
+            if CONF.libvirt_type == "qemu":
+                conf.driver_name = "qemu"
 
         return conf
 
