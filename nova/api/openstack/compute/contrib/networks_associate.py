@@ -62,6 +62,6 @@ class Networks_associate(extensions.ExtensionDescriptor):
 
     def get_controller_extensions(self):
         extension = extensions.ControllerExtension(
-                self, 'os-networks', NetworkAssociateActionController())
+                self, 'os-admin-networks', NetworkAssociateActionController())
 
         return [extension]

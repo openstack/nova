@@ -27,8 +27,9 @@ from nova import network
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'networks')
-authorize_view = extensions.extension_authorizer('compute', 'networks:view')
+authorize = extensions.extension_authorizer('compute', 'admin_networks')
+authorize_view = extensions.extension_authorizer('compute',
+                                                 'admin_networks:view')
 
 
 def network_dict(context, network):
@@ -53,7 +54,7 @@ def network_dict(context, network):
         return {}
 
 
-class NetworkController(wsgi.Controller):
+class AdminNetworkController(wsgi.Controller):
 
     def __init__(self, network_api=None):
         self.network_api = network_api or network.API()
@@ -149,20 +150,21 @@ class NetworkController(wsgi.Controller):
         return webob.Response(status_int=202)
 
 
-class Networks(extensions.ExtensionDescriptor):
-    """Admin-only Network Management Extension."""
+class Admin_networks(extensions.ExtensionDescriptor):
+    """Admin-only Network Management Extension"""
 
-    name = "Networks"
-    alias = "os-networks"
-    namespace = "http://docs.openstack.org/compute/ext/networks/api/v1.1"
+    name = "AdminNetworks"
+    alias = "os-admin-networks"
+    namespace = ("http://docs.openstack.org/compute/"
+                 "ext/os-admin-networks/api/v1.1")
     updated = "2011-12-23T00:00:00+00:00"
 
     def get_resources(self):
         member_actions = {'action': 'POST'}
         collection_actions = {'add': 'POST'}
         res = extensions.ResourceExtension(
-            'os-networks',
-            NetworkController(),
+            'os-admin-networks',
+            AdminNetworkController(),
             member_actions=member_actions,
             collection_actions=collection_actions)
         return [res]

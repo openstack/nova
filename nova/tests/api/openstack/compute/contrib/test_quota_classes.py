@@ -91,8 +91,7 @@ class QuotaClassSetsTest(test.TestCase):
                                     'injected_file_path_bytes': 255,
                                     'security_groups': 10,
                                     'security_group_rules': 20,
-                                    'key_pairs': 100,
-                                    }}
+                                    'key_pairs': 100}}
 
         req = fakes.HTTPRequest.blank(
             '/v2/fake4/os-quota-class-sets/test_class',

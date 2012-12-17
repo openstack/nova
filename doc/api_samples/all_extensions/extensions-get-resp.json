@@ -297,11 +297,19 @@
             "updated": "2012-08-07T00:00:00+00:00"
         },
         {
-            "alias": "os-networks",
-            "description": "Admin-only Network Management Extension.",
+            "alias": "os-admin-networks",
+            "description": "Admin-only Network Management Extension",
             "links": [],
-            "name": "Networks",
-            "namespace": "http://docs.openstack.org/compute/ext/networks/api/v1.1",
+            "name": "AdminNetworks",
+            "namespace": "http://docs.openstack.org/compute/ext/os-admin-networks/api/v1.1",
+            "updated": "2011-12-23T00:00:00+00:00"
+        },
+        {
+            "alias": "os-networks",
+            "description": "Tenant-based Network Management Extension",
+            "links": [],
+            "name": "OSNetworks",
+            "namespace": "http://docs.openstack.org/compute/ext/os-networks/api/v1.1",
             "updated": "2011-12-23T00:00:00+00:00"
         },
         {

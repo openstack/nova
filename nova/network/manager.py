@@ -1609,7 +1609,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 fixnet = netaddr.IPNetwork(kwargs["cidr"])
                 each_subnet_size = fixnet.size / kwargs["num_networks"]
                 if each_subnet_size > CONF.network_size:
-                    subnet = 32 - int(math.log(CONF.network_size_size, 2))
+                    subnet = 32 - int(math.log(CONF.network_size, 2))
                     oversize_msg = _(
                         'Subnet(s) too large, defaulting to /%s.'
                         '  To override, specify network_size flag.') % subnet
@@ -2303,18 +2303,23 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Create networks based on parameters."""
         self._convert_int_args(kwargs)
 
+        kwargs["vlan_start"] = kwargs.get("vlan_start") or CONF.vlan_start
+        kwargs["num_networks"] = (kwargs.get("num_networks") or
+                                  CONF.num_networks)
+        kwargs["network_size"] = (kwargs.get("network_size") or
+                                  CONF.network_size)
         # Check that num_networks + vlan_start is not > 4094, fixes lp708025
-        if kwargs['num_networks'] + kwargs['vlan_start'] > 4094:
+        if kwargs["num_networks"] + kwargs["vlan_start"] > 4094:
             raise ValueError(_('The sum between the number of networks and'
                                ' the vlan start cannot be greater'
                                ' than 4094'))
 
         # check that num networks and network size fits in fixed_net
         fixed_net = netaddr.IPNetwork(kwargs['cidr'])
-        if len(fixed_net) < kwargs['num_networks'] * kwargs['network_size']:
-            raise ValueError(_('The network range is not big enough to fit '
-                  '%(num_networks)s. Network size is %(network_size)s') %
-                  kwargs)
+        if fixed_net.size < kwargs['num_networks'] * kwargs['network_size']:
+            raise ValueError(_('The network range is not '
+                  'big enough to fit %(num_networks)s networks. Network '
+                  'size is %(network_size)s') % kwargs)
 
         kwargs['bridge_interface'] = (kwargs.get('bridge_interface') or
                                       CONF.vlan_interface)

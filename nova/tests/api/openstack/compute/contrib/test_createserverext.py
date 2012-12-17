@@ -99,7 +99,7 @@ class CreateserverextTest(test.TestCase):
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Createserverext', 'User_data',
-                'Security_groups', 'Networks'])
+                'Security_groups', 'Os_networks'])
 
     def _make_stub_method(self, canned_return):
         def stub_method(*args, **kwargs):
