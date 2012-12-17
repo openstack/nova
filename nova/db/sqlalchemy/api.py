@@ -2109,8 +2109,8 @@ def network_delete_safe(context, network_id):
                          filter_by(network_id=network_id).\
                          filter_by(deleted=False).\
                          filter_by(allocated=True).\
-                         all()
-        if result:
+                         count()
+        if result != 0:
             raise exception.NetworkInUse(network_id=network_id)
         network_ref = network_get(context, network_id=network_id,
                                   session=session)
