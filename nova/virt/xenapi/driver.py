@@ -607,6 +607,14 @@ class XenAPIDriver(driver.ComputeDriver):
         """resume guest state when a host is booted"""
         self._vmops.power_on(instance)
 
+    def get_per_instance_usage(self):
+        """Get information about instance resource usage.
+
+        :returns: dict of  nova uuid => dict of usage
+        info
+        """
+        return self._vmops.get_per_instance_usage()
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""

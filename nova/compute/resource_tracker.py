@@ -268,6 +268,11 @@ class ResourceTracker(object):
 
         self._update_usage_from_migrations(resources, migrations)
 
+        # Detect and account for orphaned instances that may exist on the
+        # hypervisor, but are not in the DB:
+        orphans = self._find_orphaned_instances()
+        self._update_usage_from_orphans(resources, orphans)
+
         self._report_final_resource_view(resources)
 
         self._sync_compute_node(context, resources)
@@ -364,8 +369,8 @@ class ResourceTracker(object):
 
     def _update_usage(self, resources, usage, sign=1):
         resources['memory_mb_used'] += sign * usage['memory_mb']
-        resources['local_gb_used'] += sign * usage['root_gb']
-        resources['local_gb_used'] += sign * usage['ephemeral_gb']
+        resources['local_gb_used'] += sign * usage.get('root_gb', 0)
+        resources['local_gb_used'] += sign * usage.get('ephemeral_gb', 0)
 
         # free ram and disk may be negative, depending on policy:
         resources['free_ram_mb'] = (resources['memory_mb'] -
@@ -500,6 +505,40 @@ class ResourceTracker(object):
 
         for instance in instances:
             self._update_usage_from_instance(resources, instance)
+
+    def _find_orphaned_instances(self):
+        """Given the set of instances and migrations already account for
+        by resource tracker, sanity check the hypervisor to determine
+        if there are any "orphaned" instances left hanging around.
+
+        Orphans could be consuming memory and should be accounted for in
+        usage calculations to guard against potential out of memory
+        errors.
+        """
+        uuids1 = frozenset(self.tracked_instances.keys())
+        uuids2 = frozenset(self.tracked_migrations.keys())
+        uuids = uuids1 | uuids2
+
+        usage = self.driver.get_per_instance_usage()
+        vuuids = frozenset(usage.keys())
+
+        orphan_uuids = vuuids - uuids
+        orphans = [usage[uuid] for uuid in orphan_uuids]
+
+        return orphans
+
+    def _update_usage_from_orphans(self, resources, orphans):
+        """Include orphaned instances in usage."""
+        for orphan in orphans:
+            uuid = orphan['uuid']
+            memory_mb = orphan['memory_mb']
+
+            LOG.warn(_("Detected running orphan instance: %(uuid)s (consuming "
+                       "%(memory_mb)s MB memory") % locals())
+
+            # just record memory usage for the orphan
+            usage = {'memory_mb': orphan['memory_mb']}
+            self._update_usage(resources, usage)
 
     def _verify_resources(self, resources):
         resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
