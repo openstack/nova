@@ -904,6 +904,9 @@ class LibvirtConnTestCase(test.TestCase):
             cpu.model = "Opteron_G4"
             cpu.vendor = "AMD"
 
+            cpu.features.append(vconfig.LibvirtConfigGuestCPUFeature("tm2"))
+            cpu.features.append(vconfig.LibvirtConfigGuestCPUFeature("ht"))
+
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
             caps.host.cpu = cpu
@@ -927,6 +930,9 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.mode, None)
         self.assertEquals(conf.cpu.model, "Opteron_G4")
         self.assertEquals(conf.cpu.vendor, "AMD")
+        self.assertEquals(len(conf.cpu.features), 2)
+        self.assertEquals(conf.cpu.features[0].name, "tm2")
+        self.assertEquals(conf.cpu.features[1].name, "ht")
 
     def test_get_guest_cpu_config_custom_old(self):
         def get_lib_version_stub(self):
