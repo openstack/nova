@@ -33,7 +33,9 @@
 """
 
 import ConfigParser
+import logging
 import os
+import pwd
 import signal
 import subprocess
 import sys
@@ -51,29 +53,21 @@ def _subprocess_setup():
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
+def _exit_error(execname, message, errorcode, log=True):
+    print "%s: %s" % (execname, message)
+    if log:
+        logging.error(message)
+    sys.exit(errorcode)
+
+
 if __name__ == '__main__':
     # Split arguments, require at least a command
     execname = sys.argv.pop(0)
     if len(sys.argv) < 2:
-        print "%s: %s" % (execname, "No command specified")
-        sys.exit(RC_NOCOMMAND)
+        _exit_error(execname, "No command specified", RC_NOCOMMAND, log=False)
 
     configfile = sys.argv.pop(0)
     userargs = sys.argv[:]
-
-    # Load configuration
-    config = ConfigParser.RawConfigParser()
-    config.read(configfile)
-    try:
-        filters_path = config.get("DEFAULT", "filters_path").split(",")
-        if config.has_option("DEFAULT", "exec_dirs"):
-            exec_dirs = config.get("DEFAULT", "exec_dirs").split(",")
-        else:
-            # Use system PATH if exec_dirs is not specified
-            exec_dirs = os.environ["PATH"].split(':')
-    except ConfigParser.Error:
-        print "%s: Incorrect configuration file: %s" % (execname, configfile)
-        sys.exit(RC_BADCONFIG)
 
     # Add ../ to sys.path to allow running from branch
     possible_topdir = os.path.normpath(os.path.join(os.path.abspath(execname),
@@ -83,14 +77,37 @@ if __name__ == '__main__':
 
     from nova.rootwrap import wrapper
 
+    # Load configuration
+    try:
+        rawconfig = ConfigParser.RawConfigParser()
+        rawconfig.read(configfile)
+        config = wrapper.RootwrapConfig(rawconfig)
+    except ValueError as exc:
+        msg = "Incorrect value in %s: %s" % (configfile, exc.message)
+        _exit_error(execname, msg, RC_BADCONFIG, log=False)
+    except ConfigParser.Error:
+        _exit_error(execname, "Incorrect configuration file: %s" % configfile,
+                    RC_BADCONFIG, log=False)
+
+    if config.use_syslog:
+        wrapper.setup_syslog(execname,
+                             config.syslog_log_facility,
+                             config.syslog_log_level)
+
     # Execute command if it matches any of the loaded filters
-    filters = wrapper.load_filters(filters_path)
+    filters = wrapper.load_filters(config.filters_path)
     try:
         filtermatch = wrapper.match_filter(filters, userargs,
-                                           exec_dirs=exec_dirs)
+                                           exec_dirs=config.exec_dirs)
         if filtermatch:
-            obj = subprocess.Popen(filtermatch.get_command(userargs,
-                                                      exec_dirs=exec_dirs),
+            command = filtermatch.get_command(userargs,
+                                              exec_dirs=config.exec_dirs)
+            if config.use_syslog:
+                logging.info("(%s > %s) Executing %s (filter match = %s)" % (
+                     os.getlogin(), pwd.getpwuid(os.getuid())[0],
+                     command, filtermatch.name))
+
+            obj = subprocess.Popen(command,
                                    stdin=sys.stdin,
                                    stdout=sys.stdout,
                                    stderr=sys.stderr,
@@ -100,9 +117,11 @@ if __name__ == '__main__':
             sys.exit(obj.returncode)
 
     except wrapper.FilterMatchNotExecutable as exc:
-        print "Executable not found: %s" % exc.match.exec_path
-        sys.exit(RC_NOEXECFOUND)
+        msg = ("Executable not found: %s (filter match = %s)"
+               % (exc.match.exec_path, exc.match.name))
+        _exit_error(execname, msg, RC_NOEXECFOUND, log=config.use_syslog)
 
     except wrapper.NoFilterMatched:
-        print "Unauthorized command: %s" % ' '.join(userargs)
-        sys.exit(RC_UNAUTHORIZED)
+        msg = ("Unauthorized command: %s (no filter matched)"
+               % ' '.join(userargs))
+        _exit_error(execname, msg, RC_UNAUTHORIZED, log=config.use_syslog)
