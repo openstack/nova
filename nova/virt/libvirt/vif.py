@@ -25,7 +25,6 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import netutils
-from nova.virt import vif
 
 from nova.virt.libvirt import config as vconfig
 
@@ -48,7 +47,7 @@ CONF.import_opt('use_ipv6', 'nova.config')
 LINUX_DEV_LEN = 14
 
 
-class LibvirtBaseVIFDriver(vif.VIFDriver):
+class LibvirtBaseVIFDriver(object):
 
     def get_config(self, instance, network, mapping):
         conf = vconfig.LibvirtConfigGuestInterface()
