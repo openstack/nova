@@ -73,13 +73,16 @@ def _fake_noop(*args, **kwargs):
 class NbdTestCase(test.TestCase):
     def setUp(self):
         super(NbdTestCase, self).setUp()
+        self.stubs.Set(nbd.NbdMount, '_detect_nbd_devices',
+                       _fake_detect_nbd_devices)
         self.useFixture(fixtures.MonkeyPatch('os.listdir',
                                              _fake_listdir_nbd_devices))
 
     def test_nbd_no_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
+        self.stubs.Set(nbd.NbdMount, '_detect_nbd_devices',
+                       _fake_detect_nbd_devices_none)
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices_none
         self.assertEquals(None, n._allocate_nbd())
 
     def test_nbd_no_free_devices(self):
@@ -109,7 +112,6 @@ class NbdTestCase(test.TestCase):
     def test_nbd_allocation(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              _fake_exists_no_users))
         self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
@@ -142,7 +144,6 @@ class NbdTestCase(test.TestCase):
     def test_inner_get_dev_no_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.assertFalse(n._inner_get_dev())
 
     def test_inner_get_dev_qemu_fails(self):
@@ -163,7 +164,6 @@ class NbdTestCase(test.TestCase):
     def test_inner_get_dev_qemu_timeout(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              _fake_exists_no_users))
 
@@ -204,7 +204,6 @@ class NbdTestCase(test.TestCase):
     def test_inner_get_dev_works(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              self.fake_exists_one))
@@ -235,7 +234,6 @@ class NbdTestCase(test.TestCase):
     def test_get_dev(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
@@ -256,9 +254,13 @@ class NbdTestCase(test.TestCase):
         self.assertEquals(None, n.device)
 
     def test_get_dev_timeout(self):
+        # Always fail to get a device
+        def fake_get_dev_fails(self):
+            return False
+        self.stubs.Set(nbd.NbdMount, '_inner_get_dev', fake_get_dev_fails)
+
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
-        n.detect_nbd_device = _fake_detect_nbd_devices
         self.useFixture(fixtures.MonkeyPatch('random.shuffle', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('time.sleep', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', _fake_noop))
@@ -268,11 +270,6 @@ class NbdTestCase(test.TestCase):
                                              self.fake_trycmd_creates_pid))
         self.useFixture(fixtures.MonkeyPatch(('nova.virt.disk.mount.nbd.'
                                               'MAX_NBD_WAIT'), -10))
-
-        # Always fail to get a device
-        def fake_get_dev_fails():
-            return False
-        n._inner_get_dev = fake_get_dev_fails
 
         # No error logged, device consumed
         self.assertFalse(n.get_dev())
