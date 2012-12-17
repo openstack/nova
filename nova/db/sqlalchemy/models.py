@@ -51,8 +51,8 @@ class NovaBase(object):
         session.add(self)
         session.flush()
 
-    def delete(self, session=None):
-        """Delete this object."""
+    def soft_delete(self, session=None):
+        """Mark this object as deleted."""
         self.deleted = True
         self.deleted_at = timeutils.utcnow()
         self.save(session=session)

@@ -162,9 +162,9 @@ There are some things which it is best to avoid:
 Efficient use of soft deletes:
 
 * There are two possible ways to mark a record as deleted:
-    model.delete() and query.soft_delete().
+    model.soft_delete() and query.soft_delete().
 
-  model.delete() method works with single already fetched entry.
+  model.soft_delete() method works with single already fetched entry.
   query.soft_delete() makes only one db request for all entries that correspond
   to query.
 
@@ -187,8 +187,8 @@ Efficient use of soft deletes:
                 if count == 0:
                     raise Exception("0 entries were soft deleted")
 
-* There is only one situation where model.delete is appropriate: when you fetch
-  a single record, work with it, and mark it as deleted in the same
+* There is only one situation where model.soft_delete() is appropriate: when
+  you fetch a single record, work with it, and mark it as deleted in the same
   transaction.
 
         def soft_delete_bar_model():
@@ -196,7 +196,7 @@ Efficient use of soft deletes:
             with session.begin():
                 bar_ref = model_query(BarModel).find(some_condition).first()
                 # Work with bar_ref
-                bar_ref.delete(session=session)
+                bar_ref.soft_delete(session=session)
 
   However, if you need to work with all entries that correspond to query and
   then soft delete them you should use query.soft_delete() method:
@@ -213,11 +213,11 @@ Efficient use of soft deletes:
                 # session and these entries are not used after this.
 
   When working with many rows, it is very important to use query.soft_delete,
-  which issues a single query. Using model.delete, as in the following example,
-  is very inefficient.
+  which issues a single query. Using model.soft_delete(), as in the following
+  example, is very inefficient.
 
         for bar_ref in bar_refs:
-            bar_ref.delete(session=session)
+            bar_ref.soft_delete(session=session)
         # This will produce count(bar_refs) db requests.
 """
 
