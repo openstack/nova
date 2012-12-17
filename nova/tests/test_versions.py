@@ -31,6 +31,7 @@ class VersionTestCase(test.TestCase):
         self.version.version_info = {'branch_nick': u'LOCALBRANCH',
                                     'revision_id': 'LOCALREVISION',
                                     'revno': 0}
+        self.version.NOVA_PACKAGE = "g9ec3421"
 
     def test_version_string_is_good(self):
         """Ensure version string works"""
@@ -48,12 +49,7 @@ class VersionTestCase(test.TestCase):
         self.assertEqual(self.version.canonical_version_string(),
                         self.version.version_string())
 
-    def test_vcs_version_string_is_good(self):
-        """Ensure uninstalled code generates local """
-        self.assertEqual("LOCALBRANCH:LOCALREVISION",
-                        self.version.vcs_version_string())
-
-    def test_version_string_with_vcs_is_good(self):
+    def test_version_string_with_package_is_good(self):
         """Ensure uninstalled code get version string"""
-        self.assertEqual("2012.10-LOCALBRANCH:LOCALREVISION",
-                        self.version.version_string_with_vcs())
+        self.assertEqual("2012.10-g9ec3421",
+                        self.version.version_string_with_package())
