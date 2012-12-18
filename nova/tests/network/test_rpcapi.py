@@ -272,14 +272,6 @@ class NetworkRpcAPITestCase(test.TestCase):
                 address='fake_addr', interface='fake_interface',
                 host='fake_host')
 
-    def test_lease_fixed_ip(self):
-        self._test_network_api('lease_fixed_ip', rpc_method='cast',
-                address='fake_addr', host='fake_host')
-
-    def test_release_fixed_ip(self):
-        self._test_network_api('release_fixed_ip', rpc_method='cast',
-                address='fake_addr', host='fake_host')
-
     def test_migrate_instance_start(self):
         self._test_network_api('migrate_instance_start', rpc_method='call',
                 instance_uuid='fake_instance_uuid',
