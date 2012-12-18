@@ -839,6 +839,9 @@ class Connection(object):
         nwfilter = NWFilter(self, xml)
         self._add_filter(nwfilter)
 
+    def listDefinedDomains(self):
+        return []
+
 
 def openReadOnly(uri):
     return Connection(uri, readonly=True)

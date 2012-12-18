@@ -447,6 +447,11 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError:
                 # Instance was deleted while listing... ignore it
                 pass
+
+        # extend instance list to contain also defined domains
+        names.extend([vm for vm in self._conn.listDefinedDomains()
+                    if vm not in names])
+
         return names
 
     def plug_vifs(self, instance, network_info):
