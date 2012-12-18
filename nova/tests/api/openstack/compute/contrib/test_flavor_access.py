@@ -226,7 +226,8 @@ class FlavorAccessTest(test.TestCase):
 
     def test_add_tenant_access_with_already_added_access(self):
         def stub_add_instance_type_access(flavorid, projectid, ctxt=None):
-            raise exception.FlavorAccessExists()
+            raise exception.FlavorAccessExists(flavor_id=flavorid,
+                                               project_id=projectid)
         self.stubs.Set(instance_types, 'add_instance_type_access',
                        stub_add_instance_type_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
@@ -238,22 +239,8 @@ class FlavorAccessTest(test.TestCase):
 
     def test_remove_tenant_access_with_bad_access(self):
         def stub_remove_instance_type_access(flavorid, projectid, ctxt=None):
-            self.assertEqual('3', flavorid, "flavorid")
-            self.assertEqual("proj2", projectid, "projectid")
-        expected = {'flavor_access': [
-            {'flavor_id': '3', 'tenant_id': 'proj3'}]}
-        self.stubs.Set(instance_types, 'remove_instance_type_access',
-                       stub_remove_instance_type_access)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
-                                      use_admin_context=True)
-        result = self.flavor_action_controller.\
-            _addTenantAccess(req, '3', body)
-        self.assertEqual(result, expected)
-
-    def test_remove_tenant_access_with_bad_access(self):
-        def stub_remove_instance_type_access(flavorid, projectid, ctxt=None):
-            raise exception.FlavorAccessNotFound()
+            raise exception.FlavorAccessNotFound(flavor_id=flavorid,
+                                                 project_id=projectid)
         self.stubs.Set(instance_types, 'remove_instance_type_access',
                        stub_remove_instance_type_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}

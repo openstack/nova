@@ -229,7 +229,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_floating_ip_show_not_found(self):
         def fake_get_floating_ip(*args, **kwargs):
-            raise exception.FloatingIpNotFound()
+            raise exception.FloatingIpNotFound(id='fake')
 
         self.stubs.Set(network.api.API, "get_floating_ip",
                        fake_get_floating_ip)
@@ -379,7 +379,8 @@ class FloatingIpTest(test.TestCase):
                                              fixed_address=None):
             floating_ips = ["10.10.10.10", "10.10.10.11"]
             if floating_address not in floating_ips:
-                    raise exception.FloatingIpNotFoundForAddress()
+                    raise exception.FloatingIpNotFoundForAddress(
+                            address=flaoting_address)
 
             self.stubs.Set(network.api.API, "associate_floating_ip",
                                              fake_network_api_associate)
@@ -395,7 +396,8 @@ class FloatingIpTest(test.TestCase):
                                                          floating_address):
             floating_ips = ["10.10.10.10", "10.10.10.11"]
             if floating_address not in floating_ips:
-                    raise exception.FloatingIpNotFoundForAddress()
+                    raise exception.FloatingIpNotFoundForAddress(
+                            address=floating_address)
 
         self.stubs.Set(network.api.API, "get_floating_ip_by_address",
                                         network_api_get_floating_ip_by_address)

@@ -91,7 +91,7 @@ def fake_compute_node_get(context, compute_id):
     for hyper in TEST_HYPERS:
         if hyper['id'] == compute_id:
             return hyper
-    raise exception.ComputeHostNotFound
+    raise exception.ComputeHostNotFound(host=compute_id)
 
 
 def fake_compute_node_statistics(context):

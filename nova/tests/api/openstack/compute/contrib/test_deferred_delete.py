@@ -61,9 +61,13 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
                 fake_instance)
+
+        exc = exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
+
         compute_api.API.force_delete(self.fake_context, fake_instance)\
-            .AndRaise(
-                exception.InstanceInvalidState)
+            .AndRaise(exc)
 
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict,
@@ -90,11 +94,14 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.mox.StubOutWithMock(compute_api.API, 'restore')
 
         fake_instance = 'fake_instance'
+        exc = exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         compute_api.API.get(self.fake_context, self.fake_uuid).AndReturn(
                 fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance).AndRaise(
-                exception.InstanceInvalidState)
+                exc)
 
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict, self.extension._restore,

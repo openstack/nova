@@ -77,7 +77,7 @@ def empty_instance_type_get_all(inactive=False, filters=None):
 
 
 def return_instance_type_not_found(flavor_id):
-    raise exception.InstanceTypeNotFound(flavor_id=flavor_id)
+    raise exception.InstanceTypeNotFound(instance_type_id=flavor_id)
 
 
 class FlavorsTest(test.TestCase):

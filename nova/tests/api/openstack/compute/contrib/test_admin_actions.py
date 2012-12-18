@@ -54,7 +54,9 @@ def fake_compute_api(*args, **kwargs):
 
 
 def fake_compute_api_raises_invalid_state(*args, **kwargs):
-    raise exception.InstanceInvalidState
+    raise exception.InstanceInvalidState(attr='fake_attr',
+            state='fake_state', method='fake_method',
+            instance_uuid='fake')
 
 
 def fake_compute_api_get(self, context, instance_id):
@@ -124,7 +126,7 @@ class AdminActionsTest(test.TestCase):
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 409)
-            self.assertIn("invalid state for '%(_action)s'" % locals(),
+            self.assertIn("Cannot \'%(_action)s\' while instance" % locals(),
                     res.body)
 
     def test_migrate_live_enabled(self):
@@ -345,7 +347,7 @@ class ResetStateTests(test.TestCase):
         def fake_get(inst, context, instance_id):
             if self.exists:
                 return dict(id=1, uuid=instance_id, vm_state=vm_states.ACTIVE)
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id=instance_id)
 
         def fake_update(inst, context, instance, **kwargs):
             self.kwargs = kwargs

@@ -787,7 +787,7 @@ class VlanNetworkTestCase(test.TestCase):
         def fixed_ip_get(_context, fixed_ip_id):
             if fixed_ip_id == 1:
                 return {'address': 'fakefixed'}
-            raise exception.FixedIpNotFound()
+            raise exception.FixedIpNotFound(id=fixed_ip_id)
         self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
 
         self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
@@ -1478,7 +1478,9 @@ class CommonNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
         manager.db.network_get_by_uuid(
                 mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(exception.NetworkNotFoundForUUID)
+                mox.IgnoreArg()).AndRaise(
+                    exception.NetworkNotFoundForUUID(uuid='fake')
+                )
         self.mox.ReplayAll()
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
@@ -1513,7 +1515,9 @@ class CommonNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
         manager.db.network_get_by_uuid(
                 mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(exception.NetworkNotFoundForUUID)
+                mox.IgnoreArg()).AndRaise(
+                    exception.NetworkNotFoundForUUID(uuid='fake')
+                )
         self.mox.ReplayAll()
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
@@ -1936,7 +1940,7 @@ class FloatingIPTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
-                exception.FloatingIpNotFoundForAddress)
+                exception.FloatingIpNotFoundForAddress(address='fake'))
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.ClientException,
                           self.network.deallocate_floating_ip,
@@ -1947,7 +1951,7 @@ class FloatingIPTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
-                exception.FloatingIpNotFoundForAddress)
+                exception.FloatingIpNotFoundForAddress(address='fake'))
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.ClientException,
                           self.network.associate_floating_ip,
@@ -1958,7 +1962,7 @@ class FloatingIPTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
-                exception.FloatingIpNotFoundForAddress)
+                exception.FloatingIpNotFoundForAddress(address='fake'))
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.ClientException,
                           self.network.disassociate_floating_ip,
@@ -1968,7 +1972,7 @@ class FloatingIPTestCase(test.TestCase):
         """Ensure that FloatingIpNotFoundForAddress is wrapped"""
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get')
         self.network.db.floating_ip_get(self.context, 'fake-id').AndRaise(
-            exception.FloatingIpNotFound)
+            exception.FloatingIpNotFound(id='fake'))
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.ClientException,
                           self.network.get_floating_ip,

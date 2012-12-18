@@ -1315,7 +1315,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             calls.append(('quota_usage_update', context, project_id,
                           resource, kwargs))
             if resource == 'nonexist':
-                raise exception.QuotaUsageNotFound()
+                raise exception.QuotaUsageNotFound(project_id=project_id)
         self.stubs.Set(db, 'quota_usage_update', fake_quota_usage_update)
 
         ctx = FakeContext('test_project', 'test_class')

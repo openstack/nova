@@ -2054,7 +2054,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(conn, '_compare_cpu')
 
-        conn._compare_cpu("asdf").AndRaise(exception.InvalidCPUInfo)
+        conn._compare_cpu("asdf").AndRaise(exception.InvalidCPUInfo(
+                                              reason='foo')
+                                           )
 
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidCPUInfo,
@@ -2614,7 +2616,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_immediate_delete(self):
         def fake_lookup_by_name(instance_name):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2717,7 +2719,7 @@ class LibvirtConnTestCase(test.TestCase):
             return mock
 
         def fake_get_info(instance_name):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2736,7 +2738,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, 'list_instances', list_instances)
 
         def get_info(instance_name):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
         self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
         result = conn.get_disk_available_least()
