@@ -19,6 +19,7 @@
 import fixtures
 
 from nova import config
+from nova import ipv6
 from nova.openstack.common import cfg
 from nova.tests.utils import cleanup_dns_managers
 
@@ -67,3 +68,4 @@ class ConfFixture(fixtures.Fixture):
         config.parse_args([], default_config_files=[])
         self.addCleanup(self.conf.reset)
         self.addCleanup(cleanup_dns_managers)
+        self.addCleanup(ipv6.api.reset_backend)
