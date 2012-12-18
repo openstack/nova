@@ -21,16 +21,14 @@ import mox
 
 from nova import context
 from nova import db
+from nova.network import driver
 from nova.network import linux_net
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('network_driver', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 HOST = "testhost"
@@ -214,8 +212,7 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
-        network_driver = CONF.network_driver
-        self.driver = importutils.import_module(network_driver)
+        self.driver = driver.load_network_driver()
         self.driver.db = db
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)

@@ -158,9 +158,6 @@ global_opts = [
                default=None,
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
-    cfg.StrOpt('network_driver',
-               default='nova.network.linux_net',
-               help='Driver to use for network creation'),
     cfg.BoolOpt('use_ipv6',
                 default=False,
                 help='use ipv6'),

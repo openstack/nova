@@ -60,6 +60,7 @@ from nova import exception
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
+from nova.network import driver
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
@@ -189,7 +190,6 @@ network_opts = [
 CONF = cfg.CONF
 CONF.register_opts(network_opts)
 CONF.import_opt('fake_network', 'nova.config')
-CONF.import_opt('network_driver', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 
@@ -909,9 +909,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     required_create_args = []
 
     def __init__(self, network_driver=None, *args, **kwargs):
-        if not network_driver:
-            network_driver = CONF.network_driver
-        self.driver = importutils.import_module(network_driver)
+        self.driver = driver.load_network_driver(network_driver)
         self.instance_dns_manager = importutils.import_object(
                 CONF.instance_dns_manager)
         self.instance_dns_domain = CONF.instance_dns_domain
