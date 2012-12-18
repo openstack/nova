@@ -24,11 +24,13 @@ import os
 import posixpath
 
 from nova.api.ec2 import ec2utils
+from nova.api.metadata import password
 from nova import block_device
 from nova import context
 from nova import db
 from nova import network
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova.virt import netutils
 
 
@@ -57,11 +59,17 @@ VERSIONS = [
     '2009-04-04',
 ]
 
-OPENSTACK_VERSIONS = ["2012-08-10"]
+FOLSOM = '2012-08-10'
+GRIZZLY = '2013-04-04'
+OPENSTACK_VERSIONS = [
+    FOLSOM,
+    GRIZZLY,
+]
 
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
 UD_NAME = "user_data"
+PASS_NAME = "password"
 
 
 class InvalidMetadataVersion(Exception):
@@ -127,6 +135,13 @@ class InstanceMetadata():
         self.launch_metadata = {}
         for item in instance.get('metadata', []):
             self.launch_metadata[item['key']] = item['value']
+
+        self.password = ''
+        # get password if set
+        for item in instance.get('system_metadata', []):
+            if item['key'] == 'password':
+                self.password = item['value'] or ''
+                break
 
         self.uuid = instance.get('uuid')
 
@@ -257,12 +272,17 @@ class InstanceMetadata():
             ret = [MD_JSON_NAME]
             if self.userdata_raw is not None:
                 ret.append(UD_NAME)
+            if self._check_os_version(GRIZZLY, version):
+                ret.append(PASS_NAME)
             return ret
 
         if path == UD_NAME:
             if self.userdata_raw is None:
                 raise KeyError(path)
             return self.userdata_raw
+
+        if path == PASS_NAME and self._check_os_version(GRIZZLY, version):
+            return password.handle_password
 
         if path != MD_JSON_NAME:
             raise KeyError(path)
@@ -303,8 +323,11 @@ class InstanceMetadata():
 
         return data[path]
 
-    def _check_version(self, required, requested):
-        return VERSIONS.index(requested) >= VERSIONS.index(required)
+    def _check_version(self, required, requested, versions=VERSIONS):
+        return versions.index(requested) >= versions.index(required)
+
+    def _check_os_version(self, required, requested):
+        return self._check_version(required, requested, OPENSTACK_VERSIONS)
 
     def _get_hostname(self):
         return "%s%s%s" % (self.instance['hostname'],
@@ -332,7 +355,10 @@ class InstanceMetadata():
         # specifically handle the top level request
         if len(path_tokens) == 1:
             if path_tokens[0] == "openstack":
-                versions = OPENSTACK_VERSIONS + ["latest"]
+                # NOTE(vish): don't show versions that are in the future
+                today = timeutils.utcnow().strftime("%Y-%m-%d")
+                versions = [v for v in OPENSTACK_VERSIONS if v <= today]
+                versions += ["latest"]
             else:
                 versions = VERSIONS + ["latest"]
             return versions
