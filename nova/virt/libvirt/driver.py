@@ -815,7 +815,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
         except exception.InstanceNotFound:
-            raise exception.InstanceNotRunning()
+            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
 
         (image_service, image_id) = glance.get_remote_image_service(
             context, instance['image_ref'])

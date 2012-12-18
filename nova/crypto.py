@@ -99,7 +99,7 @@ def fetch_ca(project_id=None):
         project_id = None
     ca_file_path = ca_path(project_id)
     if not os.path.exists(ca_file_path):
-        raise exception.CryptoCAFileNotFound(project_id=project_id)
+        raise exception.CryptoCAFileNotFound(project=project_id)
     with open(ca_file_path, 'r') as cafile:
         return cafile.read()
 
@@ -161,7 +161,7 @@ def fetch_crl(project_id):
         project_id = None
     crl_file_path = crl_path(project_id)
     if not os.path.exists(crl_file_path):
-        raise exception.CryptoCRLFileNotFound(project_id)
+        raise exception.CryptoCRLFileNotFound(project=project_id)
     with open(crl_file_path, 'r') as crlfile:
         return crlfile.read()
 
