@@ -769,6 +769,150 @@ class LibvirtConnTestCase(test.TestCase):
                           vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(cfg.devices[3].target_dev, 'vdd')
 
+    def test_get_guest_config_with_vnc(self):
+        self.flags(libvirt_type='kvm',
+                   vnc_enabled=True,
+                   use_usb_tablet=False)
+        self.flags(enabled=False, group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+        self.assertEquals(len(cfg.devices), 5)
+        self.assertEquals(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEquals(cfg.devices[4].type, "vnc")
+
+    def test_get_guest_config_with_vnc_and_tablet(self):
+        self.flags(libvirt_type='kvm',
+                   vnc_enabled=True,
+                   use_usb_tablet=True)
+        self.flags(enabled=False, group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+        self.assertEquals(len(cfg.devices), 6)
+        self.assertEquals(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestInput)
+        self.assertEquals(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEquals(cfg.devices[4].type, "tablet")
+        self.assertEquals(cfg.devices[5].type, "vnc")
+
+    def test_get_guest_config_with_spice_and_tablet(self):
+        self.flags(libvirt_type='kvm',
+                   vnc_enabled=False,
+                   use_usb_tablet=True)
+        self.flags(enabled=True,
+                   agent_enabled=False,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+        self.assertEquals(len(cfg.devices), 6)
+        self.assertEquals(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestInput)
+        self.assertEquals(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEquals(cfg.devices[4].type, "tablet")
+        self.assertEquals(cfg.devices[5].type, "spice")
+
+    def test_get_guest_config_with_spice_and_agent(self):
+        self.flags(libvirt_type='kvm',
+                   vnc_enabled=False,
+                   use_usb_tablet=True)
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+        self.assertEquals(len(cfg.devices), 6)
+        self.assertEquals(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestChannel)
+        self.assertEquals(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEquals(cfg.devices[4].target_name, "com.redhat.spice.0")
+        self.assertEquals(cfg.devices[5].type, "spice")
+
+    def test_get_guest_config_with_vnc_and_spice(self):
+        self.flags(libvirt_type='kvm',
+                   vnc_enabled=True,
+                   use_usb_tablet=True)
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+        self.assertEquals(len(cfg.devices), 8)
+        self.assertEquals(type(cfg.devices[0]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[3]),
+                          vconfig.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          vconfig.LibvirtConfigGuestInput)
+        self.assertEquals(type(cfg.devices[5]),
+                          vconfig.LibvirtConfigGuestChannel)
+        self.assertEquals(type(cfg.devices[6]),
+                          vconfig.LibvirtConfigGuestGraphics)
+        self.assertEquals(type(cfg.devices[7]),
+                          vconfig.LibvirtConfigGuestGraphics)
+
+        self.assertEquals(cfg.devices[4].type, "tablet")
+        self.assertEquals(cfg.devices[5].target_name, "com.redhat.spice.0")
+        self.assertEquals(cfg.devices[6].type, "vnc")
+        self.assertEquals(cfg.devices[7].type, "spice")
+
     def test_get_guest_cpu_config_none(self):
         self.flags(libvirt_cpu_mode="none")
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
