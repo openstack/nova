@@ -549,6 +549,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vportparams = []
         self.filtername = None
         self.filterparams = []
+        self.driver_name = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -557,6 +558,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         dev.append(etree.Element("mac", address=self.mac_addr))
         if self.model:
             dev.append(etree.Element("model", type=self.model))
+
+        if self.driver_name:
+            dev.append(etree.Element("driver", name=self.driver_name))
+
         if self.net_type == "ethernet":
             if self.script is not None:
                 dev.append(etree.Element("script", path=self.script))
