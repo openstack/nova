@@ -689,6 +689,7 @@ class VlanNetworkTestCase(test.TestCase):
         def fake4(*args, **kwargs):
             return {'address': '10.0.0.1',
                     'pool': 'nova',
+                    'instance_uuid': FAKEUUID,
                     'interface': 'eth0',
                     'network_id': 'blah'}
 
@@ -840,6 +841,7 @@ class VlanNetworkTestCase(test.TestCase):
         def fake4(*args, **kwargs):
             return {'address': '10.0.0.1',
                     'pool': 'nova',
+                    'instance_uuid': FAKEUUID,
                     'interface': 'eth0',
                     'network_id': 'blah'}
 
@@ -1632,6 +1634,115 @@ class FloatingIPTestCase(test.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
         super(FloatingIPTestCase, self).tearDown()
+
+    def test_disassociate_floating_ip_multi_host_calls(self):
+        floating_ip = {
+            'fixed_ip_id': 12
+        }
+
+        fixed_ip = {
+            'network_id': None,
+            'instance_uuid': 'instance-uuid'
+        }
+
+        network = {
+            'multi_host': True
+        }
+
+        instance = {
+            'host': 'some-other-host'
+        }
+
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        self.stubs.Set(self.network.db,
+                       'floating_ip_get_by_address',
+                       lambda _x, _y: floating_ip)
+
+        self.stubs.Set(self.network,
+                       '_floating_ip_owned_by_project',
+                       lambda _x, _y: True)
+
+        self.stubs.Set(self.network.db,
+                       'fixed_ip_get',
+                       lambda _x, _y: fixed_ip)
+
+        self.stubs.Set(self.network,
+                       '_get_network_by_id',
+                       lambda _x, _y: network)
+
+        self.stubs.Set(self.network.db,
+                       'instance_get_by_uuid',
+                       lambda _x, _y: instance)
+
+        self.stubs.Set(self.network.db,
+                       'service_get_by_host_and_topic',
+                       lambda _x, _y, _z: 'service')
+
+        self.stubs.Set(self.network.servicegroup_api,
+                       'service_is_up',
+                       lambda _x: True)
+
+        self.mox.StubOutWithMock(
+            self.network.network_rpcapi, '_disassociate_floating_ip')
+
+        self.network.network_rpcapi._disassociate_floating_ip(
+            ctxt, 'fl_ip', mox.IgnoreArg(), 'some-other-host', 'instance-uuid')
+        self.mox.ReplayAll()
+
+        self.network.disassociate_floating_ip(ctxt, 'fl_ip', True)
+
+    def test_associate_floating_ip_multi_host_calls(self):
+        floating_ip = {
+            'fixed_ip_id': None
+        }
+
+        fixed_ip = {
+            'network_id': None,
+            'instance_uuid': 'instance-uuid'
+        }
+
+        network = {
+            'multi_host': True
+        }
+
+        instance = {
+            'host': 'some-other-host'
+        }
+
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        self.stubs.Set(self.network.db,
+                       'floating_ip_get_by_address',
+                       lambda _x, _y: floating_ip)
+
+        self.stubs.Set(self.network,
+                       '_floating_ip_owned_by_project',
+                       lambda _x, _y: True)
+
+        self.stubs.Set(self.network.db,
+                       'fixed_ip_get_by_address',
+                       lambda _x, _y: fixed_ip)
+
+        self.stubs.Set(self.network,
+                       '_get_network_by_id',
+                       lambda _x, _y: network)
+
+        self.stubs.Set(self.network.db,
+                       'instance_get_by_uuid',
+                       lambda _x, _y: instance)
+
+        self.mox.StubOutWithMock(
+            self.network.network_rpcapi, '_associate_floating_ip')
+
+        self.network.network_rpcapi._associate_floating_ip(
+            ctxt, 'fl_ip', 'fix_ip', mox.IgnoreArg(), 'some-other-host',
+            'instance-uuid')
+        self.mox.ReplayAll()
+
+        self.network.associate_floating_ip(ctxt, 'fl_ip', 'fix_ip', True)
 
     def test_double_deallocation(self):
         instance_ref = db.api.instance_create(self.context,
