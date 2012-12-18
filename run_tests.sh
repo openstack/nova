@@ -82,11 +82,14 @@ function run_tests {
 
   if [ $coverage -eq 1 ]; then
     # Do not test test_coverage_ext when gathering coverage.
-    TESTRTESTS="$TESTRTESTS ^(?!.*test_coverage_ext).*$"
+    if [ "x$testrargs" = "x" ]; then
+      testrargs = "^(?!.*test_coverage_ext).*$"
+    fi
     export PYTHON="${wrapper} coverage run --source nova --parallel-mode"
   fi
   # Just run the test suites in current environment
   set +e
+  TESTRTESTS="$TESTRTESTS $testrargs"
   echo "Running \`${wrapper} $TESTRTESTS\`"
   ${wrapper} $TESTRTESTS
   RESULT=$?
@@ -130,7 +133,7 @@ function run_pep8 {
 }
 
 
-TESTRTESTS="testr run --parallel $testropts $testrargs"
+TESTRTESTS="testr run --parallel $testropts"
 
 if [ $never_venv -eq 0 ]
 then
