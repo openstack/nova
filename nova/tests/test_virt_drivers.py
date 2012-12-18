@@ -446,6 +446,15 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIn('port', vnc_console)
 
     @catch_notimplementederror
+    def test_get_spice_console(self):
+        instance_ref, network_info = self._get_running_instance()
+        spice_console = self.connection.get_spice_console(instance_ref)
+        self.assertIn('internal_access_path', spice_console)
+        self.assertIn('host', spice_console)
+        self.assertIn('port', spice_console)
+        self.assertIn('tlsPort', spice_console)
+
+    @catch_notimplementederror
     def test_get_console_pool_info(self):
         instance_ref, network_info = self._get_running_instance()
         console_pool = self.connection.get_console_pool_info(instance_ref)

@@ -1146,6 +1146,27 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return {'host': host, 'port': port, 'internal_access_path': None}
 
+    @exception.wrap_exception()
+    def get_spice_console(self, instance):
+        def get_spice_ports_for_instance(instance_name):
+            virt_dom = self._lookup_by_name(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            # TODO(sleepsonthefloor): use etree instead of minidom
+            dom = minidom.parseString(xml)
+
+            for graphic in dom.getElementsByTagName('graphics'):
+                if graphic.getAttribute('type') == 'spice':
+                    return (graphic.getAttribute('port'),
+                            graphic.getAttribute('tlsPort'))
+
+            return (None, None)
+
+        ports = get_spice_ports_for_instance(instance['name'])
+        host = CONF.spice.server_proxyclient_address
+
+        return {'host': host, 'port': ports[0],
+                'tlsPort': ports[1], 'internal_access_path': None}
+
     @staticmethod
     def _supports_direct_io(dirpath):
 
