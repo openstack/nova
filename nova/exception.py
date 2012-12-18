@@ -62,19 +62,6 @@ class ProcessExecutionError(IOError):
         IOError.__init__(self, message)
 
 
-def wrap_db_error(f):
-    def _wrap(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except UnicodeEncodeError:
-            raise InvalidUnicodeParameter()
-        except Exception, e:
-            LOG.exception(_('DB exception wrapped.'))
-            raise DBError(e)
-    _wrap.func_name = f.func_name
-    return _wrap
-
-
 def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                    level=None):
     """This decorator wraps a method to catch any exceptions that may
@@ -171,6 +158,13 @@ class DBError(NovaException):
     def __init__(self, inner_exception=None):
         self.inner_exception = inner_exception
         super(DBError, self).__init__(str(inner_exception))
+
+
+class DBDuplicateEntry(DBError):
+    """Wraps an implementation specific exception."""
+    def __init__(self, columns=[], inner_exception=None):
+        self.columns = columns
+        super(DBDuplicateEntry, self).__init__(inner_exception)
 
 
 class DecryptionFailure(NovaException):

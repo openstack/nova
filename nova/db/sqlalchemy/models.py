@@ -22,7 +22,6 @@ SQLAlchemy models for nova data.
 """
 
 from sqlalchemy import Column, Integer, BigInteger, String, schema
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
@@ -51,13 +50,7 @@ class NovaBase(object):
         if not session:
             session = get_session()
         session.add(self)
-        try:
-            session.flush()
-        except IntegrityError, e:
-            if str(e).endswith('is not unique'):
-                raise exception.Duplicate(str(e))
-            else:
-                raise
+        session.flush()
 
     def delete(self, session=None):
         """Delete this object."""
