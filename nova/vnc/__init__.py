@@ -32,7 +32,7 @@ vnc_opts = [
                     '"http://127.0.0.1:6081/console"'),
     cfg.StrOpt('vncserver_listen',
                default='127.0.0.1',
-               help='Ip address on which instance vncserversshould listen'),
+               help='IP address on which instance vncservers should listen'),
     cfg.StrOpt('vncserver_proxyclient_address',
                default='127.0.0.1',
                help='the address to which proxy clients '
