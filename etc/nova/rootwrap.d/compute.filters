@@ -92,6 +92,9 @@ iscsiadm: CommandFilter, iscsiadm, root
 # nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
 parted: CommandFilter, parted, root
 
+# nova/virt/xenapi/vm_utils.py: 'pygrub', '-qn', dev_path
+pygrub: CommandFilter, /usr/bin/pygrub, root
+
 # nova/virt/xenapi/vm_utils.py: fdisk %(dev_path)s
 fdisk: CommandFilter, /sbin/fdisk, root
 
