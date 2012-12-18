@@ -215,7 +215,7 @@ class API(base.Base):
     @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
-        args = {'instance_id': instance['id'],
+        args = {'instance_id': instance['uuid'],
                 'host': instance['host'],
                 'network_id': network_id}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
