@@ -887,7 +887,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.4'
+    RPC_API_VERSION = '1.5'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -2209,6 +2209,27 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         else:
             network_id = None
         self.db.network_associate(context, project_id, network_id, force=True)
+
+    @wrap_check_policy
+    def associate(self, context, network_uuid, associations):
+        """Associate or disassociate host or project to network."""
+        network_id = self.get_network(context, network_uuid)['id']
+        if 'host' in associations:
+            host = associations['host']
+            if host is None:
+                self.db.network_disassociate(context, network_id,
+                                             disassociate_host=True,
+                                             disassociate_project=False)
+            else:
+                self.db.network_set_host(context, network_id, host)
+        if 'project' in associations:
+            project = associations['project']
+            if project is None:
+                self.db.network_disassociate(context, network_id,
+                                             disassociate_host=False,
+                                             disassociate_project=True)
+            else:
+                self.db.network_associate(context, project, network_id, True)
 
     def _get_network_by_id(self, context, network_id):
         # NOTE(vish): Don't allow access to networks with project_id=None as

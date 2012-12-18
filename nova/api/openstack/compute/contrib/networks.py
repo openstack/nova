@@ -21,6 +21,8 @@ import webob
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
+from nova import db
 from nova import exception
 from nova import network
 from nova.openstack.common import log as logging
@@ -52,34 +54,10 @@ def network_dict(context, network):
         return {}
 
 
-class NetworkController(object):
+class NetworkController(wsgi.Controller):
 
     def __init__(self, network_api=None):
         self.network_api = network_api or network.API()
-
-    def action(self, req, id, body):
-        _actions = {
-            'disassociate': self._disassociate,
-        }
-
-        for action, data in body.iteritems():
-            try:
-                return _actions[action](req, id, body)
-            except KeyError:
-                msg = _("Network does not have %s action") % action
-                raise exc.HTTPBadRequest(explanation=msg)
-
-        raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
-
-    def _disassociate(self, request, network_id, body):
-        context = request.environ['nova.context']
-        authorize(context)
-        LOG.debug(_("Disassociating network with id %s"), network_id)
-        try:
-            self.network_api.disassociate(context, network_id)
-        except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
-        return exc.HTTPAccepted()
 
     def index(self, req):
         context = req.environ['nova.context']
@@ -87,6 +65,18 @@ class NetworkController(object):
         networks = self.network_api.get_all(context)
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
+
+    @wsgi.action("disassociate")
+    def _disassociate_host_and_project(self, req, id, body):
+        context = req.environ['nova.context']
+        authorize(context)
+        LOG.debug(_("Disassociating network with id %s"), id)
+
+        try:
+            self.network_api.associate(context, id, host=None, project=None)
+        except exception.NetworkNotFound:
+            raise exc.HTTPNotFound(_("Network not found"))
+        return exc.HTTPAccepted()
 
     def show(self, req, id):
         context = req.environ['nova.context']

@@ -2135,9 +2135,14 @@ def network_delete_safe(context, network_id):
 
 
 @require_admin_context
-def network_disassociate(context, network_id):
-    network_update(context, network_id, {'project_id': None,
-                                         'host': None})
+def network_disassociate(context, network_id, disassociate_host,
+                         disassociate_project):
+    net_update = {}
+    if disassociate_project:
+        net_update['project_id'] = None
+    if disassociate_host:
+        net_update['host'] = None
+    network_update(context, network_id, net_update)
 
 
 @require_context

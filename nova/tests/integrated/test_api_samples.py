@@ -30,6 +30,7 @@ from nova.compute import api
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
+from nova.network import api
 from nova.network.manager import NetworkManager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -2048,3 +2049,56 @@ class DiskConfigJsonTest(ServersSampleBase):
 
 class DiskConfigXmlTest(DiskConfigJsonTest):
         ctype = 'xml'
+
+
+class NetworksAssociateJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                                     ".networks_associate.Networks_associate")
+
+    _sentinel = object()
+
+    def _get_flags(self):
+        f = super(NetworksAssociateJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # Networks_associate requires Networks to be update
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.networks.Networks')
+        return f
+
+    def setUp(self):
+        super(NetworksAssociateJsonTests, self).setUp()
+
+        def fake_associate(self, context, network_id,
+                           host=NetworksAssociateJsonTests._sentinel,
+                           project=NetworksAssociateJsonTests._sentinel):
+            return True
+
+        self.stubs.Set(api.API, "associate", fake_associate)
+
+    def test_disassociate(self):
+        response = self._do_post('os-networks/1/action',
+                                 'network-disassociate-req',
+                                 {})
+        self.assertEqual(response.status, 202)
+
+    def test_disassociate_host(self):
+        response = self._do_post('os-networks/1/action',
+                                 'network-disassociate-host-req',
+                                 {})
+        self.assertEqual(response.status, 202)
+
+    def test_disassociate_project(self):
+        response = self._do_post('os-networks/1/action',
+                                 'network-disassociate-project-req',
+                                 {})
+        self.assertEqual(response.status, 202)
+
+    def test_associate_host(self):
+        response = self._do_post('os-networks/1/action',
+                                 'network-associate-host-req',
+                                 {"host": "testHost"})
+        self.assertEqual(response.status, 202)
+
+
+class NetworksAssociateXmlTests(NetworksAssociateJsonTests):
+    ctype = 'xml'

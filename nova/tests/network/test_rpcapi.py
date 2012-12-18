@@ -92,6 +92,13 @@ class NetworkRpcAPITestCase(test.TestCase):
         self._test_network_api('disassociate_network', rpc_method='call',
                 network_uuid='fake_uuid')
 
+    def test_associate_host_and_project(self):
+        self._test_network_api('associate', rpc_method='call',
+                network_uuid='fake_uuid',
+                associations={'host': "testHost",
+                              'project': 'testProject'},
+                version="1.5")
+
     def test_get_fixed_ip(self):
         self._test_network_api('get_fixed_ip', rpc_method='call', id='id')
 

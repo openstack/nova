@@ -125,6 +125,9 @@
   <extension alias="os-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/networks/api/v1.1" name="Networks">
     <description>Admin-only Network Management Extension</description>
   </extension>
+  <extension alias="os-networks-associate" updated="2012-11-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/networks_associate/api/v2" name="NetworkAssociationSupport">
+    <description>Network association support</description>
+  </extension>
   <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
     <description>Quota classes management support</description>
   </extension>

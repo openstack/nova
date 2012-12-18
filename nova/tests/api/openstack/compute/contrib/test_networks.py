@@ -23,6 +23,9 @@ import uuid
 import webob
 
 from nova.api.openstack.compute.contrib import networks
+from nova.api.openstack.compute.contrib import networks_associate
+from nova import config
+from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova import test
@@ -93,6 +96,8 @@ NEW_NETWORK = {
 
 class FakeNetworkAPI(object):
 
+    _sentinel = object()
+
     def __init__(self):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
 
@@ -107,6 +112,17 @@ class FakeNetworkAPI(object):
         for network in self.networks:
             if network.get('uuid') == network_uuid:
                 network['project_id'] = None
+                return True
+        raise exception.NetworkNotFound()
+
+    def associate(self, context, network_uuid, host=_sentinel,
+                  project=_sentinel):
+        for network in self.networks:
+            if network.get('uuid') == network_uuid:
+                if host is not FakeNetworkAPI._sentinel:
+                    network['host'] = host
+                if project is not FakeNetworkAPI._sentinel:
+                    network['project_id'] = project
                 return True
         raise exception.NetworkNotFound()
 
@@ -165,6 +181,8 @@ class NetworksTest(test.TestCase):
         super(NetworksTest, self).setUp()
         self.fake_network_api = FakeNetworkAPI()
         self.controller = networks.NetworkController(self.fake_network_api)
+        self.associate_controller = networks_associate\
+            .NetworkAssociateActionController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
 
@@ -194,13 +212,35 @@ class NetworksTest(test.TestCase):
     def test_network_disassociate(self):
         uuid = FAKE_NETWORKS[0]['uuid']
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
-        res = self.controller.action(req, uuid, {'disassociate': None})
+        res = self.controller._disassociate_host_and_project(
+            req, uuid, {'disassociate': None})
         self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.fake_network_api.networks[0]['project_id'], None)
+        self.assertEqual(self.fake_network_api.networks[0]['host'], None)
+
+    def test_network_disassociate_host_only(self):
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        res = self.associate_controller._disassociate_host_only(
+            req, uuid, {'disassociate_host': None})
+        self.assertEqual(res.status_int, 202)
+        self.assertNotEqual(self.fake_network_api.networks[0]['project_id'],
+                            None)
+        self.assertEqual(self.fake_network_api.networks[0]['host'], None)
+
+    def test_network_disassociate_project_only(self):
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        res = self.associate_controller._disassociate_project_only(
+            req, uuid, {'disassociate_project': None})
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.fake_network_api.networks[0]['project_id'], None)
+        self.assertNotEqual(self.fake_network_api.networks[0]['host'], None)
 
     def test_network_disassociate_not_found(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/100/action')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.action,
+                          self.controller._disassociate_host_and_project,
                           req, 100, {'disassociate': None})
 
     def test_network_get_as_user(self):
@@ -245,6 +285,17 @@ class NetworksTest(test.TestCase):
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.show(req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
+
+    def test_network_associate_with_host(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        res = self.associate_controller._associate_host(
+            req, uuid, {'associate_host': "TestHost"})
+        self.assertEqual(res.status_int, 202)
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
+        req.environ["nova.context"].is_admin = True
+        res_dict = self.controller.show(req, uuid)
+        self.assertEqual(res_dict['network']['host'], 'TestHost')
 
     def test_network_create(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
