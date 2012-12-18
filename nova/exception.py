@@ -29,10 +29,20 @@ import itertools
 
 import webob.exc
 
+from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
+
+exc_log_opts = [
+    cfg.BoolOpt('fatal_exception_format_errors',
+                default=False,
+                help='make exception message format errors fatal'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(exc_log_opts)
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):
@@ -137,8 +147,12 @@ class NovaException(Exception):
                 LOG.exception(_('Exception in string format operation'))
                 for name, value in kwargs.iteritems():
                     LOG.error("%s: %s" % (name, value))
-                # at least get the core message out if something happened
-                message = self.message
+
+                if CONF.fatal_exception_format_errors:
+                    raise e
+                else:
+                    # at least get the core message out if something happened
+                    message = self.message
 
         super(NovaException, self).__init__(message)
 
