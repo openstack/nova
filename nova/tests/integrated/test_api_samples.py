@@ -372,7 +372,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-instance_usage_audit_log')
         do_not_approve_additions.append('os-networks')
-        do_not_approve_additions.append('os-quota-class-sets')
         do_not_approve_additions.append('os-services')
         do_not_approve_additions.append('os-volumes')
 
@@ -2304,4 +2303,31 @@ class FlavorDisabledSampleJsonTests(ApiSampleTestBase):
 
 
 class FlavorDisabledSampleXmlTests(FlavorDisabledSampleJsonTests):
+    ctype = "xml"
+
+
+class QuotaClassesSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.quota_classes."
+                      "Quota_classes")
+    set_id = 'test_class'
+
+    def test_show_quota_classes(self):
+        """Get api sample to show quota classes"""
+        response = self._do_get('os-quota-class-sets/%s' % self.set_id)
+        self.assertEqual(response.status, 200)
+        subs = {'set_id': self.set_id}
+        return self._verify_response('quota-classes-show-get-resp', subs,
+                                     response)
+
+    def test_update_quota_classes(self):
+        """Get api sample to update quota classes"""
+        response = self._do_put('os-quota-class-sets/%s' % self.set_id,
+                                'quota-classes-update-post-req',
+                                {})
+        self.assertEqual(response.status, 200)
+        return self._verify_response('quota-classes-update-post-resp',
+                                     {}, response)
+
+
+class QuotaClassesSampleXmlTests(QuotaClassesSampleJsonTests):
     ctype = "xml"
