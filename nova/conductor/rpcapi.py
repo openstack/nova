@@ -39,6 +39,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
           security_group_rule_get_by_security_group
     1.9 - Added provider_fw_rule_get_all
     1.10 - Added agent_build_get_by_triple
+    1.11 - Added aggregate_get
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -85,6 +86,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('aggregate_host_delete', aggregate=aggregate_p,
                             host=host)
         return self.call(context, msg, version='1.3')
+
+    def aggregate_get(self, context, aggregate_id):
+        msg = self.make_msg('aggregate_get', aggregate_id=aggregate_id)
+        return self.call(context, msg, version='1.11')
 
     def aggregate_get_by_host(self, context, host, key=None):
         msg = self.make_msg('aggregate_get_by_host', host=host, key=key)

@@ -3347,7 +3347,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                            aggregate=None, aggregate_id=None):
         """Notify hypervisor of change (for hypervisor pools)."""
         if not aggregate:
-            aggregate = self.db.aggregate_get(context, aggregate_id)
+            aggregate = self.conductor_api.aggregate_get(context, aggregate_id)
 
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
@@ -3364,7 +3364,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               aggregate=None, aggregate_id=None):
         """Removes a host from a physical hypervisor pool."""
         if not aggregate:
-            aggregate = self.db.aggregate_get(context, aggregate_id)
+            aggregate = self.conductor_api.aggregate_get(context, aggregate_id)
 
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
