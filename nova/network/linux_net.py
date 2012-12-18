@@ -277,7 +277,8 @@ class IptablesManager(object):
             self.execute = execute
 
         self.ipv4 = {'filter': IptablesTable(),
-                     'nat': IptablesTable()}
+                     'nat': IptablesTable(),
+                     'mangle': IptablesTable()}
         self.ipv6 = {'filter': IptablesTable()}
 
         self.iptables_apply_deferred = False
@@ -298,7 +299,8 @@ class IptablesManager(object):
 
         # Wrap the built-in chains
         builtin_chains = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                              'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
+                              'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING'],
+                              'mangle': ['POSTROUTING']},
                           6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
 
         for ip_version in builtin_chains:
@@ -732,6 +734,24 @@ def _add_dnsmasq_accept_rules(dev):
     iptables_manager.apply()
 
 
+def _add_dhcp_mangle_rule(dev):
+    if not os.path.exists('/dev/vhost-net'):
+        return
+    table = iptables_manager.ipv4['mangle']
+    table.add_rule('POSTROUTING',
+                   '-o %s -p udp -m udp --dport 68 -j CHECKSUM '
+                   '--checksum-fill' % dev)
+    iptables_manager.apply()
+
+
+def _remove_dhcp_mangle_rule(dev):
+    table = iptables_manager.ipv4['mangle']
+    table.remove_rule('POSTROUTING',
+                      '-o %s -p udp -m udp --dport 68 -j CHECKSUM '
+                      '--checksum-fill' % dev)
+    iptables_manager.apply()
+
+
 def get_dhcp_opts(context, network_ref):
     """Get network's hosts config in dhcp-opts format."""
     hosts = []
@@ -788,6 +808,8 @@ def kill_dhcp(dev):
         else:
             LOG.debug(_('Pid %d is stale, skip killing dnsmasq'), pid)
 
+    _remove_dhcp_mangle_rule(dev)
+
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
@@ -808,6 +830,9 @@ def restart_dhcp(context, dev, network_ref):
         optsfile = _dhcp_file(dev, 'opts')
         write_to_file(optsfile, get_dhcp_opts(context, network_ref))
         os.chmod(optsfile, 0644)
+
+    if network_ref['multi_host']:
+        _add_dhcp_mangle_rule(dev)
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
