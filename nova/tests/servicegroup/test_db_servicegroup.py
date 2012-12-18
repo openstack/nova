@@ -15,6 +15,7 @@
 import datetime
 
 import eventlet
+import fixtures
 import mox
 
 from nova import context
@@ -23,6 +24,25 @@ from nova.openstack.common import timeutils
 from nova import service
 from nova import servicegroup
 from nova import test
+
+
+class ServiceFixture(fixtures.Fixture):
+
+    def __init__(self, host, binary, topic):
+        super(ServiceFixture, self).__init__()
+        self.host = host
+        self.binary = binary
+        self.topic = topic
+        self.serv = None
+
+    def setUp(self):
+        super(ServiceFixture, self).setUp()
+        self.serv = service.Service(self.host,
+                                    self.binary,
+                                    self.topic,
+                                    'nova.tests.test_service.FakeManager',
+                                    1, 1)
+        self.addCleanup(self.serv.kill)
 
 
 class DBServiceGroupTestCase(test.TestCase):
@@ -41,11 +61,8 @@ class DBServiceGroupTestCase(test.TestCase):
         self._ctx = context.get_admin_context()
 
     def test_DB_driver(self):
-        serv = service.Service(self._host,
-                                     self._binary,
-                                     self._topic,
-                                     'nova.tests.test_service.FakeManager',
-                                     1, 1)
+        serv = self.useFixture(
+            ServiceFixture(self._host, self._binary, self._topic)).serv
         serv.start()
         service_ref = db.service_get_by_args(self._ctx,
                                              self._host,
@@ -69,18 +86,12 @@ class DBServiceGroupTestCase(test.TestCase):
         host1 = self._host + '_1'
         host2 = self._host + '_2'
 
-        serv1 = service.Service(host1,
-                                self._binary,
-                                self._topic,
-                                'nova.tests.test_service.FakeManager',
-                                1, 1)
+        serv1 = self.useFixture(
+            ServiceFixture(host1, self._binary, self._topic)).serv
         serv1.start()
 
-        serv2 = service.Service(host2,
-                                self._binary,
-                                self._topic,
-                                'nova.tests.test_service.FakeManager',
-                                1, 1)
+        serv2 = self.useFixture(
+            ServiceFixture(host2, self._binary, self._topic)).serv
         serv2.start()
 
         service_ref1 = db.service_get_by_args(self._ctx,
