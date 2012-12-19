@@ -16,12 +16,15 @@
 """Support for mounting virtual image files"""
 
 import os
+import time
 
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+
+MAX_DEVICE_WAIT = 30
 
 
 class Mount(object):
@@ -101,6 +104,26 @@ class Mount(object):
         self.device = None
         self.linked = True
         return True
+
+    def _get_dev_retry_helper(self):
+        """Some implementations need to retry their get_dev."""
+        # NOTE(mikal): This method helps implement retries. The implementation
+        # simply calls _get_dev_retry_helper from their get_dev, and implements
+        # _inner_get_dev with their device acquistion logic. The NBD
+        # implementation has an example.
+        start_time = time.time()
+        device = self._inner_get_dev()
+        while not device:
+            LOG.info(_('Device allocation failed. Will retry in 2 seconds.'))
+            time.sleep(2)
+            if time.time() - start_time > MAX_DEVICE_WAIT:
+                LOG.warn(_('Device allocation failed after repeated retries.'))
+                return False
+            device = self._inner_get_dev()
+        return True
+
+    def _inner_get_dev(self):
+        raise NotImplementedError()
 
     def unget_dev(self):
         """Release the block device from the file system namespace."""
