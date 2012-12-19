@@ -20,7 +20,9 @@
 Handles all requests relating to volumes + cinder.
 """
 
+import sys
 
+from cinderclient import exceptions as cinder_exception
 from cinderclient import service_catalog
 from cinderclient.v1 import client as cinder_client
 
@@ -139,9 +141,24 @@ def _untranslate_snapshot_summary_view(context, snapshot):
 class API(base.Base):
     """API for interacting with the volume manager."""
 
+    def _reraise_translated_volume_exception(self, volume_id):
+        """Transform the exception for the volume but keep its traceback
+        intact."""
+        exc_type, exc_value, exc_trace = sys.exc_info()
+        new_exc = self._translate_volume_exception(volume_id, exc_value)
+        raise new_exc, None, exc_trace
+
+    def _translate_volume_exception(self, volume_id, exc_value):
+        if isinstance(exc_value, cinder_exception.NotFound):
+            return exception.VolumeNotFound(volume_id=volume_id)
+        return exc_value
+
     def get(self, context, volume_id):
-        item = cinderclient(context).volumes.get(volume_id)
-        return _untranslate_volume_summary_view(context, item)
+        try:
+            item = cinderclient(context).volumes.get(volume_id)
+            return _untranslate_volume_summary_view(context, item)
+        except Exception:
+            self._reraise_translated_volume_exception(volume_id)
 
     def get_all(self, context, search_opts={}):
         items = cinderclient(context).volumes.list(detailed=True)
