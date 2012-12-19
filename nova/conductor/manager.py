@@ -118,6 +118,7 @@ class ConductorManager(manager.SchedulerDependentManager):
                                                       metadata, set_delete)
         return jsonutils.to_primitive(new_metadata)
 
+    @rpc_common.client_exceptions(exception.AggregateMetadataNotFound)
     def aggregate_metadata_delete(self, context, aggregate, key):
         self.db.aggregate_metadata_delete(context.elevated(),
                                           aggregate['id'], key)
