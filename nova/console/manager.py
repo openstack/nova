@@ -52,7 +52,7 @@ class ConsoleProxyManager(manager.Manager):
 
     """
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
@@ -132,3 +132,6 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)
         return pool
+
+    def get_backdoor_port(self, context):
+        return self.backdoor_port
