@@ -191,6 +191,23 @@ class FilterScheduler(driver.Scheduler):
                 "'scheduler_max_attempts', must be >= 1"))
         return max_attempts
 
+    def _log_compute_error(self, instance_uuid, retry):
+        """If the request contained an exception from a previous compute
+        build/resize operation, log it to aid debugging
+        """
+        exc = retry.pop('exc', None)  # string-ified exception from compute
+        if not exc:
+            return  # no exception info from a prevous attempt, skip
+
+        hosts = retry.get('hosts', None)
+        if not hosts:
+            return  # no previously attempted hosts, skip
+
+        last_host, last_node = hosts[-1]
+        msg = _("Error from last host: %(last_host)s (node %(last_node)s): "
+                "%(exc)s") % locals()
+        LOG.error(msg, instance_uuid=instance_uuid)
+
     def _populate_retry(self, filter_properties, instance_properties):
         """Populate filter properties with history of retries for this
         request. If maximum retries is exceeded, raise NoValidHost.
@@ -212,8 +229,10 @@ class FilterScheduler(driver.Scheduler):
             }
         filter_properties['retry'] = retry
 
+        instance_uuid = instance_properties.get('uuid')
+        self._log_compute_error(instance_uuid, retry)
+
         if retry['num_attempts'] > max_attempts:
-            instance_uuid = instance_properties.get('uuid')
             msg = _("Exceeded max scheduling attempts %(max_attempts)d for "
                     "instance %(instance_uuid)s") % locals()
             raise exception.NoValidHost(reason=msg)

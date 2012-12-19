@@ -23,6 +23,7 @@ import copy
 import datetime
 import sys
 import time
+import traceback
 import uuid
 
 import mox
@@ -5868,7 +5869,8 @@ class ComputeReschedulingTestCase(BaseTestCase):
             self.updated_task_state = kwargs.get('task_state')
         self.stubs.Set(self.compute, '_instance_update', fake_update)
 
-    def _reschedule(self, request_spec=None, filter_properties=None):
+    def _reschedule(self, request_spec=None, filter_properties=None,
+                    exc_info=None):
         if not filter_properties:
             filter_properties = {}
 
@@ -5884,7 +5886,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
                        requested_networks, is_first_time, filter_properties)
         return self.compute._reschedule(self.context, request_spec,
                 filter_properties, instance_uuid, scheduler_method,
-                method_args, self.expected_task_state)
+                method_args, self.expected_task_state, exc_info=exc_info)
 
     def test_reschedule_no_filter_properties(self):
         """no filter_properties will disable re-scheduling"""
@@ -5905,10 +5907,17 @@ class ComputeReschedulingTestCase(BaseTestCase):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
         request_spec = {'instance_uuids': ['foo', 'bar']}
+        try:
+            raise test.TestingException("just need an exception")
+        except test.TestingException:
+            exc_info = sys.exc_info()
+            exc_str = traceback.format_exception(*exc_info)
+
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
-            request_spec=request_spec))
+            request_spec=request_spec, exc_info=exc_info))
         self.assertEqual(1, len(request_spec['instance_uuids']))
         self.assertEqual(self.updated_task_state, self.expected_task_state)
+        self.assertEqual(exc_str, filter_properties['retry']['exc'])
 
 
 class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
@@ -5918,7 +5927,8 @@ class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
         super(ComputeReschedulingResizeTestCase, self).setUp()
         self.expected_task_state = task_states.RESIZE_PREP
 
-    def _reschedule(self, request_spec=None, filter_properties=None):
+    def _reschedule(self, request_spec=None, filter_properties=None,
+                    exc_info=None):
         if not filter_properties:
             filter_properties = {}
 
@@ -5935,7 +5945,7 @@ class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
 
         return self.compute._reschedule(self.context, request_spec,
                 filter_properties, instance_uuid, scheduler_method,
-                method_args, self.expected_task_state)
+                method_args, self.expected_task_state, exc_info=exc_info)
 
 
 class InnerTestingException(Exception):
@@ -6055,7 +6065,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
                     self.instance)
             self.compute._reschedule(self.context, None, {}, instance_uuid,
                     self.compute.scheduler_rpcapi.run_instance,
-                    method_args, task_states.SCHEDULING).AndReturn(True)
+                    method_args, task_states.SCHEDULING, exc_info).AndReturn(
+                            True)
             self.compute._log_original_error(exc_info, instance_uuid)
 
             self.mox.ReplayAll()
@@ -6149,7 +6160,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             self.compute._reschedule(self.context, {}, {},
                     self.instance_uuid,
                     self.compute.scheduler_rpcapi.prep_resize, method_args,
-                    task_states.RESIZE_PREP).AndReturn(True)
+                    task_states.RESIZE_PREP, exc_info).AndReturn(True)
 
             self.compute._log_original_error(exc_info, self.instance_uuid)
             self.mox.ReplayAll()

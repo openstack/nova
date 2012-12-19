@@ -675,7 +675,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             rescheduled = self._reschedule(context, request_spec,
                     filter_properties, instance['uuid'],
                     self.scheduler_rpcapi.run_instance, method_args,
-                    task_state)
+                    task_state, exc_info)
 
         except Exception:
             rescheduled = False
@@ -690,7 +690,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exc_info[0], exc_info[1], exc_info[2]
 
     def _reschedule(self, context, request_spec, filter_properties,
-            instance_uuid, scheduler_method, method_args, task_state):
+            instance_uuid, scheduler_method, method_args, task_state,
+            exc_info=None):
         """Attempt to re-schedule a compute operation."""
 
         retry = filter_properties.get('retry', None)
@@ -713,6 +714,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # reset the task state:
         self._instance_update(context, instance_uuid, task_state=task_state)
+
+        if exc_info:
+            # stringify to avoid circular ref problem in json serialization:
+            retry['exc'] = traceback.format_exception(*exc_info)
 
         scheduler_method(context, *method_args)
         return True
@@ -1871,7 +1876,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             rescheduled = self._reschedule(context, request_spec,
                     filter_properties, instance_uuid, scheduler_method,
-                    method_args, task_state)
+                    method_args, task_state, exc_info)
         except Exception:
             rescheduled = False
             LOG.exception(_("Error trying to reschedule"),
