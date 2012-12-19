@@ -37,7 +37,7 @@ import testtools
 from nova import context
 from nova import db
 from nova.db import migration
-from nova.db.sqlalchemy.session import get_engine
+from nova.db.sqlalchemy import session
 from nova.network import manager as network_manager
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -75,38 +75,19 @@ _DB_CACHE = None
 
 class Database(fixtures.Fixture):
 
-    def __init__(self):
-        self.engine = get_engine()
+    def __init__(self, db_session, db_migrate):
+        self.engine = db_session.get_engine()
         self.engine.dispose()
         conn = self.engine.connect()
         if CONF.sql_connection == "sqlite://":
-            if migration.db_version() > migration.INIT_VERSION:
+            if db_migrate.db_version() > db_migrate.INIT_VERSION:
                 return
         else:
             testdb = os.path.join(CONF.state_path, CONF.sqlite_db)
             if os.path.exists(testdb):
                 return
-        migration.db_sync()
-        ctxt = context.get_admin_context()
-        network = network_manager.VlanManager()
-        bridge_interface = CONF.flat_interface or CONF.vlan_interface
-        network.create_networks(ctxt,
-                                label='test',
-                                cidr=CONF.fixed_range,
-                                multi_host=CONF.multi_host,
-                                num_networks=CONF.num_networks,
-                                network_size=CONF.network_size,
-                                cidr_v6=CONF.fixed_range_v6,
-                                gateway=CONF.gateway,
-                                gateway_v6=CONF.gateway_v6,
-                                bridge=CONF.flat_network_bridge,
-                                bridge_interface=bridge_interface,
-                                vpn_start=CONF.vpn_start,
-                                vlan_start=CONF.vlan_start,
-                                dns1=CONF.flat_network_dns)
-        for net in db.network_get_all(ctxt):
-            network.set_network_host(ctxt, net)
-
+        db_migrate.db_sync()
+        self.post_migrations()
         if CONF.sql_connection == "sqlite://":
             conn = self.engine.connect()
             self._DB = "".join(line for line in conn.connection.iterdump())
@@ -127,6 +108,28 @@ class Database(fixtures.Fixture):
                                          CONF.sqlite_clean_db),
                             os.path.join(CONF.state_path,
                                          CONF.sqlite_db))
+
+    def post_migrations(self):
+        """Any addition steps that are needed outside of the migrations."""
+        ctxt = context.get_admin_context()
+        network = network_manager.VlanManager()
+        bridge_interface = CONF.flat_interface or CONF.vlan_interface
+        network.create_networks(ctxt,
+                                label='test',
+                                cidr=CONF.fixed_range,
+                                multi_host=CONF.multi_host,
+                                num_networks=CONF.num_networks,
+                                network_size=CONF.network_size,
+                                cidr_v6=CONF.fixed_range_v6,
+                                gateway=CONF.gateway,
+                                gateway_v6=CONF.gateway_v6,
+                                bridge=CONF.flat_network_bridge,
+                                bridge_interface=bridge_interface,
+                                vpn_start=CONF.vpn_start,
+                                vlan_start=CONF.vlan_start,
+                                dns1=CONF.flat_network_dns)
+        for net in db.network_get_all(ctxt):
+            network.set_network_host(ctxt, net)
 
 
 class ReplaceModule(fixtures.Fixture):
@@ -205,7 +208,7 @@ class TestCase(testtools.TestCase):
 
         global _DB_CACHE
         if not _DB_CACHE:
-            _DB_CACHE = Database()
+            _DB_CACHE = Database(session, migration)
         self.useFixture(_DB_CACHE)
 
         mox_fixture = self.useFixture(MoxStubout())
