@@ -66,7 +66,7 @@ On Ubuntu::
 
 On Ubuntu Precise (12.04) you may also need to add the following packages::
 
-  sudo apt-get install build-dep python-mysqldb
+  sudo apt-get build-dep python-mysqldb
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
