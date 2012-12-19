@@ -1072,11 +1072,25 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
         libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instances = conn.list_instances()
         # Only one should be listed, since domain with ID 0 must be skiped
+        self.assertEquals(len(instances), 1)
+
+    def test_list_defined_instances(self):
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: [1]
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instances = conn.list_instances()
+        # Only one defined domain should be listed
         self.assertEquals(len(instances), 1)
 
     def test_list_instances_when_instance_deleted(self):
@@ -1088,6 +1102,7 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
         libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -1202,6 +1217,7 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: range(4)
         libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
