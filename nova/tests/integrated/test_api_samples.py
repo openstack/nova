@@ -228,9 +228,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _verify_response(self, name, subs, response):
         expected = self._read_template(name)
         expected = self._objectify(expected)
-        with file(self._get_sample(name)) as sample:
-            sample_data = sample.read()
         response_data = response.read()
+        try:
+            with file(self._get_sample(name)) as sample:
+                sample_data = sample.read()
+        except IOError:
+            sample_data = "{}"
 
         try:
             response_result = self._verify_something(subs, expected,
