@@ -27,10 +27,15 @@ from coverage import coverage
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova.cert import rpcapi as cert_api
 from nova.compute import api as compute_api
+from nova.conductor import api as conductor_api
+from nova.console import api as console_api
+from nova.consoleauth import rpcapi as consoleauth_api
 from nova import db
 from nova.network import api as network_api
 from nova.openstack.common import log as logging
+from nova.scheduler import rpcapi as scheduler_api
 
 
 LOG = logging.getLogger(__name__)
@@ -45,6 +50,11 @@ class CoverageController(object):
         self.coverInst = coverage(data_file=data_out)
         self.compute_api = compute_api.API()
         self.network_api = network_api.API()
+        self.conductor_api = conductor_api.API()
+        self.consoleauth_api = consoleauth_api.ConsoleAuthAPI()
+        self.console_api = console_api.API()
+        self.scheduler_api = scheduler_api.SchedulerAPI()
+        self.cert_api = cert_api.CertAPI()
         self.services = []
         self.combine = False
         super(CoverageController, self).__init__()
@@ -65,6 +75,11 @@ class CoverageController(object):
         apicommands = {
             "compute": self.compute_api.get_backdoor_port,
             "network": self.network_api.get_backdoor_port,
+            "conductor": self.conductor_api.get_backdoor_port,
+            "consoleauth": self.consoleauth_api.get_backdoor_port,
+            "console": self.console_api.get_backdoor_port,
+            "scheduler": self.scheduler_api.get_backdoor_port,
+            "cert": self.cert_api.get_backdoor_port,
         }
         ports = []
         temp = {}
