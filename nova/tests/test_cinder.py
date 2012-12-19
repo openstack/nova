@@ -42,6 +42,11 @@ def _stub_volume(**kwargs):
     volume.update(kwargs)
     return volume
 
+_image_metadata = {
+    'kernel_id': 'fake',
+    'ramdisk_id': 'fake'
+}
+
 
 class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 
@@ -81,6 +86,13 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 
     def get_volumes_nonexisting(self, **kw):
         raise cinder_exception.NotFound(code=404, message='Resource not found')
+
+    def get_volumes_5678(self, **kw):
+        """Volume with image metadata"""
+        volume = {'volume': _stub_volume(id='1234',
+                                         volume_image_metadata=_image_metadata)
+        }
+        return (200, volume)
 
 
 class FakeCinderClient(cinder.cinder_client.Client):
@@ -155,3 +167,9 @@ class CinderTestCase(test.TestCase):
     def test_get_non_existing_volume(self):
         self.assertRaises(exception.VolumeNotFound, self.api.get, self.context,
                           'nonexisting')
+
+    def test_volume_with_image_metadata(self):
+        volume = self.api.get(self.context, '5678')
+        self.assert_called('GET', '/volumes/5678')
+        self.assertTrue('volume_image_metadata' in volume)
+        self.assertEqual(volume['volume_image_metadata'], _image_metadata)
