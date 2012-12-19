@@ -547,12 +547,14 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
         obj.target_dev = "vnet0"
+        obj.driver_name = "vhost"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <interface type="ethernet">
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
+              <driver name="vhost"/>
               <target dev="vnet0"/>
             </interface>""")
 
