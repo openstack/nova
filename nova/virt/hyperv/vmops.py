@@ -78,8 +78,7 @@ class VMOps(baseops.BaseOps):
     def get_info(self, instance):
         """Get information about the VM"""
         LOG.debug(_("get_info called for instance"), instance=instance)
-        instance_name = instance["name"]
-        return self._get_info(instance_name)
+        return self._get_info(instance['name'])
 
     def _get_info(self, instance_name):
         vm = self._vmutils.lookup(self._conn, instance_name)
@@ -120,10 +119,9 @@ class VMOps(baseops.BaseOps):
     def spawn(self, context, instance, image_meta, injected_files,
         admin_password, network_info, block_device_info=None):
         """ Create a new VM and start it."""
-        instance_name = instance["name"]
-        vm = self._vmutils.lookup(self._conn, instance_name)
+        vm = self._vmutils.lookup(self._conn, instance['name'])
         if vm is not None:
-            raise exception.InstanceExists(name=instance_name)
+            raise exception.InstanceExists(name=instance['name'])
 
         ebs_root = self._volumeops.volume_in_mapping(
             self._volumeops.get_default_root_device(),
@@ -132,7 +130,7 @@ class VMOps(baseops.BaseOps):
         #If is not a boot from volume spawn
         if not (ebs_root):
             #Fetch the file, assume it is a VHD file.
-            vhdfile = self._vmutils.get_vhd_path(instance_name)
+            vhdfile = self._vmutils.get_vhd_path(instance['name'])
             try:
                 self._cache_image(fn=self._vmutils.fetch_image,
                   context=context,
@@ -154,7 +152,7 @@ class VMOps(baseops.BaseOps):
                     constants.IDE_DISK)
             else:
                 self._volumeops.attach_boot_volume(block_device_info,
-                                             instance_name)
+                                             instance['name'])
 
             #A SCSI controller for volumes connection is created
             self._create_scsi_controller(instance['name'])
@@ -167,9 +165,9 @@ class VMOps(baseops.BaseOps):
                 self._create_config_drive(instance, injected_files,
                     admin_password)
 
-            LOG.debug(_('Starting VM %s '), instance_name)
+            LOG.debug(_('Starting VM %s '), instance['name'])
             self._set_vm_state(instance['name'], 'Enabled')
-            LOG.info(_('Started VM %s '), instance_name)
+            LOG.info(_('Started VM %s '), instance['name'])
         except Exception as exn:
             LOG.exception(_('spawn vm failed: %s'), exn)
             self.destroy(instance)
@@ -227,11 +225,10 @@ class VMOps(baseops.BaseOps):
 
     def _create_vm(self, instance):
         """Create a VM but don't start it.  """
-        instance_name = instance["name"]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
-        vs_gs_data.ElementName = instance_name
+        vs_gs_data.ElementName = instance["name"]
         (job, ret_val) = vs_man_svc.DefineVirtualSystem(
                 [], None, vs_gs_data.GetText_(1))[1:]
         if ret_val == constants.WMI_JOB_STATUS_STARTED:
@@ -241,10 +238,10 @@ class VMOps(baseops.BaseOps):
 
         if not success:
             raise vmutils.HyperVException(_('Failed to create VM %s') %
-                instance_name)
+                instance["name"])
 
-        LOG.debug(_('Created VM %s...'), instance_name)
-        vm = self._conn.Msvm_ComputerSystem(ElementName=instance_name)[0]
+        LOG.debug(_('Created VM %s...'), instance["name"])
+        vm = self._conn.Msvm_ComputerSystem(ElementName=instance["name"])[0]
 
         vmsettings = vm.associators(
                           wmi_result_class='Msvm_VirtualSystemSettingData')
@@ -260,7 +257,7 @@ class VMOps(baseops.BaseOps):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                 vm.path_(), [memsetting.GetText_(1)])
-        LOG.debug(_('Set memory for vm %s...'), instance_name)
+        LOG.debug(_('Set memory for vm %s...'), instance["name"])
         procsetting = vmsetting.associators(
                 wmi_result_class='Msvm_ProcessorSettingData')[0]
         vcpus = long(instance['vcpus'])
@@ -273,7 +270,7 @@ class VMOps(baseops.BaseOps):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                 vm.path_(), [procsetting.GetText_(1)])
-        LOG.debug(_('Set vcpus for vm %s...'), instance_name)
+        LOG.debug(_('Set vcpus for vm %s...'), instance["name"])
 
     def _create_scsi_controller(self, vm_name):
         """ Create an iscsi controller ready to mount volumes """
@@ -447,24 +444,22 @@ class VMOps(baseops.BaseOps):
                 .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
 
     def reboot(self, instance, network_info, reboot_type):
-        instance_name = instance["name"]
         """Reboot the specified instance."""
-        vm = self._vmutils.lookup(self._conn, instance_name)
+        vm = self._vmutils.lookup(self._conn, instance['name'])
         if vm is None:
             raise exception.InstanceNotFound(instance_id=instance["id"])
-        self._set_vm_state(instance_name, 'Reboot')
+        self._set_vm_state(instance['name'], 'Reboot')
 
     def destroy(self, instance, network_info=None, cleanup=True):
         """Destroy the VM. Also destroy the associated VHD disk files"""
-        instance_name = instance["name"]
-        LOG.debug(_("Got request to destroy vm %s"), instance_name)
-        vm = self._vmutils.lookup(self._conn, instance_name)
+        LOG.debug(_("Got request to destroy vm %s"), instance['name'])
+        vm = self._vmutils.lookup(self._conn, instance['name'])
         if vm is None:
             return
-        vm = self._conn.Msvm_ComputerSystem(ElementName=instance_name)[0]
+        vm = self._conn.Msvm_ComputerSystem(ElementName=instance['name'])[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         #Stop the VM first.
-        self._set_vm_state(instance_name, 'Disabled')
+        self._set_vm_state(instance['name'], 'Disabled')
         vmsettings = vm.associators(
                          wmi_result_class='Msvm_VirtualSystemSettingData')
         rasds = vmsettings[0].associators(
@@ -492,7 +487,7 @@ class VMOps(baseops.BaseOps):
             success = True
         if not success:
             raise vmutils.HyperVException(_('Failed to destroy vm %s') %
-                instance_name)
+                instance['name'])
         #Disconnect volumes
         for volume_drive in volumes_drives_list:
             self._volumeops.disconnect_volume(volume_drive)
@@ -501,8 +496,8 @@ class VMOps(baseops.BaseOps):
             vhdfile = self._conn_cimv2.query(
             "Select * from CIM_DataFile where Name = '" +
                 disk.replace("'", "''") + "'")[0]
-            LOG.debug(_("Del: disk %(vhdfile)s vm %(instance_name)s")
-                % locals())
+            LOG.debug(_("Del: disk %(vhdfile)s vm %(name)s")
+                % {'vhdfile': vhdfile, 'name': instance['name']})
             vhdfile.Delete()
 
     def pause(self, instance):
