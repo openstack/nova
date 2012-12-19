@@ -37,6 +37,9 @@ class SchedulerRpcAPITestCase(test.TestCase):
         expected_msg = rpcapi.make_msg(method, **kwargs)
         expected_msg['version'] = expected_version
 
+        if method == 'get_backdoor_port':
+            del expected_msg['args']['host']
+
         self.fake_args = None
         self.fake_kwargs = None
 
@@ -84,3 +87,7 @@ class SchedulerRpcAPITestCase(test.TestCase):
                 rpc_method='fanout_cast', service_name='fake_name',
                 host='fake_host', capabilities='fake_capabilities',
                 version='2.4')
+
+    def test_get_backdoor_port(self):
+        self._test_scheduler_api('get_backdoor_port', rpc_method='call',
+                                 host='fake_host', version='2.5')

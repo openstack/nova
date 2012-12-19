@@ -49,6 +49,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.3 - Remove create_volume()
         2.4 - Change update_service_capabilities()
                 - accepts a list of capabilities
+        2.5 - Add get_backdoor_port()
     '''
 
     #
@@ -106,3 +107,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 service_name=service_name, host=host,
                 capabilities=capabilities),
                 version='2.4')
+
+    def get_backdoor_port(self, context, host):
+        return self.call(context, self.make_msg('get_backdoor_port'),
+                         version='2.5')
