@@ -2388,7 +2388,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self.driver.attach_volume(connection_info,
-                                      instance['name'],
+                                      instance,
                                       mountpoint)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
@@ -2435,7 +2435,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             connection_info['serial'] = volume_id
         try:
             self.driver.detach_volume(connection_info,
-                                      instance['name'],
+                                      instance,
                                       mp)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():

@@ -651,7 +651,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return method(connection_info, *args, **kwargs)
 
     @exception.wrap_exception()
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance, mountpoint):
+        instance_name = instance['name']
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         conf = self.volume_driver_method('connect_volume',
@@ -705,7 +706,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return xml
 
     @exception.wrap_exception()
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
+        instance_name = instance['name']
         mount_device = mountpoint.rpartition("/")[2]
         try:
             virt_dom = self._lookup_by_name(instance_name)

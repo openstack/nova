@@ -1707,8 +1707,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
                           {"driver_volume_type": "badtype"},
-                           "fake",
-                           "/dev/fake")
+                          {"name": "fake-instance"},
+                          "/dev/fake")
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)

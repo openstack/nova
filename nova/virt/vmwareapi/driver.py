@@ -178,11 +178,11 @@ class VMWareESXDriver(driver.ComputeDriver):
             'host': None
         }
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance, mountpoint):
         """Attach volume storage to VM instance."""
         pass
 
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance."""
         pass
 
