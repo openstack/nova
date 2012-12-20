@@ -295,8 +295,12 @@ def _sign_csr(csr_text, ca_folder):
         inbound = os.path.join(tmpdir, 'inbound.csr')
         outbound = os.path.join(tmpdir, 'outbound.csr')
 
-        with open(inbound, 'w') as csrfile:
-            csrfile.write(csr_text)
+        try:
+            with open(inbound, 'w') as csrfile:
+                csrfile.write(csr_text)
+        except IOError:
+            LOG.exception(_('Failed to write inbound.csr'))
+            raise
 
         LOG.debug(_('Flags path: %s'), ca_folder)
         start = os.getcwd()
