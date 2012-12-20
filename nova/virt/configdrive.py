@@ -17,6 +17,7 @@
 
 """Config Drive v2 helper."""
 
+import contextlib
 import os
 import shutil
 import tempfile
@@ -54,7 +55,18 @@ CONF = cfg.CONF
 CONF.register_opts(configdrive_opts)
 
 
-class ConfigDriveBuilder(object):
+@contextlib.contextmanager
+def config_drive_helper(instance_md=None):
+    cdb = _ConfigDriveBuilder(instance_md=instance_md)
+    try:
+        yield cdb
+    finally:
+        cdb.cleanup()
+
+
+class _ConfigDriveBuilder(object):
+    """Don't use this directly, use the fancy pants contextlib helper above!"""
+
     def __init__(self, instance_md=None):
         self.imagefile = None
 

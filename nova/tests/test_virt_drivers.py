@@ -118,7 +118,7 @@ class _FakeDriverBackendTestCase(object):
 
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
-        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
+        self.stubs.Set(nova.virt.configdrive._ConfigDriveBuilder,
                        'make_drive', fake_make_drive)
 
     def _teardown_fakelibvirt(self):
