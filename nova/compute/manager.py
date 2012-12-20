@@ -299,7 +299,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.20'
+    RPC_API_VERSION = '2.21'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2480,14 +2480,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
+        migrate_data = {}
         try:
-            self.compute_rpcapi.check_can_live_migrate_source(ctxt,
-                    instance, dest_check_data)
+            migrate_data = self.compute_rpcapi.\
+                                check_can_live_migrate_source(ctxt, instance,
+                                                              dest_check_data)
         finally:
             self.driver.check_can_live_migrate_destination_cleanup(ctxt,
                     dest_check_data)
         if dest_check_data and 'migrate_data' in dest_check_data:
-            return dest_check_data['migrate_data']
+            migrate_data.update(dest_check_data['migrate_data'])
+        return migrate_data
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
@@ -2499,17 +2502,27 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         :param instance: dict of instance data
         :param dest_check_data: result of check_can_live_migrate_destination
+
+        Returns a dict values required for live migration without shared
+        storage.
         """
-        self.driver.check_can_live_migrate_source(ctxt, instance,
-                                                  dest_check_data)
+        is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
+                                                                      instance,
+                                                                      None)
+        dest_check_data['is_volume_backed'] = is_volume_backed
+        return self.driver.check_can_live_migrate_source(ctxt, instance,
+                                                         dest_check_data)
 
     def pre_live_migration(self, context, instance,
-                           block_migration=False, disk=None):
+                           block_migration=False, disk=None,
+                           migrate_data=None):
         """Preparations for live migration at dest host.
 
         :param context: security context
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
+        :param migrate_data : if not None, it is a dict which holds data
+        required for live migration without shared storage.
 
         """
         # If any volume is mounted, prepare here.
@@ -2535,7 +2548,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.pre_live_migration(context, instance,
                                        block_device_info,
-                                       self._legacy_nw_info(network_info))
+                                       self._legacy_nw_info(network_info),
+                                       migrate_data)
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
@@ -2572,14 +2586,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 disk = None
 
             self.compute_rpcapi.pre_live_migration(context, instance,
-                    block_migration, disk, dest)
+                    block_migration, disk, dest, migrate_data)
 
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Pre live migration failed at  %(dest)s'),
                               locals(), instance=instance)
                 self._rollback_live_migration(context, instance, dest,
-                                              block_migration)
+                                              block_migration, migrate_data)
 
         # Executing live migration
         # live_migration might raises exceptions, but
@@ -2590,7 +2604,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    block_migration, migrate_data)
 
     def _post_live_migration(self, ctxt, instance_ref,
-                            dest, block_migration=False):
+                            dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
 
         This method is called from live_migration
@@ -2600,6 +2614,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
+        :param migrate_data: if not None, it is a dict which has data
+        required for live migration without shared storage
 
         """
         LOG.info(_('_post_live_migration() is started..'),
@@ -2636,7 +2652,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
-        if block_migration:
+        # must be deleted for preparing next live migration w/o shared storage
+        is_shared_storage = True
+        if migrate_data:
+            is_shared_storage = migrate_data.get('is_shared_storage', True)
+        if block_migration or not is_shared_storage:
             self.driver.destroy(instance_ref,
                                 self._legacy_nw_info(network_info))
         else:
@@ -2698,7 +2718,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
     def _rollback_live_migration(self, context, instance_ref,
-                                 dest, block_migration):
+                                 dest, block_migration, migrate_data=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
@@ -2707,6 +2727,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             This method is called from live migration src host.
             This param specifies destination host.
         :param block_migration: if true, prepare for block migration
+        :param migrate_data:
+            if not none, contains implementation specific data.
 
         """
         host = instance_ref['host']
@@ -2731,7 +2753,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted.
-        if block_migration:
+        # Also Volume backed live migration w/o shared storage needs to delete
+        # newly created instance-xxx dir on the destination as a part of its
+        # rollback process
+        is_volume_backed = False
+        is_shared_storage = True
+        if migrate_data:
+            is_volume_backed = migrate_data.get('is_volume_backed', False)
+            is_shared_storage = migrate_data.get('is_shared_storage', True)
+        if block_migration or (is_volume_backed and not is_shared_storage):
             self.compute_rpcapi.rollback_live_migration_at_destination(context,
                     instance_ref, dest)
 

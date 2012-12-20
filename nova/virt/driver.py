@@ -380,13 +380,15 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def pre_live_migration(self, ctxt, instance_ref,
-                           block_device_info, network_info):
+                           block_device_info, network_info,
+                           migrate_data=None):
         """Prepare an instance for live migration
 
         :param ctxt: security context
         :param instance_ref: instance object that will be migrated
         :param block_device_info: instance block device information
         :param network_info: instance network information
+        :param migrate_data: implementation specific data dict.
         """
         raise NotImplementedError()
 

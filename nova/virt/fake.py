@@ -324,7 +324,7 @@ class FakeDriver(driver.ComputeDriver):
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
-        return
+        return {}
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
@@ -339,7 +339,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
-                           network_info):
+                           network_info, migrate_data=None):
         return
 
     def unfilter_instance(self, instance_ref, network_info):

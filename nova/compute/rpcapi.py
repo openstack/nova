@@ -148,6 +148,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.18 - Add bdms to rebuild_instance
         2.19 - Add node to run_instance
         2.20 - Add node to prep_resize
+        2.21 - Add migrate_data dict param to pre_live_migration()
     '''
 
     #
@@ -215,10 +216,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         instance_p = jsonutils.to_primitive(instance)
-        self.call(ctxt, self.make_msg('check_can_live_migrate_source',
-                           instance=instance_p,
-                           dest_check_data=dest_check_data),
-                  topic=_compute_topic(self.topic, ctxt, None, instance))
+        return self.call(ctxt, self.make_msg('check_can_live_migrate_source',
+                                             instance=instance_p,
+                                             dest_check_data=dest_check_data),
+                         topic=_compute_topic(self.topic, ctxt, None,
+                                              instance))
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
@@ -350,11 +352,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
-            host):
+            host, migrate_data=None):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('pre_live_migration',
-                instance=instance_p, block_migration=block_migration,
-                disk=disk), _compute_topic(self.topic, ctxt, host, None))
+                        instance=instance_p,
+                        block_migration=block_migration,
+                        disk=disk, migrate_data=migrate_data),
+                        _compute_topic(self.topic, ctxt, host, None),
+                        version='2.21')
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,

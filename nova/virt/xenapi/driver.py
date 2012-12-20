@@ -497,7 +497,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                  recover_method, block_migration, migrate_data)
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
-                           network_info):
+                           network_info, migrate_data=None):
         """Preparation live migration.
 
         :params block_device_info:

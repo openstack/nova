@@ -2388,6 +2388,7 @@ class LibvirtDriver(driver.ComputeDriver):
         source = CONF.host
         filename = dest_check_data["filename"]
         block_migration = dest_check_data["block_migration"]
+        is_volume_backed = dest_check_data.get('is_volume_backed', False)
 
         shared = self._check_shared_storage_test_file(filename)
 
@@ -2400,10 +2401,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                     dest_check_data['disk_available_mb'],
                                     dest_check_data['disk_over_commit'])
 
-        elif not shared:
+        elif not shared and not is_volume_backed:
             reason = _("Live migration can not be used "
                        "without shared storage.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
+        dest_check_data.update({"is_shared_storage": shared})
+        return dest_check_data
 
     def _assert_dest_node_has_enough_disk(self, context, instance_ref,
                                              available_mb, disk_over_commit):
@@ -2571,10 +2574,12 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
-                          post_method, recover_method, block_migration)
+                          post_method, recover_method, block_migration,
+                          migrate_data)
 
     def _live_migration(self, ctxt, instance_ref, dest, post_method,
-                        recover_method, block_migration=False):
+                        recover_method, block_migration=False,
+                        migrate_data=None):
         """Do live migration.
 
         :params ctxt: security context
@@ -2588,7 +2593,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :params recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
-
+        :params migrate_data: implementation specific params
         """
 
         # Do live migration.
@@ -2621,14 +2626,60 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.get_info(instance_ref)['state']
             except exception.NotFound:
                 timer.stop()
-                post_method(ctxt, instance_ref, dest, block_migration)
+                post_method(ctxt, instance_ref, dest, block_migration,
+                            migrate_data)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5).wait()
 
+    def _fetch_instance_kernel_ramdisk(self, context, instance):
+        """ Download kernel and ramdisk for given instance in the given
+            instance directory.
+        """
+        instance_dir = os.path.join(CONF.instances_path, instance['name'])
+        if instance['kernel_id']:
+            libvirt_utils.fetch_image(context,
+                                      os.path.join(instance_dir, 'kernel'),
+                                      instance['kernel_id'],
+                                      instance['user_id'],
+                                      instance['project_id'])
+            if instance['ramdisk_id']:
+                libvirt_utils.fetch_image(context,
+                                          os.path.join(instance_dir,
+                                                       'ramdisk'),
+                                          instance['ramdisk_id'],
+                                          instance['user_id'],
+                                          instance['project_id'])
+
     def pre_live_migration(self, context, instance_ref, block_device_info,
-                           network_info):
+                           network_info, migrate_data=None):
         """Preparation live migration."""
+        # Steps for volume backed instance live migration w/o shared storage.
+        is_shared_storage = True
+        is_volume_backed = False
+        is_block_migration = True
+        if migrate_data:
+            is_shared_storage = migrate_data.get('is_shared_storage', True)
+            is_volume_backed = migrate_data.get('is_volume_backed', False)
+            is_block_migration = migrate_data.get('block_migration', True)
+
+        if is_volume_backed and not (is_block_migration or is_shared_storage):
+
+            # Create the instance directory on destination compute node.
+            instance_dir = os.path.join(CONF.instances_path,
+                                        instance_ref['name'])
+            if os.path.exists(instance_dir):
+                raise exception.DestinationDiskExists(path=instance_dir)
+            os.mkdir(instance_dir)
+
+            # Touch the console.log file, required by libvirt.
+            console_file = os.path.join(instance_dir, 'console.log')
+            libvirt_utils.file_open(console_file, 'a').close()
+
+            # if image has kernel and ramdisk, just download
+            # following normal way.
+            self._fetch_instance_kernel_ramdisk(context, instance_ref)
+
         # Establishing connection to volume server.
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
@@ -2703,19 +2754,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # if image has kernel and ramdisk, just download
         # following normal way.
-        if instance['kernel_id']:
-            libvirt_utils.fetch_image(ctxt,
-                                      os.path.join(instance_dir, 'kernel'),
-                                      instance['kernel_id'],
-                                      instance['user_id'],
-                                      instance['project_id'])
-            if instance['ramdisk_id']:
-                libvirt_utils.fetch_image(ctxt,
-                                          os.path.join(instance_dir,
-                                                       'ramdisk'),
-                                          instance['ramdisk_id'],
-                                          instance['user_id'],
-                                          instance['project_id'])
+        self._fetch_instance_kernel_ramdisk(ctxt, instance)
 
     def post_live_migration_at_destination(self, ctxt,
                                            instance_ref,
