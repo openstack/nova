@@ -57,7 +57,7 @@ class NbdMount(api.Mount):
 
     def _allocate_nbd(self):
         if not os.path.exists('/sys/block/nbd0'):
-            LOG.error(_('ndb module not loaded'))
+            LOG.error(_('nbd module not loaded'))
             self.error = _('nbd unavailable: module not loaded')
             return None
 
