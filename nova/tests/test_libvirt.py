@@ -48,6 +48,7 @@ from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
 from nova import utils
+from nova import version
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import fake
@@ -596,6 +597,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
+                'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
                 'memory_kb': '1024000',
                 'basepath': '/some/path',
                 'bridge_name': 'br100',
@@ -1828,6 +1830,43 @@ class LibvirtConnTestCase(test.TestCase):
             else:
                 check = (lambda t: t.find('./os/initrd'), None)
             check_list.append(check)
+
+            if hypervisor_type in ['qemu', 'kvm']:
+                xpath = "./sysinfo/system/entry"
+                check = (lambda t: t.findall(xpath)[0].get("name"),
+                         "manufacturer")
+                check_list.append(check)
+                check = (lambda t: t.findall(xpath)[0].text,
+                         version.vendor_string())
+                check_list.append(check)
+
+                check = (lambda t: t.findall(xpath)[1].get("name"),
+                         "product")
+                check_list.append(check)
+                check = (lambda t: t.findall(xpath)[1].text,
+                         version.product_string())
+                check_list.append(check)
+
+                check = (lambda t: t.findall(xpath)[2].get("name"),
+                         "version")
+                check_list.append(check)
+                check = (lambda t: t.findall(xpath)[2].text,
+                         version.version_string_with_package())
+                check_list.append(check)
+
+                check = (lambda t: t.findall(xpath)[3].get("name"),
+                         "serial")
+                check_list.append(check)
+                check = (lambda t: t.findall(xpath)[3].text,
+                         "cef19ce0-0ca2-11df-855d-b19fbce37686")
+                check_list.append(check)
+
+                check = (lambda t: t.findall(xpath)[4].get("name"),
+                         "uuid")
+                check_list.append(check)
+                check = (lambda t: t.findall(xpath)[4].text,
+                         instance['uuid'])
+                check_list.append(check)
 
             if hypervisor_type in ['qemu', 'kvm']:
                 check = (lambda t: t.findall('./devices/serial')[0].get(

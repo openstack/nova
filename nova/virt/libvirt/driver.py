@@ -69,6 +69,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova import utils
+from nova import version
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
@@ -1517,6 +1518,11 @@ class LibvirtDriver(driver.ComputeDriver):
         caps.parse_str(xmlstr)
         return caps
 
+    def get_host_uuid(self):
+        """Returns a UUID representing the host"""
+        caps = self.get_host_capabilities()
+        return caps.host.uuid
+
     def get_host_cpu_for_guest(self):
         """Returns an instance of config.LibvirtConfigGuestCPU
            representing the host's CPU model & topology with
@@ -1717,6 +1723,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return devices
 
+    def get_guest_config_sysinfo(self, instance):
+        sysinfo = vconfig.LibvirtConfigGuestSysinfo()
+
+        sysinfo.system_manufacturer = version.vendor_string()
+        sysinfo.system_product = version.product_string()
+        sysinfo.system_version = version.version_string_with_package()
+
+        sysinfo.system_serial = self.get_host_uuid()
+        sysinfo.system_uuid = instance['uuid']
+
+        return sysinfo
+
     def get_guest_config(self, instance, network_info, image_meta, rescue=None,
                          block_device_info=None):
         """Get config data for parameters.
@@ -1761,6 +1779,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt_type == "xen" and guest.os_type == vm_mode.HVM:
             guest.os_loader = CONF.xen_hvmloader_path
+
+        if CONF.libvirt_type in ("kvm", "qemu"):
+            caps = self.get_host_capabilities()
+            if caps.host.cpu.arch in ("i686", "x86_64"):
+                guest.sysinfo = self.get_guest_config_sysinfo(instance)
+                guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
         if CONF.libvirt_type == "lxc":
             guest.os_type = vm_mode.EXE
