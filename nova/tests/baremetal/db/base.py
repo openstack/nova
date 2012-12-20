@@ -40,9 +40,12 @@ class BMDBTestCase(test.TestCase):
 
     def setUp(self):
         super(BMDBTestCase, self).setUp()
-        self.flags(baremetal_sql_connection='sqlite:///:memory:')
+        self.flags(baremetal_sql_connection='sqlite://')
         global _DB_CACHE
         if not _DB_CACHE:
-            _DB_CACHE = Database(bm_session, bm_migration)
+            _DB_CACHE = Database(bm_session, bm_migration,
+                                 sql_connection=CONF.baremetal_sql_connection,
+                                 sqlite_db=None,
+                                 sqlite_clean_db=None)
         self.useFixture(_DB_CACHE)
         self.context = nova_context.get_admin_context()
