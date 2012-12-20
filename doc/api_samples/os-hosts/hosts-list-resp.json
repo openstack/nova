@@ -8,22 +8,22 @@
         {
             "host_name": "a98b433151084aee8b1a986e28823b36",
             "service": "cert",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
             "host_name": "c56158d13a884a87abf9171efb7de9d8",
             "service": "network",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
             "host_name": "81d5cdcda0014918b3ebd3503a2e5c9a",
             "service": "scheduler",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
             "host_name": "6e48bfe1a3304b7b86154326328750ae",
             "service": "conductor",
-            "zone": "nova"
+            "zone": "internal"
         }
     ]
 }

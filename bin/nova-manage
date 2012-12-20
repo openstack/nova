@@ -70,6 +70,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova.api.ec2 import ec2utils
+from nova import availability_zones
 from nova.compute import instance_types
 from nova.compute import rpcapi as compute_rpcapi
 from nova import config
@@ -626,6 +627,7 @@ class ServiceCommands(object):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
+        services = availability_zone.set_availability_zones(ctxt, services)
         if host:
             services = [s for s in services if s['host'] == host]
         if service:
@@ -741,6 +743,7 @@ class HostCommands(object):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
+        services = availability_zones.set_availability_zones(ctxt, services)
         if zone:
             services = [s for s in services if s['availability_zone'] == zone]
         hosts = []

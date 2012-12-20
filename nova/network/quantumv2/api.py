@@ -52,7 +52,6 @@ quantum_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(quantum_opts)
-CONF.import_opt('node_availability_zone', 'nova.config')
 CONF.import_opt('default_floating_pool', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
 
@@ -126,7 +125,7 @@ class API(base.Base):
         created_port_ids = []
         for network in nets:
             network_id = network['id']
-            zone = 'compute:%s' % CONF.node_availability_zone
+            zone = 'compute:%s' % instance['availability_zone']
             port_req_body = {'port': {'device_id': instance['uuid'],
                                       'device_owner': zone}}
             try:
@@ -287,7 +286,7 @@ class API(base.Base):
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
-        zone = 'compute:%s' % CONF.node_availability_zone
+        zone = 'compute:%s' % instance['availability_zone']
         search_opts = {'device_id': instance['uuid'],
                        'device_owner': zone}
         data = client.list_ports(**search_opts)

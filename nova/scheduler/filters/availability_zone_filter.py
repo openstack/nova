@@ -14,15 +14,21 @@
 #    under the License.
 
 
+from nova import availability_zones
 from nova import db
+from nova.openstack.common import cfg
 from nova.scheduler import filters
+
+
+CONF = cfg.CONF
+CONF.import_opt('default_availability_zone', 'nova.availability_zones')
 
 
 class AvailabilityZoneFilter(filters.BaseHostFilter):
     """Filters Hosts by availability zone.
 
-    Works with both service and aggregate metadata.
-    For aggregate metadata uses the key 'availability_zone'
+    Works with aggregate metadata availability zones, using the key
+    'availability_zone'
     Note: in theory a compute node can be part of multiple availability_zones
     """
 
@@ -32,12 +38,12 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
         availability_zone = props.get('availability_zone')
 
         if availability_zone:
-            if availability_zone == host_state.service['availability_zone']:
-                return True
             context = filter_properties['context'].elevated()
             metadata = db.aggregate_metadata_get_by_host(
                          context, host_state.host, key='availability_zone')
             if 'availability_zone' in metadata:
                 return availability_zone in metadata['availability_zone']
+            else:
+                return availability_zone == CONF.default_availability_zone
             return False
         return True

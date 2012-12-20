@@ -5383,8 +5383,7 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                               {'host': host,
                                'binary': 'nova-compute',
                                'topic': 'compute',
-                               'report_count': 0,
-                               'availability_zone': avail_zone})
+                               'report_count': 0})
     return values
 
 

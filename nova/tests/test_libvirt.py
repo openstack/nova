@@ -628,8 +628,7 @@ class LibvirtConnTestCase(test.TestCase):
         service_ref = {'host': kwargs.get('host', 'dummy'),
                        'binary': 'nova-compute',
                        'topic': 'compute',
-                       'report_count': 0,
-                       'availability_zone': 'zone'}
+                       'report_count': 0}
 
         return db.service_create(context.get_admin_context(), service_ref)
 
