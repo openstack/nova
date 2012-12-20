@@ -55,6 +55,7 @@ class NotificationsTestCase(test.TestCase):
         fake_network.set_stub_network_methods(self.stubs)
 
         notifier_api._reset_drivers()
+        self.addCleanup(notifier_api._reset_drivers)
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager',
@@ -67,10 +68,6 @@ class NotificationsTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
 
         self.instance = self._wrapped_create()
-
-    def tearDown(self):
-        notifier_api._reset_drivers()
-        super(NotificationsTestCase, self).tearDown()
 
     def _wrapped_create(self, params=None):
         inst = {}

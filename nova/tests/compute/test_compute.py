@@ -103,6 +103,8 @@ class BaseTestCase(test.TestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
+        notifier_api._reset_drivers()
+        self.addCleanup(notifier_api._reset_drivers)
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
                    network_manager='nova.network.manager.FlatManager')
@@ -144,7 +146,6 @@ class BaseTestCase(test.TestCase):
     def tearDown(self):
         fake_image.FakeImageService_reset()
         instances = db.instance_get_all(self.context.elevated())
-        notifier_api._reset_drivers()
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['uuid'])
         fake.restore_nodes()

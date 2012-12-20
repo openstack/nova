@@ -216,6 +216,7 @@ class UsageInfoTestCase(test.TestCase):
                        fake_get_nw_info)
 
         notifier_api._reset_drivers()
+        self.addCleanup(notifier_api._reset_drivers)
         self.flags(use_local=True, group='conductor')
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    notification_driver=[test_notifier.__name__],
@@ -232,10 +233,6 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(nova.tests.image.fake._FakeImageService,
                        'show', fake_show)
         fake_network.set_stub_network_methods(self.stubs)
-
-    def tearDown(self):
-        notifier_api._reset_drivers()
-        super(UsageInfoTestCase, self).tearDown()
 
     def _create_instance(self, params={}):
         """Create a test instance"""
