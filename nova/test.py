@@ -75,39 +75,44 @@ _DB_CACHE = None
 
 class Database(fixtures.Fixture):
 
-    def __init__(self, db_session, db_migrate):
+    def __init__(self, db_session, db_migrate, sql_connection,
+                    sqlite_db, sqlite_clean_db):
+        self.sql_connection = sql_connection
+        self.sqlite_db = sqlite_db
+        self.sqlite_clean_db = sqlite_clean_db
+
         self.engine = db_session.get_engine()
         self.engine.dispose()
         conn = self.engine.connect()
-        if CONF.sql_connection == "sqlite://":
+        if sql_connection == "sqlite://":
             if db_migrate.db_version() > db_migrate.INIT_VERSION:
                 return
         else:
-            testdb = os.path.join(CONF.state_path, CONF.sqlite_db)
+            testdb = os.path.join(CONF.state_path, sqlite_db)
             if os.path.exists(testdb):
                 return
         db_migrate.db_sync()
         self.post_migrations()
-        if CONF.sql_connection == "sqlite://":
+        if sql_connection == "sqlite://":
             conn = self.engine.connect()
             self._DB = "".join(line for line in conn.connection.iterdump())
             self.engine.dispose()
         else:
-            cleandb = os.path.join(CONF.state_path, CONF.sqlite_clean_db)
+            cleandb = os.path.join(CONF.state_path, sqlite_clean_db)
             shutil.copyfile(testdb, cleandb)
 
     def setUp(self):
         super(Database, self).setUp()
 
-        if CONF.sql_connection == "sqlite://":
+        if self.sql_connection == "sqlite://":
             conn = self.engine.connect()
             conn.connection.executescript(self._DB)
             self.addCleanup(self.engine.dispose)
         else:
             shutil.copyfile(os.path.join(CONF.state_path,
-                                         CONF.sqlite_clean_db),
+                                         self.sqlite_clean_db),
                             os.path.join(CONF.state_path,
-                                         CONF.sqlite_db))
+                                         self.sqlite_db))
 
     def post_migrations(self):
         """Any addition steps that are needed outside of the migrations."""
@@ -208,7 +213,10 @@ class TestCase(testtools.TestCase):
 
         global _DB_CACHE
         if not _DB_CACHE:
-            _DB_CACHE = Database(session, migration)
+            _DB_CACHE = Database(session, migration,
+                                    sql_connection=CONF.sql_connection,
+                                    sqlite_db=CONF.sqlite_db,
+                                    sqlite_clean_db=CONF.sqlite_clean_db)
         self.useFixture(_DB_CACHE)
 
         mox_fixture = self.useFixture(MoxStubout())
