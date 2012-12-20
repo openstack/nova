@@ -71,7 +71,6 @@ class CoverageController(object):
             "network": self.network_api.get_backdoor_port,
         }
         ports = []
-        temp = {}
         #TODO(mtreinish): Figure out how to bind the backdoor socket to 0.0.0.0
         # Currently this will only work if the host is resolved as loopback on
         # the same host as api-server
@@ -110,7 +109,7 @@ class CoverageController(object):
 
     def _start_coverage(self, req, body):
         '''Begin recording coverage information.'''
-        LOG.debug("Coverage begin")
+        LOG.debug(_("Coverage begin"))
         body = body['start']
         self.combine = False
         if 'combine' in body.keys():
@@ -144,8 +143,9 @@ class CoverageController(object):
         for service in self.services:
             self._stop_coverage_telnet(service['telnet'])
         if self._check_coverage():
-            msg = ("Coverage not running")
+            msg = _("Coverage not running")
             raise exc.HTTPNotFound(explanation=msg)
+        return {'path': self.data_path}
 
     def _report_coverage_telnet(self, tn, path, xml=False):
         if xml:
@@ -165,26 +165,34 @@ class CoverageController(object):
     def _report_coverage(self, req, body):
         self._stop_coverage(req)
         xml = False
+        html = False
         path = None
 
         body = body['report']
         if 'file' in body.keys():
             path = body['file']
             if path != os.path.basename(path):
-                msg = ("Invalid path")
+                msg = _("Invalid path")
                 raise exc.HTTPBadRequest(explanation=msg)
             path = os.path.join(self.data_path, path)
         else:
-            msg = ("No path given for report file")
+            msg = _("No path given for report file")
             raise exc.HTTPBadRequest(explanation=msg)
 
         if 'xml' in body.keys():
             xml = body['xml']
+        elif 'html' in body.keys():
+            if not self.combine:
+                msg = _("You can't use html reports without combining")
+                raise exc.HTTPBadRequest(explanation=msg)
+            html = body['html']
 
         if self.combine:
             self.coverInst.combine()
             if xml:
                 self.coverInst.xml_report(outfile=path)
+            elif html:
+                self.coverInst.html_report(directory=path)
             else:
                 output = open(path, 'w')
                 self.coverInst.report(file=output)

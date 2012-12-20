@@ -753,10 +753,15 @@ class CoverageExtJsonTests(ApiSampleTestBase):
 
     def test_stop_coverage(self):
         """Stop coverage data collection"""
-        subs = {}
+        subs = {
+            'path': '/.*',
+        }
         response = self._do_post('os-coverage/action',
                                  'coverage-stop-post-req', subs)
         self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('coverage-stop-post-resp',
+                                     subs, response)
 
     def test_report_coverage(self):
         """Generate a coverage report"""
