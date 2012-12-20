@@ -1100,9 +1100,7 @@ def main():
         sys.exit(2)
 
     if CONF.category.name == "version":
-        print (_("%(version)s (%(vcs)s)") %
-               {'version': version.version_string(),
-                'vcs': version.version_string_with_vcs()})
+        print version.version_string_with_package()
         sys.exit(0)
 
     if CONF.category.name == "bash-completion":

@@ -45,9 +45,8 @@ def version_string():
         return '%s-dev' % (canonical_version_string(),)
 
 
-def vcs_version_string():
-    return 'LOCALBRANCH:LOCALREVISION'
-
-
-def version_string_with_vcs():
-    return '%s-%s' % (canonical_version_string(), vcs_version_string())
+def version_string_with_package():
+    if package_string() is None:
+        return canonical_version_string()
+    else:
+        return "%s-%s" % (canonical_version_string(), package_string())

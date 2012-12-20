@@ -388,9 +388,9 @@ class Service(object):
         self.servicegroup_api = servicegroup.API()
 
     def start(self):
-        vcs_string = version.version_string_with_vcs()
-        LOG.audit(_('Starting %(topic)s node (version %(vcs_string)s)'),
-                  {'topic': self.topic, 'vcs_string': vcs_string})
+        verstr = version.version_string_with_package()
+        LOG.audit(_('Starting %(topic)s node (version %(version)s)'),
+                  {'topic': self.topic, 'version': verstr})
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()

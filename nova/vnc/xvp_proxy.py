@@ -174,7 +174,7 @@ class SafeHttpProtocol(eventlet.wsgi.HttpProtocol):
 
 def get_wsgi_server():
     LOG.audit(_("Starting nova-xvpvncproxy node (version %s)"),
-              version.version_string_with_vcs())
+              version.version_string_with_package())
 
     return wsgi.Server("XCP VNC Proxy",
                        XCPVNCProxy(),
