@@ -90,6 +90,9 @@
   <extension alias="os-floating-ips-bulk" name="FloatingIpsBulk" namespace="http://docs.openstack.org/compute/ext/floating_ips_bulk/api/v2" updated="2012-10-29T13:25:27-06:00">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-hide-server-addresses" updated="2012-12-11T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/hide_server_addresses/api/v1.1" name="HideServerAddresses">
+    <description>Support hiding server addresses in certain states.</description>
+  </extension>
   <extension alias="os-hosts" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/hosts/api/v1.1" name="Hosts">
     <description>%(text)s</description>
   </extension>

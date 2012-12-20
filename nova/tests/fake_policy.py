@@ -130,6 +130,7 @@ policy_data = """
     "compute_extension:floating_ips_bulk": "",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "is_admin:True",
+    "compute_extension:hide_server_addresses": "",
     "compute_extension:hosts": "",
     "compute_extension:hypervisors": "",
     "compute_extension:instance_usage_audit_log": "",
