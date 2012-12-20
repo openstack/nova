@@ -80,7 +80,16 @@ class CoverageController(object):
                 get_port_fn = apicommands[host['service']]
                 _host = host
                 _host['port'] = get_port_fn(context, host['host'])
-                ports.append(_host)
+                #NOTE(mtreinish): if the port is None then it wasn't set in
+                # the configuration file for this service. However, that
+                # doesn't necessarily mean that we don't have backdoor ports
+                # for all the services. So, skip the telnet connection for
+                # this service.
+                if _host['port']:
+                    ports.append(_host)
+                else:
+                    LOG.warning(_("Can't connect to service: %s, no port"
+                                  "specified\n"), host['service'])
             else:
                 LOG.debug(_("No backdoor API command for service: %s\n"), host)
         return ports
