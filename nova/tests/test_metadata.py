@@ -347,6 +347,21 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.assertRaises(base.InvalidMetadataPath,
             mdinst.lookup, "/openstack/2012-08-10/user_data")
 
+    def test_random_seed(self):
+        inst = copy(self.instance)
+        mdinst = fake_InstanceMetadata(self.stubs, inst)
+
+        # verify that 2013-04-04 has the 'random' field
+        mdjson = mdinst.lookup("/openstack/2013-04-04/meta_data.json")
+        mddict = json.loads(mdjson)
+
+        self.assertTrue("random_seed" in mddict)
+        self.assertEqual(len(base64.b64decode(mddict["random_seed"])), 512)
+
+        # verify that older version do not have it
+        mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
+        self.assertFalse("random_seed" in json.loads(mdjson))
+
 
 class MetadataHandlerTestCase(test.TestCase):
     """Test that metadata is returning proper values."""

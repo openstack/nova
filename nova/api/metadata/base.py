@@ -317,6 +317,9 @@ class InstanceMetadata():
         metadata['launch_index'] = self.instance['launch_index']
         metadata['availability_zone'] = self.availability_zone
 
+        if self._check_os_version(GRIZZLY, version):
+            metadata['random_seed'] = base64.b64encode(os.urandom(512))
+
         data = {
             MD_JSON_NAME: json.dumps(metadata),
         }
