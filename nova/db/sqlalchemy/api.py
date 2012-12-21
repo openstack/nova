@@ -764,9 +764,12 @@ def floating_ip_fixed_ip_associate(context, floating_address,
         fixed_ip_ref = fixed_ip_get_by_address(context,
                                                fixed_address,
                                                session=session)
+        if floating_ip_ref.fixed_ip_id == fixed_ip_ref["id"]:
+            return None
         floating_ip_ref.fixed_ip_id = fixed_ip_ref["id"]
         floating_ip_ref.host = host
         floating_ip_ref.save(session=session)
+        return fixed_address
 
 
 @require_context
