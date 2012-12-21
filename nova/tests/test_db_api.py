@@ -207,6 +207,21 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(0, len(results))
         db.instance_update(ctxt, instance['uuid'], {"task_state": None})
 
+    def test_multi_associate_disassociate(self):
+        ctxt = context.get_admin_context()
+        values = {'address': 'floating'}
+        floating = db.floating_ip_create(ctxt, values)
+        values = {'address': 'fixed'}
+        fixed = db.fixed_ip_create(ctxt, values)
+        res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
+        self.assertEqual(res, fixed)
+        res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
+        self.assertEqual(res, None)
+        res = db.floating_ip_disassociate(ctxt, floating)
+        self.assertEqual(res, fixed)
+        res = db.floating_ip_disassociate(ctxt, floating)
+        self.assertEqual(res, None)
+
     def test_network_create_safe(self):
         ctxt = context.get_admin_context()
         values = {'host': 'localhost', 'project_id': 'project1'}
