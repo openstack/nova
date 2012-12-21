@@ -24,8 +24,9 @@ from nova.virt.baremetal.db.sqlalchemy import session as bm_session
 _DB_CACHE = None
 
 CONF = cfg.CONF
-CONF.import_opt('baremetal_sql_connection',
-                'nova.virt.baremetal.db.sqlalchemy.session')
+CONF.import_opt('sql_connection',
+                'nova.virt.baremetal.db.sqlalchemy.session',
+                group='baremetal')
 
 
 class Database(test.Database):
@@ -38,11 +39,11 @@ class BMDBTestCase(test.TestCase):
 
     def setUp(self):
         super(BMDBTestCase, self).setUp()
-        self.flags(baremetal_sql_connection='sqlite://')
+        self.flags(sql_connection='sqlite://', group='baremetal')
         global _DB_CACHE
         if not _DB_CACHE:
             _DB_CACHE = Database(bm_session, bm_migration,
-                                 sql_connection=CONF.baremetal_sql_connection,
+                                 sql_connection=CONF.baremetal.sql_connection,
                                  sqlite_db=None,
                                  sqlite_clean_db=None)
         self.useFixture(_DB_CACHE)

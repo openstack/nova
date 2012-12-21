@@ -23,14 +23,19 @@ from nova.db.sqlalchemy import session as nova_session
 from nova.openstack.common import cfg
 
 opts = [
-    cfg.StrOpt('baremetal_sql_connection',
+    cfg.StrOpt('sql_connection',
                default='sqlite:///$state_path/baremetal_$sqlite_db',
                help='The SQLAlchemy connection string used to connect to the '
                     'bare-metal database'),
     ]
 
+baremetal_group = cfg.OptGroup(name='baremetal',
+                               title='Baremetal Options')
+
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(baremetal_group)
+CONF.register_opts(opts, baremetal_group)
+
 CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
 CONF.import_opt('state_path', 'nova.config')
 
@@ -55,5 +60,5 @@ def get_engine():
     """Return a SQLAlchemy engine."""
     global _ENGINE
     if _ENGINE is None:
-        _ENGINE = nova_session.create_engine(CONF.baremetal_sql_connection)
+        _ENGINE = nova_session.create_engine(CONF.baremetal.sql_connection)
     return _ENGINE
