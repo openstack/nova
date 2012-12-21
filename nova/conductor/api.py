@@ -55,7 +55,7 @@ class ExceptionHelper(object):
             try:
                 return func(*args, **kwargs)
             except rpc_common.ClientException, e:
-                raise e._exc_info
+                raise (e._exc_info[1], None, e._exc_info[2])
         return wrapper
 
 
