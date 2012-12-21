@@ -1922,14 +1922,21 @@ def _get_this_vm_ref(session):
 def _is_vdi_pv(dev):
     LOG.debug(_("Running pygrub against %s"), dev)
     dev_path = utils.make_dev_path(dev)
-    output = os.popen('pygrub -qn %s' % dev_path)
-    for line in output.readlines():
-        #try to find kernel string
-        m = re.search('(?<=kernel:)/.*(?:>)', line)
-        if m and m.group(0).find('xen') != -1:
-            LOG.debug(_("Found Xen kernel %s") % m.group(0))
-            return True
-    LOG.debug(_("No Xen kernel found.  Booting HVM."))
+    try:
+        out, err = utils.execute('pygrub', '-qn', dev_path, run_as_root=True)
+        for line in out:
+            # try to find kernel string
+            m = re.search('(?<=kernel:)/.*(?:>)', line)
+            if m and m.group(0).find('xen') != -1:
+                LOG.debug(_("Found Xen kernel %s") % m.group(0))
+                return True
+        LOG.debug(_("No Xen kernel found.  Booting HVM."))
+    except exception.ProcessExecutionError:
+        LOG.exception(_("Error while executing pygrub! Please, ensure the "
+                        "binary is installed correctly, and available in your "
+                        "PATH; on some Linux distros, pygrub may be installed "
+                        "in /usr/lib/xen-X.Y/bin/pygrub. Attempting to boot "
+                        "in HVM mode."))
     return False
 
 
