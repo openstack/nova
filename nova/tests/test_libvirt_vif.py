@@ -74,7 +74,7 @@ class LibvirtVifTestCase(test.TestCase):
         conf.memory = 100 * 1024
         conf.vcpus = 4
 
-        nic = driver.plug(self.instance, (self.net, self.mapping))
+        nic = driver.get_config(self.instance, self.net, self.mapping)
         conf.add_device(nic)
         return conf.to_xml()
 

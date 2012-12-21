@@ -1863,7 +1863,9 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(cfg)
 
         for (network, mapping) in network_info:
-            cfg = self.vif_driver.plug(instance, (network, mapping))
+            self.vif_driver.plug(instance, (network, mapping))
+            cfg = self.vif_driver.get_config(instance,
+                                                     network, mapping)
             guest.add_device(cfg)
 
         if CONF.libvirt_type == "qemu" or CONF.libvirt_type == "kvm":
