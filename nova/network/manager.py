@@ -1374,7 +1374,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self.deallocate_fixed_ip(context, address, host)
                 return
         raise exception.FixedIpNotFoundForSpecificInstance(
-                                    instance_id=instance_id, ip=address)
+                                    instance_uuid=instance_id, ip=address)
 
     def _validate_instance_zone_for_dns_domain(self, context, instance):
         instance_zone = instance.get('availability_zone')

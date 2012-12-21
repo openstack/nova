@@ -80,11 +80,11 @@ QUOTAS = quota.QUOTAS
 
 def validate_ec2_id(val):
     if not validator.validate_str()(val):
-        raise exception.InvalidInstanceIDMalformed(val)
+        raise exception.InvalidInstanceIDMalformed(val=val)
     try:
         ec2utils.ec2_id_to_id(val)
     except exception.InvalidEc2Id:
-        raise exception.InvalidInstanceIDMalformed(val)
+        raise exception.InvalidInstanceIDMalformed(val=val)
 
 
 # EC2 API can return the following values as documented in the EC2 API

@@ -997,9 +997,10 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
         #             then this has concurrency issues
         if fixed_ip_ref is None:
             raise exception.FixedIpNotFoundForNetwork(address=address,
-                                            network_id=network_id)
+                                            network_uuid=network_id)
         if fixed_ip_ref.instance_uuid:
-            raise exception.FixedIpAlreadyInUse(address=address)
+            raise exception.FixedIpAlreadyInUse(address=address,
+                                                instance_uuid=instance_uuid)
 
         if not fixed_ip_ref.network_id:
             fixed_ip_ref.network_id = network_id
@@ -1200,7 +1201,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
                  first()
 
     if not result:
-        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
+        raise exception.FixedIpNotFoundForNetworkHost(network_uuid=network_id,
                                                       host=host)
     return result
 

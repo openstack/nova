@@ -1496,7 +1496,8 @@ class API(base.Base):
             raise exception.InstanceInvalidState(
                 attr='task_state',
                 instance_uuid=instance['uuid'],
-                state=instance['task_state'])
+                state=instance['task_state'],
+                method='reboot')
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
@@ -1942,7 +1943,7 @@ class API(base.Base):
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
         if not instance['host']:
-            raise exception.InstanceNotReady(instance=instance)
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
 
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)

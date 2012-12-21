@@ -124,7 +124,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def snapshot(self, context, instance, name):
         if not instance['name'] in self.instances:
-            raise exception.InstanceNotRunning()
+            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
 
     def reboot(self, instance, network_info, reboot_type,
                block_device_info=None):
