@@ -1805,6 +1805,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     guest.os_kernel = os.path.join(CONF.instances_path,
                                                    instance['name'],
                                                    "kernel.rescue")
+                    if CONF.libvirt_type == "xen":
+                        guest.os_cmdline = "ro"
+                    else:
+                        guest.os_cmdline = ("root=%s console=ttyS0" %
+                            (root_device_name or "/dev/vda",))
+
                 if rescue.get('ramdisk_id'):
                     guest.os_initrd = os.path.join(CONF.instances_path,
                                                    instance['name'],
@@ -1816,8 +1822,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 if CONF.libvirt_type == "xen":
                     guest.os_cmdline = "ro"
                 else:
-                    guest.os_cmdline = "root=%s console=ttyS0" % (
-                        root_device_name or "/dev/vda",)
+                    guest.os_cmdline = ("root=%s console=ttyS0" %
+                        (root_device_name or "/dev/vda",))
                 if instance['ramdisk_id']:
                     guest.os_initrd = os.path.join(CONF.instances_path,
                                                    instance['name'],
