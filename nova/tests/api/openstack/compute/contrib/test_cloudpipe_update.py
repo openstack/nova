@@ -16,7 +16,6 @@
 import webob
 
 from nova.api.openstack.compute.contrib import cloudpipe_update
-from nova.api.openstack import wsgi
 from nova import db
 from nova import test
 from nova.tests.api.openstack import fakes

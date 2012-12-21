@@ -19,7 +19,6 @@ import fixtures
 import os
 
 from nova.openstack.common import cfg
-from nova.openstack.common import fileutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend

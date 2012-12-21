@@ -22,19 +22,15 @@ import re
 import sys
 import telnetlib
 import tempfile
-import time
 
 from coverage import coverage
 from webob import exc
 
-from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova import db
 from nova.network import api as network_api
 from nova.openstack.common import log as logging
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)

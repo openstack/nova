@@ -18,7 +18,6 @@ Classes for dynamic generation of mock objects.
 """
 
 import inspect
-import pickle
 
 
 def serialize_obj(obj):

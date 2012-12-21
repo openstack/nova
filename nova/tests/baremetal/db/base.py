@@ -15,8 +15,6 @@
 
 """Bare-metal DB test base class."""
 
-import fixtures
-
 from nova import context as nova_context
 from nova.openstack.common import cfg
 from nova import test

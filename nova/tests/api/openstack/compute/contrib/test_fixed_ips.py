@@ -19,7 +19,6 @@ from nova.api.openstack.compute.contrib import fixed_ips
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

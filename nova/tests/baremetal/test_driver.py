@@ -18,11 +18,8 @@
 Tests for baremetal driver.
 """
 
-import mox
-
 from nova import exception
 from nova.openstack.common import cfg
-from nova import test
 from nova.tests.baremetal.db import base
 from nova.tests.baremetal.db import utils
 from nova.tests.image import fake as fake_image

@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
 from nova import exception
 from nova import test
 from nova.tests import utils as tests_utils

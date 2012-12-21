@@ -15,7 +15,6 @@
 #    under the License.
 
 import copy
-import itertools
 import math
 import netaddr
 import uuid
@@ -24,8 +23,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import networks
 from nova.api.openstack.compute.contrib import networks_associate
-from nova import config
-from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova import test

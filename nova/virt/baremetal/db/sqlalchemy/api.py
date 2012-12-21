@@ -20,15 +20,8 @@
 
 """Implementation of SQLAlchemy backend."""
 
-from sqlalchemy import and_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
-from sqlalchemy.sql import func
 
 from nova.db.sqlalchemy.api import is_user_context
 from nova.db.sqlalchemy.api import require_admin_context

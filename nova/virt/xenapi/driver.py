@@ -39,7 +39,6 @@ A driver for XenServer or Xen Cloud Platform.
 
 import contextlib
 import cPickle as pickle
-import time
 import urlparse
 import xmlrpclib
 

@@ -16,14 +16,9 @@
 #    under the License.
 
 
-import os
-
 import fixtures
-from testtools.matchers import Equals
-from testtools.matchers import MatchesListwise
 
 from nova import test
-from nova import utils
 from nova.virt.disk.mount import loop
 
 

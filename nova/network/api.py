@@ -25,7 +25,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
 
 LOG = logging.getLogger(__name__)
 

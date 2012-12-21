@@ -15,8 +15,6 @@
 """
 Tests For HostManager
 """
-import sys
-
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db

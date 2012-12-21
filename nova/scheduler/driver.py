@@ -35,10 +35,8 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
-from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import servicegroup
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 

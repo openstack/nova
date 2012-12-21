@@ -16,7 +16,6 @@ import datetime
 
 import eventlet
 import fixtures
-import mox
 
 from nova import context
 from nova import db

@@ -26,7 +26,6 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
-from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils

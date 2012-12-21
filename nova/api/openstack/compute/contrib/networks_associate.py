@@ -1,5 +1,3 @@
-import netaddr
-import webob
 from webob import exc
 
 from nova.api.openstack import extensions

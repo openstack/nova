@@ -20,7 +20,6 @@
 #    under the License.
 
 import os
-import time
 
 from lxml import etree
 

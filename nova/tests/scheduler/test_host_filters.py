@@ -20,7 +20,6 @@ import stubout
 
 from nova import context
 from nova import db
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.scheduler import filters

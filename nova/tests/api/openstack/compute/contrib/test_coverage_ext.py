@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-import os.path
 import telnetlib
 
 from coverage import coverage
@@ -22,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import coverage_ext
 from nova import context
-from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -26,7 +26,6 @@ from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
-from nova import utils
 from nova.virt.libvirt import config as libvirt_config
 
 

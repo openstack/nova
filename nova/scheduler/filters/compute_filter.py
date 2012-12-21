@@ -17,7 +17,6 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova import servicegroup
-from nova import utils
 
 CONF = cfg.CONF
 

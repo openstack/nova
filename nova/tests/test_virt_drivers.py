@@ -17,14 +17,11 @@
 import __builtin__
 import base64
 import fixtures
-import mox
 import netaddr
-import StringIO
 import sys
 import traceback
 
 from nova.compute.manager import ComputeManager
-from nova import db
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging

@@ -22,7 +22,6 @@ from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
-from nova import db
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
