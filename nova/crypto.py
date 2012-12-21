@@ -108,9 +108,8 @@ def ensure_ca_filesystem():
     """Ensure the CA filesystem exists."""
     ca_dir = ca_folder()
     if not os.path.exists(ca_path()):
-        genrootca_sh_path = os.path.join(os.path.dirname(__file__),
-                                         'CA',
-                                         'genrootca.sh')
+        genrootca_sh_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), 'CA', 'genrootca.sh'))
 
         start = os.getcwd()
         fileutils.ensure_tree(ca_dir)
@@ -251,9 +250,8 @@ def generate_x509_cert(user_id, project_id, bits=1024):
 
 def _ensure_project_folder(project_id):
     if not os.path.exists(ca_path(project_id)):
-        geninter_sh_path = os.path.join(os.path.dirname(__file__),
-                                        'CA',
-                                        'geninter.sh')
+        geninter_sh_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), 'CA', 'geninter.sh'))
         start = os.getcwd()
         os.chdir(ca_folder())
         utils.execute('sh', geninter_sh_path, project_id,
