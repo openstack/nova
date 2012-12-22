@@ -196,26 +196,9 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.QCOW2_BASE).AndReturn(False)
-        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
-                                              self.QCOW2_BASE)
-        imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE)
-        imagebackend.libvirt_utils.create_cow_image(self.QCOW2_BASE,
+        imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
-        self.mox.ReplayAll()
-
-        image = self.image_class(self.INSTANCE, self.NAME)
-        image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
-
-        self.mox.VerifyAll()
-
-    def test_create_image_with_size_template_exists(self):
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.QCOW2_BASE).AndReturn(True)
-        imagebackend.libvirt_utils.create_cow_image(self.QCOW2_BASE,
-                                                    self.PATH)
+        imagebackend.disk.extend(self.PATH, self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
