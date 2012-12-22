@@ -58,7 +58,6 @@ from nova.image import glance
 from nova import manager
 from nova import network
 from nova.network import model as network_model
-from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils

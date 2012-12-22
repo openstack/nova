@@ -18,7 +18,6 @@
 
 import itertools
 import os
-import time
 
 from webob import exc
 

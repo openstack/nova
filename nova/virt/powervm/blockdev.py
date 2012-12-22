@@ -18,7 +18,6 @@ import hashlib
 import os
 import re
 
-from nova import exception as nova_exception
 from nova import utils
 
 from nova.openstack.common import cfg

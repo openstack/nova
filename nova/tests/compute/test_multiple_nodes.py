@@ -16,8 +16,6 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes"""
 
-import mox
-
 from nova import context
 from nova import exception
 from nova.openstack.common import cfg

@@ -25,7 +25,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils

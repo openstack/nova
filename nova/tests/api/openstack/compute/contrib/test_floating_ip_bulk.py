@@ -18,8 +18,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import floating_ips_bulk
 from nova import context
-from nova import db
-from nova import exception
 from nova.openstack.common import cfg
 from nova import test
 from nova.tests.api.openstack import fakes

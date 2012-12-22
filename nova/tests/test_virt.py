@@ -17,14 +17,10 @@
 
 import os
 
-from nova import exception
 from nova import test
-from nova import tests
 from nova import utils
 from nova.virt.disk import api as disk_api
 from nova.virt import driver
-
-from nova.openstack.common import jsonutils
 
 
 class TestVirtDriver(test.TestCase):

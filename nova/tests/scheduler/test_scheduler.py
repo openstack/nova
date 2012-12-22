@@ -31,7 +31,6 @@ from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
-from nova.openstack.common import timeutils
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup

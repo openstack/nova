@@ -27,7 +27,6 @@ from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
 
 from nova.db.sqlalchemy.session import get_session
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 

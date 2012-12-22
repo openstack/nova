@@ -22,8 +22,6 @@ import os.path
 import StringIO
 import tempfile
 
-import eventlet
-from eventlet import greenpool
 import mox
 
 import nova

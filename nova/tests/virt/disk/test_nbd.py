@@ -18,12 +18,9 @@
 
 import fixtures
 import os
-from testtools.matchers import Equals
-from testtools.matchers import MatchesListwise
 
 from nova import test
 
-from nova import utils
 from nova.virt.disk.mount import nbd
 
 ORIG_EXISTS = os.path.exists

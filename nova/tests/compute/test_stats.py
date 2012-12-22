@@ -20,8 +20,6 @@
 from nova.compute import stats
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
-from nova import exception
 from nova import test
 
 

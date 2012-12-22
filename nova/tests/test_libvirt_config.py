@@ -15,7 +15,6 @@
 #    under the License.
 
 from lxml import etree
-from lxml import objectify
 
 from nova import test
 from nova.tests import matchers

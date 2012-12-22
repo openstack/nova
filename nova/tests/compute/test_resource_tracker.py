@@ -19,14 +19,11 @@
 
 import uuid
 
-from nova.compute import claims
-from nova.compute import instance_types
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
-from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test

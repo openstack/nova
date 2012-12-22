@@ -19,7 +19,6 @@ import sys
 from nova import test
 from nova.tests import fakeguestfs
 from nova.virt.disk import api as diskapi
-from nova.virt.disk.vfs import api as vfsapi
 from nova.virt.disk.vfs import guestfs as vfsguestfs
 
 

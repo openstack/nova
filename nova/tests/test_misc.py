@@ -14,13 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import errno
 import glob
 import os
-import select
-
-from eventlet import greenpool
-from eventlet import greenthread
 
 from nova import exception
 from nova import test

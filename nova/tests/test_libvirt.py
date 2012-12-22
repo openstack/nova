@@ -58,7 +58,6 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import snapshots
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 from nova.virt.libvirt import volume_nfs

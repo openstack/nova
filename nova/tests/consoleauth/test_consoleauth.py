@@ -20,8 +20,6 @@ Tests for Consoleauth Code.
 
 """
 
-import time
-
 from nova.consoleauth import manager
 from nova import context
 from nova.openstack.common import log as logging

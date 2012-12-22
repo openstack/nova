@@ -29,7 +29,6 @@ import os
 import pyclbr
 import random
 import re
-import shlex
 import shutil
 import signal
 import socket
@@ -37,13 +36,11 @@ import struct
 import sys
 import tempfile
 import time
-import weakref
 from xml.sax import saxutils
 
 from eventlet import event
 from eventlet.green import subprocess
 from eventlet import greenthread
-from eventlet import semaphore
 import netaddr
 
 from nova import exception

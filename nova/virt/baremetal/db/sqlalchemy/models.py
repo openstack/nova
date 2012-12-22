@@ -19,12 +19,9 @@
 SQLAlchemy models for baremetal data.
 """
 
-from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, BigInteger, String, schema
-from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float, Index
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Column, Integer, String
+from sqlalchemy import ForeignKey, DateTime, Text, Index
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import ForeignKeyConstraint
 
 from nova.db.sqlalchemy import models
 

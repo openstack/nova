@@ -15,9 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from migrate import ForeignKeyConstraint
-from sqlalchemy import Boolean, BigInteger, Column, DateTime, Float, ForeignKey
-from sqlalchemy import Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Index, Integer, MetaData, String, Table
 
 from nova.openstack.common import log as logging
 

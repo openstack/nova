@@ -15,7 +15,6 @@
 #    under the License.
 
 import __builtin__
-import os
 import StringIO
 
 from nova.openstack.common import cfg

@@ -43,10 +43,8 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import service
-from nova import tests
 from nova.tests import conf_fixture
 from nova.tests import policy_fixture
-from nova.tests import utils
 
 
 test_opts = [

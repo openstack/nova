@@ -14,11 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import task_states
-from nova.compute import vm_states
-
-from nova import context as nova_context
-
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
