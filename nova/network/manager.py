@@ -543,6 +543,9 @@ class FloatingIP(object):
             # find previously associated instance
             fixed_ip = self.db.fixed_ip_get(context,
                                             floating_ip['fixed_ip_id'])
+            if fixed_ip['address'] == fixed_address:
+                # NOTE(vish): already associated to this address
+                return
             orig_instance_uuid = fixed_ip['instance_uuid']
 
             self.disassociate_floating_ip(context, floating_address)

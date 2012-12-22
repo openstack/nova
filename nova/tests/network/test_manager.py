@@ -740,15 +740,19 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network, 'disassociate_floating_ip', fake9)
 
         def fake_fixed_ip_get(context, fixed_ip_id):
-            return {'instance_uuid': 'fake_uuid'}
+            return {'address': 'old', 'instance_uuid': 'fake_uuid'}
 
         self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
 
+        # doesn't raise because we exit early if the address is the same
+        self.network.associate_floating_ip(ctxt, mox.IgnoreArg(), 'old')
+
+        # raises because we call disassociate which is mocked
         self.assertRaises(test.TestingException,
                           self.network.associate_floating_ip,
                           ctxt,
                           mox.IgnoreArg(),
-                          mox.IgnoreArg())
+                          'new')
 
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
 
