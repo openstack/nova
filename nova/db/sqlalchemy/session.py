@@ -238,6 +238,7 @@ from sqlalchemy.sql.expression import literal_column
 
 from nova.exception import DBDuplicateEntry
 from nova.exception import DBError
+from nova.exception import InvalidUnicodeParameter
 from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
 from nova.openstack.common import timeutils
