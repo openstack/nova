@@ -114,9 +114,13 @@ class XVPConsoleProxy(object):
         self._xvp_restart()
 
     def _write_conf(self, config):
-        LOG.debug(_('Re-wrote %s') % CONF.console_xvp_conf)
-        with open(CONF.console_xvp_conf, 'w') as cfile:
-            cfile.write(config)
+        try:
+            LOG.debug(_('Re-wrote %s') % CONF.console_xvp_conf)
+            with open(CONF.console_xvp_conf, 'w') as cfile:
+                cfile.write(config)
+        except IOError:
+            LOG.exception(_("Failed to write configuration file"))
+            raise
 
     def _xvp_stop(self):
         LOG.debug(_('Stopping xvp'))
@@ -194,4 +198,6 @@ class XVPConsoleProxy(object):
         #xvp will blow up on passwords that are too long (mdragon)
         password = password[:maxlen]
         out, err = utils.execute('xvp', flag, process_input=password)
+        if err:
+            raise exception.ProcessExecutionError(_("Failed to run xvp."))
         return out.strip()
