@@ -1368,6 +1368,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                 user_id=instance['user_id'],
                                 project_id=instance['project_id'])
 
+        # Lookup the filesystem type if required
+        os_type_with_default = instance['os_type']
+        if not os_type_with_default:
+            os_type_with_default = 'default'
+
         ephemeral_gb = instance['ephemeral_gb']
         if ephemeral_gb and not self._volume_in_mapping(
                 self.default_second_device, block_device_info):
@@ -1375,9 +1380,7 @@ class LibvirtDriver(driver.ComputeDriver):
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
                                    os_type=instance["os_type"])
-            fname = "ephemeral_%s_%s_%s" % ("0",
-                                            ephemeral_gb,
-                                            instance["os_type"])
+            fname = "ephemeral_%s_%s" % (ephemeral_gb, os_type_with_default)
             size = ephemeral_gb * 1024 * 1024 * 1024
             image('disk.local').cache(fetch_func=fn,
                                       filename=fname,
@@ -1391,9 +1394,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    fs_label='ephemeral%d' % eph['num'],
                                    os_type=instance["os_type"])
             size = eph['size'] * 1024 * 1024 * 1024
-            fname = "ephemeral_%s_%s_%s" % (eph['num'],
-                                            eph['size'],
-                                            instance["os_type"])
+            fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
             image(_get_eph_disk(eph)).cache(fetch_func=fn,
                                             filename=fname,
                                             size=size,
