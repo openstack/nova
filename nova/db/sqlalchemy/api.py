@@ -2740,7 +2740,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
     return reservations
 
 
-def _quota_reservations(session, context, reservations):
+def _quota_reservations_query(session, context, reservations):
     """Return the relevant reservations."""
 
     # Get the listed reservations
@@ -2748,8 +2748,7 @@ def _quota_reservations(session, context, reservations):
                        read_deleted="no",
                        session=session).\
                    filter(models.Reservation.uuid.in_(reservations)).\
-                   with_lockmode('update').\
-                   all()
+                   with_lockmode('update')
 
 
 @require_context
@@ -2757,17 +2756,14 @@ def reservation_commit(context, reservations):
     session = get_session()
     with session.begin():
         usages = _get_quota_usages(context, session)
-
-        for reservation in _quota_reservations(session, context, reservations):
+        reservation_query = _quota_reservations_query(session, context,
+                                                      reservations)
+        for reservation in reservation_query.all():
             usage = usages[reservation.resource]
             if reservation.delta >= 0:
                 usage.reserved -= reservation.delta
             usage.in_use += reservation.delta
-
-            reservation.delete(session=session)
-
-        for usage in usages.values():
-            usage.save(session=session)
+        reservation_query.soft_delete(synchronize_session=False)
 
 
 @require_context
@@ -2775,45 +2771,33 @@ def reservation_rollback(context, reservations):
     session = get_session()
     with session.begin():
         usages = _get_quota_usages(context, session)
-
-        for reservation in _quota_reservations(session, context, reservations):
+        reservation_query = _quota_reservations_query(session, context,
+                                                      reservations)
+        for reservation in reservation_query.all():
             usage = usages[reservation.resource]
             if reservation.delta >= 0:
                 usage.reserved -= reservation.delta
-
-            reservation.delete(session=session)
-
-        for usage in usages.values():
-            usage.save(session=session)
+        reservation_query.soft_delete(synchronize_session=False)
 
 
 @require_admin_context
 def quota_destroy_all_by_project(context, project_id):
     session = get_session()
     with session.begin():
-        quotas = model_query(context, models.Quota, session=session,
-                             read_deleted="no").\
-                         filter_by(project_id=project_id).\
-                         all()
+        model_query(context, models.Quota, session=session,
+                    read_deleted="no").\
+                filter_by(project_id=project_id).\
+                soft_delete(synchronize_session=False)
 
-        for quota_ref in quotas:
-            quota_ref.delete(session=session)
+        model_query(context, models.QuotaUsage,
+                    session=session, read_deleted="no").\
+                filter_by(project_id=project_id).\
+                soft_delete(synchronize_session=False)
 
-        quota_usages = model_query(context, models.QuotaUsage,
-                                   session=session, read_deleted="no").\
-                               filter_by(project_id=project_id).\
-                               all()
-
-        for quota_usage_ref in quota_usages:
-            quota_usage_ref.delete(session=session)
-
-        reservations = model_query(context, models.Reservation,
-                                   session=session, read_deleted="no").\
-                               filter_by(project_id=project_id).\
-                               all()
-
-        for reservation_ref in reservations:
-            reservation_ref.delete(session=session)
+        model_query(context, models.Reservation,
+                    session=session, read_deleted="no").\
+                filter_by(project_id=project_id).\
+                soft_delete(synchronize_session=False)
 
 
 @require_admin_context
@@ -2821,18 +2805,16 @@ def reservation_expire(context):
     session = get_session()
     with session.begin():
         current_time = timeutils.utcnow()
-        results = model_query(context, models.Reservation, session=session,
-                              read_deleted="no").\
-                          filter(models.Reservation.expire < current_time).\
-                          all()
+        reservation_query = model_query(context, models.Reservation,
+                                        session=session, read_deleted="no").\
+                            filter(models.Reservation.expire < current_time)
 
-        if results:
-            for reservation in results:
-                if reservation.delta >= 0:
-                    reservation.usage.reserved -= reservation.delta
-                    reservation.usage.save(session=session)
+        for reservation in reservation_query.join(models.QuotaUsage).all():
+            if reservation.delta >= 0:
+                reservation.usage.reserved -= reservation.delta
+                reservation.usage.save(session=session)
 
-                reservation.delete(session=session)
+        reservation_query.soft_delete(synchronize_session=False)
 
 
 ###################
