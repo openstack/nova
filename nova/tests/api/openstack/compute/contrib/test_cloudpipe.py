@@ -39,11 +39,11 @@ def fake_vpn_instance():
     }
 
 
-def compute_api_get_all_empty(context):
+def compute_api_get_all_empty(context, search_opts=None):
     return []
 
 
-def compute_api_get_all(context):
+def compute_api_get_all(context, search_opts=None):
         return [fake_vpn_instance()]
 
 
