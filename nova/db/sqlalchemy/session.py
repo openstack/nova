@@ -158,6 +158,67 @@ There are some things which it is best to avoid:
   However, this can not be done until the "deleted" columns are removed and
   proper UNIQUE constraints are added to the tables.
 
+
+Efficient use of soft deletes:
+
+* There are two possible ways to mark a record as deleted:
+    model.delete() and query.soft_delete().
+
+  model.delete() method works with single already fetched entry.
+  query.soft_delete() makes only one db request for all entries that correspond
+  to query.
+
+* In almost all cases you should use query.soft_delete(). Some examples:
+
+        def soft_delete_bar():
+            count = model_query(BarModel).find(some_condition).soft_delete()
+            if count == 0:
+                raise Exception("0 entries were soft deleted")
+
+        def complex_soft_delete_with_synchronization_bar(session=None):
+            if session is None:
+                session = get_session()
+            with session.begin(subtransactions=True):
+                count = model_query(BarModel).\
+                            find(some_condition).\
+                            soft_delete(synchronize_session=True)
+                            # Here synchronize_session is required, because we
+                            # don't know what is going on in outer session.
+                if count == 0:
+                    raise Exception("0 entries were soft deleted")
+
+* There is only one situation where model.delete is appropriate: when you fetch
+  a single record, work with it, and mark it as deleted in the same
+  transaction.
+
+        def soft_delete_bar_model():
+            session = get_session()
+            with session.begin():
+                bar_ref = model_query(BarModel).find(some_condition).first()
+                # Work with bar_ref
+                bar_ref.delete(session=session)
+
+  However, if you need to work with all entries that correspond to query and
+  then soft delete them you should use query.soft_delete() method:
+
+        def soft_delete_multi_models():
+            session = get_session()
+            with session.begin():
+                query = model_query(BarModel, session=session).\
+                            find(some_condition)
+                model_refs = query.all()
+                # Work with model_refs
+                query.soft_delete(synchronize_session=False)
+                # synchronize_session=False should be set if there is no outer
+                # session and these entries are not used after this.
+
+  When working with many rows, it is very important to use query.soft_delete,
+  which issues a single query. Using model.delete, as in the following example,
+  is very inefficient.
+
+        for bar_ref in bar_refs:
+            bar_ref.delete(session=session)
+        # This will produce count(bar_refs) db requests.
 """
 
 import re
@@ -173,11 +234,13 @@ from sqlalchemy.exc import DisconnectionError, OperationalError, IntegrityError
 import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
+from sqlalchemy.sql.expression import literal_column
 
 from nova.exception import DBDuplicateEntry
 from nova.exception import DBError
 from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
+from nova.openstack.common import timeutils
 
 
 sql_opts = [
@@ -475,11 +538,21 @@ def create_engine(sql_connection):
     return engine
 
 
+class Query(sqlalchemy.orm.query.Query):
+    """Subclass of sqlalchemy.query with soft_delete() method"""
+    def soft_delete(self, synchronize_session='evaluate'):
+        return self.update({'deleted': True,
+                            'updated_at': literal_column('updated_at'),
+                            'deleted_at': timeutils.utcnow()},
+                           synchronize_session=synchronize_session)
+
+
 def get_maker(engine, autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy sessionmaker using the given engine."""
     return sqlalchemy.orm.sessionmaker(bind=engine,
                                        autocommit=autocommit,
-                                       expire_on_commit=expire_on_commit)
+                                       expire_on_commit=expire_on_commit,
+                                       query_cls=Query)
 
 
 def patch_mysqldb_with_stacktrace_comments():
