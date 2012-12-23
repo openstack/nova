@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 from nova import test
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
@@ -30,7 +32,9 @@ cluster_size: 65536
 disk size: 96K
 blah BLAH: bb
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
