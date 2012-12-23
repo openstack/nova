@@ -18,13 +18,14 @@
 
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
+from nova.virt.firewall import NoopFirewallDriver
 
 
 def get_baremetal_nodes():
-    return Fake()
+    return FakeDriver()
 
 
-class Fake(base.NodeDriver):
+class FakeDriver(base.NodeDriver):
 
     def define_vars(self, instance, network_info, block_device_info):
         return {}
@@ -72,4 +73,36 @@ class FakePowerManager(base.PowerManager):
         pass
 
     def stop_console(self):
+        pass
+
+
+class FakeFirewallDriver(NoopFirewallDriver):
+
+    def __init__(self):
+        super(FakeFirewallDriver, self).__init__()
+
+
+class FakeVifDriver(object):
+
+    def __init__(self):
+        super(FakeVifDriver, self).__init__()
+
+    def plug(self, instance, vif):
+        pass
+
+    def unplug(self, instance, vif):
+        pass
+
+
+class FakeVolumeDriver(object):
+
+    def __init__(self, virtapi):
+        super(FakeVolumeDriver, self).__init__()
+        self.virtapi = virtapi
+        self._initiator = "fake_initiator"
+
+    def attach_volume(self, connection_info, instance_name, mountpoint):
+        pass
+
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         pass

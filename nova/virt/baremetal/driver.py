@@ -28,7 +28,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import baremetal_states
-from nova.virt.baremetal import db as bmdb
+from nova.virt.baremetal import db
 from nova.virt import driver
 from nova.virt import firewall
 from nova.virt.libvirt import imagecache
@@ -79,13 +79,13 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
 
 
 def _get_baremetal_nodes(context):
-    nodes = bmdb.bm_node_get_all(context, service_host=CONF.host)
+    nodes = db.bm_node_get_all(context, service_host=CONF.host)
     return nodes
 
 
 def _get_baremetal_node_by_instance_uuid(instance_uuid):
     ctx = nova_context.get_admin_context()
-    node = bmdb.bm_node_get_by_instance_uuid(ctx, instance_uuid)
+    node = db.bm_node_get_by_instance_uuid(ctx, instance_uuid)
     if node['service_host'] != CONF.host:
         LOG.error(_("Request for baremetal node %s "
                     "sent to wrong service host") % instance_uuid)
@@ -97,7 +97,7 @@ def _update_baremetal_state(context, node, instance, state):
     instance_uuid = None
     if instance:
         instance_uuid = instance['uuid']
-    bmdb.bm_node_update(context, node['id'],
+    db.bm_node_update(context, node['id'],
         {'instance_uuid': instance_uuid,
         'task_state': state,
         })
@@ -118,15 +118,15 @@ class BareMetalDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
         super(BareMetalDriver, self).__init__(virtapi)
 
-        self.baremetal_nodes = importutils.import_object(
+        self.driver = importutils.import_object(
                 CONF.baremetal.driver)
-        self._vif_driver = importutils.import_object(
+        self.vif_driver = importutils.import_object(
                 CONF.baremetal.vif_driver)
-        self._firewall_driver = firewall.load_driver(
+        self.firewall_driver = firewall.load_driver(
                 default=DEFAULT_FIREWALL_DRIVER)
-        self._volume_driver = importutils.import_object(
+        self.volume_driver = importutils.import_object(
                 CONF.baremetal.volume_driver, virtapi)
-        self._image_cache_manager = imagecache.ImageCacheManager()
+        self.image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
         extra_specs["baremetal_driver"] = CONF.baremetal.driver
@@ -139,9 +139,9 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.warning(
                     _('cpu_arch is not found in instance_type_extra_specs'))
             extra_specs['cpu_arch'] = ''
-        self._extra_specs = extra_specs
+        self.extra_specs = extra_specs
 
-        self._supported_instances = [
+        self.supported_instances = [
                 (extra_specs['cpu_arch'], 'baremetal', 'baremetal'),
                 ]
 
@@ -178,7 +178,7 @@ class BareMetalDriver(driver.ComputeDriver):
         if not nodename:
             raise exception.NovaException(_("Baremetal node id not supplied"
                                             " to driver"))
-        node = bmdb.bm_node_get(context, nodename)
+        node = db.bm_node_get(context, nodename)
         if node['instance_uuid']:
             raise exception.NovaException(_("Baremetal node %s already"
                                             " in use") % nodename)
@@ -188,28 +188,28 @@ class BareMetalDriver(driver.ComputeDriver):
             _update_baremetal_state(context, node, instance,
                                     baremetal_states.BUILDING)
 
-            var = self.baremetal_nodes.define_vars(instance, network_info,
+            var = self.driver.define_vars(instance, network_info,
                                                    block_device_info)
 
             self._plug_vifs(instance, network_info, context=context)
 
-            self._firewall_driver.setup_basic_filtering(instance, network_info)
-            self._firewall_driver.prepare_instance_filter(instance,
+            self.firewall_driver.setup_basic_filtering(instance, network_info)
+            self.firewall_driver.prepare_instance_filter(instance,
                                                           network_info)
 
-            self.baremetal_nodes.create_image(var, context, image_meta, node,
+            self.driver.create_image(var, context, image_meta, node,
                                               instance,
                                               injected_files=injected_files,
                                               admin_password=admin_password)
-            self.baremetal_nodes.activate_bootloader(var, context, node,
+            self.driver.activate_bootloader(var, context, node,
                                                      instance, image_meta)
             pm = get_power_manager(node)
             state = pm.activate_node()
 
             _update_baremetal_state(context, node, instance, state)
 
-            self.baremetal_nodes.activate_node(var, context, node, instance)
-            self._firewall_driver.apply_instance_filter(instance, network_info)
+            self.driver.activate_node(var, context, node, instance)
+            self.firewall_driver.apply_instance_filter(instance, network_info)
 
             block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
@@ -246,10 +246,10 @@ class BareMetalDriver(driver.ComputeDriver):
                     % instance['uuid'])
             return
 
-        var = self.baremetal_nodes.define_vars(instance, network_info,
+        var = self.driver.define_vars(instance, network_info,
                                                block_device_info)
 
-        self.baremetal_nodes.deactivate_node(var, ctx, node, instance)
+        self.driver.deactivate_node(var, ctx, node, instance)
 
         pm = get_power_manager(node)
 
@@ -267,12 +267,12 @@ class BareMetalDriver(driver.ComputeDriver):
             mountpoint = vol['mount_device']
             self.detach_volume(connection_info, instance['name'], mountpoint)
 
-        self.baremetal_nodes.deactivate_bootloader(var, ctx, node, instance)
+        self.driver.deactivate_bootloader(var, ctx, node, instance)
 
-        self.baremetal_nodes.destroy_images(var, ctx, node, instance)
+        self.driver.destroy_images(var, ctx, node, instance)
 
         # stop firewall
-        self._firewall_driver.unfilter_instance(instance,
+        self.firewall_driver.unfilter_instance(instance,
                                                 network_info=network_info)
 
         self._unplug_vifs(instance, network_info)
@@ -292,15 +292,15 @@ class BareMetalDriver(driver.ComputeDriver):
         pm.activate_node()
 
     def get_volume_connector(self, instance):
-        return self._volume_driver.get_volume_connector(instance)
+        return self.volume_driver.get_volume_connector(instance)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
-        return self._volume_driver.attach_volume(connection_info,
+        return self.volume_driver.attach_volume(connection_info,
                                                  instance_name, mountpoint)
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        return self._volume_driver.detach_volume(connection_info,
+        return self.volume_driver.detach_volume(connection_info,
                                                  instance_name, mountpoint)
 
     def get_info(self, instance):
@@ -319,15 +319,15 @@ class BareMetalDriver(driver.ComputeDriver):
                 'cpu_time': 0}
 
     def refresh_security_group_rules(self, security_group_id):
-        self._firewall_driver.refresh_security_group_rules(security_group_id)
+        self.firewall_driver.refresh_security_group_rules(security_group_id)
         return True
 
     def refresh_security_group_members(self, security_group_id):
-        self._firewall_driver.refresh_security_group_members(security_group_id)
+        self.firewall_driver.refresh_security_group_members(security_group_id)
         return True
 
     def refresh_provider_fw_rules(self):
-        self._firewall_driver.refresh_provider_fw_rules()
+        self.firewall_driver.refresh_provider_fw_rules()
 
     def _node_resource(self, node):
         vcpus_used = 0
@@ -356,27 +356,27 @@ class BareMetalDriver(driver.ComputeDriver):
         return dic
 
     def refresh_instance_security_rules(self, instance):
-        self._firewall_driver.refresh_instance_security_rules(instance)
+        self.firewall_driver.refresh_instance_security_rules(instance)
 
     def get_available_resource(self, nodename):
         context = nova_context.get_admin_context()
-        node = bmdb.bm_node_get(context, nodename)
+        node = db.bm_node_get(context, nodename)
         dic = self._node_resource(node)
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
-        self._firewall_driver.setup_basic_filtering(instance_ref, network_info)
-        self._firewall_driver.prepare_instance_filter(instance_ref,
+        self.firewall_driver.setup_basic_filtering(instance_ref, network_info)
+        self.firewall_driver.prepare_instance_filter(instance_ref,
                                                       network_info)
 
     def unfilter_instance(self, instance_ref, network_info):
-        self._firewall_driver.unfilter_instance(instance_ref,
+        self.firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
     def get_host_stats(self, refresh=False):
         caps = []
         context = nova_context.get_admin_context()
-        nodes = bmdb.bm_node_get_all(context,
+        nodes = db.bm_node_get_all(context,
                                      service_host=CONF.host)
         for node in nodes:
             res = self._node_resource(node)
@@ -393,8 +393,8 @@ class BareMetalDriver(driver.ComputeDriver):
             data['hypervisor_type'] = res['hypervisor_type']
             data['hypervisor_version'] = res['hypervisor_version']
             data['hypervisor_hostname'] = nodename
-            data['supported_instances'] = self._supported_instances
-            data.update(self._extra_specs)
+            data['supported_instances'] = self.supported_instances
+            data.update(self.extra_specs)
             data['host'] = CONF.host
             data['node'] = nodename
             # TODO(NTTdocomo): put node's extra specs here
@@ -410,24 +410,24 @@ class BareMetalDriver(driver.ComputeDriver):
             context = nova_context.get_admin_context()
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         if node:
-            pifs = bmdb.bm_interface_get_all_by_bm_node_id(context, node['id'])
+            pifs = db.bm_interface_get_all_by_bm_node_id(context, node['id'])
             for pif in pifs:
                 if pif['vif_uuid']:
-                    bmdb.bm_interface_set_vif_uuid(context, pif['id'], None)
+                    db.bm_interface_set_vif_uuid(context, pif['id'], None)
         for (network, mapping) in network_info:
-            self._vif_driver.plug(instance, (network, mapping))
+            self.vif_driver.plug(instance, (network, mapping))
 
     def _unplug_vifs(self, instance, network_info):
         for (network, mapping) in network_info:
-            self._vif_driver.unplug(instance, (network, mapping))
+            self.vif_driver.unplug(instance, (network, mapping))
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
-        self._image_cache_manager.verify_base_images(context, all_instances)
+        self.image_cache_manager.verify_base_images(context, all_instances)
 
     def get_console_output(self, instance):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
-        return self.baremetal_nodes.get_console_output(node, instance)
+        return self.driver.get_console_output(node, instance)
 
     def get_available_nodes(self):
         context = nova_context.get_admin_context()
