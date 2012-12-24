@@ -172,8 +172,8 @@ network_opts = [
                      'entries in multi host mode'),
     cfg.IntOpt("dns_update_periodic_interval",
                default=-1,
-               help='Number of periodic scheduler ticks to wait between '
-                    'runs of updates to DNS entries.'),
+               help='Number of seconds to wait between runs of updates to DNS '
+                    'entries.'),
     cfg.StrOpt('dhcp_domain',
                default='novalocal',
                help='domain to use for building the hostnames'),
@@ -1973,7 +1973,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                         mac_address)
 
     @manager.periodic_task(
-        ticks_between_runs=CONF.dns_update_periodic_interval)
+        spacing=CONF.dns_update_periodic_interval)
     def _periodic_update_dns(self, context):
         """Update local DNS entries of all networks on this host"""
         networks = self.db.network_get_all_by_host(context, self.host)

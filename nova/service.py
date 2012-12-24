@@ -49,9 +49,9 @@ service_opts = [
     cfg.IntOpt('report_interval',
                default=10,
                help='seconds between nodes reporting state to datastore'),
-    cfg.IntOpt('periodic_interval',
-               default=60,
-               help='seconds between running periodic tasks'),
+    cfg.BoolOpt('periodic_enable',
+               default=True,
+               help='enable periodic tasks'),
     cfg.IntOpt('periodic_fuzzy_delay',
                default=60,
                help='range of seconds to randomly delay when starting the'
@@ -371,7 +371,8 @@ class Service(object):
     it state to the database services table."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
-                 periodic_interval=None, periodic_fuzzy_delay=None,
+                 periodic_enable=None, periodic_fuzzy_delay=None,
+                 periodic_interval_max=None,
                  *args, **kwargs):
         self.host = host
         self.binary = binary
@@ -380,8 +381,9 @@ class Service(object):
         manager_class = importutils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.report_interval = report_interval
-        self.periodic_interval = periodic_interval
+        self.periodic_enable = periodic_enable
         self.periodic_fuzzy_delay = periodic_fuzzy_delay
+        self.periodic_interval_max = periodic_interval_max
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
         self.backdoor_port = None
@@ -433,15 +435,15 @@ class Service(object):
         if pulse:
             self.timers.append(pulse)
 
-        if self.periodic_interval:
+        if self.periodic_enable:
             if self.periodic_fuzzy_delay:
                 initial_delay = random.randint(0, self.periodic_fuzzy_delay)
             else:
                 initial_delay = None
 
-            periodic = utils.LoopingCall(self.periodic_tasks)
-            periodic.start(interval=self.periodic_interval,
-                           initial_delay=initial_delay)
+            periodic = utils.DynamicLoopingCall(self.periodic_tasks)
+            periodic.start(initial_delay=initial_delay,
+                           periodic_interval_max=self.periodic_interval_max)
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
@@ -460,8 +462,8 @@ class Service(object):
 
     @classmethod
     def create(cls, host=None, binary=None, topic=None, manager=None,
-               report_interval=None, periodic_interval=None,
-               periodic_fuzzy_delay=None):
+               report_interval=None, periodic_enable=None,
+               periodic_fuzzy_delay=None, periodic_interval_max=None):
         """Instantiates class and passes back application object.
 
         :param host: defaults to CONF.host
@@ -469,8 +471,9 @@ class Service(object):
         :param topic: defaults to bin_name - 'nova-' part
         :param manager: defaults to CONF.<topic>_manager
         :param report_interval: defaults to CONF.report_interval
-        :param periodic_interval: defaults to CONF.periodic_interval
+        :param periodic_enable: defaults to CONF.periodic_enable
         :param periodic_fuzzy_delay: defaults to CONF.periodic_fuzzy_delay
+        :param periodic_interval_max: if set, the max time to wait between runs
 
         """
         if not host:
@@ -486,14 +489,15 @@ class Service(object):
             manager = CONF.get(manager_cls, None)
         if report_interval is None:
             report_interval = CONF.report_interval
-        if periodic_interval is None:
-            periodic_interval = CONF.periodic_interval
+        if periodic_enable is None:
+            periodic_enable = CONF.periodic_enable
         if periodic_fuzzy_delay is None:
             periodic_fuzzy_delay = CONF.periodic_fuzzy_delay
         service_obj = cls(host, binary, topic, manager,
                           report_interval=report_interval,
-                          periodic_interval=periodic_interval,
-                          periodic_fuzzy_delay=periodic_fuzzy_delay)
+                          periodic_enable=periodic_enable,
+                          periodic_fuzzy_delay=periodic_fuzzy_delay,
+                          periodic_interval_max=periodic_interval_max)
 
         return service_obj
 
@@ -529,7 +533,7 @@ class Service(object):
     def periodic_tasks(self, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
         ctxt = context.get_admin_context()
-        self.manager.periodic_tasks(ctxt, raise_on_error=raise_on_error)
+        return self.manager.periodic_tasks(ctxt, raise_on_error=raise_on_error)
 
 
 class WSGIService(object):

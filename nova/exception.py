@@ -410,6 +410,10 @@ class InvalidUUID(Invalid):
     message = _("Expected a uuid but received %(uuid)s.")
 
 
+class InvalidPeriodicTaskArg(Invalid):
+    message = _("Unexpected argument for periodic task creation: %(arg)s.")
+
+
 class ConstraintNotMet(NovaException):
     message = _("Constraint not met.")
     code = 412

@@ -116,9 +116,9 @@ interval_opts = [
                default=120,
                help='Interval in seconds for querying the host status'),
     cfg.IntOpt("image_cache_manager_interval",
-               default=40,
-               help="Number of periodic scheduler ticks to wait between "
-                    "runs of the image cache manager."),
+               default=2400,
+               help='Number of seconds to wait between runs of the image '
+                        'cache manager'),
     cfg.IntOpt('reclaim_instance_interval',
                default=0,
                help='Interval in seconds for reclaiming deleted instances'),
@@ -155,9 +155,9 @@ running_deleted_opts = [
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
     cfg.IntOpt("running_deleted_instance_poll_interval",
-               default=30,
-               help="Number of periodic scheduler ticks to wait between "
-                    "runs of the cleanup task."),
+               default=1800,
+               help="Number of seconds to wait between runs of the cleanup "
+                    "task."),
     cfg.IntOpt("running_deleted_instance_timeout",
                default=0,
                help="Number of seconds after being deleted when a running "
@@ -3115,7 +3115,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capability['host_ip'] = CONF.my_ip
             self.update_service_capabilities(capabilities)
 
-    @manager.periodic_task(ticks_between_runs=10)
+    @manager.periodic_task(spacing=600.0)
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
@@ -3289,8 +3289,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             new_resource_tracker_dict[nodename] = rt
         self._resource_tracker_dict = new_resource_tracker_dict
 
-    @manager.periodic_task(
-        ticks_between_runs=CONF.running_deleted_instance_poll_interval)
+    @manager.periodic_task(spacing=CONF.running_deleted_instance_poll_interval)
     def _cleanup_running_deleted_instances(self, context):
         """Cleanup any instances which are erroneously still running after
         having been deleted.
@@ -3411,8 +3410,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     aggregate, host,
                                     isinstance(e, exception.AggregateError))
 
-    @manager.periodic_task(
-        ticks_between_runs=CONF.image_cache_manager_interval)
+    @manager.periodic_task(spacing=CONF.image_cache_manager_interval,
+                           external_process_ok=True)
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 

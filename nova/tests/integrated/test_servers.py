@@ -145,8 +145,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         fake_network.set_stub_network_methods(self.stubs)
 
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(
-                periodic_interval=0.3, periodic_fuzzy_delay=0)
+        self._restart_compute_service(periodic_interval_max=0.3,
+                                      periodic_fuzzy_delay=0)
 
         # Create server
         server = self._build_minimal_create_server_request()

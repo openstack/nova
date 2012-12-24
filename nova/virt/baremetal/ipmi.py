@@ -154,7 +154,7 @@ class IPMI(base.PowerManager):
                 LOG.exception(_("IPMI power on failed"))
 
         self.retries = 0
-        timer = utils.LoopingCall(_wait_for_power_on)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_power_on)
         timer.start(interval=0.5).wait()
 
     def _power_off(self):
@@ -176,7 +176,7 @@ class IPMI(base.PowerManager):
                 LOG.exception(_("IPMI power off failed"))
 
         self.retries = 0
-        timer = utils.LoopingCall(_wait_for_power_off)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_power_off)
         timer.start(interval=0.5).wait()
 
     def _set_pxe_for_next_boot(self):

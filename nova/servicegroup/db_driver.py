@@ -41,7 +41,7 @@ class DbDriver(api.ServiceGroupDriver):
                                  ' ServiceGroup driver'))
         report_interval = service.report_interval
         if report_interval:
-            pulse = utils.LoopingCall(self._report_state, service)
+            pulse = utils.FixedIntervalLoopingCall(self._report_state, service)
             pulse.start(interval=report_interval,
                         initial_delay=report_interval)
             return pulse

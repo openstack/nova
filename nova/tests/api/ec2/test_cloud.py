@@ -1619,19 +1619,19 @@ class CloudTestCase(test.TestCase):
         result = run_instances(self.context, **kwargs)
         self.assertEqual(len(result['instancesSet']), 1)
 
-    def _restart_compute_service(self, periodic_interval=None):
+    def _restart_compute_service(self, periodic_interval_max=None):
         """restart compute service. NOTE: fake driver forgets all instances."""
         self.compute.kill()
-        if periodic_interval:
+        if periodic_interval_max:
             self.compute = self.start_service(
-                'compute', periodic_interval=periodic_interval)
+                'compute', periodic_interval_max=periodic_interval_max)
         else:
             self.compute = self.start_service('compute')
 
     def test_stop_start_instance(self):
         """Makes sure stop/start instance works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
 
         kwargs = {'image_id': 'ami-1',
                   'instance_type': CONF.default_instance_type,
@@ -1834,7 +1834,7 @@ class CloudTestCase(test.TestCase):
     def _do_test_create_image(self, no_reboot):
         """Make sure that CreateImage works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
 
         (volumes, snapshots) = self._setUpImageSet(
             create_volumes_and_snapshots=True)
@@ -1942,7 +1942,7 @@ class CloudTestCase(test.TestCase):
         instance
         """
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
 
         (volumes, snapshots) = self._setUpImageSet(
             create_volumes_and_snapshots=True)
