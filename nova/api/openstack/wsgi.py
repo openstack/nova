@@ -406,6 +406,8 @@ class XMLDictSerializer(DictSerializer):
                 if k in attrs:
                     result.setAttribute(k, str(v))
                 else:
+                    if k == "deleted":
+                        v = str(bool(v))
                     node = self._to_xml_node(doc, metadata, k, v)
                     result.appendChild(node)
         else:

@@ -490,3 +490,77 @@ class TestMigrations(test.TestCase):
             migration_api.downgrade(engine, TestMigrations.REPOSITORY, 146)
 
             _146_check()
+
+    def test_migration_152(self):
+        host1 = 'compute-host1'
+        host2 = 'compute-host2'
+
+        def _151_check(services, volumes):
+            service = services.select(services.c.id == 1).execute().first()
+            self.assertEqual(False, service.deleted)
+            service = services.select(services.c.id == 2).execute().first()
+            self.assertEqual(True, service.deleted)
+
+            volume = volumes.select(volumes.c.id == "first").execute().first()
+            self.assertEqual(False, volume.deleted)
+            volume = volumes.select(volumes.c.id == "second").execute().first()
+            self.assertEqual(True, volume.deleted)
+
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 151)
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+
+            # NOTE(boris-42): It is enough to test one table with type of `id`
+            #                 column Integer and one with type String.
+            services = sqlalchemy.Table('services', metadata, autoload=True)
+            volumes = sqlalchemy.Table('volumes', metadata, autoload=True)
+
+            engine.execute(
+                services.insert(),
+                [
+                    {'id': 1, 'host': host1, 'binary': 'nova-compute',
+                     'report_count': 0, 'topic': 'compute', 'deleted': False},
+                    {'id': 2, 'host': host1, 'binary': 'nova-compute',
+                     'report_count': 0, 'topic': 'compute', 'deleted': True}
+                ]
+            )
+
+            engine.execute(
+                volumes.insert(),
+                [
+                    {'id': 'first', 'host': host1, 'deleted': False},
+                    {'id': 'second', 'host': host2, 'deleted': True}
+                ]
+            )
+
+            _151_check(services, volumes)
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 152)
+            # NOTE(boris-42): One more time get from DB info about tables.
+            metadata2 = sqlalchemy.schema.MetaData()
+            metadata2.bind = engine
+
+            services = sqlalchemy.Table('services', metadata2, autoload=True)
+
+            service = services.select(services.c.id == 1).execute().first()
+            self.assertEqual(0, service.deleted)
+            service = services.select(services.c.id == 2).execute().first()
+            self.assertEqual(service.id, service.deleted)
+
+            volumes = sqlalchemy.Table('volumes', metadata2, autoload=True)
+            volume = volumes.select(volumes.c.id == "first").execute().first()
+            self.assertEqual("", volume.deleted)
+            volume = volumes.select(volumes.c.id == "second").execute().first()
+            self.assertEqual(volume.id, volume.deleted)
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 151)
+            # NOTE(boris-42): One more time get from DB info about tables.
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+            services = sqlalchemy.Table('services', metadata, autoload=True)
+            volumes = sqlalchemy.Table('volumes', metadata, autoload=True)
+
+            _151_check(services, volumes)

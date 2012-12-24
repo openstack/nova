@@ -42,7 +42,7 @@ class NovaBase(object):
     created_at = Column(DateTime, default=timeutils.utcnow)
     updated_at = Column(DateTime, onupdate=timeutils.utcnow)
     deleted_at = Column(DateTime)
-    deleted = Column(Boolean, default=False)
+    deleted = Column(Integer, default=0)
     metadata = None
 
     def save(self, session=None):
@@ -63,7 +63,7 @@ class NovaBase(object):
 
     def soft_delete(self, session=None):
         """Mark this object as deleted."""
-        self.deleted = True
+        self.deleted = self.id
         self.deleted_at = timeutils.utcnow()
         self.save(session=session)
 
@@ -129,7 +129,7 @@ class ComputeNode(BASE, NovaBase):
                            foreign_keys=service_id,
                            primaryjoin='and_('
                                 'ComputeNode.service_id == Service.id,'
-                                'ComputeNode.deleted == False)')
+                                'ComputeNode.deleted == 0)')
 
     vcpus = Column(Integer)
     memory_mb = Column(Integer)
@@ -173,7 +173,7 @@ class ComputeNodeStat(BASE, NovaBase):
     compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'))
 
     primary_join = ('and_(ComputeNodeStat.compute_node_id == '
-                    'ComputeNode.id, ComputeNodeStat.deleted == False)')
+                    'ComputeNode.id, ComputeNodeStat.deleted == 0)')
     stats = relationship("ComputeNode", backref="stats",
             primaryjoin=primary_join)
 
@@ -358,6 +358,7 @@ class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'volumes'
     id = Column(String(36), primary_key=True)
+    deleted = Column(String(36), default="")
 
     @property
     def name(self):
@@ -465,13 +466,14 @@ class Reservation(BASE, NovaBase):
         "QuotaUsage",
         foreign_keys=usage_id,
         primaryjoin='and_(Reservation.usage_id == QuotaUsage.id,'
-                         'QuotaUsage.deleted == False)')
+                         'QuotaUsage.deleted == 0)')
 
 
 class Snapshot(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'snapshots'
     id = Column(String(36), primary_key=True)
+    deleted = Column(String(36), default="")
 
     @property
     def name(self):
@@ -507,7 +509,7 @@ class BlockDeviceMapping(BASE, NovaBase):
                                               'instance_uuid=='
                                               'Instance.uuid,'
                                               'BlockDeviceMapping.deleted=='
-                                              'False)')
+                                              '0)')
     device_name = Column(String(255), nullable=False)
 
     # default=False for compatibility of the existing code.
@@ -542,7 +544,7 @@ class IscsiTarget(BASE, NovaBase):
                           backref=backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
                           primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
-                                           'IscsiTarget.deleted==False)')
+                                           'IscsiTarget.deleted==0)')
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
@@ -567,14 +569,14 @@ class SecurityGroup(BASE, NovaBase):
                              primaryjoin='and_('
         'SecurityGroup.id == '
         'SecurityGroupInstanceAssociation.security_group_id,'
-        'SecurityGroupInstanceAssociation.deleted == False,'
-        'SecurityGroup.deleted == False)',
+        'SecurityGroupInstanceAssociation.deleted == 0,'
+        'SecurityGroup.deleted == 0)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_uuid == Instance.uuid,'
         # (anthony) the condition below shouldn't be necessary now that the
         # association is being marked as deleted.  However, removing this
         # may cause existing deployments to choke, so I'm leaving it
-        'Instance.deleted == False)',
+        'Instance.deleted == 0)',
                              backref='security_groups')
 
 
@@ -588,7 +590,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
                                 foreign_keys=parent_group_id,
                                 primaryjoin='and_('
         'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
-        'SecurityGroupIngressRule.deleted == False)')
+        'SecurityGroupIngressRule.deleted == 0)')
 
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
@@ -602,7 +604,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
                                  foreign_keys=group_id,
                                  primaryjoin='and_('
         'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
-        'SecurityGroupIngressRule.deleted == False)')
+        'SecurityGroupIngressRule.deleted == 0)')
 
 
 class ProviderFirewallRule(BASE, NovaBase):
@@ -651,7 +653,7 @@ class Migration(BASE, NovaBase):
     instance = relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '
                                         'Instance.uuid, Instance.deleted == '
-                                        'False)')
+                                        '0)')
 
 
 class Network(BASE, NovaBase):
@@ -735,6 +737,7 @@ class FloatingIp(BASE, NovaBase):
 class DNSDomain(BASE, NovaBase):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'
+    deleted = Column(Boolean, default=False)
     domain = Column(String(512), primary_key=True)
     scope = Column(String(255))
     availability_zone = Column(String(255))
@@ -779,7 +782,7 @@ class InstanceMetadata(BASE, NovaBase):
                             primaryjoin='and_('
                                 'InstanceMetadata.instance_uuid == '
                                      'Instance.uuid,'
-                                'InstanceMetadata.deleted == False)')
+                                'InstanceMetadata.deleted == 0)')
 
 
 class InstanceSystemMetadata(BASE, NovaBase):
@@ -793,7 +796,7 @@ class InstanceSystemMetadata(BASE, NovaBase):
                            nullable=False)
 
     primary_join = ('and_(InstanceSystemMetadata.instance_uuid == '
-                    'Instance.uuid, InstanceSystemMetadata.deleted == False)')
+                    'Instance.uuid, InstanceSystemMetadata.deleted == 0)')
     instance = relationship(Instance, backref="system_metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin=primary_join)
@@ -811,7 +814,7 @@ class InstanceTypeProjects(BASE, NovaBase):
                  foreign_keys=instance_type_id,
                  primaryjoin='and_('
                  'InstanceTypeProjects.instance_type_id == InstanceTypes.id,'
-                 'InstanceTypeProjects.deleted == False)')
+                 'InstanceTypeProjects.deleted == 0)')
 
 
 class InstanceTypeExtraSpecs(BASE, NovaBase):
@@ -826,7 +829,7 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
                  foreign_keys=instance_type_id,
                  primaryjoin='and_('
                  'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
-                 'InstanceTypeExtraSpecs.deleted == False)')
+                 'InstanceTypeExtraSpecs.deleted == 0)')
 
 
 class Cell(BASE, NovaBase):
@@ -880,24 +883,24 @@ class Aggregate(BASE, NovaBase):
                           secondary="aggregate_hosts",
                           primaryjoin='and_('
                                  'Aggregate.id == AggregateHost.aggregate_id,'
-                                 'AggregateHost.deleted == False,'
-                                 'Aggregate.deleted == False)',
+                                 'AggregateHost.deleted == 0,'
+                                 'Aggregate.deleted == 0)',
                          secondaryjoin='and_('
                                 'AggregateHost.aggregate_id == Aggregate.id, '
-                                'AggregateHost.deleted == False,'
-                                'Aggregate.deleted == False)',
+                                'AggregateHost.deleted == 0,'
+                                'Aggregate.deleted == 0)',
                          backref='aggregates')
 
     _metadata = relationship(AggregateMetadata,
                          secondary="aggregate_metadata",
                          primaryjoin='and_('
                              'Aggregate.id == AggregateMetadata.aggregate_id,'
-                             'AggregateMetadata.deleted == False,'
-                             'Aggregate.deleted == False)',
+                             'AggregateMetadata.deleted == 0,'
+                             'Aggregate.deleted == 0)',
                          secondaryjoin='and_('
                              'AggregateMetadata.aggregate_id == Aggregate.id, '
-                             'AggregateMetadata.deleted == False,'
-                             'Aggregate.deleted == False)',
+                             'AggregateMetadata.deleted == 0,'
+                             'Aggregate.deleted == 0)',
                          backref='aggregates')
 
     def _extra_keys(self):

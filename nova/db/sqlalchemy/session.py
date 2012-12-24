@@ -536,7 +536,7 @@ def create_engine(sql_connection):
 class Query(sqlalchemy.orm.query.Query):
     """Subclass of sqlalchemy.query with soft_delete() method."""
     def soft_delete(self, synchronize_session='evaluate'):
-        return self.update({'deleted': True,
+        return self.update({'deleted': literal_column('id'),
                             'updated_at': literal_column('updated_at'),
                             'deleted_at': timeutils.utcnow()},
                            synchronize_session=synchronize_session)
