@@ -1912,7 +1912,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     @wrap_check_policy
     def get_network(self, context, network_uuid):
         network = self.db.network_get_by_uuid(context.elevated(), network_uuid)
-        return dict(network.iteritems())
+        return jsonutils.to_primitive(network)
 
     @wrap_check_policy
     def get_all_networks(self, context):
