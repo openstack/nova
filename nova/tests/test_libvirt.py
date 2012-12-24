@@ -4229,7 +4229,7 @@ class LibvirtDriverTestCase(test.TestCase):
                       block_device_info=None):
             pass
 
-        def fake_create_domain(xml):
+        def fake_create_domain(xml, inst_name=''):
             return None
 
         def fake_enable_hairpin(instance):
@@ -4275,7 +4275,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml):
+        def fake_create_domain(xml, inst_name=''):
             return None
 
         def fake_enable_hairpin(instance):

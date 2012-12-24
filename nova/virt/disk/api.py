@@ -294,11 +294,11 @@ def setup_container(image, container_dir, use_cow=False):
         raise exception.NovaException(img.errors)
 
 
-def destroy_container(container_dir):
-    """Destroy the container once it terminates.
+def teardown_container(container_dir):
+    """Teardown the container rootfs mounting once it is spawned.
 
     It will umount the container that is mounted,
-    and delete any  linked devices.
+    and delete any linked devices.
     """
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)

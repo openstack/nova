@@ -577,11 +577,6 @@ class LibvirtDriver(driver.ComputeDriver):
         target = os.path.join(CONF.instances_path, instance['name'])
         LOG.info(_('Deleting instance files %(target)s') % locals(),
                  instance=instance)
-        if CONF.libvirt_type == 'lxc':
-            container_dir = os.path.join(CONF.instances_path,
-                                         instance['name'],
-                                         'rootfs')
-            disk.destroy_container(container_dir=container_dir)
         if os.path.exists(target):
             # If we fail to get rid of the directory
             # tree, this shouldn't block deletion of
@@ -949,7 +944,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          power_state.CRASHED]:
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
-                self._create_domain(domain=dom)
+                self._create_domain(domain=dom, inst_name=instance['name'])
                 timer = utils.LoopingCall(self._wait_for_running, instance)
                 timer.start(interval=0.5).wait()
                 return True
@@ -1011,7 +1006,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def power_on(self, instance):
         """Power on the specified instance"""
         dom = self._lookup_by_name(instance['name'])
-        self._create_domain(domain=dom)
+        self._create_domain(domain=dom, inst_name=instance['name'])
         timer = utils.LoopingCall(self._wait_for_running, instance)
         timer.start(interval=0.5).wait()
 
@@ -1317,12 +1312,6 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.info(_('Creating image'), instance=instance)
         libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
-        if CONF.libvirt_type == 'lxc':
-            container_dir = os.path.join(CONF.instances_path,
-                                         instance['name'],
-                                         'rootfs')
-            fileutils.ensure_tree(container_dir)
-
         # NOTE(dprince): for rescue console.log may already exist... chown it.
         self._chown_console_log_for_instance(instance['name'])
 
@@ -1483,11 +1472,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(_('Ignoring error injecting data into image '
                            '%(img_id)s (%(e)s)') % locals(),
                          instance=instance)
-
-        if CONF.libvirt_type == 'lxc':
-            disk.setup_container(image('disk').path,
-                                 container_dir=container_dir,
-                                 use_cow=CONF.use_cow_images)
 
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
@@ -1947,16 +1931,37 @@ class LibvirtDriver(driver.ComputeDriver):
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
 
-    def _create_domain(self, xml=None, domain=None, launch_flags=0):
+    def _create_domain(self, xml=None, domain=None,
+                       inst_name='', launch_flags=0):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
         the domain definition is overwritten from the xml.
         """
+        if CONF.libvirt_type == 'lxc':
+            container_dir = os.path.join(CONF.instances_path,
+                                         inst_name,
+                                         'rootfs')
+            fileutils.ensure_tree(container_dir)
+            image = self.image_backend.image(inst_name, 'disk')
+            disk.setup_container(image.path,
+                                 container_dir=container_dir,
+                                 use_cow=CONF.use_cow_images)
+
         if xml:
             domain = self._conn.defineXML(xml)
         domain.createWithFlags(launch_flags)
         self._enable_hairpin(domain.XMLDesc(0))
+
+        # NOTE(uni): Now the container is running with its own private mount
+        # namespace and so there is no need to keep the container rootfs
+        # mounted in the host namespace
+        if CONF.libvirt_type == 'lxc':
+            container_dir = os.path.join(CONF.instances_path,
+                                         inst_name,
+                                         'rootfs')
+            disk.teardown_container(container_dir=container_dir)
+
         return domain
 
     def _create_domain_and_network(self, xml, instance, network_info,
@@ -1976,7 +1981,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        domain = self._create_domain(xml)
+        domain = self._create_domain(xml, inst_name=instance['name'])
+
         self.firewall_driver.apply_instance_filter(instance, network_info)
         return domain
 
