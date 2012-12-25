@@ -2451,6 +2451,38 @@ class LibvirtConnTestCase(test.TestCase):
             shutil.rmtree(os.path.join(CONF.instances_path,
                                        CONF.base_dir_name))
 
+    def test_spawn_without_image_meta(self):
+        self.create_image_called = False
+
+        def fake_none(*args, **kwargs):
+            return
+
+        def fake_create_image(*args, **kwargs):
+            self.create_image_called = True
+
+        def fake_get_info(instance):
+            return {'state': power_state.RUNNING}
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 1
+        instance = db.instance_create(self.context, instance_ref)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'to_xml', fake_none)
+        self.stubs.Set(conn, '_create_image', fake_create_image)
+        self.stubs.Set(conn, '_create_domain_and_network', fake_none)
+        self.stubs.Set(conn, 'get_info', fake_get_info)
+
+        conn.spawn(self.context, instance, None, [], None)
+        self.assertFalse(self.create_image_called)
+
+        conn.spawn(self.context,
+                   instance,
+                   {'id': instance['image_ref']},
+                   [],
+                   None)
+        self.assertTrue(self.create_image_called)
+
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
 
