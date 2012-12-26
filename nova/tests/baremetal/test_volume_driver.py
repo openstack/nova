@@ -17,11 +17,8 @@
 Tests for baremetal volume driver.
 """
 
-import mox
-
 from nova.openstack.common import cfg
 from nova import test
-from nova import utils
 
 from nova.virt.baremetal import volume_driver
 

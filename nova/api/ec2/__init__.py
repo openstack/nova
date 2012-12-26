@@ -331,7 +331,7 @@ class Requestify(wsgi.Middleware):
             for non_arg in non_args:
                 # Remove, but raise KeyError if omitted
                 args.pop(non_arg)
-        except KeyError, e:
+        except KeyError:
             raise webob.exc.HTTPBadRequest()
         except exception.InvalidRequest as err:
             raise webob.exc.HTTPBadRequest(explanation=unicode(err))

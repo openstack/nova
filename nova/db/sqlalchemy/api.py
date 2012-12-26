@@ -32,7 +32,6 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
-from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql import func
 
 from nova import block_device
