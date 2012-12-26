@@ -4384,7 +4384,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance1 = self._create_fake_instance({
                 'display_name': 'woot',
-                'id': 0,
+                'id': 1,
                 'uuid': '00000000-0000-0000-0000-000000000010'})
         instance2 = self._create_fake_instance({
                 'display_name': 'woo',
