@@ -16,7 +16,6 @@
 #    under the License.
 
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.api.openstack.compute import extensions
 from nova.openstack.common import cfg
 from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers

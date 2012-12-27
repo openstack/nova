@@ -27,15 +27,13 @@ from lxml import etree
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.api.openstack.compute import extensions
 from nova.cloudpipe.pipelib import CloudPipe
-from nova.compute import api
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.network import api
-from nova.network.manager import NetworkManager
+from nova.network import api as network_api
+from nova.network import manager as network_manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -141,7 +139,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _read_template(self, name):
         template = self._get_template(name)
         if self.generate_samples and not os.path.exists(template):
-            with open(template, 'w') as outf:
+            with open(template, 'w'):
                 pass
         with open(template) as inf:
             return inf.read().strip()
@@ -1452,7 +1450,8 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
                     'vpn_public_port': 22}
 
         self.stubs.Set(CloudPipe, 'get_encoded_zip', get_user_data)
-        self.stubs.Set(NetworkManager, "get_network", network_api_get)
+        self.stubs.Set(network_manager.NetworkManager, "get_network",
+                       network_api_get)
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['project_id'] = 'cloudpipe-[0-9a-f-]+'
@@ -2330,7 +2329,7 @@ class NetworksAssociateJsonTests(ApiSampleTestBase):
                            project=NetworksAssociateJsonTests._sentinel):
             return True
 
-        self.stubs.Set(api.API, "associate", fake_associate)
+        self.stubs.Set(network_api.API, "associate", fake_associate)
 
     def test_disassociate(self):
         response = self._do_post('os-networks/1/action',
