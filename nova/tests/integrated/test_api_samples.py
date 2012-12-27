@@ -81,6 +81,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     indent=4)
 
         else:
+            if data is None:
+                # Likely from missing XML file.
+                return ""
             xml = etree.XML(data)
             data = etree.tostring(xml, encoding="UTF-8",
                     xml_declaration=True, pretty_print=True)
@@ -235,7 +238,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             with file(self._get_sample(name)) as sample:
                 sample_data = sample.read()
         except IOError:
-            sample_data = "{}"
+            if self.ctype == 'json':
+                sample_data = "{}"
+            else:
+                sample_data = None
 
         try:
             response_result = self._verify_something(subs, expected,
