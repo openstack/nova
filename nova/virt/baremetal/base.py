@@ -51,7 +51,7 @@ class NodeDriver(object):
 
 class PowerManager(object):
 
-    def __init__(self, node):
+    def __init__(self, **kwargs):
         pass
 
     def activate_node(self):
