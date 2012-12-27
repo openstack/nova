@@ -84,6 +84,28 @@ class VirtDiskTest(test.TestCase):
 
         vfs.teardown()
 
+    def test_inject_data_key_with_selinux_append_with_newline(self):
+
+        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs.setup()
+
+        vfs.replace_file("/etc/rc.d/rc.local", "#!/bin/sh\necho done")
+        vfs.make_path("etc/selinux")
+        vfs.make_path("etc/rc.d")
+        diskapi._inject_key_into_fs("mysshkey", vfs)
+
+        self.assertTrue("/etc/rc.d/rc.local" in vfs.handle.files)
+        self.assertEquals(vfs.handle.files["/etc/rc.d/rc.local"],
+                {'isdir': False,
+                 'content': "#!/bin/sh\necho done\n# Added "
+                            "by Nova to ensure injected ssh keys have "
+                            "the right context\nrestorecon -RF "
+                            "root/.ssh 2>/dev/null || :\n",
+                 'gid': 100,
+                 'uid': 100,
+                 'mode': 0700})
+        vfs.teardown()
+
     def test_inject_net(self):
 
         vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
