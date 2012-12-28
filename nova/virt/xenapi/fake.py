@@ -727,6 +727,8 @@ class SessionBase(object):
             return lambda *params: self._create(name, params)
         elif self._is_destroy(name):
             return lambda *params: self._destroy(name, params)
+        elif name == 'XenAPI':
+            return FakeXenAPI()
         else:
             return None
 
@@ -888,6 +890,11 @@ class SessionBase(object):
                 raise Failure(['UUID_INVALID', v, result, recs, k])
 
         return result
+
+
+class FakeXenAPI(object):
+    def __init__(self):
+        self.Failure = Failure
 
 
 # Based upon _Method from xmlrpclib.
