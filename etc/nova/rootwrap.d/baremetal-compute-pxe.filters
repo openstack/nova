@@ -1,0 +1,11 @@
+# nova-rootwrap command filters for compute nodes
+# This file should be owned by (and only-writeable by) the root user
+
+[Filters]
+
+# nova/virt/baremetal/pxe.py: 'dnsmasq', ...
+dnsmasq: CommandFilter, /usr/sbin/dnsmasq, root
+
+# nova/virt/baremetal/pxe.py: 'kill', '-TERM', str(dnsmasq_pid)
+kill_dnsmasq: KillFilter, root, /usr/sbin/dnsmasq, -15, -TERM
+

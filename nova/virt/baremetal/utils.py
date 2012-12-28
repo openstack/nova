@@ -58,3 +58,10 @@ def create_link_without_raise(source, link):
     except OSError:
         LOG.exception(_("Failed to create symlink from %(source)s to %(link)s")
                 % locals())
+
+
+def random_alnum(count):
+    import random
+    import string
+    chars = string.ascii_uppercase + string.digits
+    return "".join(random.choice(chars) for _ in range(count))

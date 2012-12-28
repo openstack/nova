@@ -12,7 +12,6 @@ auto ${ifc.name}
 iface ${ifc.name} inet static
         address ${ifc.address}
         netmask ${ifc.netmask}
-        broadcast ${ifc.broadcast}
         gateway ${ifc.gateway}
 #if $ifc.dns
         dns-nameservers ${ifc.dns}
