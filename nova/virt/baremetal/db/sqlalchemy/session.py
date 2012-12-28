@@ -47,7 +47,6 @@ def get_session(autocommit=True, expire_on_commit=False):
         _MAKER = nova_session.get_maker(engine, autocommit, expire_on_commit)
 
     session = _MAKER()
-    session = nova_session.wrap_session(session)
     return session
 
 

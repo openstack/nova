@@ -306,7 +306,6 @@ def get_session(autocommit=True, expire_on_commit=False):
         _MAKER = get_maker(engine, autocommit, expire_on_commit)
 
     session = _MAKER()
-    session = wrap_session(session)
     return session
 
 
@@ -386,13 +385,6 @@ def wrap_db_error(f):
             raise DBError(e)
     _wrap.func_name = f.func_name
     return _wrap
-
-
-def wrap_session(session):
-    """Return a session whose exceptions are wrapped."""
-    session.query = wrap_db_error(session.query)
-    session.flush = wrap_db_error(session.flush)
-    return session
 
 
 def get_engine():
@@ -548,9 +540,21 @@ class Query(sqlalchemy.orm.query.Query):
                            synchronize_session=synchronize_session)
 
 
+class Session(sqlalchemy.orm.session.Session):
+    """Custom Session class to avoid SqlAlchemy Session monkey patching"""
+    @wrap_db_error
+    def query(self, *args, **kwargs):
+        return super(Session, self).query(*args, **kwargs)
+
+    @wrap_db_error
+    def flush(self, *args, **kwargs):
+        return super(Session, self).flush(*args, **kwargs)
+
+
 def get_maker(engine, autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy sessionmaker using the given engine."""
     return sqlalchemy.orm.sessionmaker(bind=engine,
+                                       class_=Session,
                                        autocommit=autocommit,
                                        expire_on_commit=expire_on_commit,
                                        query_cls=Query)
