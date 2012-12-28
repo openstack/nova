@@ -657,37 +657,28 @@ class LibvirtDriver(driver.ComputeDriver):
                                          connection_info,
                                          mount_device)
 
-        if CONF.libvirt_type == 'lxc':
-            self._attach_lxc_volume(conf.to_xml(), virt_dom, instance_name)
-            # TODO(danms) once libvirt has support for LXC hotplug,
-            # replace this re-define with use of the
-            # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
-            # attachDevice()
-            domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
-            self._conn.defineXML(domxml)
-        else:
-            try:
-                # NOTE(vish): We can always affect config because our
-                #             domains are persistent, but we should only
-                #             affect live if the domain is running.
-                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
-                if state == power_state.RUNNING:
-                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-                virt_dom.attachDeviceFlags(conf.to_xml(), flags)
-            except Exception, ex:
-                if isinstance(ex, libvirt.libvirtError):
-                    errcode = ex.get_error_code()
-                    if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
-                        self.volume_driver_method('disconnect_volume',
-                                                  connection_info,
-                                                  mount_device)
-                        raise exception.DeviceIsBusy(device=mount_device)
-
-                with excutils.save_and_reraise_exception():
+        try:
+            # NOTE(vish): We can always affect config because our
+            #             domains are persistent, but we should only
+            #             affect live if the domain is running.
+            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            if state == power_state.RUNNING:
+                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+            virt_dom.attachDeviceFlags(conf.to_xml(), flags)
+        except Exception, ex:
+            if isinstance(ex, libvirt.libvirtError):
+                errcode = ex.get_error_code()
+                if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
                     self.volume_driver_method('disconnect_volume',
-                                               connection_info,
-                                               mount_device)
+                                                connection_info,
+                                                mount_device)
+                    raise exception.DeviceIsBusy(device=mount_device)
+
+            with excutils.save_and_reraise_exception():
+                self.volume_driver_method('disconnect_volume',
+                                            connection_info,
+                                            mount_device)
 
     @staticmethod
     def _get_disk_xml(xml, device):
@@ -720,14 +711,6 @@ class LibvirtDriver(driver.ComputeDriver):
             xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
             if not xml:
                 raise exception.DiskNotFound(location=mount_device)
-            if CONF.libvirt_type == 'lxc':
-                self._detach_lxc_volume(xml, virt_dom, instance_name)
-                # TODO(danms) once libvirt has support for LXC hotplug,
-                # replace this re-define with use of the
-                # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
-                # detachDevice()
-                domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
-                self._conn.defineXML(domxml)
             else:
                 # NOTE(vish): We can always affect config because our
                 #             domains are persistent, but we should only
@@ -751,61 +734,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.volume_driver_method('disconnect_volume',
                                   connection_info,
                                   mount_device)
-
-    @exception.wrap_exception()
-    def _attach_lxc_volume(self, xml, virt_dom, instance_name):
-        LOG.info(_('attaching LXC block device'))
-
-        lxc_container_root = self.get_lxc_container_root(virt_dom)
-        lxc_host_volume = self.get_lxc_host_device(xml)
-        lxc_container_device = self.get_lxc_container_target(xml)
-        lxc_container_target = "%s/%s" % (lxc_container_root,
-                                          lxc_container_device)
-
-        if lxc_container_target:
-            disk.bind(lxc_host_volume, lxc_container_target, instance_name)
-            s = os.stat(lxc_host_volume)
-            cgroup_info = "b %s:%s rwm\n" % (os.major(s.st_rdev),
-                                             os.minor(s.st_rdev))
-            cgroups_path = ("/sys/fs/cgroup/devices/libvirt/lxc/"
-                            "%s/devices.allow" % instance_name)
-            utils.execute('tee', cgroups_path,
-                          process_input=cgroup_info, run_as_root=True)
-
-    @exception.wrap_exception()
-    def _detach_lxc_volume(self, xml, virt_dom, instance_name):
-        LOG.info(_('detaching LXC block device'))
-
-        lxc_container_root = self.get_lxc_container_root(virt_dom)
-        lxc_container_device = self.get_lxc_container_target(xml)
-        lxc_container_target = "%s/%s" % (lxc_container_root,
-                                          lxc_container_device)
-
-        if lxc_container_target:
-            disk.unbind(lxc_container_target)
-
-    @staticmethod
-    def get_lxc_container_root(virt_dom):
-        xml = virt_dom.XMLDesc(0)
-        doc = etree.fromstring(xml)
-        filesystem_block = doc.findall('./devices/filesystem')
-        for cnt, filesystem_nodes in enumerate(filesystem_block):
-            return filesystem_nodes[cnt].get('dir')
-
-    @staticmethod
-    def get_lxc_host_device(xml):
-        dom = minidom.parseString(xml)
-
-        for device in dom.getElementsByTagName('source'):
-            return device.getAttribute('dev')
-
-    @staticmethod
-    def get_lxc_container_target(xml):
-        dom = minidom.parseString(xml)
-
-        for device in dom.getElementsByTagName('target'):
-            filesystem = device.getAttribute('dev')
-            return 'dev/%s' % filesystem
 
     @exception.wrap_exception()
     def snapshot(self, context, instance, image_href):
