@@ -1520,9 +1520,9 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
-    def test_delete_server_instance(self):
+    def _delete_server_instance(self, uuid=FAKE_UUID):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -1534,9 +1534,16 @@ class ServersControllerTest(test.TestCase):
             self.server_delete_called = True
         self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
 
-        self.controller.delete(req, FAKE_UUID)
+        self.controller.delete(req, uuid)
 
+    def test_delete_server_instance(self):
+        self._delete_server_instance()
         self.assertEqual(self.server_delete_called, True)
+
+    def test_delete_server_instance_not_found(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self._delete_server_instance,
+                          uuid='non-existent-uuid')
 
     def test_delete_server_instance_while_building(self):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
