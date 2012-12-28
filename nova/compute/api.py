@@ -432,7 +432,11 @@ class API(base.Base):
             max_count = min_count
 
         block_device_mapping = block_device_mapping or []
-
+        if min_count > 1 or max_count > 1:
+            if any(map(lambda bdm: 'volume_id' in bdm, block_device_mapping)):
+                msg = _('Cannot attach one or more volumes to multiple'
+                        ' instances')
+                raise exception.InvalidRequest(msg)
         if instance_type['disabled']:
             raise exception.InstanceTypeNotFound(
                     instance_type_id=instance_type['id'])
