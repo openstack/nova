@@ -81,6 +81,7 @@ def get_test_network_info(count=1):
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'
     fake_ip_3 = '0.0.0.1/0'
+    fake_netmask = '255.255.255.255'
     fake_vlan = 100
     fake_bridge_interface = 'eth0'
     network = {'bridge': fake,
@@ -91,11 +92,13 @@ def get_test_network_info(count=1):
                'injected': False}
     mapping = {'mac': fake,
                'dhcp_server': fake,
+               'dns': ['fake1', 'fake2'],
                'gateway': fake,
                'gateway_v6': fake,
-               'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
+               'ips': [{'ip': fake_ip, 'netmask': fake_netmask},
+                       {'ip': fake_ip, 'netmask': fake_netmask}]}
     if ipv6:
-        mapping['ip6s'] = [{'ip': fake_ip},
+        mapping['ip6s'] = [{'ip': fake_ip, 'netmask': fake_netmask},
                            {'ip': fake_ip_2},
                            {'ip': fake_ip_3}]
     return [(network, mapping) for x in xrange(0, count)]

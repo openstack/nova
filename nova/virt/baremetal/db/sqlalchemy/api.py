@@ -151,6 +151,37 @@ def bm_node_update(context, bm_node_id, values):
 
 
 @require_admin_context
+def bm_node_set_uuid_safe(context, bm_node_id, values):
+    """Associate an instance to a node safely
+
+    Associate an instance to a node only if that node is not yet assocated.
+    Allow the caller to set any other fields they require in the same
+    operation. For example, this is used to set the node's task_state to
+    BUILDING at the beginning of driver.spawn().
+
+    """
+    if 'instance_uuid' not in values:
+        raise exception.NovaException(_(
+            "instance_uuid must be supplied to bm_node_set_uuid_safe"))
+
+    session = get_session()
+    with session.begin():
+        query = model_query(context, models.BareMetalNode,
+                                session=session, read_deleted="no").\
+                        filter_by(id=bm_node_id)
+
+        count = query.filter_by(instance_uuid=None).\
+                        update(values, synchronize_session=False)
+        if count != 1:
+            raise exception.NovaException(_(
+                "Failed to associate instance %(uuid)s to baremetal node "
+                "%(id)s.") % {'id': bm_node_id,
+                              'uuid': values['instance_uuid']})
+        ref = query.first()
+    return ref
+
+
+@require_admin_context
 def bm_node_destroy(context, bm_node_id):
     model_query(context, models.BareMetalNode).\
             filter_by(id=bm_node_id).\

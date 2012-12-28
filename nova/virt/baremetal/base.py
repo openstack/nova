@@ -21,27 +21,26 @@ from nova.virt.baremetal import baremetal_states
 
 class NodeDriver(object):
 
-    def define_vars(self, instance, network_info, block_device_info):
+    def __init__(self):
+        pass
+
+    def cache_images(self, context, node, instance, **kwargs):
         raise NotImplementedError()
 
-    def create_image(self, var, context, image_meta, node, instance,
-                     injected_files=None, admin_password=None):
+    def destroy_images(self, context, node, instance):
         raise NotImplementedError()
 
-    def destroy_images(self, var, context, node, instance):
+    def activate_bootloader(self, context, node, instance):
         raise NotImplementedError()
 
-    def activate_bootloader(self, var, context, node, instance, image_meta):
+    def deactivate_bootloader(self, context, node, instance):
         raise NotImplementedError()
 
-    def deactivate_bootloader(self, var, context, node, instance):
-        raise NotImplementedError()
-
-    def activate_node(self, var, context, node, instance):
+    def activate_node(self, context, node, instance):
         """For operations after power on."""
         raise NotImplementedError()
 
-    def deactivate_node(self, var, context, node, instance):
+    def deactivate_node(self, context, node, instance):
         """For operations before power off."""
         raise NotImplementedError()
 
@@ -52,16 +51,20 @@ class NodeDriver(object):
 class PowerManager(object):
 
     def __init__(self, **kwargs):
+        self.state = baremetal_states.DELETED
         pass
 
     def activate_node(self):
-        return baremetal_states.ACTIVE
+        self.state = baremetal_states.ACTIVE
+        return self.state
 
     def reboot_node(self):
-        return baremetal_states.ACTIVE
+        self.state = baremetal_states.ACTIVE
+        return self.state
 
     def deactivate_node(self):
-        return baremetal_states.DELETED
+        self.state = baremetal_states.DELETED
+        return self.state
 
     def is_power_on(self):
         """Returns True or False according as the node's power state"""
