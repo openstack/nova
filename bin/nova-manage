@@ -1129,8 +1129,11 @@ def main():
     try:
         cliutils.validate_args(fn, *fn_args, **fn_kwargs)
     except cliutils.MissingArgs as e:
+        # NOTE(mikal): this isn't the most helpful error message ever. It is
+        # long, and tells you a lot of things you probably don't want to know
+        # if you just got a single arg wrong.
         print fn.__doc__
-        parser.print_help()
+        CONF.print_help()
         print e
         sys.exit(1)
     try:
