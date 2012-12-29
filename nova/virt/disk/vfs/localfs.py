@@ -74,8 +74,7 @@ class VFSLocalFS(vfs.VFS):
                                      self.imgdir,
                                      self.partition)
             if not mount.do_mount():
-                raise Exception(_("Failed to mount image: %s") %
-                                mount.error)
+                raise exception.NovaException(mount.error)
             self.mount = mount
         except Exception, e:
             LOG.debug(_("Failed to mount image %(ex)s)") %

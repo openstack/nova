@@ -127,20 +127,32 @@ def can_resize_fs(image, size, use_cow=False):
     # Check that we're increasing the size
     virt_size = get_disk_size(image)
     if virt_size >= size:
+        LOG.debug(_('Cannot resize filesystem %s to a smaller size.'),
+                  image)
         return False
 
     # Check the image is unpartitioned
     if use_cow:
         # Try to mount an unpartitioned qcow2 image
+        LOG.debug(_('Checking if we can resize the COW image %s.'), image)
         try:
             inject_data(image, use_cow=True)
-        except exception.NovaException:
+        except exception.NovaException, e:
+            LOG.debug(_('File injection failed for image %(image)s with '
+                        'error %(error)s. Cannot resize.'),
+                      {'image': image,
+                       'error': e})
             return False
     else:
         # For raw, we can directly inspect the file system
+        LOG.debug(_('Checking if we can resize the non-COW image %s.'), image)
         try:
             utils.execute('e2label', image)
-        except exception.ProcessExecutionError:
+        except exception.ProcessExecutionError, e:
+            LOG.debug(_('Unable to determine label for image %(image)s with '
+                        'error %(errror)s. Cannot resize.'),
+                      {'image': image,
+                       'error': e})
             return False
 
     return True
@@ -252,8 +264,7 @@ class _DiskImage(object):
 
 # Public module functions
 
-def inject_data(image,
-                key=None, net=None, metadata=None, admin_password=None,
+def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
                 files=None, partition=None, use_cow=False):
     """Injects a ssh key and optionally net data into a disk image.
 
