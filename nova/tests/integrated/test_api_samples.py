@@ -30,6 +30,7 @@ from nova.compute import api
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
+from nova import exception
 from nova.network import api
 from nova.network.manager import NetworkManager
 from nova.openstack.common import cfg
@@ -355,7 +356,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-coverage')
         do_not_approve_additions.append('os-create-server-ext')
-        do_not_approve_additions.append('os-fixed-ips')
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-flavor-extra-specs')
         do_not_approve_additions.append('os-flavor-rxtx')
@@ -1487,6 +1487,90 @@ class AgentsJsonTest(ApiSampleTestBase):
 
 
 class AgentsXmlTest(AgentsJsonTest):
+    ctype = "xml"
+
+
+class FixedIpJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.fixed_ips.Fixed_ips"
+
+    def _get_flags(self):
+        f = super(FixedIpJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        return f
+
+    def setUp(self):
+        super(FixedIpJsonTest, self).setUp()
+
+        fake_fixed_ips = [{'id': 1,
+                   'address': '192.168.1.1',
+                   'network_id': 1,
+                   'virtual_interface_id': 1,
+                   'instance_uuid': '1',
+                   'allocated': False,
+                   'leased': False,
+                   'reserved': False,
+                   'host': None},
+                  {'id': 2,
+                   'address': '192.168.1.2',
+                   'network_id': 1,
+                   'virtual_interface_id': 2,
+                   'instance_uuid': '2',
+                   'allocated': False,
+                   'leased': False,
+                   'reserved': False,
+                   'host': None},
+                  ]
+
+        def fake_fixed_ip_get_by_address(context, address):
+            for fixed_ip in fake_fixed_ips:
+                if fixed_ip['address'] == address:
+                    return fixed_ip
+            raise exception.FixedIpNotFoundForAddress(address=address)
+
+        def fake_fixed_ip_get_by_address_detailed(context, address):
+            network = {'id': 1,
+                       'cidr': "192.168.1.0/24"}
+            host = {'host': "host",
+                    'hostname': 'openstack'}
+            for fixed_ip in fake_fixed_ips:
+                if fixed_ip['address'] == address:
+                    return (fixed_ip, network, host)
+            raise exception.FixedIpNotFoundForAddress(address=address)
+
+        def fake_fixed_ip_update(context, address, values):
+            fixed_ip = fake_fixed_ip_get_by_address(context, address)
+            if fixed_ip is None:
+                raise exception.FixedIpNotFoundForAddress(address=address)
+            else:
+                for key in values:
+                    fixed_ip[key] = values[key]
+
+        self.stubs.Set(db, "fixed_ip_get_by_address",
+                       fake_fixed_ip_get_by_address)
+        self.stubs.Set(db, "fixed_ip_get_by_address_detailed",
+                       fake_fixed_ip_get_by_address_detailed)
+        self.stubs.Set(db, "fixed_ip_update", fake_fixed_ip_update)
+
+    def test_fixed_ip_reserve(self):
+        """Reserve a Fixed IP"""
+        project = {'reserve': None}
+        response = self._do_post('os-fixed-ips/192.168.1.1/action',
+                                 'fixedip-post-req',
+                                 project)
+        self.assertEqual(response.status, 202)
+
+    def test_get_fixed_ip(self):
+        """Return data about the given fixed ip."""
+        response = self._do_get('os-fixed-ips/192.168.1.1')
+        self.assertEqual(response.status, 200)
+        project = {'cidr': '192.168.1.0/24',
+                   'hostname': 'openstack',
+                   'host': 'host',
+                   'address': '192.168.1.1'}
+        return self._verify_response('fixedips-get-resp', project, response)
+
+
+class FixedIpXmlTest(FixedIpJsonTest):
     ctype = "xml"
 
 
