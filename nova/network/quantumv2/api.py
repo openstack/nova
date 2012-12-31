@@ -136,7 +136,8 @@ class API(base.Base):
                     touched_port_ids.append(port['id'])
                 else:
                     if fixed_ips.get(network_id):
-                        port_req_body['port']['fixed_ip'] = fixed_ip
+                        port_req_body['port']['fixed_ips'] = [{'ip_address':
+                                                               fixed_ip}]
                     port_req_body['port']['network_id'] = network_id
                     port_req_body['port']['admin_state_up'] = True
                     port_req_body['port']['tenant_id'] = instance['project_id']
