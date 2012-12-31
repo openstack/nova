@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova 2013.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2012-12-27 00:01+0000\n"
+"POT-Creation-Date: 2012-12-31 00:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5178,17 +5178,17 @@ msgstr ""
 msgid "unexpected role header"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3052
+#: nova/tests/api/openstack/compute/test_servers.py:3059
 msgid ""
 "Quota exceeded for instances: Requested 1, but already used 10 of 10 "
 "instances"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3057
+#: nova/tests/api/openstack/compute/test_servers.py:3064
 msgid "Quota exceeded for ram: Requested 4096, but already used 8192 of 10240 ram"
 msgstr ""
 
-#: nova/tests/api/openstack/compute/test_servers.py:3062
+#: nova/tests/api/openstack/compute/test_servers.py:3069
 msgid "Quota exceeded for cores: Requested 2, but already used 9 of 10 cores"
 msgstr ""
 
@@ -5310,12 +5310,12 @@ msgid ""
 "arguments \"%(params)s\""
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:151
+#: nova/tests/integrated/test_api_samples.py:153
 #, python-format
 msgid "Result: %(result)s is not a dict."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:155
+#: nova/tests/integrated/test_api_samples.py:157
 #, python-format
 msgid ""
 "Key mismatch:\n"
@@ -5323,25 +5323,25 @@ msgid ""
 "%(res_keys)s"
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:163
+#: nova/tests/integrated/test_api_samples.py:165
 #, python-format
 msgid "Result: %(result)s is not a list."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:166
+#: nova/tests/integrated/test_api_samples.py:168
 #, python-format
 msgid ""
 "Length mismatch: %(result)s\n"
 "%(expected)s."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:177
+#: nova/tests/integrated/test_api_samples.py:179
 #, python-format
 msgid "Result: %(res_obj)s not in %(expected)s."
 msgstr ""
 
-#: nova/tests/integrated/test_api_samples.py:195
-#: nova/tests/integrated/test_api_samples.py:208
+#: nova/tests/integrated/test_api_samples.py:197
+#: nova/tests/integrated/test_api_samples.py:210
 #, python-format
 msgid ""
 "Values do not match:\n"
@@ -5601,31 +5601,31 @@ msgstr ""
 msgid "Inject metadata fs=%(fs)s metadata=%(metadata)s"
 msgstr ""
 
-#: nova/virt/disk/api.py:376
+#: nova/virt/disk/api.py:379
 #, python-format
 msgid "Inject key fs=%(fs)s key=%(key)s"
 msgstr ""
 
-#: nova/virt/disk/api.py:404
+#: nova/virt/disk/api.py:407
 #, python-format
 msgid "Inject key fs=%(fs)s net=%(net)s"
 msgstr ""
 
-#: nova/virt/disk/api.py:430
+#: nova/virt/disk/api.py:433
 #, python-format
 msgid "Inject admin password fs=%(fs)s admin_passwd=ha-ha-not-telling-you"
 msgstr ""
 
-#: nova/virt/disk/api.py:475
+#: nova/virt/disk/api.py:478
 msgid "Not implemented on Windows"
 msgstr ""
 
-#: nova/virt/disk/api.py:504
+#: nova/virt/disk/api.py:507
 #, python-format
 msgid "User %(username)s not found in password file."
 msgstr ""
 
-#: nova/virt/disk/api.py:520
+#: nova/virt/disk/api.py:523
 #, python-format
 msgid "User %(username)s not found in shadow file."
 msgstr ""
@@ -5930,7 +5930,7 @@ msgstr ""
 msgid "The ISCSI initiator name can't be found. Choosing the default one"
 msgstr ""
 
-#: nova/virt/hyperv/basevolumeutils.py:79 nova/virt/libvirt/driver.py:1494
+#: nova/virt/hyperv/basevolumeutils.py:79 nova/virt/libvirt/driver.py:1422
 #: nova/virt/xenapi/vm_utils.py:504
 #, python-format
 msgid "block_device_list %s"
@@ -5979,7 +5979,7 @@ msgstr ""
 msgid "get_available_resource called"
 msgstr ""
 
-#: nova/virt/hyperv/hostops.py:163 nova/virt/libvirt/driver.py:3179
+#: nova/virt/hyperv/hostops.py:163 nova/virt/libvirt/driver.py:3107
 #: nova/virt/xenapi/host.py:149
 msgid "Updating host stats"
 msgstr ""
@@ -6163,16 +6163,16 @@ msgstr ""
 msgid "Invalid config_drive_format \"%s\""
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:183 nova/virt/libvirt/driver.py:1432
+#: nova/virt/hyperv/vmops.py:183 nova/virt/libvirt/driver.py:1360
 msgid "Using config drive"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:194 nova/virt/libvirt/driver.py:1442
+#: nova/virt/hyperv/vmops.py:194 nova/virt/libvirt/driver.py:1370
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:201 nova/virt/libvirt/driver.py:1447
+#: nova/virt/hyperv/vmops.py:201 nova/virt/libvirt/driver.py:1375
 #, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr ""
@@ -6599,178 +6599,170 @@ msgstr ""
 msgid "Failed to cleanup directory %(target)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:747
+#: nova/virt/libvirt/driver.py:730
 msgid "During detach_volume, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:757
-msgid "attaching LXC block device"
-msgstr ""
-
-#: nova/virt/libvirt/driver.py:777
-msgid "detaching LXC block device"
-msgstr ""
-
-#: nova/virt/libvirt/driver.py:909
+#: nova/virt/libvirt/driver.py:837
 msgid "Instance soft rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:913
+#: nova/virt/libvirt/driver.py:841
 msgid "Failed to soft reboot instance."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:945
+#: nova/virt/libvirt/driver.py:873
 msgid "Instance shutdown successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:981
+#: nova/virt/libvirt/driver.py:909
 msgid "Instance rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1109
+#: nova/virt/libvirt/driver.py:1037
 msgid "Instance is running"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1116 nova/virt/powervm/operator.py:255
+#: nova/virt/libvirt/driver.py:1044 nova/virt/powervm/operator.py:255
 msgid "Instance spawned successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1132
+#: nova/virt/libvirt/driver.py:1060
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1170 nova/virt/libvirt/driver.py:1196
+#: nova/virt/libvirt/driver.py:1098 nova/virt/libvirt/driver.py:1124
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1185
+#: nova/virt/libvirt/driver.py:1113
 msgid "Guest does not have a console available"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1234
+#: nova/virt/libvirt/driver.py:1162
 #, python-format
 msgid "Path '%(path)s' supports direct I/O"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1238
+#: nova/virt/libvirt/driver.py:1166
 #, python-format
 msgid "Path '%(path)s' does not support direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1242 nova/virt/libvirt/driver.py:1246
+#: nova/virt/libvirt/driver.py:1170 nova/virt/libvirt/driver.py:1174
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1312
+#: nova/virt/libvirt/driver.py:1240
 msgid "Creating image"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1462
+#: nova/virt/libvirt/driver.py:1390
 #, python-format
 msgid "Injecting %(injection)s into image %(img_id)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1472
+#: nova/virt/libvirt/driver.py:1400
 #, python-format
 msgid "Ignoring error injecting data into image %(img_id)s (%(e)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1546
+#: nova/virt/libvirt/driver.py:1474
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt "
 "hypervisor '%s' does not support selecting CPU models"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1552
+#: nova/virt/libvirt/driver.py:1480
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1556
+#: nova/virt/libvirt/driver.py:1484
 msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1560
+#: nova/virt/libvirt/driver.py:1488
 #, python-format
 msgid "CPU mode '%(mode)s' model '%(model)s' was chosen"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1576
+#: nova/virt/libvirt/driver.py:1504
 msgid ""
 "Passthrough of the host CPU was requested but this libvirt version does "
 "not support this feature"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1893
+#: nova/virt/libvirt/driver.py:1821
 msgid "Starting toXML method"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1897
+#: nova/virt/libvirt/driver.py:1825
 msgid "Finished toXML method"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1914
+#: nova/virt/libvirt/driver.py:1842
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2068
+#: nova/virt/libvirt/driver.py:1996
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. "
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2185
+#: nova/virt/libvirt/driver.py:2113
 msgid "libvirt version is too old (does not support getVersion)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2268
+#: nova/virt/libvirt/driver.py:2196
 #, python-format
 msgid "Trying to get stats for the volume %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2292
+#: nova/virt/libvirt/driver.py:2220
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. "
 "Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2296
+#: nova/virt/libvirt/driver.py:2224
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats "
 "for device"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2412
+#: nova/virt/libvirt/driver.py:2340
 msgid "Block migration can not be used with shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2420
+#: nova/virt/libvirt/driver.py:2348
 msgid "Live migration can not be used without shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2457
+#: nova/virt/libvirt/driver.py:2385
 #, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s: Disk of instance is too "
 "large(available on destination host:%(available)s < need:%(necessary)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2482
+#: nova/virt/libvirt/driver.py:2410
 #, python-format
 msgid ""
 "Instance launched has CPU info:\n"
 "%s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2494
+#: nova/virt/libvirt/driver.py:2422
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -6780,51 +6772,51 @@ msgid ""
 "Refer to %(u)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2511
+#: nova/virt/libvirt/driver.py:2439
 #, python-format
 msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2559
+#: nova/virt/libvirt/driver.py:2487
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2631
+#: nova/virt/libvirt/driver.py:2559
 #, python-format
 msgid "Live Migration failure: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2721
+#: nova/virt/libvirt/driver.py:2649
 #, python-format
 msgid "plug_vifs() failed %(cnt)d.Retry up to %(max_retry)d for %(hostname)s."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2836
+#: nova/virt/libvirt/driver.py:2764
 #, python-format
 msgid "skipping %(path)s since it looks like volume"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2885
+#: nova/virt/libvirt/driver.py:2813
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2934
+#: nova/virt/libvirt/driver.py:2862
 msgid "Starting migrate_disk_and_power_off"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2993
+#: nova/virt/libvirt/driver.py:2921
 msgid "Instance running successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3000
+#: nova/virt/libvirt/driver.py:2928
 msgid "Starting finish_migration"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3051
+#: nova/virt/libvirt/driver.py:2979
 msgid "Starting finish_revert_migration"
 msgstr ""
 
