@@ -399,7 +399,8 @@ class TestQuantumv2(test.TestCase):
             else:
                 fixed_ip = fixed_ips.get(net_id)
                 if fixed_ip:
-                    port_req_body['port']['fixed_ip'] = fixed_ip
+                    port_req_body['port']['fixed_ips'] = [{'ip_address':
+                                                           fixed_ip}]
                 port_req_body['port']['network_id'] = net_id
                 port_req_body['port']['admin_state_up'] = True
                 port_req_body['port']['tenant_id'] = \
