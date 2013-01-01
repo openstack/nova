@@ -981,6 +981,10 @@ class Controller(wsgi.Controller):
             msg = _("HostId cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        if 'personality' in body['server']:
+            msg = _("Personality cannot be updated.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             instance = self.compute_api.get(ctxt, id)
             req.cache_db_instance(instance)

@@ -1184,6 +1184,20 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv6'], '')
 
+    def test_update_server_personality(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {
+            'server': {
+                'personality': []
+            }
+        }
+        req.body = jsonutils.dumps(body)
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, FAKE_UUID, body)
+
     def test_update_server_adminPass_ignored(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         body = dict(server=inst_dict)
