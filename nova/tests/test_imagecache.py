@@ -26,7 +26,6 @@ import time
 
 from nova import test
 
-from nova.compute import manager as compute_manager
 from nova.compute import vm_states
 from nova import db
 from nova.openstack.common import cfg
