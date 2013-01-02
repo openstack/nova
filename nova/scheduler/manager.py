@@ -54,7 +54,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.4'
+    RPC_API_VERSION = '2.5'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -263,3 +263,6 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
+
+    def get_backdoor_port(self, context):
+        return self.backdoor_port
