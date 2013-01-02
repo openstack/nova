@@ -103,9 +103,9 @@ def _update_baremetal_state(context, node, instance, state):
         })
 
 
-def get_power_manager(node, **kwargs):
+def get_power_manager(**kwargs):
     cls = importutils.import_class(CONF.baremetal.power_manager)
-    return cls(node, **kwargs)
+    return cls(**kwargs)
 
 
 class BareMetalDriver(driver.ComputeDriver):
@@ -203,7 +203,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                               admin_password=admin_password)
             self.driver.activate_bootloader(var, context, node,
                                                      instance, image_meta)
-            pm = get_power_manager(node)
+            pm = get_power_manager(node=node, instance=instance)
             state = pm.activate_node()
 
             _update_baremetal_state(context, node, instance, state)
@@ -230,7 +230,7 @@ class BareMetalDriver(driver.ComputeDriver):
                block_device_info=None):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         ctx = nova_context.get_admin_context()
-        pm = get_power_manager(node)
+        pm = get_power_manager(node=node, instance=instance)
         state = pm.reboot_node()
         _update_baremetal_state(ctx, node, instance, state)
 
@@ -251,7 +251,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
         self.driver.deactivate_node(var, ctx, node, instance)
 
-        pm = get_power_manager(node)
+        pm = get_power_manager(node=node, instance=instance)
 
         pm.stop_console()
 
@@ -282,13 +282,13 @@ class BareMetalDriver(driver.ComputeDriver):
     def power_off(self, instance):
         """Power off the specified instance."""
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
-        pm = get_power_manager(node)
+        pm = get_power_manager(node=node, instance=instance)
         pm.deactivate_node()
 
     def power_on(self, instance):
         """Power on the specified instance"""
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
-        pm = get_power_manager(node)
+        pm = get_power_manager(node=node, instance=instance)
         pm.activate_node()
 
     def get_volume_connector(self, instance):
@@ -308,7 +308,7 @@ class BareMetalDriver(driver.ComputeDriver):
         #             so we convert from InstanceNotFound
         inst_uuid = instance.get('uuid')
         node = _get_baremetal_node_by_instance_uuid(inst_uuid)
-        pm = get_power_manager(node)
+        pm = get_power_manager(node=node, instance=instance)
         ps = power_state.SHUTDOWN
         if pm.is_power_on():
             ps = power_state.RUNNING
