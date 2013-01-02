@@ -64,14 +64,18 @@ def class_path(class_):
 
 
 COMMON_FLAGS = dict(
-    baremetal_sql_connection='sqlite:///:memory:',
-    baremetal_driver='nova.virt.baremetal.fake.Fake',
-    power_manager='nova.virt.baremetal.fake.FakePowerManager',
-    baremetal_vif_driver=class_path(FakeVifDriver),
     firewall_driver=class_path(FakeFirewallDriver),
-    baremetal_volume_driver=class_path(FakeVolumeDriver),
-    instance_type_extra_specs=['cpu_arch:test'],
+)
+
+BAREMETAL_FLAGS = dict(
+    driver='nova.virt.baremetal.fake.Fake',
     host=NODE['service_host'],
+    instance_type_extra_specs=['cpu_arch:test'],
+    power_manager='nova.virt.baremetal.fake.FakePowerManager',
+    sql_connection='sqlite:///:memory:',
+    vif_driver=class_path(FakeVifDriver),
+    volume_driver=class_path(FakeVolumeDriver),
+    group='baremetal',
 )
 
 
@@ -92,6 +96,7 @@ class BaremetalDriverSpawnTestCase(base.Database):
     def setUp(self):
         super(BaremetalDriverSpawnTestCase, self).setUp()
         self.flags(**COMMON_FLAGS)
+        self.flags(**BAREMETAL_FLAGS)
         fake_image.stub_out_image_service(self.stubs)
 
         self.node = _create_baremetal_stuff()
@@ -185,5 +190,5 @@ class BaremetalDriverTestCase(test_virt_drivers._VirtDriverTestCase,
         self.assertEqual(cap['x'], '123')
         self.assertEqual(cap['y'], '456')
         self.assertEqual(cap['hypervisor_type'], 'baremetal')
-        self.assertEqual(cap['baremetal_driver'],
+        self.assertEqual(cap['driver'],
                          'nova.virt.baremetal.fake.Fake')

@@ -37,8 +37,8 @@ these objects be simple dictionaries.
 :baremetal_db_backend:  string to lookup in the list of LazyPluggable backends.
                         `sqlalchemy` is the only supported backend right now.
 
-:baremetal_sql_connection:  string specifying the sqlalchemy connection to use,
-                            like: `sqlite:///var/lib/nova/nova.sqlite`.
+:[BAREMETAL] sql_connection: string specifying the sqlalchemy connection to
+                             use, like: `sqlite:///var/lib/nova/nova.sqlite`.
 
 """
 
@@ -46,6 +46,9 @@ from nova.openstack.common import cfg
 from nova import utils
 
 
+# NOTE(deva): we can't move baremetal_db_backend into an OptGroup yet
+#             because utils.LazyPluggable doesn't support reading from
+#             option groups. See bug #1093043.
 db_opts = [
     cfg.StrOpt('baremetal_db_backend',
                default='sqlalchemy',

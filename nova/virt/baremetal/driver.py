@@ -34,16 +34,16 @@ from nova.virt import firewall
 from nova.virt.libvirt import imagecache
 
 opts = [
-    cfg.BoolOpt('baremetal_inject_password',
+    cfg.BoolOpt('inject_password',
                 default=True,
                 help='Whether baremetal compute injects password or not'),
-    cfg.StrOpt('baremetal_injected_network_template',
+    cfg.StrOpt('injected_network_template',
                default='$pybasedir/nova/virt/baremetal/interfaces.template',
                help='Template file for injected network'),
-    cfg.StrOpt('baremetal_vif_driver',
+    cfg.StrOpt('vif_driver',
                default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
                help='Baremetal VIF driver.'),
-    cfg.StrOpt('baremetal_volume_driver',
+    cfg.StrOpt('volume_driver',
                default='nova.virt.baremetal.volume_driver.LibvirtVolumeDriver',
                help='Baremetal volume driver.'),
     cfg.ListOpt('instance_type_extra_specs',
@@ -52,13 +52,13 @@ opts = [
                'instance_type_extra_specs for this compute '
                'host to advertise. Valid entries are name=value, pairs '
                'For example, "key1:val1, key2:val2"'),
-    cfg.StrOpt('baremetal_driver',
+    cfg.StrOpt('driver',
                default='nova.virt.baremetal.pxe.PXE',
                help='Baremetal driver back-end (pxe or tilera)'),
     cfg.StrOpt('power_manager',
                default='nova.virt.baremetal.ipmi.Ipmi',
                help='Baremetal power management method'),
-    cfg.StrOpt('baremetal_tftp_root',
+    cfg.StrOpt('tftp_root',
                default='/tftpboot',
                help='Baremetal compute node\'s tftp root path'),
     ]
@@ -66,8 +66,12 @@ opts = [
 
 LOG = logging.getLogger(__name__)
 
+baremetal_group = cfg.OptGroup(name='baremetal',
+                               title='Baremetal Options')
+
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(baremetal_group)
+CONF.register_opts(opts, baremetal_group)
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -100,7 +104,7 @@ def _update_baremetal_state(context, node, instance, state):
 
 
 def get_power_manager(node, **kwargs):
-    cls = importutils.import_class(CONF.power_manager)
+    cls = importutils.import_class(CONF.baremetal.power_manager)
     return cls(node, **kwargs)
 
 
@@ -115,18 +119,18 @@ class BareMetalDriver(driver.ComputeDriver):
         super(BareMetalDriver, self).__init__(virtapi)
 
         self.baremetal_nodes = importutils.import_object(
-                CONF.baremetal_driver)
+                CONF.baremetal.driver)
         self._vif_driver = importutils.import_object(
-                CONF.baremetal_vif_driver)
+                CONF.baremetal.vif_driver)
         self._firewall_driver = firewall.load_driver(
                 default=DEFAULT_FIREWALL_DRIVER)
         self._volume_driver = importutils.import_object(
-                CONF.baremetal_volume_driver, virtapi)
+                CONF.baremetal.volume_driver, virtapi)
         self._image_cache_manager = imagecache.ImageCacheManager()
 
         extra_specs = {}
-        extra_specs["baremetal_driver"] = CONF.baremetal_driver
-        for pair in CONF.instance_type_extra_specs:
+        extra_specs["baremetal_driver"] = CONF.baremetal.driver
+        for pair in CONF.baremetal.instance_type_extra_specs:
             keyval = pair.split(':', 1)
             keyval[0] = keyval[0].strip()
             keyval[1] = keyval[1].strip()
