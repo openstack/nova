@@ -21,33 +21,25 @@ from nova.virt.baremetal import base
 from nova.virt.firewall import NoopFirewallDriver
 
 
-def get_baremetal_nodes():
-    return FakeDriver()
-
-
 class FakeDriver(base.NodeDriver):
 
-    def define_vars(self, instance, network_info, block_device_info):
-        return {}
-
-    def create_image(self, var, context, image_meta, node, instance,
-                     injected_files=None, admin_password=None):
+    def cache_images(self, context, node, instance, **kwargs):
         pass
 
-    def destroy_images(self, var, context, node, instance):
+    def destroy_images(self, context, node, instance):
         pass
 
-    def activate_bootloader(self, var, context, node, instance, image_meta):
+    def activate_bootloader(self, context, node, instance):
         pass
 
-    def deactivate_bootloader(self, var, context, node, instance):
+    def deactivate_bootloader(self, context, node, instance):
         pass
 
-    def activate_node(self, var, context, node, instance):
+    def activate_node(self, context, node, instance):
         """For operations after power on."""
         pass
 
-    def deactivate_node(self, var, context, node, instance):
+    def deactivate_node(self, context, node, instance):
         """For operations before power off."""
         pass
 
@@ -57,23 +49,8 @@ class FakeDriver(base.NodeDriver):
 
 class FakePowerManager(base.PowerManager):
 
-    def activate_node(self):
-        return baremetal_states.ACTIVE
-
-    def reboot_node(self):
-        return baremetal_states.ACTIVE
-
-    def deactivate_node(self):
-        return baremetal_states.DELETED
-
-    def is_power_on(self):
-        return True
-
-    def start_console(self):
-        pass
-
-    def stop_console(self):
-        pass
+    def __init__(self, **kwargs):
+        super(FakePowerManager, self).__init__(**kwargs)
 
 
 class FakeFirewallDriver(NoopFirewallDriver):

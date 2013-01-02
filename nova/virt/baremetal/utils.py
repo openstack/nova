@@ -18,8 +18,8 @@
 import os
 
 from nova.openstack.common import log as logging
+from nova.virt.disk import api as disk_api
 from nova.virt.libvirt import utils as libvirt_utils
-
 
 LOG = logging.getLogger(__name__)
 
@@ -30,8 +30,31 @@ def cache_image(context, target, image_id, user_id, project_id):
                                   user_id, project_id)
 
 
+def inject_into_image(image, key, net, metadata, admin_password,
+        files, partition, use_cow=False):
+    try:
+        disk_api.inject_data(image, key, net, metadata, admin_password,
+                files, partition, use_cow)
+    except Exception as e:
+        LOG.warn(_("Failed to inject data into image %(image)s. "
+                   "Error: %(e)s") % locals())
+
+
 def unlink_without_raise(path):
     try:
-        libvirt_utils.file_delete(path)
+        os.unlink(path)
     except OSError:
-        LOG.exception(_("failed to unlink %s") % path)
+        LOG.exception(_("Failed to unlink %s") % path)
+
+
+def write_to_file(path, contents):
+    with open(path, 'w') as f:
+        f.write(contents)
+
+
+def create_link_without_raise(source, link):
+    try:
+        os.symlink(source, link)
+    except OSError:
+        LOG.exception(_("Failed to create symlink from %(source)s to %(link)s")
+                % locals())

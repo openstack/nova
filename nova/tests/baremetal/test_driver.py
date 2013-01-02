@@ -159,7 +159,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         db.bm_node_update(self.context, self.node['id'],
                 {'id': 9876})
 
-        self.assertRaises(exception.InstanceNotFound,
+        self.assertRaises(exception.NovaException,
                 self.driver.spawn, **self.spawn_params)
 
         row = db.bm_node_get(self.context, 9876)
