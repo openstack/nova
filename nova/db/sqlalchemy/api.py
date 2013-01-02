@@ -1768,37 +1768,39 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
 
 
 @require_context
-def instance_test_and_set(context, instance_uuid, attr, ok_states,
-                          new_state, session=None):
+def instance_test_and_set(context, instance_uuid, attr, ok_states, new_state):
     """Atomically check if an instance is in a valid state, and if it is, set
     the instance into a new state.
     """
-    if not session:
-        session = get_session()
+    if not uuidutils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(instance_uuid)
 
+    session = get_session()
     with session.begin():
         query = model_query(context, models.Instance, session=session,
-                            project_only=True)
+                            project_only=True).\
+                    filter_by(uuid=instance_uuid)
 
-        if uuidutils.is_uuid_like(instance_uuid):
-            query = query.filter_by(uuid=instance_uuid)
+        attr_column = getattr(models.Instance, attr)
+        filter_op = None
+        # NOTE(boris-42): `SELECT IN` doesn't work with None values because
+        #                 they are incomparable.
+        if None in ok_states:
+            filter_op = or_(attr_column == None,
+                            attr_column.in_(filter(lambda x: x is not None,
+                                                   ok_states)))
         else:
-            raise exception.InvalidUUID(instance_uuid)
+            filter_op = attr_column.in_(ok_states)
 
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        instance = query.with_lockmode('update').first()
-
-        state = instance[attr]
-        if state not in ok_states:
+        count = query.filter(filter_op).\
+                        update({attr: new_state}, synchronize_session=False)
+        if count == 0:
+            instance_ref = query.first()
             raise exception.InstanceInvalidState(
                 attr=attr,
-                instance_uuid=instance['uuid'],
-                state=state,
+                instance_uuid=instance_ref['uuid'],
+                state=instance_ref[attr],
                 method='instance_test_and_set')
-
-        instance[attr] = new_state
-        instance.save(session=session)
 
 
 @require_context
