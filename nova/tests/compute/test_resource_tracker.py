@@ -601,6 +601,15 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.tracker.update_usage(self.context, instance)
         self.assertEqual(1, self.tracker.compute_node['vcpus_used'])
 
+    def test_skip_deleted_instances(self):
+        # ensure that the audit process skips instances that have vm_state
+        # DELETED, but the DB record is not yet deleted.
+        self._fake_instance(vm_state=vm_states.DELETED, host=self.host)
+        self.tracker.update_available_resource(self.context)
+
+        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+
 
 class ResizeClaimTestCase(BaseTrackerTestCase):
 
