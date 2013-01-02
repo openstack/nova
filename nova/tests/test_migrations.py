@@ -61,7 +61,7 @@ def _is_mysql_avail(user="openstack_citest",
         engine = sqlalchemy.create_engine(connect_uri)
         connection = engine.connect()
     except Exception:
-        # intential catch all to handle exceptions even if we don't
+        # intentionally catch all to handle exceptions even if we don't
         # have mysql code loaded at all.
         return False
     else:
@@ -217,7 +217,7 @@ class TestMigrations(test.TestCase):
         if not _have_mysql():
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
-        # automaticaly in tearDown so no need to clean it up here.
+        # automatically in tearDown so no need to clean it up here.
         connect_string = _mysql_get_connect_string()
         engine = sqlalchemy.create_engine(connect_string)
         self.engines["mysqlcitest"] = engine
