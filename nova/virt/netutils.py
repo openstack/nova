@@ -18,7 +18,7 @@
 #    under the License.
 
 
-"""Network-releated utilities for supporting libvirt connection code."""
+"""Network-related utilities for supporting libvirt connection code."""
 
 
 import netaddr

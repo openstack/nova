@@ -159,7 +159,7 @@ def can_resize_fs(image, size, use_cow=False):
 
 
 def bind(src, target, instance_name):
-    """Bind device to a filesytem"""
+    """Bind device to a filesystem"""
     if src:
         utils.execute('touch', target, run_as_root=True)
         utils.execute('mount', '-o', 'bind', src, target,

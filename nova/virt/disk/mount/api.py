@@ -109,7 +109,7 @@ class Mount(object):
         """Some implementations need to retry their get_dev."""
         # NOTE(mikal): This method helps implement retries. The implementation
         # simply calls _get_dev_retry_helper from their get_dev, and implements
-        # _inner_get_dev with their device acquistion logic. The NBD
+        # _inner_get_dev with their device acquisition logic. The NBD
         # implementation has an example.
         start_time = time.time()
         device = self._inner_get_dev()

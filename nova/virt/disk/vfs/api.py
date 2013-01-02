@@ -91,7 +91,7 @@ class VFS(object):
 
     """
     Replace the entire contents of the file identified
-    by @path, wth @content, creating the file if it does
+    by @path, with @content, creating the file if it does
     not already exist
     """
     def replace_file(self, path, content):
