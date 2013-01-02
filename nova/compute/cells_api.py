@@ -439,6 +439,21 @@ class ComputeCellsAPI(compute_api.API):
                 connect_info['port'], connect_info['internal_access_path'])
         return {'url': connect_info['access_url']}
 
+    @wrap_check_policy
+    @validate_cell
+    def get_spice_console(self, context, instance, console_type):
+        """Get a url to a SPICE Console."""
+        if not instance['host']:
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+
+        connect_info = self._call_to_cells(context, instance,
+                'get_spice_connect_info', console_type)
+
+        self.consoleauth_rpcapi.authorize_console(context,
+                connect_info['token'], console_type, connect_info['host'],
+                connect_info['port'], connect_info['internal_access_path'])
+        return {'url': connect_info['access_url']}
+
     @validate_cell
     def get_console_output(self, context, instance, *args, **kwargs):
         """Get console output for an an instance."""

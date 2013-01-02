@@ -165,6 +165,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('get_vnc_console', 'call',
                 instance=self.fake_instance, console_type='type')
 
+    def test_get_spice_console(self):
+        self._test_compute_api('get_spice_console', 'call',
+                instance=self.fake_instance, console_type='type',
+                version='2.24')
+
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
                 host_param='param', mode='mode', host='host')

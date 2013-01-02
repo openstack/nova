@@ -414,6 +414,7 @@ class Domain(object):
     <input type='tablet' bus='usb'/>
     <input type='mouse' bus='ps2'/>
     <graphics type='vnc' port='-1' autoport='yes'/>
+    <graphics type='spice' port='-1' autoport='yes'/>
     <video>
       <model type='cirrus' vram='9216' heads='1'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x02'

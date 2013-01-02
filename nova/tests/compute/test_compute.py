@@ -1335,6 +1335,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_novnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=False, group='spice')
+
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
@@ -1347,6 +1350,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_xvpvnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=False, group='spice')
+
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
@@ -1357,6 +1363,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_invalid_vnc_console_type(self):
         # Raise useful error if console type is an unrecognised string.
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=False, group='spice')
+
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
@@ -1367,11 +1376,55 @@ class ComputeTestCase(BaseTestCase):
 
     def test_missing_vnc_console_type(self):
         # Raise useful error is console type is None.
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=False, group='spice')
+
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
+                          self.context, None, instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_spicehtml5_spice_console(self):
+        # Make sure we can a spice console for an instance.
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=True, group='spice')
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        # Try with the full instance
+        console = self.compute.get_spice_console(self.context, 'spice-html5',
+                                               instance=instance)
+        self.assert_(console)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_invalid_spice_console_type(self):
+        # Raise useful error if console type is an unrecognised string
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=True, group='spice')
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        self.assertRaises(exception.ConsoleTypeInvalid,
+                          self.compute.get_spice_console,
+                          self.context, 'invalid', instance=instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_missing_spice_console_type(self):
+        # Raise useful error is console type is None
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=True, group='spice')
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance=instance)
+
+        self.assertRaises(exception.ConsoleTypeInvalid,
+                          self.compute.get_spice_console,
                           self.context, None, instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -5509,6 +5562,50 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InstanceNotReady,
                           self.compute_api.get_vnc_console,
                           self.context, instance, 'novnc')
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_spice_console(self):
+        # Make sure we can a spice console for an instance.
+
+        fake_instance = {'uuid': 'fake_uuid',
+                         'host': 'fake_compute_host'}
+        fake_console_type = "spice-html5"
+        fake_connect_info = {'token': 'fake_token',
+                             'console_type': fake_console_type,
+                             'host': 'fake_console_host',
+                             'port': 'fake_console_port',
+                             'internal_access_path': 'fake_access_path'}
+        fake_connect_info2 = copy.deepcopy(fake_connect_info)
+        fake_connect_info2['access_url'] = 'fake_console_url'
+
+        self.mox.StubOutWithMock(rpc, 'call')
+
+        rpc_msg1 = {'method': 'get_spice_console',
+                    'args': {'instance': fake_instance,
+                             'console_type': fake_console_type},
+                   'version': '2.24'}
+        rpc_msg2 = {'method': 'authorize_console',
+                    'args': fake_connect_info,
+                    'version': '1.0'}
+
+        rpc.call(self.context, 'compute.%s' % fake_instance['host'],
+                rpc_msg1, None).AndReturn(fake_connect_info2)
+        rpc.call(self.context, CONF.consoleauth_topic,
+                rpc_msg2, None).AndReturn(None)
+
+        self.mox.ReplayAll()
+
+        console = self.compute_api.get_spice_console(self.context,
+                fake_instance, fake_console_type)
+        self.assertEqual(console, {'url': 'fake_console_url'})
+
+    def test_get_spice_console_no_host(self):
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_spice_console,
+                          self.context, instance, 'spice')
 
         db.instance_destroy(self.context, instance['uuid'])
 

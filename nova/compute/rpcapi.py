@@ -158,6 +158,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.22 - Add recreate, on_shared_storage and host arguments to
                rebuild_instance()
         2.23 - Remove network_info from reboot_instance
+        2.24 - Added get_spice_console method
     '''
 
     #
@@ -294,6 +295,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('get_vnc_console',
                 instance=instance_p, console_type=console_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def get_spice_console(self, ctxt, instance, console_type):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('get_spice_console',
+                instance=instance_p, console_type=console_type),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                         version='2.24')
 
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode
