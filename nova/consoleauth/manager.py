@@ -45,7 +45,7 @@ CONF.import_opt('memcached_servers', 'nova.config')
 class ConsoleAuthManager(manager.Manager):
     """Manages token based authentication."""
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
@@ -75,3 +75,6 @@ class ConsoleAuthManager(manager.Manager):
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
         if token_valid:
             return jsonutils.loads(token_str)
+
+    def get_backdoor_port(self, context):
+        return self.backdoor_port

@@ -47,3 +47,8 @@ class ConsoleauthTestCase(test.TestCase):
         self.assertTrue(self.manager.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_get_backdoor_port(self):
+        self.manager.backdoor_port = 59697
+        port = self.manager.get_backdoor_port(self.context)
+        self.assertEqual(port, self.manager.backdoor_port)

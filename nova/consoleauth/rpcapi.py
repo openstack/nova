@@ -30,6 +30,7 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.1 - Added get_backdoor_port()
     '''
 
     #
@@ -59,3 +60,7 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def check_token(self, ctxt, token):
         return self.call(ctxt, self.make_msg('check_token', token=token))
+
+    def get_backdoor_port(self, ctxt, host):
+        return self.call(ctxt, self.make_msg('get_backdoor_port'),
+                         version='1.1')
