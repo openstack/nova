@@ -6027,7 +6027,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         self.compute._spawn(mox.IgnoreArg(), self.instance, None, None, None,
                 False, None).AndRaise(test.TestingException("BuildError"))
         self.compute._reschedule_or_reraise(mox.IgnoreArg(), self.instance,
-                None, None, None, False, None, {})
+                mox.IgnoreArg(), None, None, None, False, None, {})
 
         self.mox.ReplayAll()
         self.compute._run_instance(self.context, None, {}, None, None, None,
@@ -6045,6 +6045,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         except Exception:
             exc_info = sys.exc_info()
 
+            compute_utils.add_instance_fault_from_exc(self.context,
+                    instance_uuid, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance).AndRaise(InnerTestingException("Error"))
             self.compute._log_original_error(exc_info, instance_uuid)
@@ -6055,7 +6057,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             # error:
             self.assertRaises(InnerTestingException,
                     self.compute._reschedule_or_reraise, self.context,
-                    self.instance, None, None, None, False, None, {})
+                    self.instance, exc_info, None, None, None, False, None, {})
 
     def test_reschedule_fail(self):
         """Test handling of exception from _reschedule"""
@@ -6077,9 +6079,10 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             # not re-scheduling, should raise the original build error:
+            exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_or_reraise, self.context,
-                    self.instance, None, None, None, False, None, {})
+                    self.instance, exc_info, None, None, None, False, None, {})
 
     def test_reschedule_false(self):
         """Test not-rescheduling, but no nested exception"""
@@ -6088,22 +6091,25 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_deallocate_network')
         self.mox.StubOutWithMock(self.compute, '_reschedule')
 
-        self.compute._deallocate_network(self.context,
-                self.instance)
-        self.compute._reschedule(self.context, None, instance_uuid,
-                {}, self.compute.scheduler_rpcapi.run_instance, method_args,
-                task_states.SCHEDULING).AndReturn(False)
-
-        self.mox.ReplayAll()
-
         try:
             raise test.TestingException("Original")
         except Exception:
+            exc_info = sys.exc_info()
+            compute_utils.add_instance_fault_from_exc(self.context,
+                    instance_uuid, exc_info[0], exc_info=exc_info)
+            self.compute._deallocate_network(self.context,
+                    self.instance)
+            self.compute._reschedule(self.context, None, {}, instance_uuid,
+                    self.compute.scheduler_rpcapi.run_instance, method_args,
+                    task_states.SCHEDULING, exc_info).AndReturn(False)
+
+            self.mox.ReplayAll()
+
             # re-scheduling is False, the original build error should be
             # raised here:
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_or_reraise, self.context,
-                    self.instance, None, None, None, False, None, {})
+                    self.instance, exc_info, None, None, None, False, None, {})
 
     def test_reschedule_true(self):
         """Test behavior when re-scheduling happens"""
@@ -6117,6 +6123,8 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         except Exception:
             exc_info = sys.exc_info()
 
+            compute_utils.add_instance_fault_from_exc(self.context,
+                    instance_uuid, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance)
             self.compute._reschedule(self.context, None, {}, instance_uuid,
@@ -6130,7 +6138,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             # re-scheduling is True, original error is logged, but nothing
             # is raised:
             self.compute._reschedule_or_reraise(self.context, self.instance,
-                    None, None, None, False, None, {})
+                    exc_info, None, None, None, False, None, {})
 
 
 class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
@@ -6155,7 +6163,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                 mox.IgnoreArg()).AndRaise(test.TestingException("Original"))
 
         self.compute._reschedule_resize_or_reraise(mox.IgnoreArg(), None,
-                self.instance, self.instance_type, None, None, None)
+                self.instance, mox.IgnoreArg(), self.instance_type, None, None,
+                None)
 
         self.mox.ReplayAll()
 
@@ -6179,9 +6188,11 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         try:
             raise test.TestingException("Original")
         except Exception:
+            exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, self.instance, self.instance_type, None, {}, {})
+                    None, self.instance, exc_info, self.instance_type, None,
+                    {}, {})
 
     def test_reschedule_false(self):
         """Original exception should be raised if the resize is not
@@ -6199,9 +6210,11 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         try:
             raise test.TestingException("Original")
         except Exception:
+            exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, self.instance, self.instance_type, None, {}, {})
+                    None, self.instance, exc_info, self.instance_type, None,
+                    {}, {})
 
     def test_reschedule_true(self):
         """If rescheduled, the original resize exception should be logged"""
@@ -6222,7 +6235,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             self.mox.ReplayAll()
 
             self.compute._reschedule_resize_or_reraise(self.context, None,
-                    self.instance, self.instance_type, None, {}, {})
+                    self.instance, exc_info, self.instance_type, None, {}, {})
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):
