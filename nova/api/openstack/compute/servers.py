@@ -452,9 +452,6 @@ class Controller(wsgi.Controller):
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=str(err))
-        except exception.NotFound:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
         return servers
 
     @wsgi.serializers(xml=ServersTemplate)
@@ -464,9 +461,6 @@ class Controller(wsgi.Controller):
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=str(err))
-        except exception.NotFound as err:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
         return servers
 
     def _add_instance_faults(self, ctxt, instances):

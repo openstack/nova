@@ -77,6 +77,10 @@ def return_servers_by_reservation(context, reservation_id=""):
             reservation_id=reservation_id) for i in xrange(5)]
 
 
+def return_servers_empty(context, *args, **kwargs):
+    return []
+
+
 def return_servers_by_reservation_empty(context, reservation_id=""):
     return []
 
@@ -527,6 +531,16 @@ class ServersControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.ips_controller.index, req, server_id)
 
+    def test_get_server_list_empty(self):
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       return_servers_empty)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        res_dict = self.controller.index(req)
+
+        num_servers = len(res_dict['servers'])
+        self.assertEqual(0, num_servers)
+
     def test_get_server_list_with_reservation_id(self):
         self.stubs.Set(db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation)
@@ -609,6 +623,16 @@ class ServersControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=aaa')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
+
+    def test_get_server_details_empty(self):
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       return_servers_empty)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
+        res_dict = self.controller.index(req)
+
+        num_servers = len(res_dict['servers'])
+        self.assertEqual(0, num_servers)
 
     def test_get_server_details_with_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?limit=3')
