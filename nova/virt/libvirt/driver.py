@@ -1028,7 +1028,9 @@ class LibvirtDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None):
         xml = self.to_xml(instance, network_info, image_meta,
                           block_device_info=block_device_info)
-        self._create_image(context, instance, xml, network_info=network_info,
+        if image_meta:
+            self._create_image(context, instance, xml,
+                           network_info=network_info,
                            block_device_info=block_device_info,
                            files=injected_files,
                            admin_pass=admin_password)
