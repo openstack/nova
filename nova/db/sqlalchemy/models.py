@@ -981,7 +981,7 @@ class InstanceFault(BASE, NovaBase):
 
 
 class InstanceIdMapping(BASE, NovaBase):
-    """Compatability layer for the EC2 instance service"""
+    """Compatibility layer for the EC2 instance service"""
     __tablename__ = 'instance_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
