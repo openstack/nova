@@ -662,6 +662,14 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_revert_resize,
                           req, FAKE_UUID, body)
 
+    def test_revert_resize_server_not_found(self):
+        body = dict(revertResize=None)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob. exc.HTTPNotFound,
+                          self.controller._action_revert_resize,
+                          req, "bad_server_id", body)
+
     def test_revert_resize_server(self):
         body = dict(revertResize=None)
 
