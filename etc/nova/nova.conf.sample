@@ -920,6 +920,15 @@
 # l3_lib=nova.network.l3.LinuxNetL3
 #### (StrOpt) Indicates underlying L3 management library
 
+# update_dns_entries=false
+#### (BoolOpt) If True, when a DNS entry must be updated, it sends a fanout
+####           cast to all network hosts to update their DNS entries in multi
+####           host mode
+
+# dns_update_periodic_interval=-1
+#### (IntOpt) Number of periodic scheduler ticks to wait between runs of
+####          updates to DNS entries
+
 
 ######## defined in nova.network.quantumv2.api ########
 
