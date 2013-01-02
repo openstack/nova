@@ -154,6 +154,21 @@ class LocalAPI(object):
         return self._manager.block_device_mapping_get_all_by_instance(
             context, instance)
 
+    def block_device_mapping_destroy(self, context, bdms):
+        return self._manager.block_device_mapping_destroy(context, bdms=bdms)
+
+    def block_device_mapping_destroy_by_instance_and_device(self, context,
+                                                            instance,
+                                                            device_name):
+        return self._manager.block_device_mapping_destroy(
+            context, instance=instance, device_name=device_name)
+
+    def block_device_mapping_destroy_by_instance_and_volume(self, context,
+                                                            instance,
+                                                            volume_id):
+        return self._manager.block_device_mapping_destroy(
+            context, instance=instance, volume_id=volume_id)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -257,3 +272,19 @@ class API(object):
     def block_device_mapping_get_all_by_instance(self, context, instance):
         return self.conductor_rpcapi.block_device_mapping_get_all_by_instance(
             context, instance)
+
+    def block_device_mapping_destroy(self, context, bdms):
+        return self.conductor_rpcapi.block_device_mapping_destroy(context,
+                                                                  bdms=bdms)
+
+    def block_device_mapping_destroy_by_instance_and_device(self, context,
+                                                            instance,
+                                                            device_name):
+        return self.conductor_rpcapi.block_device_mapping_destroy(
+            context, instance=instance, device_name=device_name)
+
+    def block_device_mapping_destroy_by_instance_and_volume(self, context,
+                                                            instance,
+                                                            volume_id):
+        return self.conductor_rpcapi.block_device_mapping_destroy(
+            context, instance=instance, volume_id=volume_id)

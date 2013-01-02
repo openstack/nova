@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.13'
+    RPC_API_VERSION = '1.14'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -169,3 +169,20 @@ class ConductorManager(manager.SchedulerDependentManager):
         bdms = self.db.block_device_mapping_get_all_by_instance(
             context, instance['uuid'])
         return jsonutils.to_primitive(bdms)
+
+    def block_device_mapping_destroy(self, context, bdms=None,
+                                     instance=None, volume_id=None,
+                                     device_name=None):
+        if bdms is not None:
+            for bdm in bdms:
+                self.db.block_device_mapping_destroy(context, bdm['id'])
+        elif instance is not None and volume_id is not None:
+            self.db.block_device_mapping_destroy_by_instance_and_volume(
+                context, instance['uuid'], volume_id)
+        elif instance is not None and device_name is not None:
+            self.db.block_device_mapping_destroy_by_instance_and_device(
+                context, instance['uuid'], device_name)
+        else:
+            # NOTE(danms): This shouldn't happen
+            raise exception.Invalid(_("Invalid block_device_mapping_destroy"
+                                      " invocation"))

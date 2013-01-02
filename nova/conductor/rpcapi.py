@@ -42,6 +42,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.11 - Added aggregate_get
     1.12 - Added block_device_mapping_update_or_create
     1.13 - Added block_device_mapping_get_all_by_instance
+    1.14 - Added block_device_mapping_destroy
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -159,3 +160,14 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('block_device_mapping_get_all_by_instance',
                             instance=instance_p)
         return self.call(context, msg, version='1.13')
+
+    def block_device_mapping_destroy(self, context, bdms=None,
+                                     instance=None, volume_id=None,
+                                     device_name=None):
+        bdms_p = jsonutils.to_primitive(bdms)
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('block_device_mapping_destroy',
+                            bdms=bdms_p,
+                            instance=instance_p, volume_id=volume_id,
+                            device_name=device_name)
+        return self.call(context, msg, version='1.14')
