@@ -260,6 +260,7 @@ class UsageInfoTestCase(test.TestCase):
                         'other_data': 'meow'}
         db.instance_system_metadata_update(self.context, instance['uuid'],
                 sys_metadata, False)
+        instance = db.instance_get(self.context, instance_id)
         compute_utils.notify_usage_exists(self.context, instance)
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -378,3 +379,14 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance)
+
+
+class MetadataToDictTestCase(test.TestCase):
+    def test_metadata_to_dict(self):
+        self.assertEqual(compute_utils.metadata_to_dict(
+                [{'key': 'foo1', 'value': 'bar'},
+                 {'key': 'foo2', 'value': 'baz'}]),
+                         {'foo1': 'bar', 'foo2': 'baz'})
+
+    def test_metadata_to_dict_empty(self):
+        self.assertEqual(compute_utils.metadata_to_dict([]), {})

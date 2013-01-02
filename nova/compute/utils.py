@@ -37,6 +37,13 @@ CONF.import_opt('host', 'nova.config')
 LOG = log.getLogger(__name__)
 
 
+def metadata_to_dict(metadata):
+    result = {}
+    for item in metadata:
+        result[item['key']] = item['value']
+    return result
+
+
 def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
@@ -153,11 +160,7 @@ def notify_usage_exists(context, instance_ref, current_period=False,
             ignore_missing_network_data)
 
     if system_metadata is None:
-        try:
-            system_metadata = db.instance_system_metadata_get(
-                    context, instance_ref['uuid'])
-        except exception.NotFound:
-            system_metadata = {}
+        system_metadata = metadata_to_dict(instance_ref['system_metadata'])
 
     # add image metadata to the notification:
     image_meta = notifications.image_meta(system_metadata)
