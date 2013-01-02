@@ -335,6 +335,21 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_rebuild,
                           req, FAKE_UUID, body)
 
+    def test_rebuild_with_too_large_metadata(self):
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+                "metadata": {
+                   256 * "k": "value"
+                }
+            }
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller._action_rebuild, req,
+                          FAKE_UUID, body)
+
     def test_rebuild_bad_entity(self):
         body = {
             "rebuild": {
