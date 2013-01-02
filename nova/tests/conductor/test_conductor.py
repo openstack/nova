@@ -276,6 +276,24 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor = conductor_manager.ConductorManager()
         self.stub_out_client_exceptions()
 
+    def test_block_device_mapping_update_or_create(self):
+        fake_bdm = {'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'block_device_mapping_create')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
+        db.block_device_mapping_create(self.context, fake_bdm)
+        db.block_device_mapping_update(self.context, fake_bdm['id'], fake_bdm)
+        db.block_device_mapping_update_or_create(self.context, fake_bdm)
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm,
+                                                             create=True)
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm,
+                                                             create=False)
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm)
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests"""
@@ -284,6 +302,24 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor_service = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
         self.conductor = conductor_rpcapi.ConductorAPI()
+
+    def test_block_device_mapping_update_or_create(self):
+        fake_bdm = {'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'block_device_mapping_create')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
+        db.block_device_mapping_create(self.context, fake_bdm)
+        db.block_device_mapping_update(self.context, fake_bdm['id'], fake_bdm)
+        db.block_device_mapping_update_or_create(self.context, fake_bdm)
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm,
+                                                             create=True)
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm,
+                                                             create=False)
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             fake_bdm)
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -312,6 +348,21 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         result = self.conductor.bw_usage_get(*get_args)
         self.assertEqual(result, 'foo')
+
+    def test_block_device_mapping_update_or_create(self):
+        self.mox.StubOutWithMock(db, 'block_device_mapping_create')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
+        db.block_device_mapping_create(self.context, 'fake-bdm')
+        db.block_device_mapping_update(self.context,
+                                       'fake-id', {'id': 'fake-id'})
+        db.block_device_mapping_update_or_create(self.context, 'fake-bdm')
+
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_create(self.context, 'fake-bdm')
+        self.conductor.block_device_mapping_update(self.context, 'fake-id', {})
+        self.conductor.block_device_mapping_update_or_create(self.context,
+                                                             'fake-bdm')
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):

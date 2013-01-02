@@ -40,6 +40,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.9 - Added provider_fw_rule_get_all
     1.10 - Added agent_build_get_by_triple
     1.11 - Added aggregate_get
+    1.12 - Added block_device_mapping_update_or_create
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -145,3 +146,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             hypervisor=hypervisor, os=os,
                             architecture=architecture)
         return self.call(context, msg, version='1.10')
+
+    def block_device_mapping_update_or_create(self, context, values,
+                                              create=None):
+        msg = self.make_msg('block_device_mapping_update_or_create',
+                            values=values, create=create)
+        return self.call(context, msg, version='1.12')

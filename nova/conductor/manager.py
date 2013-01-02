@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.11'
+    RPC_API_VERSION = '1.12'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -155,3 +155,12 @@ class ConductorManager(manager.SchedulerDependentManager):
         info = self.db.agent_build_get_by_triple(context, hypervisor, os,
                                                  architecture)
         return jsonutils.to_primitive(info)
+
+    def block_device_mapping_update_or_create(self, context, values,
+                                              create=None):
+        if create is None:
+            self.db.block_device_mapping_update_or_create(context, values)
+        elif create is True:
+            self.db.block_device_mapping_create(context, values)
+        else:
+            self.db.block_device_mapping_update(context, values['id'], values)

@@ -135,6 +135,21 @@ class LocalAPI(object):
         return self._manager.agent_build_get_by_triple(context, hypervisor,
                                                        os, architecture)
 
+    def block_device_mapping_create(self, context, values):
+        return self._manager.block_device_mapping_update_or_create(context,
+                                                                   values,
+                                                                   create=True)
+
+    def block_device_mapping_update(self, context, bdm_id, values):
+        values = dict(values)
+        values['id'] = bdm_id
+        return self._manager.block_device_mapping_update_or_create(
+            context, values, create=False)
+
+    def block_device_mapping_update_or_create(self, context, values):
+        return self._manager.block_device_mapping_update_or_create(context,
+                                                                   values)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -220,3 +235,17 @@ class API(object):
                                                                hypervisor,
                                                                os,
                                                                architecture)
+
+    def block_device_mapping_create(self, context, values):
+        return self.conductor_rpcapi.block_device_mapping_update_or_create(
+            context, values, create=True)
+
+    def block_device_mapping_update(self, context, bdm_id, values):
+        values = dict(values)
+        values['id'] = bdm_id
+        return self.conductor_rpcapi.block_device_mapping_update_or_create(
+            context, values, create=False)
+
+    def block_device_mapping_update_or_create(self, context, values):
+        return self.conductor_rpcapi.block_device_mapping_update_or_create(
+            context, values)

@@ -551,7 +551,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     if volume['status'] != 'creating':
                         break
                     greenthread.sleep(1)
-                self.db.block_device_mapping_update(
+                self.conductor_api.block_device_mapping_update(
                     context, bdm['id'], {'volume_id': vol['id']})
                 bdm['volume_id'] = vol['id']
 
@@ -562,7 +562,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                  instance,
                                                  volume,
                                                  bdm['device_name'])
-                self.db.block_device_mapping_update(
+                self.conductor_api.block_device_mapping_update(
                         context, bdm['id'],
                         {'connection_info': jsonutils.dumps(cinfo)})
                 bdmap = {'connection_info': cinfo,
@@ -2303,7 +2303,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             values = {'instance_uuid': instance['uuid'],
                       'volume_id': volume_id or 'reserved',
                       'device_name': result}
-            self.db.block_device_mapping_create(context, values)
+            self.conductor_api.block_device_mapping_create(context, values)
             return result
         return do_reserve()
 
@@ -2369,7 +2369,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             'volume_id': volume_id,
             'volume_size': None,
             'no_device': None}
-        self.db.block_device_mapping_update_or_create(context, values)
+        self.conductor_api.block_device_mapping_update_or_create(context,
+                                                                 values)
 
     def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""
