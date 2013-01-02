@@ -21,7 +21,7 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-nova-cert is a server daemon that serves the Nova Cert service for X509 certificates.
+nova-cert is a server daemon that serves the Nova Cert service for X509 certificates.  Used to generate certificates for euca-bundle-image.  Only needed for EC2 API.
 
 OPTIONS
 =======
