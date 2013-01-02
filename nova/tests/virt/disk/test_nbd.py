@@ -16,11 +16,12 @@
 #    under the License.
 
 
-import fixtures
 import os
+import tempfile
+
+import fixtures
 
 from nova import test
-
 from nova.virt.disk.mount import nbd
 
 ORIG_EXISTS = os.path.exists
@@ -270,3 +271,22 @@ class NbdTestCase(test.TestCase):
 
         # No error logged, device consumed
         self.assertFalse(n.get_dev())
+
+    def test_do_mount_need_to_specify_fs_type(self):
+        # NOTE(mikal): Bug 1094373 saw a regression where we failed to
+        # communicate a failed mount properly.
+        def fake_trycmd(*args, **kwargs):
+            return '', 'broken'
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd', fake_trycmd))
+
+        imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
+        tempdir = self.useFixture(fixtures.TempDir()).path
+        mount = nbd.NbdMount(imgfile.name, tempdir)
+
+        def fake_returns_true(*args, **kwargs):
+            return True
+        mount.get_dev = fake_returns_true
+        mount.map_dev = fake_returns_true
+
+        self.assertFalse(mount.do_mount())
