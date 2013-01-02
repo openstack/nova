@@ -136,12 +136,7 @@ class InstanceMetadata():
         for item in instance.get('metadata', []):
             self.launch_metadata[item['key']] = item['value']
 
-        self.password = ''
-        # get password if set
-        for item in instance.get('system_metadata', []):
-            if item['key'] == 'password':
-                self.password = item['value'] or ''
-                break
+        self.password = password.extract_password(instance)
 
         self.uuid = instance.get('uuid')
 

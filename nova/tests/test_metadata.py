@@ -550,4 +550,5 @@ class MetadataPasswordTestCase(test.TestCase):
     def test_too_large(self):
         self.mdinst.password = ''
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._try_set_password, 'a' * 257)
+                          self._try_set_password,
+                          'a' * (password.MAX_SIZE + 1))
