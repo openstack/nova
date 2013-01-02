@@ -289,6 +289,27 @@ class VolumeAttachTests(test.TestCase):
         self.assertEqual(result['volumeAttachment']['id'],
             '00000000-aaaa-aaaa-aaaa-000000000000')
 
+    def test_attach_volume_bad_id(self):
+        self.stubs.Set(compute_api.API,
+                       'attach_volume',
+                       fake_attach_volume)
+        attachments = volumes.VolumeAttachmentController()
+
+        body = {
+            'volumeAttachment': {
+                'device': None,
+                'volumeId': 'TESTVOLUME',
+            }
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes/attach')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = jsonutils.dumps(body)
+
+        self.assertRaises(webob.exc.HTTPBadRequest, attachments.create,
+                          req, FAKE_UUID, body)
+
 
 class VolumeSerializerTest(test.TestCase):
     def _verify_volume_attachment(self, attach, tree):

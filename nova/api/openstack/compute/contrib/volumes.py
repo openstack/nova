@@ -26,6 +26,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import uuidutils
 from nova import utils
 from nova import volume
 
@@ -365,6 +366,12 @@ class VolumeAttachmentController(wsgi.Controller):
             instance['uuid'],
             assigned_mountpoint)}
 
+    def _validate_volume_id(self, volume_id):
+        if not uuidutils.is_uuid_like(volume_id):
+            msg = _("Bad volumeId format: volumeId is "
+                    "not in proper format (%s)") % volume_id
+            raise exc.HTTPBadRequest(explanation=msg)
+
     @wsgi.serializers(xml=VolumeAttachmentTemplate)
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
@@ -376,6 +383,8 @@ class VolumeAttachmentController(wsgi.Controller):
 
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
+
+        self._validate_volume_id(volume_id)
 
         msg = _("Attach volume %(volume_id)s to instance %(server_id)s"
                 " at %(device)s") % locals()
