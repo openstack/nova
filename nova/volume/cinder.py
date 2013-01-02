@@ -20,6 +20,7 @@
 Handles all requests relating to volumes + cinder.
 """
 
+from copy import deepcopy
 import sys
 
 from cinderclient import exceptions as cinder_exception
@@ -116,6 +117,9 @@ def _untranslate_volume_summary_view(context, vol):
         item['key'] = key
         item['value'] = value
         d['volume_metadata'].append(item)
+
+    if hasattr(vol, 'volume_image_metadata'):
+        d['volume_image_metadata'] = deepcopy(vol.volume_image_metadata)
 
     return d
 
