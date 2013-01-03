@@ -24,10 +24,10 @@ from nova.network import linux_net
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-from nova.virt import netutils
 
 from nova.virt.libvirt import config as vconfig
-
+from nova.virt.libvirt import designer
+from nova.virt import netutils
 LOG = logging.getLogger(__name__)
 
 libvirt_vif_opts = [
@@ -51,14 +51,18 @@ class LibvirtBaseVIFDriver(object):
 
     def get_config(self, instance, network, mapping):
         conf = vconfig.LibvirtConfigGuestInterface()
-        conf.mac_addr = mapping['mac']
-        if CONF.libvirt_type in ('kvm', 'qemu') and \
-                CONF.libvirt_use_virtio_for_bridges:
-            conf.model = "virtio"
+        model = None
+        driver = None
+        if (CONF.libvirt_type in ('kvm', 'qemu') and
+            CONF.libvirt_use_virtio_for_bridges):
+            model = "virtio"
             # Workaround libvirt bug, where it mistakenly
             # enables vhost mode, even for non-KVM guests
             if CONF.libvirt_type == "qemu":
-                conf.driver_name = "qemu"
+                driver = "qemu"
+
+        designer.set_vif_guest_frontend_config(
+            conf, mapping['mac'], model, driver)
 
         return conf
 
@@ -75,28 +79,26 @@ class LibvirtBridgeDriver(LibvirtBaseVIFDriver):
                      self).get_config(instance,
                                       network,
                                       mapping)
-        conf.net_type = "bridge"
-        conf.source_dev = network['bridge']
-        conf.script = ""
 
-        conf.filtername = "nova-instance-" + instance['name'] + "-" + mac_id
-        conf.add_filter_param("IP", mapping['ips'][0]['ip'])
+        designer.set_vif_host_backend_bridge_config(
+            conf, network['bridge'], None)
+
+        name = "nova-instance-" + instance['name'] + "-" + mac_id
+        primary_addr = mapping['ips'][0]['ip']
+        dhcp_server = ra_server = ipv4_cidr = ipv6_cidr = None
+
         if mapping['dhcp_server']:
-            conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
-
+            dhcp_server = mapping['dhcp_server']
         if CONF.use_ipv6:
-            conf.add_filter_param("RASERVER",
-                                  mapping.get('gateway_v6') + "/128")
-
+            ra_server = mapping.get('gateway_v6') + "/128"
         if CONF.allow_same_net_traffic:
-            net, mask = netutils.get_net_and_mask(network['cidr'])
-            conf.add_filter_param("PROJNET", net)
-            conf.add_filter_param("PROJMASK", mask)
+            ipv4_cidr = network['cidr']
             if CONF.use_ipv6:
-                net_v6, prefixlen_v6 = netutils.get_net_and_prefixlen(
-                                           network['cidr_v6'])
-                conf.add_filter_param("PROJNET6", net_v6)
-                conf.add_filter_param("PROJMASK6", prefixlen_v6)
+                ipv6_cidr = network['cidr_v6']
+
+        designer.set_vif_host_backend_filter_config(
+            conf, name, primary_addr, dhcp_server,
+            ra_server, ipv4_cidr, ipv6_cidr)
 
         return conf
 
@@ -146,9 +148,7 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
                                       network,
                                       mapping)
 
-        conf.net_type = "ethernet"
-        conf.target_dev = dev
-        conf.script = ""
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
 
         return conf
 
@@ -279,10 +279,8 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
                                       network,
                                       mapping)
 
-        conf.net_type = "bridge"
-        conf.source_dev = CONF.libvirt_ovs_bridge
-        conf.vporttype = "openvswitch"
-        conf.add_vport_param("interfaceid", mapping['vif_uuid'])
+        designer.set_vif_host_backend_ovs_config(
+            conf, CONF.libvirt_ovs_bridge, mapping['vif_uuid'])
 
         return conf
 
@@ -316,9 +314,8 @@ class QuantumLinuxBridgeVIFDriver(LibvirtBaseVIFDriver):
                                       network,
                                       mapping)
 
-        conf.target_dev = dev
-        conf.net_type = "bridge"
-        conf.source_dev = bridge
+        designer.set_vif_host_backend_bridge_config(
+            conf, bridge, dev)
 
         return conf
 
