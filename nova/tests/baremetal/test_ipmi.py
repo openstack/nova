@@ -24,9 +24,6 @@ Test class for baremetal IPMI power manager.
 import os
 import stat
 import tempfile
-import time
-
-import mox
 
 from nova.openstack.common import cfg
 from nova import test
@@ -35,7 +32,6 @@ from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import ipmi
 from nova.virt.baremetal import utils as bm_utils
-from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 

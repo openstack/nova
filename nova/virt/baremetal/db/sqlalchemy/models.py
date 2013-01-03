@@ -20,8 +20,8 @@ SQLAlchemy models for baremetal data.
 """
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy import ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import ForeignKey, Text
 
 from nova.db.sqlalchemy import models
 

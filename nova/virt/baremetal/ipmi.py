@@ -24,7 +24,6 @@ Baremetal IPMI power manager.
 import os
 import stat
 import tempfile
-import time
 
 from nova.exception import InvalidParameterValue
 from nova.openstack.common import cfg

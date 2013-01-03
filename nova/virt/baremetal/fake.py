@@ -16,7 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
 from nova.virt.firewall import NoopFirewallDriver
 

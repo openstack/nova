@@ -15,13 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-import os
 import tempfile
 
 import fixtures
 
-from nova.openstack.common import importutils
 from nova import test
 from nova.virt.disk import api
 
