@@ -18,7 +18,6 @@
 Unit Tests for nova.consoleauth.rpcapi
 """
 
-from nova.consoleauth import manager as consoleauth_manager
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.openstack.common import cfg
