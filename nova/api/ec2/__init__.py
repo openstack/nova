@@ -511,7 +511,13 @@ class Executor(wsgi.Application):
         except exception.KeyPairExists as ex:
             LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
                      context=context)
-            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
+            code = 'InvalidKeyPair.Duplicate'
+            return ec2_error(req, request_id, code, unicode(ex))
+        except exception.InvalidKeypair as ex:
+            LOG.debug(_('InvalidKeypair raised: %s'), unicode(ex),
+                        context)
+            code = 'InvalidKeyPair.Format'
+            return ec2_error(req, request_id, code, unicode(ex))
         except exception.InvalidParameterValue as ex:
             LOG.debug(_('InvalidParameterValue raised: %s'), unicode(ex),
                      context=context)
