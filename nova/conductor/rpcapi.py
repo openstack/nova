@@ -47,6 +47,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
            instance_get_all_hung_in_rebooting and
            instance_get_active_by_window
            Deprecated instance_get_all_by_host
+    1.16 - Added instance_destroy
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -190,3 +191,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             begin=begin, end=end, project_id=project_id,
                             host=host)
         return self.call(context, msg, version='1.15')
+
+    def instance_destroy(self, context, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('instance_destroy', instance=instance_p)
+        self.call(context, msg, version='1.16')

@@ -1054,7 +1054,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          terminated_at=timeutils.utcnow())
         system_meta = compute_utils.metadata_to_dict(
             instance['system_metadata'])
-        self.db.instance_destroy(context, instance_uuid)
+        self.conductor_api.instance_destroy(context, instance)
 
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
