@@ -124,6 +124,9 @@ def extend(image, size):
 def can_resize_fs(image, size, use_cow=False):
     """Check whether we can resize contained file system."""
 
+    LOG.debug(_('Checking if we can resize image %(image)s. '
+                'size=%(size)s, CoW=%(use_cow)s'), locals())
+
     # Check that we're increasing the size
     virt_size = get_disk_size(image)
     if virt_size >= size:
@@ -133,19 +136,18 @@ def can_resize_fs(image, size, use_cow=False):
 
     # Check the image is unpartitioned
     if use_cow:
-        # Try to mount an unpartitioned qcow2 image
-        LOG.debug(_('Checking if we can resize the COW image %s.'), image)
         try:
-            inject_data(image, use_cow=True)
+            fs = vfs.VFS.instance_for_image(image, 'qcow2', None)
+            fs.setup()
+            fs.teardown()
         except exception.NovaException, e:
-            LOG.debug(_('File injection failed for image %(image)s with '
+            LOG.debug(_('Unable to mount image %(image)s with '
                         'error %(error)s. Cannot resize.'),
                       {'image': image,
                        'error': e})
             return False
     else:
         # For raw, we can directly inspect the file system
-        LOG.debug(_('Checking if we can resize the non-COW image %s.'), image)
         try:
             utils.execute('e2label', image)
         except exception.ProcessExecutionError, e:

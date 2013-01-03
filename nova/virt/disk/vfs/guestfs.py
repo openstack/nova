@@ -89,18 +89,23 @@ class VFSGuestFS(vfs.VFS):
             self.handle.mount_options("", mount[1], mount[0])
 
     def setup(self):
-        try:
-            LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
-                      {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
-            self.handle = guestfs.GuestFS()
+        LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
+                  {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
+        self.handle = guestfs.GuestFS()
 
+        try:
             self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
             self.handle.launch()
 
             self.setup_os()
 
             self.handle.aug_init("/", 0)
-        except Exception, e:
+        except RuntimeError, e:
+            self.handle = None
+            raise exception.NovaException(
+                _("Error mounting %(imgfile)s with libguestfs (%(e)s)") %
+                {'imgfile': self.imgfile, 'e': e})
+        except Exception:
             self.handle = None
             raise
 
@@ -109,15 +114,15 @@ class VFSGuestFS(vfs.VFS):
         try:
             self.handle.aug_close()
         except Exception, e:
-            LOG.debug(_("Failed to close augeas %s"), str(e))
+            LOG.debug(_("Failed to close augeas %s"), e)
         try:
             self.handle.shutdown()
         except Exception, e:
-            LOG.debug(_("Failed to shutdown appliance %s"), str(e))
+            LOG.debug(_("Failed to shutdown appliance %s"), e)
         try:
             self.handle.close()
         except Exception, e:
-            LOG.debug(_("Failed to close guest handle %s"), str(e))
+            LOG.debug(_("Failed to close guest handle %s"), e)
         self.handle = None
 
     @staticmethod
