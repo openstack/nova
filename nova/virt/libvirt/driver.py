@@ -1366,20 +1366,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
             inst_md = instance_metadata.InstanceMetadata(instance,
                 content=files, extra_md=extra_md)
-            cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
-            try:
+            with configdrive.config_drive_helper(instance_md=inst_md) as cdb:
                 configdrive_path = basepath(fname='disk.config')
                 LOG.info(_('Creating config drive at %(path)s'),
                          {'path': configdrive_path}, instance=instance)
 
-                cdb.make_drive(configdrive_path)
-            except exception.ProcessExecutionError, e:
-                LOG.error(_('Creating config drive failed with error: %s'),
-                          e, instance=instance)
-                raise
-
-            finally:
-                cdb.cleanup()
+                try:
+                    cdb.make_drive(configdrive_path)
+                except exception.ProcessExecutionError, e:
+                    LOG.error(_('Creating config drive failed with error: %s'),
+                              e, instance=instance)
+                    raise
 
         elif any((key, net, metadata, admin_pass, files)):
             # If we're not using config_drive, inject into root fs

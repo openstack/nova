@@ -45,12 +45,11 @@ class ConfigDriveTestCase(test.TestCase):
 
             self.mox.ReplayAll()
 
-            c = configdrive.ConfigDriveBuilder()
-            c._add_file('this/is/a/path/hello', 'This is some content')
-            (fd, imagefile) = tempfile.mkstemp(prefix='cd_iso_')
-            os.close(fd)
-            c._make_iso9660(imagefile)
-            c.cleanup()
+            with configdrive.config_drive_helper() as c:
+                c._add_file('this/is/a/path/hello', 'This is some content')
+                (fd, imagefile) = tempfile.mkstemp(prefix='cd_iso_')
+                os.close(fd)
+                c._make_iso9660(imagefile)
 
             # Check cleanup
             self.assertFalse(os.path.exists(c.tempdir))
@@ -78,12 +77,11 @@ class ConfigDriveTestCase(test.TestCase):
 
             self.mox.ReplayAll()
 
-            c = configdrive.ConfigDriveBuilder()
-            c._add_file('this/is/a/path/hello', 'This is some content')
-            (fd, imagefile) = tempfile.mkstemp(prefix='cd_vfat_')
-            os.close(fd)
-            c._make_vfat(imagefile)
-            c.cleanup()
+            with configdrive.config_drive_helper() as c:
+                c._add_file('this/is/a/path/hello', 'This is some content')
+                (fd, imagefile) = tempfile.mkstemp(prefix='cd_vfat_')
+                os.close(fd)
+                c._make_vfat(imagefile)
 
             # Check cleanup
             self.assertFalse(os.path.exists(c.tempdir))
