@@ -2,9 +2,9 @@
 nova-novncproxy
 ===============
 
--------------------------------------------
-Websocket novnc Proxy for OpenStack Nova.
--------------------------------------------
+--------------------------------------------------------
+Websocket novnc Proxy for OpenStack Nova noVNC consoles.
+--------------------------------------------------------
 
 :Author: openstack@lists.launchpad.net
 :Date:   2012-09-27
@@ -21,7 +21,8 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-Websocket proxy that is compatible with OpenStack Nova.
+Websocket proxy that is compatible with OpenStack Nova
+noVNC consoles.
 
 OPTIONS
 =======
@@ -39,7 +40,6 @@ FILES
 SEE ALSO
 ========
 
-* `OpenStack Nova <http://nova.openstack.org>`__
 * `OpenStack Nova <http://nova.openstack.org>`__
 
 BUGS

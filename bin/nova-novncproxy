@@ -17,8 +17,8 @@
 #    under the License.
 
 '''
-Websocket proxy that is compatible with OpenStack Nova.
-Leverages websockify.py by Joel Martin
+Websocket proxy that is compatible with OpenStack Nova
+noVNC consoles. Leverages websockify.py by Joel Martin
 '''
 
 import Cookie
