@@ -17,9 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Test class for baremetal IPMI power manager.
-"""
+"""Test class for baremetal IPMI power manager."""
 
 import os
 import stat

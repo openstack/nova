@@ -18,9 +18,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Tests for the base baremetal driver class.
-"""
+"""Tests for the base baremetal driver class."""
 
 from nova import exception
 from nova.openstack.common import cfg

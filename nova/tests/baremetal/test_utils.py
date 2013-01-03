@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Tests for baremetal utils
-"""
+"""Tests for baremetal utils."""
 
 import mox
 
