@@ -75,8 +75,28 @@ class LocalAPI(object):
     def instance_get_by_uuid(self, context, instance_uuid):
         return self._manager.instance_get_by_uuid(context, instance_uuid)
 
+    def instance_get_all(self, context):
+        return self.instance_get_all_by_filters(context, {})
+
     def instance_get_all_by_host(self, context, host):
-        return self._manager.instance_get_all_by_host(context, host)
+        return self.instance_get_all_by_filters(context, {'host': host})
+
+    def instance_get_all_by_filters(self, context, filters,
+                                    sort_key='created_at',
+                                    sort_dir='desc'):
+        return self._manager.instance_get_all_by_filters(context,
+                                                         filters,
+                                                         sort_key,
+                                                         sort_dir)
+
+    def instance_get_all_hung_in_rebooting(self, context, timeout):
+        return self._manager.instance_get_all_hung_in_rebooting(context,
+                                                                timeout)
+
+    def instance_get_active_by_window(self, context, begin, end=None,
+                                       project_id=None, host=None):
+        return self._manager.instance_get_active_by_window(
+            context, begin, end, project_id, host)
 
     def migration_get(self, context, migration_id):
         return self._manager.migration_get(context, migration_id)
@@ -185,8 +205,28 @@ class API(object):
         return self.conductor_rpcapi.instance_get_by_uuid(context,
                                                           instance_uuid)
 
+    def instance_get_all(self, context):
+        return self.instance_get_all_by_filters(context, {})
+
     def instance_get_all_by_host(self, context, host):
-        return self.conductor_rpcapi.instance_get_all_by_host(context, host)
+        return self.instance_get_all_by_filters(context, {'host': host})
+
+    def instance_get_all_by_filters(self, context, filters,
+                                    sort_key='created_at',
+                                    sort_dir='desc'):
+        return self.conductor_rpcapi.instance_get_all_by_filters(context,
+                                                                 filters,
+                                                                 sort_key,
+                                                                 sort_dir)
+
+    def instance_get_all_hung_in_rebooting(self, context, timeout):
+        return self.conductor_rpcapi.instance_get_all_hung_in_rebooting(
+            context, timeout)
+
+    def instance_get_active_by_window(self, context, begin, end=None,
+                                      project_id=None, host=None):
+        return self.conductor_rpcapi.instance_get_active_by_window(
+            context, begin, end, project_id, host)
 
     def migration_get(self, context, migration_id):
         return self.conductor_rpcapi.migration_get(context, migration_id)

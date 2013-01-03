@@ -28,6 +28,7 @@ from nova import test
 
 from nova.compute import manager as compute_manager
 from nova.compute import vm_states
+from nova import conductor
 from nova import db
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -929,7 +930,7 @@ class ImageCacheManagerTestCase(test.TestCase):
     def test_compute_manager(self):
         was = {'called': False}
 
-        def fake_get_all(context):
+        def fake_get_all(context, *args, **kwargs):
             was['called'] = True
             return [{'image_ref': '1',
                      'host': CONF.host,
@@ -947,7 +948,9 @@ class ImageCacheManagerTestCase(test.TestCase):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
-            self.stubs.Set(db, 'instance_get_all', fake_get_all)
+            self.stubs.Set(db, 'instance_get_all_by_filters', fake_get_all)
             compute = importutils.import_object(CONF.compute_manager)
+            self.flags(use_local=True, group='conductor')
+            compute.conductor_api = conductor.API()
             compute._run_image_cache_manager_pass(None)
             self.assertTrue(was['called'])

@@ -417,6 +417,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
+
+        # NOTE(danms): this requires some care since conductor
+        # may not be up and fielding requests by the time compute is
         instances = self.db.instance_get_all_by_host(context, self.host)
 
         if CONF.defer_iptables_apply:
@@ -724,7 +727,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             return
 
         filters = {'vm_state': vm_states.BUILDING}
-        building_insts = self.db.instance_get_all_by_filters(context, filters)
+        building_insts = self.conductor_api.instance_get_all_by_filters(
+            context, filters)
 
         for instance in building_insts:
             if timeutils.is_older_than(instance['created_at'], timeout):
@@ -2814,7 +2818,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     continue
             else:
                 # No more in our copy of uuids.  Pull from the DB.
-                db_instances = self.db.instance_get_all_by_host(
+                db_instances = self.conductor_api.instance_get_all_by_host(
                         context, self.host)
                 if not db_instances:
                     # None.. just return.
@@ -2837,7 +2841,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_rebooting_instances(self, context):
         if CONF.reboot_timeout > 0:
-            instances = self.db.instance_get_all_hung_in_rebooting(
+            instances = self.conductor_api.instance_get_all_hung_in_rebooting(
                 context, CONF.reboot_timeout)
             self.driver.poll_rebooting_instances(CONF.reboot_timeout,
                                                  instances)
@@ -2922,11 +2926,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.instance_usage_audit:
             if not compute_utils.has_audit_been_run(context, self.host):
                 begin, end = utils.last_completed_audit_period()
-                instances = self.db.instance_get_active_by_window_joined(
-                                                            context,
-                                                            begin,
-                                                            end,
-                                                            host=self.host)
+                capi = self.conductor_api
+                instances = capi.instance_get_active_by_window_joined(
+                    context, begin, end, host=self.host)
                 num_instances = len(instances)
                 errors = 0
                 successes = 0
@@ -2973,7 +2975,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._last_bw_usage_poll = curr_time
             LOG.info(_("Updating bandwidth usage cache"))
 
-            instances = self.db.instance_get_all_by_host(context, self.host)
+            instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                    self.host)
             try:
                 bw_counters = self.driver.get_all_bw_counters(instances)
             except NotImplementedError:
@@ -3034,7 +3037,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _get_host_volume_bdms(self, context, host):
         """Return all block device mappings on a compute host"""
         compute_host_bdms = []
-        instances = self.db.instance_get_all_by_host(context, self.host)
+        instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                self.host)
         for instance in instances:
             instance_bdms = self._get_instance_volume_bdms(context, instance)
             compute_host_bdms.append(dict(instance=instance,
@@ -3123,7 +3127,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         If the instance is not found on the hypervisor, but is in the database,
         then a stop() API will be called on the instance.
         """
-        db_instances = self.db.instance_get_all_by_host(context, self.host)
+        db_instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                   self.host)
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
@@ -3253,7 +3258,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_("CONF.reclaim_instance_interval <= 0, skipping..."))
             return
 
-        instances = self.db.instance_get_all_by_host(context, self.host)
+        instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                self.host)
         for instance in instances:
             old_enough = (not instance['deleted_at'] or
                           timeutils.is_older_than(instance['deleted_at'],
@@ -3355,7 +3361,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return True
             return False
         present_name_labels = set(self.driver.list_instances())
-        instances = self.db.instance_get_all_by_host(context, self.host)
+        instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                self.host)
         return [i for i in instances if deleted_instance(i)]
 
     @contextlib.contextmanager
@@ -3416,7 +3423,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.image_cache_manager_interval == 0:
             return
 
-        all_instances = self.db.instance_get_all(context)
+        all_instances = self.conductor_api.instance_get_all(context)
 
         # Determine what other nodes use this storage
         storage_users.register_storage_use(CONF.instances_path, CONF.host)
