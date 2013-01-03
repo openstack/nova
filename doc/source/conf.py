@@ -145,6 +145,8 @@ man_pages = [
      [u'OpenStack'], 1),
     ('man/nova-novncproxy', 'nova-novncproxy', u'Cloud controller fabric',
      [u'OpenStack'], 1),
+    ('man/nova-spicehtml5proxy', 'nova-spicehtml5proxy', u'Cloud controller fabric',
+     [u'OpenStack'], 1),
     ('man/nova-objectstore', 'nova-objectstore', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-rootwrap', 'nova-rootwrap', u'Cloud controller fabric',
