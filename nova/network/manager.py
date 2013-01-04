@@ -1231,6 +1231,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         nw_info = network_model.NetworkInfo()
         for vif in vifs:
             vif_dict = {'id': vif['uuid'],
+                        'type': network_model.VIF_TYPE_BRIDGE,
                         'address': vif['address']}
 
             # handle case where vif doesn't have a network

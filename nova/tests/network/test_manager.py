@@ -27,6 +27,7 @@ from nova import exception
 from nova import ipv6
 from nova.network import linux_net
 from nova.network import manager as network_manager
+from nova.network import model as net_model
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -184,7 +185,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'label': 'test%d' % nid,
                      'mac': 'DE:AD:BE:EF:00:%02x' % nid,
                      'rxtx_cap': 30,
-                     'vif_type': None,
+                     'vif_type': net_model.VIF_TYPE_BRIDGE,
                      'vif_uuid':
                         '00000000-0000-0000-0000-00000000000000%02d' % nid,
                      'should_create_vlan': False,
