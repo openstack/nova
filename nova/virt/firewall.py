@@ -53,7 +53,7 @@ class FirewallDriver(object):
     """ Firewall Driver base class.
 
         Defines methods that any driver providing security groups
-        and provider fireall functionality should implement.
+        and provider firewall functionality should implement.
     """
     def __init__(self, virtapi):
         self._virtapi = virtapi
