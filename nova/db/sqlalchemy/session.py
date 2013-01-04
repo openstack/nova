@@ -242,11 +242,12 @@ from nova.exception import InvalidUnicodeParameter
 from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
 from nova.openstack.common import timeutils
+from nova import paths
 
 
 sql_opts = [
     cfg.StrOpt('sql_connection',
-               default='sqlite:///$state_path/$sqlite_db',
+               default='sqlite:///' + paths.state_path_def('$sqlite_db'),
                help='The SQLAlchemy connection string used to connect to the '
                     'database'),
     cfg.StrOpt('sqlite_db',
@@ -290,7 +291,6 @@ sql_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(sql_opts)
-CONF.import_opt('state_path', 'nova.paths')
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None

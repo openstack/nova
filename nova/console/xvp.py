@@ -27,12 +27,13 @@ from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova import paths
 from nova import utils
 
 
 xvp_opts = [
     cfg.StrOpt('console_xvp_conf_template',
-               default='$pybasedir/nova/console/xvp.conf.template',
+               default=paths.basedir_def('nova/console/xvp.conf.template'),
                help='XVP conf template'),
     cfg.StrOpt('console_xvp_conf',
                default='/etc/xvp.conf',
@@ -51,7 +52,6 @@ xvp_opts = [
 CONF = cfg.CONF
 CONF.register_opts(xvp_opts)
 CONF.import_opt('host', 'nova.config')
-CONF.import_opt('pybasedir', 'nova.paths')
 LOG = logging.getLogger(__name__)
 
 

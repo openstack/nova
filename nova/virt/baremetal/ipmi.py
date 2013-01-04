@@ -28,6 +28,7 @@ import tempfile
 from nova.exception import InvalidParameterValue
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova import paths
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
@@ -41,7 +42,7 @@ opts = [
                default=None,
                help='path to baremetal terminal SSL cert(PEM)'),
     cfg.StrOpt('terminal_pid_dir',
-               default='$state_path/baremetal/console',
+               default=paths.state_path_def('baremetal/console'),
                help='path to directory stores pidfiles of baremetal_terminal'),
     cfg.IntOpt('ipmi_power_retry',
                default=5,
@@ -54,7 +55,6 @@ baremetal_group = cfg.OptGroup(name='baremetal',
 CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
-CONF.import_opt('state_path', 'nova.paths')
 
 LOG = logging.getLogger(__name__)
 
