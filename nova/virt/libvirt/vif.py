@@ -165,21 +165,6 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
 
         return conf
 
-    def create_ovs_vif_port(self, bridge, dev, iface_id, mac, instance_id):
-        utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
-                      bridge, dev,
-                      '--', 'set', 'Interface', dev,
-                      'external-ids:iface-id=%s' % iface_id,
-                      'external-ids:iface-status=active',
-                      'external-ids:attached-mac=%s' % mac,
-                      'external-ids:vm-uuid=%s' % instance_id,
-                      run_as_root=True)
-
-    def delete_ovs_vif_port(self, bridge, dev):
-        utils.execute('ovs-vsctl', 'del-port', bridge, dev,
-                      run_as_root=True)
-        utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
-
     def plug(self, instance, vif):
         network, mapping = vif
         iface_id = self.get_ovs_interfaceid(mapping)
@@ -198,22 +183,21 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
                 utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
             utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
 
-        self.create_ovs_vif_port(self.get_bridge_name(network),
-                                 dev, iface_id, mapping['mac'],
-                                 instance['uuid'])
+        linux_net.create_ovs_vif_port(self.get_bridge_name(network),
+                                      dev, iface_id, mapping['mac'],
+                                      instance['uuid'])
 
     def unplug(self, instance, vif):
         """Unplug the VIF by deleting the port from the bridge."""
         try:
             network, mapping = vif
-            self.delete_ovs_vif_port(self.get_bridge_name(network),
-                                     self.get_vif_devname(mapping))
+            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
+                                          self.get_vif_devname(mapping))
         except exception.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
 
-class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
-                                   LibvirtOpenVswitchDriver):
+class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver):
     """VIF driver that uses OVS + Linux Bridge for iptables compatibility.
 
     Enables the use of OVS-based Quantum plugins while at the same
@@ -231,6 +215,9 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
+
+    def get_ovs_interfaceid(self, mapping):
+        return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
 
     def get_config(self, instance, network, mapping):
         br_name = self.get_br_name(mapping['vif_uuid'])
@@ -261,9 +248,9 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
             linux_net._create_veth_pair(v1_name, v2_name)
             utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
             utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-            self.create_ovs_vif_port(self.get_bridge_name(network),
-                                     v2_name, iface_id, mapping['mac'],
-                                     instance['uuid'])
+            linux_net.create_ovs_vif_port(self.get_bridge_name(network),
+                                          v2_name, iface_id, mapping['mac'],
+                                          instance['uuid'])
 
     def unplug(self, instance, vif):
         """UnPlug using hybrid strategy
@@ -281,7 +268,8 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
                           run_as_root=True)
             utils.execute('brctl', 'delbr', br_name, run_as_root=True)
 
-            self.delete_ovs_vif_port(self.get_bridge_name(network), v2_name)
+            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
+                                          v2_name)
         except exception.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
