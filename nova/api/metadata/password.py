@@ -19,7 +19,34 @@ from nova import context
 from nova import db
 
 
-MAX_SIZE = 256
+CHUNKS = 4
+CHUNK_LENGTH = 255
+MAX_SIZE = CHUNKS * CHUNK_LENGTH
+
+
+def extract_password(instance):
+    result = ''
+    for datum in sorted(instance.get('system_metadata', []),
+                        key=lambda x: x['key']):
+        if datum['key'].startswith('password_'):
+            result += datum['value']
+    return result or None
+
+
+def set_password(context, instance_uuid, password):
+    """Stores password as system_metadata items.
+
+    Password is stored with the keys 'password_0' -> 'password_3'.
+    """
+    password = password or ''
+    meta = {}
+    for i in xrange(CHUNKS):
+        meta['password_%d' % i] = password[:CHUNK_LENGTH]
+        password = password[CHUNK_LENGTH:]
+    db.instance_system_metadata_update(context,
+                                       instance_uuid,
+                                       meta,
+                                       False)
 
 
 def handle_password(req, meta_data):
@@ -36,9 +63,6 @@ def handle_password(req, meta_data):
         if (req.content_length > MAX_SIZE or len(req.body) > MAX_SIZE):
             msg = _("Request is too large.")
             raise exc.HTTPBadRequest(explanation=msg)
-        db.instance_system_metadata_update(ctxt,
-                                           meta_data.uuid,
-                                           {'password': req.body},
-                                           False)
+        set_password(ctxt, meta_data.uuid, req.body)
     else:
         raise exc.HTTPBadRequest()
