@@ -53,6 +53,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.19 - Added vol_get_usage_by_time and vol_usage_update
     1.20 - Added migration_get_unconfirmed_by_dest_compute
     1.21 - Added service_get_all_by
+    1.22 - Added ping
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -61,6 +62,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         super(ConductorAPI, self).__init__(
             topic=CONF.conductor.topic,
             default_version=self.BASE_RPC_API_VERSION)
+
+    def ping(self, context, arg, timeout=None):
+        arg_p = jsonutils.to_primitive(arg)
+        msg = self.make_msg('ping', arg=arg_p)
+        return self.call(context, msg, version='1.22', timeout=timeout)
 
     def instance_update(self, context, instance_uuid, updates):
         updates_p = jsonutils.to_primitive(updates)

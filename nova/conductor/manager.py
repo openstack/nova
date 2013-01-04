@@ -43,11 +43,14 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.21'
+    RPC_API_VERSION = '1.22'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
+
+    def ping(self, context, arg):
+        return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
 
     @rpc_common.client_exceptions(KeyError, ValueError,
                                   exception.InvalidUUID,
