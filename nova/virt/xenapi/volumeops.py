@@ -105,7 +105,8 @@ class VolumeOps(object):
             LOG.exception(exc)
             raise exception.NovaException(_('Could not forget SR'))
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance_name, mountpoint,
+                      hotplug=True):
         """Attach volume storage to VM instance"""
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
@@ -121,14 +122,14 @@ class VolumeOps(object):
         connection_data = connection_info['data']
         dev_number = volume_utils.get_device_number(mountpoint)
 
-        self.connect_volume(
-            connection_data, dev_number, instance_name, vm_ref)
+        self.connect_volume(connection_data, dev_number, instance_name,
+                            vm_ref, hotplug=hotplug)
 
         LOG.info(_('Mountpoint %(mountpoint)s attached to'
                 ' instance %(instance_name)s') % locals())
 
     def connect_volume(self, connection_data, dev_number, instance_name,
-                       vm_ref):
+                       vm_ref, hotplug=True):
 
         description = 'Disk-for:%s' % instance_name
         uuid, label, sr_params = volume_utils.parse_sr_info(connection_data,
@@ -172,13 +173,14 @@ class VolumeOps(object):
             raise Exception(_('Unable to use SR %(sr_ref)s for'
                               ' instance %(instance_name)s') % locals())
 
-        try:
-            self._session.call_xenapi("VBD.plug", vbd_ref)
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            self.forget_sr(uuid)
-            raise Exception(_('Unable to attach volume to instance %s')
-                            % instance_name)
+        if hotplug:
+            try:
+                self._session.call_xenapi("VBD.plug", vbd_ref)
+            except self._session.XenAPI.Failure, exc:
+                LOG.exception(exc)
+                self.forget_sr(uuid)
+                raise Exception(_('Unable to attach volume to instance %s')
+                                % instance_name)
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""

@@ -39,11 +39,13 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
+from nova.virt import driver as virt_driver
 from nova.virt import firewall
 from nova.virt.xenapi import agent as xapi_agent
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import volumeops
 
 
 LOG = logging.getLogger(__name__)
@@ -147,6 +149,7 @@ class VMOps(object):
         self.compute_api = compute.API()
         self._session = session
         self._virtapi = virtapi
+        self._volumeops = volumeops.VolumeOps(self._session)
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             self._virtapi,
@@ -179,7 +182,20 @@ class VMOps(object):
         vm_ref = vm_utils.lookup(self._session, name_label)
         return self._destroy(instance, vm_ref, network_info)
 
-    def finish_revert_migration(self, instance):
+    def _attach_mapped_block_devices(self, instance, block_device_info):
+        # We are attaching these volumes before start (no hotplugging)
+        # because some guests (windows) don't load PV drivers quickly
+        block_device_mapping = virt_driver.block_device_info_get_mapping(
+                block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mount_device = vol['mount_device'].rpartition("/")[2]
+            self._volumeops.attach_volume(connection_info,
+                                          instance['name'],
+                                          mount_device,
+                                          hotplug=False)
+
+    def finish_revert_migration(self, instance, block_device_info=None):
         # NOTE(sirp): the original vm was suffixed with '-orig'; find it using
         # the old suffix, remove the suffix, then power it back on.
         name_label = self._get_orig_vm_name_label(instance)
@@ -189,6 +205,8 @@ class VMOps(object):
         # ends up on the source host, common during testing)
         name_label = instance['name']
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
+
+        self._attach_mapped_block_devices(instance, block_device_info)
 
         self._start(instance, vm_ref)
 
@@ -221,6 +239,9 @@ class VMOps(object):
                                  {'root': root_vdi},
                                  disk_image_type, network_info, kernel_file,
                                  ramdisk_file)
+
+        self._attach_mapped_block_devices(instance, block_device_info)
+
         # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
         self._update_instance_progress(context, instance,
