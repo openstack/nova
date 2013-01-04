@@ -288,6 +288,12 @@ class _BaseTestCase(object):
                                                      'fake-begin', 'fake-end',
                                                      'fake-proj', 'fake-host')
 
+    def test_instance_destroy(self):
+        self.mox.StubOutWithMock(db, 'instance_destroy')
+        db.instance_destroy(self.context, 'fake-uuid')
+        self.mox.ReplayAll()
+        self.conductor.instance_destroy(self.context, {'uuid': 'fake-uuid'})
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
