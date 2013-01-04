@@ -1272,8 +1272,8 @@ class HostFiltersTestCase(test.TestCase):
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'nodeX', {})
         retry = dict(num_attempts=2,
-                     hosts=[('host1', 'node1'),  # same host, different node
-                            ('host2', 'node2'),  # different host and node
+                     hosts=[['host1', 'node1'],  # same host, different node
+                            ['host2', 'node2'],  # different host and node
                             ])
         filter_properties = dict(retry=retry)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
@@ -1283,7 +1283,7 @@ class HostFiltersTestCase(test.TestCase):
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
         retry = dict(num_attempts=1,
-                     hosts=[('host1', 'node1')])
+                     hosts=[['host1', 'node1']])
         filter_properties = dict(retry=retry)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 

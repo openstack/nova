@@ -33,10 +33,13 @@ class RetryFilter(filters.BaseHostFilter):
             return True
 
         hosts = retry.get('hosts', [])
-        host = (host_state.host, host_state.nodename)
+        host = [host_state.host, host_state.nodename]
 
-        LOG.debug(_("Previously tried hosts: %(hosts)s.  (host=%(host)s)") %
-                locals())
+        passes = host not in hosts
+        pass_msg = "passes" if passes else "fails"
+
+        LOG.debug(_("Host %(host)s %(pass_msg)s.  Previously tried hosts: "
+                    "%(hosts)s") % locals())
 
         # Host passes if it's not in the list of previously attempted hosts:
-        return host not in hosts
+        return passes
