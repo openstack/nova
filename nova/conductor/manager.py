@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.17'
+    RPC_API_VERSION = '1.18'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -211,3 +211,7 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def instance_info_cache_delete(self, context, instance):
         self.db.instance_info_cache_delete(context, instance['uuid'])
+
+    def instance_type_get(self, context, instance_type_id):
+        result = self.db.instance_type_get(context, instance_type_id)
+        return jsonutils.to_primitive(result)

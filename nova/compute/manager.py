@@ -1899,7 +1899,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             if not instance_type:
-                instance_type = self.db.instance_type_get(context,
+                instance_type = self.conductor_api.instance_type_get(context,
                         migration['new_instance_type_id'])
 
             network_info = self._get_instance_nw_info(context, instance)

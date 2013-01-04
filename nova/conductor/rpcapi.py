@@ -49,6 +49,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
            Deprecated instance_get_all_by_host
     1.16 - Added instance_destroy
     1.17 - Added instance_info_cache_delete
+    1.18 - Added instance_type_get
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -202,3 +203,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('instance_info_cache_delete', instance=instance_p)
         self.call(context, msg, version='1.17')
+
+    def instance_type_get(self, context, instance_type_id):
+        msg = self.make_msg('instance_type_get',
+                            instance_type_id=instance_type_id)
+        return self.call(context, msg, version='1.18')

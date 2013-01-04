@@ -301,6 +301,13 @@ class _BaseTestCase(object):
         self.conductor.instance_info_cache_delete(self.context,
                                                   {'uuid': 'fake-uuid'})
 
+    def test_instance_type_get(self):
+        self.mox.StubOutWithMock(db, 'instance_type_get')
+        db.instance_type_get(self.context, 'fake-id').AndReturn('fake-type')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_type_get(self.context, 'fake-id')
+        self.assertEqual(result, 'fake-type')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
