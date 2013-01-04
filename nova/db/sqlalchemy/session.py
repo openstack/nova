@@ -290,7 +290,7 @@ sql_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(sql_opts)
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 LOG = logging.getLogger(__name__)
 
 _ENGINE = None

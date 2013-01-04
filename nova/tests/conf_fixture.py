@@ -24,7 +24,7 @@ from nova.openstack.common import cfg
 from nova.tests.utils import cleanup_dns_managers
 
 CONF = cfg.CONF
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')
 CONF.import_opt('network_size', 'nova.network.manager')

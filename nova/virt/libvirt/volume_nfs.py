@@ -35,7 +35,7 @@ volume_opts = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(volume_opts)
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 
 
 class NfsVolumeDriver(volume.LibvirtVolumeDriver):

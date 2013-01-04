@@ -73,7 +73,7 @@ disk_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(disk_opts)
-CONF.import_opt('pybasedir', 'nova.config')
+CONF.import_opt('pybasedir', 'nova.paths')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
