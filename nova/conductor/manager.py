@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.16'
+    RPC_API_VERSION = '1.17'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -208,3 +208,6 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def instance_destroy(self, context, instance):
         self.db.instance_destroy(context, instance['uuid'])
+
+    def instance_info_cache_delete(self, context, instance):
+        self.db.instance_info_cache_delete(context, instance['uuid'])

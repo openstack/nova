@@ -1034,7 +1034,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _delete_instance(self, context, instance, bdms):
         """Delete an instance on this host."""
         instance_uuid = instance['uuid']
-        self.db.instance_info_cache_delete(context, instance_uuid)
+        self.conductor_api.instance_info_cache_delete(context, instance)
         self._notify_about_instance_usage(context, instance, "delete.start")
         self._shutdown_instance(context, instance, bdms)
         # NOTE(vish): We have already deleted the instance, so we have
