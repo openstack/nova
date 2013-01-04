@@ -769,6 +769,34 @@ class CellNotFound(NotFound):
     message = _("Cell %(cell_id)s could not be found.")
 
 
+class CellRoutingInconsistency(NovaException):
+    message = _("Inconsistency in cell routing: %(reason)s")
+
+
+class CellServiceAPIMethodNotFound(NotFound):
+    message = _("Service API method not found: %(detail)s")
+
+
+class CellTimeout(NotFound):
+    message = _("Timeout waiting for response from cell")
+
+
+class CellMaxHopCountReached(NovaException):
+    message = _("Cell message has reached maximum hop count: %(hop_count)s")
+
+
+class NoCellsAvailable(NovaException):
+    message = _("No cells available matching scheduling criteria.")
+
+
+class CellError(NovaException):
+    message = _("Exception received during cell processing: %(exc_name)s.")
+
+
+class InstanceUnknownCell(NotFound):
+    message = _("Cell is not known for instance %(instance_uuid)s")
+
+
 class SchedulerHostFilterNotFound(NotFound):
     message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
