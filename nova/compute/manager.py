@@ -1053,9 +1053,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          vm_state=vm_states.DELETED,
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
+        system_meta = compute_utils.metadata_to_dict(
+            instance['system_metadata'])
         self.db.instance_destroy(context, instance_uuid)
-        system_meta = self.db.instance_system_metadata_get(context,
-            instance_uuid)
 
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
@@ -1542,8 +1542,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_rescue_image_ref(self, context, instance):
         """Determine what image should be used to boot the rescue VM. """
-        system_meta = self.db.instance_system_metadata_get(
-                context, instance['uuid'])
+        system_meta = compute_utils.metadata_to_dict(
+            instance['system_metadata'])
 
         rescue_image_ref = system_meta.get('image_base_image_ref')
 
