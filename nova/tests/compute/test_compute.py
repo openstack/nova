@@ -1726,7 +1726,16 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             pass
 
+        def fake_migration_update(context, id, values):
+            # Ensure instance status updates is after the migration finish
+            migration_ref = db.migration_get(context, id)
+            instance_uuid = migration_ref['instance_uuid']
+            instance = db.instance_get_by_uuid(context, instance_uuid)
+            self.assertFalse(instance['vm_state'] == vm_states.RESIZED)
+            self.assertEqual(instance['task_state'], task_states.RESIZE_FINISH)
+
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stubs.Set(db, 'migration_update', fake_migration_update)
 
         reservations = self._ensure_quota_reservations_committed()
 

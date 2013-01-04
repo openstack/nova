@@ -2006,6 +2006,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      image, resize_instance,
                                      block_device_info)
 
+        migration = self.conductor_api.migration_update(context,
+                migration, 'finished')
+
         instance = self._instance_update(context,
                                          instance['uuid'],
                                          vm_state=vm_states.RESIZED,
@@ -2013,9 +2016,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=None,
                                          expected_task_state=task_states.
                                              RESIZE_FINISH)
-
-        migration = self.conductor_api.migration_update(context,
-                migration, 'finished')
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
