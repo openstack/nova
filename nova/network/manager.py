@@ -575,7 +575,8 @@ class FloatingIP(object):
         else:
             # send to correct host
             self.network_rpcapi._associate_floating_ip(context,
-                    floating_address, fixed_address, interface, host)
+                    floating_address, fixed_address, interface, host,
+                    fixed_ip['instance_uuid'])
 
         return orig_instance_uuid
 
@@ -664,7 +665,7 @@ class FloatingIP(object):
         else:
             # send to correct host
             self.network_rpcapi._disassociate_floating_ip(context, address,
-                    interface, host)
+                    interface, host, fixed_ip['instance_uuid'])
 
     def _disassociate_floating_ip(self, context, address, interface,
                                   instance_uuid):
@@ -921,7 +922,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.5'
+    RPC_API_VERSION = '1.6'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False

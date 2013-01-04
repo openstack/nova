@@ -38,6 +38,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.3 - Adds fanout cast update_dns for multi_host networks
         1.4 - Add get_backdoor_port()
         1.5 - Adds associate
+        1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
     '''
 
     #
@@ -259,20 +260,24 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     # 1.0 API was being documented using this client proxy class.  It should be
     # changed if there was ever a 2.0.
     def _associate_floating_ip(self, ctxt, floating_address, fixed_address,
-                               interface, host):
+                               interface, host, instance_uuid=None):
         return self.call(ctxt, self.make_msg('_associate_floating_ip',
                 floating_address=floating_address, fixed_address=fixed_address,
-                interface=interface),
-                topic=rpc.queue_get_for(ctxt, self.topic, host))
+                interface=interface, instance_uuid=instance_uuid),
+                topic=rpc.queue_get_for(ctxt, self.topic, host),
+                version='1.6')
 
     # NOTE(russellb): Ideally this would not have a prefix of '_' since it is
     # a part of the rpc API. However, this is how it was being called when the
     # 1.0 API was being documented using this client proxy class.  It should be
     # changed if there was ever a 2.0.
-    def _disassociate_floating_ip(self, ctxt, address, interface, host):
+    def _disassociate_floating_ip(self, ctxt, address, interface, host,
+                                  instance_uuid=None):
         return self.call(ctxt, self.make_msg('_disassociate_floating_ip',
-                address=address, interface=interface),
-                topic=rpc.queue_get_for(ctxt, self.topic, host))
+                address=address, interface=interface,
+                instance_uuid=instance_uuid),
+                topic=rpc.queue_get_for(ctxt, self.topic, host),
+                version='1.6')
 
     def lease_fixed_ip(self, ctxt, address, host):
         self.cast(ctxt, self.make_msg('lease_fixed_ip', address=address),
