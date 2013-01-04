@@ -402,6 +402,36 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
 
+    def _test_stubbed(self, name, dbargs, condargs):
+        self.mox.StubOutWithMock(db, name)
+        getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.service_get_all_by(self.context, **condargs)
+        self.assertEqual(result, 'fake-result')
+
+    def test_service_get_all(self):
+        self._test_stubbed('service_get_all', (), {})
+
+    def test_service_get_by_host_and_topic(self):
+        self._test_stubbed('service_get_by_host_and_topic',
+                           ('host', 'topic'),
+                           dict(topic='topic', host='host'))
+
+    def test_service_get_all_by_topic(self):
+        self._test_stubbed('service_get_all_by_topic',
+                           ('topic',),
+                           dict(topic='topic'))
+
+    def test_service_get_all_by_host(self):
+        self._test_stubbed('service_get_all_by_host',
+                           ('host',),
+                           dict(host='host'))
+
+    def test_service_get_all_compute_by_host(self):
+        self._test_stubbed('service_get_all_compute_by_host',
+                           ('host',),
+                           dict(topic='compute', host='host'))
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests"""
@@ -462,6 +492,36 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
+
+    def _test_stubbed(self, name, dbargs, condargs):
+        self.mox.StubOutWithMock(db, name)
+        getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.service_get_all_by(self.context, **condargs)
+        self.assertEqual(result, 'fake-result')
+
+    def test_service_get_all(self):
+        self._test_stubbed('service_get_all', (), {})
+
+    def test_service_get_by_host_and_topic(self):
+        self._test_stubbed('service_get_by_host_and_topic',
+                           ('host', 'topic'),
+                           dict(topic='topic', host='host'))
+
+    def test_service_get_all_by_topic(self):
+        self._test_stubbed('service_get_all_by_topic',
+                           ('topic',),
+                           dict(topic='topic'))
+
+    def test_service_get_all_by_host(self):
+        self._test_stubbed('service_get_all_by_host',
+                           ('host',),
+                           dict(host='host'))
+
+    def test_service_get_all_compute_by_host(self):
+        self._test_stubbed('service_get_all_compute_by_host',
+                           ('host',),
+                           dict(topic='compute', host='host'))
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -541,6 +601,28 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context,
                                                    {'name': 'fake-inst'},
                                                    'updated_at', 'asc')
+
+    def _test_stubbed(self, name, *args):
+        self.mox.StubOutWithMock(db, name)
+        getattr(db, name)(self.context, *args).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = getattr(self.conductor, name)(self.context, *args)
+        self.assertEqual(result, 'fake-result')
+
+    def test_service_get_all(self):
+        self._test_stubbed('service_get_all')
+
+    def test_service_get_by_host_and_topic(self):
+        self._test_stubbed('service_get_by_host_and_topic', 'host', 'topic')
+
+    def test_service_get_all_by_topic(self):
+        self._test_stubbed('service_get_all_by_topic', 'topic')
+
+    def test_service_get_all_by_host(self):
+        self._test_stubbed('service_get_all_by_host', 'host')
+
+    def test_service_get_all_compute_by_host(self):
+        self._test_stubbed('service_get_all_compute_by_host', 'host')
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):

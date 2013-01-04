@@ -216,6 +216,21 @@ class LocalAPI(object):
                                               instance, last_refreshed,
                                               update_totals)
 
+    def service_get_all(self, context):
+        return self._manager.service_get_all_by(context)
+
+    def service_get_all_by_topic(self, context, topic):
+        return self._manager.service_get_all_by(context, topic=topic)
+
+    def service_get_all_by_host(self, context, host):
+        return self._manager.service_get_all_by(context, host=host)
+
+    def service_get_by_host_and_topic(self, context, host, topic):
+        return self._manager.service_get_all_by(context, topic, host)
+
+    def service_get_all_compute_by_host(self, context, host):
+        return self._manager.service_get_all_by(context, 'compute', host)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -385,3 +400,19 @@ class API(object):
                                                       wr_req, wr_bytes,
                                                       instance, last_refreshed,
                                                       update_totals)
+
+    def service_get_all(self, context):
+        return self.conductor_rpcapi.service_get_all_by(context)
+
+    def service_get_all_by_topic(self, context, topic):
+        return self.conductor_rpcapi.service_get_all_by(context, topic=topic)
+
+    def service_get_all_by_host(self, context, host):
+        return self.conductor_rpcapi.service_get_all_by(context, host=host)
+
+    def service_get_by_host_and_topic(self, context, host, topic):
+        return self.conductor_rpcapi.service_get_all_by(context, topic, host)
+
+    def service_get_all_compute_by_host(self, context, host):
+        return self.conductor_rpcapi.service_get_all_by(context, 'compute',
+                                                        host)

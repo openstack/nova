@@ -52,6 +52,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.18 - Added instance_type_get
     1.19 - Added vol_get_usage_by_time and vol_usage_update
     1.20 - Added migration_get_unconfirmed_by_dest_compute
+    1.21 - Added service_get_all_by
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -234,3 +235,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             instance=instance_p, last_refreshed=last_refreshed,
                             update_totals=update_totals)
         return self.call(context, msg, version='1.19')
+
+    def service_get_all_by(self, context, topic=None, host=None):
+        msg = self.make_msg('service_get_all_by', topic=topic, host=host)
+        return self.call(context, msg, version='1.21')

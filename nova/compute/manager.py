@@ -2460,8 +2460,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             pass
 
     def _get_compute_info(self, context, host):
-        compute_node_ref = self.db.service_get_all_compute_by_host(context,
-                                                                   host)
+        compute_node_ref = self.conductor_api.service_get_all_compute_by_host(
+            context, host)
         try:
             return compute_node_ref[0]['compute_node'][0]
         except IndexError:
