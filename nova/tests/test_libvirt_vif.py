@@ -111,6 +111,41 @@ class LibvirtVifTestCase(test.TestCase):
         'vif_uuid': 'vif-xxx-yyy-zzz',
     }
 
+    net_8021 = {
+             'cidr': '101.168.1.0/24',
+             'cidr_v6': '101:1db9::/64',
+             'gateway_v6': '101:1db9::1',
+             'netmask_v6': '64',
+             'netmask': '255.255.255.0',
+             'interface': 'eth0',
+             'vlan': 99,
+             'gateway': '101.168.1.1',
+             'broadcast': '101.168.1.255',
+             'dns1': '8.8.8.8',
+             'id': 'network-id-xxx-yyy-zzz'
+    }
+
+    mapping_8021qbh = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_802_QBH,
+        'qbh_params': network_model.VIF8021QbhParams(
+            profileid="xxx-yyy-zzz"),
+    }
+
+    mapping_8021qbg = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_802_QBG,
+        'qbg_params': network_model.VIF8021QbgParams(
+            managerid="xxx-yyy-zzz",
+            typeid="aaa-bbb-ccc",
+            typeidversion="1",
+            instanceid="ddd-eee-fff")
+    }
+
     mapping_none = {
         'mac': 'ca:fe:de:ad:be:ef',
         'gateway_v6': net_bridge['gateway_v6'],
@@ -457,3 +492,89 @@ class LibvirtVifTestCase(test.TestCase):
                                           self.net_ovs,
                                           self.mapping_ovs,
                                           br_want)
+
+    def test_generic_8021qbh_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        xml = self._get_instance_xml(d,
+                                     self.net_8021,
+                                     self.mapping_8021qbh)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        self.assertEqual(node.get("type"), "direct")
+
+        br_name = node.find("source").get("dev")
+        self.assertEqual(br_name, "eth0")
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping_8021qbh['mac'])
+        vp = node.find("virtualport")
+        self.assertEqual(vp.get("type"), "802.1Qbh")
+        profile_id_found = False
+        for p_elem in vp.findall("parameters"):
+            wantparams = self.mapping_8021qbh['qbh_params']
+            profile_id = p_elem.get("profileid", None)
+            if profile_id:
+                self.assertEqual(profile_id,
+                                 wantparams['profileid'])
+                profile_id_found = True
+
+        self.assertTrue(profile_id_found)
+
+    def test_generic_8021qbg_driver(self):
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        xml = self._get_instance_xml(d,
+                                     self.net_8021,
+                                     self.mapping_8021qbg)
+
+        doc = etree.fromstring(xml)
+        print xml
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        self.assertEqual(node.get("type"), "direct")
+
+        br_name = node.find("source").get("dev")
+        self.assertEqual(br_name, "eth0")
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping_8021qbg['mac'])
+        vp = node.find("virtualport")
+        self.assertEqual(vp.get("type"), "802.1Qbg")
+        manager_id_found = False
+        type_id_found = False
+        typeversion_id_found = False
+        instance_id_found = False
+        for p_elem in vp.findall("parameters"):
+            wantparams = self.mapping_8021qbg['qbg_params']
+            manager_id = p_elem.get("managerid", None)
+            type_id = p_elem.get("typeid", None)
+            typeversion_id = p_elem.get("typeidversion", None)
+            instance_id = p_elem.get("instanceid", None)
+            if manager_id:
+                self.assertEqual(manager_id,
+                                 wantparams['managerid'])
+                manager_id_found = True
+            if type_id:
+                self.assertEqual(type_id,
+                                 wantparams['typeid'])
+                type_id_found = True
+            if typeversion_id:
+                self.assertEqual(typeversion_id,
+                                 wantparams['typeidversion'])
+                typeversion_id_found = True
+            if instance_id:
+                self.assertEqual(instance_id,
+                                 wantparams['instanceid'])
+                instance_id_found = True
+
+        self.assertTrue(manager_id_found)
+        self.assertTrue(type_id_found)
+        self.assertTrue(typeversion_id_found)
+        self.assertTrue(instance_id_found)

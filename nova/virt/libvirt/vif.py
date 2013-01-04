@@ -196,6 +196,35 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return self.get_config_ovs_ethernet(instance, network,
                                                 mapping)
 
+    def get_config_802qbg(self, instance, network, mapping):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance,
+                                      network,
+                                      mapping)
+
+        params = mapping["qbg_params"]
+        designer.set_vif_host_backend_802qbg_config(
+            conf, network["interface"],
+            params['managerid'],
+            params['typeid'],
+            params['typeidversion'],
+            params['instanceid'])
+
+        return conf
+
+    def get_config_802qbh(self, instance, network, mapping):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance,
+                                      network,
+                                      mapping)
+
+        params = mapping["qbh_params"]
+        designer.set_vif_host_backend_802qbh_config(
+            conf, network["interface"],
+            params['profileid'])
+
+        return conf
+
     def get_config(self, instance, network, mapping):
         vif_type = mapping.get('vif_type')
 
@@ -212,6 +241,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return self.get_config_bridge(instance, network, mapping)
         elif vif_type == network_model.VIF_TYPE_OVS:
             return self.get_config_ovs(instance, network, mapping)
+        elif vif_type == network_model.VIF_TYPE_802_QBG:
+            return self.get_config_802qbg(instance, network, mapping)
+        elif vif_type == network_model.VIF_TYPE_802_QBH:
+            return self.get_config_802qbh(instance, network, mapping)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -294,6 +327,14 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         else:
             self.plug_ovs_ethernet(instance, vif)
 
+    def plug_802qbg(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
+    def plug_802qbh(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
     def plug(self, instance, vif):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
@@ -311,6 +352,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.plug_bridge(instance, vif)
         elif vif_type == network_model.VIF_TYPE_OVS:
             self.plug_ovs(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_802_QBG:
+            self.plug_802qbg(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_802_QBH:
+            self.plug_802qbh(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -369,6 +414,14 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         else:
             self.unplug_ovs_ethernet(instance, vif)
 
+    def unplug_802qbg(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
+    def unplug_802qbh(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
     def unplug(self, instance, vif):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
@@ -386,6 +439,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.unplug_bridge(instance, vif)
         elif vif_type == network_model.VIF_TYPE_OVS:
             self.unplug_ovs(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_802_QBG:
+            self.unplug_802qbg(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_802_QBH:
+            self.unplug_802qbh(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)

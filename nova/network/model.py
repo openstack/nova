@@ -204,10 +204,29 @@ class Network(Model):
         return network
 
 
+class VIF8021QbgParams(Model):
+    """Represents the parameters for a 802.1qbg VIF."""
+
+    def __init__(self, managerid, typeid, typeidversion, instanceid):
+        self['managerid'] = managerid
+        self['typeid'] = typeid
+        self['typeidversion'] = typeidversion
+        self['instanceid'] = instanceid
+
+
+class VIF8021QbhParams(Model):
+    """Represents the parameters for a 802.1qbh VIF."""
+
+    def __init__(self, profileid):
+        self['profileid'] = profileid
+
+
 class VIF(Model):
     """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
-                 devname=None, ovs_interfaceid=None, **kwargs):
+                 devname=None, ovs_interfaceid=None,
+                 qbh_params=None, qbg_params=None,
+                 **kwargs):
         super(VIF, self).__init__()
 
         self['id'] = id
@@ -217,6 +236,8 @@ class VIF(Model):
         self['devname'] = devname
 
         self['ovs_interfaceid'] = ovs_interfaceid
+        self['qbh_params'] = qbh_params
+        self['qbg_params'] = qbg_params
 
         self._set_meta(kwargs)
 
@@ -384,6 +405,8 @@ class NetworkInfo(list):
                          'vif_devname': vif.get('devname'),
                          'vif_uuid': vif['id'],
                          'ovs_interfaceid': vif.get('ovs_interfaceid'),
+                         'qbh_params': vif.get('qbh_params'),
+                         'qbg_params': vif.get('qbg_params'),
                          'rxtx_cap': vif.get_meta('rxtx_cap', 0),
                          'dns': [get_ip(ip) for ip in subnet_v4['dns']],
                          'ips': [fixed_ip_dict(ip, subnet)

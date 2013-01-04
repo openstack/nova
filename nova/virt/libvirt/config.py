@@ -549,6 +549,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.mac_addr = None
         self.script = None
         self.source_dev = None
+        self.source_mode = "private"
         self.vporttype = None
         self.vportparams = []
         self.filtername = None
@@ -571,7 +572,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 dev.append(etree.Element("script", path=self.script))
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
-                                     mode="private"))
+                                     mode=self.source_mode))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
 

@@ -70,6 +70,38 @@ def set_vif_host_backend_ovs_config(conf, brname, interfaceid, tapname=None):
     conf.script = ""
 
 
+def set_vif_host_backend_802qbg_config(conf, devname, managerid,
+                                       typeid, typeidversion,
+                                       instanceid, tapname=None):
+    """Populate a LibvirtConfigGuestInterface instance
+    with host backend details for an 802.1qbg device"""
+
+    conf.net_type = "direct"
+    conf.source_dev = devname
+    conf.source_mode = "vepa"
+    conf.vporttype = "802.1Qbg"
+    conf.add_vport_param("managerid", managerid)
+    conf.add_vport_param("typeid", typeid)
+    conf.add_vport_param("typeidversion", typeidversion)
+    conf.add_vport_param("instanceid", instanceid)
+    if tapname:
+        conf.target_dev = tapname
+
+
+def set_vif_host_backend_802qbh_config(conf, devname, profileid,
+                                       tapname=None):
+    """Populate a LibvirtConfigGuestInterface instance
+    with host backend details for an 802.1qbh device"""
+
+    conf.net_type = "direct"
+    conf.source_dev = devname
+    conf.source_mode = "vepa"
+    conf.vporttype = "802.1Qbh"
+    conf.add_vport_param("profileid", profileid)
+    if tapname:
+        conf.target_dev = tapname
+
+
 def set_vif_host_backend_filter_config(conf, name,
                                        primary_addr,
                                        dhcp_server=None,
