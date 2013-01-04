@@ -253,6 +253,22 @@ class ServerMetaDataTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.create, req, self.uuid, body)
 
+    def test_update_metadata(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        req = fakes.HTTPRequest.blank(self.url)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        expected = {
+            'metadata': {
+                'key1': 'updatedvalue',
+                'key29': 'newkey',
+            }
+        }
+        req.body = jsonutils.dumps(expected)
+        response = self.controller.update_all(req, self.uuid, expected)
+        self.assertEqual(expected, response)
+
     def test_update_all(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
