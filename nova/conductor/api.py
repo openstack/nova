@@ -150,6 +150,10 @@ class LocalAPI(object):
         return self._manager.block_device_mapping_update_or_create(context,
                                                                    values)
 
+    def block_device_mapping_get_all_by_instance(self, context, instance):
+        return self._manager.block_device_mapping_get_all_by_instance(
+            context, instance)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -249,3 +253,7 @@ class API(object):
     def block_device_mapping_update_or_create(self, context, values):
         return self.conductor_rpcapi.block_device_mapping_update_or_create(
             context, values)
+
+    def block_device_mapping_get_all_by_instance(self, context, instance):
+        return self.conductor_rpcapi.block_device_mapping_get_all_by_instance(
+            context, instance)

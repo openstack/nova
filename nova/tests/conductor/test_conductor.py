@@ -268,6 +268,17 @@ class _BaseTestCase(object):
                                                           'fake-arch')
         self.assertEqual(result, 'it worked')
 
+    def test_block_device_mapping_get_all_by_instance(self):
+        fake_inst = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db,
+                                 'block_device_mapping_get_all_by_instance')
+        db.block_device_mapping_get_all_by_instance(
+            self.context, fake_inst['uuid']).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.block_device_mapping_get_all_by_instance(
+            self.context, fake_inst)
+        self.assertEqual(result, 'fake-result')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""

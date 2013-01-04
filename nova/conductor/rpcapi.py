@@ -41,6 +41,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.10 - Added agent_build_get_by_triple
     1.11 - Added aggregate_get
     1.12 - Added block_device_mapping_update_or_create
+    1.13 - Added block_device_mapping_get_all_by_instance
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -152,3 +153,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('block_device_mapping_update_or_create',
                             values=values, create=create)
         return self.call(context, msg, version='1.12')
+
+    def block_device_mapping_get_all_by_instance(self, context, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('block_device_mapping_get_all_by_instance',
+                            instance=instance_p)
+        return self.call(context, msg, version='1.13')
