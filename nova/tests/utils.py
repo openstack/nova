@@ -20,6 +20,7 @@ import nova.context
 import nova.db
 from nova.image import glance
 from nova.network import minidns
+from nova.network import model as network_model
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
@@ -91,6 +92,8 @@ def get_test_network_info(count=1):
                'bridge_interface': fake_bridge_interface,
                'injected': False}
     mapping = {'mac': fake,
+               'vif_type': network_model.VIF_TYPE_BRIDGE,
+               'vif_uuid': 'vif-xxx-yyy-zzz',
                'dhcp_server': fake,
                'dns': ['fake1', 'fake2'],
                'gateway': fake,

@@ -47,7 +47,8 @@ class LibvirtVifTestCase(test.TestCase):
         'gateway_v6': net['gateway_v6'],
         'ips': [{'ip': '101.168.1.9'}],
         'dhcp_server': '191.168.1.1',
-        'vif_uuid': 'vif-xxx-yyy-zzz'
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz'
     }
 
     instance = {
