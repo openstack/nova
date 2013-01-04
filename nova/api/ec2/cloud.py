@@ -219,6 +219,17 @@ class CloudController(object):
     def __str__(self):
         return 'CloudController'
 
+    def _enforce_valid_instance_ids(self, context, instance_ids):
+        # NOTE(mikal): Amazon's implementation of the EC2 API requires that
+        # _all_ instance ids passed in be valid.
+        instances = {}
+        if instance_ids:
+            for ec2_id in instance_ids:
+                instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+                instance = self.compute_api.get(context, instance_uuid)
+                instances[ec2_id] = instance
+        return instances
+
     def _get_image_state(self, image):
         # NOTE(vish): fallback status if image_state isn't set
         state = image.get('status')
@@ -977,14 +988,19 @@ class CloudController(object):
     def describe_instances(self, context, **kwargs):
         # Optional DescribeInstances argument
         instance_id = kwargs.get('instance_id', None)
+        instances = self._enforce_valid_instance_ids(context, instance_id)
         return self._format_describe_instances(context,
-                instance_id=instance_id)
+                                               instance_id=instance_id,
+                                               instance_cache=instances)
 
     def describe_instances_v6(self, context, **kwargs):
         # Optional DescribeInstancesV6 argument
         instance_id = kwargs.get('instance_id', None)
+        instances = self._enforce_valid_instance_ids(context, instance_id)
         return self._format_describe_instances(context,
-                instance_id=instance_id, use_v6=True)
+                                               instance_id=instance_id,
+                                               instance_cache=instances,
+                                               use_v6=True)
 
     def _format_describe_instances(self, context, **kwargs):
         return {'reservationSet': self._format_instances(context, **kwargs)}
@@ -1066,23 +1082,30 @@ class CloudController(object):
             security_group_names, 'groupId')
 
     def _format_instances(self, context, instance_id=None, use_v6=False,
-            **search_opts):
+            instances_cache=None, **search_opts):
         # TODO(termie): this method is poorly named as its name does not imply
         #               that it will be making a variety of database calls
         #               rather than simply formatting a bunch of instances that
         #               were handed to it
         reservations = {}
+
+        if not instances_cache:
+            instances_cache = {}
+
         # NOTE(vish): instance_id is an optional list of ids to filter by
         if instance_id:
             instances = []
             for ec2_id in instance_id:
-                try:
-                    instance_uuid = ec2utils.ec2_inst_id_to_uuid(context,
-                                                                 ec2_id)
-                    instance = self.compute_api.get(context, instance_uuid)
-                except exception.NotFound:
-                    continue
-                instances.append(instance)
+                if ec2_id in instances_cache:
+                    instances.append(instances_cache[ec2_id])
+                else:
+                    try:
+                        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context,
+                                                                     ec2_id)
+                        instance = self.compute_api.get(context, instance_uuid)
+                    except exception.NotFound:
+                        continue
+                    instances.append(instance)
         else:
             try:
                 # always filter out deleted instances
@@ -1092,6 +1115,7 @@ class CloudController(object):
                                                      sort_dir='asc')
             except exception.NotFound:
                 instances = []
+
         for instance in instances:
             if not context.is_admin:
                 if instance['image_ref'] == str(CONF.vpn_image_id):

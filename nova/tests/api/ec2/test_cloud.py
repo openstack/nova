@@ -781,10 +781,29 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertEqual(instance['dnsNameV6'],
                 'fe80:b33f::a8bb:ccff:fedd:eeff')
+
+        # A filter with even one invalid id should cause an exception to be
+        # raised
+        self.assertRaises(exception.InstanceNotFound,
+                          self.cloud.describe_instances, self.context,
+                          instance_id=[instance_id, '435679'])
+
         db.instance_destroy(self.context, inst1['uuid'])
         db.instance_destroy(self.context, inst2['uuid'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
+
+    def test_describe_instances_all_invalid(self):
+        """Makes sure describe_instances works and filters results."""
+        self.flags(use_ipv6=True)
+
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        instance_id = ec2utils.id_to_ec2_inst_id('435679')
+        self.assertRaises(exception.InstanceNotFound,
+                          self.cloud.describe_instances, self.context,
+                          instance_id=[instance_id])
 
     def test_describe_instances_sorting(self):
         """Makes sure describe_instances works and is sorted as expected."""
