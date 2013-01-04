@@ -48,6 +48,11 @@ quantum_opts = [
                default='keystone',
                help='auth strategy for connecting to '
                     'quantum in admin context'),
+    # TODO(berrange) temporary hack until Quantum can pass over the
+    # name of the OVS bridge it is configured with
+    cfg.StrOpt('quantum_ovs_bridge',
+               default='br-int',
+               help='Name of Integration Bridge used by Open vSwitch'),
     ]
 
 CONF = cfg.CONF
@@ -564,9 +569,21 @@ class API(base.Base):
                 subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
                                  if fixed_ip.is_in_subnet(subnet)]
 
+            bridge = None
+            vif_type = port.get('binding:vif_type')
+            # TODO(berrange) Quantum should pass the bridge name
+            # in another binding metadata field
+            if vif_type == network_model.VIF_TYPE_OVS:
+                bridge = CONF.quantum_ovs_bridge
+            elif vif_type == network_model.VIF_TYPE_BRIDGE:
+                bridge = "brq" + port['network_id']
+
+            if bridge is not None:
+                bridge = bridge[:network_model.BRIDGE_NAME_LEN]
+
             network = network_model.Network(
                 id=port['network_id'],
-                bridge='',  # Quantum ignores this field
+                bridge=bridge,
                 injected=CONF.flat_injected,
                 label=network_name,
                 tenant_id=net['tenant_id']
