@@ -56,14 +56,7 @@ core_opts = [
                help="Top-level directory for maintaining nova's state"),
     ]
 
-debug_opts = [
-    cfg.BoolOpt('fake_network',
-                default=False,
-                help='If passed, use fake network devices and addresses'),
-]
-
 cfg.CONF.register_cli_opts(core_opts)
-cfg.CONF.register_cli_opts(debug_opts)
 
 global_opts = [
     cfg.StrOpt('my_ip',
