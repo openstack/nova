@@ -283,7 +283,7 @@ class ComputeTestCase(BaseTestCase):
 
         @compute_manager.wrap_instance_fault
         def failer(self2, context, instance_uuid):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         self.assertRaises(exception.InstanceNotFound, failer,
                           self.compute, self.context, inst_uuid)
@@ -618,7 +618,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_instance()
 
         def fake(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id="fake")
 
         self.stubs.Set(self.compute.driver, 'spawn', fake)
         self.mox.StubOutWithMock(self.compute, '_deallocate_network')
@@ -723,7 +723,9 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.compute._get_instance_nw_info(
                 mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(exception.NetworkNotFound())
+                mox.IgnoreArg()).AndRaise(
+                    exception.NetworkNotFound(network_id='fake')
+                )
         self.mox.ReplayAll()
 
         self.compute.terminate_instance(self.context, instance=instance)
@@ -2790,7 +2792,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_instance_get_by_uuid(context, instance_uuid):
             if instance_uuid not in instance_map:
-                raise exception.InstanceNotFound
+                raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
             return instance_map[instance_uuid]
 
@@ -4024,7 +4026,7 @@ class ComputeAPITestCase(BaseTestCase):
         """
 
         def fake_show(*args):
-            raise exception.ImageNotFound
+            raise exception.ImageNotFound(image_id="fake")
 
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 

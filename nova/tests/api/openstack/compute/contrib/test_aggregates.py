@@ -78,7 +78,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_create_with_duplicate_aggregate_name(self):
         def stub_create_aggregate(context, name, availability_zone):
-            raise exception.AggregateNameExists
+            raise exception.AggregateNameExists(aggregate_name=name)
         self.stubs.Set(self.controller.api, "create_aggregate",
                        stub_create_aggregate)
 
@@ -232,7 +232,8 @@ class AggregateTestCase(test.TestCase):
 
     def test_add_host_with_already_added_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.AggregateHostExists()
+            raise exception.AggregateHostExists(aggregate_id=aggregate,
+                                                host=host)
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
@@ -242,7 +243,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_add_host_with_bad_aggregate(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.AggregateNotFound()
+            raise exception.AggregateNotFound(aggregate_id=aggregate)
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
@@ -252,7 +253,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_add_host_with_bad_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.ComputeHostNotFound()
+            raise exception.ComputeHostNotFound(host=host)
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
@@ -262,7 +263,9 @@ class AggregateTestCase(test.TestCase):
 
     def test_add_host_with_host_in_wrong_availability_zone(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.InvalidAggregateAction()
+            raise exception.InvalidAggregateAction(action='create_aggregate',
+                                                   aggregate_id="'N/A'",
+                                                   reason='wrong zone')
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
@@ -290,7 +293,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_remove_host_with_bad_aggregate(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.AggregateNotFound()
+            raise exception.AggregateNotFound(aggregate_id=aggregate)
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
@@ -301,7 +304,8 @@ class AggregateTestCase(test.TestCase):
 
     def test_remove_host_with_bad_host(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
-            raise exception.AggregateHostNotFound()
+            raise exception.AggregateHostNotFound(aggregate_id=aggregate,
+                                                  host=host)
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
@@ -339,7 +343,7 @@ class AggregateTestCase(test.TestCase):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
 
         def stub_update_aggregate(context, aggregate, metadata):
-            raise exception.AggregateNotFound()
+            raise exception.AggregateNotFound(aggregate_id=aggregate)
         self.stubs.Set(self.controller.api,
                        "update_aggregate_metadata",
                        stub_update_aggregate)
@@ -370,7 +374,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_delete_aggregate_with_bad_aggregate(self):
         def stub_delete_aggregate(context, aggregate):
-            raise exception.AggregateNotFound()
+            raise exception.AggregateNotFound(aggregate_id=aggregate)
         self.stubs.Set(self.controller.api, "delete_aggregate",
                        stub_delete_aggregate)
 

@@ -124,7 +124,7 @@ class HideServerAddressesTest(test.TestCase):
     def test_no_instance_passthrough_404(self):
 
         def fake_compute_get(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         res = self._make_request('/v2/fake/servers/' + fakes.get_fake_uuid())

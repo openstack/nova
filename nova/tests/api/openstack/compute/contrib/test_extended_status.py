@@ -98,7 +98,7 @@ class ExtendedStatusTest(test.TestCase):
     def test_no_instance_passthrough_404(self):
 
         def fake_compute_get(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'

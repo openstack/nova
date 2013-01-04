@@ -522,7 +522,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_get_server_addresses_nonexistent_server(self):
         def fake_instance_get(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
 
@@ -1250,7 +1250,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_not_found(self):
         def fake_get(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
@@ -1263,7 +1263,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_not_found_on_update(self):
         def fake_update(*args, **kwargs):
-            raise exception.InstanceNotFound()
+            raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute_api.API, 'update', fake_update)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)

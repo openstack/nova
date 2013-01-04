@@ -152,7 +152,7 @@ class ApiTestCase(test.TestCase):
 
     def test_is_multi_host_instance_has_no_fixed_ip(self):
         def fake_fixed_ip_get_by_instance(ctxt, uuid):
-            raise exception.FixedIpNotFoundForInstance
+            raise exception.FixedIpNotFoundForInstance(instance_uuid=uuid)
         self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
                        fake_fixed_ip_get_by_instance)
         instance = {'uuid': FAKE_UUID}

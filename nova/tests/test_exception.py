@@ -117,8 +117,8 @@ class NovaExceptionTestCase(test.TestCase):
         class FakeNovaException(exception.NovaException):
             message = "default message: %(mispelled_code)s"
 
-        exc = FakeNovaException(code=500)
-        self.assertEquals(unicode(exc), 'default message: %(mispelled_code)s')
+        exc = FakeNovaException(code=500, mispelled_code='blah')
+        self.assertEquals(unicode(exc), 'default message: blah')
 
     def test_default_error_code(self):
         class FakeNovaException(exception.NovaException):

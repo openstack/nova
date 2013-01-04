@@ -86,7 +86,7 @@ def return_server_by_uuid(context, server_uuid):
 
 
 def return_server_nonexistent(context, server_id):
-    raise exception.InstanceNotFound()
+    raise exception.InstanceNotFound(instance_id=server_id)
 
 
 def fake_change_instance_metadata(self, context, instance, diff):

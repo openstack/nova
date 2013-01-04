@@ -103,14 +103,14 @@ class FakeNetworkAPI(object):
             if network['id'] == network_id:
                 del self.networks[0]
                 return True
-        raise exception.NetworkNotFoundForUUID()
+        raise exception.NetworkNotFoundForUUID(uuid=network_id)
 
     def disassociate(self, context, network_uuid):
         for network in self.networks:
             if network.get('uuid') == network_uuid:
                 network['project_id'] = None
                 return True
-        raise exception.NetworkNotFound()
+        raise exception.NetworkNotFound(network_id=network_uuid)
 
     def associate(self, context, network_uuid, host=_sentinel,
                   project=_sentinel):
@@ -121,7 +121,7 @@ class FakeNetworkAPI(object):
                 if project is not FakeNetworkAPI._sentinel:
                     network['project_id'] = project
                 return True
-        raise exception.NetworkNotFound()
+        raise exception.NetworkNotFound(network_id=network_uuid)
 
     def add_network_to_project(self, context,
                                project_id, network_uuid=None):
@@ -143,7 +143,7 @@ class FakeNetworkAPI(object):
         for network in self.networks:
             if network.get('uuid') == network_id:
                 return network
-        raise exception.NetworkNotFound()
+        raise exception.NetworkNotFound(network_id=network_id)
 
     def create(self, context, **kwargs):
         subnet_bits = int(math.ceil(math.log(kwargs.get(

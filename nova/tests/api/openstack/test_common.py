@@ -284,26 +284,15 @@ class MiscFunctionsTest(test.TestCase):
         self.assertEqual(actual, expected)
 
     def test_raise_http_conflict_for_instance_invalid_state(self):
-        # Correct args
         exc = exception.InstanceInvalidState(attr='fake_attr',
-                state='fake_state', method='fake_method')
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
         try:
             common.raise_http_conflict_for_instance_invalid_state(exc,
                     'meow')
         except webob.exc.HTTPConflict as e:
             self.assertEqual(unicode(e),
                 "Cannot 'meow' while instance is in fake_attr fake_state")
-        else:
-            self.fail("webob.exc.HTTPConflict was not raised")
-
-        # Incorrect args
-        exc = exception.InstanceInvalidState()
-        try:
-            common.raise_http_conflict_for_instance_invalid_state(exc,
-                    'meow')
-        except webob.exc.HTTPConflict as e:
-            self.assertEqual(unicode(e),
-                "Instance is in an invalid state for 'meow'")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
 

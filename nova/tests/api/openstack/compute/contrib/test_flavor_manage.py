@@ -208,7 +208,7 @@ class FlavorManageTest(test.TestCase):
 
         def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
                         flavorid, swap, rxtx_factor, is_public):
-            raise exception.InstanceTypeExists()
+            raise exception.InstanceTypeExists(name=name)
 
         self.stubs.Set(instance_types, "create", fake_create)
         url = '/v2/fake/flavors'

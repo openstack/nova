@@ -184,7 +184,9 @@ class ServerActionsControllerTest(test.TestCase):
         body = dict(reboot=dict(type="HARD"))
 
         def fake_reboot(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         self.stubs.Set(compute_api.API, 'reboot', fake_reboot)
 
@@ -306,7 +308,9 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         def fake_rebuild(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
 
@@ -604,7 +608,9 @@ class ServerActionsControllerTest(test.TestCase):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         def fake_resize(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         self.stubs.Set(compute_api.API, 'resize', fake_resize)
 
@@ -648,7 +654,9 @@ class ServerActionsControllerTest(test.TestCase):
         body = dict(confirmResize=None)
 
         def fake_confirm_resize(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         self.stubs.Set(compute_api.API, 'confirm_resize',
                 fake_confirm_resize)
@@ -693,7 +701,9 @@ class ServerActionsControllerTest(test.TestCase):
         body = dict(revertResize=None)
 
         def fake_revert_resize(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
 
         self.stubs.Set(compute_api.API, 'revert_resize',
                 fake_revert_resize)
@@ -896,7 +906,9 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_raises_conflict_on_invalid_state(self):
         def snapshot(*args, **kwargs):
-            raise exception.InstanceInvalidState
+            raise exception.InstanceInvalidState(attr='fake_attr',
+                state='fake_state', method='fake_method',
+                instance_uuid='fake')
         self.stubs.Set(compute_api.API, 'snapshot', snapshot)
 
         body = {

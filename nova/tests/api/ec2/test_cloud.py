@@ -2125,7 +2125,6 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(self, context, id_):
             LOG.debug("id_ %s", id_)
-            print id_
 
             prop = {}
             if id_ == 'ami-3':

@@ -116,7 +116,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
                     dict(address='10.0.0.2')]
 
         def network_get_by_cidr(self, context, cidr):
-            raise exception.NetworkNotFoundForCidr()
+            raise exception.NetworkNotFoundForCidr(cidr=cidr)
 
         def network_create_safe(self, context, net):
             fakenet = dict(net)
@@ -127,7 +127,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
             return {'cidr_v6': '2001:db8:69:%x::/64' % network_id}
 
         def network_get_by_uuid(self, context, network_uuid):
-            raise exception.NetworkNotFoundForUUID()
+            raise exception.NetworkNotFoundForUUID(uuid=network_uuid)
 
         def network_get_all(self, context):
             raise exception.NoNetworksFound()

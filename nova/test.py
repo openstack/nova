@@ -220,6 +220,7 @@ class TestCase(testtools.TestCase):
         self.addCleanup(self._clear_attrs)
         self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
+        CONF.set_override('fatal_exception_format_errors', True)
 
     def _clear_attrs(self):
         # Delete attributes that don't start with _ so they don't pin
