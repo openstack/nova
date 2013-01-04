@@ -290,7 +290,8 @@ def floating_ip_destroy(context, address):
 def floating_ip_disassociate(context, address):
     """Disassociate a floating ip from a fixed ip by address.
 
-    :returns: the address of the existing fixed ip.
+    :returns: the address of the previous fixed ip or None
+              if the ip was not associated to an ip.
 
     """
     return IMPL.floating_ip_disassociate(context, address)
@@ -298,7 +299,12 @@ def floating_ip_disassociate(context, address):
 
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
-    """Associate a floating ip to a fixed_ip by address."""
+    """Associate a floating ip to a fixed_ip by address.
+
+    :returns: the address of the new fixed ip (fixed_address) or None
+              if the ip was already associated to the fixed ip.
+    """
+
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address,
