@@ -25,6 +25,17 @@ def ensure_string_keys(d):
     # http://bugs.python.org/issue4978
     return dict([(str(k), v) for k, v in d.iteritems()])
 
+# Constants for the 'vif_type' field in VIF class
+VIF_TYPE_OVS = 'ovs'
+VIF_TYPE_BRIDGE = 'bridge'
+VIF_TYPE_802_QBG = '802.1qbg'
+VIF_TYPE_802_QBH = '802.1qbh'
+VIF_TYPE_OTHER = 'other'
+
+# Constant for max length of 'bridge' in Network class
+# Chosen to match max Linux NIC name length
+BRIDGE_NAME_LEN = 14
+
 
 class Model(dict):
     """Defines some necessary structures for most of the network models."""
