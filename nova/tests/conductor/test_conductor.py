@@ -294,6 +294,13 @@ class _BaseTestCase(object):
         self.mox.ReplayAll()
         self.conductor.instance_destroy(self.context, {'uuid': 'fake-uuid'})
 
+    def test_instance_info_cache_delete(self):
+        self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
+        db.instance_info_cache_delete(self.context, 'fake-uuid')
+        self.mox.ReplayAll()
+        self.conductor.instance_info_cache_delete(self.context,
+                                                  {'uuid': 'fake-uuid'})
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
