@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.14'
+    RPC_API_VERSION = '1.15'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -72,6 +72,7 @@ class ConductorManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(
             self.db.instance_get_by_uuid(context, instance_uuid))
 
+    # NOTE(danms): This should go away in RPC version 2
     def instance_get_all_by_host(self, context, host):
         return jsonutils.to_primitive(
             self.db.instance_get_all_by_host(context.elevated(), host))
@@ -186,3 +187,21 @@ class ConductorManager(manager.SchedulerDependentManager):
             # NOTE(danms): This shouldn't happen
             raise exception.Invalid(_("Invalid block_device_mapping_destroy"
                                       " invocation"))
+
+    def instance_get_all_by_filters(self, context, filters, sort_key,
+                                    sort_dir):
+        result = self.db.instance_get_all_by_filters(context, filters,
+                                                     sort_key, sort_dir)
+        return jsonutils.to_primitive(result)
+
+    def instance_get_all_hung_in_rebooting(self, context, timeout):
+        result = self.db.instance_get_all_hung_in_rebooting(context, timeout)
+        return jsonutils.to_primitive(result)
+
+    def instance_get_active_by_window(self, context, begin, end=None,
+                                      project_id=None, host=None):
+        result = self.db.instance_get_active_by_window_joined(context,
+                                                              begin, end,
+                                                              project_id,
+                                                              host)
+        return jsonutils.to_primitive(result)

@@ -2732,10 +2732,10 @@ class ComputeTestCase(BaseTestCase):
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action='reap')
 
-        self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
-        self.compute.db.instance_get_all_by_host(admin_context,
-                                                 self.compute.host
-                                                ).AndReturn([instance])
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 "instance_get_all_by_host")
+        self.compute.conductor_api.instance_get_all_by_host(
+            admin_context, self.compute.host).AndReturn([instance])
 
         bdms = []
 
@@ -2771,9 +2771,10 @@ class ComputeTestCase(BaseTestCase):
         timeutils.is_older_than('sometimeago',
                     CONF.running_deleted_instance_timeout).AndReturn(True)
 
-        self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
-        self.compute.db.instance_get_all_by_host('context',
-                                                 'host').AndReturn(
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 "instance_get_all_by_host")
+        self.compute.conductor_api.instance_get_all_by_host('context',
+                                                            'host').AndReturn(
                                                                 [instance1,
                                                                  instance2])
         self.mox.ReplayAll()
@@ -2814,7 +2815,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(instance, call_info['expected_instance'])
             call_info['get_nw_info'] += 1
 
-        self.stubs.Set(db, 'instance_get_all_by_host',
+        self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
                 fake_instance_get_all_by_host)
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fake_instance_get_by_uuid)

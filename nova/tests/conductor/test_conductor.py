@@ -116,13 +116,6 @@ class _BaseTestCase(object):
         self.assertEqual(orig_instance['name'],
                          copy_instance['name'])
 
-    def test_instance_get_all_by_host(self):
-        orig_instance = jsonutils.to_primitive(self._create_fake_instance())
-        all_instances = self.conductor.instance_get_all_by_host(
-            self.context, orig_instance['host'])
-        self.assertEqual(orig_instance['name'],
-                         all_instances[0]['name'])
-
     def _setup_aggregate_with_host(self):
         aggregate_ref = db.aggregate_create(self.context.elevated(),
                 {'name': 'foo', 'availability_zone': 'foo'})
@@ -279,6 +272,22 @@ class _BaseTestCase(object):
             self.context, fake_inst)
         self.assertEqual(result, 'fake-result')
 
+    def test_instance_get_all_hung_in_rebooting(self):
+        self.mox.StubOutWithMock(db, 'instance_get_all_hung_in_rebooting')
+        db.instance_get_all_hung_in_rebooting(self.context, 123)
+        self.mox.ReplayAll()
+        self.conductor.instance_get_all_hung_in_rebooting(self.context, 123)
+
+    def test_instance_get_active_by_window(self):
+        self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
+        db.instance_get_active_by_window_joined(self.context, 'fake-begin',
+                                                'fake-end', 'fake-proj',
+                                                'fake-host')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_active_by_window(self.context,
+                                                     'fake-begin', 'fake-end',
+                                                     'fake-proj', 'fake-host')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
@@ -333,6 +342,15 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                                     instance=fake_inst,
                                                     volume_id='fake-volume')
 
+    def test_instance_get_all_by_filters(self):
+        filters = {'foo': 'bar'}
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        db.instance_get_all_by_filters(self.context, filters,
+                                       'fake-key', 'fake-sort')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_all_by_filters(self.context, filters,
+                                                   'fake-key', 'fake-sort')
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests"""
@@ -384,6 +402,15 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.block_device_mapping_destroy(self.context,
                                                     instance=fake_inst,
                                                     volume_id='fake-volume')
+
+    def test_instance_get_all_by_filters(self):
+        filters = {'foo': 'bar'}
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        db.instance_get_all_by_filters(self.context, filters,
+                                       'fake-key', 'fake-sort')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_all_by_filters(self.context, filters,
+                                                   'fake-key', 'fake-sort')
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -449,6 +476,20 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
             self.context, fake_inst, 'fake-device')
         self.conductor.block_device_mapping_destroy_by_instance_and_volume(
             self.context, fake_inst, 'fake-volume')
+
+    def test_instance_get_all(self):
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        db.instance_get_all_by_filters(self.context, {}, 'created_at', 'desc')
+        db.instance_get_all_by_filters(self.context, {'host': 'fake-host'},
+                                       'created_at', 'desc')
+        db.instance_get_all_by_filters(self.context, {'name': 'fake-inst'},
+                                       'updated_at', 'asc')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_all(self.context)
+        self.conductor.instance_get_all_by_host(self.context, 'fake-host')
+        self.conductor.instance_get_all_by_filters(self.context,
+                                                   {'name': 'fake-inst'},
+                                                   'updated_at', 'asc')
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):

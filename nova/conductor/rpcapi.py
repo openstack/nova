@@ -43,6 +43,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.12 - Added block_device_mapping_update_or_create
     1.13 - Added block_device_mapping_get_all_by_instance
     1.14 - Added block_device_mapping_destroy
+    1.15 - Added instance_get_all_by_filters and
+           instance_get_all_hung_in_rebooting and
+           instance_get_active_by_window
+           Deprecated instance_get_all_by_host
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -62,10 +66,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def instance_get_by_uuid(self, context, instance_uuid):
         msg = self.make_msg('instance_get_by_uuid',
                             instance_uuid=instance_uuid)
-        return self.call(context, msg, version='1.2')
-
-    def instance_get_all_by_host(self, context, host):
-        msg = self.make_msg('instance_get_all_by_host', host=host)
         return self.call(context, msg, version='1.2')
 
     def migration_get(self, context, migration_id):
@@ -171,3 +171,22 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             instance=instance_p, volume_id=volume_id,
                             device_name=device_name)
         return self.call(context, msg, version='1.14')
+
+    def instance_get_all_by_filters(self, context, filters, sort_key,
+                                    sort_dir):
+        msg = self.make_msg('instance_get_all_by_filters',
+                            filters=filters, sort_key=sort_key,
+                            sort_dir=sort_dir)
+        return self.call(context, msg, version='1.15')
+
+    def instance_get_all_hung_in_rebooting(self, context, timeout):
+        msg = self.make_msg('instance_get_all_hung_in_rebooting',
+                            timeout=timeout)
+        return self.call(context, msg, version='1.15')
+
+    def instance_get_active_by_window(self, context, begin, end=None,
+                                      project_id=None, host=None):
+        msg = self.make_msg('instance_get_active_by_window',
+                            begin=begin, end=end, project_id=project_id,
+                            host=host)
+        return self.call(context, msg, version='1.15')
