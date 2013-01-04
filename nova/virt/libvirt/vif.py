@@ -372,33 +372,20 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
         pass
 
 
-class QuantumLinuxBridgeVIFDriver(LibvirtBaseVIFDriver):
-    """VIF driver for Linux Bridge when running Quantum."""
+class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
+    """Retained in Grizzly for compatibility with Quantum
+       drivers which do not yet report 'vif_type' port binding.
+       Will be deprecated in Havana, and removed in Ixxxx."""
 
     def get_bridge_name(self, network):
         def_bridge = ("brq" + network['id'])[:network_model.NIC_NAME_LEN]
         return network.get('bridge') or def_bridge
 
     def get_config(self, instance, network, mapping):
-        linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
-            self.get_bridge_name(network),
-            None,
-            filtering=False)
-
-        conf = super(QuantumLinuxBridgeVIFDriver,
-                     self).get_config(instance,
-                                      network,
-                                      mapping)
-
-        designer.set_vif_host_backend_bridge_config(
-            conf, self.get_bridge_name(network),
-            self.get_vif_devname(mapping))
-
-        return conf
+        return self.get_config_bridge(instance, network, mapping)
 
     def plug(self, instance, vif):
-        pass
+        self.plug_bridge(instance, vif)
 
     def unplug(self, instance, vif):
-        """No action needed.  Libvirt takes care of cleanup."""
-        pass
+        self.unplug_bridge(instance, vif)
