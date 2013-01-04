@@ -189,7 +189,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                      block_device_info)
 
     def snapshot(self, context, instance, image_id, update_task_state):
-        """ Create snapshot from a running VM instance """
+        """Create snapshot from a running VM instance."""
         self._vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, instance, network_info, reboot_type,
@@ -515,24 +515,24 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._vmops.unfilter_instance(instance_ref, network_info)
 
     def refresh_security_group_rules(self, security_group_id):
-        """ Updates security group rules for all instances
-            associated with a given security group
-            Invoked when security group rules are updated
-        """
+        """Updates security group rules for all instances associated with a
+        given security group.
+
+        Invoked when security group rules are updated."""
         return self._vmops.refresh_security_group_rules(security_group_id)
 
     def refresh_security_group_members(self, security_group_id):
-        """ Updates security group rules for all instances
-            associated with a given security group
-            Invoked when instances are added/removed to a security group
-        """
+        """Updates security group rules for all instances associated with a
+        given security group.
+
+        Invoked when instances are added/removed to a security group."""
         return self._vmops.refresh_security_group_members(security_group_id)
 
     def refresh_instance_security_rules(self, instance):
-        """ Updates security group rules for specified instance
-            Invoked when instances are added/removed to a security group
-            or when a rule is added/removed to a security group
-        """
+        """Updates security group rules for specified instance.
+
+        Invoked when instances are added/removed to a security group
+        or when a rule is added/removed to a security group."""
         return self._vmops.refresh_instance_security_rules(instance)
 
     def refresh_provider_fw_rules(self):

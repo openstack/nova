@@ -321,7 +321,7 @@ class DbApiTestCase(test.TestCase):
                           inst['uuid'], 'vm_state', [None, 'disable'], 'run')
 
     def test_instance_update_with_instance_uuid(self):
-        """ test instance_update() works when an instance UUID is passed """
+        """test instance_update() works when an instance UUID is passed """
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
@@ -479,7 +479,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(404, faults[uuid][0]['code'])
 
     def test_instance_fault_get_by_instance(self):
-        """ ensure we can retrieve an instance fault by  instance UUID """
+        """ensure we can retrieve an instance fault by  instance UUID """
         ctxt = context.get_admin_context()
         instance1 = db.instance_create(ctxt, {})
         instance2 = db.instance_create(ctxt, {})

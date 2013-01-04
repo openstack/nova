@@ -39,8 +39,8 @@ CONF.import_opt('state_path', 'nova.config')
 
 
 class NfsVolumeDriver(volume.LibvirtVolumeDriver):
-    """ Class implements libvirt part of volume driver for NFS
-    """
+    """Class implements libvirt part of volume driver for NFS."""
+
     def __init__(self, *args, **kwargs):
         """Create back-end to nfs and check connection"""
         super(NfsVolumeDriver, self).__init__(*args, **kwargs)

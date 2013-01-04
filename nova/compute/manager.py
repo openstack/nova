@@ -2779,7 +2779,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance_ref, dest)
 
     def rollback_live_migration_at_destination(self, context, instance):
-        """ Cleaning up image directory that is created pre_live_migration.
+        """Cleaning up image directory that is created pre_live_migration.
 
         :param context: security context
         :param instance: an Instance dict sent over rpc

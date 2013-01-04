@@ -335,8 +335,10 @@ _RE_DB = {
 
 
 def raise_if_duplicate_entry_error(integrity_error, engine_name):
-    """ In this function will be raised DBDuplicateEntry exception if integrity
-        error wrap unique constraint violation. """
+    """
+    In this function will be raised DBDuplicateEntry exception if integrity
+    error wrap unique constraint violation.
+    """
 
     def get_columns_from_uniq_cons_or_name(columns):
         # note(boris-42): UniqueConstraint name convention: "uniq_c1_x_c2_x_c3"

@@ -24,7 +24,7 @@ from nova import exception
 
 
 class Controller(object):
-    """ The server metadata API controller for the OpenStack API """
+    """The server metadata API controller for the OpenStack API """
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -45,7 +45,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
-        """ Returns the list of metadata for a given instance """
+        """Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
@@ -138,7 +138,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
-        """ Return a single metadata item """
+        """Return a single metadata item """
         context = req.environ['nova.context']
         data = self._get_metadata(context, server_id)
 
@@ -150,7 +150,7 @@ class Controller(object):
 
     @wsgi.response(204)
     def delete(self, req, server_id, id):
-        """ Deletes an existing metadata """
+        """Deletes an existing metadata """
         context = req.environ['nova.context']
 
         metadata = self._get_metadata(context, server_id)

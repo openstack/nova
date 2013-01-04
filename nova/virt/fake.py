@@ -349,7 +349,7 @@ class FakeDriver(driver.ComputeDriver):
         raise NotImplementedError('This method is supported only by libvirt.')
 
     def test_remove_vm(self, instance_name):
-        """ Removes the named VM, as if it crashed. For testing"""
+        """Removes the named VM, as if it crashed. For testing"""
         self.instances.pop(instance_name)
 
     def get_host_stats(self, refresh=False):
@@ -386,7 +386,6 @@ class FakeDriver(driver.ComputeDriver):
         return 'disabled'
 
     def get_disk_available_least(self):
-        """ """
         pass
 
     def get_volume_connector(self, instance):

@@ -2024,7 +2024,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return stats['total'] / (1024 ** 3)
 
     def get_vcpu_used(self):
-        """ Get vcpu usage number of physical computer.
+        """Get vcpu usage number of physical computer.
 
         :returns: The total number of vcpu that currently used.
 
@@ -2579,9 +2579,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timer.start(interval=0.5).wait()
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):
-        """ Download kernel and ramdisk for given instance in the given
-            instance directory.
-        """
+        """Download kernel and ramdisk for instance in instance directory."""
         instance_dir = os.path.join(CONF.instances_path, instance['name'])
         if instance['kernel_id']:
             libvirt_utils.fetch_image(context,
@@ -3000,8 +2998,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_diagnostics(self, instance):
         def get_io_devices(xml_doc):
-            """ get the list of io devices from the
-            xml document."""
+            """get the list of io devices from the xml document."""
             result = {"volumes": [], "ifaces": []}
             try:
                 doc = etree.fromstring(xml_doc)

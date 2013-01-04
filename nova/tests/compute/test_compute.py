@@ -573,7 +573,7 @@ class ComputeTestCase(BaseTestCase):
                             'task_state': task_states.SCHEDULING})
 
     def test_run_instance_setup_block_device_mapping_fail(self):
-        """ block device mapping failure test.
+        """block device mapping failure test.
 
         Make sure that when there is a block device mapping problem,
         the instance goes to ERROR state, keeping the task state
@@ -593,7 +593,7 @@ class ComputeTestCase(BaseTestCase):
                             'task_state': None})
 
     def test_run_instance_spawn_fail(self):
-        """ spawn failure test.
+        """spawn failure test.
 
         Make sure that when there is a spawning problem,
         the instance goes to ERROR state, keeping the task state"""
@@ -611,7 +611,7 @@ class ComputeTestCase(BaseTestCase):
                             'task_state': None})
 
     def test_run_instance_dealloc_network_instance_not_found(self):
-        """ spawn network deallocate test.
+        """spawn network deallocate test.
 
         Make sure that when an instance is not found during spawn
         that the network is deallocated"""

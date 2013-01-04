@@ -2509,7 +2509,7 @@ class StubDependencies(object):
 
 
 class ResourcePoolWithStubs(StubDependencies, pool.ResourcePool):
-    """ A ResourcePool, use stub dependencies """
+    """A ResourcePool, use stub dependencies """
 
 
 class HypervisorPoolTestCase(test.TestCase):

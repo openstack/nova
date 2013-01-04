@@ -21,7 +21,7 @@ CALLED_FUNCTION = []
 
 
 def example_decorator(name, function):
-    """ decorator for notify which is used from utils.monkey_patch()
+    """decorator for notify which is used from utils.monkey_patch()
 
         :param name: name of the function
         :param function: - object of the function

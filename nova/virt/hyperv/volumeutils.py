@@ -68,7 +68,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
             time.sleep(CONF.hyperv_wait_between_attach_retry)
 
         def logout_storage_target(self, target_iqn):
-            """ Logs out storage target through its session id """
+            """Logs out storage target through its session id """
 
             sessions = self._conn_wmi.query(
                     "SELECT * FROM MSiSCSIInitiator_SessionClass \
@@ -77,5 +77,5 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                 self.execute_log_out(session.SessionId)
 
         def execute_log_out(self, session_id):
-            """ Executes log out of the session described by its session ID """
+            """Executes log out of the session described by its session ID """
             self.execute('iscsicli.exe ' + 'logouttarget ' + session_id)

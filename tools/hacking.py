@@ -268,18 +268,23 @@ def nova_import_no_db_in_virt(logical_line, filename):
         yield (0, "NOVA N307: nova.db import not allowed in nova/virt/*")
 
 
-def nova_docstring_start_space(physical_line):
+def nova_docstring_start_space(physical_line, previous_logical):
     """Check for docstring not start with space.
 
     nova HACKING guide recommendation for docstring:
     Docstring should not start with space
     N401
     """
-    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
-    if (pos != -1 and len(physical_line) > pos + 1):
-        if (physical_line[pos + 3] == ' '):
-            return (pos, "NOVA N401: one line docstring should not start with"
-                " a space")
+    # it's important that we determine this is actually a docstring,
+    # and not a doc block used somewhere after the first line of a
+    # function def
+    if (previous_logical.startswith("def ") or
+        previous_logical.startswith("class ")):
+        pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])
+        if (pos != -1 and len(physical_line) > pos + 4):
+            if (physical_line[pos + 3] == ' '):
+                return (pos, "NOVA N401: docstring should not start with"
+                        " a space")
 
 
 def nova_docstring_one_line(physical_line):

@@ -27,12 +27,11 @@ LOG = logging.getLogger(__name__)
 
 
 class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
-    """ Dom0IptablesFirewallDriver class
+    """Dom0IptablesFirewallDriver class
 
     This class provides an implementation for nova.virt.Firewall
     using iptables. This class is meant to be used with the xenapi
-    backend and uses xenapi plugin to enforce iptables rules in dom0
-
+    backend and uses xenapi plugin to enforce iptables rules in dom0.
     """
     def _plugin_execute(self, *cmd, **kwargs):
         # Prepare arguments for plugin call

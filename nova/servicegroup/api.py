@@ -110,7 +110,7 @@ class ServiceGroupDriver(object):
         raise NotImplementedError()
 
     def is_up(self, member):
-        """ Check whether the given member is up. """
+        """Check whether the given member is up. """
         raise NotImplementedError()
 
     def leave(self, member_id, group_id):

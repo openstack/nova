@@ -201,7 +201,7 @@ def _format_mappings(properties, result):
 
 
 class CloudController(object):
-    """ CloudController provides the critical dispatch between
+    """CloudController provides the critical dispatch between
  inbound API calls through the endpoint and messages
  sent to the other nodes.
 """

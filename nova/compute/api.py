@@ -313,9 +313,10 @@ class API(base.Base):
                 raise exception.InvalidMetadataSize(reason=msg)
 
     def _check_requested_networks(self, context, requested_networks):
-        """ Check if the networks requested belongs to the project
-            and the fixed IP address for each network provided is within
-            same the network block
+        """
+        Check if the networks requested belongs to the project
+        and the fixed IP address for each network provided is within
+        same the network block
         """
         if not requested_networks:
             return
