@@ -305,6 +305,34 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              fake_bdm)
 
+    def test_block_device_mapping_destroy(self):
+        fake_bdm = {'id': 'fake-bdm'}
+        fake_bdm2 = {'id': 'fake-bdm-2'}
+        fake_inst = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_device')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_volume')
+        db.block_device_mapping_destroy(self.context, 'fake-bdm')
+        db.block_device_mapping_destroy(self.context, 'fake-bdm-2')
+        db.block_device_mapping_destroy_by_instance_and_device(self.context,
+                                                               'fake-uuid',
+                                                               'fake-device')
+        db.block_device_mapping_destroy_by_instance_and_volume(self.context,
+                                                               'fake-uuid',
+                                                               'fake-volume')
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    [fake_bdm,
+                                                     fake_bdm2])
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    instance=fake_inst,
+                                                    device_name='fake-device')
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    instance=fake_inst,
+                                                    volume_id='fake-volume')
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests"""
@@ -331,6 +359,31 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                                                              create=False)
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              fake_bdm)
+
+    def test_block_device_mapping_destroy(self):
+        fake_bdm = {'id': 'fake-bdm'}
+        fake_inst = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_device')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_volume')
+        db.block_device_mapping_destroy(self.context, 'fake-bdm')
+        db.block_device_mapping_destroy_by_instance_and_device(self.context,
+                                                               'fake-uuid',
+                                                               'fake-device')
+        db.block_device_mapping_destroy_by_instance_and_volume(self.context,
+                                                               'fake-uuid',
+                                                               'fake-volume')
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    bdms=[fake_bdm])
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    instance=fake_inst,
+                                                    device_name='fake-device')
+        self.conductor.block_device_mapping_destroy(self.context,
+                                                    instance=fake_inst,
+                                                    volume_id='fake-volume')
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -374,6 +427,28 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.block_device_mapping_update(self.context, 'fake-id', {})
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              'fake-bdm')
+
+    def test_block_device_mapping_destroy(self):
+        fake_bdm = {'id': 'fake-bdm'}
+        fake_inst = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_device')
+        self.mox.StubOutWithMock(
+            db, 'block_device_mapping_destroy_by_instance_and_volume')
+        db.block_device_mapping_destroy(self.context, 'fake-bdm')
+        db.block_device_mapping_destroy_by_instance_and_device(self.context,
+                                                               'fake-uuid',
+                                                               'fake-device')
+        db.block_device_mapping_destroy_by_instance_and_volume(self.context,
+                                                               'fake-uuid',
+                                                               'fake-volume')
+        self.mox.ReplayAll()
+        self.conductor.block_device_mapping_destroy(self.context, [fake_bdm])
+        self.conductor.block_device_mapping_destroy_by_instance_and_device(
+            self.context, fake_inst, 'fake-device')
+        self.conductor.block_device_mapping_destroy_by_instance_and_volume(
+            self.context, fake_inst, 'fake-volume')
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):

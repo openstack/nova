@@ -1058,8 +1058,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_uuid)
 
         # ensure block device mappings are not leaked
-        for bdm in bdms:
-            self.db.block_device_mapping_destroy(context, bdm['id'])
+        self.conductor_api.block_device_mapping_destroy(context, bdms)
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
@@ -2323,8 +2322,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        mountpoint, instance)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self.db.block_device_mapping_destroy_by_instance_and_device(
-                        context, instance.get('uuid'), mountpoint)
+                capi = self.conductor_api
+                capi.block_device_mapping_destroy_by_instance_and_device(
+                        context, instance, mountpoint)
 
     def _attach_volume(self, context, volume_id, mountpoint, instance):
         volume = self.volume_api.get(context, volume_id)
@@ -2435,8 +2435,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         connector = self.driver.get_volume_connector(instance)
         self.volume_api.terminate_connection(context, volume, connector)
         self.volume_api.detach(context.elevated(), volume)
-        self.db.block_device_mapping_destroy_by_instance_and_volume(
-            context, instance['uuid'], volume_id)
+        self.conductor_api.block_device_mapping_destroy_by_instance_and_volume(
+            context, instance, volume_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, volume_id, instance):
