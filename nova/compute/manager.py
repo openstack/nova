@@ -2430,9 +2430,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vol_stats:
                 LOG.debug(_("Updating volume usage cache with totals"))
                 rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
-                self.db.vol_usage_update(context, volume_id, rd_req, rd_bytes,
-                                         wr_req, wr_bytes, instance['id'],
-                                         update_totals=True)
+                self.conductor_api.vol_usage_update(context, volume_id,
+                                                    rd_req, rd_bytes,
+                                                    wr_req, wr_bytes,
+                                                    instance,
+                                                    update_totals=True)
 
         self._detach_volume(context, instance, bdm)
         volume = self.volume_api.get(context, volume_id)
@@ -3056,11 +3058,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         for usage in vol_usages:
             # Allow switching of greenthreads between queries.
             greenthread.sleep(0)
-            self.db.vol_usage_update(context, usage['volume'], usage['rd_req'],
-                                     usage['rd_bytes'], usage['wr_req'],
-                                     usage['wr_bytes'],
-                                     usage['instance']['uuid'],
-                                     last_refreshed=refreshed)
+            self.conductor_api.vol_usage_update(context, usage['volume'],
+                                                usage['rd_req'],
+                                                usage['rd_bytes'],
+                                                usage['wr_req'],
+                                                usage['wr_bytes'],
+                                                usage['instance'],
+                                                last_refreshed=refreshed)
 
     def _send_volume_usage_notifications(self, context, start_time):
         """Queries vol usage cache table and sends a vol usage notification"""
@@ -3068,7 +3072,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # the last run of get_all_volume_usage and this one
         # but detach stats will be recorded in db and returned from
         # vol_get_usage_by_time
-        vol_usages = self.db.vol_get_usage_by_time(context, start_time)
+        vol_usages = self.conductor_api.vol_get_usage_by_time(context,
+                                                              start_time)
         for vol_usage in vol_usages:
             notifier.notify(context, 'volume.%s' % self.host, 'volume.usage',
                             notifier.INFO,

@@ -308,6 +308,26 @@ class _BaseTestCase(object):
         result = self.conductor.instance_type_get(self.context, 'fake-id')
         self.assertEqual(result, 'fake-type')
 
+    def test_vol_get_usage_by_time(self):
+        self.mox.StubOutWithMock(db, 'vol_get_usage_by_time')
+        db.vol_get_usage_by_time(self.context, 'fake-time').AndReturn(
+            'fake-usage')
+        self.mox.ReplayAll()
+        result = self.conductor.vol_get_usage_by_time(self.context,
+                                                      'fake-time')
+        self.assertEqual(result, 'fake-usage')
+
+    def test_vol_usage_update(self):
+        self.mox.StubOutWithMock(db, 'vol_usage_update')
+        db.vol_usage_update(self.context, 'fake-vol', 'rd-req', 'rd-bytes',
+                            'wr-req', 'wr-bytes', 'fake-id', 'fake-refr',
+                            'fake-bool')
+        self.mox.ReplayAll()
+        self.conductor.vol_usage_update(self.context, 'fake-vol', 'rd-req',
+                                        'rd-bytes', 'wr-req', 'wr-bytes',
+                                        {'uuid': 'fake-id'}, 'fake-refr',
+                                        'fake-bool')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""

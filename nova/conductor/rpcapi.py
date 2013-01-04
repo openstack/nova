@@ -50,6 +50,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.16 - Added instance_destroy
     1.17 - Added instance_info_cache_delete
     1.18 - Added instance_type_get
+    1.19 - Added vol_get_usage_by_time and vol_usage_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -208,3 +209,19 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('instance_type_get',
                             instance_type_id=instance_type_id)
         return self.call(context, msg, version='1.18')
+
+    def vol_get_usage_by_time(self, context, start_time):
+        start_time_p = jsonutils.to_primitive(start_time)
+        msg = self.make_msg('vol_get_usage_by_time', start_time=start_time_p)
+        return self.call(context, msg, version='1.19')
+
+    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
+                         wr_bytes, instance, last_refreshed=None,
+                         update_totals=False):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('vol_usage_update', vol_id=vol_id, rd_req=rd_req,
+                            rd_bytes=rd_bytes, wr_req=wr_req,
+                            wr_bytes=wr_bytes,
+                            instance=instance_p, last_refreshed=last_refreshed,
+                            update_totals=update_totals)
+        return self.call(context, msg, version='1.19')

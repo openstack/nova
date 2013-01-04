@@ -198,6 +198,18 @@ class LocalAPI(object):
         return self._manager.block_device_mapping_destroy(
             context, instance=instance, volume_id=volume_id)
 
+    def vol_get_usage_by_time(self, context, start_time):
+        return self._manager.vol_get_usage_by_time(context, start_time)
+
+    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
+                         wr_bytes, instance, last_refreshed=None,
+                         update_totals=False):
+        return self._manager.vol_usage_update(context, vol_id,
+                                              rd_req, rd_bytes,
+                                              wr_req, wr_bytes,
+                                              instance, last_refreshed,
+                                              update_totals)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager"""
@@ -348,3 +360,15 @@ class API(object):
                                                             volume_id):
         return self.conductor_rpcapi.block_device_mapping_destroy(
             context, instance=instance, volume_id=volume_id)
+
+    def vol_get_usage_by_time(self, context, start_time):
+        return self.conductor_rpcapi.vol_get_usage_by_time(context, start_time)
+
+    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
+                         wr_bytes, instance, last_refreshed=None,
+                         update_totals=False):
+        return self.conductor_rpcapi.vol_usage_update(context, vol_id,
+                                                      rd_req, rd_bytes,
+                                                      wr_req, wr_bytes,
+                                                      instance, last_refreshed,
+                                                      update_totals)
