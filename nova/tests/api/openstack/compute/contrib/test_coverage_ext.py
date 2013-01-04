@@ -88,6 +88,8 @@ class CoverageExtensionTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app(
                                fake_auth_context=self.admin_context))
         self.assertEqual(res.status_int, 200)
+        resp_dict = jsonutils.loads(res.body)
+        self.assertTrue('path' in resp_dict)
 
     def test_report_coverage_action_file(self):
         self.stubs.Set(coverage_ext.CoverageController,
@@ -178,7 +180,7 @@ class CoverageExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_report_coverage_action_nostart(self):
-        body = {'stop': {}}
+        body = {'report': {}}
         req = webob.Request.blank('/v2/fake/os-coverage/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
