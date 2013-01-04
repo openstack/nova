@@ -100,6 +100,17 @@ class _BaseTestCase(object):
                          self.conductor.migration_get(self.context,
                                                       migration['id']))
 
+    def test_migration_get_unconfirmed_by_dest_compute(self):
+        self.mox.StubOutWithMock(db,
+                                 'migration_get_unconfirmed_by_dest_compute')
+        db.migration_get_unconfirmed_by_dest_compute(self.context,
+                                                     'fake-window',
+                                                     'fake-host')
+        self.mox.ReplayAll()
+        self.conductor.migration_get_unconfirmed_by_dest_compute(self.context,
+                                                                 'fake-window',
+                                                                 'fake-host')
+
     def test_migration_update(self):
         migration = db.migration_create(self.context.elevated(),
                 {'instance_uuid': 'fake-uuid',

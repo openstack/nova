@@ -51,6 +51,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.17 - Added instance_info_cache_delete
     1.18 - Added instance_type_get
     1.19 - Added vol_get_usage_by_time and vol_usage_update
+    1.20 - Added migration_get_unconfirmed_by_dest_compute
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -75,6 +76,14 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def migration_get(self, context, migration_id):
         msg = self.make_msg('migration_get', migration_id=migration_id)
         return self.call(context, msg, version='1.4')
+
+    def migration_get_unconfirmed_by_dest_compute(self, context,
+                                                  confirm_window,
+                                                  dest_compute):
+        msg = self.make_msg('migration_get_unconfirmed_by_dest_compute',
+                            confirm_window=confirm_window,
+                            dest_compute=dest_compute)
+        return self.call(context, msg, version='1.20')
 
     def migration_update(self, context, migration, status):
         migration_p = jsonutils.to_primitive(migration)

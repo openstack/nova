@@ -2876,7 +2876,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_unconfirmed_resizes(self, context):
         if CONF.resize_confirm_window > 0:
-            migrations = self.db.migration_get_unconfirmed_by_dest_compute(
+            capi = self.conductor_api
+            migrations = capi.migration_get_unconfirmed_by_dest_compute(
                     context, CONF.resize_confirm_window, self.host)
 
             migrations_info = dict(migration_count=len(migrations),
