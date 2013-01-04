@@ -20,7 +20,6 @@
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
-from nova.virt import vif
 from nova.virt.vmwareapi import network_utils
 
 
@@ -30,7 +29,7 @@ CONF = cfg.CONF
 CONF.set_default('vmwareapi_vlan_interface', 'vmnic0')
 
 
-class VMWareVlanBridgeDriver(vif.VIFDriver):
+class VMWareVlanBridgeDriver(object):
     """VIF Driver to setup bridge/VLAN networking using VMWare API."""
 
     def plug(self, instance, vif):
