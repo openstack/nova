@@ -2199,7 +2199,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if vol_stats:
                     rd_req, rd_bytes, wr_req, wr_bytes, flush_ops = vol_stats
                     vol_usage.append(dict(volume=bdm['volume_id'],
-                                          instance_id=instance['id'],
+                                          instance=instance,
                                           rd_req=rd_req,
                                           rd_bytes=rd_bytes,
                                           wr_req=wr_req,

@@ -4419,12 +4419,12 @@ class LibvirtVolumeUsageTestCase(test.TestCase):
               [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
 
         expected_usage = [{'volume': 1,
-                           'instance_id': 1,
+                           'instance': self.ins_ref,
                            'rd_bytes': 688640L, 'wr_req': 0L,
                            'flush_operations': -1L, 'rd_req': 169L,
                            'wr_bytes': 0L},
                            {'volume': 2,
-                            'instance_id': 1,
+                            'instance': self.ins_ref,
                             'rd_bytes': 688640L, 'wr_req': 0L,
                             'flush_operations': -1L, 'rd_req': 169L,
                             'wr_bytes': 0L}]

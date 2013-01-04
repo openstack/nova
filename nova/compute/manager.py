@@ -3058,7 +3058,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             greenthread.sleep(0)
             self.db.vol_usage_update(context, usage['volume'], usage['rd_req'],
                                      usage['rd_bytes'], usage['wr_req'],
-                                     usage['wr_bytes'], usage['instance_id'],
+                                     usage['wr_bytes'],
+                                     usage['instance']['uuid'],
                                      last_refreshed=refreshed)
 
     def _send_volume_usage_notifications(self, context, start_time):
