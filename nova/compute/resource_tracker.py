@@ -503,7 +503,10 @@ class ResourceTracker(object):
         resources['running_vms'] = 0
 
         for instance in instances:
-            self._update_usage_from_instance(resources, instance)
+            if instance['vm_state'] == vm_states.DELETED:
+                continue
+            else:
+                self._update_usage_from_instance(resources, instance)
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
