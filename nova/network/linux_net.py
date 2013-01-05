@@ -645,18 +645,29 @@ def ensure_vpn_forward(public_ip, port, private_ip):
     iptables_manager.apply()
 
 
-def ensure_floating_forward(floating_ip, fixed_ip, device):
+def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     """Ensure floating ip forwarding rule."""
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
+    if device != network['bridge']:
+        ensure_ebtables_rules(*floating_ebtables_rules(fixed_ip, network))
 
 
-def remove_floating_forward(floating_ip, fixed_ip, device):
+def remove_floating_forward(floating_ip, fixed_ip, device, network):
     """Remove forwarding for floating ip."""
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].remove_rule(chain, rule)
     iptables_manager.apply()
+    if device != network['bridge']:
+        remove_ebtables_rules(*floating_ebtables_rules(fixed_ip, network))
+
+
+def floating_ebtables_rules(fixed_ip, network):
+    """Makes sure only in-network traffic is bridged."""
+    return (['PREROUTING --logical-in %s -p ipv4 --ip-src %s '
+            '! --ip-dst %s -j redirect --redirect-target ACCEPT' %
+            (network['bridge'], fixed_ip, network['cidr'])], 'nat')
 
 
 def floating_forward_rules(floating_ip, fixed_ip, device):
@@ -1387,18 +1398,18 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
 
 @lockutils.synchronized('ebtables', 'nova-', external=True)
-def ensure_ebtables_rules(rules):
+def ensure_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '-D'] + rule.split()
+        cmd = ['ebtables', '-t', table, '-D'] + rule.split()
         _execute(*cmd, check_exit_code=False, run_as_root=True)
-        cmd[1] = '-I'
+        cmd[3] = '-I'
         _execute(*cmd, run_as_root=True)
 
 
 @lockutils.synchronized('ebtables', 'nova-', external=True)
-def remove_ebtables_rules(rules):
+def remove_ebtables_rules(rules, table='filter'):
     for rule in rules:
-        cmd = ['ebtables', '-D'] + rule.split()
+        cmd = ['ebtables', '-t', table, '-D'] + rule.split()
         _execute(*cmd, check_exit_code=False, run_as_root=True)
 
 

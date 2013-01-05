@@ -673,7 +673,7 @@ class VlanNetworkTestCase(test.TestCase):
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            return '10.0.0.1'
+            return {'address': '10.0.0.1', 'network': 'fakenet'}
 
         # floating ip that's already associated
         def fake2(*args, **kwargs):
@@ -793,9 +793,9 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network.db, 'floating_ip_get_all_by_host',
                        get_all_by_host)
 
-        def fixed_ip_get(_context, fixed_ip_id):
+        def fixed_ip_get(_context, fixed_ip_id, get_network):
             if fixed_ip_id == 1:
-                return {'address': 'fakefixed'}
+                return {'address': 'fakefixed', 'network': 'fakenet'}
             raise exception.FixedIpNotFound(id=fixed_ip_id)
         self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
 
@@ -803,7 +803,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.flags(public_interface=False)
         self.network.l3driver.add_floating_ip('fakefloat',
                                               'fakefixed',
-                                              'fakeiface')
+                                              'fakeiface',
+                                              'fakenet')
         self.mox.ReplayAll()
         self.network.init_host_floating_ips()
         self.mox.UnsetStubs()
@@ -813,7 +814,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.flags(public_interface='fooiface')
         self.network.l3driver.add_floating_ip('fakefloat',
                                               'fakefixed',
-                                              'fooiface')
+                                              'fooiface',
+                                              'fakenet')
         self.mox.ReplayAll()
         self.network.init_host_floating_ips()
         self.mox.UnsetStubs()
@@ -1812,11 +1814,13 @@ class FloatingIPTestCase(test.TestCase):
         def fake_is_stale_floating_ip_address(context, floating_ip):
             return floating_ip['address'] == '172.24.4.23'
 
-        def fake_fixed_ip_get(context, fixed_ip_id):
+        def fake_fixed_ip_get(context, fixed_ip_id, get_network):
             return {'instance_uuid': 'fake_uuid',
-                    'address': '10.0.0.2'}
+                    'address': '10.0.0.2',
+                    'network': 'fakenet'}
 
-        def fake_remove_floating_ip(floating_addr, fixed_addr, interface):
+        def fake_remove_floating_ip(floating_addr, fixed_addr, interface,
+                                    network):
             called['count'] += 1
 
         def fake_floating_ip_update(context, address, args):
@@ -1853,11 +1857,13 @@ class FloatingIPTestCase(test.TestCase):
         def fake_is_stale_floating_ip_address(context, floating_ip):
             return floating_ip['address'] == '172.24.4.23'
 
-        def fake_fixed_ip_get(context, fixed_ip_id):
+        def fake_fixed_ip_get(context, fixed_ip_id, get_network):
             return {'instance_uuid': 'fake_uuid',
-                    'address': '10.0.0.2'}
+                    'address': '10.0.0.2',
+                    'network': 'fakenet'}
 
-        def fake_add_floating_ip(floating_addr, fixed_addr, interface):
+        def fake_add_floating_ip(floating_addr, fixed_addr, interface,
+                                 network):
             called['count'] += 1
 
         def fake_floating_ip_update(context, address, args):

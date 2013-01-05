@@ -305,7 +305,7 @@ def floating_ip_destroy(context, address):
 def floating_ip_disassociate(context, address):
     """Disassociate a floating ip from a fixed ip by address.
 
-    :returns: the address of the previous fixed ip or None
+    :returns: the fixed ip record joined to network record or None
               if the ip was not associated to an ip.
 
     """
@@ -316,7 +316,7 @@ def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     """Associate a floating ip to a fixed_ip by address.
 
-    :returns: the address of the new fixed ip (fixed_address) or None
+    :returns: the fixed ip record joined to network record or None
               if the ip was already associated to the fixed ip.
     """
 
@@ -477,9 +477,12 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
-def fixed_ip_get(context, id):
-    """Get fixed ip by id or raise if it does not exist."""
-    return IMPL.fixed_ip_get(context, id)
+def fixed_ip_get(context, id, get_network=False):
+    """Get fixed ip by id or raise if it does not exist.
+
+    If get_network is true, also return the assocated network.
+    """
+    return IMPL.fixed_ip_get(context, id, get_network)
 
 
 def fixed_ip_get_all(context):

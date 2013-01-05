@@ -717,6 +717,12 @@ class FixedIp(BASE, NovaBase):
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
     host = Column(String(255))
+    network = relationship(Network,
+                           backref=backref('fixed_ips'),
+                           foreign_keys=network_id,
+                           primaryjoin='and_('
+                                'FixedIp.network_id == Network.id,'
+                                'FixedIp.deleted == False)')
 
 
 class FloatingIp(BASE, NovaBase):

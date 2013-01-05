@@ -317,17 +317,19 @@ class FloatingIP(object):
             fixed_ip_id = floating_ip.get('fixed_ip_id')
             if fixed_ip_id:
                 try:
-                    fixed_ip_ref = self.db.fixed_ip_get(admin_context,
-                                                        fixed_ip_id)
+                    fixed_ip = self.db.fixed_ip_get(admin_context,
+                                                    fixed_ip_id,
+                                                    get_network=True)
                 except exception.FixedIpNotFound:
                     msg = _('Fixed ip %(fixed_ip_id)s not found') % locals()
                     LOG.debug(msg)
                     continue
-                fixed_address = fixed_ip_ref['address']
                 interface = CONF.public_interface or floating_ip['interface']
                 try:
                     self.l3driver.add_floating_ip(floating_ip['address'],
-                            fixed_address, interface)
+                                                  fixed_ip['address'],
+                                                  interface,
+                                                  fixed_ip['network'])
                 except exception.ProcessExecutionError:
                     LOG.debug(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
@@ -587,17 +589,17 @@ class FloatingIP(object):
         @lockutils.synchronized(unicode(floating_address), 'nova-')
         def do_associate():
             # associate floating ip
-            res = self.db.floating_ip_fixed_ip_associate(context,
-                                                         floating_address,
-                                                         fixed_address,
-                                                         self.host)
-            if not res:
+            fixed = self.db.floating_ip_fixed_ip_associate(context,
+                                                           floating_address,
+                                                           fixed_address,
+                                                           self.host)
+            if not fixed:
                 # NOTE(vish): ip was already associated
                 return
             try:
                 # gogo driver time
                 self.l3driver.add_floating_ip(floating_address, fixed_address,
-                        interface)
+                        interface, fixed['network'])
             except exception.ProcessExecutionError as e:
                 self.db.floating_ip_disassociate(context, floating_address)
                 if "Cannot find device" in str(e):
@@ -681,15 +683,15 @@ class FloatingIP(object):
             #             don't worry about this case because the miniscule
             #             window where the ip is on both hosts shouldn't cause
             #             any problems.
-            fixed_address = self.db.floating_ip_disassociate(context, address)
+            fixed = self.db.floating_ip_disassociate(context, address)
 
-            if not fixed_address:
+            if not fixed:
                 # NOTE(vish): ip was already disassociated
                 return
             if interface:
                 # go go driver time
-                self.l3driver.remove_floating_ip(address, fixed_address,
-                                                 interface)
+                self.l3driver.remove_floating_ip(address, fixed['address'],
+                                                 interface, fixed['network'])
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
                            floating_ip=address)
@@ -762,10 +764,12 @@ class FloatingIP(object):
 
             interface = CONF.public_interface or floating_ip['interface']
             fixed_ip = self.db.fixed_ip_get(context,
-                                            floating_ip['fixed_ip_id'])
+                                            floating_ip['fixed_ip_id'],
+                                            get_network=True)
             self.l3driver.remove_floating_ip(floating_ip['address'],
                                              fixed_ip['address'],
-                                             interface)
+                                             interface,
+                                             fixed_ip['network'])
 
             # NOTE(wenjianhn): Make this address will not be bound to public
             # interface when restarts nova-network on dest compute node
@@ -804,10 +808,12 @@ class FloatingIP(object):
 
             interface = CONF.public_interface or floating_ip['interface']
             fixed_ip = self.db.fixed_ip_get(context,
-                                            floating_ip['fixed_ip_id'])
+                                            floating_ip['fixed_ip_id'],
+                                            get_network=True)
             self.l3driver.add_floating_ip(floating_ip['address'],
                                           fixed_ip['address'],
-                                          interface)
+                                          interface,
+                                          fixed_ip['network'])
 
     def _prepare_domain_entry(self, context, domain):
         domainref = self.db.dnsdomain_get(context, domain)
