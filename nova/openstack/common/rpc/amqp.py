@@ -428,7 +428,4 @@ def cleanup(connection_pool):
 
 
 def get_control_exchange(conf):
-    try:
-        return conf.control_exchange
-    except cfg.NoSuchOptError:
-        return 'openstack'
+    return conf.control_exchange

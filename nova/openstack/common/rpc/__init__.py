@@ -57,17 +57,17 @@ rpc_opts = [
     cfg.BoolOpt('fake_rabbit',
                 default=False,
                 help='If passed, use a fake RabbitMQ provider'),
-    #
-    # The following options are not registered here, but are expected to be
-    # present. The project using this library must register these options with
-    # the configuration so that project-specific defaults may be defined.
-    #
-    #cfg.StrOpt('control_exchange',
-    #           default='nova',
-    #           help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
+    cfg.StrOpt('control_exchange',
+               default='openstack',
+               help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
 ]
 
 cfg.CONF.register_opts(rpc_opts)
+
+
+def set_defaults(control_exchange):
+    cfg.set_defaults(rpc_opts,
+                     control_exchange=control_exchange)
 
 
 def create_connection(new=True):
