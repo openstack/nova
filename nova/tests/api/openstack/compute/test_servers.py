@@ -4008,7 +4008,7 @@ class ServersViewBuilderTest(test.TestCase):
                           "message": "Error",
                           'details': 'Stock details for test'}
 
-        self.request.context = context.get_admin_context()
+        self.request.environ['nova.context'].is_admin = True
         output = self.view_builder.show(self.request, self.instance)
         self.assertThat(output['server']['fault'],
                         matchers.DictMatches(expected_fault))
@@ -4027,7 +4027,7 @@ class ServersViewBuilderTest(test.TestCase):
                           "created": "2010-10-10T12:00:00Z",
                           "message": "Error"}
 
-        self.request.context = context.get_admin_context()
+        self.request.environ['nova.context'].is_admin = True
         output = self.view_builder.show(self.request, self.instance)
         self.assertThat(output['server']['fault'],
                         matchers.DictMatches(expected_fault))
