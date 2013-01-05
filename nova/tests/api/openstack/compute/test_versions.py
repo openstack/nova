@@ -37,17 +37,17 @@ NS = {
 }
 
 
-LINKS = {
+EXP_LINKS = {
    'v2.0': {
        'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/1.1/os-compute-devguide-1.1.pdf',
+               'api/openstack-compute/2/os-compute-devguide-2.pdf',
        'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/1.1/wadl/os-compute-1.1.wadl',
+               'api/openstack-compute/2/wadl/os-compute-2.wadl',
     },
 }
 
 
-VERSIONS = {
+EXP_VERSIONS = {
     "v2.0": {
         "id": "v2.0",
         "status": "CURRENT",
@@ -56,12 +56,12 @@ VERSIONS = {
             {
                 "rel": "describedby",
                 "type": "application/pdf",
-                "href": LINKS['v2.0']['pdf'],
+                "href": EXP_LINKS['v2.0']['pdf'],
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
-                "href": LINKS['v2.0']['wadl'],
+                "href": EXP_LINKS['v2.0']['wadl'],
             },
         ],
         "media-types": [
@@ -79,9 +79,6 @@ VERSIONS = {
 
 
 class VersionsTest(test.TestCase):
-    def setUp(self):
-        super(VersionsTest, self).setUp()
-        self.stubs.Set(versions, 'VERSIONS', VERSIONS)
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
@@ -132,12 +129,12 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": LINKS['v2.0']['pdf'],
+                        "href": EXP_LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": LINKS['v2.0']['wadl'],
+                        "href": EXP_LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -176,12 +173,12 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": LINKS['v2.0']['pdf'],
+                        "href": EXP_LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": LINKS['v2.0']['wadl'],
+                        "href": EXP_LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -210,7 +207,7 @@ class VersionsTest(test.TestCase):
         version = etree.XML(res.body)
         xmlutil.validate_schema(version, 'version')
 
-        expected = VERSIONS['v2.0']
+        expected = EXP_VERSIONS['v2.0']
         self.assertTrue(version.xpath('/ns:version', namespaces=NS))
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
@@ -240,7 +237,7 @@ class VersionsTest(test.TestCase):
 
         for i, v in enumerate(['v2.0']):
             version = versions[i]
-            expected = VERSIONS[v]
+            expected = EXP_VERSIONS[v]
             for key in ['id', 'status', 'updated']:
                 self.assertEqual(version.get(key), expected[key])
             (link,) = version.xpath('atom:link', namespaces=NS)
@@ -278,11 +275,11 @@ class VersionsTest(test.TestCase):
         self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
         self.assertEqual(entry.links[0]['rel'], 'self')
         self.assertEqual(entry.links[1], {
-            'href': LINKS['v2.0']['pdf'],
+            'href': EXP_LINKS['v2.0']['pdf'],
             'type': 'application/pdf',
             'rel': 'describedby'})
         self.assertEqual(entry.links[2], {
-            'href': LINKS['v2.0']['wadl'],
+            'href': EXP_LINKS['v2.0']['wadl'],
             'type': 'application/vnd.sun.wadl+xml',
             'rel': 'describedby'})
 
@@ -368,8 +365,11 @@ class VersionsTest(test.TestCase):
         self.assertEqual(version.get('status'), 'CURRENT')
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
-        self.assertTrue(common.compare_media_types(media_types,
-                                             VERSIONS['v2.0']['media-types']))
+        self.assertTrue(common.
+                        compare_media_types(media_types,
+                                            EXP_VERSIONS['v2.0']['media-types']
+                                            ))
+
         links = version.xpath('atom:link', namespaces=NS)
         self.assertTrue(common.compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
@@ -512,7 +512,7 @@ class VersionsSerializerTests(test.TestCase):
                     "id": "2.7",
                     "updated": "2011-07-18T11:30:00Z",
                     "status": "DEPRECATED",
-                    "media-types": VERSIONS['v2.0']['media-types'],
+                    "media-types": EXP_VERSIONS['v2.0']['media-types'],
                     "links": [
                         {
                             "rel": "self",
@@ -601,12 +601,12 @@ class VersionsSerializerTests(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": LINKS['v2.0']['pdf'],
+                        "href": EXP_LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": LINKS['v2.0']['wadl'],
+                        "href": EXP_LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -651,9 +651,9 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(entry.links[1], {
             'rel': 'describedby',
             'type': 'application/pdf',
-            'href': LINKS['v2.0']['pdf']})
+            'href': EXP_LINKS['v2.0']['pdf']})
         self.assertEqual(entry.links[2], {
             'rel': 'describedby',
             'type': 'application/vnd.sun.wadl+xml',
-            'href': LINKS['v2.0']['wadl'],
+            'href': EXP_LINKS['v2.0']['wadl'],
         })
