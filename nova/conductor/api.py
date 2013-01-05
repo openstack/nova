@@ -104,6 +104,9 @@ class LocalAPI(object):
     def instance_info_cache_delete(self, context, instance):
         return self._manager.instance_info_cache_delete(context, instance)
 
+    def instance_type_get(self, context, instance_type_id):
+        return self._manager.instance_type_get(context, instance_type_id)
+
     def migration_get(self, context, migration_id):
         return self._manager.migration_get(context, migration_id)
 
@@ -240,6 +243,10 @@ class API(object):
     def instance_info_cache_delete(self, context, instance):
         return self.conductor_rpcapi.instance_info_cache_delete(context,
                                                                 instance)
+
+    def instance_type_get(self, context, instance_type_id):
+        return self.conductor_rpcapi.instance_type_get(context,
+                                                       instance_type_id)
 
     def migration_get(self, context, migration_id):
         return self.conductor_rpcapi.migration_get(context, migration_id)
