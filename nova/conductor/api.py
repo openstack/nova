@@ -68,6 +68,9 @@ class LocalAPI(object):
         # other/future users of this sort of functionality.
         self._manager = ExceptionHelper(manager.ConductorManager())
 
+    def ping(self, context, arg, timeout=None):
+        return self._manager.ping(context, arg)
+
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database"""
         return self._manager.instance_update(context, instance_uuid, updates)
@@ -237,6 +240,9 @@ class API(object):
 
     def __init__(self):
         self.conductor_rpcapi = rpcapi.ConductorAPI()
+
+    def ping(self, context, arg, timeout=None):
+        return self.conductor_rpcapi.ping(context, arg, timeout)
 
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database"""

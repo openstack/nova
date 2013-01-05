@@ -339,6 +339,10 @@ class _BaseTestCase(object):
                                         {'uuid': 'fake-id'}, 'fake-refr',
                                         'fake-bool')
 
+    def test_ping(self):
+        result = self.conductor.ping(self.context, 'foo')
+        self.assertEqual(result, {'service': 'conductor', 'arg': 'foo'})
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests"""
