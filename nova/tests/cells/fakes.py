@@ -55,6 +55,12 @@ class FakeDBApi(object):
     def compute_node_get_all(self, ctxt):
         return []
 
+    def instance_get_all_by_filters(self, ctxt, *args, **kwargs):
+        return []
+
+    def instance_get_by_uuid(self, ctxt, *args, **kwargs):
+        return None
+
 
 class FakeCellsDriver(driver.BaseCellsDriver):
     pass

@@ -15,8 +15,12 @@
 """
 Tests For CellsManager
 """
+import datetime
+
 from nova.cells import messaging
+from nova.cells import utils as cells_utils
 from nova import context
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.cells import fakes
 
@@ -149,3 +153,61 @@ class CellsManagerClassTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.cells_manager.bw_usage_update_at_top(
                 self.ctxt, bw_update_info='fake-bw-info')
+
+    def test_heal_instances(self):
+        self.flags(instance_updated_at_threshold=1000,
+                   instance_update_num_instances=2,
+                   group='cells')
+
+        fake_context = context.RequestContext('fake', 'fake')
+        stalled_time = timeutils.utcnow()
+        updated_since = stalled_time - datetime.timedelta(seconds=1000)
+
+        def utcnow():
+            return stalled_time
+
+        call_info = {'get_instances': 0, 'sync_instances': []}
+
+        instances = ['instance1', 'instance2', 'instance3']
+
+        def get_instances_to_sync(context, **kwargs):
+            self.assertEqual(context, fake_context)
+            call_info['shuffle'] = kwargs.get('shuffle')
+            call_info['project_id'] = kwargs.get('project_id')
+            call_info['updated_since'] = kwargs.get('updated_since')
+            call_info['get_instances'] += 1
+            return iter(instances)
+
+        def instance_get_by_uuid(context, uuid):
+            return instances[int(uuid[-1]) - 1]
+
+        def sync_instance(context, instance):
+            self.assertEqual(context, fake_context)
+            call_info['sync_instances'].append(instance)
+
+        self.stubs.Set(cells_utils, 'get_instances_to_sync',
+                get_instances_to_sync)
+        self.stubs.Set(self.cells_manager.db, 'instance_get_by_uuid',
+                instance_get_by_uuid)
+        self.stubs.Set(self.cells_manager, '_sync_instance',
+                sync_instance)
+        self.stubs.Set(timeutils, 'utcnow', utcnow)
+
+        self.cells_manager._heal_instances(fake_context)
+        self.assertEqual(call_info['shuffle'], True)
+        self.assertEqual(call_info['project_id'], None)
+        self.assertEqual(call_info['updated_since'], updated_since)
+        self.assertEqual(call_info['get_instances'], 1)
+        # Only first 2
+        self.assertEqual(call_info['sync_instances'],
+                instances[:2])
+
+        call_info['sync_instances'] = []
+        self.cells_manager._heal_instances(fake_context)
+        self.assertEqual(call_info['shuffle'], True)
+        self.assertEqual(call_info['project_id'], None)
+        self.assertEqual(call_info['updated_since'], updated_since)
+        self.assertEqual(call_info['get_instances'], 2)
+        # Now the last 1 and the first 1
+        self.assertEqual(call_info['sync_instances'],
+                [instances[-1], instances[0]])
