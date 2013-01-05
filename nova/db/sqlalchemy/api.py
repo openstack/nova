@@ -3800,42 +3800,41 @@ def instance_metadata_get_item(context, instance_uuid, key, session=None):
 @require_context
 def instance_metadata_update(context, instance_uuid, metadata, delete,
                              session=None):
+    all_keys = metadata.keys()
+    synchronize_session = "fetch"
     if session is None:
         session = get_session()
-    # Set existing metadata to deleted if delete argument is True
-    if delete:
-        original_metadata = instance_metadata_get(context, instance_uuid,
-                                                  session=session)
-        for meta_key, meta_value in original_metadata.iteritems():
-            if meta_key not in metadata:
-                meta_ref = instance_metadata_get_item(context, instance_uuid,
-                                                      meta_key, session)
-                meta_ref.update({'deleted': True})
-                meta_ref.save(session=session)
+        synchronize_session = False
+    with session.begin(subtransactions=True):
+        if delete:
+            _instance_metadata_get_query(context, instance_uuid,
+                                         session=session).\
+                filter(~models.InstanceMetadata.key.in_(all_keys)).\
+                soft_delete(synchronize_session=synchronize_session)
 
-    meta_ref = None
+        already_existing_keys = []
+        meta_refs = _instance_metadata_get_query(context, instance_uuid,
+                                                 session=session).\
+            filter(models.InstanceMetadata.key.in_(all_keys)).\
+            all()
 
-    # Now update all existing items with new values, or create new meta objects
-    for meta_key, meta_value in metadata.iteritems():
+        for meta_ref in meta_refs:
+            already_existing_keys.append(meta_ref.key)
+            meta_ref.update({"value": metadata[meta_ref.key]})
 
-        # update the value whether it exists or not
-        item = {"value": meta_value}
-
-        try:
-            meta_ref = instance_metadata_get_item(context, instance_uuid,
-                                                  meta_key, session)
-        except exception.InstanceMetadataNotFound:
+        new_keys = set(all_keys) - set(already_existing_keys)
+        for key in new_keys:
             meta_ref = models.InstanceMetadata()
-            item.update({"key": meta_key, "instance_uuid": instance_uuid})
+            meta_ref.update({"key": key, "value": metadata[key],
+                             "instance_uuid": instance_uuid})
+            session.add(meta_ref)
 
-        meta_ref.update(item)
-        meta_ref.save(session=session)
-
-    return metadata
+        return metadata
 
 
 #######################
 # System-owned metadata
+
 
 def _instance_system_metadata_get_query(context, instance_uuid, session=None):
     return model_query(context, models.InstanceSystemMetadata,
@@ -3872,39 +3871,36 @@ def _instance_system_metadata_get_item(context, instance_uuid, key,
 @require_context
 def instance_system_metadata_update(context, instance_uuid, metadata, delete,
                                     session=None):
+    all_keys = metadata.keys()
+    synchronize_session = "fetch"
     if session is None:
         session = get_session()
+        synchronize_session = False
+    with session.begin(subtransactions=True):
+        if delete:
+            _instance_system_metadata_get_query(context, instance_uuid,
+                                                session=session).\
+                filter(~models.InstanceSystemMetadata.key.in_(all_keys)).\
+                soft_delete(synchronize_session=synchronize_session)
 
-    # Set existing metadata to deleted if delete argument is True
-    if delete:
-        original_metadata = instance_system_metadata_get(
-                context, instance_uuid, session=session)
-        for meta_key, meta_value in original_metadata.iteritems():
-            if meta_key not in metadata:
-                meta_ref = _instance_system_metadata_get_item(
-                        context, instance_uuid, meta_key, session)
-                meta_ref.update({'deleted': True})
-                meta_ref.save(session=session)
+        already_existing_keys = []
+        meta_refs = _instance_system_metadata_get_query(context, instance_uuid,
+                                                        session=session).\
+            filter(models.InstanceSystemMetadata.key.in_(all_keys)).\
+            all()
 
-    meta_ref = None
+        for meta_ref in meta_refs:
+            already_existing_keys.append(meta_ref.key)
+            meta_ref.update({"value": metadata[meta_ref.key]})
 
-    # Now update all existing items with new values, or create new meta objects
-    for meta_key, meta_value in metadata.iteritems():
-
-        # update the value whether it exists or not
-        item = {"value": meta_value}
-
-        try:
-            meta_ref = _instance_system_metadata_get_item(
-                    context, instance_uuid, meta_key, session)
-        except exception.InstanceSystemMetadataNotFound:
+        new_keys = set(all_keys) - set(already_existing_keys)
+        for key in new_keys:
             meta_ref = models.InstanceSystemMetadata()
-            item.update({"key": meta_key, "instance_uuid": instance_uuid})
+            meta_ref.update({"key": key, "value": metadata[key],
+                             "instance_uuid": instance_uuid})
+            session.add(meta_ref)
 
-        meta_ref.update(item)
-        meta_ref.save(session=session)
-
-    return metadata
+        return metadata
 
 
 ####################
@@ -4347,6 +4343,16 @@ def aggregate_get_all(context):
 
 
 @require_admin_context
+def aggregate_metadata_get_query(context, aggregate_id, session=None,
+                                 read_deleted="yes"):
+    return model_query(context,
+                       models.AggregateMetadata,
+                       read_deleted=read_deleted,
+                       session=session).\
+                filter_by(aggregate_id=aggregate_id)
+
+
+@require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_get(context, aggregate_id):
     rows = model_query(context,
@@ -4391,33 +4397,31 @@ def aggregate_metadata_get_item(context, aggregate_id, key, session=None):
 @require_aggregate_exists
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
     session = get_session()
+    all_keys = metadata.keys()
+    with session.begin():
+        query = aggregate_metadata_get_query(context, aggregate_id,
+                                             session=session)
+        if set_delete:
+            query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
+                soft_delete(synchronize_session=False)
 
-    if set_delete:
-        original_metadata = aggregate_metadata_get(context, aggregate_id)
-        for meta_key, meta_value in original_metadata.iteritems():
-            if meta_key not in metadata:
-                meta_ref = aggregate_metadata_get_item(context, aggregate_id,
-                                                      meta_key, session)
-                meta_ref.update({'deleted': True})
-                meta_ref.save(session=session)
+        query = query.filter(models.AggregateMetadata.key.in_(all_keys))
+        already_existing_keys = []
+        for meta_ref in query.all():
+            key = meta_ref.key
+            meta_ref.update({"value": metadata[key],
+                             "deleted": False,
+                             "deleted_at": None})
+            already_existing_keys.append(key)
 
-    meta_ref = None
-
-    for meta_key, meta_value in metadata.iteritems():
-        item = {"value": meta_value}
-        try:
-            meta_ref = aggregate_metadata_get_item(context, aggregate_id,
-                                                  meta_key, session)
-            if meta_ref.deleted:
-                item.update({'deleted': False, 'deleted_at': None})
-        except exception.AggregateMetadataNotFound:
+        for key in set(all_keys) - set(already_existing_keys):
             meta_ref = models.AggregateMetadata()
-            item.update({"key": meta_key, "aggregate_id": aggregate_id})
+            meta_ref.update({"key": key,
+                             "value": metadata[key],
+                             "aggregate_id": aggregate_id})
+            session.add(meta_ref)
 
-        meta_ref.update(item)
-        meta_ref.save(session=session)
-
-    return metadata
+        return metadata
 
 
 @require_admin_context
