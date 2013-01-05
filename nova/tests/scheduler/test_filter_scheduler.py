@@ -287,7 +287,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         hosts = filter_properties['retry']['hosts']
         self.assertEqual(1, len(hosts))
-        self.assertEqual((host, node), hosts[0])
+        self.assertEqual([host, node], hosts[0])
 
     def test_post_select_populate(self):
         """Test addition of certain filter props after a node is selected"""
@@ -300,7 +300,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched._post_select_populate_filter_properties(filter_properties,
                 host_state)
 
-        self.assertEqual(('host', 'node'),
+        self.assertEqual(['host', 'node'],
                          filter_properties['retry']['hosts'][0])
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
@@ -337,5 +337,5 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched.schedule_prep_resize(self.context, image, request_spec,
                 filter_properties, instance, instance_type, reservations)
 
-        self.assertEqual([('host', 'node')],
+        self.assertEqual([['host', 'node']],
                          filter_properties['retry']['hosts'])

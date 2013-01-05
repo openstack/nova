@@ -165,7 +165,7 @@ class FilterScheduler(driver.Scheduler):
         if not retry:
             return
         hosts = retry['hosts']
-        hosts.append((host, node))
+        hosts.append([host, node])
 
     def _add_oversubscription_policy(self, filter_properties, host_state):
         filter_properties['limits'] = host_state.limits
