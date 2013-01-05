@@ -191,6 +191,8 @@ class TestCase(testtools.TestCase):
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
+        # Give each test a maximum of one minute to run.
+        self.useFixture(fixtures.Timeout(60, gentle=True))
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
 
