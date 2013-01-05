@@ -150,6 +150,9 @@ network_opts = [
     cfg.StrOpt('network_host',
                default=socket.getfqdn(),
                help='Network host to use for ip allocation in flat modes'),
+    cfg.BoolOpt('fake_network',
+                default=False,
+                help='If passed, use fake network devices and addresses'),
     cfg.BoolOpt('fake_call',
                 default=False,
                 help='If True, skip using the queue and make local calls'),
@@ -193,7 +196,6 @@ network_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(network_opts)
-CONF.import_opt('fake_network', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 
