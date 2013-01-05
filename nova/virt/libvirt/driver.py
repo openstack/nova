@@ -1209,8 +1209,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _get_console_log_path(instance_name):
-        return os.path.join(CONF.instances_path, instance_name,
-                'console.log')
+        return os.path.join(CONF.instances_path, instance_name, 'console.log')
 
     def _chown_console_log_for_instance(self, instance_name):
         console_log = self._get_console_log_path(instance_name)
@@ -1246,7 +1245,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._chown_console_log_for_instance(instance['name'])
 
         # NOTE(vish): No need add the suffix to console.log
-        libvirt_utils.write_to_file(basepath('console.log', ''), '', 007)
+        libvirt_utils.write_to_file(
+            self._get_console_log_path(instance['name']), '', 007)
 
         if not disk_images:
             disk_images = {'image_id': instance['image_ref'],
@@ -1787,9 +1787,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # to configure two separate consoles.
             consolelog = vconfig.LibvirtConfigGuestSerial()
             consolelog.type = "file"
-            consolelog.source_path = os.path.join(CONF.instances_path,
-                                                  instance['name'],
-                                                  "console.log")
+            consolelog.source_path = self._get_console_log_path(
+                instance['name'])
             guest.add_device(consolelog)
 
             consolepty = vconfig.LibvirtConfigGuestSerial()
@@ -2615,7 +2614,7 @@ class LibvirtDriver(driver.ComputeDriver):
             os.mkdir(instance_dir)
 
             # Touch the console.log file, required by libvirt.
-            console_file = os.path.join(instance_dir, 'console.log')
+            console_file = self._get_console_log_path(instance_ref['name'])
             libvirt_utils.file_open(console_file, 'a').close()
 
             # if image has kernel and ramdisk, just download
