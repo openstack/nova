@@ -396,6 +396,9 @@ class FakeDriver(driver.ComputeDriver):
     def get_available_nodes(self):
         return _FAKE_NODES
 
+    def instance_on_disk(self, instance):
+        return False
+
 
 class FakeVirtAPI(virtapi.VirtAPI):
     def instance_update(self, context, instance_uuid, updates):

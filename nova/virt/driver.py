@@ -778,6 +778,20 @@ class ComputeDriver(object):
         """
         return {}
 
+    def instance_on_disk(self, instance):
+        """Checks access of instance files on the host.
+
+        :param instance: instance to lookup
+
+        Returns True if files of an instance with the supplied ID accessible on
+        the host, False otherwise.
+
+        .. note::
+            Used in rebuild for HA implementation and required for validation
+            of access to instance shared disk files
+        """
+        return False
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.
