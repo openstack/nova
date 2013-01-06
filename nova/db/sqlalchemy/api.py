@@ -4554,22 +4554,8 @@ def _ec2_instance_get_query(context, session=None):
 
 
 @require_admin_context
-def task_log_get(context, task_name, period_beginning,
-                 period_ending, host, state=None, session=None):
-    query = model_query(context, models.TaskLog, session=session).\
-                     filter_by(task_name=task_name).\
-                     filter_by(period_beginning=period_beginning).\
-                     filter_by(period_ending=period_ending).\
-                     filter_by(host=host)
-    if state is not None:
-        query = query.filter_by(state=state)
-
-    return query.first()
-
-
-@require_admin_context
-def task_log_get_all(context, task_name, period_beginning,
-                 period_ending, host=None, state=None, session=None):
+def _task_log_get_query(context, task_name, period_beginning,
+                        period_ending, host=None, state=None, session=None):
     query = model_query(context, models.TaskLog, session=session).\
                      filter_by(task_name=task_name).\
                      filter_by(period_beginning=period_beginning).\
@@ -4578,25 +4564,34 @@ def task_log_get_all(context, task_name, period_beginning,
         query = query.filter_by(host=host)
     if state is not None:
         query = query.filter_by(state=state)
-    return query.all()
+    return query
 
 
 @require_admin_context
-def task_log_begin_task(context, task_name,
-                        period_beginning,
-                        period_ending,
-                        host,
-                        task_items=None,
-                        message=None,
-                        session=None):
-    session = session or get_session()
+def task_log_get(context, task_name, period_beginning, period_ending, host,
+                 state=None):
+    return _task_log_get_query(task_name, period_beginning, period_ending,
+                               host, state).first()
+
+
+@require_admin_context
+def task_log_get_all(context, task_name, period_beginning, period_ending,
+                     host=None, state=None):
+    return _task_log_get_query(task_name, period_beginning, period_ending,
+                               host, state).all()
+
+
+@require_admin_context
+def task_log_begin_task(context, task_name, period_beginning, period_ending,
+                        host, task_items=None, message=None):
+    # NOTE(boris-42): This method has a race condition and will be rewritten
+    #                 after bp/db-unique-keys implementation.
+    session = get_session()
     with session.begin():
-        task = task_log_get(context, task_name,
-                            period_beginning,
-                            period_ending,
-                            host,
-                            session=session)
-        if task:
+        task_ref = _task_log_get_query(context, task_name, period_beginning,
+                                       period_ending, host, session=session).\
+                        first()
+        if task_ref:
             #It's already run(ning)!
             raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
         task = models.TaskLog()
@@ -4610,30 +4605,20 @@ def task_log_begin_task(context, task_name,
         if task_items:
             task.task_items = task_items
         task.save(session=session)
-    return task
 
 
 @require_admin_context
-def task_log_end_task(context, task_name,
-                        period_beginning,
-                        period_ending,
-                        host,
-                        errors,
-                        message=None,
-                        session=None):
-    session = session or get_session()
+def task_log_end_task(context, task_name, period_beginning, period_ending,
+                      host, errors, message=None):
+    values = dict(state="DONE", errors=errors)
+    if message:
+        values["message"] = message
+
+    session = get_session()
     with session.begin():
-        task = task_log_get(context, task_name,
-                            period_beginning,
-                            period_ending,
-                            host,
-                            session=session)
-        if not task:
+        rows = _task_log_get_query(context, task_name, period_beginning,
+                                       period_ending, host, session=session).\
+                        update(values)
+        if rows == 0:
             #It's not running!
             raise exception.TaskNotRunning(task_name=task_name, host=host)
-        task.state = "DONE"
-        if message:
-            task.message = message
-        task.errors = errors
-        task.save(session=session)
-    return task
