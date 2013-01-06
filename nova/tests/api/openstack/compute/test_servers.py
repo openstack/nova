@@ -3664,6 +3664,24 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 }}
         self.assertEquals(request['body'], expected)
 
+    def test_request_with_config_drive(self):
+        serial_request = """
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
+        name="config_drive_test"
+        imageRef="1"
+        flavorRef="1"
+        config_drive="true"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "server": {
+                "name": "config_drive_test",
+                "imageRef": "1",
+                "flavorRef": "1",
+                "config_drive": "true"
+            },
+        }
+        self.assertEquals(request['body'], expected)
+
 
 class TestAddressesXMLSerialization(test.TestCase):
 

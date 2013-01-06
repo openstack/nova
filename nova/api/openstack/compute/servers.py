@@ -223,6 +223,10 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         if auto_disk_config:
             server['OS-DCF:diskConfig'] = utils.bool_from_str(auto_disk_config)
 
+        config_drive = server_node.getAttribute('config_drive')
+        if config_drive:
+            server['config_drive'] = config_drive
+
         return server
 
     def _extract_block_device_mapping(self, server_node):
