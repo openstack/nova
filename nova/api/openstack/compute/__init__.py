@@ -57,7 +57,8 @@ class APIRouter(nova.api.openstack.APIRouter):
             self.resources['versions'] = versions.create_resource()
             mapper.connect("versions", "/",
                         controller=self.resources['versions'],
-                        action='show')
+                        action='show',
+                        conditions={"method": ['GET']})
 
         mapper.redirect("", "/")
 
