@@ -33,6 +33,8 @@ SPAWNING = 'spawning'
 
 # possible task states during snapshot()
 IMAGE_SNAPSHOT = 'image_snapshot'
+IMAGE_PENDING_UPLOAD = 'image_pending_upload'
+IMAGE_UPLOADING = 'image_uploading'
 
 # possible task states during backup()
 IMAGE_BACKUP = 'image_backup'

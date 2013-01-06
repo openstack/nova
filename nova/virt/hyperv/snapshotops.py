@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 
+from nova.compute import task_states
 from nova import exception
 from nova.image import glance
 from nova.openstack.common import cfg
@@ -45,7 +46,7 @@ class SnapshotOps(baseops.BaseOps):
         super(SnapshotOps, self).__init__()
         self._vmutils = vmutils.VMUtils()
 
-    def snapshot(self, context, instance, name):
+    def snapshot(self, context, instance, name, update_task_state):
         """Create snapshot from a running VM instance."""
         instance_name = instance["name"]
         vm = self._vmutils.lookup(self._conn, instance_name)
@@ -70,6 +71,8 @@ class SnapshotOps(baseops.BaseOps):
             raise vmutils.HyperVException(
                 _('Failed to create snapshot for VM %s') %
                     instance_name)
+        else:
+            update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
         export_folder = None
         f = None
@@ -164,6 +167,8 @@ class SnapshotOps(baseops.BaseOps):
                 _("Updating Glance image %(image_id)s with content from "
                     "merged disk %(image_vhd_path)s"),
                     locals())
+            update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                              expected_state=task_states.IMAGE_PENDING_UPLOAD)
             glance_image_service.update(context, image_id, image_metadata, f)
 
             LOG.debug(_("Snapshot image %(image_id)s updated for VM "

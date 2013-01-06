@@ -127,9 +127,9 @@ class VMWareESXDriver(driver.ComputeDriver):
         """Create VM instance."""
         self._vmops.spawn(context, instance, image_meta, network_info)
 
-    def snapshot(self, context, instance, name):
+    def snapshot(self, context, instance, name, update_task_state):
         """Create snapshot from a running VM instance."""
-        self._vmops.snapshot(context, instance, name)
+        self._vmops.snapshot(context, instance, name, update_task_state)
 
     def reboot(self, instance, network_info, reboot_type,
                block_device_info=None):

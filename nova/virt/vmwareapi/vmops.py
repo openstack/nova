@@ -27,6 +27,7 @@ import urllib2
 import uuid
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -333,7 +334,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Powered on the VM instance"), instance=instance)
         _power_on_vm()
 
-    def snapshot(self, context, instance, snapshot_name):
+    def snapshot(self, context, instance, snapshot_name, update_task_state):
         """Create snapshot from a running VM instance.
 
         Steps followed are:
@@ -390,6 +391,7 @@ class VMWareVMOps(object):
                       instance=instance)
 
         _create_vm_snapshot()
+        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
         def _check_if_tmp_folder_exists():
             # Copy the contents of the VM that were there just before the
@@ -468,6 +470,8 @@ class VMWareVMOps(object):
             LOG.debug(_("Uploaded image %s") % snapshot_name,
                       instance=instance)
 
+        update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                          expected_state=task_states.IMAGE_PENDING_UPLOAD)
         _upload_vmdk_to_image_repository()
 
         def _clean_temp_data():
