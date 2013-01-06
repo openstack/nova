@@ -101,6 +101,7 @@ class VFSGuestFS(vfs.VFS):
 
             self.handle.aug_init("/", 0)
         except RuntimeError, e:
+            # dereference object and implicitly close()
             self.handle = None
             raise exception.NovaException(
                 _("Error mounting %(imgfile)s with libguestfs (%(e)s)") %
@@ -111,19 +112,31 @@ class VFSGuestFS(vfs.VFS):
 
     def teardown(self):
         LOG.debug(_("Tearing down appliance"))
+
         try:
-            self.handle.aug_close()
-        except Exception, e:
-            LOG.debug(_("Failed to close augeas %s"), e)
-        try:
-            self.handle.shutdown()
-        except Exception, e:
-            LOG.debug(_("Failed to shutdown appliance %s"), e)
-        try:
-            self.handle.close()
-        except Exception, e:
-            LOG.debug(_("Failed to close guest handle %s"), e)
-        self.handle = None
+            try:
+                self.handle.aug_close()
+            except RuntimeError, e:
+                LOG.warn(_("Failed to close augeas %s"), e)
+
+            try:
+                self.handle.shutdown()
+            except AttributeError:
+                # Older libguestfs versions haven't an explicit shutdown
+                pass
+            except RuntimeError, e:
+                LOG.warn(_("Failed to shutdown appliance %s"), e)
+
+            try:
+                self.handle.close()
+            except AttributeError:
+                # Older libguestfs versions haven't an explicit close
+                pass
+            except RuntimeError, e:
+                LOG.warn(_("Failed to close guest handle %s"), e)
+        finally:
+            # dereference object and implicitly close()
+            self.handle = None
 
     @staticmethod
     def _canonicalize_path(path):
@@ -157,7 +170,7 @@ class VFSGuestFS(vfs.VFS):
         try:
             self.handle.stat(path)
             return True
-        except Exception, e:
+        except RuntimeError:
             return False
 
     def set_permissions(self, path, mode):

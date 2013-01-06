@@ -96,13 +96,13 @@ class GuestFS(object):
 
     def stat(self, path):
         if not path in self.files:
-            raise Exception("No such file: " + path)
+            raise RuntimeError("No such file: " + path)
 
         return self.files[path]["mode"]
 
     def chown(self, uid, gid, path):
         if not path in self.files:
-            raise Exception("No such file: " + path)
+            raise RuntimeError("No such file: " + path)
 
         if uid != -1:
             self.files[path]["uid"] = uid
@@ -111,7 +111,7 @@ class GuestFS(object):
 
     def chmod(self, mode, path):
         if not path in self.files:
-            raise Exception("No such file: " + path)
+            raise RuntimeError("No such file: " + path)
 
         self.files[path]["mode"] = mode
 
@@ -123,7 +123,7 @@ class GuestFS(object):
 
     def aug_get(self, cfgpath):
         if not self.auginit:
-            raise Exception("Augeus not initialized")
+            raise RuntimeError("Augeus not initialized")
 
         if cfgpath == "/files/etc/passwd/root/uid":
             return 0
@@ -137,4 +137,4 @@ class GuestFS(object):
             return 500
         elif cfgpath == "/files/etc/group/admins/gid":
             return 600
-        raise Exception("Unknown path %s", cfgpath)
+        raise RuntimeError("Unknown path %s", cfgpath)
