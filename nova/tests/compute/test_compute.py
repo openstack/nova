@@ -4203,7 +4203,7 @@ class ComputeAPITestCase(BaseTestCase):
                               flavorid, 0, 1.0, True)
         instance_types.destroy(name)
         self.assertRaises(exception.FlavorNotFound, self.compute_api.resize,
-                self.context, instance, 200)
+                self.context, instance, flavorid)
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -4218,6 +4218,25 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.CannotResizeToSameFlavor,
                           self.compute_api.resize, self.context, instance, 1)
 
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_resize_quota_exceeds_fails(self):
+        instance = self._create_fake_instance()
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
+
+        name = 'test_resize_with_big_mem'
+        flavorid = 11
+        memory_mb = 102400
+        root_gb = 0
+        vcpus = 1
+        instance_types.create(name, memory_mb, vcpus, root_gb, 0,
+                              flavorid, 0, 1.0, True)
+        self.assertRaises(exception.TooManyInstances, self.compute_api.resize,
+                self.context, instance, flavorid)
+
+        instance_types.destroy(name)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_migrate(self):
