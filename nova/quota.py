@@ -40,7 +40,7 @@ quota_opts = [
     cfg.IntOpt('quota_ram',
                default=50 * 1024,
                help='megabytes of instance ram allowed per project'),
-   cfg.IntOpt('quota_floating_ips',
+    cfg.IntOpt('quota_floating_ips',
                default=10,
                help='number of floating ips allowed per project'),
     cfg.IntOpt('quota_metadata_items',
@@ -400,6 +400,192 @@ class DbQuotaDriver(object):
         """
 
         db.reservation_expire(context)
+
+
+class NoopQuotaDriver(object):
+    """Driver that turns quotas calls into no-ops and pretends that quotas
+    for all resources are unlimited.  This can be used if you do not
+    wish to have any quota checking.  For instance, with nova compute
+    cells, the parent cell should do quota checking, but the child cell
+    should not.
+    """
+
+    def get_by_project(self, context, project_id, resource):
+        """Get a specific quota by project."""
+        # Unlimited
+        return -1
+
+    def get_by_class(self, context, quota_class, resource):
+        """Get a specific quota by quota class."""
+        # Unlimited
+        return -1
+
+    def get_defaults(self, context, resources):
+        """Given a list of resources, retrieve the default quotas.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        """
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = -1
+        return quotas
+
+    def get_class_quotas(self, context, resources, quota_class,
+                         defaults=True):
+        """
+        Given a list of resources, retrieve the quotas for the given
+        quota class.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param quota_class: The name of the quota class to return
+                            quotas for.
+        :param defaults: If True, the default value will be reported
+                         if there is no specific value for the
+                         resource.
+        """
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = -1
+        return quotas
+
+    def get_project_quotas(self, context, resources, project_id,
+                           quota_class=None, defaults=True,
+                           usages=True):
+        """
+        Given a list of resources, retrieve the quotas for the given
+        project.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param project_id: The ID of the project to return quotas for.
+        :param quota_class: If project_id != context.project_id, the
+                            quota class cannot be determined.  This
+                            parameter allows it to be specified.  It
+                            will be ignored if project_id ==
+                            context.project_id.
+        :param defaults: If True, the quota class value (or the
+                         default value, if there is no value from the
+                         quota class) will be reported if there is no
+                         specific value for the resource.
+        :param usages: If True, the current in_use and reserved counts
+                       will also be returned.
+        """
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = -1
+        return quotas
+
+    def limit_check(self, context, resources, values):
+        """Check simple quota limits.
+
+        For limits--those quotas for which there is no usage
+        synchronization function--this method checks that a set of
+        proposed values are permitted by the limit restriction.
+
+        This method will raise a QuotaResourceUnknown exception if a
+        given resource is unknown or if it is not a simple limit
+        resource.
+
+        If any of the proposed values is over the defined quota, an
+        OverQuota exception will be raised with the sorted list of the
+        resources which are too high.  Otherwise, the method returns
+        nothing.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param values: A dictionary of the values to check against the
+                       quota.
+        """
+        pass
+
+    def reserve(self, context, resources, deltas, expire=None):
+        """Check quotas and reserve resources.
+
+        For counting quotas--those quotas for which there is a usage
+        synchronization function--this method checks quotas against
+        current usage and the desired deltas.
+
+        This method will raise a QuotaResourceUnknown exception if a
+        given resource is unknown or if it does not have a usage
+        synchronization function.
+
+        If any of the proposed values is over the defined quota, an
+        OverQuota exception will be raised with the sorted list of the
+        resources which are too high.  Otherwise, the method returns a
+        list of reservation UUIDs which were created.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param deltas: A dictionary of the proposed delta changes.
+        :param expire: An optional parameter specifying an expiration
+                       time for the reservations.  If it is a simple
+                       number, it is interpreted as a number of
+                       seconds and added to the current time; if it is
+                       a datetime.timedelta object, it will also be
+                       added to the current time.  A datetime.datetime
+                       object will be interpreted as the absolute
+                       expiration time.  If None is specified, the
+                       default expiration time set by
+                       --default-reservation-expire will be used (this
+                       value will be treated as a number of seconds).
+        """
+        return []
+
+    def commit(self, context, reservations):
+        """Commit reservations.
+
+        :param context: The request context, for access checks.
+        :param reservations: A list of the reservation UUIDs, as
+                             returned by the reserve() method.
+        """
+        pass
+
+    def rollback(self, context, reservations):
+        """Roll back reservations.
+
+        :param context: The request context, for access checks.
+        :param reservations: A list of the reservation UUIDs, as
+                             returned by the reserve() method.
+        """
+        pass
+
+    def usage_reset(self, context, resources):
+        """
+        Reset the usage records for a particular user on a list of
+        resources.  This will force that user's usage records to be
+        refreshed the next time a reservation is made.
+
+        Note: this does not affect the currently outstanding
+        reservations the user has; those reservations must be
+        committed or rolled back (or expired).
+
+        :param context: The request context, for access checks.
+        :param resources: A list of the resource names for which the
+                          usage must be reset.
+        """
+        pass
+
+    def destroy_all_by_project(self, context, project_id):
+        """
+        Destroy all quotas, usages, and reservations associated with a
+        project.
+
+        :param context: The request context, for access checks.
+        :param project_id: The ID of the project being deleted.
+        """
+        pass
+
+    def expire(self, context):
+        """Expire reservations.
+
+        Explores all currently existing reservations and rolls back
+        any that have expired.
+
+        :param context: The request context, for access checks.
+        """
+        pass
 
 
 class BaseResource(object):
