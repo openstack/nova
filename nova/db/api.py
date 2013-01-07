@@ -1016,20 +1016,22 @@ def reservation_destroy(context, uuid):
 
 
 def quota_reserve(context, resources, quotas, deltas, expire,
-                  until_refresh, max_age):
+                  until_refresh, max_age, project_id=None):
     """Check quotas and create appropriate reservations."""
     return IMPL.quota_reserve(context, resources, quotas, deltas, expire,
-                              until_refresh, max_age)
+                              until_refresh, max_age, project_id=project_id)
 
 
-def reservation_commit(context, reservations):
+def reservation_commit(context, reservations, project_id=None):
     """Commit quota reservations."""
-    return IMPL.reservation_commit(context, reservations)
+    return IMPL.reservation_commit(context, reservations,
+                                   project_id=project_id)
 
 
-def reservation_rollback(context, reservations):
+def reservation_rollback(context, reservations, project_id=None):
     """Roll back quota reservations."""
-    return IMPL.reservation_rollback(context, reservations)
+    return IMPL.reservation_rollback(context, reservations,
+                                     project_id=project_id)
 
 
 def quota_destroy_all_by_project(context, project_id):

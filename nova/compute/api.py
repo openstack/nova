@@ -885,6 +885,12 @@ class API(base.Base):
         bdms = self.db.block_device_mapping_get_all_by_instance(
                     context, instance['uuid'])
         reservations = None
+
+        if context.is_admin and context.project_id != instance['project_id']:
+            project_id = instance['project_id']
+        else:
+            project_id = context.project_id
+
         try:
             # NOTE(maoy): no expected_task_state needs to be set
             attrs = {'progress': 0}
@@ -899,6 +905,7 @@ class API(base.Base):
                 old['task_state'] not in (task_states.DELETING,
                                           task_states.SOFT_DELETING)):
                 reservations = QUOTAS.reserve(context,
+                                              project_id=project_id,
                                               instances=-1,
                                               cores=-instance['vcpus'],
                                               ram=-instance['memory_mb'])
@@ -910,7 +917,9 @@ class API(base.Base):
                     self.db.instance_destroy(context, instance['uuid'],
                                              constraint)
                     if reservations:
-                        QUOTAS.commit(context, reservations)
+                        QUOTAS.commit(context,
+                                      reservations,
+                                      project_id=project_id)
                     return
                 except exception.ConstraintNotMet:
                     # Refresh to get new host information
@@ -962,15 +971,21 @@ class API(base.Base):
                 # If compute node isn't up, just delete from DB
                 self._local_delete(context, instance, bdms)
             if reservations:
-                QUOTAS.commit(context, reservations)
+                QUOTAS.commit(context,
+                              reservations,
+                              project_id=project_id)
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
             if reservations:
-                QUOTAS.rollback(context, reservations)
+                QUOTAS.rollback(context,
+                                reservations,
+                                project_id=project_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if reservations:
-                    QUOTAS.rollback(context, reservations)
+                    QUOTAS.rollback(context,
+                                    reservations,
+                                    project_id=project_id)
 
     def _local_delete(self, context, instance, bdms):
         LOG.warning(_("instance's host %s is down, deleting from "
