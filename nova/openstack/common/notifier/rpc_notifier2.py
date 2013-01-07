@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+'''messaging based notification driver, with message envelopes'''
 
 from nova.openstack.common import cfg
 from nova.openstack.common import context as req_context
@@ -23,11 +24,15 @@ from nova.openstack.common import rpc
 LOG = logging.getLogger(__name__)
 
 notification_topic_opt = cfg.ListOpt(
-    'notification_topics', default=['notifications', ],
-    help='AMQP topic used for openstack notifications')
+    'topics', default=['notifications', ],
+    help='AMQP topic(s) used for openstack notifications')
+
+opt_group = cfg.OptGroup(name='rpc_notifier2',
+                         title='Options for rpc_notifier2')
 
 CONF = cfg.CONF
-CONF.register_opt(notification_topic_opt)
+CONF.register_group(opt_group)
+CONF.register_opt(notification_topic_opt, opt_group)
 
 
 def notify(context, message):
@@ -37,10 +42,10 @@ def notify(context, message):
     priority = message.get('priority',
                            CONF.default_notification_level)
     priority = priority.lower()
-    for topic in CONF.notification_topics:
+    for topic in CONF.rpc_notifier2.topics:
         topic = '%s.%s' % (topic, priority)
         try:
-            rpc.notify(context, topic, message)
+            rpc.notify(context, topic, message, envelope=True)
         except Exception:
             LOG.exception(_("Could not send notification to %(topic)s. "
                             "Payload=%(message)s"), locals())
