@@ -123,6 +123,12 @@ function run_pep8 {
   # Until all these issues get fixed, ignore.
   ignore='--ignore=E12,E711,E721,E712'
 
+  # First run the hacking selftest, to make sure it's right
+  echo "Running hacking.py self test"
+  ${wrapper} python tools/hacking.py --doctest
+
+  # Then actually run it
+  echo "Running pep8"
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
 
   # NOTE(sdague): as of grizzly-2 these are passing however leaving the comment
