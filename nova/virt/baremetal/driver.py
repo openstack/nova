@@ -169,11 +169,19 @@ class BareMetalDriver(driver.ComputeDriver):
         l = []
         ctx = nova_context.get_admin_context()
         for node in _get_baremetal_nodes(ctx):
-            if node['instance_uuid']:
-                inst = self.virtapi.instance_get_by_uuid(ctx,
-                                                         node['instance_uuid'])
-                if inst:
-                    l.append(inst['name'])
+            if not node['instance_uuid']:
+                # Not currently assigned to an instance.
+                continue
+            try:
+                inst = self.virtapi.instance_get_by_uuid(
+                    ctx, node['instance_uuid'])
+            except exception.InstanceNotFound:
+                # Assigned to an instance that no longer exists.
+                LOG.warning(_("Node %(id)r assigned to instance %(uuid)r "
+                    "which cannot be found."),
+                    dict(id=node['id'], uuid=node['instance_uuid']))
+                continue
+            l.append(inst['name'])
         return l
 
     def spawn(self, context, instance, image_meta, injected_files,
