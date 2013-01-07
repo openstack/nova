@@ -54,6 +54,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.20 - Added migration_get_unconfirmed_by_dest_compute
     1.21 - Added service_get_all_by
     1.22 - Added ping
+    1.23 - Added instance_get_all
+           Un-Deprecate instance_get_all_by_host
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -245,3 +247,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def service_get_all_by(self, context, topic=None, host=None):
         msg = self.make_msg('service_get_all_by', topic=topic, host=host)
         return self.call(context, msg, version='1.21')
+
+    def instance_get_all(self, context):
+        msg = self.make_msg('instance_get_all')
+        return self.call(context, msg, version='1.23')
+
+    def instance_get_all_by_host(self, context, host):
+        msg = self.make_msg('instance_get_all_by_host', host=host)
+        return self.call(context, msg, version='1.23')

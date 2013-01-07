@@ -594,9 +594,8 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
     def test_instance_get_all(self):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
-        db.instance_get_all_by_filters(self.context, {}, 'created_at', 'desc')
-        db.instance_get_all_by_filters(self.context, {'host': 'fake-host'},
-                                       'created_at', 'desc')
+        db.instance_get_all(self.context)
+        db.instance_get_all_by_host(self.context.elevated(), 'fake-host')
         db.instance_get_all_by_filters(self.context, {'name': 'fake-inst'},
                                        'updated_at', 'asc')
         self.mox.ReplayAll()

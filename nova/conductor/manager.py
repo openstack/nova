@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.22'
+    RPC_API_VERSION = '1.23'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -75,7 +75,9 @@ class ConductorManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(
             self.db.instance_get_by_uuid(context, instance_uuid))
 
-    # NOTE(danms): This should go away in RPC version 2
+    def instance_get_all(self, context):
+        return jsonutils.to_primitive(self.db.instance_get_all(context))
+
     def instance_get_all_by_host(self, context, host):
         return jsonutils.to_primitive(
             self.db.instance_get_all_by_host(context.elevated(), host))
