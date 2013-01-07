@@ -49,6 +49,17 @@ CONF.register_opts(driver_opts)
 LOG = logging.getLogger(__name__)
 
 
+def driver_dict_from_config(named_driver_config, *args, **kwargs):
+    driver_registry = dict()
+
+    for driver_str in named_driver_config:
+        driver_type, _sep, driver = driver_str.partition('=')
+        driver_class = importutils.import_class(driver)
+        driver_registry[driver_type] = driver_class(*args, **kwargs)
+
+    return driver_registry
+
+
 def block_device_info_get_root(block_device_info):
     block_device_info = block_device_info or {}
     return block_device_info.get('root_device_name')

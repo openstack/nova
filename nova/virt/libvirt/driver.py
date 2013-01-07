@@ -284,11 +284,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             get_connection=self._get_connection)
         self.vif_driver = importutils.import_object(CONF.libvirt_vif_driver)
-        self.volume_drivers = {}
-        for driver_str in CONF.libvirt_volume_drivers:
-            driver_type, _sep, driver = driver_str.partition('=')
-            driver_class = importutils.import_class(driver)
-            self.volume_drivers[driver_type] = driver_class(self)
+
+        self.volume_drivers = driver.driver_dict_from_config(
+            CONF.libvirt_volume_drivers, self)
+
         self._host_state = None
 
         disk_prefix_map = {"lxc": "", "uml": "ubd", "xen": "sd"}
