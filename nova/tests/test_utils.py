@@ -26,15 +26,9 @@ import mox
 
 import nova
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
-
-CONF = cfg.CONF
-CONF.import_opt('glance_host', 'nova.config')
-CONF.import_opt('glance_port', 'nova.config')
-CONF.import_opt('glance_protocol', 'nova.config')
 
 
 class ByteConversionTest(test.TestCase):
@@ -379,17 +373,6 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertFalse(utils.bool_from_str('0'))
         self.assertFalse(utils.bool_from_str(None))
         self.assertFalse(utils.bool_from_str('junk'))
-
-    def test_generate_glance_http_url(self):
-        generated_url = utils.generate_glance_url()
-        http_url = "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
-        self.assertEqual(generated_url, http_url)
-
-    def test_generate_glance_https_url(self):
-        self.flags(glance_protocol="https")
-        generated_url = utils.generate_glance_url()
-        https_url = "https://%s:%d" % (CONF.glance_host, CONF.glance_port)
-        self.assertEqual(generated_url, https_url)
 
     def test_read_cached_file(self):
         self.mox.StubOutWithMock(os.path, "getmtime")

@@ -41,6 +41,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.openstack.common import cfg
@@ -1455,7 +1456,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertTrue(payload['launched_at'])
-        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
+        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
@@ -1496,7 +1497,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         self.assertTrue('deleted_at' in payload)
         self.assertEqual(payload['deleted_at'], timeutils.strtime(cur_time))
-        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
+        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_run_instance_existing(self):
@@ -1824,8 +1825,8 @@ class ComputeTestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
 
-        image_ref_url = utils.generate_image_url(image_ref)
-        new_image_ref_url = utils.generate_image_url(new_image_ref)
+        image_ref_url = glance.generate_image_url(image_ref)
+        new_image_ref_url = glance.generate_image_url(new_image_ref)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -1904,7 +1905,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
-        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
+        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(new_instance))
@@ -1951,7 +1952,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
+        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance=new_instance)
 

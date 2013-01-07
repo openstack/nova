@@ -22,6 +22,7 @@ the system.
 import nova.context
 from nova import db
 from nova import exception
+from nova.image import glance
 from nova import network
 from nova.network import model as network_model
 from nova.openstack.common import cfg
@@ -277,7 +278,7 @@ def info_from_instance(context, instance_ref, network_info,
     def null_safe_str(s):
         return str(s) if s else ''
 
-    image_ref_url = utils.generate_image_url(instance_ref['image_ref'])
+    image_ref_url = glance.generate_image_url(instance_ref['image_ref'])
 
     instance_type_name = instance_ref.get('instance_type', {}).get('name', '')
 

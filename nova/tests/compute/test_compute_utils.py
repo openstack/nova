@@ -24,6 +24,7 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
+from nova.image import glance
 from nova.network import api as network_api
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -33,7 +34,6 @@ from nova.openstack.common.notifier import test_notifier
 from nova import test
 from nova.tests import fake_network
 import nova.tests.image.fake
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -281,7 +281,7 @@ class UsageInfoTestCase(test.TestCase):
                             msg="Key %s not in payload" % attr)
         self.assertEquals(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance)
 
@@ -317,7 +317,7 @@ class UsageInfoTestCase(test.TestCase):
                             msg="Key %s not in payload" % attr)
         self.assertEquals(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_notify_usage_exists_instance_not_found(self):
@@ -343,7 +343,7 @@ class UsageInfoTestCase(test.TestCase):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
         self.assertEquals(payload['image_meta'], {})
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_usage(self):
@@ -376,7 +376,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         self.assertEquals(payload['image_name'], 'fake_name')
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance)
 
