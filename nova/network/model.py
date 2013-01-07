@@ -207,7 +207,7 @@ class Network(Model):
 class VIF(Model):
     """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
-                 devname=None, **kwargs):
+                 devname=None, ovs_interfaceid=None, **kwargs):
         super(VIF, self).__init__()
 
         self['id'] = id
@@ -215,6 +215,8 @@ class VIF(Model):
         self['network'] = network or None
         self['type'] = type
         self['devname'] = devname
+
+        self['ovs_interfaceid'] = ovs_interfaceid
 
         self._set_meta(kwargs)
 
@@ -381,6 +383,7 @@ class NetworkInfo(list):
                          'vif_type': vif['type'],
                          'vif_devname': vif.get('devname'),
                          'vif_uuid': vif['id'],
+                         'ovs_interfaceid': vif.get('ovs_interfaceid'),
                          'rxtx_cap': vif.get_meta('rxtx_cap', 0),
                          'dns': [get_ip(ip) for ip in subnet_v4['dns']],
                          'ips': [fixed_ip_dict(ip, subnet)

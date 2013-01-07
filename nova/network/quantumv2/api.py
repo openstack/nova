@@ -661,11 +661,13 @@ class API(base.Base):
                                  if fixed_ip.is_in_subnet(subnet)]
 
             bridge = None
+            ovs_interfaceid = None
             vif_type = port.get('binding:vif_type')
             # TODO(berrange) Quantum should pass the bridge name
             # in another binding metadata field
             if vif_type == network_model.VIF_TYPE_OVS:
                 bridge = CONF.quantum_ovs_bridge
+                ovs_interfaceid = port['id']
             elif vif_type == network_model.VIF_TYPE_BRIDGE:
                 bridge = "brq" + port['network_id']
 
@@ -688,6 +690,7 @@ class API(base.Base):
                 address=port['mac_address'],
                 network=network,
                 type=port.get('binding:vif_type'),
+                ovs_interfaceid=ovs_interfaceid,
                 devname=devname))
         return nw_info
 

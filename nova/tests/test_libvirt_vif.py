@@ -27,7 +27,7 @@ CONF = cfg.CONF
 
 class LibvirtVifTestCase(test.TestCase):
 
-    net = {
+    net_bridge = {
              'cidr': '101.168.1.0/24',
              'cidr_v6': '101:1db9::/64',
              'gateway_v6': '101:1db9::1',
@@ -42,13 +42,37 @@ class LibvirtVifTestCase(test.TestCase):
              'id': 'network-id-xxx-yyy-zzz'
     }
 
-    mapping = {
+    mapping_bridge = {
         'mac': 'ca:fe:de:ad:be:ef',
-        'gateway_v6': net['gateway_v6'],
+        'gateway_v6': net_bridge['gateway_v6'],
         'ips': [{'ip': '101.168.1.9'}],
         'dhcp_server': '191.168.1.1',
         'vif_uuid': 'vif-xxx-yyy-zzz',
         'vif_devname': 'tap-xxx-yyy-zzz'
+    }
+
+    net_ovs = {
+             'cidr': '101.168.1.0/24',
+             'cidr_v6': '101:1db9::/64',
+             'gateway_v6': '101:1db9::1',
+             'netmask_v6': '64',
+             'netmask': '255.255.255.0',
+             'bridge': 'br0',
+             'vlan': 99,
+             'gateway': '101.168.1.1',
+             'broadcast': '101.168.1.255',
+             'dns1': '8.8.8.8',
+             'id': 'network-id-xxx-yyy-zzz'
+    }
+
+    mapping_ovs = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'gateway_v6': net_ovs['gateway_v6'],
+        'ips': [{'ip': '101.168.1.9'}],
+        'dhcp_server': '191.168.1.1',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'ovs_interfaceid': 'aaa-bbb-ccc',
     }
 
     instance = {
@@ -67,7 +91,7 @@ class LibvirtVifTestCase(test.TestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
-    def _get_instance_xml(self, driver):
+    def _get_instance_xml(self, driver, net, mapping):
         conf = vconfig.LibvirtConfigGuest()
         conf.virt_type = "qemu"
         conf.name = "fake-name"
@@ -75,7 +99,7 @@ class LibvirtVifTestCase(test.TestCase):
         conf.memory = 100 * 1024
         conf.vcpus = 4
 
-        nic = driver.get_config(self.instance, self.net, self.mapping)
+        nic = driver.get_config(self.instance, net, mapping)
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -126,7 +150,9 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='kvm')
 
         d = vif.LibvirtBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -143,7 +169,9 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='kvm')
 
         d = vif.LibvirtBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -160,7 +188,9 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='qemu')
 
         d = vif.LibvirtBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -177,7 +207,9 @@ class LibvirtVifTestCase(test.TestCase):
                    libvirt_type='xen')
 
         d = vif.LibvirtBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -191,7 +223,9 @@ class LibvirtVifTestCase(test.TestCase):
 
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -199,13 +233,15 @@ class LibvirtVifTestCase(test.TestCase):
         node = ret[0]
         self.assertEqual(node.get("type"), "bridge")
         br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, self.net['bridge'])
+        self.assertEqual(br_name, self.net_bridge['bridge'])
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping['mac'])
+        self.assertEqual(mac, self.mapping_bridge['mac'])
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtOpenVswitchDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_ovs,
+                                     self.mapping_ovs)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -215,13 +251,15 @@ class LibvirtVifTestCase(test.TestCase):
         dev_name = node.find("target").get("dev")
         self.assertTrue(dev_name.startswith("tap"))
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping['mac'])
+        self.assertEqual(mac, self.mapping_ovs['mac'])
         script = node.find("script").get("path")
         self.assertEquals(script, "")
 
     def test_ovs_virtualport_driver(self):
         d = vif.LibvirtOpenVswitchVirtualPortDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_ovs,
+                                     self.mapping_ovs)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -232,21 +270,24 @@ class LibvirtVifTestCase(test.TestCase):
         br_name = node.find("source").get("bridge")
         self.assertEqual(br_name, "br0")
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping['mac'])
+        self.assertEqual(mac, self.mapping_ovs['mac'])
         vp = node.find("virtualport")
         self.assertEqual(vp.get("type"), "openvswitch")
         iface_id_found = False
         for p_elem in vp.findall("parameters"):
             iface_id = p_elem.get("interfaceid", None)
             if iface_id:
-                self.assertEqual(iface_id, self.mapping['vif_uuid'])
+                self.assertEqual(iface_id,
+                                 self.mapping_ovs['ovs_interfaceid'])
                 iface_id_found = True
 
         self.assertTrue(iface_id_found)
 
     def test_quantum_bridge_ethernet_driver(self):
         d = vif.QuantumLinuxBridgeVIFDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -256,13 +297,15 @@ class LibvirtVifTestCase(test.TestCase):
         dev_name = node.find("target").get("dev")
         self.assertTrue(dev_name.startswith("tap"))
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping['mac'])
+        self.assertEqual(mac, self.mapping_ovs['mac'])
         br_name = node.find("source").get("bridge")
         self.assertEqual(br_name, "br0")
 
     def test_quantum_hybrid_driver(self):
         d = vif.LibvirtHybridOVSBridgeDriver()
-        xml = self._get_instance_xml(d)
+        xml = self._get_instance_xml(d,
+                                     self.net_ovs,
+                                     self.mapping_ovs)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -270,6 +313,6 @@ class LibvirtVifTestCase(test.TestCase):
         node = ret[0]
         self.assertEqual(node.get("type"), "bridge")
         br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, self.net['bridge'])
+        self.assertEqual(br_name, self.net_ovs['bridge'])
         mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping['mac'])
+        self.assertEqual(mac, self.mapping_ovs['mac'])
