@@ -31,29 +31,6 @@ from nova.tests.scheduler import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.config')
-DATA = ''
-
-
-def stub_out_https_backend(stubs):
-    """
-    Stubs out the httplib.HTTPRequest.getresponse to return
-    faked-out data instead of grabbing actual contents of a resource
-
-    The stubbed getresponse() returns an iterator over
-    the data "I am a teapot, short and stout\n"
-
-    :param stubs: Set of stubout stubs
-    """
-
-    class FakeHTTPResponse(object):
-
-        def read(self):
-            return DATA
-
-    def fake_do_request(self, *args, **kwargs):
-        return httplib.OK, FakeHTTPResponse()
-
-    stubs.Set(AttestationService, '_do_request', fake_do_request)
 
 
 class TestFilter(filters.BaseHostFilter):
@@ -254,10 +231,15 @@ class ExtraSpecsOpsTestCase(test.TestCase):
 class HostFiltersTestCase(test.TestCase):
     """Test case for host filters."""
 
+    def fake_oat_request(self, *args, **kwargs):
+        """Stubs out the response from OAT service."""
+        return httplib.OK, jsonutils.loads(self.oat_data)
+
     def setUp(self):
         super(HostFiltersTestCase, self).setUp()
+        self.oat_data = ''
         self.stubs = stubout.StubOutForTesting()
-        stub_out_https_backend(self.stubs)
+        self.stubs.Set(AttestationService, '_request', self.fake_oat_request)
         self.context = context.RequestContext('fake', 'fake')
         self.json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
@@ -1167,8 +1149,8 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_trusted_filter_trusted_and_trusted_passes(self):
-        global DATA
-        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
+        self.oat_data =\
+            '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
         extra_specs = {'trust:trusted_host': 'trusted'}
@@ -1178,8 +1160,8 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_trusted_filter_trusted_and_untrusted_fails(self):
-        global DATA
-        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
+        self.oat_data =\
+            '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
         extra_specs = {'trust:trusted_host': 'trusted'}
@@ -1189,8 +1171,8 @@ class HostFiltersTestCase(test.TestCase):
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_trusted_filter_untrusted_and_trusted_fails(self):
-        global DATA
-        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
+        self.oat_data =\
+            '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
         extra_specs = {'trust:trusted_host': 'untrusted'}
@@ -1200,8 +1182,8 @@ class HostFiltersTestCase(test.TestCase):
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_trusted_filter_untrusted_and_untrusted_passes(self):
-        global DATA
-        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
+        self.oat_data =\
+            '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
         extra_specs = {'trust:trusted_host': 'untrusted'}
