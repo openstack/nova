@@ -137,8 +137,6 @@ class LibvirtVifTestCase(test.TestCase):
         ret = node.findall("driver")
         self.assertEqual(len(ret), 0)
 
-        d.unplug(None, (self.net, self.mapping))
-
     def test_model_kvm(self):
         self.flags(libvirt_use_virtio_for_bridges=True,
                    libvirt_type='kvm')
@@ -155,8 +153,6 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(model, "virtio")
         ret = node.findall("driver")
         self.assertEqual(len(ret), 0)
-
-        d.unplug(None, (self.net, self.mapping))
 
     def test_model_qemu(self):
         self.flags(libvirt_use_virtio_for_bridges=True,
@@ -175,8 +171,6 @@ class LibvirtVifTestCase(test.TestCase):
         driver = node.find("driver").get("name")
         self.assertEqual(driver, "qemu")
 
-        d.unplug(None, (self.net, self.mapping))
-
     def test_model_xen(self):
         self.flags(libvirt_use_virtio_for_bridges=True,
                    libvirt_type='xen')
@@ -194,8 +188,6 @@ class LibvirtVifTestCase(test.TestCase):
         ret = node.findall("driver")
         self.assertEqual(len(ret), 0)
 
-        d.unplug(None, (self.net, self.mapping))
-
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver()
         xml = self._get_instance_xml(d)
@@ -209,8 +201,6 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(br_name, self.net['bridge'])
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
-
-        d.unplug(None, (self.net, self.mapping))
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtOpenVswitchDriver()
@@ -227,8 +217,6 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(mac, self.mapping['mac'])
         script = node.find("script").get("path")
         self.assertEquals(script, "")
-
-        d.unplug(None, (self.net, self.mapping))
 
     def test_ovs_virtualport_driver(self):
         d = vif.LibvirtOpenVswitchVirtualPortDriver()
@@ -254,7 +242,6 @@ class LibvirtVifTestCase(test.TestCase):
                 iface_id_found = True
 
         self.assertTrue(iface_id_found)
-        d.unplug(None, (self.net, self.mapping))
 
     def test_quantum_bridge_ethernet_driver(self):
         d = vif.QuantumLinuxBridgeVIFDriver()
@@ -272,8 +259,6 @@ class LibvirtVifTestCase(test.TestCase):
         br_name = node.find("source").get("bridge")
         self.assertTrue(br_name.startswith("brq"))
 
-        d.unplug(None, (self.net, self.mapping))
-
     def test_quantum_hybrid_driver(self):
         d = vif.LibvirtHybridOVSBridgeDriver()
         xml = self._get_instance_xml(d)
@@ -287,5 +272,3 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(br_name, self.net['bridge'])
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
-
-        d.unplug(None, (self.net, self.mapping))
