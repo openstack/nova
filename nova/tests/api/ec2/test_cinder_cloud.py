@@ -672,12 +672,12 @@ class CinderCloudTestCase(test.TestCase):
         instance_id = rv['instancesSet'][0]['instanceId']
         return instance_id
 
-    def _restart_compute_service(self, periodic_interval=None):
+    def _restart_compute_service(self, periodic_interval_max=None):
         """restart compute service. NOTE: fake driver forgets all instances."""
         self.compute.kill()
-        if periodic_interval:
+        if periodic_interval_max:
             self.compute = self.start_service(
-                'compute', periodic_interval=periodic_interval)
+                'compute', periodic_interval_max=periodic_interval_max)
         else:
             self.compute = self.start_service('compute')
 
@@ -716,7 +716,7 @@ class CinderCloudTestCase(test.TestCase):
         vol1_uuid = ec2utils.ec2_vol_id_to_uuid(vol1['volumeId'])
         vol2_uuid = ec2utils.ec2_vol_id_to_uuid(vol2['volumeId'])
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
 
         kwargs = {'image_id': 'ami-1',
                   'instance_type': CONF.default_instance_type,
@@ -799,7 +799,7 @@ class CinderCloudTestCase(test.TestCase):
         vol2_uuid = ec2utils.ec2_vol_id_to_uuid(vol2['volumeId'])
 
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
         kwargs = {'image_id': 'ami-1',
                   'instance_type': CONF.default_instance_type,
                   'max_count': 1,
@@ -936,7 +936,7 @@ class CinderCloudTestCase(test.TestCase):
     def test_create_image(self):
         """Make sure that CreateImage works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
-        self._restart_compute_service(periodic_interval=0.3)
+        self._restart_compute_service(periodic_interval_max=0.3)
 
         (volumes, snapshots) = self._setUpImageSet(
             create_volumes_and_snapshots=True)

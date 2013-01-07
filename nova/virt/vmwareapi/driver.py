@@ -354,8 +354,8 @@ class VMWareAPISession(object):
         The task is polled until it completes.
         """
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, instance_uuid, task_ref,
-                                      done)
+        loop = utils.FixedIntervalLoopingCall(self._poll_task, instance_uuid,
+                                              task_ref, done)
         loop.start(CONF.vmwareapi_task_poll_interval)
         ret_val = done.wait()
         loop.stop()

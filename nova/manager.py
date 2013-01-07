@@ -54,8 +54,10 @@ This module provides Manager, a base class for managers.
 """
 
 import eventlet
+import time
 
 from nova.db import base
+from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
@@ -63,9 +65,20 @@ from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import version
 
+
+periodic_opts = [
+    cfg.BoolOpt('run_external_periodic_tasks',
+               default=True,
+               help=('Some periodic tasks can be run in a separate process. '
+                     'Should we run them here?')),
+    ]
+
 CONF = cfg.CONF
+CONF.register_opts(periodic_opts)
 CONF.import_opt('host', 'nova.config')
 LOG = logging.getLogger(__name__)
+
+DEFAULT_INTERVAL = 60.0
 
 
 def periodic_task(*args, **kwargs):
@@ -73,15 +86,29 @@ def periodic_task(*args, **kwargs):
 
     This decorator can be used in two ways:
 
-        1. Without arguments '@periodic_task', this will be run on every tick
+        1. Without arguments '@periodic_task', this will be run on every cycle
            of the periodic scheduler.
 
-        2. With arguments, @periodic_task(ticks_between_runs=N), this will be
-           run on every N ticks of the periodic scheduler.
+        2. With arguments, @periodic_task(periodic_spacing=N), this will be
+           run on approximately every N seconds. If this number is negative the
+           periodic task will be disabled.
     """
     def decorator(f):
+        # Test for old style invocation
+        if 'ticks_between_runs' in kwargs:
+            raise exception.InvalidPeriodicTaskArg(arg='ticks_between_runs')
+
+        # Control if run at all
         f._periodic_task = True
-        f._ticks_between_runs = kwargs.pop('ticks_between_runs', 0)
+        f._periodic_external_ok = kwargs.pop('external_process_ok', False)
+        if f._periodic_external_ok and not CONF.run_external_periodic_tasks:
+            f._periodic_enabled = False
+        else:
+            f._periodic_enabled = kwargs.pop('enabled', True)
+
+        # Control frequency
+        f._periodic_spacing = kwargs.pop('spacing', 0)
+        f._periodic_last_run = time.time()
         return f
 
     # NOTE(sirp): The `if` is necessary to allow the decorator to be used with
@@ -117,17 +144,39 @@ class ManagerMeta(type):
             cls._periodic_tasks = []
 
         try:
-            cls._ticks_to_skip = cls._ticks_to_skip.copy()
+            cls._periodic_last_run = cls._periodic_last_run.copy()
         except AttributeError:
-            cls._ticks_to_skip = {}
+            cls._periodic_last_run = {}
+
+        try:
+            cls._periodic_spacing = cls._periodic_spacing.copy()
+        except AttributeError:
+            cls._periodic_spacing = {}
 
         for value in cls.__dict__.values():
             if getattr(value, '_periodic_task', False):
                 task = value
                 name = task.__name__
-                if task._ticks_between_runs >= 0:
-                    cls._periodic_tasks.append((name, task))
-                    cls._ticks_to_skip[name] = task._ticks_between_runs
+
+                if task._periodic_spacing < 0:
+                    LOG.info(_('Skipping periodic task %(task)s because '
+                               'its interval is negative'),
+                             {'task': name})
+                    continue
+                if not task._periodic_enabled:
+                    LOG.info(_('Skipping periodic task %(task)s because '
+                               'it is disabled'),
+                             {'task': name})
+                    continue
+
+                # A periodic spacing of zero indicates that this task should
+                # be run every pass
+                if task._periodic_spacing == 0:
+                    task._periodic_spacing = None
+
+                cls._periodic_tasks.append((name, task))
+                cls._periodic_spacing[name] = task._periodic_spacing
+                cls._periodic_last_run[name] = task._periodic_last_run
 
 
 class Manager(base.Base):
@@ -158,29 +207,38 @@ class Manager(base.Base):
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
+        idle_for = DEFAULT_INTERVAL
         for task_name, task in self._periodic_tasks:
             full_task_name = '.'.join([self.__class__.__name__, task_name])
 
-            ticks_to_skip = self._ticks_to_skip[task_name]
-            if ticks_to_skip > 0:
-                LOG.debug(_("Skipping %(full_task_name)s, %(ticks_to_skip)s"
-                            " ticks left until next run"), locals())
-                self._ticks_to_skip[task_name] -= 1
-                continue
+            # If a periodic task is _nearly_ due, then we'll run it early
+            if self._periodic_spacing[task_name] is None:
+                wait = 0
+            else:
+                wait = time.time() - (self._periodic_last_run[task_name] +
+                                      self._periodic_spacing[task_name])
+                if wait > 0.2:
+                    if wait < idle_for:
+                        idle_for = wait
+                    continue
 
-            self._ticks_to_skip[task_name] = task._ticks_between_runs
             LOG.debug(_("Running periodic task %(full_task_name)s"), locals())
+            self._periodic_last_run[task_name] = time.time()
 
             try:
                 task(self, context)
-                # NOTE(tiantian): After finished a task, allow manager to
-                # do other work (report_state, processing AMPQ request etc.)
-                eventlet.sleep(0)
             except Exception as e:
                 if raise_on_error:
                     raise
                 LOG.exception(_("Error during %(full_task_name)s: %(e)s"),
                               locals())
+
+            if (not self._periodic_spacing[task_name] is None and
+                self._periodic_spacing[task_name] < idle_for):
+                idle_for = self._periodic_spacing[task_name]
+            eventlet.sleep(0)
+
+        return idle_for
 
     def init_host(self):
         """Hook to do additional manager initialization when one requests

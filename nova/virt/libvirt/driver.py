@@ -513,7 +513,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise utils.LoopingCallDone()
 
-        timer = utils.LoopingCall(_wait_for_destroy)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_destroy)
         timer.start(interval=0.5).wait()
 
     def destroy(self, instance, network_info, block_device_info=None):
@@ -877,8 +877,9 @@ class LibvirtDriver(driver.ComputeDriver):
                          power_state.CRASHED]:
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
-                self._create_domain(domain=dom, inst_name=instance['name'])
-                timer = utils.LoopingCall(self._wait_for_running, instance)
+                self._create_domain(domain=dom)
+                timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
+                                                       instance)
                 timer.start(interval=0.5).wait()
                 return True
             greenthread.sleep(1)
@@ -915,7 +916,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise utils.LoopingCallDone()
 
-        timer = utils.LoopingCall(_wait_for_reboot)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_reboot)
         timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
@@ -939,8 +940,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def power_on(self, instance):
         """Power on the specified instance"""
         dom = self._lookup_by_name(instance['name'])
-        self._create_domain(domain=dom, inst_name=instance['name'])
-        timer = utils.LoopingCall(self._wait_for_running, instance)
+        self._create_domain(domain=dom)
+        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
+                                               instance)
         timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
@@ -1052,7 +1054,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise utils.LoopingCallDone()
 
-        timer = utils.LoopingCall(_wait_for_boot)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_boot)
         timer.start(interval=0.5).wait()
 
     def _flush_libvirt_console(self, pty):
@@ -2564,7 +2566,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 recover_method(ctxt, instance_ref, dest, block_migration)
 
         # Waiting for completion of live_migration.
-        timer = utils.LoopingCall(f=None)
+        timer = utils.FixedIntervalLoopingCall(f=None)
 
         def wait_for_live_migration():
             """waiting for live migration completion"""
@@ -2973,7 +2975,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                     block_device_info=None)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
-        timer = utils.LoopingCall(self._wait_for_running, instance)
+        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
+                                               instance)
         timer.start(interval=0.5).wait()
 
     @exception.wrap_exception()
@@ -2991,7 +2994,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
-        timer = utils.LoopingCall(self._wait_for_running, instance)
+        timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
+                                               instance)
         timer.start(interval=0.5).wait()
 
     def confirm_migration(self, migration, instance, network_info):
