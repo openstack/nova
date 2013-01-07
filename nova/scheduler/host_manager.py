@@ -122,7 +122,8 @@ class HostState(object):
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
-        if self.updated and self.updated > compute['updated_at']:
+        if (self.updated and compute['updated_at']
+            and self.updated > compute['updated_at']):
             return
         all_ram_mb = compute['memory_mb']
 
