@@ -218,7 +218,7 @@ the changes across.
 OpenStack Trademark
 -------------------
 
-OpenStack is a registered trademark of OpenStack, LLC, and uses the
+OpenStack is a registered trademark of the OpenStack Foundation, and uses the
 following capitalization:
 
    OpenStack
