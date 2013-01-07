@@ -59,8 +59,6 @@ recreate_db=1
 LANG=en_US.UTF-8
 LANGUAGE=en_US:en
 LC_ALL=C
-OS_STDOUT_NOCAPTURE=False
-OS_STDERR_NOCAPTURE=False
 
 for arg in "$@"; do
   process_option $arg
