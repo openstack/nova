@@ -629,8 +629,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.exception(msg, instance=instance)
                 raise
             except Exception:
+                exc_info = sys.exc_info()
                 # try to re-schedule instance:
-                self._reschedule_or_reraise(context, instance,
+                self._reschedule_or_reraise(context, instance, exc_info,
                         requested_networks, admin_password, injected_files,
                         is_first_time, request_spec, filter_properties)
             else:
@@ -652,15 +653,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                   traceback.format_exception(type_, value, tb),
                   instance_uuid=instance_uuid)
 
-    def _reschedule_or_reraise(self, context, instance, requested_networks,
-                               admin_password, injected_files, is_first_time,
-                               request_spec, filter_properties):
+    def _reschedule_or_reraise(self, context, instance, exc_info,
+            requested_networks, admin_password, injected_files, is_first_time,
+            request_spec, filter_properties):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
-        exc_info = sys.exc_info()
         instance_uuid = instance['uuid']
         rescheduled = False
+
+        compute_utils.add_instance_fault_from_exc(context, instance_uuid,
+                exc_info[0], exc_info=exc_info)
 
         try:
             self._deallocate_network(context, instance)
@@ -1850,8 +1853,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                         reservations, request_spec, filter_properties, node)
             except Exception:
                 # try to re-schedule the resize elsewhere:
+                exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,
-                        instance_type, reservations, request_spec,
+                        exc_info, instance_type, reservations, request_spec,
                         filter_properties)
             finally:
                 extra_usage_info = dict(
@@ -1862,7 +1866,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, "resize.prep.end",
                     extra_usage_info=extra_usage_info)
 
-    def _reschedule_resize_or_reraise(self, context, image, instance,
+    def _reschedule_resize_or_reraise(self, context, image, instance, exc_info,
             instance_type, reservations, request_spec, filter_properties):
         """Try to re-schedule the resize or re-raise the original error to
         error out the instance.
@@ -1872,9 +1876,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not filter_properties:
             filter_properties = {}
 
-        exc_info = sys.exc_info()
         rescheduled = False
         instance_uuid = instance['uuid']
+
+        compute_utils.add_instance_fault_from_exc(context, instance_uuid,
+                exc_info[0], exc_info=exc_info)
 
         try:
             scheduler_method = self.scheduler_rpcapi.prep_resize
