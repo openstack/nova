@@ -453,7 +453,12 @@ class ResourceTracker(object):
                 filtered[uuid] = migration
 
         for migration in filtered.values():
-            self._update_usage_from_migration(resources, migration)
+            try:
+                self._update_usage_from_migration(resources, migration)
+            except exception.InstanceTypeNotFound:
+                LOG.warn(_("InstanceType could not be found, skipping "
+                           "migration."), instance_uuid=uuid)
+                continue
 
     def _update_usage_from_instance(self, resources, instance):
         """Update usage for a single instance."""

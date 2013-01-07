@@ -1024,6 +1024,9 @@ class Controller(wsgi.Controller):
         except exception.MigrationNotFound:
             msg = _("Instance has not been resized.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.InstanceTypeNotFound:
+            msg = _("Flavor used by the instance could not be found.")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'revertResize')
