@@ -25,7 +25,6 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
-CONF.import_opt('network_topic', 'nova.config')
 
 
 class NetworkRpcAPITestCase(test.TestCase):
