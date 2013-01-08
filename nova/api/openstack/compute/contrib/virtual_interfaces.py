@@ -77,7 +77,7 @@ class ServerVirtualInterfaceController(object):
 
 
 class Virtual_interfaces(extensions.ExtensionDescriptor):
-    """Virtual interface support"""
+    """Virtual interface support."""
 
     name = "VirtualInterfaces"
     alias = "os-virtual-interfaces"

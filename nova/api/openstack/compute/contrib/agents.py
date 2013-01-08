@@ -156,7 +156,7 @@ class AgentController(object):
 
 
 class Agents(extensions.ExtensionDescriptor):
-    """Agents support"""
+    """Agents support."""
 
     name = "Agents"
     alias = "os-agents"

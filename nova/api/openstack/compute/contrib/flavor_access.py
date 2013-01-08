@@ -202,7 +202,7 @@ class FlavorActionController(wsgi.Controller):
 
 
 class Flavor_access(extensions.ExtensionDescriptor):
-    """Flavor access supprt"""
+    """Flavor access supprt."""
 
     name = "FlavorAccess"
     alias = "os-flavor-access"

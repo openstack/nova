@@ -76,7 +76,7 @@ class FloatingIPPoolsController(object):
 
 
 class Floating_ip_pools(extensions.ExtensionDescriptor):
-    """Floating IPs support"""
+    """Floating IPs support."""
 
     name = "FloatingIpPools"
     alias = "os-floating-ip-pools"

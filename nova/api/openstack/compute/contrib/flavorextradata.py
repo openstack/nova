@@ -63,7 +63,7 @@ class FlavorextradataController(wsgi.Controller):
 
 
 class Flavorextradata(extensions.ExtensionDescriptor):
-    """Provide additional data for flavors"""
+    """Provide additional data for flavors."""
 
     name = "FlavorExtraData"
     alias = "OS-FLV-EXT-DATA"

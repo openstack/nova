@@ -50,7 +50,7 @@ class ServerDiagnosticsController(object):
 
 
 class Server_diagnostics(extensions.ExtensionDescriptor):
-    """Allow Admins to view server diagnostics through server action"""
+    """Allow Admins to view server diagnostics through server action."""
 
     name = "ServerDiagnostics"
     alias = "os-server-diagnostics"

@@ -24,7 +24,7 @@ from nova.image import glance
 
 
 class Controller(object):
-    """The image metadata API controller for the OpenStack API"""
+    """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
         self.image_service = glance.get_default_image_service()
@@ -38,7 +38,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, image_id):
-        """Returns the list of metadata for a given instance"""
+        """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']
         return dict(metadata=metadata)

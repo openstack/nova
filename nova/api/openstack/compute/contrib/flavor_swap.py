@@ -53,7 +53,7 @@ class FlavorSwapController(wsgi.Controller):
 
 
 class Flavor_swap(extensions.ExtensionDescriptor):
-    """Support to show the swap status of a flavor"""
+    """Support to show the swap status of a flavor."""
 
     name = "FlavorSwap"
     alias = "os-flavor-swap"

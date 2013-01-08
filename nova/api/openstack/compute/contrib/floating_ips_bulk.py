@@ -36,14 +36,14 @@ authorize = extensions.extension_authorizer('compute', 'floating_ips_bulk')
 class FloatingIPBulkController(object):
 
     def index(self, req):
-        """Return a list of all floating ips"""
+        """Return a list of all floating ips."""
         context = req.environ['nova.context']
         authorize(context)
 
         return self._get_floating_ip_info(context)
 
     def show(self, req, id):
-        """Return a list of all floating ips for a given host"""
+        """Return a list of all floating ips for a given host."""
         context = req.environ['nova.context']
         authorize(context)
 
@@ -76,7 +76,7 @@ class FloatingIPBulkController(object):
         return floating_ip_info
 
     def create(self, req, body):
-        """Bulk create floating ips"""
+        """Bulk create floating ips."""
         context = req.environ['nova.context']
         authorize(context)
 
@@ -111,7 +111,7 @@ class FloatingIPBulkController(object):
                                                "interface": interface}}
 
     def update(self, req, id, body):
-        """Bulk delete floating IPs"""
+        """Bulk delete floating IPs."""
         context = req.environ['nova.context']
         authorize(context)
 
@@ -154,7 +154,7 @@ class FloatingIPBulkController(object):
 
 
 class Floating_ips_bulk(extensions.ExtensionDescriptor):
-    """Bulk handling of Floating IPs"""
+    """Bulk handling of Floating IPs."""
 
     name = "FloatingIpsBulk"
     alias = "os-floating-ips-bulk"

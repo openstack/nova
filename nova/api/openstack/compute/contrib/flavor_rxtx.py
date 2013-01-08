@@ -53,7 +53,7 @@ class FlavorRxtxController(wsgi.Controller):
 
 
 class Flavor_rxtx(extensions.ExtensionDescriptor):
-    """Support to show the rxtx status of a flavor"""
+    """Support to show the rxtx status of a flavor."""
 
     name = "FlavorRxtx"
     alias = "os-flavor-rxtx"

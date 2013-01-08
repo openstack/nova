@@ -209,7 +209,7 @@ class SimpleTenantUsageController(object):
 
     @wsgi.serializers(xml=SimpleTenantUsagesTemplate)
     def index(self, req):
-        """Retrieve tenant_usage for all tenants"""
+        """Retrieve tenant_usage for all tenants."""
         context = req.environ['nova.context']
 
         authorize_list(context)
@@ -226,7 +226,7 @@ class SimpleTenantUsageController(object):
 
     @wsgi.serializers(xml=SimpleTenantUsageTemplate)
     def show(self, req, id):
-        """Retrieve tenant_usage for a specified tenant"""
+        """Retrieve tenant_usage for a specified tenant."""
         tenant_id = id
         context = req.environ['nova.context']
 
@@ -249,7 +249,7 @@ class SimpleTenantUsageController(object):
 
 
 class Simple_tenant_usage(extensions.ExtensionDescriptor):
-    """Simple tenant usage extension"""
+    """Simple tenant usage extension."""
 
     name = "SimpleTenantUsage"
     alias = "os-simple-tenant-usage"

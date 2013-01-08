@@ -317,7 +317,7 @@ class FloatingIPActionController(wsgi.Controller):
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
-    """Floating IPs support"""
+    """Floating IPs support."""
 
     name = "FloatingIps"
     alias = "os-floating-ips"

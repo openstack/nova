@@ -77,7 +77,7 @@ CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
 def ec2_error(req, request_id, code, message):
-    """Helper to send an ec2_compatible error"""
+    """Helper to send an ec2_compatible error."""
     LOG.error(_('%(code)s: %(message)s') % locals())
     resp = webob.Response()
     resp.status = 400

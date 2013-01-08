@@ -41,7 +41,7 @@ def _underscore_to_xmlcase(str):
 
 
 def _database_to_isoformat(datetimeobj):
-    """Return a xs:dateTime parsable string from datatime"""
+    """Return a xs:dateTime parsable string from datatime."""
     return datetimeobj.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'
 
 

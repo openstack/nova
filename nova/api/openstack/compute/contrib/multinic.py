@@ -84,7 +84,7 @@ class MultinicController(wsgi.Controller):
 # Note: The class name is as it has to be for this to be loaded as an
 # extension--only first character capitalized.
 class Multinic(extensions.ExtensionDescriptor):
-    """Multiple network support"""
+    """Multiple network support."""
 
     name = "Multinic"
     alias = "NMN"

@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Keypair management extension"""
+"""Keypair management extension."""
 
 import webob
 import webob.exc
@@ -49,7 +49,7 @@ class KeypairsTemplate(xmlutil.TemplateBuilder):
 
 class KeypairController(object):
 
-    """Keypair API controller for the OpenStack API """
+    """Keypair API controller for the OpenStack API."""
     def __init__(self):
         self.api = compute_api.KeypairAPI()
 
@@ -187,7 +187,7 @@ class Controller(servers.Controller):
 
 
 class Keypairs(extensions.ExtensionDescriptor):
-    """Keypair Support"""
+    """Keypair Support."""
 
     name = "Keypairs"
     alias = "os-keypairs"

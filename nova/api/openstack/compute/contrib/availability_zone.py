@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 
 
 class Availability_zone(extensions.ExtensionDescriptor):
-    """Add availability_zone to the Create Server v1.1 API"""
+    """Add availability_zone to the Create Server v1.1 API."""
 
     name = "AvailabilityZone"
     alias = "os-availability-zone"

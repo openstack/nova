@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Config Drive extension"""
+"""Config Drive extension."""
 
 from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
@@ -71,7 +71,7 @@ class Controller(servers.Controller):
 
 
 class Config_drive(extensions.ExtensionDescriptor):
-    """Config Drive Extension"""
+    """Config Drive Extension."""
 
     name = "ConfigDrive"
     alias = "os-config-drive"

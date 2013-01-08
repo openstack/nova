@@ -45,7 +45,7 @@ class QuotaClassTemplate(xmlutil.TemplateBuilder):
 class QuotaClassSetsController(object):
 
     def _format_quota_set(self, quota_class, quota_set):
-        """Convert the quota object to a result dict"""
+        """Convert the quota object to a result dict."""
 
         result = dict(id=str(quota_class))
 
@@ -84,7 +84,7 @@ class QuotaClassSetsController(object):
 
 
 class Quota_classes(extensions.ExtensionDescriptor):
-    """Quota classes management support"""
+    """Quota classes management support."""
 
     name = "QuotaClasses"
     alias = "os-quota-class-sets"

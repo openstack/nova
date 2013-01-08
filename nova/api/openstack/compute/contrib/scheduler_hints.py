@@ -53,7 +53,7 @@ class SchedulerHintsController(wsgi.Controller):
 
 
 class Scheduler_hints(extensions.ExtensionDescriptor):
-    """Pass arbitrary key/value pairs to the scheduler"""
+    """Pass arbitrary key/value pairs to the scheduler."""
 
     name = "SchedulerHints"
     alias = "OS-SCH-HNT"
