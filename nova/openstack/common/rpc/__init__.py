@@ -178,17 +178,18 @@ def multicall(context, topic, msg, timeout=None):
     return _get_impl().multicall(cfg.CONF, context, topic, msg, timeout)
 
 
-def notify(context, topic, msg):
+def notify(context, topic, msg, envelope=False):
     """Send notification event.
 
     :param context: Information that identifies the user that has made this
                     request.
     :param topic: The topic to send the notification to.
     :param msg: This is a dict of content of event.
+    :param envelope: Set to True to enable message envelope for notifications.
 
     :returns: None
     """
-    return _get_impl().notify(cfg.CONF, context, topic, msg)
+    return _get_impl().notify(cfg.CONF, context, topic, msg, envelope)
 
 
 def cleanup():

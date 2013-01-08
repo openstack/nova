@@ -162,7 +162,8 @@ class ConsumerBase(object):
         def _callback(raw_message):
             message = self.channel.message_to_python(raw_message)
             try:
-                callback(message.payload)
+                msg = rpc_common.deserialize_msg(message.payload)
+                callback(msg)
                 message.ack()
             except Exception:
                 LOG.exception(_("Failed to process message... skipping it."))
@@ -196,7 +197,7 @@ class DirectConsumer(ConsumerBase):
         # Default options
         options = {'durable': False,
                    'auto_delete': True,
-                   'exclusive': True}
+                   'exclusive': False}
         options.update(kwargs)
         exchange = kombu.entity.Exchange(name=msg_id,
                                          type='direct',
@@ -269,7 +270,7 @@ class FanoutConsumer(ConsumerBase):
         options = {'durable': False,
                    'queue_arguments': _get_queue_arguments(conf),
                    'auto_delete': True,
-                   'exclusive': True}
+                   'exclusive': False}
         options.update(kwargs)
         exchange = kombu.entity.Exchange(name=exchange_name, type='fanout',
                                          durable=options['durable'],
@@ -316,7 +317,7 @@ class DirectPublisher(Publisher):
 
         options = {'durable': False,
                    'auto_delete': True,
-                   'exclusive': True}
+                   'exclusive': False}
         options.update(kwargs)
         super(DirectPublisher, self).__init__(channel, msg_id, msg_id,
                                               type='direct', **options)
@@ -350,7 +351,7 @@ class FanoutPublisher(Publisher):
         """
         options = {'durable': False,
                    'auto_delete': True,
-                   'exclusive': True}
+                   'exclusive': False}
         options.update(kwargs)
         super(FanoutPublisher, self).__init__(channel, '%s_fanout' % topic,
                                               None, type='fanout', **options)
@@ -387,6 +388,7 @@ class Connection(object):
     def __init__(self, conf, server_params=None):
         self.consumers = []
         self.consumer_thread = None
+        self.proxy_callbacks = []
         self.conf = conf
         self.max_retries = self.conf.rabbit_max_retries
         # Try forever?
@@ -469,7 +471,7 @@ class Connection(object):
             LOG.info(_("Reconnecting to AMQP server on "
                      "%(hostname)s:%(port)d") % params)
             try:
-                self.connection.close()
+                self.connection.release()
             except self.connection_errors:
                 pass
             # Setting this in case the next statement fails, though
@@ -573,12 +575,14 @@ class Connection(object):
     def close(self):
         """Close/release this connection"""
         self.cancel_consumer_thread()
+        self.wait_on_proxy_callbacks()
         self.connection.release()
         self.connection = None
 
     def reset(self):
         """Reset a connection so it can be used again"""
         self.cancel_consumer_thread()
+        self.wait_on_proxy_callbacks()
         self.channel.close()
         self.channel = self.connection.channel()
         # work around 'memory' transport bug in 1.1.3
@@ -643,6 +647,11 @@ class Connection(object):
             except greenlet.GreenletExit:
                 pass
             self.consumer_thread = None
+
+    def wait_on_proxy_callbacks(self):
+        """Wait for all proxy callback threads to exit."""
+        for proxy_cb in self.proxy_callbacks:
+            proxy_cb.wait()
 
     def publisher_send(self, cls, topic, msg, **kwargs):
         """Send to a publisher based on the publisher class"""
@@ -719,6 +728,7 @@ class Connection(object):
         proxy_cb = rpc_amqp.ProxyCallback(
             self.conf, proxy,
             rpc_amqp.get_connection_pool(self.conf, Connection))
+        self.proxy_callbacks.append(proxy_cb)
 
         if fanout:
             self.declare_fanout_consumer(topic, proxy_cb)
@@ -730,6 +740,7 @@ class Connection(object):
         proxy_cb = rpc_amqp.ProxyCallback(
             self.conf, proxy,
             rpc_amqp.get_connection_pool(self.conf, Connection))
+        self.proxy_callbacks.append(proxy_cb)
         self.declare_topic_consumer(topic, proxy_cb, pool_name)
 
 
@@ -782,11 +793,12 @@ def fanout_cast_to_server(conf, context, server_params, topic, msg):
         rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def notify(conf, context, topic, msg):
+def notify(conf, context, topic, msg, envelope):
     """Sends a notification event on a topic."""
     return rpc_amqp.notify(
         conf, context, topic, msg,
-        rpc_amqp.get_connection_pool(conf, Connection))
+        rpc_amqp.get_connection_pool(conf, Connection),
+        envelope)
 
 
 def cleanup():

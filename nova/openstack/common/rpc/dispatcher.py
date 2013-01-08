@@ -103,21 +103,6 @@ class RpcDispatcher(object):
         self.callbacks = callbacks
         super(RpcDispatcher, self).__init__()
 
-    @staticmethod
-    def _is_compatible(mversion, version):
-        """Determine whether versions are compatible.
-
-        :param mversion: The API version implemented by a callback.
-        :param version: The API version requested by an incoming message.
-        """
-        version_parts = version.split('.')
-        mversion_parts = mversion.split('.')
-        if int(version_parts[0]) != int(mversion_parts[0]):  # Major
-            return False
-        if int(version_parts[1]) > int(mversion_parts[1]):  # Minor
-            return False
-        return True
-
     def dispatch(self, ctxt, version, method, **kwargs):
         """Dispatch a message based on a requested version.
 
@@ -139,7 +124,8 @@ class RpcDispatcher(object):
                 rpc_api_version = proxyobj.RPC_API_VERSION
             else:
                 rpc_api_version = '1.0'
-            is_compatible = self._is_compatible(rpc_api_version, version)
+            is_compatible = rpc_common.version_is_compatible(rpc_api_version,
+                                                             version)
             had_compatible = had_compatible or is_compatible
             if not hasattr(proxyobj, method):
                 continue
