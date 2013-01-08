@@ -63,7 +63,7 @@ xenapi_vmops_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vmops_opts)
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (

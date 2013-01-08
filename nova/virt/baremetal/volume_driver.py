@@ -45,6 +45,8 @@ CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 
+CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
 
 LOG = logging.getLogger(__name__)

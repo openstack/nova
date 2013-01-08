@@ -47,7 +47,7 @@ from nova.openstack.common import rpc
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
 LOG = logging.getLogger('nova.dhcpbridge')
 

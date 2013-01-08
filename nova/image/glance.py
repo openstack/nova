@@ -64,7 +64,7 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.register_opts(glance_opts)
 CONF.import_opt('auth_strategy', 'nova.api.auth')
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 def generate_glance_url():

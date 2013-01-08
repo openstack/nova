@@ -27,7 +27,7 @@ import nova.virt.firewall as base_firewall
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 try:
     import libvirt

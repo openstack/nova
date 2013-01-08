@@ -73,8 +73,8 @@ libvirt_driver.libvirt = libvirt
 
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('host', 'nova.config')
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 LOG = logging.getLogger(__name__)
 

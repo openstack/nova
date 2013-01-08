@@ -38,7 +38,6 @@ cell_state_manager_opts = [
 LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
-CONF.import_opt('host', 'nova.config')
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 #CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_state_manager_opts, group='cells')

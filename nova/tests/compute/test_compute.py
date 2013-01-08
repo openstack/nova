@@ -71,7 +71,7 @@ QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 

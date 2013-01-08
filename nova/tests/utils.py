@@ -23,7 +23,7 @@ from nova.network import minidns
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 def get_test_admin_context():

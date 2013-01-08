@@ -38,7 +38,7 @@ from nova.virt.libvirt import utils as virtutils
 
 CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 
 LOG = log.getLogger(__name__)
 

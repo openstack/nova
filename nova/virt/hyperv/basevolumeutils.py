@@ -33,7 +33,7 @@ if sys.platform == 'win32':
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class BaseVolumeUtils(object):

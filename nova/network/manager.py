@@ -196,8 +196,8 @@ network_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(network_opts)
-CONF.import_opt('use_ipv6', 'nova.config')
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class RPCAllocateFixedIP(object):

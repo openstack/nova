@@ -30,7 +30,7 @@ from nova import test
 from nova.tests.scheduler import fakes
 
 CONF = cfg.CONF
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class TestFilter(filters.BaseHostFilter):
