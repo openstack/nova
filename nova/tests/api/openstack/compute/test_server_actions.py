@@ -40,7 +40,7 @@ FAKE_UUID = fakes.FAKE_UUID
 INSTANCE_IDS = {FAKE_UUID: 1}
 
 
-def return_server_not_found(context, uuid):
+def return_server_not_found(*arg, **kwarg):
     raise exception.NotFound()
 
 
@@ -601,6 +601,29 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    def test_resize_with_server_not_found(self):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+
+        self.stubs.Set(compute_api.API, 'get', return_server_not_found)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    def test_resize_with_too_many_instances(self):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+
+        def fake_resize(*args, **kwargs):
+            raise exception.TooManyInstances(message="TooManyInstance")
+
+        self.stubs.Set(compute_api.API, 'resize', fake_resize)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(exception.TooManyInstances,
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 
