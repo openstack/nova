@@ -1016,9 +1016,73 @@ class GetLogCommands(object):
             print _('No nova entries in syslog!')
 
 
+class CellCommands(object):
+    """Commands for managing cells."""
+
+    @args('--name', dest='name', metavar='<name>',
+            help='Name for the new cell')
+    @args('--cell_type', dest='cell_type', metavar='<parent|child>',
+         help='Whether the cell is a parent or child')
+    @args('--username', dest='username', metavar='<username>',
+         help='Username for the message broker in this cell')
+    @args('--password', dest='password', metavar='<password>',
+         help='Password for the message broker in this cell')
+    @args('--hostname', dest='hostname', metavar='<hostname>',
+         help='Address of the message broker in this cell')
+    @args('--port', dest='port', metavar='<number>',
+         help='Port number of the message broker in this cell')
+    @args('--virtual_host', dest='virtual_host', metavar='<virtual_host>',
+         help='The virtual host of the message broker in this cell')
+    @args('--woffset', dest='woffset', metavar='<float>')
+    @args('--wscale', dest='wscale', metavar='<float>')
+    def create(self, name, cell_type='child', username=None, password=None,
+               hostname=None, port=None, virtual_host=None,
+               woffset=None, wscale=None):
+
+        if cell_type not in ['parent', 'child']:
+            print "Error: cell type must be 'parent' or 'child'"
+            sys.exit(2)
+
+        is_parent = cell_type == 'parent'
+        values = {'name': name,
+                  'is_parent': is_parent,
+                  'username': username,
+                  'password': password,
+                  'rpc_host': hostname,
+                  'rpc_port': int(port),
+                  'rpc_virtual_host': virtual_host,
+                  'weight_offset': float(woffset),
+                  'weight_scale': float(wscale)}
+        ctxt = context.get_admin_context()
+        db.cell_create(ctxt, values)
+
+    @args('--cell_id', dest='cell_id', metavar='<cell_id>',
+         help='ID of the cell to delete')
+    def delete(self, cell_id):
+        ctxt = context.get_admin_context()
+        db.cell_delete(ctxt, cell_id)
+
+    def list(self):
+        ctxt = context.get_admin_context()
+        cells = db.cell_get_all(ctxt)
+        fmt = "%3s  %-10s  %-6s  %-10s  %-15s  %-5s  %-10s"
+        print fmt % ('Id', 'Name', 'Type', 'Username', 'Hostname',
+                'Port', 'VHost')
+        print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
+                '-' * 5, '-' * 10)
+        for cell in cells:
+            print fmt % (cell.id, cell.name,
+                    'parent' if cell.is_parent else 'child',
+                    cell.username, cell.rpc_host,
+                    cell.rpc_port, cell.rpc_virtual_host)
+        print fmt % ('-' * 3, '-' * 10, '-' * 6, '-' * 10, '-' * 15,
+                '-' * 5, '-' * 10)
+
+
 CATEGORIES = {
     'account': AccountCommands,
     'agent': AgentBuildCommands,
+    'cell': CellCommands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
     'flavor': InstanceTypeCommands,
