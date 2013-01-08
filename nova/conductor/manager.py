@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD"""
 
-    RPC_API_VERSION = '1.23'
+    RPC_API_VERSION = '1.24'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -69,6 +69,11 @@ class ConductorManager(manager.SchedulerDependentManager):
             context, instance_uuid, updates)
         notifications.send_update(context, old_ref, instance_ref)
         return jsonutils.to_primitive(instance_ref)
+
+    @rpc_common.client_exceptions(exception.InstanceNotFound)
+    def instance_get(self, context, instance_id):
+        return jsonutils.to_primitive(
+            self.db.instance_get(context, instance_id))
 
     @rpc_common.client_exceptions(exception.InstanceNotFound)
     def instance_get_by_uuid(self, context, instance_uuid):

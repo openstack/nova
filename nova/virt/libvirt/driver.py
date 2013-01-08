@@ -456,6 +456,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return names
 
+    def list_instance_uuids(self):
+        return [self._conn.lookupByName(name).UUIDString()
+                for name in self.list_instances()]
+
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for (network, mapping) in network_info:

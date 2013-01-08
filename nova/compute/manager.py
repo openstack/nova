@@ -386,6 +386,71 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return self.conductor_api.instance_get_all_by_host(context, self.host)
 
+    def _destroy_evacuated_instances(self, context):
+        """Destroys evacuated instances.
+
+        While the compute was down the instances running on it could be
+        evacuated to another host. Checking that instance host identical to
+        current host. Otherwise destroying it
+        """
+
+        # getting all vms on this host
+        local_instances = []
+        try:
+            # try to find all local instances by uuid
+            for uuid in self.driver.list_instance_uuids():
+                try:
+                    local_instances.append(self.conductor_api.
+                                           instance_get_by_uuid(context, uuid))
+                except exception.InstanceNotFound as e:
+                    LOG.error(_('Instance %(uuid)s found in the '
+                            'hypervisor, but not in the database'),
+                         locals())
+                continue
+        except NotImplementedError:
+            # the driver doesn't support uuids listing, will do it in ugly way
+            for instance_name in self.driver.list_instances():
+                try:
+                    # couldn't find better way to find instance in db by it's
+                    # name if i will run on the list of this host instances it
+                    # will be hard to ignore instances that were created
+                    # outside openstack. returns -1 if instance name doesn't
+                    # match template
+                    instance_id = compute_utils.parse_decimal_id(CONF
+                                        .instance_name_template, instance_name)
+
+                    if instance_id == -1:
+                        continue
+
+                    local_instances.append(self.conductor_api.
+                                           instance_get(context, instance_id))
+                except exception.InstanceNotFound as e:
+                    LOG.error(_('Instance %(instance_name)s found in the '
+                                'hypervisor, but not in the database'),
+                             locals())
+                    continue
+
+        for instance in local_instances:
+            instance_host = instance['host']
+            host = self.host
+            instance_name = instance['name']
+            if instance['host'] != host:
+                LOG.info(_('instance host %(instance_host)s is not equal to '
+                           'current host %(host)s. '
+                           'Deleting zombie instance %(instance_name)s'),
+                         locals())
+
+                network_info = self._get_instance_nw_info(context, instance)
+                bdi = self._get_instance_volume_block_device_info(context,
+                                                          instance['uuid'])
+
+                self.driver.destroy(instance,
+                                    self._legacy_nw_info(network_info),
+                                    bdi,
+                                    False)
+
+                LOG.info(_('zombie vm destroyed'))
+
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
         db_state = instance['power_state']
@@ -450,6 +515,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.filter_defer_apply_on()
 
         try:
+            # checking that instance was not already evacuated to other host
+            self._destroy_evacuated_instances(context)
             for instance in instances:
                 self._init_instance(context, instance)
         finally:
