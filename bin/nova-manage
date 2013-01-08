@@ -226,7 +226,7 @@ class ProjectCommands(object):
     @args('--key', dest="key", metavar='<key>', help='Key')
     @args('--value', dest="value", metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
-        """Set or display quotas for project"""
+        """Set or display quotas for project."""
         ctxt = context.get_admin_context()
         project_quota = QUOTAS.get_project_quotas(ctxt, project_id)
         if key and key in project_quota:
@@ -250,7 +250,7 @@ class ProjectCommands(object):
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
     def scrub(self, project_id):
-        """Deletes data associated with project"""
+        """Deletes data associated with project."""
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
@@ -268,7 +268,7 @@ class FixedIpCommands(object):
 
     @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
-        """Lists all fixed ips (optionally by host)"""
+        """Lists all fixed ips (optionally by host)."""
         ctxt = context.get_admin_context()
 
         try:
@@ -382,7 +382,7 @@ class FloatingIpCommands(object):
     @args('--interface', dest="interface", metavar='<interface>',
           help='Optional interface')
     def create(self, ip_range, pool=None, interface=None):
-        """Creates floating ips for zone by range"""
+        """Creates floating ips for zone by range."""
         admin_context = context.get_admin_context()
         if not pool:
             pool = CONF.default_floating_pool
@@ -402,7 +402,7 @@ class FloatingIpCommands(object):
 
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
-        """Deletes floating ips by range"""
+        """Deletes floating ips by range."""
         admin_context = context.get_admin_context()
 
         ips = ({'address': str(address)}
@@ -476,7 +476,7 @@ class NetworkCommands(object):
                gateway_v6=None, bridge=None, bridge_interface=None,
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
-        """Creates fixed ips for host by range"""
+        """Creates fixed ips for host by range."""
         kwargs = dict(((k, v) for k, v in locals().iteritems()
                        if v and k != "self"))
         if multi_host is not None:
@@ -485,7 +485,7 @@ class NetworkCommands(object):
         net_manager.create_networks(context.get_admin_context(), **kwargs)
 
     def list(self):
-        """List all created networks"""
+        """List all created networks."""
         _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
         print _fmt % (_('id'),
                           _('IPv4'),
@@ -520,7 +520,7 @@ class NetworkCommands(object):
     @args('--uuid', dest='uuid', metavar='<uuid>',
             help='UUID of network to delete')
     def delete(self, fixed_range=None, uuid=None):
-        """Deletes a network"""
+        """Deletes a network."""
 
         if fixed_range is None and uuid is None:
             raise Exception(_("Please specify either fixed_range or uuid"))
@@ -576,7 +576,7 @@ class VmCommands(object):
 
     @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
-        """Show a list of all instances"""
+        """Show a list of all instances."""
 
         print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                "  %-10s %-10s %-10s %-5s" % (_('instance'),
@@ -615,7 +615,7 @@ class VmCommands(object):
 
 
 class ServiceCommands(object):
-    """Enable and disable running services"""
+    """Enable and disable running services."""
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     @args('--service', dest='service', metavar='<service>',
@@ -655,7 +655,7 @@ class ServiceCommands(object):
     @args('--service', dest='service', metavar='<service>',
             help='Nova service')
     def enable(self, host, service):
-        """Enable scheduling for a service"""
+        """Enable scheduling for a service."""
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
@@ -667,7 +667,7 @@ class ServiceCommands(object):
     @args('--service', dest='service', metavar='<service>',
             help='Nova service')
     def disable(self, host, service):
-        """Disable scheduling for a service"""
+        """Disable scheduling for a service."""
         ctxt = context.get_admin_context()
         svc = db.service_get_by_args(ctxt, host, service)
         if not svc:
@@ -733,7 +733,7 @@ class ServiceCommands(object):
 
 
 class HostCommands(object):
-    """List hosts"""
+    """List hosts."""
 
     def list(self, zone=None):
         """Show a list of all physical hosts. Filter by zone.
@@ -802,7 +802,7 @@ class InstanceTypeCommands(object):
             help='Make flavor accessible to the public')
     def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
                flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
-        """Creates instance types / flavors"""
+        """Creates instance types / flavors."""
         try:
             instance_types.create(name, memory, vcpus, root_gb,
                                   ephemeral_gb, flavorid, swap, rxtx_factor,
@@ -828,7 +828,7 @@ class InstanceTypeCommands(object):
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
     def delete(self, name):
-        """Marks instance types / flavors as deleted"""
+        """Marks instance types / flavors as deleted."""
         try:
             instance_types.destroy(name)
         except exception.InstanceTypeNotFound:
@@ -845,7 +845,7 @@ class InstanceTypeCommands(object):
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
     def list(self, name=None):
-        """Lists all active or specific instance types / flavors"""
+        """Lists all active or specific instance types / flavors."""
         try:
             if name is None:
                 inst_types = instance_types.get_all_types()
@@ -866,7 +866,7 @@ class InstanceTypeCommands(object):
     @args('--value', dest='value', metavar='<value>',
            help='The value of the key/value pair')
     def set_key(self, name, key, value=None):
-        """Add key/value pair to specified instance type's extra_specs"""
+        """Add key/value pair to specified instance type's extra_specs."""
         try:
             try:
                 inst_type = instance_types.get_instance_type_by_name(name)
@@ -890,7 +890,7 @@ class InstanceTypeCommands(object):
     @args('--key', dest='key', metavar='<key>',
            help='The key to be deleted')
     def unset_key(self, name, key):
-        """Delete the specified extra spec for instance type"""
+        """Delete the specified extra spec for instance type."""
         try:
             try:
                 inst_type = instance_types.get_instance_type_by_name(name)
@@ -970,10 +970,10 @@ class AgentBuildCommands(object):
 
 
 class GetLogCommands(object):
-    """Get logging information"""
+    """Get logging information."""
 
     def errors(self):
-        """Get all of the errors from the log files"""
+        """Get all of the errors from the log files."""
         error_found = 0
         if CONF.log_dir:
             logs = [x for x in os.listdir(CONF.log_dir) if x.endswith('.log')]
@@ -994,7 +994,7 @@ class GetLogCommands(object):
             print _('No errors in logfiles!')
 
     def syslog(self, num_entries=10):
-        """Get <num_entries> of the nova syslog events"""
+        """Get <num_entries> of the nova syslog events."""
         entries = int(num_entries)
         count = 0
         log_file = ''
