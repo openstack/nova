@@ -35,76 +35,6 @@ class VolumeOps(object):
     def __init__(self, session):
         self._session = session
 
-    def create_volume_for_sm(self, volume, sr_uuid):
-        LOG.debug("Creating volume for Storage Manager")
-
-        sm_vol_rec = {}
-        try:
-            sr_ref = self._session.call_xenapi("SR.get_by_uuid", sr_uuid)
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            raise volume_utils.StorageError(_('Unable to get SR using uuid'))
-        #Create VDI
-        label = 'vol-' + volume['id']
-        desc = 'xensm volume for ' + volume['id']
-        # size presented to xenapi is in bytes, while euca api is in GB
-        vdi_size = volume['size'] * 1024 * 1024 * 1024
-        vdi_ref = vm_utils.create_vdi(self._session, sr_ref,
-                                      None, label, desc,
-                                      vdi_size, False)
-        vdi_rec = self._session.call_xenapi("VDI.get_record", vdi_ref)
-        sm_vol_rec['vdi_uuid'] = vdi_rec['uuid']
-        return sm_vol_rec
-
-    def delete_volume_for_sm(self, vdi_uuid):
-        vdi_ref = self._session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
-        if vdi_ref is None:
-            raise exception.NovaException(_('Could not find VDI ref'))
-
-        vm_utils.destroy_vdi(self._session, vdi_ref)
-
-    def create_sr(self, label, params):
-        LOG.debug(_("Creating SR %s") % label)
-        sr_ref = volume_utils.create_sr(self._session, label, params)
-        if sr_ref is None:
-            raise exception.NovaException(_('Could not create SR'))
-        sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
-        if sr_rec is None:
-            raise exception.NovaException(_('Could not retrieve SR record'))
-        return sr_rec['uuid']
-
-    # Checks if sr has already been introduced to this host
-    def introduce_sr(self, sr_uuid, label, params):
-        LOG.debug(_("Introducing SR %s") % label)
-        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
-        if sr_ref:
-            LOG.debug(_('SR found in xapi database. No need to introduce'))
-            return sr_ref
-        sr_ref = volume_utils.introduce_sr(self._session, sr_uuid, label,
-                                           params)
-        if sr_ref is None:
-            raise exception.NovaException(_('Could not introduce SR'))
-        return sr_ref
-
-    def is_sr_on_host(self, sr_uuid):
-        LOG.debug(_('Checking for SR %s') % sr_uuid)
-        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
-        if sr_ref:
-            return True
-        return False
-
-    # Checks if sr has been introduced
-    def forget_sr(self, sr_uuid):
-        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
-        if sr_ref is None:
-            LOG.INFO(_('SR %s not found in the xapi database') % sr_uuid)
-            return
-        try:
-            volume_utils.forget_sr(self._session, sr_uuid)
-        except volume_utils.StorageError, exc:
-            LOG.exception(exc)
-            raise exception.NovaException(_('Could not forget SR'))
-
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
         """Attach volume storage to VM instance"""
@@ -122,13 +52,13 @@ class VolumeOps(object):
         connection_data = connection_info['data']
         dev_number = volume_utils.get_device_number(mountpoint)
 
-        self.connect_volume(connection_data, dev_number, instance_name,
+        self._connect_volume(connection_data, dev_number, instance_name,
                             vm_ref, hotplug=hotplug)
 
         LOG.info(_('Mountpoint %(mountpoint)s attached to'
                 ' instance %(instance_name)s') % locals())
 
-    def connect_volume(self, connection_data, dev_number, instance_name,
+    def _connect_volume(self, connection_data, dev_number, instance_name,
                        vm_ref, hotplug=True):
 
         description = 'Disk-for:%s' % instance_name
@@ -137,7 +67,8 @@ class VolumeOps(object):
 
         # Introduce SR
         try:
-            sr_ref = self.introduce_sr(uuid, label, sr_params)
+            sr_ref = volume_utils.introduce_sr_unless_present(
+                self._session, uuid, label, sr_params)
             LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
         except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
@@ -159,7 +90,7 @@ class VolumeOps(object):
                                                  vdi_uuid, target_lun)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
-            self.forget_sr(uuid)
+            volume_utils.forget_sr_if_present(self._session, uuid)
             raise Exception(_('Unable to create VDI on SR %(sr_ref)s for'
                     ' instance %(instance_name)s') % locals())
 
@@ -169,7 +100,7 @@ class VolumeOps(object):
                                           osvol=True)
         except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
-            self.forget_sr(uuid)
+            volume_utils.forget_sr_if_present(self._session, uuid)
             raise Exception(_('Unable to use SR %(sr_ref)s for'
                               ' instance %(instance_name)s') % locals())
 
@@ -178,7 +109,7 @@ class VolumeOps(object):
                 self._session.call_xenapi("VBD.plug", vbd_ref)
             except self._session.XenAPI.Failure, exc:
                 LOG.exception(exc)
-                self.forget_sr(uuid)
+                volume_utils.forget_sr_if_present(self._session, uuid)
                 raise Exception(_('Unable to attach volume to instance %s')
                                 % instance_name)
 
@@ -190,7 +121,7 @@ class VolumeOps(object):
         # Detach VBD from VM
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s")
                 % locals())
-        device_number = volume_utils.mountpoint_to_number(mountpoint)
+        device_number = volume_utils.get_device_number(mountpoint)
         try:
             vbd_ref = vm_utils.find_vbd_by_number(self._session, vm_ref,
                                                   device_number)
@@ -199,9 +130,7 @@ class VolumeOps(object):
             raise Exception(_('Unable to locate volume %s') % mountpoint)
 
         try:
-            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-            sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
-            if vm_rec['power_state'] != 'Halted':
+            if not vm_utils._is_vm_shutdown(self._session, vm_ref):
                 vm_utils.unplug_vbd(self._session, vbd_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
@@ -214,6 +143,7 @@ class VolumeOps(object):
 
         # Forget SR only if no other volumes on this host are using it
         try:
+            sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
             volume_utils.purge_sr(self._session, sr_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
