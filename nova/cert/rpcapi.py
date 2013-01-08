@@ -21,8 +21,14 @@ Client side of the cert manager RPC API.
 from nova.openstack.common import cfg
 import nova.openstack.common.rpc.proxy
 
+rpcapi_opts = [
+    cfg.StrOpt('cert_topic',
+               default='cert',
+               help='the topic cert nodes listen on'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('cert_topic', 'nova.config')
+CONF.register_opts(rpcapi_opts)
 
 
 class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
