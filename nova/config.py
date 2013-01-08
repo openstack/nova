@@ -50,11 +50,6 @@ global_opts = [
     cfg.ListOpt('enabled_apis',
                 default=['ec2', 'osapi_compute', 'metadata'],
                 help='a list of APIs to enable by default'),
-    cfg.StrOpt('osapi_compute_unique_server_name_scope',
-               default='',
-               help='When set, compute API will consider duplicate hostnames '
-                    'invalid within the specified scope, regardless of case. '
-                    'Should be empty, "project" or "global".'),
     cfg.StrOpt('default_instance_type',
                default='m1.small',
                help='default instance type to use, testing only'),

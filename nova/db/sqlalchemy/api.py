@@ -47,8 +47,16 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 
+db_opts = [
+    cfg.StrOpt('osapi_compute_unique_server_name_scope',
+               default='',
+               help='When set, compute API will consider duplicate hostnames '
+                    'invalid within the specified scope, regardless of case. '
+                    'Should be empty, "project" or "global".'),
+]
 
 CONF = cfg.CONF
+CONF.register_opts(db_opts)
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
 
