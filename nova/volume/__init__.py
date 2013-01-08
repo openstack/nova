@@ -21,6 +21,15 @@
 import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
+_volume_opts = [
+    nova.openstack.common.cfg.StrOpt('volume_api_class',
+                                     default='nova.volume.cinder.API',
+                                     help='The full class name of the '
+                                          'volume API class to use'),
+]
+
+nova.openstack.common.cfg.CONF.register_opts(_volume_opts)
+
 
 def API():
     importutils = nova.openstack.common.importutils

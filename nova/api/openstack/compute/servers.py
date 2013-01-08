@@ -48,7 +48,7 @@ server_opts = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(server_opts)
-CONF.import_opt('network_api_class', 'nova.config')
+CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 LOG = logging.getLogger(__name__)

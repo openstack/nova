@@ -21,6 +21,15 @@
 import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
+_compute_opts = [
+    nova.openstack.common.cfg.StrOpt('compute_api_class',
+                                     default='nova.compute.api.API',
+                                     help='The full class name of the '
+                                          'compute API class to use'),
+]
+
+nova.openstack.common.cfg.CONF.register_opts(_compute_opts)
+
 
 def API(*args, **kwargs):
     importutils = nova.openstack.common.importutils

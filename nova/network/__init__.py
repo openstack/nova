@@ -21,6 +21,15 @@
 import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
+_network_opts = [
+    nova.openstack.common.cfg.StrOpt('network_api_class',
+                                     default='nova.network.api.API',
+                                     help='The full class name of the '
+                                          'network API class to use'),
+]
+
+nova.openstack.common.cfg.CONF.register_opts(_network_opts)
+
 
 def API():
     importutils = nova.openstack.common.importutils
