@@ -82,10 +82,10 @@ class LocalAPI(object):
         return self._manager.instance_destroy(context, instance)
 
     def instance_get_all(self, context):
-        return self.instance_get_all_by_filters(context, {})
+        return self._manager.instance_get_all(context)
 
     def instance_get_all_by_host(self, context, host):
-        return self.instance_get_all_by_filters(context, {'host': host})
+        return self._manager.instance_get_all_by_host(context, host)
 
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',
@@ -257,10 +257,10 @@ class API(object):
                                                           instance_uuid)
 
     def instance_get_all(self, context):
-        return self.instance_get_all_by_filters(context, {})
+        return self.conductor_rpcapi.instance_get_all(context)
 
     def instance_get_all_by_host(self, context, host):
-        return self.instance_get_all_by_filters(context, {'host': host})
+        return self.conductor_rpcapi.instance_get_all_by_host(context, host)
 
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',

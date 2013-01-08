@@ -947,7 +947,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
-            self.stubs.Set(db, 'instance_get_all_by_filters', fake_get_all)
+            self.stubs.Set(db, 'instance_get_all', fake_get_all)
             compute = importutils.import_object(CONF.compute_manager)
             self.flags(use_local=True, group='conductor')
             compute.conductor_api = conductor.API()
