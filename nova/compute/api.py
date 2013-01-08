@@ -89,7 +89,7 @@ compute_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
 
 MAX_USERDATA_SIZE = 65535

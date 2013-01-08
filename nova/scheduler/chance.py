@@ -28,7 +28,7 @@ from nova.openstack.common import cfg
 from nova.scheduler import driver
 
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 class ChanceScheduler(driver.Scheduler):

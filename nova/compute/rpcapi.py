@@ -24,8 +24,14 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy
 
+rpcapi_opts = [
+    cfg.StrOpt('compute_topic',
+               default='compute',
+               help='the topic compute nodes listen on'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.register_opts(rpcapi_opts)
 
 
 def _compute_topic(topic, ctxt, host, instance):

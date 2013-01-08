@@ -27,7 +27,6 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
 
 
 class ComputeRpcAPITestCase(test.TestCase):

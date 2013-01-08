@@ -49,7 +49,7 @@ from nova.openstack.common import uuidutils
 
 
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
 
 LOG = logging.getLogger(__name__)

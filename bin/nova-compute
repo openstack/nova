@@ -48,7 +48,7 @@ from nova import service
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)

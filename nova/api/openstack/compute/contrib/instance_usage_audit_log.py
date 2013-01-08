@@ -26,7 +26,7 @@ from nova.openstack.common import cfg
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.config')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 authorize = extensions.extension_authorizer('compute',
