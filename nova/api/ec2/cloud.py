@@ -30,6 +30,7 @@ from nova.api.ec2 import inst_state
 from nova.api import validator
 from nova import availability_zones
 from nova import block_device
+from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import instance_types
@@ -71,7 +72,6 @@ ec2_opts = [
 CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
 CONF.import_opt('my_ip', 'nova.config')
-CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('vpn_key_suffix', 'nova.config')
 CONF.import_opt('internal_service_availability_zone',
         'nova.availability_zones')
@@ -1132,7 +1132,7 @@ class CloudController(object):
 
         for instance in instances:
             if not context.is_admin:
-                if instance['image_ref'] == str(CONF.vpn_image_id):
+                if pipelib.is_vpn_image(instance['image_ref']):
                     continue
             i = {}
             instance_uuid = instance['uuid']
