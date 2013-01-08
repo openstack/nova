@@ -20,6 +20,8 @@
 
 import base64
 import copy
+import hashlib
+import hmac
 import json
 import re
 
@@ -461,15 +463,19 @@ class MetadataHandlerTestCase(test.TestCase):
         expected_instance_id = 'a-b-c-d'
 
         def fake_get_metadata(instance_id, remote_address):
-            if instance_id == expected_instance_id:
+            if remote_address is None:
+                raise Exception('Expected X-Forwared-For header')
+            elif instance_id == expected_instance_id:
                 return self.mdinst
             else:
                 # raise the exception to aid with 500 response code test
                 raise Exception("Expected instance_id of %s, got %s" %
                                 (expected_instance_id, instance_id))
 
-        signed = ('d98d0dd53b026a24df2c06b464ffa5da'
-                  'db922ae41af7bd3ecc3cae75aef65771')
+        signed = hmac.new(
+            CONF.quantum_metadata_proxy_shared_secret,
+            expected_instance_id,
+            hashlib.sha256).hexdigest()
 
         # try a request with service disabled
         response = fake_request(
@@ -481,8 +487,33 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.status_int, 200)
 
         # now enable the service
-
         self.flags(service_quantum_metadata_proxy=True)
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': signed})
+
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.body,
+                         base64.b64decode(self.instance['user_data']))
+
+        # mismatched signature
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': ''})
+
+        self.assertEqual(response.status_int, 403)
+
+        # without X-Forwarded-For
         response = fake_request(
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
@@ -491,29 +522,22 @@ class MetadataHandlerTestCase(test.TestCase):
             headers={'X-Instance-ID': 'a-b-c-d',
                      'X-Instance-ID-Signature': signed})
 
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body,
-                         base64.b64decode(self.instance['user_data']))
+        self.assertEqual(response.status_int, 500)
+
+        # unexpected Instance-ID
+        signed = hmac.new(
+            CONF.quantum_metadata_proxy_shared_secret,
+           'z-z-z-z',
+           hashlib.sha256).hexdigest()
 
         response = fake_request(
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
             fake_get_metadata_by_instance_id=fake_get_metadata,
-            headers={'X-Instance-ID': 'a-b-c-d',
-                     'X-Instance-ID-Signature': ''})
-
-        self.assertEqual(response.status_int, 403)
-
-        response = fake_request(
-            self.stubs, self.mdinst,
-            relpath="/2009-04-04/user-data",
-            address="192.192.192.2",
-            fake_get_metadata_by_instance_id=fake_get_metadata,
-            headers={'X-Instance-ID': 'z-z-z-z',
-                     'X-Instance-ID-Signature': '81f42e3fc77ba3a3e8d83142746e0'
-                                                '8387b96cbc5bd2474665192d2ec28'
-                                                '8ffb67'})
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'z-z-z-z',
+                     'X-Instance-ID-Signature': signed})
         self.assertEqual(response.status_int, 500)
 
 
