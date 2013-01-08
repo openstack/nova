@@ -51,7 +51,6 @@ scheduler_driver_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(scheduler_driver_opts)
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 
