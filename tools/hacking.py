@@ -297,7 +297,7 @@ def nova_docstring_one_line(physical_line):
     pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
     end = max([physical_line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
     if (pos != -1 and end and len(physical_line) > pos + 4):
-        if (physical_line[-5] != '.'):
+        if (physical_line[-5] not in ['.', '?', '!']):
             return pos, "NOVA N402: one line docstring needs a period"
 
 

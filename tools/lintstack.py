@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""pylint error checking"""
+"""pylint error checking."""
 
 import cStringIO as StringIO
 import json
