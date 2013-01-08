@@ -8,7 +8,7 @@ eventlet>=0.9.17
 kombu>=1.0.4
 lxml>=2.3
 routes==1.12.3
-WebOb==1.0.8
+WebOb>=1.0.8
 greenlet>=0.3.1
 PasteDeploy==1.5.0
 paste
