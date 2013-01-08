@@ -18,7 +18,27 @@
 
 """Super simple fake memcache client."""
 
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
+
+memcache_opts = [
+    cfg.ListOpt('memcached_servers',
+                default=None,
+                help='Memcached servers or None for in process cache.'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(memcache_opts)
+
+
+def get_client():
+    client_cls = Client
+
+    if CONF.memcached_servers:
+        import memcache
+        client_cls = memcache.Client
+
+    return client_cls(CONF.memcached_servers, debug=0)
 
 
 class Client(object):

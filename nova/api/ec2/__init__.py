@@ -31,6 +31,7 @@ from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
+from nova.common import memorycache
 from nova import context
 from nova import exception
 from nova.openstack.common import cfg
@@ -72,7 +73,6 @@ ec2_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
-CONF.import_opt('memcached_servers', 'nova.config')
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
@@ -162,12 +162,7 @@ class Lockout(wsgi.Middleware):
 
     def __init__(self, application):
         """middleware can use fake for testing."""
-        if CONF.memcached_servers:
-            import memcache
-        else:
-            from nova.common import memorycache as memcache
-        self.mc = memcache.Client(CONF.memcached_servers,
-                                  debug=0)
+        self.mc = memorycache.get_client()
         super(Lockout, self).__init__(application)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)

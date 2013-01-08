@@ -25,6 +25,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
+from nova.common import memorycache
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -33,7 +34,6 @@ from nova import wsgi
 CACHE_EXPIRATION = 15  # in seconds
 
 CONF = cfg.CONF
-CONF.import_opt('memcached_servers', 'nova.config')
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 metadata_proxy_opts = [
@@ -52,17 +52,12 @@ CONF.register_opts(metadata_proxy_opts)
 
 LOG = logging.getLogger(__name__)
 
-if CONF.memcached_servers:
-    import memcache
-else:
-    from nova.common import memorycache as memcache
-
 
 class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
 
     def __init__(self):
-        self._cache = memcache.Client(CONF.memcached_servers, debug=0)
+        self._cache = memorycache.get_client()
 
     def get_metadata_by_remote_address(self, address):
         if not address:

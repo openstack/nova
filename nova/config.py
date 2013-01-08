@@ -54,9 +54,6 @@ global_opts = [
                     'However, the node name must be valid within '
                     'an AMQP key, and if using ZeroMQ, a valid '
                     'hostname, FQDN, or IP address'),
-    cfg.ListOpt('memcached_servers',
-                default=None,
-                help='Memcached servers or None for in process cache.'),
     cfg.BoolOpt('use_ipv6',
                 default=False,
                 help='use ipv6'),
