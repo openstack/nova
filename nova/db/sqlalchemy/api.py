@@ -1833,6 +1833,30 @@ def instance_update_and_get_original(context, instance_uuid, values):
                             copy_old_instance=True)
 
 
+# NOTE(danms): This updates the instance's metadata list in-place and in
+# the database to avoid stale data and refresh issues. It assumes the
+# delete=True behavior of instance_metadata_update(...)
+def _instance_metadata_update_in_place(context, instance, metadata, session):
+    to_delete = []
+    for keyvalue in instance['metadata']:
+        key = keyvalue['key']
+        if key in metadata:
+            keyvalue['value'] = metadata.pop(key)
+        elif key not in metadata:
+            to_delete.append(keyvalue)
+
+    for condemned in to_delete:
+        instance['metadata'].remove(condemned)
+        condemned.soft_delete(session=session)
+
+    for key, value in metadata.iteritems():
+        newitem = models.InstanceMetadata()
+        newitem.update({'key': key, 'value': value,
+                        'instance_uuid': instance['uuid']})
+        session.add(newitem)
+        instance['metadata'].append(newitem)
+
+
 def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     session = get_session()
 
@@ -1877,9 +1901,9 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
 
         metadata = values.get('metadata')
         if metadata is not None:
-            instance_metadata_update(context, instance_ref['uuid'],
-                                     values.pop('metadata'), True,
-                                     session=session)
+            _instance_metadata_update_in_place(context, instance_ref,
+                                               values.pop('metadata'),
+                                               session)
 
         system_metadata = values.get('system_metadata')
         if system_metadata is not None:

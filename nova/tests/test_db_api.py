@@ -325,12 +325,12 @@ class DbApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
-        values = {'metadata': {'host': 'foo'},
+        values = {'metadata': {'host': 'foo', 'key1': 'meow'},
                   'system_metadata': {'original_image_ref': 'blah'}}
         instance = db.instance_create(ctxt, values)
 
         # Update the metadata
-        values = {'metadata': {'host': 'bar'},
+        values = {'metadata': {'host': 'bar', 'key2': 'wuff'},
                   'system_metadata': {'original_image_ref': 'baz'}}
         db.instance_update(ctxt, instance['uuid'], values)
 
@@ -338,6 +338,8 @@ class DbApiTestCase(test.TestCase):
         # updated
         instance_meta = db.instance_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('bar', instance_meta['host'])
+        self.assertEqual('wuff', instance_meta['key2'])
+        self.assertNotIn('key1', instance_meta)
 
         # Retrieve the system metadata to ensure it was successfully updated
         system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
