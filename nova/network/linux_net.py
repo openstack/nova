@@ -1140,15 +1140,15 @@ class LinuxNetInterfaceDriver(object):
     """
 
     def plug(self, network, mac_address):
-        """Create Linux device, return device name"""
+        """Create Linux device, return device name."""
         raise NotImplementedError()
 
     def unplug(self, network):
-        """Destory Linux device, return device name"""
+        """Destory Linux device, return device name."""
         raise NotImplementedError()
 
     def get_dev(self, network):
-        """Get device name"""
+        """Get device name."""
         raise NotImplementedError()
 
 
@@ -1242,7 +1242,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     @classmethod
     @lockutils.synchronized('lock_vlan', 'nova-', external=True)
     def remove_vlan(cls, vlan_num):
-        """Delete a vlan"""
+        """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
         if not device_exists(vlan_interface):
             return

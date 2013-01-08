@@ -281,7 +281,7 @@ class RPCAllocateFixedIP(object):
 
 
 def wrap_check_policy(func):
-    """Check policy corresponding to the wrapped methods prior to execution"""
+    """Check policy corresponding to the wrapped methods prior to execution."""
 
     @functools.wraps(func)
     def wrapped(self, context, *args, **kwargs):
@@ -423,7 +423,7 @@ class FloatingIP(object):
         super(FloatingIP, self).deallocate_for_instance(context, **kwargs)
 
     def _floating_ip_owned_by_project(self, context, floating_ip):
-        """Raises if floating ip does not belong to project"""
+        """Raises if floating ip does not belong to project."""
         if context.is_admin:
             return
 
@@ -584,7 +584,7 @@ class FloatingIP(object):
 
     def _associate_floating_ip(self, context, floating_address, fixed_address,
                                interface, instance_uuid):
-        """Performs db and driver calls to associate floating ip & fixed ip"""
+        """Performs db and driver calls to associate floating ip & fixed ip."""
 
         @lockutils.synchronized(unicode(floating_address), 'nova-')
         def do_associate():
@@ -671,7 +671,7 @@ class FloatingIP(object):
 
     def _disassociate_floating_ip(self, context, address, interface,
                                   instance_uuid):
-        """Performs db and driver calls to disassociate floating ip"""
+        """Performs db and driver calls to disassociate floating ip."""
         # disassociate floating ip
 
         @lockutils.synchronized(unicode(address), 'nova-')
@@ -704,31 +704,31 @@ class FloatingIP(object):
     @rpc_common.client_exceptions(exception.FloatingIpNotFound)
     @wrap_check_policy
     def get_floating_ip(self, context, id):
-        """Returns a floating IP as a dict"""
+        """Returns a floating IP as a dict."""
         return dict(self.db.floating_ip_get(context, id).iteritems())
 
     @wrap_check_policy
     def get_floating_pools(self, context):
-        """Returns list of floating pools"""
+        """Returns list of floating pools."""
         pools = self.db.floating_ip_get_pools(context)
         return [dict(pool.iteritems()) for pool in pools]
 
     @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
-        """Returns a floating IP as a dict"""
+        """Returns a floating IP as a dict."""
         return dict(self.db.floating_ip_get_by_address(context,
                                                        address).iteritems())
 
     @wrap_check_policy
     def get_floating_ips_by_project(self, context):
-        """Returns the floating IPs allocated to a project"""
+        """Returns the floating IPs allocated to a project."""
         ips = self.db.floating_ip_get_all_by_project(context,
                                                      context.project_id)
         return [dict(ip.iteritems()) for ip in ips]
 
     @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        """Returns the floating IPs associated with a fixed_address"""
+        """Returns the floating IPs associated with a fixed_address."""
         floating_ips = self.db.floating_ip_get_by_fixed_address(context,
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
@@ -988,7 +988,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                    host=host)
 
     def get_dhcp_leases(self, ctxt, network_ref):
-        """Broker the request to the driver to fetch the dhcp leases"""
+        """Broker the request to the driver to fetch the dhcp leases."""
         return self.driver.get_dhcp_leases(ctxt, network_ref)
 
     def init_host(self):
@@ -1300,7 +1300,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         return nw_info
 
     def _get_network_dict(self, network):
-        """Returns the dict representing necessary and meta network fields"""
+        """Returns the dict representing necessary and meta network fields."""
         # get generic network fields
         network_dict = {'id': network['uuid'],
                         'bridge': network['bridge'],
@@ -1315,7 +1315,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def _get_subnets_from_network(self, context, network,
                                   vif, instance_host=None):
-        """Returns the 1 or 2 possible subnets for a nova network"""
+        """Returns the 1 or 2 possible subnets for a nova network."""
         # get subnets
         ipam_subnets = self.ipam.get_subnets_by_net_id(context,
                            network['project_id'], network['uuid'], vif['uuid'])
@@ -1392,7 +1392,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._allocate_fixed_ips(context, instance_id, host, [network])
 
     def get_backdoor_port(self, context):
-        """Return backdoor port for eventlet_backdoor"""
+        """Return backdoor port for eventlet_backdoor."""
         return self.backdoor_port
 
     @wrap_check_policy
@@ -1826,7 +1826,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def setup_networks_on_host(self, context, instance_id, host,
                                teardown=False):
-        """calls setup/teardown on network hosts associated with an instance"""
+        """calls setup/teardown on network hosts for an instance."""
         green_pool = greenpool.GreenPool()
 
         if teardown:
@@ -1916,14 +1916,14 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance_id):
-        """Returns the vifs associated with an instance"""
+        """Returns the vifs associated with an instance."""
         instance = self.db.instance_get(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance['uuid'])
         return [dict(vif.iteritems()) for vif in vifs]
 
     def get_instance_id_by_floating_address(self, context, address):
-        """Returns the instance id a floating ip's fixed ip is allocated to"""
+        """Returns the instance id a floating ip's fixed ip is allocated to."""
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if floating_ip['fixed_ip_id'] is None:
             return None
@@ -1960,7 +1960,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     @wrap_check_policy
     def get_fixed_ip(self, context, id):
-        """Return a fixed ip"""
+        """Return a fixed ip."""
         fixed = self.db.fixed_ip_get(context, id)
         return jsonutils.to_primitive(fixed)
 
@@ -1970,21 +1970,21 @@ class NetworkManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(fixed)
 
     def get_vif_by_mac_address(self, context, mac_address):
-        """Returns the vifs record for the mac_address"""
+        """Returns the vifs record for the mac_address."""
         return self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
 
     @manager.periodic_task(
         spacing=CONF.dns_update_periodic_interval)
     def _periodic_update_dns(self, context):
-        """Update local DNS entries of all networks on this host"""
+        """Update local DNS entries of all networks on this host."""
         networks = self.db.network_get_all_by_host(context, self.host)
         for network in networks:
             dev = self.driver.get_dev(network)
             self.driver.update_dns(context, dev, network)
 
     def update_dns(self, context, network_ids):
-        """Called when fixed IP is allocated or deallocated"""
+        """Called when fixed IP is allocated or deallocated."""
         if CONF.fake_network:
             return
 
@@ -2070,27 +2070,27 @@ class FlatManager(NetworkManager):
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
-        """Returns a floating IP as a dict"""
+        """Returns a floating IP as a dict."""
         return None
 
     @wrap_check_policy
     def get_floating_pools(self, context):
-        """Returns list of floating pools"""
+        """Returns list of floating pools."""
         return {}
 
     @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
-        """Returns a floating IP as a dict"""
+        """Returns a floating IP as a dict."""
         return None
 
     @wrap_check_policy
     def get_floating_ips_by_project(self, context):
-        """Returns the floating IPs allocated to a project"""
+        """Returns the floating IPs allocated to a project."""
         return []
 
     @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        """Returns the floating IPs associated with a fixed_address"""
+        """Returns the floating IPs associated with a fixed_address."""
         return []
 
     def migrate_instance_start(self, context, instance_uuid,
@@ -2106,7 +2106,7 @@ class FlatManager(NetworkManager):
         pass
 
     def update_dns(self, context, network_ids):
-        """Called when fixed IP is allocated or deallocated"""
+        """Called when fixed IP is allocated or deallocated."""
         pass
 
 
@@ -2157,7 +2157,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
-        """Returns the dict representing necessary and meta network fields"""
+        """Returns the dict representing necessary and meta network fields."""
 
         # get generic network fields
         network_dict = super(FlatDHCPManager, self)._get_network_dict(network)
@@ -2382,7 +2382,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 self.driver.update_dhcp(context, dev, network)
 
     def _get_network_dict(self, network):
-        """Returns the dict representing necessary and meta network fields"""
+        """Returns the dict representing necessary and meta network fields."""
 
         # get generic network fields
         network_dict = super(VlanManager, self)._get_network_dict(network)

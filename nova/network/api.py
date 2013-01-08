@@ -140,7 +140,7 @@ class API(base.Base):
         return self.network_rpcapi.get_vif_by_mac_address(context, mac_address)
 
     def allocate_floating_ip(self, context, pool=None):
-        """Adds a floating ip to a project from a pool. (allocates)"""
+        """Adds (allocates) a floating ip to a project from a pool."""
         # NOTE(vish): We don't know which network host should get the ip
         #             when we allocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
@@ -150,7 +150,7 @@ class API(base.Base):
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
-        """Removes floating ip with address from a project. (deallocates)"""
+        """Removes (deallocates) a floating ip with address from a project."""
         return self.network_rpcapi.deallocate_floating_ip(context, address,
                 affect_auto_assigned)
 
@@ -235,7 +235,7 @@ class API(base.Base):
 
     def associate(self, context, network_uuid, host=_sentinel,
                   project=_sentinel):
-        """Associate or disassociate host or project to network"""
+        """Associate or disassociate host or project to network."""
         associations = {}
         if host is not API._sentinel:
             associations['host'] = host
@@ -280,7 +280,7 @@ class API(base.Base):
         return self.network_rpcapi.get_dns_domains(context)
 
     def add_dns_entry(self, context, address, name, dns_type, domain):
-        """Create specified DNS entry for address"""
+        """Create specified DNS entry for address."""
         args = {'address': address,
                 'name': name,
                 'dns_type': dns_type,
@@ -288,7 +288,7 @@ class API(base.Base):
         return self.network_rpcapi.add_dns_entry(context, **args)
 
     def modify_dns_entry(self, context, name, address, domain):
-        """Create specified DNS entry for address"""
+        """Create specified DNS entry for address."""
         args = {'address': address,
                 'name': name,
                 'domain': domain}
@@ -304,12 +304,12 @@ class API(base.Base):
         return self.network_rpcapi.delete_dns_domain(context, domain=domain)
 
     def get_dns_entries_by_address(self, context, address, domain):
-        """Get entries for address and domain"""
+        """Get entries for address and domain."""
         args = {'address': address, 'domain': domain}
         return self.network_rpcapi.get_dns_entries_by_address(context, **args)
 
     def get_dns_entries_by_name(self, context, name, domain):
-        """Get entries for name and domain"""
+        """Get entries for name and domain."""
         args = {'name': name, 'domain': domain}
         return self.network_rpcapi.get_dns_entries_by_name(context, **args)
 
@@ -353,7 +353,7 @@ class API(base.Base):
         return [floating_ip['address'] for floating_ip in floating_ips]
 
     def migrate_instance_start(self, context, instance, migration):
-        """Start to migrate the network of an instance"""
+        """Start to migrate the network of an instance."""
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance['instance_type']['rxtx_factor'],
@@ -371,7 +371,7 @@ class API(base.Base):
         self.network_rpcapi.migrate_instance_start(context, **args)
 
     def migrate_instance_finish(self, context, instance, migration):
-        """Finish migrating the network of an instance"""
+        """Finish migrating the network of an instance."""
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=instance['instance_type']['rxtx_factor'],
