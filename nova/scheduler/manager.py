@@ -155,7 +155,7 @@ class SchedulerManager(manager.Manager):
 
     def _set_vm_state_and_notify(self, method, updates, context, ex,
                                  request_spec):
-        """changes VM state and notifies"""
+        """changes VM state and notifies."""
         # FIXME(comstud): Re-factor this somehow. Not sure this belongs in the
         # scheduler manager like this. We should make this easier.
         # run_instance only sends a request_spec, and an instance may or may

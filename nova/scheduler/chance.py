@@ -61,7 +61,7 @@ class ChanceScheduler(driver.Scheduler):
                               admin_password, injected_files,
                               requested_networks, is_first_time,
                               filter_properties):
-        """Create and run an instance or instances"""
+        """Create and run an instance or instances."""
         instance_uuids = request_spec.get('instance_uuids')
         for num, instance_uuid in enumerate(instance_uuids):
             request_spec['instance_properties']['launch_index'] = num
