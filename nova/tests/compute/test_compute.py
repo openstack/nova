@@ -4254,6 +4254,40 @@ class ComputeAPITestCase(BaseTestCase):
         instance_types.destroy(name)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_resize_revert_deleted_flavor_fails(self):
+        orig_name = 'test_resize_revert_orig_flavor'
+        orig_flavorid = 11
+        memory_mb = 128
+        root_gb = 0
+        vcpus = 1
+        instance_types.create(orig_name, memory_mb, vcpus, root_gb, 0,
+                              orig_flavorid, 0, 1.0, True)
+
+        instance = self._create_fake_instance(type_name=orig_name)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(instance)
+        self.compute.run_instance(self.context, instance=instance)
+
+        old_instance_type_id = instance['instance_type_id']
+        new_flavor = instance_types.get_instance_type_by_name('m1.tiny')
+        new_flavorid = new_flavor['flavorid']
+        new_instance_type_id = new_flavor['id']
+        self.compute_api.resize(self.context, instance, new_flavorid)
+
+        db.migration_create(self.context.elevated(),
+                {'instance_uuid': instance['uuid'],
+                 'old_instance_type_id': old_instance_type_id,
+                 'new_instance_type_id': new_instance_type_id,
+                 'status': 'finished'})
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'task_state': None,
+                                       'vm_state': vm_states.RESIZED})
+        instance_types.destroy(orig_name)
+        self.assertRaises(exception.InstanceTypeNotFound,
+                          self.compute_api.revert_resize,
+                          self.context, instance)
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_migrate(self):
         instance = self._create_fake_instance()
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
