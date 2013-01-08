@@ -18,14 +18,13 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import db as bmdb
-from nova.virt.vif import VIFDriver
 
 CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 
 
-class BareMetalVIFDriver(VIFDriver):
+class BareMetalVIFDriver(object):
 
     def _after_plug(self, instance, network, mapping, pif):
         pass
