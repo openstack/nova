@@ -145,6 +145,7 @@ policy_data = """
     "compute_extension:rescue": "",
     "compute_extension:security_groups": "",
     "compute_extension:server_diagnostics": "",
+    "compute_extension:server_password": "",
     "compute_extension:services": "",
     "compute_extension:simple_tenant_usage:show": "",
     "compute_extension:simple_tenant_usage:list": "",

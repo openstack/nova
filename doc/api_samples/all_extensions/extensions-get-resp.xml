@@ -146,6 +146,9 @@
   <extension alias="os-server-diagnostics" updated="2011-12-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1" name="ServerDiagnostics">
     <description>Allow Admins to view server diagnostics through server action</description>
   </extension>
+  <extension alias="os-server-password" updated="2012-11-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server-password/api/v2" name="ServerPassword">
+    <description>Server password support</description>
+  </extension>
   <extension alias="os-server-start-stop" updated="2012-01-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/servers/api/v1.1" name="ServerStartStop">
     <description>Start/Stop instance compute API support</description>
   </extension>

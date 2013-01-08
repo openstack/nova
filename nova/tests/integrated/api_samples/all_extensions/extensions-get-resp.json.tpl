@@ -361,6 +361,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-server-password",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerPassword",
+            "namespace": "http://docs.openstack.org/compute/ext/server-password/api/v2",
+            "updated": "2012-11-29T00:00:00+00:00"
+        },
+        {
             "alias": "os-server-start-stop",
             "description": "%(text)s",
             "links": [],
