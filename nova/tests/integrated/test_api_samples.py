@@ -364,7 +364,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-flavor-extra-specs')
-        do_not_approve_additions.append('os-flavor-rxtx')
         do_not_approve_additions.append('os-flavor-swap')
         do_not_approve_additions.append('os-floating-ip-dns')
         do_not_approve_additions.append('os-floating-ip-pools')
@@ -976,6 +975,55 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBase):
 
 
 class FlavorsExtraDataXmlTest(FlavorsExtraDataJsonTest):
+    ctype = 'xml'
+
+
+class FlavorRxtxJsonTest(ApiSampleTestBase):
+    extension_name = ('nova.api.openstack.compute.contrib.flavor_rxtx.'
+                      'Flavor_rxtx')
+
+    def _get_flags(self):
+        f = super(FlavorRxtxJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # FlavorRxtx extension also needs Flavormanage to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
+        return f
+
+    def test_flavor_rxtx_get(self):
+        flavor_id = 1
+        response = self._do_get('flavors/%s' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'flavor_id': flavor_id,
+            'flavor_name': 'm1.tiny'
+        }
+        subs.update(self._get_regexes())
+        return self._verify_response('flavor-rxtx-get-resp', subs,
+                                     response)
+
+    def test_flavors_rxtx_list(self):
+        response = self._do_get('flavors/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavor-rxtx-list-resp', subs,
+                                     response)
+
+    def test_flavors_rxtx_create(self):
+        subs = {
+            'flavor_id': 100,
+            'flavor_name': 'flavortest'
+        }
+        response = self._do_post('flavors',
+                                 'flavor-rxtx-post-req',
+                                 subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('flavor-rxtx-post-resp',
+                                     subs, response)
+
+
+class FlavorRxtxXmlTest(FlavorRxtxJsonTest):
     ctype = 'xml'
 
 
