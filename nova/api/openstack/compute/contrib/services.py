@@ -32,7 +32,7 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'services')
 CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.config')
+CONF.import_opt('service_down_time', 'nova.service')
 
 
 class ServicesIndexTemplate(xmlutil.TemplateBuilder):

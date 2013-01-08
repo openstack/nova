@@ -80,7 +80,6 @@ utils_opts = [
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
-CONF.import_opt('service_down_time', 'nova.config')
 
 LOG = logging.getLogger(__name__)
 
