@@ -14,6 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+import time
+
+from nova.compute import task_states
+from nova.compute import vm_states
+
+from nova import context as nova_context
+
+from nova.image import glance
+
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
@@ -110,6 +120,48 @@ class PowerVMDriver(driver.ComputeDriver):
         Retrieves the IP address of the dom0
         """
         pass
+
+    def snapshot(self, context, instance, image_id):
+        """Snapshots the specified instance.
+
+        :param context: security context
+        :param instance: Instance object as returned by DB layer.
+        :param image_id: Reference to a pre-created image that will
+                         hold the snapshot.
+        """
+        snapshot_start = time.time()
+
+        # get current image info
+        glance_service, old_image_id = glance.get_remote_image_service(
+                context, instance['image_ref'])
+        image_meta = glance_service.show(context, old_image_id)
+        img_props = image_meta['properties']
+
+        # build updated snapshot metadata
+        snapshot_meta = glance_service.show(context, image_id)
+        new_snapshot_meta = {'is_public': False,
+                             'name': snapshot_meta['name'],
+                             'status': 'active',
+                             'properties': {'image_location': 'snapshot',
+                                            'image_state': 'available',
+                                            'owner_id': instance['project_id']
+                                           },
+                             'disk_format': image_meta['disk_format'],
+                             'container_format': image_meta['container_format']
+                            }
+
+        if 'architecture' in image_meta['properties']:
+            arch = image_meta['properties']['architecture']
+            new_snapshot_meta['properties']['architecture'] = arch
+
+        # disk capture and glance upload
+        self._powervm.capture_image(context, instance, image_id,
+                                    new_snapshot_meta)
+
+        snapshot_time = time.time() - snapshot_start
+        inst_name = instance['name']
+        LOG.info(_("%(inst_name)s captured in %(snapshot_time)s seconds") %
+                    locals())
 
     def pause(self, instance):
         """Pause the specified instance."""

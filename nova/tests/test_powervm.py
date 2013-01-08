@@ -26,6 +26,7 @@ from nova.compute import power_state
 from nova.openstack.common import log as logging
 from nova.virt import images
 from nova.virt.powervm import blockdev as powervm_blockdev
+from nova.virt.powervm import common
 from nova.virt.powervm import driver as powervm_driver
 from nova.virt.powervm import exception
 from nova.virt.powervm import lpar
@@ -195,3 +196,31 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEqual(info['mem'], 1024)
         self.assertEqual(info['num_cpu'], 2)
         self.assertEqual(info['cpu_time'], 939395)
+
+    def test_remote_utility_1(self):
+        path_one = '/some/file/'
+        path_two = '/path/filename'
+        joined_path = common.aix_path_join(path_one, path_two)
+        expected_path = '/some/file/path/filename'
+        self.assertEqual(joined_path, expected_path)
+
+    def test_remote_utility_2(self):
+        path_one = '/some/file/'
+        path_two = 'path/filename'
+        joined_path = common.aix_path_join(path_one, path_two)
+        expected_path = '/some/file/path/filename'
+        self.assertEqual(joined_path, expected_path)
+
+    def test_remote_utility_3(self):
+        path_one = '/some/file'
+        path_two = '/path/filename'
+        joined_path = common.aix_path_join(path_one, path_two)
+        expected_path = '/some/file/path/filename'
+        self.assertEqual(joined_path, expected_path)
+
+    def test_remote_utility_4(self):
+        path_one = '/some/file'
+        path_two = 'path/filename'
+        joined_path = common.aix_path_join(path_one, path_two)
+        expected_path = '/some/file/path/filename'
+        self.assertEqual(joined_path, expected_path)

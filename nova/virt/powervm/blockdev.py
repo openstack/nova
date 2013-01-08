@@ -18,11 +18,16 @@ import hashlib
 import os
 import re
 
+from eventlet import greenthread
+
 from nova import utils
+
+from nova.image import glance
 
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -78,7 +83,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         :param context: nova context used to retrieve image from glance
         :param instance: instance to create the volume for
-        :image_id: image_id reference used to locate image in glance
+        :param image_id: image_id reference used to locate image in glance
         :returns: dictionary with the name of the created
                   Logical Volume device in 'device_name' key
         """
@@ -125,8 +130,44 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         return {'device_name': disk_name}
 
-    def create_image_from_volume(self):
-        raise NotImplementedError()
+    def create_image_from_volume(self, device_name, context,
+                                 image_id, image_meta):
+        """Capture the contents of a volume and upload to glance
+
+        :param device_name: device in /dev/ to capture
+        :param context: nova context for operation
+        :param image_id: image reference to pre-created image in glance
+        :param image_meta: metadata for new image
+        """
+
+        # do the disk copy
+        dest_file_path = common.aix_path_join(CONF.powervm_img_remote_path,
+                                                 image_id)
+        self._copy_device_to_file(device_name, dest_file_path)
+
+        # compress and copy the file back to the nova-compute host
+        snapshot_file_path = self._copy_image_file_from_host(
+                dest_file_path, CONF.powervm_img_local_path,
+                compress=True)
+
+        # get glance service
+        glance_service, image_id = glance.get_remote_image_service(
+                context, image_id)
+
+        # upload snapshot file to glance
+        with open(snapshot_file_path, 'r') as img_file:
+            glance_service.update(context,
+                                  image_id,
+                                  image_meta,
+                                  img_file)
+            LOG.debug(_("Snapshot added to glance."))
+
+        # clean up local image file
+        try:
+            os.remove(snapshot_file_path)
+        except OSError as ose:
+            LOG.warn(_("Failed to clean up snapshot file "
+                       "%(snapshot_file_path)s") % locals())
 
     def migrate_volume(self):
         raise NotImplementedError()
@@ -202,6 +243,25 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             cmd = 'dd if=%s of=/dev/%s bs=1024k' % (source_path, device)
         self.run_vios_command_as_root(cmd)
 
+    def _copy_device_to_file(self, device_name, file_path):
+        """Copy a device to a file using dd
+
+        :param device_name: device name to copy from
+        :param file_path: output file path
+        """
+        cmd = 'dd if=/dev/%s of=%s bs=1024k' % (device_name, file_path)
+        self.run_vios_command_as_root(cmd)
+
+    def _md5sum_remote_file(self, remote_path):
+        # AIX6/VIOS cannot md5sum files with sizes greater than ~2GB
+        cmd = ("perl -MDigest::MD5 -e 'my $file = \"%s\"; open(FILE, $file); "
+               "binmode(FILE); "
+               "print Digest::MD5->new->addfile(*FILE)->hexdigest, "
+               "\" $file\n\";'" % remote_path)
+
+        output = self.run_vios_command_as_root(cmd)
+        return output[0]
+
     def _copy_image_file(self, source_path, remote_path, decompress=False):
         """Copy file to VIOS, decompress it, and return its new size and name.
 
@@ -225,26 +285,24 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         if not decompress:
             final_path = comp_path
         else:
-            final_path = "%s.%s" % (uncomp_path, source_cksum)
+            final_path = uncomp_path
 
         # Check whether the image is already on IVM
         output = self.run_vios_command("ls %s" % final_path,
                                        check_exit_code=False)
 
         # If the image does not exist already
-        if not len(output):
+        if not output:
             # Copy file to IVM
             common.ftp_put_command(self.connection_data, source_path,
                                    remote_path)
 
             # Verify image file checksums match
-            cmd = ("/usr/bin/csum -h MD5 %s |"
-                   "/usr/bin/awk '{print $1}'" % comp_path)
-            output = self.run_vios_command_as_root(cmd)
-            if not len(output):
+            output = self._md5sum_remote_file(final_path)
+            if not output:
                 LOG.error(_("Unable to get checksum"))
                 raise exception.PowerVMFileTransferFailed()
-            if source_cksum != output[0]:
+            if source_cksum != output.split(' ')[0]:
                 LOG.error(_("Image checksums do not match"))
                 raise exception.PowerVMFileTransferFailed()
 
@@ -271,7 +329,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         # Calculate file size in multiples of 512 bytes
         output = self.run_vios_command("ls -o %s|awk '{print $4}'" %
                                   final_path, check_exit_code=False)
-        if len(output):
+        if output:
             size = int(output[0])
         else:
             LOG.error(_("Uncompressed image file not found"))
@@ -280,6 +338,71 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             size = (int(size / 512) + 1) * 512
 
         return final_path, size
+
+    def _copy_image_file_from_host(self, remote_source_path, local_dest_dir,
+                                   compress=False):
+        """
+        Copy a file from IVM to the nova-compute host,
+        and return the location of the copy
+
+        :param remote_source_path remote source file path
+        :param local_dest_dir local destination directory
+        :param compress: if True, compress the file before transfer;
+                         if False (default), copy the file as is
+        """
+
+        temp_str = common.aix_path_join(local_dest_dir,
+                                        os.path.basename(remote_source_path))
+        local_file_path = temp_str + '.gz'
+
+        if compress:
+            copy_from_path = remote_source_path + '.gz'
+        else:
+            copy_from_path = remote_source_path
+
+        if compress:
+            # Gzip the file
+            cmd = "/usr/bin/gzip %s" % remote_source_path
+            self.run_vios_command_as_root(cmd)
+
+            # Cleanup uncompressed remote file
+            cmd = "/usr/bin/rm -f %s" % remote_source_path
+            self.run_vios_command_as_root(cmd)
+
+        # Get file checksum
+        output = self._md5sum_remote_file(copy_from_path)
+        if not output:
+            LOG.error(_("Unable to get checksum"))
+            msg_args = {'file_path': copy_from_path}
+            raise exception.PowerVMFileTransferFailed(**msg_args)
+        else:
+            source_chksum = output.split(' ')[0]
+
+        # Copy file to host
+        common.ftp_get_command(self.connection_data,
+                               copy_from_path,
+                               local_file_path)
+
+        # Calculate copied image checksum
+        with open(local_file_path, 'r') as image_file:
+            hasher = hashlib.md5()
+            block_size = 0x10000
+            buf = image_file.read(block_size)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = image_file.read(block_size)
+            dest_chksum = hasher.hexdigest()
+
+        # do comparison
+        if source_chksum and dest_chksum != source_chksum:
+            LOG.error(_("Image checksums do not match"))
+            raise exception.PowerVMFileTransferFailed()
+
+        # Cleanup transferred remote file
+        cmd = "/usr/bin/rm -f %s" % copy_from_path
+        output = self.run_vios_command_as_root(cmd)
+
+        return local_file_path
 
     def run_vios_command(self, cmd, check_exit_code=True):
         """Run a remote command using an active ssh connection.

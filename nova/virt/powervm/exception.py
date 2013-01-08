@@ -22,7 +22,11 @@ class PowerVMConnectionFailed(exception.NovaException):
 
 
 class PowerVMFileTransferFailed(exception.NovaException):
-    message = _("File '%(file_path)' transfer to PowerVM manager failed")
+    message = _("File '%(file_path)s' transfer to PowerVM manager failed")
+
+
+class PowerVMFTPTransferFailed(PowerVMFileTransferFailed):
+    message = _("FTP %(ftp_cmd)s from %(source_path)s to %(dest_path)s failed")
 
 
 class PowerVMLPARInstanceNotFound(exception.InstanceNotFound):

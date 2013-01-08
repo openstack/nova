@@ -63,6 +63,7 @@ def ssh_command_as_root(ssh_connection, cmd, check_exit_code=True):
     :returns: Tuple -- a tuple of (stdout, stderr)
     :raises: nova.exception.ProcessExecutionError
     """
+    LOG.debug(_('Running cmd (SSH-as-root): %s') % cmd)
     chan = ssh_connection._transport.open_session()
     # This command is required to be executed
     # in order to become root.
@@ -108,5 +109,48 @@ def ftp_put_command(connection, local_path, remote_dir):
         f.close()
         ftp.close()
     except Exception:
-        LOG.exception(_('File transfer to PowerVM manager failed'))
-        raise exception.PowerVMFileTransferFailed(file_path=local_path)
+        LOG.error(_('File transfer to PowerVM manager failed'))
+        raise exception.PowerVMFTPTransferFailed(ftp_cmd='PUT',
+                source_path=local_path, dest_path=remote_dir)
+
+
+def ftp_get_command(connection, remote_path, local_path):
+    """Retrieve a file via FTP
+
+    :param connection: a Connection object.
+    :param remote_path: path to the remote file
+    :param local_path: path to local destination
+    :raises: PowerVMFileTransferFailed
+    """
+    try:
+        ftp = ftplib.FTP(host=connection.host,
+                         user=connection.username,
+                         passwd=connection.password)
+        ftp.cwd(os.path.dirname(remote_path))
+        name = os.path.basename(remote_path)
+        LOG.debug(_("ftp GET %(remote_path)s to: %(local_path)s") % locals())
+        with open(local_path, 'w') as ftpfile:
+            ftpcmd = 'RETR %s' % name
+            ftp.retrbinary(ftpcmd, ftpfile.write)
+        ftp.close()
+    except Exception:
+        LOG.error(_("File transfer from PowerVM manager failed"))
+        raise exception.PowerVMFTPTransferFailed(ftp_cmd='GET',
+                source_path=remote_path, dest_path=local_path)
+
+
+def aix_path_join(path_one, path_two):
+    """Ensures file path is built correctly for remote UNIX system
+
+    :param path_one: string of the first file path
+    :param path_two: string of the second file path
+    :returns: a uniform path constructed from both strings
+    """
+    if path_one.endswith('/'):
+        path_one = path_one.rstrip('/')
+
+    if path_two.startswith('/'):
+        path_two = path_two.lstrip('/')
+
+    final_path = path_one + '/' + path_two
+    return final_path
