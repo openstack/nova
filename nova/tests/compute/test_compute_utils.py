@@ -37,7 +37,7 @@ import nova.tests.image.fake
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 

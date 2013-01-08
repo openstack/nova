@@ -29,7 +29,7 @@ from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
-CONF.import_opt('console_manager', 'nova.config')
+CONF.import_opt('console_manager', 'nova.service')
 CONF.import_opt('console_driver', 'nova.console.manager')
 
 

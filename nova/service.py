@@ -87,6 +87,21 @@ service_opts = [
     cfg.IntOpt('metadata_workers',
                default=None,
                help='Number of workers for metadata service'),
+    cfg.StrOpt('compute_manager',
+               default='nova.compute.manager.ComputeManager',
+               help='full class name for the Manager for compute'),
+    cfg.StrOpt('console_manager',
+               default='nova.console.manager.ConsoleProxyManager',
+               help='full class name for the Manager for console proxy'),
+    cfg.StrOpt('cert_manager',
+               default='nova.cert.manager.CertManager',
+               help='full class name for the Manager for cert'),
+    cfg.StrOpt('network_manager',
+               default='nova.network.manager.VlanManager',
+               help='full class name for the Manager for network'),
+    cfg.StrOpt('scheduler_manager',
+               default='nova.scheduler.manager.SchedulerManager',
+               help='full class name for the Manager for scheduler'),
     ]
 
 CONF = cfg.CONF
@@ -482,7 +497,6 @@ class Service(object):
         if not manager:
             manager_cls = ('%s_manager' %
                            binary.rpartition('nova-')[2])
-            CONF.import_opt(manager_cls, 'nova.config')
             manager = CONF.get(manager_cls, None)
         if report_interval is None:
             report_interval = CONF.report_interval

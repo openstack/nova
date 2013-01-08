@@ -25,7 +25,7 @@ from nova.virt import fake
 
 
 CONF = cfg.CONF
-CONF.import_opt('compute_manager', 'nova.config')
+CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
