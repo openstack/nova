@@ -116,18 +116,24 @@ function run_pep8 {
   srcfiles=`find nova -type f -name "*.py" ! -wholename "nova\/openstack*"`
   srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
   srcfiles+=" `find tools -type f -name "*.py"`"
+  srcfiles+=" `find plugins -type f -name "*.py"`"
+  srcfiles+=" `find smoketests -type f -name "*.py"`"
   srcfiles+=" setup.py"
 
   # Until all these issues get fixed, ignore.
-  ignore='--ignore=N402,E12,E711,E721,E712'
+  ignore='--ignore=E12,E711,E721,E712'
 
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
 
+  # NOTE(sdague): as of grizzly-2 these are passing however leaving the comment
+  # in here in case we need to break it out when we get more of our hacking working
+  # again.
+  #
   # NOTE(sirp): Dom0 plugins are written for Python 2.4, meaning some HACKING
   #             checks are too strict.
-  pep8onlyfiles=`find plugins -type f -name "*.py"`
-  pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -perm +111`"
-  ${wrapper} pep8 ${ignore} ${pep8onlyfiles}
+  # pep8onlyfiles=`find plugins -type f -name "*.py"`
+  # pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -perm +111`"
+  # ${wrapper} pep8 ${ignore} ${pep8onlyfiles}
 }
 
 
