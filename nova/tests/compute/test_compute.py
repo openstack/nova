@@ -5770,7 +5770,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.live_migrate(self.context, instance,
                                       block_migration=True,
                                       disk_over_commit=True,
-                                      host='fake_dest_host')
+                                      host_name='fake_dest_host')
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
@@ -6066,7 +6066,7 @@ class ComputePolicyTestCase(BaseTestCase):
 
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get_instance_faults,
-                          self.context, instances)
+                          context.get_admin_context(), instances)
 
     def test_force_host_fail(self):
         rules = {"compute:create": [],
@@ -6098,11 +6098,19 @@ class ComputeHostAPITestCase(BaseTestCase):
             call_info['msg'] = msg
         self.stubs.Set(rpc, 'call', fake_rpc_call)
 
+    def _pretend_fake_host_exists(self, ctxt):
+        """Sets it so that the host API always thinks that 'fake_host'
+        exists"""
+        self.mox.StubOutWithMock(self.host_api, 'does_host_exist')
+        self.host_api.does_host_exist(ctxt, 'fake_host').AndReturn(True)
+        self.mox.ReplayAll()
+
     def test_set_host_enabled(self):
-        ctxt = context.RequestContext('fake', 'fake')
+        ctxt = context.get_admin_context()
         call_info = {}
         self._rpc_call_stub(call_info)
 
+        self._pretend_fake_host_exists(ctxt)
         self.host_api.set_host_enabled(ctxt, 'fake_host', 'fake_enabled')
         self.assertEqual(call_info['context'], ctxt)
         self.assertEqual(call_info['topic'], 'compute.fake_host')
@@ -6116,6 +6124,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         call_info = {}
         self._rpc_call_stub(call_info)
 
+        self._pretend_fake_host_exists(ctxt)
         self.host_api.get_host_uptime(ctxt, 'fake_host')
         self.assertEqual(call_info['context'], ctxt)
         self.assertEqual(call_info['topic'], 'compute.fake_host')
@@ -6125,9 +6134,10 @@ class ComputeHostAPITestCase(BaseTestCase):
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_host_power_action(self):
-        ctxt = context.RequestContext('fake', 'fake')
+        ctxt = context.get_admin_context()
         call_info = {}
         self._rpc_call_stub(call_info)
+        self._pretend_fake_host_exists(ctxt)
         self.host_api.host_power_action(ctxt, 'fake_host', 'fake_action')
         self.assertEqual(call_info['context'], ctxt)
         self.assertEqual(call_info['topic'], 'compute.fake_host')
@@ -6138,9 +6148,10 @@ class ComputeHostAPITestCase(BaseTestCase):
                  compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_set_host_maintenance(self):
-        ctxt = context.RequestContext('fake', 'fake')
+        ctxt = context.get_admin_context()
         call_info = {}
         self._rpc_call_stub(call_info)
+        self._pretend_fake_host_exists(ctxt)
         self.host_api.set_host_maintenance(ctxt, 'fake_host', 'fake_mode')
         self.assertEqual(call_info['context'], ctxt)
         self.assertEqual(call_info['topic'], 'compute.fake_host')
