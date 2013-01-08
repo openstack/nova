@@ -49,19 +49,20 @@ from nova.openstack.common import notifier
 
 log_opts = [
     cfg.StrOpt('logging_context_format_string',
-               default='%(asctime)s %(levelname)s %(name)s [%(request_id)s '
-                       '%(user_id)s %(project_id)s] %(instance)s'
+               default='%(asctime)s.%(msecs)d %(levelname)s %(name)s '
+                       '[%(request_id)s %(user)s %(tenant)s] %(instance)s'
                        '%(message)s',
                help='format string to use for log messages with context'),
     cfg.StrOpt('logging_default_format_string',
-               default='%(asctime)s %(process)d %(levelname)s %(name)s [-]'
-                       ' %(instance)s%(message)s',
+               default='%(asctime)s.%(msecs)d %(process)d %(levelname)s '
+                       '%(name)s [-] %(instance)s%(message)s',
                help='format string to use for log messages without context'),
     cfg.StrOpt('logging_debug_format_suffix',
                default='%(funcName)s %(pathname)s:%(lineno)d',
                help='data to append to log format when level is DEBUG'),
     cfg.StrOpt('logging_exception_prefix',
-               default='%(asctime)s %(process)d TRACE %(name)s %(instance)s',
+               default='%(asctime)s.%(msecs)d %(process)d TRACE %(name)s '
+               '%(instance)s',
                help='prefix each line of exception output with this format'),
     cfg.ListOpt('default_log_levels',
                 default=[
@@ -95,6 +96,12 @@ log_opts = [
 
 
 generic_log_opts = [
+    cfg.StrOpt('logdir',
+               default=None,
+               help='Log output to a per-service log file in named directory'),
+    cfg.StrOpt('logfile',
+               default=None,
+               help='Log output to a named file'),
     cfg.BoolOpt('use_stderr',
                 default=True,
                 help='Log output to standard error'),
@@ -142,15 +149,18 @@ def _get_binary_name():
 
 
 def _get_log_file_path(binary=None):
-    if CONF.log_file and not CONF.log_dir:
-        return CONF.log_file
+    logfile = CONF.log_file or CONF.logfile
+    logdir = CONF.log_dir or CONF.logdir
 
-    if CONF.log_file and CONF.log_dir:
-        return os.path.join(CONF.log_dir, CONF.log_file)
+    if logfile and not logdir:
+        return logfile
 
-    if CONF.log_dir:
+    if logfile and logdir:
+        return os.path.join(logdir, logfile)
+
+    if logdir:
         binary = binary or _get_binary_name()
-        return '%s.log' % (os.path.join(CONF.log_dir, binary),)
+        return '%s.log' % (os.path.join(logdir, binary),)
 
 
 class ContextAdapter(logging.LoggerAdapter):
@@ -165,7 +175,7 @@ class ContextAdapter(logging.LoggerAdapter):
         self.log(logging.AUDIT, msg, *args, **kwargs)
 
     def deprecated(self, msg, *args, **kwargs):
-        stdmsg = _("Deprecated Config: %s") % msg
+        stdmsg = _("Deprecated: %s") % msg
         if CONF.fatal_deprecations:
             self.critical(stdmsg, *args, **kwargs)
             raise DeprecatedConfig(msg=stdmsg)
@@ -278,6 +288,12 @@ def setup(product_name):
             raise
     else:
         _setup_logging_from_conf(product_name)
+
+
+def set_defaults(logging_context_format_string):
+    cfg.set_defaults(log_opts,
+                     logging_context_format_string=
+                     logging_context_format_string)
 
 
 def _find_facility_from_conf():
