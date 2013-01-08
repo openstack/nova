@@ -179,6 +179,7 @@ class Domain(object):
         self._def = self._parse_definition(xml)
         self._has_saved_state = False
         self._snapshots = {}
+        self._id = self._connection._id_counter
 
     def _parse_definition(self, xml):
         try:
@@ -298,6 +299,9 @@ class Domain(object):
     def destroy(self):
         self._state = VIR_DOMAIN_SHUTOFF
         self._connection._mark_not_running(self)
+
+    def ID(self):
+        return self._id
 
     def name(self):
         return self._def['name']
@@ -515,6 +519,8 @@ class Connection(object):
     def _mark_not_running(self, dom):
         if dom._transient:
             self._undefine(dom)
+
+        dom._id = -1
 
         for (k, v) in self._running_vms.iteritems():
             if v == dom:
