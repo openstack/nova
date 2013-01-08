@@ -51,7 +51,7 @@ xvp_opts = [
 CONF = cfg.CONF
 CONF.register_opts(xvp_opts)
 CONF.import_opt('host', 'nova.config')
-CONF.import_opt('pybasedir', 'nova.config')
+CONF.import_opt('pybasedir', 'nova.paths')
 LOG = logging.getLogger(__name__)
 
 

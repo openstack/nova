@@ -37,7 +37,7 @@ CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 
 CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 
 _ENGINE = None
 _MAKER = None

@@ -178,7 +178,7 @@ CONF.import_opt('network_manager', 'nova.config')
 CONF.import_opt('reclaim_instance_interval', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 
 QUOTAS = quota.QUOTAS
 

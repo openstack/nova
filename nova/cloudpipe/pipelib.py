@@ -58,7 +58,7 @@ CONF.import_opt('ec2_dmz_host', 'nova.api.ec2.cloud')
 CONF.import_opt('ec2_port', 'nova.api.ec2.cloud')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('vpn_key_suffix', 'nova.config')
-CONF.import_opt('pybasedir', 'nova.config')
+CONF.import_opt('pybasedir', 'nova.paths')
 CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
 
 LOG = logging.getLogger(__name__)

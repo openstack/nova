@@ -43,21 +43,6 @@ def _get_my_ip():
         return "127.0.0.1"
 
 
-core_opts = [
-    cfg.StrOpt('pybasedir',
-               default=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                    '../')),
-               help='Directory where the nova python module is installed'),
-    cfg.StrOpt('bindir',
-               default='$pybasedir/bin',
-               help='Directory where nova binaries are installed'),
-    cfg.StrOpt('state_path',
-               default='$pybasedir',
-               help="Top-level directory for maintaining nova's state"),
-    ]
-
-cfg.CONF.register_cli_opts(core_opts)
-
 global_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),

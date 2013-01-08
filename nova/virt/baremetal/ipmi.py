@@ -54,6 +54,7 @@ baremetal_group = cfg.OptGroup(name='baremetal',
 CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
+CONF.import_opt('state_path', 'nova.paths')
 
 LOG = logging.getLogger(__name__)
 

@@ -73,7 +73,7 @@ crypto_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(crypto_opts)
-CONF.import_opt('state_path', 'nova.config')
+CONF.import_opt('state_path', 'nova.paths')
 
 
 def ca_folder(project_id=None):
