@@ -73,7 +73,7 @@ class API(object):
         return self._driver.join(member_id, group_id, service)
 
     def service_is_up(self, member):
-        """Check if the given member is up"""
+        """Check if the given member is up."""
         msg = _('Check if the given member [%s] is part of the '
                 'ServiceGroup, is up')
         LOG.debug(msg, member)
@@ -106,19 +106,19 @@ class ServiceGroupDriver(object):
     """Base class for ServiceGroup drivers."""
 
     def join(self, member_id, group_id, service=None):
-        """Join the given service with it's group"""
+        """Join the given service with it's group."""
         raise NotImplementedError()
 
     def is_up(self, member):
-        """Check whether the given member is up. """
+        """Check whether the given member is up."""
         raise NotImplementedError()
 
     def leave(self, member_id, group_id):
-        """Remove the given member from the ServiceGroup monitoring"""
+        """Remove the given member from the ServiceGroup monitoring."""
         raise NotImplementedError()
 
     def get_all(self, group_id):
-        """Returns ALL members of the given group"""
+        """Returns ALL members of the given group."""
         raise NotImplementedError()
 
     def get_one(self, group_id):

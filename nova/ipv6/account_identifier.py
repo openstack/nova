@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""IPv6 address generation with account identifier embedded"""
+"""IPv6 address generation with account identifier embedded."""
 
 import hashlib
 import netaddr

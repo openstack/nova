@@ -401,7 +401,7 @@ class S3ImageService(object):
 
     @staticmethod
     def _test_for_malicious_tarball(path, filename):
-        """Raises exception if extracting tarball would escape extract path"""
+        """Raises exception if extracting tarball would escape extract path."""
         tar_file = tarfile.open(filename, 'r|gz')
         for n in tar_file.getnames():
             if not os.path.abspath(os.path.join(path, n)).startswith(path):
