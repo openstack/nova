@@ -43,7 +43,7 @@ from nova import service
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('enabled_apis', 'nova.config')
+CONF.import_opt('enabled_apis', 'nova.service')
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)
