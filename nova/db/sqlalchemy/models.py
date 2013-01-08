@@ -81,7 +81,7 @@ class NovaBase(object):
         return n, getattr(self, n)
 
     def update(self, values):
-        """Make the model object behave like a dict"""
+        """Make the model object behave like a dict."""
         for k, v in values.iteritems():
             setattr(self, k, v)
 
@@ -172,7 +172,7 @@ class ComputeNodeStat(BASE, NovaBase):
 
 
 class Certificate(BASE, NovaBase):
-    """Represents a x509 certificate"""
+    """Represents a x509 certificate."""
     __tablename__ = 'certificates'
     id = Column(Integer, primary_key=True)
 
@@ -321,7 +321,7 @@ class InstanceInfoCache(BASE, NovaBase):
 
 
 class InstanceTypes(BASE, NovaBase):
-    """Represent possible instance_types or flavor of VM offered"""
+    """Represent possible instance_types or flavor of VM offered."""
     __tablename__ = "instance_types"
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
@@ -484,7 +484,7 @@ class Snapshot(BASE, NovaBase):
 
 
 class BlockDeviceMapping(BASE, NovaBase):
-    """Represents block device mapping that is defined by EC2"""
+    """Represents block device mapping that is defined by EC2."""
     __tablename__ = "block_device_mapping"
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -521,7 +521,7 @@ class BlockDeviceMapping(BASE, NovaBase):
 
 
 class IscsiTarget(BASE, NovaBase):
-    """Represents an iscsi target for a given host"""
+    """Represents an iscsi target for a given host."""
     __tablename__ = 'iscsi_targets'
     __table_args__ = (schema.UniqueConstraint("target_num", "host"), )
     id = Column(Integer, primary_key=True)
@@ -757,7 +757,7 @@ class Console(BASE, NovaBase):
 
 
 class InstanceMetadata(BASE, NovaBase):
-    """Represents a user-provided metadata key/value pair for an instance"""
+    """Represents a user-provided metadata key/value pair for an instance."""
     __tablename__ = 'instance_metadata'
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
@@ -773,7 +773,7 @@ class InstanceMetadata(BASE, NovaBase):
 
 
 class InstanceSystemMetadata(BASE, NovaBase):
-    """Represents a system-owned metadata key/value pair for an instance"""
+    """Represents a system-owned metadata key/value pair for an instance."""
     __tablename__ = 'instance_system_metadata'
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
@@ -790,7 +790,7 @@ class InstanceSystemMetadata(BASE, NovaBase):
 
 
 class InstanceTypeProjects(BASE, NovaBase):
-    """Represent projects associated instance_types"""
+    """Represent projects associated instance_types."""
     __tablename__ = "instance_type_projects"
     id = Column(Integer, primary_key=True)
     instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
@@ -805,7 +805,7 @@ class InstanceTypeProjects(BASE, NovaBase):
 
 
 class InstanceTypeExtraSpecs(BASE, NovaBase):
-    """Represents additional specs as key/value pairs for an instance_type"""
+    """Represents additional specs as key/value pairs for an instance_type."""
     __tablename__ = 'instance_type_extra_specs'
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
@@ -921,7 +921,7 @@ class AgentBuild(BASE, NovaBase):
 
 
 class BandwidthUsage(BASE, NovaBase):
-    """Cache for instance bandwidth usage data pulled from the hypervisor"""
+    """Cache for instance bandwidth usage data pulled from the hypervisor."""
     __tablename__ = 'bw_usage_cache'
     id = Column(Integer, primary_key=True, nullable=False)
     uuid = Column(String(36), nullable=False)
@@ -935,7 +935,7 @@ class BandwidthUsage(BASE, NovaBase):
 
 
 class VolumeUsage(BASE, NovaBase):
-    """Cache for volume usage data pulled from the hypervisor"""
+    """Cache for volume usage data pulled from the hypervisor."""
     __tablename__ = 'volume_usage_cache'
     id = Column(Integer, primary_key=True, nullable=False)
     volume_id = Column(String(36), nullable=False)
@@ -953,21 +953,21 @@ class VolumeUsage(BASE, NovaBase):
 
 
 class S3Image(BASE, NovaBase):
-    """Compatibility layer for the S3 image service talking to Glance"""
+    """Compatibility layer for the S3 image service talking to Glance."""
     __tablename__ = 's3_images'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
 
 class VolumeIdMapping(BASE, NovaBase):
-    """Compatibility layer for the EC2 volume service"""
+    """Compatibility layer for the EC2 volume service."""
     __tablename__ = 'volume_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
 
 class SnapshotIdMapping(BASE, NovaBase):
-    """Compatibility layer for the EC2 snapshot service"""
+    """Compatibility layer for the EC2 snapshot service."""
     __tablename__ = 'snapshot_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
@@ -1014,14 +1014,14 @@ class InstanceActionEvent(BASE, NovaBase):
 
 
 class InstanceIdMapping(BASE, NovaBase):
-    """Compatibility layer for the EC2 instance service"""
+    """Compatibility layer for the EC2 instance service."""
     __tablename__ = 'instance_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
 
 class TaskLog(BASE, NovaBase):
-    """Audit log for background periodic tasks"""
+    """Audit log for background periodic tasks."""
     __tablename__ = 'task_log'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     task_name = Column(String(255), nullable=False)

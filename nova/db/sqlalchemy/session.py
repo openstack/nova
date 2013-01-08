@@ -398,7 +398,7 @@ def get_engine():
 
 
 def synchronous_switch_listener(dbapi_conn, connection_rec):
-    """Switch sqlite connections to non-synchronous mode"""
+    """Switch sqlite connections to non-synchronous mode."""
     dbapi_conn.execute("PRAGMA synchronous = OFF")
 
 
@@ -534,7 +534,7 @@ def create_engine(sql_connection):
 
 
 class Query(sqlalchemy.orm.query.Query):
-    """Subclass of sqlalchemy.query with soft_delete() method"""
+    """Subclass of sqlalchemy.query with soft_delete() method."""
     def soft_delete(self, synchronize_session='evaluate'):
         return self.update({'deleted': True,
                             'updated_at': literal_column('updated_at'),
@@ -543,7 +543,7 @@ class Query(sqlalchemy.orm.query.Query):
 
 
 class Session(sqlalchemy.orm.session.Session):
-    """Custom Session class to avoid SqlAlchemy Session monkey patching"""
+    """Custom Session class to avoid SqlAlchemy Session monkey patching."""
     @wrap_db_error
     def query(self, *args, **kwargs):
         return super(Session, self).query(*args, **kwargs)

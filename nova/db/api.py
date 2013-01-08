@@ -79,7 +79,7 @@ class NoMoreNetworks(exception.NovaException):
 
 
 class NoMoreTargets(exception.NovaException):
-    """No more available targets"""
+    """No more available targets."""
     pass
 
 
@@ -246,7 +246,7 @@ def floating_ip_get(context, id):
 
 
 def floating_ip_get_pools(context):
-    """Returns a list of floating ip pools"""
+    """Returns a list of floating ip pools."""
     return IMPL.floating_ip_get_pools(context)
 
 
@@ -335,12 +335,12 @@ def floating_ip_get_by_address(context, address):
 
 
 def floating_ip_get_by_fixed_address(context, fixed_address):
-    """Get a floating ips by fixed address"""
+    """Get a floating ips by fixed address."""
     return IMPL.floating_ip_get_by_fixed_address(context, fixed_address)
 
 
 def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id):
-    """Get a floating ips by fixed address"""
+    """Get a floating ips by fixed address."""
     return IMPL.floating_ip_get_by_fixed_ip_id(context, fixed_ip_id)
 
 
@@ -350,7 +350,7 @@ def floating_ip_update(context, address, values):
 
 
 def floating_ip_set_auto_assigned(context, address):
-    """Set auto_assigned flag to floating ip"""
+    """Set auto_assigned flag to floating ip."""
     return IMPL.floating_ip_set_auto_assigned(context, address)
 
 
@@ -360,17 +360,17 @@ def dnsdomain_list(context):
 
 
 def dnsdomain_register_for_zone(context, fqdomain, zone):
-    """Associated a DNS domain with an availability zone"""
+    """Associated a DNS domain with an availability zone."""
     return IMPL.dnsdomain_register_for_zone(context, fqdomain, zone)
 
 
 def dnsdomain_register_for_project(context, fqdomain, project):
-    """Associated a DNS domain with a project id"""
+    """Associated a DNS domain with a project id."""
     return IMPL.dnsdomain_register_for_project(context, fqdomain, project)
 
 
 def dnsdomain_unregister(context, fqdomain):
-    """Purge associations for the specified DNS zone"""
+    """Purge associations for the specified DNS zone."""
     return IMPL.dnsdomain_unregister(context, fqdomain)
 
 
@@ -513,7 +513,7 @@ def virtual_interface_create(context, values):
 
 
 def virtual_interface_get(context, vif_id):
-    """Gets a virtual interface from the table,"""
+    """Gets a virtual interface from the table."""
     return IMPL.virtual_interface_get(context, vif_id)
 
 
@@ -551,7 +551,7 @@ def virtual_interface_delete_by_instance(context, instance_id):
 
 
 def virtual_interface_get_all(context):
-    """Gets all virtual interfaces from the table"""
+    """Gets all virtual interfaces from the table."""
     return IMPL.virtual_interface_get_all(context)
 
 
@@ -657,7 +657,7 @@ def instance_get_floating_address(context, instance_id):
 
 
 def instance_floating_address_get_all(context, instance_uuid):
-    """Get all floating ip addresses of an instance"""
+    """Get all floating ip addresses of an instance."""
     return IMPL.instance_floating_address_get_all(context, instance_uuid)
 
 
@@ -867,7 +867,7 @@ def network_get_by_uuid(context, uuid):
 
 
 def network_get_by_cidr(context, cidr):
-    """Get a network by cidr or raise if it does not exist"""
+    """Get a network by cidr or raise if it does not exist."""
     return IMPL.network_get_by_cidr(context, cidr)
 
 
@@ -1069,12 +1069,12 @@ def ec2_snapshot_create(context, snapshot_id, forced_id=None):
 
 
 def block_device_mapping_create(context, values):
-    """Create an entry of block device mapping"""
+    """Create an entry of block device mapping."""
     return IMPL.block_device_mapping_create(context, values)
 
 
 def block_device_mapping_update(context, bdm_id, values):
-    """Update an entry of block device mapping"""
+    """Update an entry of block device mapping."""
     return IMPL.block_device_mapping_update(context, bdm_id, values)
 
 
@@ -1085,7 +1085,7 @@ def block_device_mapping_update_or_create(context, values):
 
 
 def block_device_mapping_get_all_by_instance(context, instance_uuid):
-    """Get all block device mapping belonging to an instance"""
+    """Get all block device mapping belonging to an instance."""
     return IMPL.block_device_mapping_get_all_by_instance(context,
                                                          instance_uuid)
 
@@ -1484,7 +1484,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
 
 
 def vol_get_usage_by_time(context, begin):
-    """Return volumes usage that have been updated after a specified time"""
+    """Return volumes usage that have been updated after a specified time."""
     return IMPL.vol_get_usage_by_time(context, begin)
 
 
@@ -1502,17 +1502,17 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
 
 
 def s3_image_get(context, image_id):
-    """Find local s3 image represented by the provided id"""
+    """Find local s3 image represented by the provided id."""
     return IMPL.s3_image_get(context, image_id)
 
 
 def s3_image_get_by_uuid(context, image_uuid):
-    """Find local s3 image represented by the provided uuid"""
+    """Find local s3 image represented by the provided uuid."""
     return IMPL.s3_image_get_by_uuid(context, image_uuid)
 
 
 def s3_image_create(context, image_uuid):
-    """Create local s3 image represented by provided uuid"""
+    """Create local s3 image represented by provided uuid."""
     return IMPL.s3_image_create(context, image_uuid)
 
 
@@ -1530,7 +1530,7 @@ def aggregate_get(context, aggregate_id):
 
 
 def aggregate_get_by_host(context, host, key=None):
-    """Get a list of aggregates that host belongs to"""
+    """Get a list of aggregates that host belongs to."""
     return IMPL.aggregate_get_by_host(context, host, key)
 
 
@@ -1663,17 +1663,17 @@ def action_event_get_by_id(context, action_id, event_id):
 
 
 def get_ec2_instance_id_by_uuid(context, instance_id):
-    """Get ec2 id through uuid from instance_id_mappings table"""
+    """Get ec2 id through uuid from instance_id_mappings table."""
     return IMPL.get_ec2_instance_id_by_uuid(context, instance_id)
 
 
 def get_instance_uuid_by_ec2_id(context, ec2_id):
-    """Get uuid through ec2 id from instance_id_mappings table"""
+    """Get uuid through ec2 id from instance_id_mappings table."""
     return IMPL.get_instance_uuid_by_ec2_id(context, ec2_id)
 
 
 def ec2_instance_create(context, instance_uuid, id=None):
-    """Create the ec2 id to instance uuid mapping on demand"""
+    """Create the ec2 id to instance uuid mapping on demand."""
     return IMPL.ec2_instance_create(context, instance_uuid, id)
 
 
@@ -1687,7 +1687,7 @@ def task_log_end_task(context, task_name,
                         errors,
                         message=None,
                         session=None):
-    """Mark a task as complete for a given host/time period"""
+    """Mark a task as complete for a given host/time period."""
     return IMPL.task_log_end_task(context, task_name,
                                   period_beginning,
                                   period_ending,
@@ -1704,7 +1704,7 @@ def task_log_begin_task(context, task_name,
                         task_items=None,
                         message=None,
                         session=None):
-    """Mark a task as started for a given host/time period"""
+    """Mark a task as started for a given host/time period."""
     return IMPL.task_log_begin_task(context, task_name,
                                     period_beginning,
                                     period_ending,
