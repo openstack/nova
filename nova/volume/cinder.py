@@ -42,6 +42,9 @@ cinder_opts = [
                default=None,
                help='Override service catalog lookup with template for cinder '
                     'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
+    cfg.IntOpt('cinder_http_retries',
+               default=3,
+               help='Number of cinderclient retries on failed http calls'),
 ]
 
 CONF = cfg.CONF
@@ -72,7 +75,8 @@ def cinderclient(context):
     c = cinder_client.Client(context.user_id,
                              context.auth_token,
                              project_id=context.project_id,
-                             auth_url=url)
+                             auth_url=url,
+                             retries=CONF.cinder_http_retries)
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
                                                            context.project_id)
