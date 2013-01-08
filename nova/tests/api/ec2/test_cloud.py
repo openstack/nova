@@ -52,7 +52,7 @@ from nova import volume
 
 CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
-CONF.import_opt('default_instance_type', 'nova.config')
+CONF.import_opt('default_instance_type', 'nova.compute.instance_types')
 CONF.import_opt('use_ipv6', 'nova.config')
 LOG = logging.getLogger(__name__)
 

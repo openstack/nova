@@ -30,8 +30,15 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 
+instance_type_opts = [
+    cfg.StrOpt('default_instance_type',
+               default='m1.small',
+               help='default instance type to use, testing only'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('default_instance_type', 'nova.config')
+CONF.register_opts(instance_type_opts)
+
 LOG = logging.getLogger(__name__)
 
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
