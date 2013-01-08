@@ -139,6 +139,8 @@ class CloudTestCase(test.TestCase):
         self.flags(use_local=True, group='conductor')
 
         # set up services
+        self.conductor = self.start_service('conductor',
+                manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
@@ -730,7 +732,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_availability_zones(admin_ctxt,
                                                         zone_name='verbose')
 
-        self.assertEqual(len(result['availabilityZoneInfo']), 13)
+        self.assertEqual(len(result['availabilityZoneInfo']), 15)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 

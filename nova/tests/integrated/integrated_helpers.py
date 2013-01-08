@@ -24,6 +24,7 @@ import string
 import uuid
 
 import nova.image.glance
+from nova.openstack.common import cfg
 from nova.openstack.common.log import logging
 from nova import service
 from nova import test  # For the flags
@@ -32,6 +33,7 @@ import nova.tests.image.fake
 from nova.tests.integrated.api import client
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -73,12 +75,12 @@ class _IntegratedTestBase(test.TestCase):
                     'chance.ChanceScheduler')
 
         # set up services
+        self.conductor = self.start_service('conductor',
+                manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
         self.scheduler = self.start_service('cert')
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
-        self.conductor = self.start_service(
-            'conductor', manager='nova.conductor.manager.ConductorManager')
 
         self._start_api_service()
 
