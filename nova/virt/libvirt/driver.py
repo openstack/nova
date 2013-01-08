@@ -661,7 +661,6 @@ class LibvirtDriver(driver.ComputeDriver):
         method = getattr(driver, method_name)
         return method(connection_info, *args, **kwargs)
 
-    @exception.wrap_exception()
     def attach_volume(self, connection_info, instance, mountpoint):
         instance_name = instance['name']
         virt_dom = self._lookup_by_name(instance_name)
@@ -716,7 +715,6 @@ class LibvirtDriver(driver.ComputeDriver):
                               block_device_info=block_device_info)
         return xml
 
-    @exception.wrap_exception()
     def detach_volume(self, connection_info, instance, mountpoint):
         instance_name = instance['name']
         mount_device = mountpoint.rpartition("/")[2]
@@ -749,7 +747,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                   connection_info,
                                   mount_device)
 
-    @exception.wrap_exception()
     def snapshot(self, context, instance, image_href, update_task_state):
         """Create snapshot from a running VM instance.
 
@@ -845,7 +842,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                      metadata,
                                      image_file)
 
-    @exception.wrap_exception()
     def reboot(self, instance, network_info, reboot_type='SOFT',
                block_device_info=None):
         """Reboot a virtual machine, given an instance reference."""
@@ -932,24 +928,20 @@ class LibvirtDriver(driver.ComputeDriver):
         timer = utils.FixedIntervalLoopingCall(_wait_for_reboot)
         timer.start(interval=0.5).wait()
 
-    @exception.wrap_exception()
     def pause(self, instance):
         """Pause VM instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.suspend()
 
-    @exception.wrap_exception()
     def unpause(self, instance):
         """Unpause paused VM instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.resume()
 
-    @exception.wrap_exception()
     def power_off(self, instance):
         """Power off the specified instance."""
         self._destroy(instance)
 
-    @exception.wrap_exception()
     def power_on(self, instance):
         """Power on the specified instance."""
         dom = self._lookup_by_name(instance['name'])
@@ -958,20 +950,17 @@ class LibvirtDriver(driver.ComputeDriver):
                                                instance)
         timer.start(interval=0.5).wait()
 
-    @exception.wrap_exception()
     def suspend(self, instance):
         """Suspend the specified instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.managedSave(0)
 
-    @exception.wrap_exception()
     def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance."""
         xml = self._get_domain_xml(instance, network_info, block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
-    @exception.wrap_exception()
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted."""
@@ -979,7 +968,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
-    @exception.wrap_exception()
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Loads a VM using rescue images.
@@ -1010,7 +998,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
         self._create_domain(xml)
 
-    @exception.wrap_exception()
     def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
         """
@@ -1027,7 +1014,6 @@ class LibvirtDriver(driver.ComputeDriver):
         for rescue_file in glob.iglob(rescue_files):
             libvirt_utils.file_delete(rescue_file)
 
-    @exception.wrap_exception()
     def poll_rebooting_instances(self, timeout, instances):
         pass
 
@@ -1042,7 +1028,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
-    @exception.wrap_exception()
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         xml = self.to_xml(instance, network_info, image_meta,
@@ -1083,7 +1068,6 @@ class LibvirtDriver(driver.ComputeDriver):
         fp.write(data)
         return fpath
 
-    @exception.wrap_exception()
     def get_console_output(self, instance):
         virt_dom = self._lookup_by_name(instance['name'])
         xml = virt_dom.XMLDesc(0)
@@ -1150,7 +1134,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_host_ip_addr():
         return CONF.my_ip
 
-    @exception.wrap_exception()
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
@@ -2891,7 +2874,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception:
             pass
 
-    @exception.wrap_exception()
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
                                    block_device_info=None):
@@ -2957,7 +2939,6 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(_("Instance running successfully."), instance=instance)
             raise utils.LoopingCallDone()
 
-    @exception.wrap_exception()
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None):
@@ -3010,7 +2991,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                                instance)
         timer.start(interval=0.5).wait()
 
-    @exception.wrap_exception()
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None):
         LOG.debug(_("Starting finish_revert_migration"),

@@ -82,9 +82,11 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
     # to pass it in as a parameter. Otherwise we get a cyclic import of
     # nova.notifier.api -> nova.utils -> nova.exception :(
     def inner(f):
-        def wrapped(*args, **kw):
+        def wrapped(self, context, *args, **kw):
+            # Don't store self or context in the payload, it now seems to
+            # contain confidential information.
             try:
-                return f(*args, **kw)
+                return f(self, context, *args, **kw)
             except Exception, e:
                 with excutils.save_and_reraise_exception():
                     if notifier:
@@ -103,10 +105,6 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                             # functools.wraps to ensure the name is
                             # propagated.
                             temp_type = f.__name__
-
-                        context = get_context_from_function_and_args(f,
-                                                                     args,
-                                                                     kw)
 
                         notifier.notify(context, publisher_id, temp_type,
                                         temp_level, payload)
@@ -1089,20 +1087,3 @@ class CryptoCAFileNotFound(FileNotFound):
 
 class CryptoCRLFileNotFound(FileNotFound):
     message = _("The CRL file for %(project)s could not be found")
-
-
-def get_context_from_function_and_args(function, args, kwargs):
-    """Find an arg of type RequestContext and return it.
-
-       This is useful in a couple of decorators where we don't
-       know much about the function we're wrapping.
-    """
-
-    # import here to avoid circularity:
-    from nova import context
-
-    for arg in itertools.chain(kwargs.values(), args):
-        if isinstance(arg, context.RequestContext):
-            return arg
-
-    return None

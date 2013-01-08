@@ -324,10 +324,9 @@ class BareMetalDriver(driver.ComputeDriver):
         return self.volume_driver.attach_volume(connection_info,
                                                 instance, mountpoint)
 
-    @exception.wrap_exception()
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint):
         return self.volume_driver.detach_volume(connection_info,
-                                                instance, mountpoint)
+                                                instance_name, mountpoint)
 
     def get_info(self, instance):
         # NOTE(deva): compute/manager.py expects to get NotFound exception

@@ -52,23 +52,23 @@ class FakeNotifier(object):
         self.provided_context = context
 
 
-def good_function():
+def good_function(self, context):
     return 99
 
 
-def bad_function_exception(blah="a", boo="b", context=None):
+def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
     raise test.TestingException()
 
 
 class WrapExceptionTestCase(test.TestCase):
     def test_wrap_exception_good_return(self):
         wrapped = exception.wrap_exception()
-        self.assertEquals(99, wrapped(good_function)())
+        self.assertEquals(99, wrapped(good_function)(1, 2))
 
     def test_wrap_exception_throws_exception(self):
         wrapped = exception.wrap_exception()
         self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception))
+                          wrapped(bad_function_exception), 1, 2, 3)
 
     def test_wrap_exception_with_notifier(self):
         notifier = FakeNotifier()
@@ -76,7 +76,7 @@ class WrapExceptionTestCase(test.TestCase):
                                            "level")
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception), context=ctxt)
+                          wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
         self.assertEquals(notifier.provided_publisher, "publisher")
         self.assertEquals(notifier.provided_event, "event")
         self.assertEquals(notifier.provided_priority, "level")
@@ -88,7 +88,7 @@ class WrapExceptionTestCase(test.TestCase):
         notifier = FakeNotifier()
         wrapped = exception.wrap_exception(notifier)
         self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception))
+                          wrapped(bad_function_exception), 1, 2, 3)
         self.assertEquals(notifier.provided_publisher, None)
         self.assertEquals(notifier.provided_event, "bad_function_exception")
         self.assertEquals(notifier.provided_priority, notifier.ERROR)

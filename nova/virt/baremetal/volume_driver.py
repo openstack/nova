@@ -246,7 +246,6 @@ class LibvirtVolumeDriver(VolumeDriver):
             # TODO(NTTdocomo): support CHAP
             _allow_iscsi_tgtadm(tid, 'ALL')
 
-    @exception.wrap_exception()
     def detach_volume(self, connection_info, instance, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
         try:
