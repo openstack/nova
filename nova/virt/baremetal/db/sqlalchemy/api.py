@@ -309,6 +309,7 @@ def bm_interface_get(context, if_id):
     return result
 
 
+@require_admin_context
 def bm_interface_get_all(context):
     query = model_query(context, models.BareMetalInterface,
                         read_deleted="no")
