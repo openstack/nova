@@ -1892,3 +1892,65 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                      project_id='test_project',
                      delta=-2 * 1024),
                 ])
+
+
+class NoopQuotaDriverTestCase(test.TestCase):
+    def setUp(self):
+        super(NoopQuotaDriverTestCase, self).setUp()
+
+        self.flags(quota_instances=10,
+                   quota_cores=20,
+                   quota_ram=50 * 1024,
+                   quota_floating_ips=10,
+                   quota_metadata_items=128,
+                   quota_injected_files=5,
+                   quota_injected_file_content_bytes=10 * 1024,
+                   quota_injected_file_path_bytes=255,
+                   quota_security_groups=10,
+                   quota_security_group_rules=20,
+                   reservation_expire=86400,
+                   until_refresh=0,
+                   max_age=0,
+                   )
+
+        self.expected_quotas = dict([(r, -1)
+                                     for r in quota.QUOTAS._resources])
+        self.driver = quota.NoopQuotaDriver()
+
+    def test_get_defaults(self):
+        # Use our pre-defined resources
+        result = self.driver.get_defaults(None, quota.QUOTAS._resources)
+        self.assertEqual(self.expected_quotas, result)
+
+    def test_get_class_quotas(self):
+        result = self.driver.get_class_quotas(None,
+                                              quota.QUOTAS._resources,
+                                              'test_class')
+        self.assertEqual(self.expected_quotas, result)
+
+    def test_get_class_quotas_no_defaults(self):
+        result = self.driver.get_class_quotas(None,
+                                              quota.QUOTAS._resources,
+                                              'test_class',
+                                              False)
+        self.assertEqual(self.expected_quotas, result)
+
+    def test_get_project_quotas(self):
+        result = self.driver.get_project_quotas(None,
+                                                quota.QUOTAS._resources,
+                                                'test_project')
+        self.assertEqual(self.expected_quotas, result)
+
+    def test_get_project_quotas_no_defaults(self):
+        result = self.driver.get_project_quotas(None,
+                                                quota.QUOTAS._resources,
+                                                'test_project',
+                                                defaults=False)
+        self.assertEqual(self.expected_quotas, result)
+
+    def test_get_project_quotas_no_usages(self):
+        result = self.driver.get_project_quotas(None,
+                                                quota.QUOTAS._resources,
+                                                'test_project',
+                                                usages=False)
+        self.assertEqual(self.expected_quotas, result)
