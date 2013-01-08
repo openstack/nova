@@ -54,11 +54,13 @@ cloudpipe_opts = [
     cfg.StrOpt('dmz_mask',
                default='255.255.255.0',
                help=_('Netmask to push into openvpn config')),
+    cfg.StrOpt('vpn_key_suffix',
+               default='-vpn',
+               help='Suffix to add to project name for vpn key and secgroups'),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(cloudpipe_opts)
-CONF.import_opt('vpn_key_suffix', 'nova.config')
 
 LOG = logging.getLogger(__name__)
 

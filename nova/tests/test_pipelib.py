@@ -21,7 +21,6 @@ from nova import test
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('vpn_key_suffix', 'nova.config')
 
 
 class PipelibTest(test.TestCase):
