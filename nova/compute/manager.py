@@ -68,6 +68,7 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
+from nova import paths
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
@@ -91,7 +92,7 @@ compute_opts = [
                      ' during a host restart and apply all at the end of the'
                      ' init phase'),
     cfg.StrOpt('instances_path',
-               default='$state_path/instances',
+               default=paths.state_path_def('instances'),
                help='where instances are stored on disk'),
     cfg.BoolOpt('instance_usage_audit',
                default=False,
@@ -178,7 +179,6 @@ CONF.import_opt('network_manager', 'nova.config')
 CONF.import_opt('reclaim_instance_interval', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
-CONF.import_opt('state_path', 'nova.paths')
 
 QUOTAS = quota.QUOTAS
 

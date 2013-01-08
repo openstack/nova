@@ -27,6 +27,7 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova import paths
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt import driver
@@ -38,7 +39,8 @@ opts = [
                 default=True,
                 help='Whether baremetal compute injects password or not'),
     cfg.StrOpt('injected_network_template',
-               default='$pybasedir/nova/virt/baremetal/interfaces.template',
+               default=paths.basedir_def('nova/virt/'
+                                         'baremetal/interfaces.template'),
                help='Template file for injected network'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
@@ -72,7 +74,6 @@ baremetal_group = cfg.OptGroup(name='baremetal',
 CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
-CONF.import_opt('pybasedir', 'nova.paths')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,

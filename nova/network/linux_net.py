@@ -31,6 +31,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova import paths
 from nova import utils
 
 
@@ -42,7 +43,7 @@ linux_net_opts = [
                default='/etc/nova/nova-dhcpbridge.conf',
                help='location of flagfile for dhcpbridge'),
     cfg.StrOpt('networks_path',
-               default='$state_path/networks',
+               default=paths.state_path_def('networks'),
                help='Location to keep network config files'),
     cfg.StrOpt('public_interface',
                default='eth0',
@@ -51,7 +52,7 @@ linux_net_opts = [
                default=None,
                help='MTU setting for vlan'),
     cfg.StrOpt('dhcpbridge',
-               default='$bindir/nova-dhcpbridge',
+               default=paths.bindir_def('nova-dhcpbridge'),
                help='location of nova-dhcpbridge'),
     cfg.StrOpt('routing_source_ip',
                default='$my_ip',
@@ -94,12 +95,9 @@ linux_net_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(linux_net_opts)
-CONF.import_opt('fake_network', 'nova.network.manager')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
-CONF.import_opt('bindir', 'nova.paths')
-CONF.import_opt('state_path', 'nova.paths')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we

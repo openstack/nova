@@ -21,10 +21,12 @@
 
 from nova.db.sqlalchemy import session as nova_session
 from nova.openstack.common import cfg
+from nova import paths
 
 opts = [
     cfg.StrOpt('sql_connection',
-               default='sqlite:///$state_path/baremetal_$sqlite_db',
+               default=('sqlite:///' +
+                        paths.state_path_def('baremetal_$sqlite_db')),
                help='The SQLAlchemy connection string used to connect to the '
                     'bare-metal database'),
     ]
@@ -37,7 +39,6 @@ CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 
 CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
-CONF.import_opt('state_path', 'nova.paths')
 
 _ENGINE = None
 _MAKER = None

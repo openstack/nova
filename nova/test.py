@@ -42,6 +42,7 @@ from nova.network import manager as network_manager
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import paths
 from nova import service
 from nova.tests import conf_fixture
 from nova.tests import policy_fixture
@@ -57,7 +58,6 @@ CONF = cfg.CONF
 CONF.register_opts(test_opts)
 CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
 CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
-CONF.import_opt('state_path', 'nova.paths')
 CONF.set_override('use_stderr', False)
 
 logging.setup('nova')
@@ -83,7 +83,7 @@ class Database(fixtures.Fixture):
             if db_migrate.db_version() > db_migrate.INIT_VERSION:
                 return
         else:
-            testdb = os.path.join(CONF.state_path, sqlite_db)
+            testdb = paths.state_path_rel(sqlite_db)
             if os.path.exists(testdb):
                 return
         db_migrate.db_sync()
@@ -93,7 +93,7 @@ class Database(fixtures.Fixture):
             self._DB = "".join(line for line in conn.connection.iterdump())
             self.engine.dispose()
         else:
-            cleandb = os.path.join(CONF.state_path, sqlite_clean_db)
+            cleandb = paths.state_path_rel(sqlite_clean_db)
             shutil.copyfile(testdb, cleandb)
 
     def setUp(self):
@@ -104,10 +104,8 @@ class Database(fixtures.Fixture):
             conn.connection.executescript(self._DB)
             self.addCleanup(self.engine.dispose)
         else:
-            shutil.copyfile(os.path.join(CONF.state_path,
-                                         self.sqlite_clean_db),
-                            os.path.join(CONF.state_path,
-                                         self.sqlite_db))
+            shutil.copyfile(paths.state_path_rel(self.sqlite_clean_db),
+                            paths.state_path_rel(self.sqlite_db))
 
     def post_migrations(self):
         """Any addition steps that are needed outside of the migrations."""

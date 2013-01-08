@@ -34,6 +34,7 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova import paths
 from nova import utils
 
 
@@ -42,7 +43,7 @@ cloudpipe_opts = [
                default='m1.tiny',
                help=_('Instance type for vpn instances')),
     cfg.StrOpt('boot_script_template',
-               default='$pybasedir/nova/cloudpipe/bootscript.template',
+               default=paths.basedir_def('nova/cloudpipe/bootscript.template'),
                help=_('Template for cloudpipe instance boot script')),
     cfg.StrOpt('dmz_net',
                default='10.0.0.0',
@@ -58,7 +59,6 @@ CONF.import_opt('ec2_dmz_host', 'nova.api.ec2.cloud')
 CONF.import_opt('ec2_port', 'nova.api.ec2.cloud')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('vpn_key_suffix', 'nova.config')
-CONF.import_opt('pybasedir', 'nova.paths')
 CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
 
 LOG = logging.getLogger(__name__)

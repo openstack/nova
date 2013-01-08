@@ -35,6 +35,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import paths
 from nova import utils
 
 
@@ -51,10 +52,10 @@ crypto_opts = [
                default='crl.pem',
                help=_('Filename of root Certificate Revocation List')),
     cfg.StrOpt('keys_path',
-               default='$state_path/keys',
+               default=paths.state_path_def('keys'),
                help=_('Where we keep our keys')),
     cfg.StrOpt('ca_path',
-               default='$state_path/CA',
+               default=paths.state_path_def('CA'),
                help=_('Where we keep our root CA')),
     cfg.BoolOpt('use_project_ca',
                 default=False,
@@ -73,7 +74,6 @@ crypto_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(crypto_opts)
-CONF.import_opt('state_path', 'nova.paths')
 
 
 def ca_folder(project_id=None):

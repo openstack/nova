@@ -46,13 +46,14 @@ import webob
 
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
+from nova import paths
 from nova import utils
 from nova import wsgi
 
 
 s3_opts = [
     cfg.StrOpt('buckets_path',
-               default='$state_path/buckets',
+               default=paths.state_path_def('buckets'),
                help='path to s3 buckets'),
     cfg.StrOpt('s3_listen',
                default="0.0.0.0",
@@ -64,7 +65,6 @@ s3_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(s3_opts)
-CONF.import_opt('state_path', 'nova.paths')
 
 
 def get_wsgi_server():
