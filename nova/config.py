@@ -87,9 +87,6 @@ global_opts = [
                help='When set, compute API will consider duplicate hostnames '
                     'invalid within the specified scope, regardless of case. '
                     'Should be empty, "project" or "global".'),
-    cfg.StrOpt('osapi_path',
-               default='/v1.1/',
-               help='the path prefix used to call the openstack api server'),
     cfg.StrOpt('default_instance_type',
                default='m1.small',
                help='default instance type to use, testing only'),
