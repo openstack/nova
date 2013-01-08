@@ -22,8 +22,14 @@ from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
+rpcapi_opts = [
+    cfg.StrOpt('scheduler_topic',
+               default='scheduler',
+               help='the topic scheduler nodes listen on'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.config')
+CONF.register_opts(rpcapi_opts)
 
 
 class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):

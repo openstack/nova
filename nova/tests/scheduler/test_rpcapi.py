@@ -25,7 +25,6 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
 CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.config')
 
 
 class SchedulerRpcAPITestCase(test.TestCase):
