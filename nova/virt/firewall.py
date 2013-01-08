@@ -64,15 +64,15 @@ class FirewallDriver(object):
         raise NotImplementedError()
 
     def filter_defer_apply_on(self):
-        """Defer application of IPTables rules"""
+        """Defer application of IPTables rules."""
         pass
 
     def filter_defer_apply_off(self):
-        """Turn off deferral of IPTables rules and apply the rules now"""
+        """Turn off deferral of IPTables rules and apply the rules now."""
         pass
 
     def unfilter_instance(self, instance, network_info):
-        """Stop filtering instance"""
+        """Stop filtering instance."""
         raise NotImplementedError()
 
     def apply_instance_filter(self, instance, network_info):
@@ -126,7 +126,7 @@ class FirewallDriver(object):
         raise NotImplementedError()
 
     def instance_filter_exists(self, instance, network_info):
-        """Check nova-instance-instance-xxx exists"""
+        """Check nova-instance-instance-xxx exists."""
         raise NotImplementedError()
 
     def _handle_network_info_model(self, network_info):

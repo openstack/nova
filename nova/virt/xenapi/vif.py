@@ -70,7 +70,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
         return vif_rec
 
     def _ensure_vlan_bridge(self, network):
-        """Ensure that a VLAN bridge exists"""
+        """Ensure that a VLAN bridge exists."""
 
         vlan_num = network.get_meta('vlan')
         bridge = network['bridge']

@@ -307,7 +307,7 @@ class SimpleDH(object):
 
     @staticmethod
     def mod_exp(num, exp, mod):
-        """Efficient implementation of (num ** exp) % mod"""
+        """Efficient implementation of (num ** exp) % mod."""
         result = 1
         while exp > 0:
             if (exp & 1) == 1:

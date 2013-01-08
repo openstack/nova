@@ -58,7 +58,7 @@ class ResourcePool(object):
 
     def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error):
-        """Undo aggregate operation when pool error raised"""
+        """Undo aggregate operation when pool error raised."""
         try:
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
@@ -236,7 +236,7 @@ class ResourcePool(object):
                                            reason=str(e.details))
 
     def _create_slave_info(self):
-        """XenServer specific info needed to join the hypervisor pool"""
+        """XenServer specific info needed to join the hypervisor pool."""
         # replace the address from the xenapi connection url
         # because this might be 169.254.0.1, i.e. xenapi
         # NOTE: password in clear is not great, but it'll do for now

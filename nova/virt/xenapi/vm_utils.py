@@ -333,7 +333,7 @@ def ensure_free_mem(session, instance):
 
 
 def find_vbd_by_number(session, vm_ref, number):
-    """Get the VBD reference from the device number"""
+    """Get the VBD reference from the device number."""
     vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
     if vbd_refs:
         for vbd_ref in vbd_refs:
@@ -348,7 +348,7 @@ def find_vbd_by_number(session, vm_ref, number):
 
 
 def unplug_vbd(session, vbd_ref):
-    """Unplug VBD from VM"""
+    """Unplug VBD from VM."""
     # Call VBD.unplug on the given VBD, with a retry if we get
     # DEVICE_DETACH_REJECTED.  For reasons which we don't understand,
     # we're seeing the device still in use, even when all processes
@@ -379,7 +379,7 @@ def unplug_vbd(session, vbd_ref):
 
 
 def destroy_vbd(session, vbd_ref):
-    """Destroy VBD from host database"""
+    """Destroy VBD from host database."""
     try:
         session.call_xenapi('VBD.destroy', vbd_ref)
     except session.XenAPI.Failure, exc:
@@ -592,7 +592,7 @@ def set_vdi_name(session, vdi_uuid, label, description, vdi_ref=None):
 
 
 def get_vdi_for_vm_safely(session, vm_ref):
-    """Retrieves the primary VDI for a VM"""
+    """Retrieves the primary VDI for a VM."""
     vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
     for vbd in vbd_refs:
         vbd_rec = session.call_xenapi("VBD.get_record", vbd)
@@ -1352,7 +1352,7 @@ def list_vms(session):
 
 
 def lookup_vm_vdis(session, vm_ref):
-    """Look for the VDIs that are attached to the VM"""
+    """Look for the VDIs that are attached to the VM."""
     # Firstly we get the VBDs, then the VDIs.
     # TODO(Armando): do we leave the read-only devices?
     vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
@@ -1375,7 +1375,7 @@ def lookup_vm_vdis(session, vm_ref):
 
 
 def lookup(session, name_label):
-    """Look the instance up and return it if available"""
+    """Look the instance up and return it if available."""
     vm_refs = session.call_xenapi("VM.get_by_name_label", name_label)
     n = len(vm_refs)
     if n == 0:
@@ -1420,7 +1420,7 @@ def is_snapshot(session, vm):
 
 
 def compile_info(record):
-    """Fill record with VM status information"""
+    """Fill record with VM status information."""
     return {'state': XENAPI_POWER_STATE[record['power_state']],
             'max_mem': long(record['memory_static_max']) >> 10,
             'mem': long(record['memory_dynamic_max']) >> 10,
@@ -1429,7 +1429,7 @@ def compile_info(record):
 
 
 def compile_diagnostics(record):
-    """Compile VM diagnostics data"""
+    """Compile VM diagnostics data."""
     try:
         keys = []
         diags = {}
@@ -1484,14 +1484,14 @@ def compile_metrics(start_time, stop_time=None):
 
 
 def _scan_sr(session, sr_ref=None):
-    """Scans the SR specified by sr_ref"""
+    """Scans the SR specified by sr_ref."""
     if sr_ref:
         LOG.debug(_("Re-scanning SR %s"), sr_ref)
         session.call_xenapi('SR.scan', sr_ref)
 
 
 def scan_default_sr(session):
-    """Looks for the system default SR and triggers a re-scan"""
+    """Looks for the system default SR and triggers a re-scan."""
     _scan_sr(session, _find_sr(session))
 
 
@@ -1506,7 +1506,7 @@ def safe_find_sr(session):
 
 
 def _find_sr(session):
-    """Return the storage repository to hold VM images"""
+    """Return the storage repository to hold VM images."""
     host = session.get_xenapi_host()
     try:
         tokens = CONF.sr_matching_filter.split(':')
@@ -1550,7 +1550,7 @@ def _safe_find_iso_sr(session):
 
 
 def _find_iso_sr(session):
-    """Return the storage repository to hold ISO images"""
+    """Return the storage repository to hold ISO images."""
     host = session.get_xenapi_host()
     for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
         LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
@@ -1588,7 +1588,7 @@ def _get_rrd_server():
 
 
 def _get_rrd(server, vm_uuid):
-    """Return the VM RRD XML as a string"""
+    """Return the VM RRD XML as a string."""
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/vm_rrd?uuid=%s" % (
             server[0],
@@ -1604,7 +1604,7 @@ def _get_rrd(server, vm_uuid):
 
 
 def _get_rrd_updates(server, start_time):
-    """Return the RRD updates XML as a string"""
+    """Return the RRD updates XML as a string."""
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/rrd_updates?start=%s" % (
             server[0],
@@ -1710,7 +1710,7 @@ def _get_all_vdis_in_sr(session, sr_ref):
 
 
 def get_instance_vdis_for_sr(session, vm_ref, sr_ref):
-    """Return opaqueRef for all the vdis which live on sr"""
+    """Return opaqueRef for all the vdis which live on sr."""
     for vbd_ref in session.call_xenapi('VM.get_VBDs', vm_ref):
         try:
             vdi_ref = session.call_xenapi('VBD.get_VDI', vbd_ref)
@@ -1733,7 +1733,7 @@ def _get_vhd_parent_uuid(session, vdi_ref):
 
 
 def _walk_vdi_chain(session, vdi_uuid):
-    """Yield vdi_recs for each element in a VDI chain"""
+    """Yield vdi_recs for each element in a VDI chain."""
     scan_default_sr(session)
     while True:
         vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
@@ -1852,7 +1852,7 @@ def _remap_vbd_dev(dev):
 
 
 def _wait_for_device(dev):
-    """Wait for device node to appear"""
+    """Wait for device node to appear."""
     for i in xrange(0, CONF.block_device_creation_timeout):
         dev_path = utils.make_dev_path(dev)
         if os.path.exists(dev_path):
@@ -1864,7 +1864,7 @@ def _wait_for_device(dev):
 
 
 def cleanup_attached_vdis(session):
-    """Unplug any instance VDIs left after an unclean restart"""
+    """Unplug any instance VDIs left after an unclean restart."""
     this_vm_ref = _get_this_vm_ref(session)
 
     vbd_refs = session.call_xenapi('VM.get_VBDs', this_vm_ref)
@@ -2114,7 +2114,7 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
 
 
 def _mount_filesystem(dev_path, dir):
-    """mounts the device specified by dev_path in dir"""
+    """mounts the device specified by dev_path in dir."""
     try:
         _out, err = utils.execute('mount',
                                  '-t', 'ext2,ext3,ext4,reiserfs',
@@ -2125,7 +2125,7 @@ def _mount_filesystem(dev_path, dir):
 
 
 def _mounted_processing(device, key, net, metadata):
-    """Callback which runs with the image VDI attached"""
+    """Callback which runs with the image VDI attached."""
     # NB: Partition 1 hardcoded
     dev_path = utils.make_dev_path(device, partition=1)
     with utils.tempdir() as tmpdir:

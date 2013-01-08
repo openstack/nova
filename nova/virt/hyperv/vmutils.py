@@ -56,7 +56,7 @@ class VMUtils(object):
             return vms[0].ElementName
 
     def check_job_status(self, jobpath):
-        """Poll WMI job state for completion"""
+        """Poll WMI job state for completion."""
         job_wmi_path = jobpath.replace('\\', '/')
         job = wmi.WMI(moniker=job_wmi_path)
 
@@ -115,7 +115,7 @@ class VMUtils(object):
         return export_folder
 
     def clone_wmi_obj(self, conn, wmi_class, wmi_obj):
-        """Clone a WMI object"""
+        """Clone a WMI object."""
         cl = conn.__getattr__(wmi_class)  # get the class
         newinst = cl.new()
         #Copy the properties from the original.
@@ -130,7 +130,7 @@ class VMUtils(object):
         return newinst
 
     def add_virt_resource(self, conn, res_setting_data, target_vm):
-        """Add a new resource (disk/nic) to the VM"""
+        """Add a new resource (disk/nic) to the VM."""
         vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
         (job, new_resources, ret_val) = vs_man_svc.\
                     AddVirtualSystemResources([res_setting_data.GetText_(1)],
@@ -146,7 +146,7 @@ class VMUtils(object):
             return None
 
     def remove_virt_resource(self, conn, res_setting_data, target_vm):
-        """Add a new resource (disk/nic) to the VM"""
+        """Add a new resource (disk/nic) to the VM."""
         vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
         (job, ret_val) = vs_man_svc.\
                     RemoveVirtualSystemResources([res_setting_data.path_()],

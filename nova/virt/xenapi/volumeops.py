@@ -107,7 +107,7 @@ class VolumeOps(object):
 
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
-        """Attach volume storage to VM instance"""
+        """Attach volume storage to VM instance."""
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
 
@@ -183,7 +183,7 @@ class VolumeOps(object):
                                 % instance_name)
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        """Detach volume storage to VM instance"""
+        """Detach volume storage to VM instance."""
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
 

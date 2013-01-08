@@ -80,7 +80,7 @@ DEVICE_CD = '4'
 
 
 def cmp_version(a, b):
-    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
+    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)."""
     a = a.split('.')
     b = b.split('.')
 
@@ -250,7 +250,7 @@ class VMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
     def _start(self, instance, vm_ref=None):
-        """Power on a VM instance"""
+        """Power on a VM instance."""
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Starting instance"), instance=instance)
         self._session.call_xenapi('VM.start_on', vm_ref,
@@ -1313,7 +1313,7 @@ class VMOps(object):
                 'internal_access_path': path}
 
     def _vif_xenstore_data(self, vif):
-        """convert a network info vif to injectable instance data"""
+        """convert a network info vif to injectable instance data."""
 
         def get_ip(ip):
             if not ip:
@@ -1512,15 +1512,15 @@ class VMOps(object):
         self._session.call_xenapi('VM.remove_from_xenstore_data', vm_ref, key)
 
     def refresh_security_group_rules(self, security_group_id):
-        """recreates security group rules for every instance """
+        """recreates security group rules for every instance."""
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
     def refresh_security_group_members(self, security_group_id):
-        """recreates security group rules for every instance """
+        """recreates security group rules for every instance."""
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
     def refresh_instance_security_rules(self, instance):
-        """recreates security group rules for specified instance """
+        """recreates security group rules for specified instance."""
         self.firewall_driver.refresh_instance_security_rules(instance)
 
     def refresh_provider_fw_rules(self):
@@ -1623,14 +1623,14 @@ class VMOps(object):
                                                  'failed'))
 
     def _generate_vdi_map(self, destination_sr_ref, vm_ref):
-        """generate a vdi_map for _call_live_migrate_command """
+        """generate a vdi_map for _call_live_migrate_command."""
         sr_ref = vm_utils.safe_find_sr(self._session)
         vm_vdis = vm_utils.get_instance_vdis_for_sr(self._session,
                                                     vm_ref, sr_ref)
         return dict((vdi, destination_sr_ref) for vdi in vm_vdis)
 
     def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
-        """unpack xapi specific parameters, and call a live migrate command"""
+        """unpack xapi specific parameters, and call a live migrate command."""
         destination_sr_ref = migrate_data['destination_sr_ref']
         migrate_send_data = migrate_data['migrate_send_data']
 

@@ -112,7 +112,7 @@ def get_disk_size(path):
 
 
 def extend(image, size):
-    """Increase image to size"""
+    """Increase image to size."""
     virt_size = get_disk_size(image)
     if virt_size >= size:
         return
@@ -161,7 +161,7 @@ def can_resize_fs(image, size, use_cow=False):
 
 
 def bind(src, target, instance_name):
-    """Bind device to a filesystem"""
+    """Bind device to a filesystem."""
     if src:
         utils.execute('touch', target, run_as_root=True)
         utils.execute('mount', '-o', 'bind', src, target,

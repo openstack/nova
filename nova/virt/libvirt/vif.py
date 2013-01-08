@@ -273,7 +273,7 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
        OVS virtual port XML (introduced in libvirt 0.9.11)."""
 
     def get_config(self, instance, network, mapping):
-        """Pass data required to create OVS virtual port element"""
+        """Pass data required to create OVS virtual port element."""
         conf = super(LibvirtOpenVswitchVirtualPortDriver,
                      self).get_config(instance,
                                       network,
@@ -290,7 +290,7 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
         pass
 
     def unplug(self, instance, vif):
-        """No action needed.  Libvirt takes care of cleanup"""
+        """No action needed.  Libvirt takes care of cleanup."""
         pass
 
 
@@ -326,5 +326,5 @@ class QuantumLinuxBridgeVIFDriver(LibvirtBaseVIFDriver):
         pass
 
     def unplug(self, instance, vif):
-        """No action needed.  Libvirt takes care of cleanup"""
+        """No action needed.  Libvirt takes care of cleanup."""
         pass

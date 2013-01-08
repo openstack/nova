@@ -38,7 +38,7 @@ def execute(*args, **kwargs):
 
 
 def get_iscsi_initiator():
-    """Get iscsi initiator name for this machine"""
+    """Get iscsi initiator name for this machine."""
     # NOTE(vish) openiscsi stores initiator name in a file that
     #            needs root permission to read.
     contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
@@ -439,7 +439,7 @@ def find_disk(virt_dom):
 
 
 def get_disk_type(path):
-    """Retrieve disk type (raw, qcow2, lvm) for given file"""
+    """Retrieve disk type (raw, qcow2, lvm) for given file."""
     if path.startswith('/dev'):
         return 'lvm'
 
@@ -466,5 +466,5 @@ def get_fs_info(path):
 
 
 def fetch_image(context, target, image_id, user_id, project_id):
-    """Grab image"""
+    """Grab image."""
     images.fetch_to_raw(context, image_id, target, user_id, project_id)

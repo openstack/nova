@@ -300,7 +300,7 @@ class BareMetalDriver(driver.ComputeDriver):
         pm.deactivate_node()
 
     def power_on(self, instance):
-        """Power on the specified instance"""
+        """Power on the specified instance."""
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node=node, instance=instance)
         pm.activate_node()

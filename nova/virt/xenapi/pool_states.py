@@ -49,5 +49,5 @@ POOL_FLAG = 'hypervisor_pool'
 
 
 def is_hv_pool(metadata):
-    """Checks if aggregate is a hypervisor_pool"""
+    """Checks if aggregate is a hypervisor_pool."""
     return POOL_FLAG in metadata.keys()

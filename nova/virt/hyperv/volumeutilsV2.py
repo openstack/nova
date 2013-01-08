@@ -37,7 +37,7 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
 
         def login_storage_target(self, target_lun, target_iqn,
             target_portal):
-            """Add target portal, list targets and logins to the target"""
+            """Add target portal, list targets and logins to the target."""
             separator = target_portal.find(':')
             target_address = target_portal[:separator]
             target_port = target_portal[separator + 1:]
@@ -53,7 +53,7 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
             time.sleep(CONF.hyperv_wait_between_attach_retry)
 
         def logout_storage_target(self, target_iqn):
-            """Logs out storage target through its session id """
+            """Logs out storage target through its session id."""
 
             target = self._conn_storage.MSFT_iSCSITarget(
                     NodeAddress=target_iqn)[0]

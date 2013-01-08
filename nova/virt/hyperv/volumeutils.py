@@ -52,7 +52,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                     'calling the iscsi initiator: %s') % stdout_value)
 
         def login_storage_target(self, target_lun, target_iqn, target_portal):
-            """Add target portal, list targets and logins to the target"""
+            """Add target portal, list targets and logins to the target."""
             separator = target_portal.find(':')
             target_address = target_portal[:separator]
             target_port = target_portal[separator + 1:]
@@ -68,7 +68,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
             time.sleep(CONF.hyperv_wait_between_attach_retry)
 
         def logout_storage_target(self, target_iqn):
-            """Logs out storage target through its session id """
+            """Logs out storage target through its session id."""
 
             sessions = self._conn_wmi.query(
                     "SELECT * FROM MSiSCSIInitiator_SessionClass \
@@ -77,5 +77,5 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                 self.execute_log_out(session.SessionId)
 
         def execute_log_out(self, session_id):
-            """Executes log out of the session described by its session ID """
+            """Executes log out of the session described by its session ID."""
             self.execute('iscsicli.exe ' + 'logouttarget ' + session_id)

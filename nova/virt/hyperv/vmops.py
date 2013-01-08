@@ -69,14 +69,14 @@ class VMOps(baseops.BaseOps):
         self._volumeops = volumeops
 
     def list_instances(self):
-        """Return the names of all the instances known to Hyper-V. """
+        """Return the names of all the instances known to Hyper-V."""
         vms = [v.ElementName
                 for v in self._conn.Msvm_ComputerSystem(['ElementName'],
                     Caption="Virtual Machine")]
         return vms
 
     def get_info(self, instance):
-        """Get information about the VM"""
+        """Get information about the VM."""
         LOG.debug(_("get_info called for instance"), instance=instance)
         return self._get_info(instance['name'])
 
@@ -222,7 +222,7 @@ class VMOps(baseops.BaseOps):
             drive_type)
 
     def _create_vm(self, instance):
-        """Create a VM but don't start it.  """
+        """Create a VM but don't start it."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
@@ -271,7 +271,7 @@ class VMOps(baseops.BaseOps):
         LOG.debug(_('Set vcpus for vm %s...'), instance["name"])
 
     def _create_scsi_controller(self, vm_name):
-        """Create an iscsi controller ready to mount volumes """
+        """Create an iscsi controller ready to mount volumes."""
         LOG.debug(_('Creating a scsi controller for %(vm_name)s for volume '
                 'attaching') % locals())
         vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
@@ -305,7 +305,7 @@ class VMOps(baseops.BaseOps):
 
     def _attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
         drive_type=constants.IDE_DISK):
-        """Create an IDE drive and attach it to the vm"""
+        """Create an IDE drive and attach it to the vm."""
         LOG.debug(_('Creating disk for %(vm_name)s by attaching'
                 ' disk file %(path)s') % locals())
 
@@ -368,7 +368,7 @@ class VMOps(baseops.BaseOps):
             locals())
 
     def _create_nic(self, vm_name, mac):
-        """Create a (synthetic) nic and attach it to the vm"""
+        """Create a (synthetic) nic and attach it to the vm."""
         LOG.debug(_('Creating nic for %s '), vm_name)
         #Find the vswitch that is connected to the physical nic.
         vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
@@ -450,7 +450,7 @@ class VMOps(baseops.BaseOps):
 
     def destroy(self, instance, network_info=None, cleanup=True,
                 destroy_disks=True):
-        """Destroy the VM. Also destroy the associated VHD disk files"""
+        """Destroy the VM. Also destroy the associated VHD disk files."""
         LOG.debug(_("Got request to destroy vm %s"), instance['name'])
         vm = self._vmutils.lookup(self._conn, instance['name'])
         if vm is None:
@@ -527,12 +527,12 @@ class VMOps(baseops.BaseOps):
         self._set_vm_state(instance["name"], 'Disabled')
 
     def power_on(self, instance):
-        """Power on the specified instance"""
+        """Power on the specified instance."""
         LOG.debug(_("Power on instance"), instance=instance)
         self._set_vm_state(instance["name"], 'Enabled')
 
     def _set_vm_state(self, vm_name, req_state):
-        """Set the desired state of the VM"""
+        """Set the desired state of the VM."""
         vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
         if len(vms) == 0:
             return False

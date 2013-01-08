@@ -106,13 +106,13 @@ class HyperVDriver(driver.ComputeDriver):
         return self._vmops.get_info(instance)
 
     def attach_volume(self, connection_info, instance, mountpoint):
-        """Attach volume storage to VM instance"""
+        """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info,
                                              instance['name'],
                                              mountpoint)
 
     def detach_volume(self, connection_info, instance, mountpoint):
-        """Detach volume storage to VM instance"""
+        """Detach volume storage to VM instance."""
         return self._volumeops.detach_volume(connection_info,
                                              instance['name'],
                                              mountpoint)
@@ -191,22 +191,22 @@ class HyperVDriver(driver.ComputeDriver):
             instance=instance_ref)
 
     def unfilter_instance(self, instance, network_info):
-        """Stop filtering instance"""
+        """Stop filtering instance."""
         LOG.debug(_("unfilter_instance called"), instance=instance)
 
     def confirm_migration(self, migration, instance, network_info):
-        """Confirms a resize, destroying the source VM"""
+        """Confirms a resize, destroying the source VM."""
         LOG.debug(_("confirm_migration called"), instance=instance)
 
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None):
-        """Finish reverting a resize, powering back on the instance"""
+        """Finish reverting a resize, powering back on the instance."""
         LOG.debug(_("finish_revert_migration called"), instance=instance)
 
     def finish_migration(self, context, migration, instance, disk_info,
         network_info, image_meta, resize_instance=False,
         block_device_info=None):
-        """Completes a resize, turning on the migrated instance"""
+        """Completes a resize, turning on the migrated instance."""
         LOG.debug(_("finish_migration called"), instance=instance)
 
     def get_console_output(self, instance):

@@ -42,7 +42,7 @@ class NfsVolumeDriver(volume.LibvirtVolumeDriver):
     """Class implements libvirt part of volume driver for NFS."""
 
     def __init__(self, *args, **kwargs):
-        """Create back-end to nfs and check connection"""
+        """Create back-end to nfs and check connection."""
         super(NfsVolumeDriver, self).__init__(*args, **kwargs)
 
     def connect_volume(self, connection_info, mount_device):
@@ -56,7 +56,7 @@ class NfsVolumeDriver(volume.LibvirtVolumeDriver):
         return conf
 
     def disconnect_volume(self, connection_info, mount_device):
-        """Disconnect the volume"""
+        """Disconnect the volume."""
         pass
 
     def _ensure_mounted(self, nfs_export):
@@ -69,7 +69,7 @@ class NfsVolumeDriver(volume.LibvirtVolumeDriver):
         return mount_path
 
     def _mount_nfs(self, mount_path, nfs_share, ensure=False):
-        """Mount nfs export to mount path"""
+        """Mount nfs export to mount path."""
         if not self._path_exists(mount_path):
             utils.execute('mkdir', '-p', mount_path)
 
@@ -84,12 +84,12 @@ class NfsVolumeDriver(volume.LibvirtVolumeDriver):
 
     @staticmethod
     def get_hash_str(base_str):
-        """returns string that represents hash of base_str (in a hex format)"""
+        """returns string that represents hash of base_str (in hex format)."""
         return str(ctypes.c_uint64(hash(base_str)).value)
 
     @staticmethod
     def _path_exists(path):
-        """Check path """
+        """Check path."""
         try:
             return utils.execute('stat', path, run_as_root=True)
         except exception.ProcessExecutionError:

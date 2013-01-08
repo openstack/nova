@@ -67,7 +67,7 @@ class PowerManager(object):
         return self.state
 
     def is_power_on(self):
-        """Returns True or False according as the node's power state"""
+        """Returns True or False according as the node's power state."""
         return True
 
     # TODO(NTTdocomo): split out console methods to its own class

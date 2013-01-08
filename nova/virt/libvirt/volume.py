@@ -66,7 +66,7 @@ class LibvirtVolumeDriver(object):
         return conf
 
     def disconnect_volume(self, connection_info, mount_device):
-        """Disconnect the volume"""
+        """Disconnect the volume."""
         pass
 
 
@@ -140,7 +140,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
 
     @lockutils.synchronized('connect_volume', 'nova-')
     def connect_volume(self, connection_info, mount_device):
-        """Attach the volume to instance_name"""
+        """Attach the volume to instance_name."""
         iscsi_properties = connection_info['data']
         # NOTE(vish): If we are on the same host as nova volume, the
         #             discovery makes the target so we don't need to
@@ -210,7 +210,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
 
     @lockutils.synchronized('connect_volume', 'nova-')
     def disconnect_volume(self, connection_info, mount_device):
-        """Detach the volume from instance_name"""
+        """Detach the volume from instance_name."""
         sup = super(LibvirtISCSIVolumeDriver, self)
         sup.disconnect_volume(connection_info, mount_device)
         iscsi_properties = connection_info['data']

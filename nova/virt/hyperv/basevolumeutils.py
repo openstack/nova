@@ -39,7 +39,7 @@ CONF.import_opt('my_ip', 'nova.config')
 class BaseVolumeUtils(object):
 
     def get_iscsi_initiator(self, cim_conn):
-        """Get iscsi initiator name for this machine"""
+        """Get iscsi initiator name for this machine."""
 
         computer_system = cim_conn.Win32_ComputerSystem()[0]
         hostname = computer_system.name

@@ -78,7 +78,7 @@ class FakeDriver(driver.ComputeDriver):
         "has_imagecache": True,
         }
 
-    """Fake hypervisor driver"""
+    """Fake hypervisor driver."""
 
     def __init__(self, virtapi, read_only=False):
         super(FakeDriver, self).__init__(virtapi)
@@ -200,7 +200,7 @@ class FakeDriver(driver.ComputeDriver):
                          'inst': self.instances}, instance=instance)
 
     def attach_volume(self, connection_info, instance, mountpoint):
-        """Attach the disk to the instance at mountpoint using info"""
+        """Attach the disk to the instance at mountpoint using info."""
         instance_name = instance['name']
         if not instance_name in self._mounts:
             self._mounts[instance_name] = {}
@@ -208,7 +208,7 @@ class FakeDriver(driver.ComputeDriver):
         return True
 
     def detach_volume(self, connection_info, instance, mountpoint):
-        """Detach the disk attached to the instance"""
+        """Detach the disk attached to the instance."""
         try:
             del self._mounts[instance['name']][mountpoint]
         except KeyError:
@@ -351,7 +351,7 @@ class FakeDriver(driver.ComputeDriver):
         raise NotImplementedError('This method is supported only by libvirt.')
 
     def test_remove_vm(self, instance_name):
-        """Removes the named VM, as if it crashed. For testing"""
+        """Removes the named VM, as if it crashed. For testing."""
         self.instances.pop(instance_name)
 
     def get_host_stats(self, refresh=False):
