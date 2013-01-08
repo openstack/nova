@@ -58,7 +58,7 @@ hyperv_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts)
-CONF.import_opt('use_cow_images', 'nova.config')
+CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 
 class VMOps(baseops.BaseOps):

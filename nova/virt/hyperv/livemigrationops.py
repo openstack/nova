@@ -35,7 +35,7 @@ if sys.platform == 'win32':
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-CONF.import_opt('use_cow_images', 'nova.config')
+CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 
 class LiveMigrationOps(baseops.BaseOps):

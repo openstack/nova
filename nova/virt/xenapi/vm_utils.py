@@ -123,9 +123,9 @@ xenapi_vm_utils_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vm_utils_opts)
-CONF.import_opt('default_ephemeral_format', 'nova.config')
+CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
+CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('glance_num_retries', 'nova.image.glance')
-CONF.import_opt('use_cow_images', 'nova.config')
 CONF.import_opt('use_ipv6', 'nova.config')
 
 XENAPI_POWER_STATE = {

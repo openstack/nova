@@ -35,6 +35,13 @@ driver_opts = [
                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
                    'vmwareapi.VMWareESXDriver'),
+    cfg.StrOpt('default_ephemeral_format',
+               default=None,
+               help='The default format an ephemeral_volume will be '
+                    'formatted with on creation.'),
+    cfg.BoolOpt('use_cow_images',
+                default=True,
+                help='Whether to use cow images'),
 ]
 
 CONF = cfg.CONF
