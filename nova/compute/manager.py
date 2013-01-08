@@ -190,7 +190,7 @@ def publisher_id(host=None):
 
 
 def reverts_task_state(function):
-    """Decorator to revert task_state on failure"""
+    """Decorator to revert task_state on failure."""
 
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
@@ -542,7 +542,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return power_state.NOSTATE
 
     def get_backdoor_port(self, context):
-        """Return backdoor port for eventlet_backdoor"""
+        """Return backdoor port for eventlet_backdoor."""
         return self.backdoor_port
 
     def get_console_topic(self, context):
@@ -600,13 +600,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         return network_info
 
     def _legacy_nw_info(self, network_info):
-        """Converts the model nw_info object to legacy style"""
+        """Converts the model nw_info object to legacy style."""
         if self.driver.legacy_nwinfo():
             network_info = network_info.legacy()
         return network_info
 
     def _setup_block_device_mapping(self, context, instance, bdms):
-        """setup volumes for block device mapping"""
+        """setup volumes for block device mapping."""
         block_device_mapping = []
         swap = None
         ephemerals = []
@@ -933,7 +933,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    None))
 
     def _allocate_network(self, context, instance, requested_networks):
-        """Allocate networks for an instance and return the network info"""
+        """Allocate networks for an instance and return the network info."""
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.NETWORKING,
@@ -955,7 +955,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return network_info
 
     def _prep_block_device(self, context, instance, bdms):
-        """Set up the block device for an instance with error logging"""
+        """Set up the block device for an instance with error logging."""
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
@@ -968,7 +968,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password):
-        """Spawn an instance with error logging and update its power state"""
+        """Spawn an instance with error logging and update its power state."""
         self._instance_update(context, instance['uuid'],
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.SPAWNING,
@@ -1008,7 +1008,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.deallocate_for_instance(context, instance)
 
     def _get_volume_bdms(self, bdms):
-        """Return only bdms that have a volume_id"""
+        """Return only bdms that have a volume_id."""
         return [bdm for bdm in bdms if bdm['volume_id']]
 
     # NOTE(danms): Legacy interface for digging up volumes in the database
@@ -1164,7 +1164,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms=None):
-        """Terminate an instance on this host.  """
+        """Terminate an instance on this host."""
         # Note(eglynn): we do not decorate this action with reverts_task_state
         # because a failure during termination should leave the task state as
         # DELETING, as a signal to the API layer that a subsequent deletion
@@ -1707,7 +1707,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.inject_file(instance, path, file_contents)
 
     def _get_rescue_image_ref(self, context, instance):
-        """Determine what image should be used to boot the rescue VM. """
+        """Determine what image should be used to boot the rescue VM."""
         system_meta = compute_utils.metadata_to_dict(
             instance['system_metadata'])
 
@@ -2611,7 +2611,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, volume_id, instance):
-        """Remove a volume connection using the volume api"""
+        """Remove a volume connection using the volume api."""
         # NOTE(vish): We don't want to actually mark the volume
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
@@ -3208,7 +3208,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    last_refreshed=refreshed)
 
     def _get_host_volume_bdms(self, context, host):
-        """Return all block device mappings on a compute host"""
+        """Return all block device mappings on a compute host."""
         compute_host_bdms = []
         instances = self.conductor_api.instance_get_all_by_host(context,
                                                                 self.host)
@@ -3220,7 +3220,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return compute_host_bdms
 
     def _update_volume_usage_cache(self, context, vol_usages, refreshed):
-        """Updates the volume usage cache table with a list of stats"""
+        """Updates the volume usage cache table with a list of stats."""
         for usage in vol_usages:
             # Allow switching of greenthreads between queries.
             greenthread.sleep(0)
@@ -3233,7 +3233,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                 last_refreshed=refreshed)
 
     def _send_volume_usage_notifications(self, context, start_time):
-        """Queries vol usage cache table and sends a vol usage notification"""
+        """Queries vol usage cache table and sends a vol usage notification."""
         # We might have had a quick attach/detach that we missed in
         # the last run of get_all_volume_usage and this one
         # but detach stats will be recorded in db and returned from

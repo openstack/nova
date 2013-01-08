@@ -33,7 +33,7 @@ class Stats(dict):
 
     @property
     def io_workload(self):
-        """Calculate an I/O based load by counting I/O heavy operations"""
+        """Calculate an I/O based load by counting I/O heavy operations."""
 
         def _get(state, state_type):
             key = "num_%s_%s" % (state_type, state)
@@ -127,7 +127,7 @@ class Stats(dict):
         self[key] = x + 1
 
     def _extract_state_from_instance(self, instance):
-        """Save the useful bits of instance state for tracking purposes"""
+        """Save the useful bits of instance state for tracking purposes."""
 
         uuid = instance['uuid']
         vm_state = instance['vm_state']

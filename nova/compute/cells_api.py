@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Compute API that proxies via Cells Service"""
+"""Compute API that proxies via Cells Service."""
 
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi

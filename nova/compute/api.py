@@ -139,7 +139,7 @@ def check_instance_lock(function):
 
 
 def policy_decorator(scope):
-    """Check corresponding policy prior of wrapped method to execution"""
+    """Check corresponding policy prior of wrapped method to execution."""
     def outer(func):
         @functools.wraps(func)
         def wrapped(self, context, target, *args, **kwargs):
@@ -842,7 +842,7 @@ class API(base.Base):
                                scheduler_hints=scheduler_hints)
 
     def trigger_provider_fw_rules_refresh(self, context):
-        """Called when a rule is added/removed from a provider firewall"""
+        """Called when a rule is added/removed from a provider firewall."""
 
         hosts = [x['host'] for (x, idx)
                            in self.db.service_get_all_compute_sorted(context)]
@@ -1866,7 +1866,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
     def get_backdoor_port(self, context, host):
-        """Retrieve backdoor port"""
+        """Retrieve backdoor port."""
         return self.compute_rpcapi.get_backdoor_port(context, host)
 
     @wrap_check_policy
@@ -2539,7 +2539,7 @@ class SecurityGroupAPI(base.Base):
 
     @wrap_check_security_groups_policy
     def add_to_instance(self, context, instance, security_group_name):
-        """Add security group to the instance"""
+        """Add security group to the instance."""
         security_group = self.db.security_group_get_by_name(context,
                 context.project_id,
                 security_group_name)
@@ -2569,7 +2569,7 @@ class SecurityGroupAPI(base.Base):
 
     @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
-        """Remove the security group associated with the instance"""
+        """Remove the security group associated with the instance."""
         security_group = self.db.security_group_get_by_name(context,
                 context.project_id,
                 security_group_name)

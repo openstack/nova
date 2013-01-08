@@ -191,7 +191,7 @@ class ResourceTracker(object):
         instance_ref['node'] = self.nodename
 
     def abort_instance_claim(self, instance):
-        """Remove usage from the given instance"""
+        """Remove usage from the given instance."""
         # flag the instance as deleted to revert the resource usage
         # and associated stats:
         instance['vm_state'] = vm_states.DELETED
@@ -201,7 +201,7 @@ class ResourceTracker(object):
         self._update(ctxt, self.compute_node)
 
     def abort_resize_claim(self, instance_uuid, instance_type):
-        """Remove usage for an incoming migration"""
+        """Remove usage for an incoming migration."""
         if instance_uuid in self.tracked_migrations:
             migration, itype = self.tracked_migrations.pop(instance_uuid)
 
@@ -277,7 +277,7 @@ class ResourceTracker(object):
         self._sync_compute_node(context, resources)
 
     def _sync_compute_node(self, context, resources):
-        """Create or update the compute node DB record"""
+        """Create or update the compute node DB record."""
         if not self.compute_node:
             # we need a copy of the ComputeNode record:
             service = self._get_service(context)
@@ -304,7 +304,7 @@ class ResourceTracker(object):
             LOG.info(_('Compute_service record updated for %s ') % self.host)
 
     def _create(self, context, values):
-        """Create the compute node in the DB"""
+        """Create the compute node in the DB."""
         # initialize load stats from existing instances:
         compute_node = db.compute_node_create(context, values)
         self.compute_node = dict(compute_node)
@@ -350,20 +350,20 @@ class ResourceTracker(object):
             LOG.audit(_("Free VCPU information unavailable"))
 
     def _update(self, context, values, prune_stats=False):
-        """Persist the compute node updates to the DB"""
+        """Persist the compute node updates to the DB."""
         compute_node = db.compute_node_update(context,
                 self.compute_node['id'], values, prune_stats)
         self.compute_node = dict(compute_node)
 
     def confirm_resize(self, context, migration, status='confirmed'):
-        """Cleanup usage for a confirmed resize"""
+        """Cleanup usage for a confirmed resize."""
         elevated = context.elevated()
         db.migration_update(elevated, migration['id'],
                             {'status': status})
         self.update_available_resource(elevated)
 
     def revert_resize(self, context, migration, status='reverted'):
-        """Cleanup usage for a reverted resize"""
+        """Cleanup usage for a reverted resize."""
         self.confirm_resize(context, migration, status)
 
     def _update_usage(self, resources, usage, sign=1):
