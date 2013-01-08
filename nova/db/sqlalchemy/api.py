@@ -298,12 +298,12 @@ def service_destroy(context, service_id):
     session = get_session()
     with session.begin():
         service_ref = service_get(context, service_id, session=session)
-        service_ref.delete(session=session)
+        service_ref.soft_delete(session=session)
 
         if (service_ref.topic == CONF.compute_topic and
             service_ref.compute_node):
             for c in service_ref.compute_node:
-                c.delete(session=session)
+                c.soft_delete(session=session)
 
 
 @require_admin_context
