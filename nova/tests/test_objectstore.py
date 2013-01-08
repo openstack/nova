@@ -34,7 +34,7 @@ from nova import test
 from nova import wsgi
 
 CONF = cfg.CONF
-CONF.import_opt('s3_host', 'nova.config')
+CONF.import_opt('s3_host', 'nova.image.s3')
 
 # Create a unique temporary directory. We don't delete after test to
 # allow checking the contents after running tests. Users and/or tools
