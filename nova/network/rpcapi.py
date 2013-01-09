@@ -23,8 +23,14 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import proxy as rpc_proxy
 
+rpcapi_opts = [
+    cfg.StrOpt('network_topic',
+               default='network',
+               help='the topic network nodes listen on'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('network_topic', 'nova.config')
+CONF.register_opts(rpcapi_opts)
 
 
 class NetworkAPI(rpc_proxy.RpcProxy):
