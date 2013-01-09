@@ -21,7 +21,7 @@ import uuid
 
 import webob
 
-from nova.api.openstack.compute.contrib import networks
+from nova.api.openstack.compute.contrib import admin_networks as networks
 from nova.api.openstack.compute.contrib import networks_associate
 from nova import exception
 from nova.openstack.common import cfg
@@ -177,7 +177,8 @@ class NetworksTest(test.TestCase):
     def setUp(self):
         super(NetworksTest, self).setUp()
         self.fake_network_api = FakeNetworkAPI()
-        self.controller = networks.NetworkController(self.fake_network_api)
+        self.controller = networks.AdminNetworkController(
+                                                self.fake_network_api)
         self.associate_controller = networks_associate\
             .NetworkAssociateActionController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)

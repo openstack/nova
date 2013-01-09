@@ -51,8 +51,7 @@ class QuotaSetsTest(test.TestCase):
             'injected_file_content_bytes': 10240,
             'security_groups': 10,
             'security_group_rules': 20,
-            'key_pairs': 100,
-            }
+            'key_pairs': 100}
 
         quota_set = self.controller._format_quota_set('1234', raw_quota_set)
         qs = quota_set['quota_set']
@@ -88,8 +87,7 @@ class QuotaSetsTest(test.TestCase):
                     'injected_file_content_bytes': 10240,
                     'security_groups': 10,
                     'security_group_rules': 20,
-                    'key_pairs': 100,
-                    }}
+                    'key_pairs': 100}}
 
         self.assertEqual(res_dict, expected)
 
