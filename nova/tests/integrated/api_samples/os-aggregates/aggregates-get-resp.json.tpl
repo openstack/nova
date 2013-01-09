@@ -6,7 +6,9 @@
         "deleted_at": null,
         "hosts": [],
         "id": 1,
-        "metadata": {},
+        "metadata": {
+            "availability_zone": "nova"
+        },
         "name": "name",
         "updated_at": null
     }

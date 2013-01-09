@@ -1543,6 +1543,14 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return IMPL.aggregate_metadata_get_by_host(context, host, key)
 
 
+def aggregate_host_get_by_metadata_key(context, key):
+    """Get hosts with a specific metadata key metadata for all aggregates.
+
+    Returns a dictionary where each key is a hostname and each value is the
+    key value"""
+    return IMPL.aggregate_host_get_by_metadata_key(context, key)
+
+
 def aggregate_update(context, aggregate_id, values):
     """Update the attributes of an aggregates. If values contains a metadata
     key, it updates the aggregate metadata too."""

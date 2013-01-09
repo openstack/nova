@@ -6,7 +6,9 @@
         "deleted_at": null,
         "hosts": [],
         "id": 1,
-        "metadata": {},
+        "metadata": {
+            "availability_zone": "nova2"
+        },
         "name": "newname",
         "updated_at": "%(timestamp)s"
     }

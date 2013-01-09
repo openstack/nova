@@ -765,13 +765,13 @@ class DbApiTestCase(test.TestCase):
 
 
 def _get_fake_aggr_values():
-    return {'name': 'fake_aggregate',
-            'availability_zone': 'fake_avail_zone', }
+    return {'name': 'fake_aggregate'}
 
 
 def _get_fake_aggr_metadata():
     return {'fake_key1': 'fake_value1',
-            'fake_key2': 'fake_value2'}
+            'fake_key2': 'fake_value2',
+            'availability_zone': 'fake_avail_zone'}
 
 
 def _get_fake_aggr_hosts():
@@ -802,28 +802,26 @@ class AggregateDBApiTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-    def test_aggregate_create(self):
-        """Ensure aggregate can be created with no metadata."""
+    def test_aggregate_create_no_metadata(self):
         result = _create_aggregate(metadata=None)
         self.assertEquals(result['name'], 'fake_aggregate')
 
     def test_aggregate_create_avoid_name_conflict(self):
-        """Test we can avoid conflict on deleted aggregates."""
         r1 = _create_aggregate(metadata=None)
         db.aggregate_delete(context.get_admin_context(), r1['id'])
-        values = {'name': r1['name'], 'availability_zone': 'new_zone'}
-        r2 = _create_aggregate(values=values)
+        values = {'name': r1['name']}
+        metadata = {'availability_zone': 'new_zone'}
+        r2 = _create_aggregate(values=values, metadata=metadata)
         self.assertEqual(r2['name'], values['name'])
-        self.assertEqual(r2['availability_zone'], values['availability_zone'])
+        self.assertEqual(r2['availability_zone'],
+                metadata['availability_zone'])
 
     def test_aggregate_create_raise_exist_exc(self):
-        """Ensure aggregate names are distinct."""
         _create_aggregate(metadata=None)
         self.assertRaises(exception.AggregateNameExists,
                           _create_aggregate, metadata=None)
 
     def test_aggregate_get_raise_not_found(self):
-        """Ensure AggregateNotFound is raised when getting an aggregate."""
         ctxt = context.get_admin_context()
         # this does not exist!
         aggregate_id = 1
@@ -832,7 +830,6 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, aggregate_id)
 
     def test_aggregate_metadata_get_raise_not_found(self):
-        """Ensure AggregateNotFound is raised when getting metadata."""
         ctxt = context.get_admin_context()
         # this does not exist!
         aggregate_id = 1
@@ -841,7 +838,6 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, aggregate_id)
 
     def test_aggregate_create_with_metadata(self):
-        """Ensure aggregate can be created with metadata."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
@@ -849,25 +845,25 @@ class AggregateDBApiTestCase(test.TestCase):
                         matchers.DictMatches(_get_fake_aggr_metadata()))
 
     def test_aggregate_create_delete_create_with_metadata(self):
-        """Ensure aggregate metadata is deleted bug 1052479."""
+        #test for bug 1052479
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(expected_metadata,
                         matchers.DictMatches(_get_fake_aggr_metadata()))
         db.aggregate_delete(ctxt, result['id'])
-        result = _create_aggregate(metadata=None)
+        result = _create_aggregate(metadata={'availability_zone':
+            'fake_avail_zone'})
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
-        self.assertEqual(expected_metadata, {})
+        self.assertEqual(expected_metadata, {'availability_zone':
+            'fake_avail_zone'})
 
     def test_aggregate_create_low_privi_context(self):
-        """Ensure right context is applied when creating aggregate."""
         self.assertRaises(exception.AdminRequired,
                           db.aggregate_create,
                           self.context, _get_fake_aggr_values())
 
     def test_aggregate_get(self):
-        """Ensure we can get aggregate with all its relations."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt)
         expected = db.aggregate_get(ctxt, result['id'])
@@ -875,20 +871,16 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(_get_fake_aggr_metadata(), expected['metadetails'])
 
     def test_aggregate_get_by_host(self):
-        """Ensure we can get aggregates by host."""
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2',
-            'availability_zone': 'fake_avail_zone', }
+        values = {'name': 'fake_aggregate2'}
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
         self.assertEqual([a1['id'], a2['id']], [x['id'] for x in r1])
 
     def test_aggregate_get_by_host_with_key(self):
-        """Ensure we can get aggregates by host."""
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2',
-            'availability_zone': 'fake_avail_zone', }
+        values = {'name': 'fake_aggregate2'}
         a1 = _create_aggregate_with_hosts(context=ctxt,
                                           metadata={'goodkey': 'good'})
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
@@ -896,13 +888,10 @@ class AggregateDBApiTestCase(test.TestCase):
         r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
         self.assertEqual([a1['id']], [x['id'] for x in r1])
 
-    def test_aggregate_metdata_get_by_host(self):
-        """Ensure we can get aggregates by host."""
+    def test_aggregate_metadata_get_by_host(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2',
-            'availability_zone': 'fake_avail_zone', }
-        values2 = {'name': 'fake_aggregate3',
-            'availability_zone': 'fake_avail_zone', }
+        values = {'name': 'fake_aggregate2'}
+        values2 = {'name': 'fake_aggregate3'}
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
         a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
@@ -911,13 +900,10 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(r1['fake_key1'], set(['fake_value1']))
         self.assertFalse('badkey' in r1)
 
-    def test_aggregate_metdata_get_by_host_with_key(self):
-        """Ensure we can get aggregates by host."""
+    def test_aggregate_metadata_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
-        values = {'name': 'fake_aggregate2',
-            'availability_zone': 'fake_avail_zone', }
-        values2 = {'name': 'fake_aggregate3',
-            'availability_zone': 'fake_avail_zone', }
+        values = {'name': 'fake_aggregate2'}
+        values2 = {'name': 'fake_aggregate3'}
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
         a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
@@ -932,14 +918,24 @@ class AggregateDBApiTestCase(test.TestCase):
                                                key='good')
         self.assertFalse('good' in r2)
 
+    def test_aggregate_host_get_by_metadata_key(self):
+        ctxt = context.get_admin_context()
+        values = {'name': 'fake_aggregate2'}
+        values2 = {'name': 'fake_aggregate3'}
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+                hosts=['foo.openstack.org'], metadata={'good': 'value'})
+        r1 = db.aggregate_host_get_by_metadata_key(ctxt, key='good')
+        self.assertEqual(r1, {'foo.openstack.org': set(['value'])})
+        self.assertFalse('fake_key1' in r1)
+
     def test_aggregate_get_by_host_not_found(self):
-        """Ensure AggregateHostNotFound is raised with unknown host."""
         ctxt = context.get_admin_context()
         _create_aggregate_with_hosts(context=ctxt)
         self.assertEqual([], db.aggregate_get_by_host(ctxt, 'unknown_host'))
 
     def test_aggregate_delete_raise_not_found(self):
-        """Ensure AggregateNotFound is raised when deleting an aggregate."""
         ctxt = context.get_admin_context()
         # this does not exist!
         aggregate_id = 1
@@ -948,7 +944,6 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, aggregate_id)
 
     def test_aggregate_delete(self):
-        """Ensure we can delete an aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         db.aggregate_delete(ctxt, result['id'])
@@ -959,9 +954,10 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(aggregate['deleted'], True)
 
     def test_aggregate_update(self):
-        """Ensure an aggregate can be updated."""
         ctxt = context.get_admin_context()
-        result = _create_aggregate(context=ctxt, metadata=None)
+        result = _create_aggregate(context=ctxt, metadata={'availability_zone':
+            'fake_avail_zone'})
+        self.assertEqual(result.availability_zone, 'fake_avail_zone')
         new_values = _get_fake_aggr_values()
         new_values['availability_zone'] = 'different_avail_zone'
         updated = db.aggregate_update(ctxt, 1, new_values)
@@ -969,18 +965,20 @@ class AggregateDBApiTestCase(test.TestCase):
                             updated['availability_zone'])
 
     def test_aggregate_update_with_metadata(self):
-        """Ensure an aggregate can be updated with metadata."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
+        values['availability_zone'] = 'different_avail_zone'
         db.aggregate_update(ctxt, 1, values)
         expected = db.aggregate_metadata_get(ctxt, result['id'])
-        self.assertThat(_get_fake_aggr_metadata(),
+        updated = db.aggregate_get(ctxt, result['id'])
+        self.assertThat(values['metadata'],
                         matchers.DictMatches(expected))
+        self.assertNotEqual(result.availability_zone,
+                            updated.availability_zone)
 
     def test_aggregate_update_with_existing_metadata(self):
-        """Ensure an aggregate can be updated with existing metadata."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         values = _get_fake_aggr_values()
@@ -991,7 +989,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertThat(values['metadata'], matchers.DictMatches(expected))
 
     def test_aggregate_update_raise_not_found(self):
-        """Ensure AggregateNotFound is raised when updating an aggregate."""
         ctxt = context.get_admin_context()
         # this does not exist!
         aggregate_id = 1
@@ -1000,26 +997,22 @@ class AggregateDBApiTestCase(test.TestCase):
                           db.aggregate_update, ctxt, aggregate_id, new_values)
 
     def test_aggregate_get_all(self):
-        """Ensure we can get all aggregates."""
         ctxt = context.get_admin_context()
         counter = 3
         for c in xrange(counter):
             _create_aggregate(context=ctxt,
-                              values={'name': 'fake_aggregate_%d' % c,
-                                      'availability_zone': 'fake_avail_zone'},
+                              values={'name': 'fake_aggregate_%d' % c},
                               metadata=None)
         results = db.aggregate_get_all(ctxt)
         self.assertEqual(len(results), counter)
 
     def test_aggregate_get_all_non_deleted(self):
-        """Ensure we get only non-deleted aggregates."""
         ctxt = context.get_admin_context()
         add_counter = 5
         remove_counter = 2
         aggregates = []
         for c in xrange(1, add_counter):
-            values = {'name': 'fake_aggregate_%d' % c,
-                      'availability_zone': 'fake_avail_zone'}
+            values = {'name': 'fake_aggregate_%d' % c}
             aggregates.append(_create_aggregate(context=ctxt,
                                                 values=values, metadata=None))
         for c in xrange(1, remove_counter):
@@ -1028,7 +1021,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(len(results), add_counter - remove_counter)
 
     def test_aggregate_metadata_add(self):
-        """Ensure we can add metadata for the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         metadata = _get_fake_aggr_metadata()
@@ -1037,7 +1029,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_update(self):
-        """Ensure we can update metadata for the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         metadata = _get_fake_aggr_metadata()
@@ -1050,7 +1041,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_delete(self):
-        """Ensure we can delete metadata for the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         metadata = _get_fake_aggr_metadata()
@@ -1060,8 +1050,17 @@ class AggregateDBApiTestCase(test.TestCase):
         del metadata[metadata.keys()[0]]
         self.assertThat(metadata, matchers.DictMatches(expected))
 
+    def test_aggregate_remove_availability_zone(self):
+        ctxt = context.get_admin_context()
+        result = _create_aggregate(context=ctxt, metadata={'availability_zone':
+            'fake_avail_zone'})
+        db.aggregate_metadata_delete(ctxt, result.id, 'availability_zone')
+        expected = db.aggregate_metadata_get(ctxt, result.id)
+        aggregate = db.aggregate_get(ctxt, result.id)
+        self.assertEquals(aggregate.availability_zone, None)
+        self.assertThat({}, matchers.DictMatches(expected))
+
     def test_aggregate_metadata_delete_raise_not_found(self):
-        """Ensure AggregateMetadataNotFound is raised when deleting."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         self.assertRaises(exception.AggregateMetadataNotFound,
@@ -1069,14 +1068,12 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, result['id'], 'foo_key')
 
     def test_aggregate_host_add(self):
-        """Ensure we can add host to the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         expected = db.aggregate_host_get_all(ctxt, result['id'])
         self.assertEqual(_get_fake_aggr_hosts(), expected)
 
-    def test_aggregate_host_add_deleted(self):
-        """Ensure we can add a host that was previously deleted."""
+    def test_aggregate_host_re_add(self):
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         host = _get_fake_aggr_hosts()[0]
@@ -1086,19 +1083,16 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(len(expected), 1)
 
     def test_aggregate_host_add_duplicate_works(self):
-        """Ensure we can add host to distinct aggregates."""
         ctxt = context.get_admin_context()
         r1 = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         r2 = _create_aggregate_with_hosts(ctxt,
-                          values={'name': 'fake_aggregate2',
-                                  'availability_zone': 'fake_avail_zone2', },
-                          metadata=None)
+                          values={'name': 'fake_aggregate2'},
+                          metadata={'availability_zone': 'fake_avail_zone2'})
         h1 = db.aggregate_host_get_all(ctxt, r1['id'])
         h2 = db.aggregate_host_get_all(ctxt, r2['id'])
         self.assertEqual(h1, h2)
 
     def test_aggregate_host_add_duplicate_raise_exist_exc(self):
-        """Ensure we cannot add host to the same aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         self.assertRaises(exception.AggregateHostExists,
@@ -1106,7 +1100,6 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, result['id'], _get_fake_aggr_hosts()[0])
 
     def test_aggregate_host_add_raise_not_found(self):
-        """Ensure AggregateFound when adding a host."""
         ctxt = context.get_admin_context()
         # this does not exist!
         aggregate_id = 1
@@ -1116,7 +1109,6 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, aggregate_id, host)
 
     def test_aggregate_host_delete(self):
-        """Ensure we can add host to the aggregate."""
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         db.aggregate_host_delete(ctxt, result['id'],
@@ -1125,7 +1117,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(0, len(expected))
 
     def test_aggregate_host_delete_raise_not_found(self):
-        """Ensure AggregateHostNotFound is raised when deleting a host."""
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         self.assertRaises(exception.AggregateHostNotFound,

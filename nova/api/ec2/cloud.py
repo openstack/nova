@@ -257,12 +257,18 @@ class CloudController(object):
             if not zone in available_zones:
                 available_zones.append(zone)
 
+        # aggregate based availability_zones
+        metadata = db.aggregate_host_get_by_metadata_key(context,
+                key='availability_zone')
+        for zone_set in metadata.values():
+            for zone in zone_set:
+                if zone not in available_zones:
+                    available_zones.append(zone)
         not_available_zones = []
         for zone in [service.availability_zone for service in disabled_services
                      if not service['availability_zone'] in available_zones]:
             if not zone in not_available_zones:
                 not_available_zones.append(zone)
-
         return (available_zones, not_available_zones)
 
     def _describe_availability_zones(self, context, **kwargs):
@@ -294,6 +300,15 @@ class CloudController(object):
 
             host_services.setdefault(service['host'], [])
             host_services[service['host']].append(service)
+        # aggregate based available_zones
+        metadata = db.aggregate_host_get_by_metadata_key(context,
+                key='availability_zone')
+         #  metdata:  {machine: set( az1, az2 )}
+        for host, zones in metadata.items():
+            for zone in zones:
+                zone_hosts.setdefault(zone, [])
+                if host not in zone_hosts[zone]:
+                    zone_hosts[zone].append(host)
 
         result = []
         for zone in available_zones:

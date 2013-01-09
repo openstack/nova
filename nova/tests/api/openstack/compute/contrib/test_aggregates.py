@@ -123,7 +123,7 @@ class AggregateTestCase(test.TestCase):
     def test_create_with_extra_invalid_arg(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, dict(name="test",
-                                         availablity_zone="nova1",
+                                         availability_zone="nova1",
                                          foo='bar'))
 
     def test_show(self):
@@ -183,9 +183,7 @@ class AggregateTestCase(test.TestCase):
             return AGGREGATE
         self.stubs.Set(self.controller.api, "update_aggregate",
                        stub_update_aggregate)
-
         result = self.controller.update(self.req, "1", body=body)
-
         self.assertEqual(AGGREGATE, result["aggregate"])
 
     def test_update_with_no_updates(self):
@@ -258,18 +256,6 @@ class AggregateTestCase(test.TestCase):
                        stub_add_host_to_aggregate)
 
         self.assertRaises(exc.HTTPNotFound, self.controller.action,
-                          self.req, "bogus_aggregate",
-                          body={"add_host": {"host": "host1"}})
-
-    def test_add_host_with_host_in_wrong_availability_zone(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.InvalidAggregateAction(action='create_aggregate',
-                                                   aggregate_id="'N/A'",
-                                                   reason='wrong zone')
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-
-        self.assertRaises(exc.HTTPConflict, self.controller.action,
                           self.req, "bogus_aggregate",
                           body={"add_host": {"host": "host1"}})
 

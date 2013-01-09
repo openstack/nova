@@ -297,3 +297,37 @@ class TestMigrations(test.TestCase):
         self.assertEqual(version,
                 migration_api.db_version(engine,
                                          TestMigrations.REPOSITORY))
+
+    def test_migration_146(self):
+        name = 'name'
+        az = 'custom_az'
+
+        def _145_check():
+            agg = aggregates.select(aggregates.c.id == 1).execute().first()
+            self.assertEqual(name, agg.name)
+            self.assertEqual(az, agg.availability_zone)
+
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 145)
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+            aggregates = sqlalchemy.Table('aggregates', metadata,
+                    autoload=True)
+
+            aggregates.insert().values(id=1, availability_zone=az,
+                    aggregate_name=1, name=name).execute()
+
+            _145_check()
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 146)
+
+            aggregate_metadata = sqlalchemy.Table('aggregate_metadata',
+                    metadata, autoload=True)
+            metadata = aggregate_metadata.select(aggregate_metadata.c.
+                    aggregate_id == 1).execute().first()
+            self.assertEqual(az, metadata['value'])
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 145)
+            _145_check()

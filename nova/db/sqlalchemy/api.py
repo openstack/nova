@@ -4256,12 +4256,13 @@ def _aggregate_get_query(context, model_class, id_field=None, id=None,
 @require_admin_context
 def aggregate_create(context, values, metadata=None):
     session = get_session()
-    aggregate = _aggregate_get_query(context,
-                                     models.Aggregate,
-                                     models.Aggregate.name,
-                                     values['name'],
-                                     session=session,
-                                     read_deleted='no').first()
+    query = _aggregate_get_query(context,
+                                 models.Aggregate,
+                                 models.Aggregate.name,
+                                 values['name'],
+                                 session=session,
+                                 read_deleted='no')
+    aggregate = query.options(joinedload('_metadata')).first()
     if not aggregate:
         aggregate = models.Aggregate()
         aggregate.update(values)
@@ -4274,15 +4275,16 @@ def aggregate_create(context, values, metadata=None):
         raise exception.AggregateNameExists(aggregate_name=values['name'])
     if metadata:
         aggregate_metadata_add(context, aggregate.id, metadata)
-    return aggregate
+    return aggregate_get(context, aggregate.id)
 
 
 @require_admin_context
 def aggregate_get(context, aggregate_id):
-    aggregate = _aggregate_get_query(context,
-                                     models.Aggregate,
-                                     models.Aggregate.id,
-                                     aggregate_id).first()
+    query = _aggregate_get_query(context,
+                                 models.Aggregate,
+                                 models.Aggregate.id,
+                                 aggregate_id)
+    aggregate = query.options(joinedload('_metadata')).first()
 
     if not aggregate:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
@@ -4314,18 +4316,38 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     for agg in rows:
         for kv in agg._metadata:
             metadata[kv['key']].add(kv['value'])
-    return metadata
+    return dict(metadata)
+
+
+@require_admin_context
+def aggregate_host_get_by_metadata_key(context, key):
+    query = model_query(context, models.Aggregate).join(
+            "_metadata").filter(models.AggregateMetadata.key == key)
+    rows = query.all()
+    metadata = collections.defaultdict(set)
+    for agg in rows:
+        for agghost in agg._hosts:
+            metadata[agghost.host].add(agg._metadata[0]['value'])
+    return dict(metadata)
 
 
 @require_admin_context
 def aggregate_update(context, aggregate_id, values):
     session = get_session()
-    aggregate = _aggregate_get_query(context,
+    aggregate = (_aggregate_get_query(context,
                                      models.Aggregate,
                                      models.Aggregate.id,
                                      aggregate_id,
-                                     session=session).first()
+                                     session=session).
+                                     options(joinedload('_metadata')).first())
+
     if aggregate:
+        if "availability_zone" in values:
+            az = values.pop('availability_zone')
+            if 'metadata' not in values:
+                values['metadata'] = {'availability_zone': az}
+            else:
+                values['metadata']['availability_zone'] = az
         metadata = values.get('metadata')
         if metadata is not None:
             aggregate_metadata_add(context,
@@ -4336,7 +4358,7 @@ def aggregate_update(context, aggregate_id, values):
             aggregate.update(values)
             aggregate.save(session=session)
         values['metadata'] = metadata
-        return aggregate
+        return aggregate_get(context, aggregate.id)
     else:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 

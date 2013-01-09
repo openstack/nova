@@ -10,5 +10,6 @@
   <id>1</id>
   <metadata>
     <key>value</key>
+    <availability_zone>nova</availability_zone>
   </metadata>
 </aggregate>

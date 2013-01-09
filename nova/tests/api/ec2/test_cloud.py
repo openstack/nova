@@ -710,8 +710,16 @@ class CloudTestCase(test.TestCase):
                                          'topic': 'compute',
                                          'report_count': 0,
                                          'availability_zone': "zone2"})
+        # Aggregate based zones
+        agg = db.aggregate_create(self.context,
+                {'name': 'agg1'}, {'availability_zone': 'aggzones'})
+        db.aggregate_host_add(self.context, agg.id, 'host2_zones')
         result = self.cloud.describe_availability_zones(self.context)
-        self.assertEqual(len(result['availabilityZoneInfo']), 3)
+        self.assertEqual(len(result['availabilityZoneInfo']), 4)
+        admin_ctxt = context.get_admin_context(read_deleted="no")
+        result = self.cloud.describe_availability_zones(admin_ctxt,
+                zone_name='verbose')
+        self.assertEqual(len(result['availabilityZoneInfo']), 18)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
