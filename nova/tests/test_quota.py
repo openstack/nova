@@ -34,7 +34,7 @@ from nova import test
 import nova.tests.image.fake
 
 CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.config')
+CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 

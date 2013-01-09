@@ -43,7 +43,7 @@ from nova import service
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('scheduler_topic', 'nova.config')
+CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)
