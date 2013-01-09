@@ -2473,6 +2473,9 @@ class LibvirtConnTestCase(test.TestCase):
                "cluster_size: 2097152\n"
                "backing file: /test/dummy (actual path: /backing/file)\n")
 
+        self.mox.StubOutWithMock(os.path, "exists")
+        os.path.exists('/test/disk.local').AndReturn(True)
+
         self.mox.StubOutWithMock(utils, "execute")
         utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
                       '/test/disk.local').AndReturn((ret, ''))
@@ -4073,8 +4076,10 @@ class LibvirtUtilsTestCase(test.TestCase):
         libvirt_utils.create_image('qcow2', '/some/stuff', '1234567891234')
 
     def test_create_cow_image(self):
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
         rval = ('', '')
+        os.path.exists('/some/path').AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', '/some/path').AndReturn(rval)
         utils.execute('qemu-img', 'create', '-f', 'qcow2',
@@ -4098,7 +4103,9 @@ class LibvirtUtilsTestCase(test.TestCase):
                 self.assertEquals(result, expected_result)
 
     def test_get_disk_size(self):
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists('/some/path').AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
                       '/some/path').AndReturn(('''image: 00000001
 file format: raw
@@ -4257,7 +4264,11 @@ disk size: 4.4M''', ''))
                         "backing file: /foo/bar/baz\n"
                         "...: ...\n"), ''
 
+        def return_true(*args, **kwargs):
+            return True
+
         self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(os.path, 'exists', return_true)
 
         out = libvirt_utils.get_disk_backing_file('')
         self.assertEqual(out, 'baz')

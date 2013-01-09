@@ -176,6 +176,9 @@ class QemuImgInfo(object):
 
 def qemu_img_info(path):
     """Return a object containing the parsed output from qemu-img info."""
+    if not os.path.exists(path):
+        return QemuImgInfo()
+
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
                              'qemu-img', 'info', path)
     return QemuImgInfo(out)

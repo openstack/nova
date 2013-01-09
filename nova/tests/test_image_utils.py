@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 from nova import test
 from nova import utils
 
@@ -41,7 +43,9 @@ disk size: 96K
                 'format': f,
                 'path': path,
             })
+            self.mox.StubOutWithMock(os.path, 'exists')
             self.mox.StubOutWithMock(utils, 'execute')
+            os.path.exists(path).AndReturn(True)
             utils.execute('env', 'LC_ALL=C', 'LANG=C',
                           'qemu-img', 'info', path).AndReturn((output, ''))
             self.mox.ReplayAll()
@@ -60,7 +64,9 @@ disk size: 96K
         output = template_output % ({
             'path': path,
         })
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((output, ''))
         self.mox.ReplayAll()
@@ -84,7 +90,9 @@ disk size: 96K
                 'vsize_b': i,
                 'path': path,
             })
+            self.mox.StubOutWithMock(os.path, 'exists')
             self.mox.StubOutWithMock(utils, 'execute')
+            os.path.exists(path).AndReturn(True)
             utils.execute('env', 'LC_ALL=C', 'LANG=C',
                           'qemu-img', 'info', path).AndReturn((output, ''))
             self.mox.ReplayAll()
@@ -96,7 +104,9 @@ disk size: 96K
                 'vsize_b': i,
                 'path': path,
             })
+            self.mox.StubOutWithMock(os.path, 'exists')
             self.mox.StubOutWithMock(utils, 'execute')
+            os.path.exists(path).AndReturn(True)
             utils.execute('env', 'LC_ALL=C', 'LANG=C',
                           'qemu-img', 'info', path).AndReturn((output, ''))
             self.mox.ReplayAll()
@@ -113,7 +123,9 @@ cluster_size: 65536
 disk size: 96K
 blah BLAH: bb
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
@@ -133,7 +145,9 @@ cluster_size: 65536
 disk size: 963434
 backing file: /var/lib/nova/a328c7998805951a_2
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
@@ -158,7 +172,9 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 1     d9a9784a500742a7bb95627bb3aace38      0 2012-08-20 10:52:46 00:00:00.000
 backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
@@ -184,7 +200,9 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 4        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 junk stuff: bbb
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
@@ -206,7 +224,9 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 3        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 4        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 """
+        self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
+        os.path.exists(path).AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', path).AndReturn((example_output, ''))
         self.mox.ReplayAll()
