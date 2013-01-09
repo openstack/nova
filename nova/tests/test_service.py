@@ -182,6 +182,14 @@ class TestWSGIService(test.TestCase):
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
 
+    def test_service_random_port_with_ipv6(self):
+        CONF.set_default("test_service_listen", "::1")
+        test_service = service.WSGIService("test_service")
+        test_service.start()
+        self.assertEqual("::1", test_service.host)
+        self.assertNotEqual(0, test_service.port)
+        test_service.stop()
+
 
 class TestLauncher(test.TestCase):
 

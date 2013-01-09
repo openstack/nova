@@ -20,6 +20,7 @@
 """Utility methods for working with WSGI servers."""
 
 import os.path
+import socket
 import sys
 
 import eventlet
@@ -82,8 +83,14 @@ class Server(object):
             raise exception.InvalidInput(
                     reason='The backlog must be more than 1')
 
-        self._socket = eventlet.listen((host, port), backlog=backlog)
-        (self.host, self.port) = self._socket.getsockname()
+        try:
+            socket.inet_pton(socket.AF_INET6, host)
+            family = socket.AF_INET6
+        except Exception:
+            family = socket.AF_INET
+
+        self._socket = eventlet.listen((host, port), family, backlog=backlog)
+        (self.host, self.port) = self._socket.getsockname()[0:2]
         LOG.info(_("%(name)s listening on %(host)s:%(port)s") % self.__dict__)
 
     def start(self):
