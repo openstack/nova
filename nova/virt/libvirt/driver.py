@@ -2763,7 +2763,15 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = []
 
         virt_dom = self._lookup_by_name(instance_name)
-        xml = virt_dom.XMLDesc(0)
+        try:
+            xml = virt_dom.XMLDesc(0)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            msg = _("Error from libvirt while getting description of "
+                    "%(instance_name)s: [Error Code %(error_code)s] "
+                    "%(ex)s") % locals()
+            LOG.warn(msg)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         doc = etree.fromstring(xml)
         disk_nodes = doc.findall('.//devices/disk')
         path_nodes = doc.findall('.//devices/disk/source')
