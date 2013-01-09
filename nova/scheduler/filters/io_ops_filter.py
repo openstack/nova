@@ -28,7 +28,7 @@ CONF.register_opt(max_io_ops_per_host_opt)
 
 
 class IoOpsFilter(filters.BaseHostFilter):
-    """Filter out hosts with too many concurrent I/O operations"""
+    """Filter out hosts with too many concurrent I/O operations."""
 
     def host_passes(self, host_state, filter_properties):
         """Use information about current vm and task states collected from

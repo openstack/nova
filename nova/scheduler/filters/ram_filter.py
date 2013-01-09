@@ -29,7 +29,7 @@ CONF.register_opt(ram_allocation_ratio_opt)
 
 
 class RamFilter(filters.BaseHostFilter):
-    """Ram Filter with over subscription flag"""
+    """Ram Filter with over subscription flag."""
 
     def host_passes(self, host_state, filter_properties):
         """Only return hosts with sufficient available RAM."""

@@ -51,7 +51,7 @@ class JsonFilter(filters.BaseHostFilter):
         return self._op_compare(args, operator.gt)
 
     def _in(self, args):
-        """First term is in set of remaining terms"""
+        """First term is in set of remaining terms."""
         return self._op_compare(args, operator.contains)
 
     def _less_than_equal(self, args):

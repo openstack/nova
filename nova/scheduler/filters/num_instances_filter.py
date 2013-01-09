@@ -28,7 +28,7 @@ CONF.register_opt(max_instances_per_host_opt)
 
 
 class NumInstancesFilter(filters.BaseHostFilter):
-    """Filter out hosts with too many instances"""
+    """Filter out hosts with too many instances."""
 
     def host_passes(self, host_state, filter_properties):
         num_instances = host_state.num_instances

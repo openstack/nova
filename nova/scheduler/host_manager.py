@@ -196,7 +196,7 @@ class HostState(object):
         self.num_io_ops = int(statmap.get('io_workload', 0))
 
     def consume_from_instance(self, instance):
-        """Incrementally update host state from an instance"""
+        """Incrementally update host state from an instance."""
         disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
         ram_mb = instance['memory_mb']
         vcpus = instance['vcpus']
@@ -294,7 +294,7 @@ class HostManager(object):
 
     def get_filtered_hosts(self, hosts, filter_properties,
             filter_class_names=None):
-        """Filter hosts and return only ones passing all filters"""
+        """Filter hosts and return only ones passing all filters."""
 
         def _strip_ignore_hosts(host_map, hosts_to_ignore):
             ignored_hosts = []
@@ -338,7 +338,7 @@ class HostManager(object):
                 hosts, filter_properties)
 
     def get_weighed_hosts(self, hosts, weight_properties):
-        """Weigh the hosts"""
+        """Weigh the hosts."""
         return self.weight_handler.get_weighed_objects(self.weight_classes,
                 hosts, weight_properties)
 

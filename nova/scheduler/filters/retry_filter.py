@@ -25,7 +25,7 @@ class RetryFilter(filters.BaseHostFilter):
     """
 
     def host_passes(self, host_state, filter_properties):
-        """Skip nodes that have already been attempted"""
+        """Skip nodes that have already been attempted."""
         retry = filter_properties.get('retry', None)
         if not retry:
             # Re-scheduling is disabled

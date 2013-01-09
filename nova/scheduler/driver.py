@@ -95,7 +95,7 @@ def instance_update_db(context, instance_uuid):
 
 
 def encode_instance(instance, local=True):
-    """Encode locally created instance for return via RPC"""
+    """Encode locally created instance for return via RPC."""
     # TODO(comstud): I would love to be able to return the full
     # instance information here, but we'll need some modifications
     # to the RPC code to handle datetime conversions with the

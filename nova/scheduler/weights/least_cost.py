@@ -52,7 +52,7 @@ CONF.register_opts(least_cost_opts)
 
 
 def noop_cost_fn(host_state, weight_properties):
-    """Return a pre-weight cost of 1 for each host"""
+    """Return a pre-weight cost of 1 for each host."""
     return 1
 
 

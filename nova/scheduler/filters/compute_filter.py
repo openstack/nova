@@ -24,13 +24,13 @@ LOG = logging.getLogger(__name__)
 
 
 class ComputeFilter(filters.BaseHostFilter):
-    """Filter on active Compute nodes"""
+    """Filter on active Compute nodes."""
 
     def __init__(self):
         self.servicegroup_api = servicegroup.API()
 
     def host_passes(self, host_state, filter_properties):
-        """Returns True for only active compute nodes"""
+        """Returns True for only active compute nodes."""
         capabilities = host_state.capabilities
         service = host_state.service
 
