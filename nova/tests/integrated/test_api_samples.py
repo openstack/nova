@@ -51,7 +51,7 @@ CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.extensions')
-CONF.import_opt('vpn_image_id', 'nova.config')
+CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('osapi_glance_link_prefix', 'nova.api.openstack.common')
 LOG = logging.getLogger(__name__)

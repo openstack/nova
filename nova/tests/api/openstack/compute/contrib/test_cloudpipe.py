@@ -28,7 +28,7 @@ from nova.tests import matchers
 from nova import utils
 
 CONF = cfg.CONF
-CONF.import_opt('vpn_image_id', 'nova.config')
+CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 
 
 def fake_vpn_instance():

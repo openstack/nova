@@ -42,6 +42,7 @@ import uuid
 from eventlet import greenthread
 
 from nova import block_device
+from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -177,7 +178,6 @@ CONF.import_opt('host', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('network_manager', 'nova.service')
 CONF.import_opt('reclaim_instance_interval', 'nova.config')
-CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('my_ip', 'nova.config')
 
 QUOTAS = quota.QUOTAS
@@ -938,7 +938,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.NETWORKING,
                               expected_task_state=None)
-        is_vpn = instance['image_ref'] == str(CONF.vpn_image_id)
+        is_vpn = pipelib.is_vpn_image(instance['image_ref'])
         try:
             # allocate and get network info
             network_info = self.network_api.allocate_for_instance(

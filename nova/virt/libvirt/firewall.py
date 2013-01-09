@@ -20,6 +20,7 @@
 
 from eventlet import tpool
 
+from nova.cloudpipe import pipelib
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
@@ -27,7 +28,6 @@ import nova.virt.firewall as base_firewall
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.config')
-CONF.import_opt('vpn_image_id', 'nova.config')
 
 try:
     import libvirt
@@ -117,7 +117,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             if mapping['dhcp_server']:
                 allow_dhcp = True
                 break
-        if instance['image_ref'] == str(CONF.vpn_image_id):
+        if pipelib.is_vpn_image(instance['image_ref']):
             base_filter = 'nova-vpn'
         elif allow_dhcp:
             base_filter = 'nova-base'
