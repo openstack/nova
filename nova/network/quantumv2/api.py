@@ -427,7 +427,7 @@ class API(base.Base):
         return []
 
     def get_instance_id_by_floating_address(self, context, address):
-        """Returns the instance id a floating ip's fixed ip is allocated to"""
+        """Returns the instance id a floating ip's fixed ip is allocated to."""
         client = quantumv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
         if not fip['port_id']:
@@ -473,7 +473,7 @@ class API(base.Base):
         return fip['floatingip']['floating_ip_address']
 
     def _get_floating_ip_by_address(self, client, address):
-        """Get floatingip from floating ip address"""
+        """Get floatingip from floating ip address."""
         data = client.list_floatingips(floating_ip_address=address)
         fips = data['floatingips']
         if len(fips) == 0:
@@ -515,13 +515,13 @@ class API(base.Base):
         client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
     def migrate_instance_start(self, context, instance, migration):
-        """Start to migrate the network of an instance"""
+        """Start to migrate the network of an instance."""
         # NOTE(wenjianhn): just pass to make migrate instance doesn't
         # raise for now.
         pass
 
     def migrate_instance_finish(self, context, instance, migration):
-        """Finish migrating the network of an instance"""
+        """Finish migrating the network of an instance."""
         # NOTE(wenjianhn): just pass to make migrate instance doesn't
         # raise for now.
         pass

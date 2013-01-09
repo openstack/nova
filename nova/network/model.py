@@ -27,7 +27,7 @@ def ensure_string_keys(d):
 
 
 class Model(dict):
-    """Defines some necessary structures for most of the network models"""
+    """Defines some necessary structures for most of the network models."""
     def __repr__(self):
         return self.__class__.__name__ + '(' + dict.__repr__(self) + ')'
 
@@ -38,12 +38,12 @@ class Model(dict):
         self['meta'].update(kwargs)
 
     def get_meta(self, key, default=None):
-        """calls get(key, default) on self['meta']"""
+        """calls get(key, default) on self['meta']."""
         return self['meta'].get(key, default)
 
 
 class IP(Model):
-    """Represents an IP address in Nova"""
+    """Represents an IP address in Nova."""
     def __init__(self, address=None, type=None, **kwargs):
         super(IP, self).__init__()
 
@@ -78,7 +78,7 @@ class IP(Model):
 
 
 class FixedIP(IP):
-    """Represents a Fixed IP address in Nova"""
+    """Represents a Fixed IP address in Nova."""
     def __init__(self, floating_ips=None, **kwargs):
         super(FixedIP, self).__init__(**kwargs)
         self['floating_ips'] = floating_ips or []
@@ -102,7 +102,7 @@ class FixedIP(IP):
 
 
 class Route(Model):
-    """Represents an IP Route in Nova"""
+    """Represents an IP Route in Nova."""
     def __init__(self, cidr=None, gateway=None, interface=None, **kwargs):
         super(Route, self).__init__()
 
@@ -120,7 +120,7 @@ class Route(Model):
 
 
 class Subnet(Model):
-    """Represents a Subnet in Nova"""
+    """Represents a Subnet in Nova."""
     def __init__(self, cidr=None, dns=None, gateway=None, ips=None,
                  routes=None, **kwargs):
         super(Subnet, self).__init__()
@@ -153,7 +153,7 @@ class Subnet(Model):
             self['ips'].append(ip)
 
     def as_netaddr(self):
-        """Convience function to get cidr as a netaddr object"""
+        """Convience function to get cidr as a netaddr object."""
         return netaddr.IPNetwork(self['cidr'])
 
     @classmethod
@@ -167,7 +167,7 @@ class Subnet(Model):
 
 
 class Network(Model):
-    """Represents a Network in Nova"""
+    """Represents a Network in Nova."""
     def __init__(self, id=None, bridge=None, label=None,
                  subnets=None, **kwargs):
         super(Network, self).__init__()
@@ -193,7 +193,7 @@ class Network(Model):
 
 
 class VIF(Model):
-    """Represents a Virtual Interface in Nova"""
+    """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
                  **kwargs):
         super(VIF, self).__init__()
@@ -258,16 +258,16 @@ class VIF(Model):
 
 
 class NetworkInfo(list):
-    """Stores and manipulates network information for a Nova instance"""
+    """Stores and manipulates network information for a Nova instance."""
 
     # NetworkInfo is a list of VIFs
 
     def fixed_ips(self):
-        """Returns all fixed_ips without floating_ips attached"""
+        """Returns all fixed_ips without floating_ips attached."""
         return [ip for vif in self for ip in vif.fixed_ips()]
 
     def floating_ips(self):
-        """Returns all floating_ips"""
+        """Returns all floating_ips."""
         return [ip for vif in self for ip in vif.floating_ips()]
 
     @classmethod

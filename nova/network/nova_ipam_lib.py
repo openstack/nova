@@ -69,7 +69,7 @@ class QuantumNovaIPAMLib(object):
         return [subnet_v4, subnet_v6]
 
     def get_routes_by_ip_block(self, context, block_id, project_id):
-        """Returns the list of routes for the IP block"""
+        """Returns the list of routes for the IP block."""
         return []
 
     def get_v4_ips_by_interface(self, context, net_id, vif_id, project_id):

@@ -19,7 +19,7 @@ from nova.network import dns_driver
 
 
 class NoopDNSDriver(dns_driver.DNSDriver):
-    """No-op DNS manager. Does nothing. """
+    """No-op DNS manager. Does nothing."""
 
     def __init__(self):
         pass
