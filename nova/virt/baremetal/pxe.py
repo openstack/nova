@@ -36,12 +36,6 @@ from nova.virt.disk import api as disk
 
 
 pxe_opts = [
-    cfg.StrOpt('dnsmasq_pid_dir',
-               default='$state_path/baremetal/dnsmasq',
-               help='path to directory stores pidfiles of dnsmasq'),
-    cfg.StrOpt('dnsmasq_lease_dir',
-               default='$state_path/baremetal/dnsmasq',
-               help='path to directory stores leasefiles of dnsmasq'),
     cfg.StrOpt('deploy_kernel',
                help='Default kernel image ID used in deployment phase'),
     cfg.StrOpt('deploy_ramdisk',
@@ -55,11 +49,6 @@ pxe_opts = [
     cfg.StrOpt('pxe_config_template',
                default='$pybasedir/nova/virt/baremetal/pxe_config.template',
                help='Template file for PXE configuration'),
-    cfg.StrOpt('pxe_interface',
-               default='eth0'),
-    cfg.StrOpt('pxe_path',
-               default='/usr/lib/syslinux/pxelinux.0',
-               help='path to pxelinux.0'),
     ]
 
 LOG = logging.getLogger(__name__)
