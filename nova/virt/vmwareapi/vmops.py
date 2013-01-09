@@ -539,7 +539,7 @@ class VMWareVMOps(object):
             self._session._wait_for_task(instance['uuid'], reset_task)
             LOG.debug(_("Did hard reboot of VM"), instance=instance)
 
-    def destroy(self, instance, network_info):
+    def destroy(self, instance, network_info, destroy_disks=True):
         """
         Destroy a VM instance. Steps followed are:
         1. Power off the VM, if it is in poweredOn state.
@@ -590,30 +590,32 @@ class VMWareVMOps(object):
 
             # Delete the folder holding the VM related content on
             # the datastore.
-            try:
-                dir_ds_compliant_path = vm_util.build_datastore_path(
-                                 datastore_name,
-                                 os.path.dirname(vmx_file_path))
-                LOG.debug(_("Deleting contents of the VM from "
-                            "datastore %(datastore_name)s") %
-                           {'datastore_name': datastore_name},
-                          instance=instance)
-                delete_task = self._session._call_method(
-                    self._session._get_vim(),
-                    "DeleteDatastoreFile_Task",
-                    self._session._get_vim().get_service_content().fileManager,
-                    name=dir_ds_compliant_path)
-                self._session._wait_for_task(instance['uuid'], delete_task)
-                LOG.debug(_("Deleted contents of the VM from "
-                            "datastore %(datastore_name)s") %
-                           {'datastore_name': datastore_name},
-                          instance=instance)
-            except Exception, excep:
-                LOG.warn(_("In vmwareapi:vmops:destroy, "
-                             "got this exception while deleting"
-                             " the VM contents from the disk: %s")
-                             % str(excep),
-                         instance=instance)
+            if destroy_disks:
+                try:
+                    dir_ds_compliant_path = vm_util.build_datastore_path(
+                                     datastore_name,
+                                     os.path.dirname(vmx_file_path))
+                    LOG.debug(_("Deleting contents of the VM from "
+                                "datastore %(datastore_name)s") %
+                               {'datastore_name': datastore_name},
+                              instance=instance)
+                    vim = self._session._get_vim()
+                    delete_task = self._session._call_method(
+                        vim,
+                        "DeleteDatastoreFile_Task",
+                        vim.get_service_content().fileManager,
+                        name=dir_ds_compliant_path)
+                    self._session._wait_for_task(instance['uuid'], delete_task)
+                    LOG.debug(_("Deleted contents of the VM from "
+                                "datastore %(datastore_name)s") %
+                               {'datastore_name': datastore_name},
+                              instance=instance)
+                except Exception, excep:
+                    LOG.warn(_("In vmwareapi:vmops:destroy, "
+                                 "got this exception while deleting"
+                                 " the VM contents from the disk: %s")
+                                 % str(excep),
+                             instance=instance)
         except Exception, exc:
             LOG.exception(exc, instance=instance)
 

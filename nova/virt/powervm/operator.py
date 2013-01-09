@@ -276,13 +276,13 @@ class PowerVMOperator(object):
         LOG.info(_("Instance spawned in %s seconds") % spawn_time,
                  instance=instance)
 
-    def destroy(self, instance_name):
+    def destroy(self, instance_name, destroy_disks=True):
         """Destroy (shutdown and delete) the specified instance.
 
         :param instance_name: Instance name.
         """
         try:
-            self._cleanup(instance_name)
+            self._cleanup(instance_name, destroy_disks)
         except exception.PowerVMLPARInstanceNotFound:
             LOG.warn(_("During destroy, LPAR instance '%s' was not found on "
                        "PowerVM system.") % instance_name)
@@ -317,7 +317,7 @@ class PowerVMOperator(object):
         if previous_state == 'Running':
             self.power_on(instance['name'])
 
-    def _cleanup(self, instance_name):
+    def _cleanup(self, instance_name, destroy_disks=True):
         lpar_id = self._get_instance(instance_name)['lpar_id']
         try:
             vhost = self._operator.get_vhost_by_instance_id(lpar_id)
@@ -326,7 +326,7 @@ class PowerVMOperator(object):
             LOG.debug(_("Shutting down the instance '%s'") % instance_name)
             self._operator.stop_lpar(instance_name)
 
-            if disk_name:
+            if disk_name and destroy_disks:
                 # TODO(mrodden): we should also detach from the instance
                 # before we start deleting things...
                 self._disk_adapter.detach_volume_from_host(disk_name)

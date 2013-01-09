@@ -1067,7 +1067,8 @@ class VMOps(object):
         # Destroy Rescue VM
         self._session.call_xenapi("VM.destroy", rescue_vm_ref)
 
-    def destroy(self, instance, network_info, block_device_info=None):
+    def destroy(self, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
@@ -1087,10 +1088,11 @@ class VMOps(object):
             self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
         return self._destroy(instance, vm_ref, network_info,
-                             block_device_info=block_device_info)
+                             block_device_info=block_device_info,
+                             destroy_disks=destroy_disks)
 
     def _destroy(self, instance, vm_ref, network_info=None,
-                 block_device_info=None):
+                 block_device_info=None, destroy_disks=True):
         """Destroys VM instance by performing:
 
             1. A shutdown
@@ -1106,10 +1108,11 @@ class VMOps(object):
 
         vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
-        # Destroy VDIs
-        self._detach_vm_vols(instance, vm_ref, block_device_info)
-        self._destroy_vdis(instance, vm_ref, block_device_info)
-        self._destroy_kernel_ramdisk(instance, vm_ref)
+        # Destroy VDIs (if necessary)
+        if destroy_disks:
+            self._detach_vm_vols(instance, vm_ref, block_device_info)
+            self._destroy_vdis(instance, vm_ref, block_device_info)
+            self._destroy_kernel_ramdisk(instance, vm_ref)
 
         vm_utils.destroy_vm(self._session, instance, vm_ref)
 

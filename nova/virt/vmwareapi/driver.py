@@ -136,9 +136,10 @@ class VMWareESXDriver(driver.ComputeDriver):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info)
 
-    def destroy(self, instance, network_info, block_device_info=None):
+    def destroy(self, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         """Destroy VM instance."""
-        self._vmops.destroy(instance, network_info)
+        self._vmops.destroy(instance, network_info, destroy_disks)
 
     def pause(self, instance):
         """Pause VM instance."""

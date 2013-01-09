@@ -448,7 +448,8 @@ class VMOps(baseops.BaseOps):
             raise exception.InstanceNotFound(instance_id=instance["id"])
         self._set_vm_state(instance['name'], 'Reboot')
 
-    def destroy(self, instance, network_info=None, cleanup=True):
+    def destroy(self, instance, network_info=None, cleanup=True,
+                destroy_disks=True):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         LOG.debug(_("Got request to destroy vm %s"), instance['name'])
         vm = self._vmutils.lookup(self._conn, instance['name'])
@@ -486,17 +487,18 @@ class VMOps(baseops.BaseOps):
         if not success:
             raise vmutils.HyperVException(_('Failed to destroy vm %s') %
                 instance['name'])
-        #Disconnect volumes
-        for volume_drive in volumes_drives_list:
-            self._volumeops.disconnect_volume(volume_drive)
-        #Delete associated vhd disk files.
-        for disk in disk_files:
-            vhdfile = self._conn_cimv2.query(
-            "Select * from CIM_DataFile where Name = '" +
-                disk.replace("'", "''") + "'")[0]
-            LOG.debug(_("Del: disk %(vhdfile)s vm %(name)s")
-                % {'vhdfile': vhdfile, 'name': instance['name']})
-            vhdfile.Delete()
+        if destroy_disks:
+            #Disconnect volumes
+            for volume_drive in volumes_drives_list:
+                self._volumeops.disconnect_volume(volume_drive)
+            #Delete associated vhd disk files.
+            for disk in disk_files:
+                vhdfile = self._conn_cimv2.query(
+                "Select * from CIM_DataFile where Name = '" +
+                    disk.replace("'", "''") + "'")[0]
+                LOG.debug(_("Del: disk %(vhdfile)s vm %(name)s")
+                    % {'vhdfile': vhdfile, 'name': instance['name']})
+                vhdfile.Delete()
 
     def pause(self, instance):
         """Pause VM instance."""

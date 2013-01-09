@@ -516,9 +516,10 @@ class LibvirtDriver(driver.ComputeDriver):
         timer = utils.FixedIntervalLoopingCall(_wait_for_destroy)
         timer.start(interval=0.5).wait()
 
-    def destroy(self, instance, network_info, block_device_info=None):
+    def destroy(self, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         self._destroy(instance)
-        self._cleanup(instance, network_info, block_device_info)
+        self._cleanup(instance, network_info, block_device_info, destroy_disks)
 
     def _undefine_domain(self, instance):
         try:
@@ -551,7 +552,8 @@ class LibvirtDriver(driver.ComputeDriver):
                             locals(), instance=instance)
                 raise
 
-    def _cleanup(self, instance, network_info, block_device_info):
+    def _cleanup(self, instance, network_info, block_device_info,
+                 destroy_disks):
         self._undefine_domain(instance)
         self.unplug_vifs(instance, network_info)
         try:
@@ -575,21 +577,22 @@ class LibvirtDriver(driver.ComputeDriver):
                                       connection_info,
                                       mount_device)
 
-        target = os.path.join(CONF.instances_path, instance['name'])
-        LOG.info(_('Deleting instance files %(target)s') % locals(),
-                 instance=instance)
-        if os.path.exists(target):
-            # If we fail to get rid of the directory
-            # tree, this shouldn't block deletion of
-            # the instance as whole.
-            try:
-                shutil.rmtree(target)
-            except OSError, e:
-                LOG.error(_("Failed to cleanup directory %(target)s: %(e)s") %
-                          locals())
+        if destroy_disks:
+            target = os.path.join(CONF.instances_path, instance['name'])
+            LOG.info(_('Deleting instance files %(target)s') % locals(),
+                     instance=instance)
+            if os.path.exists(target):
+                # If we fail to get rid of the directory
+                # tree, this shouldn't block deletion of
+                # the instance as whole.
+                try:
+                    shutil.rmtree(target)
+                except OSError, e:
+                    LOG.error(_("Failed to cleanup directory %(target)s: %(e)s"
+                                ) % locals())
 
-        #NOTE(bfilippov): destroy all LVM disks for this instance
-        self._cleanup_lvm(instance)
+            #NOTE(bfilippov): destroy all LVM disks for this instance
+            self._cleanup_lvm(instance)
 
     def _cleanup_lvm(self, instance):
         """Delete all LVM disks for given instance object"""

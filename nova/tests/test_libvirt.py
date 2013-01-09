@@ -2760,6 +2760,74 @@ class LibvirtConnTestCase(test.TestCase):
         instance = db.instance_create(self.context, self.test_instance)
         conn.destroy(instance, {})
 
+    def test_destroy_removes_disk(self):
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 '_undefine_domain')
+        libvirt_driver.LibvirtDriver._undefine_domain(instance)
+        self.mox.StubOutWithMock(shutil, "rmtree")
+        shutil.rmtree(os.path.join(CONF.instances_path, instance['name']))
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_cleanup_lvm')
+        libvirt_driver.LibvirtDriver._cleanup_lvm(instance)
+
+        # Start test
+        self.mox.ReplayAll()
+
+        def fake_destroy(instance):
+            pass
+
+        def fake_os_path_exists(path):
+            return True
+
+        def fake_unplug_vifs(instance, network_info):
+            pass
+
+        def fake_unfilter_instance(instance, network_info):
+            pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.stubs.Set(conn, '_destroy', fake_destroy)
+        self.stubs.Set(conn, 'unplug_vifs', fake_unplug_vifs)
+        self.stubs.Set(conn.firewall_driver,
+                       'unfilter_instance', fake_unfilter_instance)
+        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        conn.destroy(instance, [])
+
+    def test_destroy_not_removes_disk(self):
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 '_undefine_domain')
+        libvirt_driver.LibvirtDriver._undefine_domain(instance)
+
+        # Start test
+        self.mox.ReplayAll()
+
+        def fake_destroy(instance):
+            pass
+
+        def fake_os_path_exists(path):
+            return True
+
+        def fake_unplug_vifs(instance, network_info):
+            pass
+
+        def fake_unfilter_instance(instance, network_info):
+            pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.stubs.Set(conn, '_destroy', fake_destroy)
+        self.stubs.Set(conn, 'unplug_vifs', fake_unplug_vifs)
+        self.stubs.Set(conn.firewall_driver,
+                       'unfilter_instance', fake_unfilter_instance)
+        self.stubs.Set(os.path, 'exists', fake_os_path_exists)
+        conn.destroy(instance, [], None, False)
+
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.destroy()
