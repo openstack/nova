@@ -22,6 +22,7 @@ from nova.cells import messaging
 from nova.cells import state as cells_state
 import nova.db
 from nova.db import base
+from nova import exception
 from nova.openstack.common import cfg
 
 CONF = cfg.CONF
@@ -43,6 +44,10 @@ CELL_NAME_TO_STUB_INFO = {}
 
 
 class FakeDBApi(object):
+    """Cells uses a different DB in each cell.  This means in order to
+    stub out things differently per cell, I need to create a fake DBApi
+    object that is instantiated by each fake cell.
+    """
     def __init__(self, cell_db_entries):
         self.cell_db_entries = cell_db_entries
 
@@ -58,8 +63,8 @@ class FakeDBApi(object):
     def instance_get_all_by_filters(self, ctxt, *args, **kwargs):
         return []
 
-    def instance_get_by_uuid(self, ctxt, *args, **kwargs):
-        return None
+    def instance_get_by_uuid(self, ctxt, instance_uuid):
+        raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
 class FakeCellsDriver(driver.BaseCellsDriver):
