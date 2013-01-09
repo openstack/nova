@@ -24,7 +24,7 @@ from nova.virt.libvirt import utils as libvirt_utils
 class Snapshot(object):
     @abc.abstractmethod
     def create(self):
-        """Create new snapshot"""
+        """Create new snapshot."""
         pass
 
     @abc.abstractmethod
@@ -38,7 +38,7 @@ class Snapshot(object):
 
     @abc.abstractmethod
     def delete(self):
-        """Delete snapshot"""
+        """Delete snapshot."""
         pass
 
 

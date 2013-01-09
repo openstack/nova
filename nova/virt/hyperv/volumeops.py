@@ -86,7 +86,7 @@ class VolumeOps(baseops.BaseOps):
         return version
 
     def attach_boot_volume(self, block_device_info, vm_name):
-        """Attach the boot volume to the IDE controller"""
+        """Attach the boot volume to the IDE controller."""
         LOG.debug(_("block device info: %s"), block_device_info)
         ebs_root = self._driver.block_device_info_get_mapping(
             block_device_info)[0]
@@ -126,7 +126,7 @@ class VolumeOps(baseops.BaseOps):
             block_device_info)
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
-        """Attach a volume to the SCSI controller"""
+        """Attach a volume to the SCSI controller."""
         LOG.debug(_("Attach_volume: %(connection_info)s, %(instance_name)s,"
         " %(mountpoint)s") % locals())
         data = connection_info['data']
@@ -160,7 +160,7 @@ class VolumeOps(baseops.BaseOps):
 
     def _attach_volume_to_controller(self, controller, address, mounted_disk,
         instance):
-        """Attach a volume to a controller """
+        """Attach a volume to a controller."""
         #Find the default disk drive object for the vm and clone it.
         diskdflt = self._conn.query(
                 "SELECT * FROM Msvm_ResourceAllocationSettingData \
@@ -187,7 +187,7 @@ class VolumeOps(baseops.BaseOps):
         return len(volumes)
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
-        """Dettach a volume to the SCSI controller"""
+        """Dettach a volume to the SCSI controller."""
         LOG.debug(_("Detach_volume: %(connection_info)s, %(instance_name)s,"
         " %(mountpoint)s") % locals())
         data = connection_info['data']

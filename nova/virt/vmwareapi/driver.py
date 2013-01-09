@@ -170,7 +170,7 @@ class VMWareESXDriver(driver.ComputeDriver):
         return self._vmops.get_console_output(instance)
 
     def get_volume_connector(self, _instance):
-        """Return volume connector information"""
+        """Return volume connector information."""
         # TODO(vish): When volume attaching is supported, return the
         #             proper initiator iqn and host.
         return {

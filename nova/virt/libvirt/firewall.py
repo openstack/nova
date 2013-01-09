@@ -52,7 +52,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         self.handle_security_groups = False
 
     def apply_instance_filter(self, instance, network_info):
-        """No-op. Everything is done in prepare_instance_filter"""
+        """No-op. Everything is done in prepare_instance_filter."""
         pass
 
     def _get_connection(self):
@@ -100,7 +100,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                   </filter>'''
 
     def setup_basic_filtering(self, instance, network_info):
-        """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
+        """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
         LOG.info(_('Called setup_basic_filtering in nwfilter'),
                  instance=instance)
 
@@ -205,7 +205,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
     def instance_filter_exists(self, instance, network_info):
-        """Check nova-instance-instance-xxx exists"""
+        """Check nova-instance-instance-xxx exists."""
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
@@ -235,7 +235,7 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
             self.basicly_filtered = True
 
     def apply_instance_filter(self, instance, network_info):
-        """No-op. Everything is done in prepare_instance_filter"""
+        """No-op. Everything is done in prepare_instance_filter."""
         pass
 
     def unfilter_instance(self, instance, network_info):
@@ -252,5 +252,5 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
                      'filtered'), instance=instance)
 
     def instance_filter_exists(self, instance, network_info):
-        """Check nova-instance-instance-xxx exists"""
+        """Check nova-instance-instance-xxx exists."""
         return self.nwfilter.instance_filter_exists(instance, network_info)

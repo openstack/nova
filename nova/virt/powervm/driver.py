@@ -89,7 +89,7 @@ class PowerVMDriver(driver.ComputeDriver):
         return self._powervm.list_instances()
 
     def get_host_stats(self, refresh=False):
-        """Return currently known host stats"""
+        """Return currently known host stats."""
         return self._powervm.get_host_stats(refresh=refresh)
 
     def plug_vifs(self, instance, network_info):
@@ -169,15 +169,15 @@ class PowerVMDriver(driver.ComputeDriver):
         pass
 
     def unpause(self, instance):
-        """Unpause paused VM instance"""
+        """Unpause paused VM instance."""
         pass
 
     def suspend(self, instance):
-        """suspend the specified instance"""
+        """suspend the specified instance."""
         pass
 
     def resume(self, instance, network_info, block_device_info=None):
-        """resume the specified instance"""
+        """resume the specified instance."""
         pass
 
     def power_off(self, instance):
@@ -185,7 +185,7 @@ class PowerVMDriver(driver.ComputeDriver):
         self._powervm.power_off(instance['name'])
 
     def power_on(self, instance):
-        """Power on the specified instance"""
+        """Power on the specified instance."""
         self._powervm.power_on(instance['name'])
 
     def get_available_resource(self, nodename):

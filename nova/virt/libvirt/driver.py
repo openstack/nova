@@ -600,13 +600,13 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_lvm(instance)
 
     def _cleanup_lvm(self, instance):
-        """Delete all LVM disks for given instance object"""
+        """Delete all LVM disks for given instance object."""
         disks = self._lvm_disks(instance)
         if disks:
             libvirt_utils.remove_logical_volumes(*disks)
 
     def _lvm_disks(self, instance):
-        """Returns all LVM disks for given instance object"""
+        """Returns all LVM disks for given instance object."""
         if CONF.libvirt_images_volume_group:
             vg = os.path.join('/dev', CONF.libvirt_images_volume_group)
             if not os.path.exists(vg):
@@ -692,7 +692,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _get_disk_xml(xml, device):
-        """Returns the xml for the disk mounted at device"""
+        """Returns the xml for the disk mounted at device."""
         try:
             doc = etree.fromstring(xml)
         except Exception:
@@ -931,24 +931,24 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def pause(self, instance):
-        """Pause VM instance"""
+        """Pause VM instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.suspend()
 
     @exception.wrap_exception()
     def unpause(self, instance):
-        """Unpause paused VM instance"""
+        """Unpause paused VM instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.resume()
 
     @exception.wrap_exception()
     def power_off(self, instance):
-        """Power off the specified instance"""
+        """Power off the specified instance."""
         self._destroy(instance)
 
     @exception.wrap_exception()
     def power_on(self, instance):
-        """Power on the specified instance"""
+        """Power on the specified instance."""
         dom = self._lookup_by_name(instance['name'])
         self._create_domain(domain=dom)
         timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
@@ -957,13 +957,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def suspend(self, instance):
-        """Suspend the specified instance"""
+        """Suspend the specified instance."""
         dom = self._lookup_by_name(instance['name'])
         dom.managedSave(0)
 
     @exception.wrap_exception()
     def resume(self, instance, network_info, block_device_info=None):
-        """resume the specified instance"""
+        """resume the specified instance."""
         xml = self._get_domain_xml(instance, network_info,
                                    block_device_info=None)
         self._create_domain_and_network(xml, instance, network_info,
@@ -972,7 +972,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
-        """resume guest state when a host is booted"""
+        """resume guest state when a host is booted."""
         xml = self._get_domain_xml(instance, network_info, block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
@@ -1204,7 +1204,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _create_local(target, local_size, unit='G',
                       fs_format=None, label=None):
-        """Create a blank image of specified size"""
+        """Create a blank image of specified size."""
 
         if not fs_format:
             fs_format = CONF.default_ephemeral_format
@@ -1220,7 +1220,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _create_swap(target, swap_mb):
-        """Create a swap file of specified size"""
+        """Create a swap file of specified size."""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         utils.mkfs('swap', target)
 
@@ -1448,7 +1448,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return caps
 
     def get_host_uuid(self):
-        """Returns a UUID representing the host"""
+        """Returns a UUID representing the host."""
         caps = self.get_host_capabilities()
         return caps.host.uuid
 
@@ -2579,7 +2579,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timer = utils.FixedIntervalLoopingCall(f=None)
 
         def wait_for_live_migration():
-            """waiting for live migration completion"""
+            """waiting for live migration completion."""
             try:
                 self.get_info(instance_ref)['state']
             except exception.NotFound:
@@ -2859,7 +2859,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.image_cache_manager.verify_base_images(context, all_instances)
 
     def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize):
-        """Used only for cleanup in case migrate_disk_and_power_off fails"""
+        """Used only for cleanup in case migrate_disk_and_power_off fails."""
         try:
             if os.path.exists(inst_base_resize):
                 utils.execute('rm', '-rf', inst_base)
@@ -3007,7 +3007,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timer.start(interval=0.5).wait()
 
     def confirm_migration(self, migration, instance, network_info):
-        """Confirms a resize, destroying the source VM"""
+        """Confirms a resize, destroying the source VM."""
         self._cleanup_resize(instance, network_info)
 
     def get_diagnostics(self, instance):
@@ -3094,7 +3094,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error=True):
-        """only used for Resource Pools"""
+        """only used for Resource Pools."""
         pass
 
     def instance_on_disk(self, instance):
@@ -3109,7 +3109,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
 
 class HostState(object):
-    """Manages information about the compute node through libvirt"""
+    """Manages information about the compute node through libvirt."""
     def __init__(self, virtapi, read_only):
         super(HostState, self).__init__()
         self.read_only = read_only

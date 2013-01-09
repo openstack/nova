@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 class StorageError(Exception):
-    """To raise errors related to SR, VDI, PBD, and VBD commands"""
+    """To raise errors related to SR, VDI, PBD, and VBD commands."""
 
     def __init__(self, message=None):
         super(StorageError, self).__init__(message)
@@ -167,7 +167,7 @@ def create_iscsi_storage(session, info, label, description):
 
 
 def find_sr_from_vbd(session, vbd_ref):
-    """Find the SR reference from the VBD reference"""
+    """Find the SR reference from the VBD reference."""
     try:
         vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
@@ -202,7 +202,7 @@ def unplug_pbds(session, sr_ref):
 
 
 def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
-    """Introduce VDI in the host"""
+    """Introduce VDI in the host."""
     try:
         session.call_xenapi("SR.scan", sr_ref)
         if vdi_uuid:
@@ -334,7 +334,7 @@ def parse_volume_info(connection_data):
 
 
 def mountpoint_to_number(mountpoint):
-    """Translate a mountpoint like /dev/sdc into a numeric"""
+    """Translate a mountpoint like /dev/sdc into a numeric."""
     if mountpoint.startswith('/dev/'):
         mountpoint = mountpoint[5:]
     if re.match('^[hs]d[a-p]$', mountpoint):
@@ -349,7 +349,7 @@ def mountpoint_to_number(mountpoint):
 
 
 def _get_volume_id(path_or_id):
-    """Retrieve the volume id from device_path"""
+    """Retrieve the volume id from device_path."""
     # If we have the ID and not a path, just return it.
     if isinstance(path_or_id, int):
         return path_or_id
@@ -368,7 +368,7 @@ def _get_volume_id(path_or_id):
 
 
 def _get_target_host(iscsi_string):
-    """Retrieve target host"""
+    """Retrieve target host."""
     if iscsi_string:
         return iscsi_string[0:iscsi_string.find(':')]
     elif iscsi_string is None or CONF.target_host:
@@ -376,7 +376,7 @@ def _get_target_host(iscsi_string):
 
 
 def _get_target_port(iscsi_string):
-    """Retrieve target port"""
+    """Retrieve target port."""
     if iscsi_string:
         return iscsi_string[iscsi_string.find(':') + 1:]
     elif iscsi_string is None or CONF.target_port:
