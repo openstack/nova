@@ -155,6 +155,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.19 - Add node to run_instance
         2.20 - Add node to prep_resize
         2.21 - Add migrate_data dict param to pre_live_migration()
+        2.22 - Add recreate, on_shared_storage and host arguments to
+               rebuild_instance()
     '''
 
     #
@@ -393,16 +395,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='2.5')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
-            image_ref, orig_image_ref, orig_sys_metadata, bdms):
+            image_ref, orig_image_ref, orig_sys_metadata, bdms,
+            recreate=False, on_shared_storage=False, host=None):
         instance_p = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         self.cast(ctxt, self.make_msg('rebuild_instance',
                 instance=instance_p, new_pass=new_pass,
                 injected_files=injected_files, image_ref=image_ref,
                 orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata, bdms=bdms_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.18')
+                orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,
+                recreate=recreate, on_shared_storage=on_shared_storage),
+                topic=_compute_topic(self.topic, ctxt, host, instance),
+                version='2.22')
 
     def refresh_provider_fw_rules(self, ctxt, host):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),

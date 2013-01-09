@@ -244,8 +244,16 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('rebuild_instance', 'cast',
                 instance=self.fake_instance, new_pass='pass',
                 injected_files='files', image_ref='ref',
-                orig_image_ref='orig_ref', bdms=[],
-                orig_sys_metadata='orig_sys_metadata', version='2.18')
+                orig_image_ref='orig_ref', bdms=[], recreate=False,
+                on_shared_storage=False, orig_sys_metadata='orig_sys_metadata',
+                version='2.22')
+
+    def test_rebuild_instance_with_shared(self):
+        self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
+                injected_files='None', image_ref='None', orig_image_ref='None',
+                bdms=[], instance=self.fake_instance, host='new_host',
+                orig_sys_metadata=None, recreate=True, on_shared_storage=True,
+                version='2.22')
 
     def test_reserve_block_device_name(self):
         self._test_compute_api('reserve_block_device_name', 'call',

@@ -299,7 +299,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.21'
+    RPC_API_VERSION = '2.22'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1299,7 +1299,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata=None,
-                         bdms=None):
+                         bdms=None, recreate=False, on_shared_storage=False):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -1312,11 +1312,50 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         :param orig_sys_metadata: instance system metadata from pre-rebuild
+        :param recreate: True if instance should be recreated with same disk
+        :param on_shared_storage: True if instance files on shared storage
         """
         context = context.elevated()
+
+        orig_vm_state = instance['vm_state']
         with self._error_out_instance_on_exception(context, instance['uuid']):
             LOG.audit(_("Rebuilding instance"), context=context,
                       instance=instance)
+
+            if recreate:
+
+                if not self.driver.capabilities["supports_recreate"]:
+                    # if driver doesn't support recreate return with failure
+                    _msg = _('instance recreate is not implemented '
+                             'by this driver.')
+
+                    LOG.warn(_msg, instance=instance)
+                    self._instance_update(context,
+                                          instance['uuid'],
+                                          task_state=None,
+                                          expected_task_state=task_states.
+                                          REBUILDING)
+                    raise exception.Invalid(_msg)
+
+                self._check_instance_not_already_created(context, instance)
+
+                # to cover case when admin expects that instance files are on
+                # shared storage, but not accessible and vice versa
+                if on_shared_storage != self.driver.instance_on_disk(instance):
+                    _msg = _("Invalid state of instance files on "
+                             "shared storage")
+                    raise exception.Invalid(_msg)
+
+                if on_shared_storage:
+                    LOG.info(_('disk on shared storage,'
+                             'recreating using existing disk'))
+                else:
+                    image_ref = orig_image_ref = instance['image_ref']
+                    LOG.info(_("disk not on shared storage"
+                               "rebuilding from: '%s'") % str(image_ref))
+
+                instance = self._instance_update(context, instance['uuid'],
+                                                 host=self.host)
 
             if image_ref:
                 image_meta = _get_image_meta(context, image_ref)
@@ -1344,8 +1383,23 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   task_state=task_states.REBUILDING,
                                   expected_task_state=task_states.REBUILDING)
 
-            network_info = self._get_instance_nw_info(context, instance)
-            self.driver.destroy(instance, self._legacy_nw_info(network_info))
+            if recreate:
+                # Detaching volumes.
+                for bdm in self._get_instance_volume_bdms(context, instance):
+                    volume = self.volume_api.get(context, bdm['volume_id'])
+
+                    # We can't run volume disconnect on source because
+                    # the host is down. Just marking volume as detached
+                    # in db, anyway the zombie instance going to be deleted
+                    # from source during init_host when host comes back
+                    self.volume_api.detach(context.elevated(), volume)
+
+                self.network_api.setup_networks_on_host(context,
+                                                        instance, self.host)
+            else:
+                network_info = self._get_instance_nw_info(context, instance)
+                self.driver.destroy(instance,
+                                    self._legacy_nw_info(network_info))
 
             instance = self._instance_update(context,
                                   instance['uuid'],
@@ -1387,6 +1441,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              expected_task_state=task_states.
                                                  REBUILD_SPAWNING,
                                              launched_at=timeutils.utcnow())
+
+            LOG.info(_("bringing vm to original state: '%s'") % orig_vm_state)
+            if orig_vm_state == vm_states.STOPPED:
+                instance = self._instance_update(context, instance['uuid'],
+                                 vm_state=vm_states.ACTIVE,
+                                 task_state=task_states.STOPPING,
+                                 terminated_at=timeutils.utcnow(),
+                                 progress=0)
+                self.stop_instance(context, instance['uuid'])
 
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",
