@@ -44,6 +44,13 @@ s3_opts = [
     cfg.StrOpt('image_decryption_dir',
                default='/tmp',
                help='parent dir for tempdir used for image decryption'),
+    cfg.StrOpt('s3_host',
+               default='$my_ip',
+               help='hostname or ip for openstack to use when accessing '
+                    'the s3 api'),
+    cfg.IntOpt('s3_port',
+               default=3333,
+               help='port used when accessing the s3 api'),
     cfg.StrOpt('s3_access_key',
                default='notchecked',
                help='access key to use for s3 server for images'),
@@ -61,8 +68,7 @@ s3_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(s3_opts)
-CONF.import_opt('s3_host', 'nova.config')
-CONF.import_opt('s3_port', 'nova.config')
+CONF.import_opt('my_ip', 'nova.config')
 
 
 class S3ImageService(object):

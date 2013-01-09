@@ -47,13 +47,6 @@ global_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),
                help='ip address of this host'),
-    cfg.IntOpt('s3_port',
-               default=3333,
-               help='port used when accessing the s3 api'),
-    cfg.StrOpt('s3_host',
-               default='$my_ip',
-               help='hostname or ip for openstack to use when accessing '
-                    'the s3 api'),
     cfg.StrOpt('cert_topic',
                default='cert',
                help='the topic cert nodes listen on'),
