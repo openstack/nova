@@ -1074,6 +1074,15 @@ class UnexpectedTaskStateError(NovaException):
                 "the actual state is %(actual)s")
 
 
+class InstanceActionNotFound(NovaException):
+    message = _("Action for request_id %(request_id)s on instance"
+                " %(instance_uuid)s not found")
+
+
+class InstanceActionEventNotFound(NovaException):
+    message = _("Event %(event)s not found for action id %(action_id)s")
+
+
 class CryptoCAFileNotFound(FileNotFound):
     message = _("The CA file for %(project)s could not be found")
 

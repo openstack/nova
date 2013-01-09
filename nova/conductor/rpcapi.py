@@ -57,6 +57,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.23 - Added instance_get_all
            Un-Deprecate instance_get_all_by_host
     1.24 - Added instance_get
+    1.25 - Added action_event_start and action_event_finish
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -261,3 +262,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def instance_get_all_by_host(self, context, host):
         msg = self.make_msg('instance_get_all_by_host', host=host)
         return self.call(context, msg, version='1.23')
+
+    def action_event_start(self, context, values):
+        msg = self.make_msg('action_event_start', values=values)
+        return self.call(context, msg, version='1.25')
+
+    def action_event_finish(self, context, values):
+        msg = self.make_msg('action_event_finish', values=values)
+        return self.call(context, msg, version='1.25')

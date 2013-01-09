@@ -984,6 +984,35 @@ class InstanceFault(BASE, NovaBase):
     details = Column(Text)
 
 
+class InstanceAction(BASE, NovaBase):
+    """Track client actions on an instance"""
+    __tablename__ = 'instance_actions'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    action = Column(String(255))
+    instance_uuid = Column(String(36),
+                           ForeignKey('instances.uuid'),
+                           nullable=False)
+    request_id = Column(String(255))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    start_time = Column(DateTime, default=timeutils.utcnow)
+    finish_time = Column(DateTime)
+    message = Column(String(255))
+
+
+class InstanceActionEvent(BASE, NovaBase):
+    """Track events that occur during an InstanceAction"""
+    __tablename__ = 'instance_actions_events'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    event = Column(String(255))
+    action_id = Column(Integer, ForeignKey('instance_actions.id'),
+                       nullable=False)
+    start_time = Column(DateTime, default=timeutils.utcnow)
+    finish_time = Column(DateTime)
+    result = Column(String(255))
+    traceback = Column(Text)
+
+
 class InstanceIdMapping(BASE, NovaBase):
     """Compatibility layer for the EC2 instance service"""
     __tablename__ = 'instance_id_mappings'

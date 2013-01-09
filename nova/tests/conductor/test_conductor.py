@@ -86,6 +86,18 @@ class _BaseTestCase(object):
         self.assertEqual(instance['vm_state'], vm_states.STOPPED)
         self.assertEqual(new_inst['vm_state'], instance['vm_state'])
 
+    def test_action_event_start(self):
+        self.mox.StubOutWithMock(db, 'action_event_start')
+        db.action_event_start(self.context, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conductor.action_event_start(self.context, {})
+
+    def test_action_event_finish(self):
+        self.mox.StubOutWithMock(db, 'action_event_finish')
+        db.action_event_finish(self.context, mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.conductor.action_event_finish(self.context, {})
+
     def test_instance_update_invalid_key(self):
         # NOTE(danms): the real DB API call ignores invalid keys
         if self.db == None:
