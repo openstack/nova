@@ -107,7 +107,7 @@ class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
     Deserializer to handle xml-formatted security group requests.
     """
     def default(self, string):
-        """Deserialize an xml-formatted security group create request"""
+        """Deserialize an xml-formatted security group create request."""
         dom = minidom.parseString(string)
         security_group = {}
         sg_node = self.find_first_child_named(dom,
@@ -128,13 +128,13 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
 
     def default(self, string):
-        """Deserialize an xml-formatted security group create request"""
+        """Deserialize an xml-formatted security group create request."""
         dom = minidom.parseString(string)
         security_group_rule = self._extract_security_group_rule(dom)
         return {'body': {'security_group_rule': security_group_rule}}
 
     def _extract_security_group_rule(self, node):
-        """Marshal the security group rule attribute of a parsed request"""
+        """Marshal the security group rule attribute of a parsed request."""
         sg_rule = {}
         sg_rule_node = self.find_first_child_named(node,
                                                    'security_group_rule')
@@ -261,7 +261,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
 
     @wsgi.serializers(xml=SecurityGroupsTemplate)
     def index(self, req):
-        """Returns a list of security groups"""
+        """Returns a list of security groups."""
         context = self._authorize_context(req)
 
         search_opts = {}
@@ -522,7 +522,7 @@ class SecurityGroupServersTemplate(xmlutil.TemplateBuilder):
 
 
 class Security_groups(extensions.ExtensionDescriptor):
-    """Security group support"""
+    """Security group support."""
     name = "SecurityGroups"
     alias = "os-security-groups"
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"

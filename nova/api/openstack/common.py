@@ -146,7 +146,7 @@ def get_pagination_params(request):
 
 
 def _get_limit_param(request):
-    """Extract integer limit from request or fail"""
+    """Extract integer limit from request or fail."""
     try:
         limit = int(request.GET['limit'])
     except ValueError:
@@ -159,7 +159,7 @@ def _get_limit_param(request):
 
 
 def _get_marker_param(request):
-    """Extract marker id from request or fail"""
+    """Extract marker id from request or fail."""
     return request.GET['marker']
 
 
@@ -201,7 +201,7 @@ def limited(items, request, max_limit=CONF.osapi_max_limit):
 
 
 def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
-    """get limited parameter from request"""
+    """get limited parameter from request."""
     params = get_pagination_params(request)
     limit = params.get('limit', max_limit)
     limit = min(max_limit, limit)
@@ -372,7 +372,7 @@ class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
 class MetadataXMLDeserializer(wsgi.XMLDeserializer):
 
     def extract_metadata(self, metadata_node):
-        """Marshal the metadata attribute of a parsed request"""
+        """Marshal the metadata attribute of a parsed request."""
         if metadata_node is None:
             return {}
         metadata = {}

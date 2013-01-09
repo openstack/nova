@@ -129,7 +129,7 @@ def _create_domain_entry(domain, scope=None, project=None, av_zone=None):
 
 
 class FloatingIPDNSDomainController(object):
-    """DNS domain controller for OpenStack API"""
+    """DNS domain controller for OpenStack API."""
 
     def __init__(self):
         self.network_api = network.API()
@@ -151,7 +151,7 @@ class FloatingIPDNSDomainController(object):
 
     @wsgi.serializers(xml=DomainTemplate)
     def update(self, req, id, body):
-        """Add or modify domain entry"""
+        """Add or modify domain entry."""
         context = req.environ['nova.context']
         authorize(context)
         fqdomain = _unquote_domain(id)
@@ -179,7 +179,7 @@ class FloatingIPDNSDomainController(object):
                                              area_name: area})
 
     def delete(self, req, id):
-        """Delete the domain identified by id. """
+        """Delete the domain identified by id."""
         context = req.environ['nova.context']
         authorize(context)
         domain = _unquote_domain(id)
@@ -194,7 +194,7 @@ class FloatingIPDNSDomainController(object):
 
 
 class FloatingIPDNSEntryController(object):
-    """DNS Entry controller for OpenStack API"""
+    """DNS Entry controller for OpenStack API."""
 
     def __init__(self):
         self.network_api = network.API()
@@ -235,7 +235,7 @@ class FloatingIPDNSEntryController(object):
 
     @wsgi.serializers(xml=FloatingIPDNSTemplate)
     def update(self, req, domain_id, id, body):
-        """Add or modify dns entry"""
+        """Add or modify dns entry."""
         context = req.environ['nova.context']
         authorize(context)
         domain = _unquote_domain(domain_id)
@@ -263,7 +263,7 @@ class FloatingIPDNSEntryController(object):
                                           'domain': domain})
 
     def delete(self, req, domain_id, id):
-        """Delete the entry identified by req and id. """
+        """Delete the entry identified by req and id."""
         context = req.environ['nova.context']
         authorize(context)
         domain = _unquote_domain(domain_id)
@@ -278,7 +278,7 @@ class FloatingIPDNSEntryController(object):
 
 
 class Floating_ip_dns(extensions.ExtensionDescriptor):
-    """Floating IP DNS support"""
+    """Floating IP DNS support."""
 
     name = "FloatingIpDns"
     alias = "os-floating-ip-dns"

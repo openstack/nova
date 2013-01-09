@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 
 
 class Createserverext(extensions.ExtensionDescriptor):
-    """Extended support to the Create Server v1.1 API"""
+    """Extended support to the Create Server v1.1 API."""
 
     name = "Createserverext"
     alias = "os-create-server-ext"

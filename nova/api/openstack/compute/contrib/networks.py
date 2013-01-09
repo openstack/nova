@@ -150,7 +150,7 @@ class NetworkController(wsgi.Controller):
 
 
 class Networks(extensions.ExtensionDescriptor):
-    """Admin-only Network Management Extension"""
+    """Admin-only Network Management Extension."""
 
     name = "Networks"
     alias = "os-networks"

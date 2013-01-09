@@ -228,7 +228,7 @@ class ExtensionControllerTest(ExtensionTestCase):
                 'namespace': 'http://www.fox.in.socks/api/ext/pie/v1.0',
                 'name': 'Fox In Socks',
                 'updated': '2011-01-22T13:25:27-06:00',
-                'description': 'The Fox In Socks Extension',
+                'description': 'The Fox In Socks Extension.',
                 'alias': 'FOXNSOX',
                 'links': []
             },
@@ -252,7 +252,7 @@ class ExtensionControllerTest(ExtensionTestCase):
                 "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
                 "name": "Fox In Socks",
                 "updated": "2011-01-22T13:25:27-06:00",
-                "description": "The Fox In Socks Extension",
+                "description": "The Fox In Socks Extension.",
                 "alias": "FOXNSOX",
                 "links": []})
 
@@ -283,7 +283,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             'http://www.fox.in.socks/api/ext/pie/v1.0')
         self.assertEqual(fox_ext.get('updated'), '2011-01-22T13:25:27-06:00')
         self.assertEqual(fox_ext.findtext('{0}description'.format(NS)),
-            'The Fox In Socks Extension')
+            'The Fox In Socks Extension.')
 
         xmlutil.validate_schema(root, 'extensions')
 
@@ -303,7 +303,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             'http://www.fox.in.socks/api/ext/pie/v1.0')
         self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
         self.assertEqual(root.findtext('{0}description'.format(NS)),
-            'The Fox In Socks Extension')
+            'The Fox In Socks Extension.')
 
         xmlutil.validate_schema(root, 'extension')
 

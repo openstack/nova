@@ -88,7 +88,7 @@ class CertificatesController(object):
 
 
 class Certificates(extensions.ExtensionDescriptor):
-    """Certificates support"""
+    """Certificates support."""
 
     name = "Certificates"
     alias = "os-certificates"

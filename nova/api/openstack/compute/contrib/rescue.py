@@ -81,7 +81,7 @@ class RescueController(wsgi.Controller):
 
 
 class Rescue(exts.ExtensionDescriptor):
-    """Instance rescue mode"""
+    """Instance rescue mode."""
 
     name = "Rescue"
     alias = "os-rescue"

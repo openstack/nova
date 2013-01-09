@@ -230,7 +230,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         return server
 
     def _extract_block_device_mapping(self, server_node):
-        """Marshal the block_device_mapping node of a parsed request"""
+        """Marshal the block_device_mapping node of a parsed request."""
         node = self.find_first_child_named(server_node, "block_device_mapping")
         if node:
             block_device_mapping = []
@@ -255,7 +255,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             return None
 
     def _extract_scheduler_hints(self, server_node):
-        """Marshal the scheduler hints attribute of a parsed request"""
+        """Marshal the scheduler hints attribute of a parsed request."""
         node = self.find_first_child_named_in_namespace(server_node,
             "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
             "scheduler_hints")

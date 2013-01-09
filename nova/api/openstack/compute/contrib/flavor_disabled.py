@@ -53,7 +53,7 @@ class FlavorDisabledController(wsgi.Controller):
 
 
 class Flavor_disabled(extensions.ExtensionDescriptor):
-    """Support to show the disabled status of a flavor"""
+    """Support to show the disabled status of a flavor."""
 
     name = "FlavorDisabled"
     alias = "OS-FLV-DISABLED"

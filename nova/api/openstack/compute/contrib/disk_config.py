@@ -170,7 +170,7 @@ class ServerDiskConfigController(wsgi.Controller):
 
 
 class Disk_config(extensions.ExtensionDescriptor):
-    """Disk Management Extension"""
+    """Disk Management Extension."""
 
     name = "DiskConfig"
     alias = ALIAS

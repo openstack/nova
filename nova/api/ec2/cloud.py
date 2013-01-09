@@ -110,7 +110,7 @@ _STATE_DESCRIPTION_MAP = {
 
 
 def _state_description(vm_state, _shutdown_terminate):
-    """Map the vm state to the server status string"""
+    """Map the vm state to the server status string."""
     # Note(maoy): We do not provide EC2 compatibility
     # in shutdown_terminate flag behavior. So we ignore
     # it here.
@@ -180,7 +180,7 @@ def _format_block_device_mapping(bdm):
 
 
 def _format_mappings(properties, result):
-    """Format multiple BlockDeviceMappingItemType"""
+    """Format multiple BlockDeviceMappingItemType."""
     mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
                 for m in _properties_get_mappings(properties)
                 if block_device.is_swap_or_ephemeral(m['virtual'])]
@@ -1045,7 +1045,7 @@ class CloudController(object):
 
     def _format_instance_bdm(self, context, instance_uuid, root_device_name,
                              result):
-        """Format InstanceBlockDeviceMappingResponseItemType"""
+        """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
         mapping = []
         for bdm in db.block_device_mapping_get_all_by_instance(context,
@@ -1328,7 +1328,7 @@ class CloudController(object):
         return self._format_run_instances(context, resv_id)
 
     def _ec2_ids_to_instances(self, context, instance_id):
-        """Get all instances first, to prevent partial executions"""
+        """Get all instances first, to prevent partial executions."""
         instances = []
         for ec2_id in instance_id:
             validate_ec2_id(ec2_id)
@@ -1349,7 +1349,7 @@ class CloudController(object):
                                                 previous_states)
 
     def reboot_instances(self, context, instance_id, **kwargs):
-        """instance_id is a list of instance ids"""
+        """instance_id is a list of instance ids."""
         instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for instance in instances:

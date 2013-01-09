@@ -162,7 +162,7 @@
         },
         {
             "alias": "os-fixed-ips",
-            "description": "Fixed IPs support",
+            "description": "Fixed IPs support.",
             "links": [],
             "name": "FixedIPs",
             "namespace": "http://docs.openstack.org/compute/ext/fixed_ips/api/v2",

@@ -73,7 +73,7 @@ class CloudpipeController(object):
         fileutils.ensure_tree(CONF.keys_path)
 
     def _get_all_cloudpipes(self, context):
-        """Get all cloudpipes"""
+        """Get all cloudpipes."""
         instances = self.compute_api.get_all(context,
                                              search_opts={'deleted': False})
         return [instance for instance in instances

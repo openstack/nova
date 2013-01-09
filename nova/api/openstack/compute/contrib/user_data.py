@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 
 
 class User_data(extensions.ExtensionDescriptor):
-    """Add user_data to the Create Server v1.1 API"""
+    """Add user_data to the Create Server v1.1 API."""
 
     name = "UserData"
     alias = "os-user-data"

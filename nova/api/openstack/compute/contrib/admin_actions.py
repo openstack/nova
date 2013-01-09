@@ -46,7 +46,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('pause')
     def _pause(self, req, id, body):
-        """Permit Admins to pause the server"""
+        """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, 'pause')
         try:
@@ -63,7 +63,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('unpause')
     def _unpause(self, req, id, body):
-        """Permit Admins to unpause the server"""
+        """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, 'unpause')
         try:
@@ -80,7 +80,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('suspend')
     def _suspend(self, req, id, body):
-        """Permit admins to suspend the server"""
+        """Permit admins to suspend the server."""
         context = req.environ['nova.context']
         authorize(context, 'suspend')
         try:
@@ -97,7 +97,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('resume')
     def _resume(self, req, id, body):
-        """Permit admins to resume the server from suspend"""
+        """Permit admins to resume the server from suspend."""
         context = req.environ['nova.context']
         authorize(context, 'resume')
         try:
@@ -114,7 +114,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('migrate')
     def _migrate(self, req, id, body):
-        """Permit admins to migrate a server to a new host"""
+        """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
         authorize(context, 'migrate')
         try:
@@ -130,7 +130,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
-        """Permit admins to reset networking on an server"""
+        """Permit admins to reset networking on an server."""
         context = req.environ['nova.context']
         authorize(context, 'resetNetwork')
         try:
@@ -144,7 +144,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('injectNetworkInfo')
     def _inject_network_info(self, req, id, body):
-        """Permit admins to inject network info into a server"""
+        """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
         authorize(context, 'injectNetworkInfo')
         try:
@@ -160,7 +160,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('lock')
     def _lock(self, req, id, body):
-        """Permit admins to lock a server"""
+        """Permit admins to lock a server."""
         context = req.environ['nova.context']
         authorize(context, 'lock')
         try:
@@ -176,7 +176,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('unlock')
     def _unlock(self, req, id, body):
-        """Permit admins to lock a server"""
+        """Permit admins to lock a server."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
         try:
@@ -266,7 +266,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('os-migrateLive')
     def _migrate_live(self, req, id, body):
-        """Permit admins to (live) migrate a server to a new host"""
+        """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
         authorize(context, 'migrateLive')
 

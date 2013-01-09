@@ -616,7 +616,7 @@ class SnapshotController(wsgi.Controller):
 
 
 class Volumes(extensions.ExtensionDescriptor):
-    """Volumes support"""
+    """Volumes support."""
 
     name = "Volumes"
     alias = "os-volumes"

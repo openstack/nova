@@ -203,7 +203,7 @@ class AggregateController(object):
 
 
 class Aggregates(extensions.ExtensionDescriptor):
-    """Admin-only aggregate administration"""
+    """Admin-only aggregate administration."""
 
     name = "Aggregates"
     alias = "os-aggregates"

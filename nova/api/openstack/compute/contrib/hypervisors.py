@@ -241,7 +241,7 @@ class HypervisorsController(object):
 
 
 class Hypervisors(extensions.ExtensionDescriptor):
-    """Admin-only hypervisor administration"""
+    """Admin-only hypervisor administration."""
 
     name = "Hypervisors"
     alias = "os-hypervisors"

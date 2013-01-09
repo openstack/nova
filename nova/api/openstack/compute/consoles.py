@@ -25,7 +25,7 @@ from nova import exception
 
 
 def _translate_keys(cons):
-    """Coerces a console instance into proper dictionary format """
+    """Coerces a console instance into proper dictionary format."""
     pool = cons['pool']
     info = {'id': cons['id'],
             'console_type': pool['console_type']}
@@ -80,14 +80,14 @@ class ConsolesTemplate(xmlutil.TemplateBuilder):
 
 
 class Controller(object):
-    """The Consoles controller for the OpenStack API"""
+    """The Consoles controller for the OpenStack API."""
 
     def __init__(self):
         self.console_api = console_api.API()
 
     @wsgi.serializers(xml=ConsolesTemplate)
     def index(self, req, server_id):
-        """Returns a list of consoles for this instance"""
+        """Returns a list of consoles for this instance."""
         consoles = self.console_api.get_consoles(
                                     req.environ['nova.context'],
                                     server_id)
@@ -95,14 +95,14 @@ class Controller(object):
                               for console in consoles])
 
     def create(self, req, server_id):
-        """Creates a new console"""
+        """Creates a new console."""
         self.console_api.create_console(
                                 req.environ['nova.context'],
                                 server_id)
 
     @wsgi.serializers(xml=ConsoleTemplate)
     def show(self, req, server_id, id):
-        """Shows in-depth information on a specific console"""
+        """Shows in-depth information on a specific console."""
         try:
             console = self.console_api.get_console(
                                         req.environ['nova.context'],
@@ -113,11 +113,11 @@ class Controller(object):
         return _translate_detail_keys(console)
 
     def update(self, req, server_id, id):
-        """You can't update a console"""
+        """You can't update a console."""
         raise exc.HTTPNotImplemented()
 
     def delete(self, req, server_id, id):
-        """Deletes a console"""
+        """Deletes a console."""
         try:
             self.console_api.delete_console(req.environ['nova.context'],
                                             server_id,

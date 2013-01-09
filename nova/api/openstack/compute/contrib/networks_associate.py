@@ -52,7 +52,7 @@ class NetworkAssociateActionController(wsgi.Controller):
 
 
 class Networks_associate(extensions.ExtensionDescriptor):
-    """Network association support"""
+    """Network association support."""
 
     name = "NetworkAssociationSupport"
     alias = "os-networks-associate"

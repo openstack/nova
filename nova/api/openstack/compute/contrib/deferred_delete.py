@@ -66,7 +66,7 @@ class DeferredDeleteController(wsgi.Controller):
 
 
 class Deferred_delete(extensions.ExtensionDescriptor):
-    """Instance deferred delete"""
+    """Instance deferred delete."""
 
     name = "DeferredDelete"
     alias = "os-deferred-delete"

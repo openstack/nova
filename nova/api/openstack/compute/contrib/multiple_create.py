@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 
 
 class Multiple_create(extensions.ExtensionDescriptor):
-    """Allow multiple create in the Create Server v1.1 API"""
+    """Allow multiple create in the Create Server v1.1 API."""
 
     name = "MultipleCreate"
     alias = "os-multiple-create"

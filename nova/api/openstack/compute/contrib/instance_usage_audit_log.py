@@ -122,7 +122,7 @@ class InstanceUsageAuditLogController(object):
 
 
 class Instance_usage_audit_log(extensions.ExtensionDescriptor):
-    """Admin-only Task Log Monitoring"""
+    """Admin-only Task Log Monitoring."""
     name = "OSInstanceUsageAuditLog"
     alias = "os-instance_usage_audit_log"
     namespace = "http://docs.openstack.org/ext/services/api/v1.1"

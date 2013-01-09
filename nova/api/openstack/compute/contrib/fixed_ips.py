@@ -78,7 +78,7 @@ class FixedIPController(object):
 
 
 class Fixed_ips(extensions.ExtensionDescriptor):
-    """Fixed IPs support"""
+    """Fixed IPs support."""
 
     name = "FixedIPs"
     alias = "os-fixed-ips"

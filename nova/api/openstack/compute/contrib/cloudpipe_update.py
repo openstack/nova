@@ -35,7 +35,7 @@ class CloudpipeUpdateController(wsgi.Controller):
 
     @wsgi.action("update")
     def update(self, req, id, body):
-        """Configure cloudpipe parameters for the project"""
+        """Configure cloudpipe parameters for the project."""
 
         context = req.environ['nova.context']
         authorize(context)

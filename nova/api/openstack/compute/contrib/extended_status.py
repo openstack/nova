@@ -61,7 +61,7 @@ class ExtendedStatusController(wsgi.Controller):
 
 
 class Extended_status(extensions.ExtensionDescriptor):
-    """Extended Status support"""
+    """Extended Status support."""
 
     name = "ExtendedStatus"
     alias = "OS-EXT-STS"

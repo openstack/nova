@@ -43,7 +43,7 @@ authorize = extensions.extension_authorizer('compute', 'coverage_ext')
 
 
 class CoverageController(object):
-    """The Coverage report API controller for the OpenStack API"""
+    """The Coverage report API controller for the OpenStack API."""
     def __init__(self):
         self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
         data_out = os.path.join(self.data_path, '.nova-coverage')
@@ -60,7 +60,7 @@ class CoverageController(object):
         super(CoverageController, self).__init__()
 
     def _find_services(self, req):
-        """Returns a list of services"""
+        """Returns a list of services."""
         context = req.environ['nova.context']
         services = db.service_get_all(context, False)
         hosts = []
@@ -69,7 +69,7 @@ class CoverageController(object):
         return hosts
 
     def _find_ports(self, req, hosts):
-        """Return a list of backdoor ports for all services in the list"""
+        """Return a list of backdoor ports for all services in the list."""
         context = req.environ['nova.context']
 
         apicommands = {
@@ -247,7 +247,7 @@ class CoverageController(object):
 
 
 class Coverage_ext(extensions.ExtensionDescriptor):
-    """Enable Nova Coverage"""
+    """Enable Nova Coverage."""
 
     name = "Coverage"
     alias = "os-coverage"

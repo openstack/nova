@@ -61,7 +61,7 @@ class FoxInSocksFlavorBandsControllerExtension(wsgi.Controller):
 
 
 class Foxinsocks(extensions.ExtensionDescriptor):
-    """The Fox In Socks Extension"""
+    """The Fox In Socks Extension."""
 
     name = "Fox In Socks"
     alias = "FOXNSOX"

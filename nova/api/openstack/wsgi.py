@@ -181,7 +181,7 @@ class ActionDispatcher(object):
 
 
 class TextDeserializer(ActionDispatcher):
-    """Default request body deserialization"""
+    """Default request body deserialization."""
 
     def deserialize(self, datastring, action='default'):
         return self.dispatch(datastring, action=action)
@@ -245,7 +245,7 @@ class XMLDeserializer(TextDeserializer):
             return result
 
     def find_first_child_named_in_namespace(self, parent, namespace, name):
-        """Search a nodes children for the first child with a given name"""
+        """Search a nodes children for the first child with a given name."""
         for node in parent.childNodes:
             if (node.localName == name and
                 node.namespaceURI and
@@ -254,20 +254,20 @@ class XMLDeserializer(TextDeserializer):
         return None
 
     def find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
+        """Search a nodes children for the first child with a given name."""
         for node in parent.childNodes:
             if node.localName == name:
                 return node
         return None
 
     def find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
+        """Return all of a nodes children who have the given name."""
         for node in parent.childNodes:
             if node.localName == name:
                 yield node
 
     def extract_text(self, node):
-        """Get the text field contained by the given node"""
+        """Get the text field contained by the given node."""
         if len(node.childNodes) == 1:
             child = node.childNodes[0]
             if child.nodeType == child.TEXT_NODE:
@@ -275,7 +275,7 @@ class XMLDeserializer(TextDeserializer):
         return ""
 
     def extract_elements(self, node):
-        """Get only Element type childs from node"""
+        """Get only Element type childs from node."""
         elements = []
         for child in node.childNodes:
             if child.nodeType == child.ELEMENT_NODE:
@@ -283,7 +283,7 @@ class XMLDeserializer(TextDeserializer):
         return elements
 
     def find_attribute_or_element(self, parent, name):
-        """Get an attribute value; fallback to an element if not found"""
+        """Get an attribute value; fallback to an element if not found."""
         if parent.hasAttribute(name):
             return parent.getAttribute(name)
 
@@ -300,7 +300,7 @@ class XMLDeserializer(TextDeserializer):
 class MetadataXMLDeserializer(XMLDeserializer):
 
     def extract_metadata(self, metadata_node):
-        """Marshal the metadata attribute of a parsed request"""
+        """Marshal the metadata attribute of a parsed request."""
         metadata = {}
         if metadata_node is not None:
             for meta_node in self.find_children_named(metadata_node, "meta"):
@@ -310,7 +310,7 @@ class MetadataXMLDeserializer(XMLDeserializer):
 
 
 class DictSerializer(ActionDispatcher):
-    """Default request body serialization"""
+    """Default request body serialization."""
 
     def serialize(self, data, action='default'):
         return self.dispatch(data, action=action)
@@ -320,7 +320,7 @@ class DictSerializer(ActionDispatcher):
 
 
 class JSONDictSerializer(DictSerializer):
-    """Default JSON request body serialization"""
+    """Default JSON request body serialization."""
 
     def default(self, data):
         return jsonutils.dumps(data)

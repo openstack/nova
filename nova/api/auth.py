@@ -76,7 +76,7 @@ class InjectContext(wsgi.Middleware):
 
 
 class NovaKeystoneContext(wsgi.Middleware):
-    """Make a request context from keystone headers"""
+    """Make a request context from keystone headers."""
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
@@ -128,7 +128,7 @@ class NovaKeystoneContext(wsgi.Middleware):
         return self.application
 
     def _get_roles(self, req):
-        """Get the list of roles"""
+        """Get the list of roles."""
 
         if 'X_ROLES' in req.headers:
             roles = req.headers.get('X_ROLES', '')

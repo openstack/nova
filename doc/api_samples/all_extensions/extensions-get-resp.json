@@ -2,7 +2,7 @@
     "extensions": [
         {
             "alias": "NMN",
-            "description": "Multiple network support",
+            "description": "Multiple network support.",
             "links": [],
             "name": "Multinic",
             "namespace": "http://docs.openstack.org/compute/ext/multinic/api/v1.1",
@@ -10,7 +10,7 @@
         },
         {
             "alias": "OS-DCF",
-            "description": "Disk Management Extension",
+            "description": "Disk Management Extension.",
             "links": [],
             "name": "DiskConfig",
             "namespace": "http://docs.openstack.org/compute/ext/disk_config/api/v1.1",
@@ -26,7 +26,7 @@
         },
         {
             "alias": "OS-EXT-STS",
-            "description": "Extended Status support",
+            "description": "Extended Status support.",
             "links": [],
             "name": "ExtendedStatus",
             "namespace": "http://docs.openstack.org/compute/ext/extended_status/api/v1.1",
@@ -34,7 +34,7 @@
         },
         {
             "alias": "OS-FLV-DISABLED",
-            "description": "Support to show the disabled status of a flavor",
+            "description": "Support to show the disabled status of a flavor.",
             "links": [],
             "name": "FlavorDisabled",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1",
@@ -42,7 +42,7 @@
         },
         {
             "alias": "OS-FLV-EXT-DATA",
-            "description": "Provide additional data for flavors",
+            "description": "Provide additional data for flavors.",
             "links": [],
             "name": "FlavorExtraData",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1",
@@ -50,7 +50,7 @@
         },
         {
             "alias": "OS-SCH-HNT",
-            "description": "Pass arbitrary key/value pairs to the scheduler",
+            "description": "Pass arbitrary key/value pairs to the scheduler.",
             "links": [],
             "name": "SchedulerHints",
             "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
@@ -66,7 +66,7 @@
         },
         {
             "alias": "os-agents",
-            "description": "Agents support",
+            "description": "Agents support.",
             "links": [],
             "name": "Agents",
             "namespace": "http://docs.openstack.org/compute/ext/agents/api/v2",
@@ -74,7 +74,7 @@
         },
         {
             "alias": "os-aggregates",
-            "description": "Admin-only aggregate administration",
+            "description": "Admin-only aggregate administration.",
             "links": [],
             "name": "Aggregates",
             "namespace": "http://docs.openstack.org/compute/ext/aggregates/api/v1.1",
@@ -82,7 +82,7 @@
         },
         {
             "alias": "os-availability-zone",
-            "description": "Add availability_zone to the Create Server v1.1 API",
+            "description": "Add availability_zone to the Create Server v1.1 API.",
             "links": [],
             "name": "AvailabilityZone",
             "namespace": "http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1",
@@ -90,7 +90,7 @@
         },
         {
             "alias": "os-certificates",
-            "description": "Certificates support",
+            "description": "Certificates support.",
             "links": [],
             "name": "Certificates",
             "namespace": "http://docs.openstack.org/compute/ext/certificates/api/v1.1",
@@ -114,7 +114,7 @@
         },
         {
             "alias": "os-config-drive",
-            "description": "Config Drive Extension",
+            "description": "Config Drive Extension.",
             "links": [],
             "name": "ConfigDrive",
             "namespace": "http://docs.openstack.org/compute/ext/config_drive/api/v1.1",
@@ -138,7 +138,7 @@
         },
         {
             "alias": "os-coverage",
-            "description": "Enable Nova Coverage",
+            "description": "Enable Nova Coverage.",
             "links": [],
             "name": "Coverage",
             "namespace": "http://docs.openstack.org/compute/ext/coverage/api/v2",
@@ -146,7 +146,7 @@
         },
         {
             "alias": "os-create-server-ext",
-            "description": "Extended support to the Create Server v1.1 API",
+            "description": "Extended support to the Create Server v1.1 API.",
             "links": [],
             "name": "Createserverext",
             "namespace": "http://docs.openstack.org/compute/ext/createserverext/api/v1.1",
@@ -154,7 +154,7 @@
         },
         {
             "alias": "os-deferred-delete",
-            "description": "Instance deferred delete",
+            "description": "Instance deferred delete.",
             "links": [],
             "name": "DeferredDelete",
             "namespace": "http://docs.openstack.org/compute/ext/deferred-delete/api/v1.1",
@@ -162,7 +162,7 @@
         },
         {
             "alias": "os-fixed-ips",
-            "description": "Fixed IPs support",
+            "description": "Fixed IPs support.",
             "links": [],
             "name": "FixedIPs",
             "namespace": "http://docs.openstack.org/compute/ext/fixed_ips/api/v2",
@@ -170,7 +170,7 @@
         },
         {
             "alias": "os-flavor-access",
-            "description": "Flavor access supprt",
+            "description": "Flavor access supprt.",
             "links": [],
             "name": "FlavorAccess",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_access/api/v2",
@@ -178,7 +178,7 @@
         },
         {
             "alias": "os-flavor-extra-specs",
-            "description": "Instance type (flavor) extra specs",
+            "description": "Instance type (flavor) extra specs.",
             "links": [],
             "name": "FlavorExtraSpecs",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_extra_specs/api/v1.1",
@@ -194,7 +194,7 @@
         },
         {
             "alias": "os-flavor-rxtx",
-            "description": "Support to show the rxtx status of a flavor",
+            "description": "Support to show the rxtx status of a flavor.",
             "links": [],
             "name": "FlavorRxtx",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1",
@@ -202,7 +202,7 @@
         },
         {
             "alias": "os-flavor-swap",
-            "description": "Support to show the swap status of a flavor",
+            "description": "Support to show the swap status of a flavor.",
             "links": [],
             "name": "FlavorSwap",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1",
@@ -210,7 +210,7 @@
         },
         {
             "alias": "os-floating-ip-dns",
-            "description": "Floating IP DNS support",
+            "description": "Floating IP DNS support.",
             "links": [],
             "name": "FloatingIpDns",
             "namespace": "http://docs.openstack.org/ext/floating_ip_dns/api/v1.1",
@@ -218,7 +218,7 @@
         },
         {
             "alias": "os-floating-ip-pools",
-            "description": "Floating IPs support",
+            "description": "Floating IPs support.",
             "links": [],
             "name": "FloatingIpPools",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ip_pools/api/v1.1",
@@ -226,7 +226,7 @@
         },
         {
             "alias": "os-floating-ips",
-            "description": "Floating IPs support",
+            "description": "Floating IPs support.",
             "links": [],
             "name": "FloatingIps",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ips/api/v1.1",
@@ -234,7 +234,7 @@
         },
         {
             "alias": "os-floating-ips-bulk",
-            "description": "Bulk handling of Floating IPs",
+            "description": "Bulk handling of Floating IPs.",
             "links": [],
             "name": "FloatingIpsBulk",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ips_bulk/api/v2",
@@ -258,7 +258,7 @@
         },
         {
             "alias": "os-hosts",
-            "description": "Admin-only host administration",
+            "description": "Admin-only host administration.",
             "links": [],
             "name": "Hosts",
             "namespace": "http://docs.openstack.org/compute/ext/hosts/api/v1.1",
@@ -266,7 +266,7 @@
         },
         {
             "alias": "os-hypervisors",
-            "description": "Admin-only hypervisor administration",
+            "description": "Admin-only hypervisor administration.",
             "links": [],
             "name": "Hypervisors",
             "namespace": "http://docs.openstack.org/compute/ext/hypervisors/api/v1.1",
@@ -274,7 +274,7 @@
         },
         {
             "alias": "os-instance_usage_audit_log",
-            "description": "Admin-only Task Log Monitoring",
+            "description": "Admin-only Task Log Monitoring.",
             "links": [],
             "name": "OSInstanceUsageAuditLog",
             "namespace": "http://docs.openstack.org/ext/services/api/v1.1",
@@ -282,7 +282,7 @@
         },
         {
             "alias": "os-keypairs",
-            "description": "Keypair Support",
+            "description": "Keypair Support.",
             "links": [],
             "name": "Keypairs",
             "namespace": "http://docs.openstack.org/compute/ext/keypairs/api/v1.1",
@@ -290,7 +290,7 @@
         },
         {
             "alias": "os-multiple-create",
-            "description": "Allow multiple create in the Create Server v1.1 API",
+            "description": "Allow multiple create in the Create Server v1.1 API.",
             "links": [],
             "name": "MultipleCreate",
             "namespace": "http://docs.openstack.org/compute/ext/multiplecreate/api/v1.1",
@@ -298,7 +298,7 @@
         },
         {
             "alias": "os-networks",
-            "description": "Admin-only Network Management Extension",
+            "description": "Admin-only Network Management Extension.",
             "links": [],
             "name": "Networks",
             "namespace": "http://docs.openstack.org/compute/ext/networks/api/v1.1",
@@ -306,7 +306,7 @@
         },
         {
             "alias": "os-networks-associate",
-            "description": "Network association support",
+            "description": "Network association support.",
             "links": [],
             "name": "NetworkAssociationSupport",
             "namespace": "http://docs.openstack.org/compute/ext/networks_associate/api/v2",
@@ -314,7 +314,7 @@
         },
         {
             "alias": "os-quota-class-sets",
-            "description": "Quota classes management support",
+            "description": "Quota classes management support.",
             "links": [],
             "name": "QuotaClasses",
             "namespace": "http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1",
@@ -322,7 +322,7 @@
         },
         {
             "alias": "os-quota-sets",
-            "description": "Quotas management support",
+            "description": "Quotas management support.",
             "links": [],
             "name": "Quotas",
             "namespace": "http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1",
@@ -330,7 +330,7 @@
         },
         {
             "alias": "os-rescue",
-            "description": "Instance rescue mode",
+            "description": "Instance rescue mode.",
             "links": [],
             "name": "Rescue",
             "namespace": "http://docs.openstack.org/compute/ext/rescue/api/v1.1",
@@ -338,7 +338,7 @@
         },
         {
             "alias": "os-security-groups",
-            "description": "Security group support",
+            "description": "Security group support.",
             "links": [],
             "name": "SecurityGroups",
             "namespace": "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1",
@@ -346,7 +346,7 @@
         },
         {
             "alias": "os-server-diagnostics",
-            "description": "Allow Admins to view server diagnostics through server action",
+            "description": "Allow Admins to view server diagnostics through server action.",
             "links": [],
             "name": "ServerDiagnostics",
             "namespace": "http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1",
@@ -362,7 +362,7 @@
         },
         {
             "alias": "os-server-start-stop",
-            "description": "Start/Stop instance compute API support",
+            "description": "Start/Stop instance compute API support.",
             "links": [],
             "name": "ServerStartStop",
             "namespace": "http://docs.openstack.org/compute/ext/servers/api/v1.1",
@@ -370,7 +370,7 @@
         },
         {
             "alias": "os-services",
-            "description": "Services support",
+            "description": "Services support.",
             "links": [],
             "name": "Services",
             "namespace": "http://docs.openstack.org/compute/ext/services/api/v2",
@@ -378,7 +378,7 @@
         },
         {
             "alias": "os-simple-tenant-usage",
-            "description": "Simple tenant usage extension",
+            "description": "Simple tenant usage extension.",
             "links": [],
             "name": "SimpleTenantUsage",
             "namespace": "http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1",
@@ -394,7 +394,7 @@
         },
         {
             "alias": "os-user-data",
-            "description": "Add user_data to the Create Server v1.1 API",
+            "description": "Add user_data to the Create Server v1.1 API.",
             "links": [],
             "name": "UserData",
             "namespace": "http://docs.openstack.org/compute/ext/userdata/api/v1.1",
@@ -402,7 +402,7 @@
         },
         {
             "alias": "os-virtual-interfaces",
-            "description": "Virtual interface support",
+            "description": "Virtual interface support.",
             "links": [],
             "name": "VirtualInterfaces",
             "namespace": "http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1",
@@ -410,7 +410,7 @@
         },
         {
             "alias": "os-volumes",
-            "description": "Volumes support",
+            "description": "Volumes support.",
             "links": [],
             "name": "Volumes",
             "namespace": "http://docs.openstack.org/compute/ext/volumes/api/v1.1",
