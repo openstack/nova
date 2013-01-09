@@ -21,8 +21,14 @@ Client side of the console RPC API.
 from nova.openstack.common import cfg
 import nova.openstack.common.rpc.proxy
 
+rpcapi_opts = [
+    cfg.StrOpt('console_topic',
+               default='console',
+               help='the topic console proxy nodes listen on'),
+]
+
 CONF = cfg.CONF
-CONF.import_opt('console_topic', 'nova.config')
+CONF.register_opts(rpcapi_opts)
 
 
 class ConsoleAPI(nova.openstack.common.rpc.proxy.RpcProxy):

@@ -39,7 +39,7 @@ from nova.openstack.common import log as logging
 from nova import service
 
 CONF = cfg.CONF
-CONF.import_opt('console_topic', 'nova.config')
+CONF.import_opt('console_topic', 'nova.console.rpcapi')
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)

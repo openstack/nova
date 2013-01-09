@@ -25,7 +25,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common import uuidutils
 
 CONF = cfg.CONF
-CONF.import_opt('console_topic', 'nova.config')
+CONF.import_opt('console_topic', 'nova.console.rpcapi')
 
 
 class API(base.Base):
