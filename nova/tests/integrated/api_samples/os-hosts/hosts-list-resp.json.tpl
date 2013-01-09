@@ -8,22 +8,22 @@
         {
             "host_name": "%(host_name)s",
             "service": "cert",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
             "host_name": "%(host_name)s",
             "service": "network",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
             "host_name": "%(host_name)s",
             "service": "scheduler",
-            "zone": "nova"
+            "zone": "internal"
         },
         {
 	    "host_name": "%(host_name)s",
 	    "service": "conductor",
-	    "zone": "nova"
+	    "zone": "internal"
         }
     ]
 }

@@ -331,3 +331,61 @@ class TestMigrations(test.TestCase):
 
             migration_api.downgrade(engine, TestMigrations.REPOSITORY, 145)
             _145_check()
+
+    def test_migration_147(self):
+        az = 'test_zone'
+        host1 = 'compute-host1'
+        host2 = 'compute-host2'
+
+        def _146_check():
+            service = services.select(services.c.id == 1).execute().first()
+            self.assertEqual(az, service.availability_zone)
+            self.assertEqual(host1, service.host)
+            service = services.select(services.c.id == 2).execute().first()
+            self.assertNotEqual(az, service.availability_zone)
+            service = services.select(services.c.id == 3).execute().first()
+            self.assertEqual(az, service.availability_zone)
+            self.assertEqual(host2, service.host)
+
+        for key, engine in self.engines.items():
+            migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                          migration.INIT_VERSION)
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 146)
+            metadata = sqlalchemy.schema.MetaData()
+            metadata.bind = engine
+
+            #populate service table
+            services = sqlalchemy.Table('services', metadata,
+                    autoload=True)
+            services.insert().values(id=1, host=host1,
+                    binary='nova-compute', topic='compute', report_count=0,
+                    availability_zone=az).execute()
+            services.insert().values(id=2, host='sched-host',
+                    binary='nova-scheduler', topic='scheduler', report_count=0,
+                    availability_zone='ignore_me').execute()
+            services.insert().values(id=3, host=host2,
+                    binary='nova-compute', topic='compute', report_count=0,
+                    availability_zone=az).execute()
+
+            _146_check()
+
+            migration_api.upgrade(engine, TestMigrations.REPOSITORY, 147)
+
+            # check aggregate metadata
+            aggregate_metadata = sqlalchemy.Table('aggregate_metadata',
+                    metadata, autoload=True)
+            aggregate_hosts = sqlalchemy.Table('aggregate_hosts',
+                    metadata, autoload=True)
+            metadata = aggregate_metadata.select(aggregate_metadata.c.
+                    aggregate_id == 1).execute().first()
+            self.assertEqual(az, metadata['value'])
+            self.assertEqual(aggregate_hosts.select(
+                    aggregate_hosts.c.aggregate_id == 1).execute().
+                    first().host, host1)
+            blank = [h for h in aggregate_hosts.select(
+                    aggregate_hosts.c.aggregate_id == 2).execute()]
+            self.assertEqual(blank, [])
+
+            migration_api.downgrade(engine, TestMigrations.REPOSITORY, 146)
+
+            _146_check()

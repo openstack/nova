@@ -2242,11 +2242,6 @@ class AggregateAPI(base.Base):
         # validates the host; ComputeHostNotFound is raised if invalid
         service = self.db.service_get_all_compute_by_host(context, host)[0]
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        if service['availability_zone'] != aggregate['availability_zone']:
-            raise exception.InvalidAggregateAction(
-                    action='add host',
-                    aggregate_id=aggregate_id,
-                    reason='availability zone mismatch')
         self.db.aggregate_host_add(context, aggregate_id, host)
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,

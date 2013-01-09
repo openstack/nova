@@ -92,7 +92,6 @@ service_opts = [
 CONF = cfg.CONF
 CONF.register_opts(service_opts)
 CONF.import_opt('host', 'nova.config')
-CONF.import_opt('node_availability_zone', 'nova.config')
 
 
 class SignalExit(SystemExit):
@@ -447,13 +446,11 @@ class Service(object):
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
-        zone = CONF.node_availability_zone
         service_ref = db.service_create(context,
                                         {'host': self.host,
                                          'binary': self.binary,
                                          'topic': self.topic,
-                                         'report_count': 0,
-                                         'availability_zone': zone})
+                                         'report_count': 0})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):

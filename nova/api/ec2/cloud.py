@@ -28,6 +28,7 @@ import time
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api import validator
+from nova import availability_zones
 from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
@@ -72,6 +73,8 @@ CONF.register_opts(ec2_opts)
 CONF.import_opt('my_ip', 'nova.config')
 CONF.import_opt('vpn_image_id', 'nova.config')
 CONF.import_opt('vpn_key_suffix', 'nova.config')
+CONF.import_opt('internal_service_availability_zone',
+        'nova.availability_zones')
 
 LOG = logging.getLogger(__name__)
 
@@ -250,6 +253,10 @@ class CloudController(object):
         """Return available and unavailable zones."""
         enabled_services = db.service_get_all(context, False)
         disabled_services = db.service_get_all(context, True)
+        enabled_services = availability_zones.set_availability_zones(context,
+                enabled_services)
+        disabled_services = availability_zones.set_availability_zones(context,
+                disabled_services)
 
         available_zones = []
         for zone in [service['availability_zone'] for service
@@ -257,17 +264,11 @@ class CloudController(object):
             if not zone in available_zones:
                 available_zones.append(zone)
 
-        # aggregate based availability_zones
-        metadata = db.aggregate_host_get_by_metadata_key(context,
-                key='availability_zone')
-        for zone_set in metadata.values():
-            for zone in zone_set:
-                if zone not in available_zones:
-                    available_zones.append(zone)
         not_available_zones = []
-        for zone in [service.availability_zone for service in disabled_services
-                     if not service['availability_zone'] in available_zones]:
-            if not zone in not_available_zones:
+        zones = [service['available_zones'] for service in disabled_services
+                if service['available_zones'] not in available_zones]
+        for zone in zones:
+            if zone not in not_available_zones:
                 not_available_zones.append(zone)
         return (available_zones, not_available_zones)
 
@@ -277,6 +278,9 @@ class CloudController(object):
 
         result = []
         for zone in available_zones:
+            # Hide internal_service_availability_zone
+            if zone == CONF.internal_service_availability_zone:
+                continue
             result.append({'zoneName': zone,
                            'zoneState': "available"})
         for zone in not_available_zones:
@@ -290,6 +294,8 @@ class CloudController(object):
 
         # Available services
         enabled_services = db.service_get_all(context, False)
+        enabled_services = availability_zones.set_availability_zones(context,
+                enabled_services)
         zone_hosts = {}
         host_services = {}
         for service in enabled_services:
@@ -298,17 +304,10 @@ class CloudController(object):
                 zone_hosts[service['availability_zone']].append(
                     service['host'])
 
-            host_services.setdefault(service['host'], [])
-            host_services[service['host']].append(service)
-        # aggregate based available_zones
-        metadata = db.aggregate_host_get_by_metadata_key(context,
-                key='availability_zone')
-         #  metdata:  {machine: set( az1, az2 )}
-        for host, zones in metadata.items():
-            for zone in zones:
-                zone_hosts.setdefault(zone, [])
-                if host not in zone_hosts[zone]:
-                    zone_hosts[zone].append(host)
+            host_services.setdefault(service['availability_zone'] +
+                    service['host'], [])
+            host_services[service['availability_zone'] + service['host']].\
+                    append(service)
 
         result = []
         for zone in available_zones:
@@ -318,7 +317,7 @@ class CloudController(object):
                 result.append({'zoneName': '|- %s' % host,
                                'zoneState': ''})
 
-                for service in host_services[host]:
+                for service in host_services[zone + host]:
                     alive = self.servicegroup_api.service_is_up(service)
                     art = (alive and ":-)") or "XXX"
                     active = 'enabled'

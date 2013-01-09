@@ -61,7 +61,7 @@ CONF.import_opt('compute_manager', 'nova.config')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('host', 'nova.config')
 CONF.import_opt('network_manager', 'nova.config')
-CONF.import_opt('node_availability_zone', 'nova.config')
+CONF.import_opt('default_availability_zone', 'nova.availability_zones')
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'
@@ -206,7 +206,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         vol['user_id'] = 'fake'
         vol['project_id'] = 'fake'
         vol['host'] = 'localhost'
-        vol['availability_zone'] = CONF.node_availability_zone
+        vol['availability_zone'] = CONF.default_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
         return db.volume_create(self.context, vol)
@@ -2196,8 +2196,7 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                               {'host': host,
                                'binary': 'nova-compute',
                                'topic': 'compute',
-                               'report_count': 0,
-                               'availability_zone': avail_zone})
+                               'report_count': 0})
     return values
 
 
@@ -2213,7 +2212,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                                    'Dom0IptablesFirewallDriver',
                    host='host',
                    compute_driver='xenapi.XenAPIDriver',
-                   node_availability_zone='avail_zone1')
+                   default_availability_zone='avail_zone1')
         self.flags(use_local=True, group='conductor')
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)

@@ -72,7 +72,6 @@ class DbDriver(api.ServiceGroupDriver):
     def _report_state(self, service):
         """Update the state of this service in the datastore."""
         ctxt = context.get_admin_context()
-        zone = CONF.node_availability_zone
         state_catalog = {}
         try:
             try:
@@ -84,8 +83,6 @@ class DbDriver(api.ServiceGroupDriver):
                 service_ref = db.service_get(ctxt, service.service_id)
 
             state_catalog['report_count'] = service_ref['report_count'] + 1
-            if zone != service_ref['availability_zone']:
-                state_catalog['availability_zone'] = zone
 
             db.service_update(ctxt,
                              service.service_id, state_catalog)

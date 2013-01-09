@@ -22,6 +22,7 @@ from xml.parsers import expat
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import availability_zones
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
@@ -99,6 +100,7 @@ def _list_hosts(req):
     """
     context = req.environ['nova.context']
     services = db.service_get_all(context, False)
+    services = availability_zones.set_availability_zones(context, services)
     zone = ''
     if 'zone' in req.GET:
         zone = req.GET['zone']

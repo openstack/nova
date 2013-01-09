@@ -137,6 +137,7 @@ class TestQuantumv2(test.TestCase):
         self.instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance',
+                         'availability_zone': 'nova',
                          'security_groups': []}
         self.nets1 = [{'id': 'my_netid1',
                       'name': 'my_netname1',

@@ -18,6 +18,7 @@
 
 import re
 
+from nova import availability_zones
 from nova import context
 from nova import db
 from nova import exception
@@ -116,7 +117,7 @@ def get_ip_info_for_instance(context, instance):
 
 def get_availability_zone_by_host(services, host):
     if len(services) > 0:
-        return services[0]['availability_zone']
+        return availability_zones.get_host_availability_zone(context, host)
     return 'unknown zone'
 
 

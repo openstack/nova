@@ -127,13 +127,11 @@ class ServiceTestCase(test.TestCase):
         service_create = {'host': self.host,
                           'binary': self.binary,
                           'topic': self.topic,
-                          'report_count': 0,
-                          'availability_zone': 'nova'}
+                          'report_count': 0}
         service_ref = {'host': self.host,
                           'binary': self.binary,
                           'topic': self.topic,
                           'report_count': 0,
-                          'availability_zone': 'nova',
                           'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),

@@ -27,18 +27,14 @@ from nova import test
 LOG = logging.getLogger(__name__)
 HOST_LIST = {"hosts": [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
-        {"host_name": "host_c2", "service": "compute", "zone": "nonova"},
-        {"host_name": "host_v1", "service": "volume", "zone": "nova"},
-        {"host_name": "host_v2", "service": "volume", "zone": "nonova"}]
+        {"host_name": "host_c2", "service": "compute", "zone": "nova"}]
         }
 HOST_LIST_NOVA_ZONE = [
         {"host_name": "host_c1", "service": "compute", "zone": "nova"},
-        {"host_name": "host_v1", "service": "volume", "zone": "nova"}]
+        {"host_name": "host_c2", "service": "compute", "zone": "nova"}]
 SERVICES_LIST = [
-        {"host": "host_c1", "topic": "compute", "availability_zone": "nova"},
-        {"host": "host_c2", "topic": "compute", "availability_zone": "nonova"},
-        {"host": "host_v1", "topic": "volume", "availability_zone": "nova"},
-        {"host": "host_v2", "topic": "volume", "availability_zone": "nonova"}]
+        {"host": "host_c1", "topic": "compute"},
+        {"host": "host_c2", "topic": "compute"}]
 
 
 def stub_service_get_all(self, req):
@@ -250,7 +246,7 @@ class HostTestCase(test.TestCase):
         """Create compute-manager(ComputeNode and Service record)."""
         ctxt = context.get_admin_context()
         dic = {'host': 'dummy', 'binary': 'nova-compute', 'topic': 'compute',
-               'report_count': 0, 'availability_zone': 'dummyzone'}
+               'report_count': 0}
         s_ref = db.service_create(ctxt, dic)
 
         dic = {'service_id': s_ref['id'],
