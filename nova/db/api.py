@@ -1622,32 +1622,32 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 
 
 def action_start(context, values):
-    """Start an action for an instance"""
+    """Start an action for an instance."""
     return IMPL.action_start(context, values)
 
 
 def action_finish(context, values):
-    """Finish an action for an instance"""
+    """Finish an action for an instance."""
     return IMPL.action_finish(context, values)
 
 
 def actions_get(context, uuid):
-    """Get all instance actions for the provided instance"""
+    """Get all instance actions for the provided instance."""
     return IMPL.actions_get(context, uuid)
 
 
 def action_get_by_id(context, uuid, action_id):
-    """Get the action by id and given instance"""
+    """Get the action by id and given instance."""
     return IMPL.action_get_by_id(context, uuid, action_id)
 
 
 def action_event_start(context, values):
-    """Start an event on an instance action"""
+    """Start an event on an instance action."""
     return IMPL.action_event_start(context, values)
 
 
 def action_event_finish(context, values):
-    """Finish an event on an instance action"""
+    """Finish an event on an instance action."""
     return IMPL.action_event_finish(context, values)
 
 

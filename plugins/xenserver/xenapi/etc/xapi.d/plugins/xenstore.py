@@ -38,7 +38,7 @@ pluginlib.configure_logging("xenstore")
 
 
 class XenstoreError(pluginlib.PluginError):
-    """Errors that occur when calling xenstore-* through subprocesses"""
+    """Errors that occur when calling xenstore-* through subprocesses."""
 
     def __init__(self, cmd, return_code, stderr, stdout):
         msg = "cmd: %s; returncode: %d; stderr: %s; stdout: %s"

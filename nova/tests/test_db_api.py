@@ -540,7 +540,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(expected, instance_faults)
 
     def test_instance_action_start(self):
-        """Create an instance action"""
+        """Create an instance action."""
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
 
@@ -563,7 +563,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(ctxt.project_id, actions[0]['project_id'])
 
     def test_instance_action_finish(self):
-        """Create an instance action"""
+        """Create an instance action."""
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
 
@@ -593,7 +593,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(ctxt.project_id, actions[0]['project_id'])
 
     def test_instance_actions_get_by_instance(self):
-        """Ensure we can get actions by UUID"""
+        """Ensure we can get actions by UUID."""
         ctxt1 = context.get_admin_context()
         ctxt2 = context.get_admin_context()
         uuid1 = str(stdlib_uuid.uuid4())
@@ -625,7 +625,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual('run_instance', actions[1]['action'])
 
     def test_instance_action_get_by_instance_and_action(self):
-        """Ensure we can get an action by instance UUID and action id"""
+        """Ensure we can get an action by instance UUID and action id."""
         ctxt1 = context.get_admin_context()
         ctxt2 = context.get_admin_context()
         uuid1 = str(stdlib_uuid.uuid4())
@@ -657,7 +657,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(ctxt1.request_id, action['request_id'])
 
     def test_instance_action_event_start(self):
-        """Create an instance action event"""
+        """Create an instance action event."""
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
 
@@ -683,7 +683,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(start_time, events[0]['start_time'])
 
     def test_instance_action_event_finish(self):
-        """Finish an instance action event"""
+        """Finish an instance action event."""
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
 
@@ -717,7 +717,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(finish_time, events[0]['finish_time'])
 
     def test_instance_action_event_get_by_id(self):
-        """Get a specific instance action event"""
+        """Get a specific instance action event."""
         ctxt1 = context.get_admin_context()
         ctxt2 = context.get_admin_context()
         uuid1 = str(stdlib_uuid.uuid4())

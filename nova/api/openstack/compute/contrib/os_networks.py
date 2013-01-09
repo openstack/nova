@@ -187,7 +187,7 @@ class NetworkController(object):
 
 
 class Os_networks(extensions.ExtensionDescriptor):
-    """Tenant-based Network Management Extension"""
+    """Tenant-based Network Management Extension."""
 
     name = "OSNetworks"
     alias = "os-networks"

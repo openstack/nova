@@ -66,7 +66,7 @@ class ServerPasswordController(object):
 
 
 class Server_password(extensions.ExtensionDescriptor):
-    """Server password support"""
+    """Server password support."""
 
     name = "ServerPassword"
     alias = "os-server-password"

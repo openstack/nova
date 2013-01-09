@@ -56,7 +56,7 @@ QUEUE = Queue.Queue()
 # They are split for stub-out.
 
 def discovery(portal_address, portal_port):
-    """Do iSCSI discovery on portal"""
+    """Do iSCSI discovery on portal."""
     utils.execute('iscsiadm',
                   '-m', 'discovery',
                   '-t', 'st',
@@ -66,7 +66,7 @@ def discovery(portal_address, portal_port):
 
 
 def login_iscsi(portal_address, portal_port, target_iqn):
-    """Login to an iSCSI target"""
+    """Login to an iSCSI target."""
     utils.execute('iscsiadm',
                   '-m', 'node',
                   '-p', '%s:%s' % (portal_address, portal_port),
@@ -79,7 +79,7 @@ def login_iscsi(portal_address, portal_port, target_iqn):
 
 
 def logout_iscsi(portal_address, portal_port, target_iqn):
-    """Logout from an iSCSI target"""
+    """Logout from an iSCSI target."""
     utils.execute('iscsiadm',
                   '-m', 'node',
                   '-p', '%s:%s' % (portal_address, portal_port),
@@ -90,7 +90,7 @@ def logout_iscsi(portal_address, portal_port, target_iqn):
 
 
 def make_partitions(dev, root_mb, swap_mb):
-    """Create partitions for root and swap on a disk device"""
+    """Create partitions for root and swap on a disk device."""
     commands = ['o,w',
                 'n,p,1,,+%dM,t,1,83,w' % root_mb,
                 'n,p,2,,+%dM,t,2,82,w' % swap_mb,
@@ -106,13 +106,13 @@ def make_partitions(dev, root_mb, swap_mb):
 
 
 def is_block_device(dev):
-    """Check whether a device is block or not"""
+    """Check whether a device is block or not."""
     s = os.stat(dev)
     return stat.S_ISBLK(s.st_mode)
 
 
 def dd(src, dst):
-    """Execute dd from src to dst"""
+    """Execute dd from src to dst."""
     utils.execute('dd',
                   'if=%s' % src,
                   'of=%s' % dst,
@@ -122,7 +122,7 @@ def dd(src, dst):
 
 
 def mkswap(dev, label='swap1'):
-    """Execute mkswap on a device"""
+    """Execute mkswap on a device."""
     utils.execute('mkswap',
                   '-L', label,
                   dev,
@@ -131,7 +131,7 @@ def mkswap(dev, label='swap1'):
 
 
 def block_uuid(dev):
-    """Get UUID of a block device"""
+    """Get UUID of a block device."""
     out, _ = utils.execute('blkid', '-s', 'UUID', '-o', 'value', dev,
                            run_as_root=True,
                            check_exit_code=[0])
@@ -219,7 +219,7 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
 
 
 class Worker(threading.Thread):
-    """Thread that handles requests in queue"""
+    """Thread that handles requests in queue."""
 
     def __init__(self):
         super(Worker, self).__init__()
@@ -250,7 +250,7 @@ class Worker(threading.Thread):
 
 
 class BareMetalDeploy(object):
-    """WSGI server for bare-metal deployment"""
+    """WSGI server for bare-metal deployment."""
 
     def __init__(self):
         self.worker = Worker()
