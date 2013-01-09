@@ -121,17 +121,10 @@ class TestMigrations(test.TestCase):
         self._reset_databases()
 
     def tearDown(self):
-
         # We destroy the test data store between each test case,
         # and recreate it, which ensures that we have no side-effects
         # from the tests
         self._reset_databases()
-
-        # remove these from the list so they aren't used in the migration tests
-        if "mysqlcitest" in self.engines:
-            del self.engines["mysqlcitest"]
-        if "mysqlcitest" in self.test_databases:
-            del self.test_databases["mysqlcitest"]
         super(TestMigrations, self).tearDown()
 
     def _reset_databases(self):
