@@ -80,9 +80,6 @@ utils_opts = [
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
 CONF.register_opts(utils_opts)
-CONF.import_opt('glance_host', 'nova.config')
-CONF.import_opt('glance_port', 'nova.config')
-CONF.import_opt('glance_protocol', 'nova.config')
 CONF.import_opt('service_down_time', 'nova.config')
 
 LOG = logging.getLogger(__name__)
@@ -973,17 +970,6 @@ def timefunc(func):
             LOG.debug(_("timefunc: '%(name)s' took %(total_time).2f secs") %
                       dict(name=func.__name__, total_time=total_time))
     return inner
-
-
-def generate_glance_url():
-    """Generate the URL to glance."""
-    return "%s://%s:%d" % (CONF.glance_protocol, CONF.glance_host,
-                           CONF.glance_port)
-
-
-def generate_image_url(image_ref):
-    """Generate an image URL from an image_ref."""
-    return "%s/images/%s" % (generate_glance_url(), image_ref)
 
 
 @contextlib.contextmanager

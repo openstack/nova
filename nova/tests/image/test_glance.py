@@ -25,10 +25,13 @@ import glanceclient.exc
 from nova import context
 from nova import exception
 from nova.image import glance
+from nova.openstack.common import cfg
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests import matchers
+
+CONF = cfg.CONF
 
 
 class NullWriter(object):
@@ -703,3 +706,17 @@ class TestGlanceClientWrapper(test.TestCase):
 
         client2.call(ctxt, 1, 'get', 'meow')
         self.assertEqual(info['num_calls'], 2)
+
+
+class TestGlanceUrl(test.TestCase):
+
+    def test_generate_glance_http_url(self):
+        generated_url = glance.generate_glance_url()
+        http_url = "http://%s:%d" % (CONF.glance_host, CONF.glance_port)
+        self.assertEqual(generated_url, http_url)
+
+    def test_generate_glance_https_url(self):
+        self.flags(glance_protocol="https")
+        generated_url = glance.generate_glance_url()
+        https_url = "https://%s:%d" % (CONF.glance_host, CONF.glance_port)
+        self.assertEqual(generated_url, https_url)

@@ -1326,7 +1326,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # This instance.exists message should contain the original
             # image_ref, not the new one.  Since the DB has been updated
             # to point to the new one... we have to override it.
-            orig_image_ref_url = utils.generate_image_url(orig_image_ref)
+            orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
             compute_utils.notify_usage_exists(context, instance,
                     current_period=True, system_metadata=orig_sys_metadata,

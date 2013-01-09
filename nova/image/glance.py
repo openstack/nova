@@ -36,6 +36,16 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
 glance_opts = [
+    cfg.StrOpt('glance_host',
+               default='$my_ip',
+               help='default glance hostname or ip'),
+    cfg.IntOpt('glance_port',
+               default=9292,
+               help='default glance port'),
+    cfg.StrOpt('glance_protocol',
+                default='http',
+                help='Default protocol to use when connecting to glance. '
+                     'Set to https for SSL.'),
     cfg.ListOpt('glance_api_servers',
                 default=['$glance_host:$glance_port'],
                 help='A list of the glance api servers available to nova. '
@@ -54,6 +64,18 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.register_opts(glance_opts)
 CONF.import_opt('auth_strategy', 'nova.api.auth')
+CONF.import_opt('my_ip', 'nova.config')
+
+
+def generate_glance_url():
+    """Generate the URL to glance."""
+    return "%s://%s:%d" % (CONF.glance_protocol, CONF.glance_host,
+                           CONF.glance_port)
+
+
+def generate_image_url(image_ref):
+    """Generate an image URL from an image_ref."""
+    return "%s/images/%s" % (generate_glance_url(), image_ref)
 
 
 def _parse_image_ref(image_href):
