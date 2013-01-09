@@ -3090,6 +3090,16 @@ class LibvirtDriver(driver.ComputeDriver):
         """only used for Resource Pools"""
         pass
 
+    def instance_on_disk(self, instance):
+        # ensure directories exist and are writable
+        instance_path = os.path.join(CONF.instances_path, instance["name"])
+
+        LOG.debug(_('Checking instance files accessability'
+                   '%(instance_path)s')
+                 % locals())
+
+        return os.access(instance_path, os.W_OK)
+
 
 class HostState(object):
     """Manages information about the compute node through libvirt"""
