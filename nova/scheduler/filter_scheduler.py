@@ -298,3 +298,30 @@ class FilterScheduler(driver.Scheduler):
             # will change for the next instance.
             best_host.obj.consume_from_instance(instance_properties)
         return selected_hosts
+
+    def _assert_compute_node_has_enough_memory(self, context,
+                                              instance_ref, dest):
+        """Checks if destination host has enough memory for live migration.
+
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
+        """
+        compute = self._get_compute_info(context, dest)
+        node = compute.get('hypervisor_hostname')
+        host_state = self.host_manager.host_state_cls(dest, node)
+        host_state.update_from_compute_node(compute)
+
+        instance_type = instance_ref['instance_type']
+        filter_properties = {'instance_type': instance_type}
+
+        hosts = self.host_manager.get_filtered_hosts([host_state],
+                                                     filter_properties,
+                                                     'RamFilter')
+        if not hosts:
+            instance_uuid = instance_ref['uuid']
+            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
+                       "Lack of memory")
+            raise exception.MigrationError(reason=reason % locals())

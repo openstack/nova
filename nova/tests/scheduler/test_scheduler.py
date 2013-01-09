@@ -322,7 +322,8 @@ class SchedulerTestCase(test.TestCase):
                 'root_gb': 1024,
                 'ephemeral_gb': 0,
                 'vm_state': '',
-                'task_state': ''}
+                'task_state': '',
+                'instance_type': {'memory_mb': 1024}}
 
     def test_live_migration_basic(self):
         # Test basic schedule_live_migration functionality.
@@ -361,9 +362,7 @@ class SchedulerTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         self.mox.StubOutWithMock(rpc, 'call')
-        self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(self.driver.compute_rpcapi,
                                  'live_migration')
 
@@ -384,9 +383,14 @@ class SchedulerTestCase(test.TestCase):
         # assert_compute_node_has_enough_memory()
         db.service_get_by_compute_host(self.context, dest).AndReturn(
                 {'compute_node': [{'memory_mb': 2048,
+                                   'free_disk_gb': 512,
+                                   'local_gb_used': 512,
+                                   'free_ram_mb': 1280,
+                                   'local_gb': 1024,
+                                   'vcpus': 4,
+                                   'vcpus_used': 2,
+                                   'updated_at': None,
                                    'hypervisor_version': 1}]})
-        db.instance_get_all_by_host(self.context, dest).AndReturn(
-                [dict(memory_mb=256), dict(memory_mb=512)])
 
         # Common checks (same hypervisor, etc)
         db.service_get_by_compute_host(self.context, dest).AndReturn(
@@ -529,11 +533,14 @@ class SchedulerTestCase(test.TestCase):
     def test_live_migration_dest_check_service_lack_memory(self):
         # Confirms exception raises when dest doesn't have enough memory.
 
+        # Flag needed to make FilterScheduler test hit memory limit since the
+        # default for it is to allow memory overcommit by a factor of 1.5.
+        self.flags(ram_allocation_ratio=1.0)
+
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
 
         dest = 'fake_host2'
         block_migration = False
@@ -546,9 +553,14 @@ class SchedulerTestCase(test.TestCase):
         self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
 
         self.driver._get_compute_info(self.context, dest).AndReturn(
-                                                       {'memory_mb': 2048})
-        db.instance_get_all_by_host(self.context, dest).AndReturn(
-                [dict(memory_mb=1024), dict(memory_mb=512)])
+                                                       {'memory_mb': 2048,
+                                                        'free_disk_gb': 512,
+                                                        'local_gb_used': 512,
+                                                        'free_ram_mb': 512,
+                                                        'local_gb': 1024,
+                                                        'vcpus': 4,
+                                                        'vcpus_used': 2,
+                                                        'updated_at': None})
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationError,
