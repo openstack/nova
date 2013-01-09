@@ -51,7 +51,7 @@ class FlavorExtraSpecsController(object):
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
-        """Returns the list of extra specs for a givenflavor."""
+        """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
         authorize(context)
         return self._get_extra_specs(context, flavor_id)
