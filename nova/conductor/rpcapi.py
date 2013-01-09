@@ -56,6 +56,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.22 - Added ping
     1.23 - Added instance_get_all
            Un-Deprecate instance_get_all_by_host
+    1.24 - Added instance_get
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -76,6 +77,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
                                        updates=updates_p))
+
+    def instance_get(self, context, instance_id):
+        msg = self.make_msg('instance_get',
+                            instance_id=instance_id)
+        return self.call(context, msg, version='1.24')
 
     def instance_get_by_uuid(self, context, instance_uuid):
         msg = self.make_msg('instance_get_by_uuid',

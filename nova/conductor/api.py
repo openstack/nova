@@ -75,6 +75,9 @@ class LocalAPI(object):
         """Perform an instance update in the database"""
         return self._manager.instance_update(context, instance_uuid, updates)
 
+    def instance_get(self, context, instance_id):
+        return self._manager.instance_get(context, instance_id)
+
     def instance_get_by_uuid(self, context, instance_uuid):
         return self._manager.instance_get_by_uuid(context, instance_uuid)
 
@@ -251,6 +254,9 @@ class API(object):
 
     def instance_destroy(self, context, instance):
         return self.conductor_rpcapi.instance_destroy(context, instance)
+
+    def instance_get(self, context, instance_id):
+        return self.conductor_rpcapi.instance_get(context, instance_id)
 
     def instance_get_by_uuid(self, context, instance_uuid):
         return self.conductor_rpcapi.instance_get_by_uuid(context,

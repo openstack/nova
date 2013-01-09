@@ -3110,6 +3110,149 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(timeouts.count(10), 10)
         self.assertTrue(None in timeouts)
 
+    def test_init_host_with_evacuated_instances_uuid_list(self):
+        # creating testdata
+        c = context.get_admin_context()
+
+        # instances in central db
+        instances = [
+            # those are still related to this host
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host}))
+        ]
+
+        # those are already been evacuated to other host
+        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+
+        # creating mocks
+        self.mox.StubOutWithMock(self.compute.driver, 'init_host')
+
+        self.compute.driver.init_host(host=self.compute.host)
+
+        def fake_get_admin_context():
+            return c
+
+        def fake_all(*args, **kwargs):
+            pass
+
+        def fake_list_instance_uuids():
+            return [
+                     # those are still related to this host
+                     instances[0]['uuid'],
+                     instances[1]['uuid'],
+                     instances[2]['uuid'],
+                     # and this one already been evacuated to other host
+                     evacuated_instance['uuid']
+                    ]
+
+        def fake_destroy(instance, nw, bdi, destroyDisks):
+            self.assertFalse(destroyDisks)
+            self.assertEqual(instance['uuid'], evacuated_instance['uuid'])
+
+        self.stubs.Set(nova.context,
+                       'get_admin_context',
+                       fake_get_admin_context)
+        self.stubs.Set(self.compute.driver, 'filter_defer_apply_on', fake_all)
+        self.stubs.Set(self.compute.driver,
+                       'list_instance_uuids',
+                       fake_list_instance_uuids)
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_all)
+        self.stubs.Set(self.compute, '_get_instance_volume_block_device_info',
+                       fake_all)
+        self.stubs.Set(self.compute.driver, 'destroy', fake_destroy)
+        self.stubs.Set(self.compute, '_legacy_nw_info', fake_all)
+        self.stubs.Set(self.compute, '_init_instance', fake_all)
+
+        self.stubs.Set(self.compute.driver, 'filter_defer_apply_off', fake_all)
+        self.stubs.Set(self.compute, '_report_driver_status', fake_all)
+        self.stubs.Set(self.compute, 'publish_service_capabilities', fake_all)
+        # start test
+        self.mox.ReplayAll()
+        self.compute.init_host()
+
+        db.instance_destroy(c, evacuated_instance['uuid'])
+        for instance in instances:
+            db.instance_destroy(c, instance['uuid'])
+
+    def test_init_host_with_evacuated_instances_names_list(self):
+        # creating testdata
+        c = context.get_admin_context()
+
+        # instances in central db
+        instances = [
+            # those are still related to this host
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                                {'host': self.compute.host}))
+        ]
+
+        # those are already been evacuated to other host
+        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+
+        # creating mocks
+        self.mox.StubOutWithMock(self.compute.driver, 'init_host')
+
+        self.compute.driver.init_host(host=self.compute.host)
+
+        def fake_get_admin_context():
+            return c
+
+        def fake_all(*args, **kwargs):
+            pass
+
+        def fake_list_instances():
+            return [
+                     # those are still related to this host
+                     CONF.instance_name_template % instances[0]['id'],
+                     CONF.instance_name_template % instances[1]['id'],
+                     CONF.instance_name_template % instances[2]['id'],
+                     # and this one already been evacuated to other host
+                     CONF.instance_name_template % evacuated_instance['id']
+                    ]
+
+        def fake_list_instance_uuids():
+            raise NotImplementedError()
+
+        def fake_destroy(instance, nw, bdi, destroyDisks):
+            self.assertFalse(destroyDisks)
+            self.assertEqual(instance['uuid'], evacuated_instance['uuid'])
+
+        self.stubs.Set(nova.context,
+                       'get_admin_context',
+                       fake_get_admin_context)
+        self.stubs.Set(self.compute.driver, 'filter_defer_apply_on', fake_all)
+        self.stubs.Set(self.compute.driver,
+                       'list_instances',
+                       fake_list_instances)
+        self.stubs.Set(self.compute.driver,
+                       'list_instance_uuids',
+                       fake_list_instance_uuids)
+
+        self.stubs.Set(self.compute, '_get_instance_nw_info', fake_all)
+        self.stubs.Set(self.compute, '_get_instance_volume_block_device_info',
+                       fake_all)
+        self.stubs.Set(self.compute.driver, 'destroy', fake_destroy)
+        self.stubs.Set(self.compute, '_legacy_nw_info', fake_all)
+        self.stubs.Set(self.compute, '_init_instance', fake_all)
+
+        self.stubs.Set(self.compute.driver, 'filter_defer_apply_off', fake_all)
+        self.stubs.Set(self.compute, '_report_driver_status', fake_all)
+        self.stubs.Set(self.compute, 'publish_service_capabilities', fake_all)
+        # start test
+        self.mox.ReplayAll()
+        self.compute.init_host()
+
+        db.instance_destroy(c, evacuated_instance['uuid'])
+        for instance in instances:
+            db.instance_destroy(c, instance['uuid'])
+
 
 class ComputeAPITestCase(BaseTestCase):
 

@@ -167,6 +167,13 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def list_instance_uuids(self):
+        """
+        Return the UUIDS of all the instances known to the virtualization
+        layer, as a list.
+        """
+        raise NotImplementedError()
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """
