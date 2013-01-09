@@ -109,7 +109,7 @@ class RootwrapTestCase(test.TestCase):
             p.wait()
 
     def test_KillFilter_no_raise(self):
-        """Makes sure ValueError from bug 926412 is gone"""
+        # Makes sure ValueError from bug 926412 is gone.
         f = filters.KillFilter("root", "")
         # Providing anything other than kill should be False
         usercmd = ['notkill', 999999]
@@ -119,7 +119,7 @@ class RootwrapTestCase(test.TestCase):
         self.assertFalse(f.match(usercmd))
 
     def test_KillFilter_deleted_exe(self):
-        """Makes sure deleted exe's are killed correctly"""
+        # Makes sure deleted exe's are killed correctly.
         # See bug #967931.
         def fake_readlink(blah):
             return '/bin/commandddddd (deleted)'

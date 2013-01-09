@@ -151,7 +151,7 @@ class MetadataTestCase(test.TestCase):
             "%s.%s" % (self.instance['hostname'], CONF.dhcp_domain))
 
     def test_format_instance_mapping(self):
-        """Make sure that _format_instance_mappings works"""
+        # Make sure that _format_instance_mappings works.
         ctxt = None
         instance_ref0 = {'id': 0,
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',

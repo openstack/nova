@@ -26,7 +26,7 @@ from nova.tests.cells import fakes
 
 
 class CellsManagerClassTestCase(test.TestCase):
-    """Test case for CellsManager class"""
+    """Test case for CellsManager class."""
 
     def setUp(self):
         super(CellsManagerClassTestCase, self).setUp()

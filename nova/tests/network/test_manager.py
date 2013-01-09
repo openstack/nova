@@ -1030,7 +1030,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertFalse(fixed['allocated'])
 
     def test_deallocate_fixed_deleted(self):
-        """Verify doesn't deallocate deleted fixed_ip from deleted network"""
+        # Verify doesn't deallocate deleted fixed_ip from deleted network.
 
         def network_get(_context, network_id, project_only="allow_none"):
             return networks[network_id]
@@ -1094,7 +1094,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
 
     def test_fixed_ip_cleanup_fail(self):
-        """Verify IP is not deallocated if the security group refresh fails."""
+        # Verify IP is not deallocated if the security group refresh fails.
         def network_get(_context, network_id, project_only="allow_none"):
             return networks[network_id]
 
@@ -1534,11 +1534,11 @@ class CommonNetworkTestCase(test.TestCase):
 
 class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
         network_manager.NetworkManager):
-    """Dummy manager that implements RPCAllocateFixedIP"""
+    """Dummy manager that implements RPCAllocateFixedIP."""
 
 
 class RPCAllocateTestCase(test.TestCase):
-    """Tests nova.network.manager.RPCAllocateFixedIP"""
+    """Tests nova.network.manager.RPCAllocateFixedIP."""
     def setUp(self):
         super(RPCAllocateTestCase, self).setUp()
         self.rpc_fixed = TestRPCFixedManager()
@@ -1566,7 +1566,7 @@ class RPCAllocateTestCase(test.TestCase):
 
 
 class BackdoorPortTestCase(test.TestCase):
-    """Tests nova.network.manager.get_backdoor_port"""
+    """Tests nova.network.manager.get_backdoor_port."""
     def setUp(self):
         super(BackdoorPortTestCase, self).setUp()
         self.manager = network_manager.NetworkManager()
@@ -1580,7 +1580,7 @@ class BackdoorPortTestCase(test.TestCase):
 
 class TestFloatingIPManager(network_manager.FloatingIP,
         network_manager.NetworkManager):
-    """Dummy manager that implements FloatingIP"""
+    """Dummy manager that implements FloatingIP."""
 
 
 class AllocateTestCase(test.TestCase):
@@ -1624,7 +1624,7 @@ class AllocateTestCase(test.TestCase):
 
 
 class FloatingIPTestCase(test.TestCase):
-    """Tests nova.network.manager.FloatingIP"""
+    """Tests nova.network.manager.FloatingIP."""
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
         self.tempdir = tempfile.mkdtemp()
@@ -2023,7 +2023,7 @@ class FloatingIPTestCase(test.TestCase):
         self.network.delete_dns_domain(context_admin, domain2)
 
     def test_mac_conflicts(self):
-        """Make sure MAC collisions are retried"""
+        # Make sure MAC collisions are retried.
         self.flags(create_unique_mac_address_attempts=3)
         ctxt = context.RequestContext('testuser', 'testproject', is_admin=True)
         macs = ['bb:bb:bb:bb:bb:bb', 'aa:aa:aa:aa:aa:aa']
@@ -2055,7 +2055,7 @@ class FloatingIPTestCase(test.TestCase):
         self.assertEqual(macs, [])
 
     def test_deallocate_client_exceptions(self):
-        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        # Ensure that FloatingIpNotFoundForAddress is wrapped.
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
@@ -2066,7 +2066,7 @@ class FloatingIPTestCase(test.TestCase):
                           self.context, '1.2.3.4')
 
     def test_associate_client_exceptions(self):
-        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        # Ensure that FloatingIpNotFoundForAddress is wrapped.
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
@@ -2077,7 +2077,7 @@ class FloatingIPTestCase(test.TestCase):
                           self.context, '1.2.3.4', '10.0.0.1')
 
     def test_disassociate_client_exceptions(self):
-        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        # Ensure that FloatingIpNotFoundForAddress is wrapped.
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get_by_address')
         self.network.db.floating_ip_get_by_address(
             self.context, '1.2.3.4').AndRaise(
@@ -2088,7 +2088,7 @@ class FloatingIPTestCase(test.TestCase):
                           self.context, '1.2.3.4')
 
     def test_get_floating_ip_client_exceptions(self):
-        """Ensure that FloatingIpNotFoundForAddress is wrapped"""
+        # Ensure that FloatingIpNotFoundForAddress is wrapped.
         self.mox.StubOutWithMock(self.network.db, 'floating_ip_get')
         self.network.db.floating_ip_get(self.context, 'fake-id').AndRaise(
             exception.FloatingIpNotFound(id='fake'))
@@ -2123,7 +2123,7 @@ class NetworkPolicyTestCase(test.TestCase):
 
 
 class InstanceDNSTestCase(test.TestCase):
-    """Tests nova.network.manager instance DNS"""
+    """Tests nova.network.manager instance DNS."""
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()
         self.tempdir = tempfile.mkdtemp()
@@ -2166,7 +2166,7 @@ domain2 = "example.com"
 
 
 class LdapDNSTestCase(test.TestCase):
-    """Tests nova.network.ldapdns.LdapDNS"""
+    """Tests nova.network.ldapdns.LdapDNS."""
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 

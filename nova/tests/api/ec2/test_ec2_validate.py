@@ -176,7 +176,7 @@ class EC2ValidateTestCase(test.TestCase):
 
 
 class EC2TimestampValidationTestCase(test.TestCase):
-    """Test case for EC2 request timestamp validation"""
+    """Test case for EC2 request timestamp validation."""
 
     def test_validate_ec2_timestamp_valid(self):
         params = {'Timestamp': '2011-04-22T11:29:49Z'}

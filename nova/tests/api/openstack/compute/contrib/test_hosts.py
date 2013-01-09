@@ -70,13 +70,13 @@ def stub_host_power_action(context, host, action):
 
 
 def _create_instance(**kwargs):
-    """Create a test instance"""
+    """Create a test instance."""
     ctxt = context.get_admin_context()
     return db.instance_create(ctxt, _create_instance_dict(**kwargs))
 
 
 def _create_instance_dict(**kwargs):
-    """Create a dictionary for a test instance"""
+    """Create a dictionary for a test instance."""
     inst = {}
     inst['image_ref'] = 'cedef40a-ed67-4d10-800e-17455edce175'
     inst['reservation_id'] = 'r-fakeres'
@@ -130,7 +130,7 @@ class HostTestCase(test.TestCase):
         self.assertEqual(result[key], expected_value)
 
     def test_list_hosts(self):
-        """Verify that the compute hosts are returned."""
+        # Verify that the compute hosts are returned.
         hosts = os_hosts._list_hosts(self.req)
         self.assertEqual(hosts, HOST_LIST['hosts'])
 
@@ -235,7 +235,7 @@ class HostTestCase(test.TestCase):
         self.req.environ["nova.context"].is_admin = True
 
     def test_show_host_not_exist(self):
-        """A host given as an argument does not exists."""
+        # A host given as an argument does not exists.
         self.req.environ["nova.context"].is_admin = True
         dest = 'dummydest'
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -259,7 +259,7 @@ class HostTestCase(test.TestCase):
         return db.service_get(ctxt, s_ref['id'])
 
     def test_show_no_project(self):
-        """No instance are running on the given host."""
+        # No instance are running on the given host.
         ctxt = context.get_admin_context()
         s_ref = self._create_compute_service()
 
@@ -275,7 +275,7 @@ class HostTestCase(test.TestCase):
         db.service_destroy(ctxt, s_ref['id'])
 
     def test_show_works_correctly(self):
-        """show() works correctly as expected."""
+        # show() works correctly as expected.
         ctxt = context.get_admin_context()
         s_ref = self._create_compute_service()
         i_ref1 = _create_instance(project_id='p-01', host=s_ref['host'])

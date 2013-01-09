@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for compute resource tracking"""
+"""Tests for compute resource tracking."""
 
 import uuid
 
@@ -38,7 +38,7 @@ FAKE_VIRT_VCPUS = 1
 
 
 class UnsupportedVirtDriver(driver.ComputeDriver):
-    """Pretend version of a lame virt driver"""
+    """Pretend version of a lame virt driver."""
 
     def __init__(self):
         super(UnsupportedVirtDriver, self).__init__(None)
@@ -363,7 +363,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _limits(self, memory_mb=FAKE_VIRT_MEMORY_MB,
                 disk_gb=FAKE_VIRT_LOCAL_GB, vcpus=FAKE_VIRT_VCPUS):
-        """Create limits dictionary used for oversubscribing resources"""
+        """Create limits dictionary used for oversubscribing resources."""
 
         return {
             'memory_mb': memory_mb,

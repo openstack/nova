@@ -855,7 +855,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(servers[0]['id'], server_uuid)
 
     def test_get_servers_invalid_status(self):
-        """Test getting servers by invalid status"""
+        # Test getting servers by invalid status.
         req = fakes.HTTPRequest.blank('/v2/fake/servers?status=baloney',
                                       use_admin_context=False)
         servers = self.controller.index(req)['servers']
@@ -1686,7 +1686,7 @@ class ServerStatusTest(test.TestCase):
 class ServersControllerCreateTest(test.TestCase):
 
     def setUp(self):
-        """Shared implementation for tests below that create instance"""
+        """Shared implementation for tests below that create instance."""
         super(ServersControllerCreateTest, self).setUp()
 
         self.flags(verbose=True,
@@ -1735,7 +1735,7 @@ class ServersControllerCreateTest(test.TestCase):
             return self.instance_cache_by_id[instance_id]
 
         def rpc_call_wrapper(context, topic, msg, timeout=None):
-            """Stub out the scheduler creating the instance entry"""
+            """Stub out the scheduler creating the instance entry."""
             if (topic == CONF.scheduler_topic and
                 msg['method'] == 'run_instance'):
                 request_spec = msg['args']['request_spec']
@@ -5264,7 +5264,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
         self.app = compute.APIRouter()
 
     def test_create_missing_server(self):
-        """Test create with malformed body"""
+        # Test create with malformed body.
 
         def fake_create(*args, **kwargs):
             raise test.TestingException("Should not reach the compute API.")
@@ -5281,7 +5281,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
         self.assertEqual(422, res.status_int)
 
     def test_update_missing_server(self):
-        """Test create with malformed body"""
+        # Test create with malformed body.
 
         def fake_update(*args, **kwargs):
             raise test.TestingException("Should not reach the compute API.")

@@ -265,7 +265,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
             'dev/sd')
 
     def test_attach_volume(self):
-        """This shows how to test Ops classes' methods."""
+        # This shows how to test Ops classes' methods.
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         instance = db.instance_create(self.context, self.instance_values)
@@ -281,7 +281,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         self.assertEqual(vm_ref, vm)
 
     def test_attach_volume_raise_exception(self):
-        """This shows how to test when exceptions are raised."""
+        # This shows how to test when exceptions are raised.
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -636,7 +636,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertTrue(instance['architecture'])
 
     def test_spawn_empty_dns(self):
-        """Test spawning with an empty dns list"""
+        # Test spawning with an empty dns list.
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64",
                          empty_dns=True)
@@ -858,7 +858,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                               str(3 * 10 * 1024))
 
     def test_spawn_injected_files(self):
-        """Test spawning with injected_files"""
+        # Test spawning with injected_files.
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
@@ -1340,7 +1340,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               network_info, image_meta, resize_instance=False)
 
     def test_migrate_no_auto_disk_config_no_resize_down(self):
-        """Resize down should fail when auto_disk_config not set"""
+        # Resize down should fail when auto_disk_config not set.
         instance_values = self.instance_values
         instance_values['root_gb'] = 40
         instance_values['auto_disk_config'] = False
@@ -1358,7 +1358,7 @@ class XenAPIImageTypeTestCase(test.TestCase):
     """Test ImageType class."""
 
     def test_to_string(self):
-        """Can convert from type id to type string."""
+        # Can convert from type id to type string.
         self.assertEquals(
             vm_utils.ImageType.to_string(vm_utils.ImageType.KERNEL),
             vm_utils.ImageType.KERNEL_STR)
@@ -1439,23 +1439,23 @@ class XenAPIDetermineIsPVTestCase(test.TestCase):
 
 class CompareVersionTestCase(test.TestCase):
     def test_less_than(self):
-        """Test that cmp_version compares a as less than b"""
+        # Test that cmp_version compares a as less than b.
         self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
 
     def test_greater_than(self):
-        """Test that cmp_version compares a as greater than b"""
+        # Test that cmp_version compares a as greater than b.
         self.assertTrue(vmops.cmp_version('1.2.3.5', '1.2.3.4') > 0)
 
     def test_equal(self):
-        """Test that cmp_version compares a as equal to b"""
+        # Test that cmp_version compares a as equal to b.
         self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.4') == 0)
 
     def test_non_lexical(self):
-        """Test that cmp_version compares non-lexically"""
+        # Test that cmp_version compares non-lexically.
         self.assertTrue(vmops.cmp_version('1.2.3.10', '1.2.3.4') > 0)
 
     def test_length(self):
-        """Test that cmp_version compares by length as last resort"""
+        # Test that cmp_version compares by length as last resort.
         self.assertTrue(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
@@ -1619,7 +1619,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
     @stub_vm_utils_with_vdi_attached_here
     def test_instance_auto_disk_config_doesnt_pass_fail_safes(self):
-        """Should not partition unless fail safes pass"""
+        # Should not partition unless fail safes pass.
         self.instance_values['auto_disk_config'] = True
 
         def fake_get_partitions(dev):
@@ -1645,7 +1645,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
 
 class XenAPIGenerateLocal(stubs.XenAPITestBase):
-    """Test generating of local disks, like swap and ephemeral"""
+    """Test generating of local disks, like swap and ephemeral."""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
         self.flags(xenapi_connection_url='test_url',
@@ -1697,7 +1697,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.assertTrue(self.called)
 
     def test_generate_swap(self):
-        """Test swap disk generation."""
+        # Test swap disk generation.
         instance = db.instance_create(self.context, self.instance_values)
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 5})
@@ -1714,7 +1714,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.assertCalled(instance)
 
     def test_generate_ephemeral(self):
-        """Test ephemeral disk generation."""
+        # Test ephemeral disk generation.
         instance = db.instance_create(self.context, self.instance_values)
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 4})
@@ -2136,7 +2136,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
     """Unit tests for testing we find the right SR."""
     def test_safe_find_sr_raise_exception(self):
-        """Ensure StorageRepositoryNotFound is raise when wrong filter."""
+        # Ensure StorageRepositoryNotFound is raise when wrong filter.
         self.flags(sr_matching_filter='yadayadayada')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
@@ -2145,7 +2145,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
                           vm_utils.safe_find_sr, session)
 
     def test_safe_find_sr_local_storage(self):
-        """Ensure the default local-storage is found."""
+        # Ensure the default local-storage is found.
         self.flags(sr_matching_filter='other-config:i18n-key=local-storage')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
@@ -2162,7 +2162,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_by_other_criteria(self):
-        """Ensure the SR is found when using a different filter."""
+        # Ensure the SR is found when using a different filter.
         self.flags(sr_matching_filter='other-config:my_fake_sr=true')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
@@ -2176,7 +2176,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_default(self):
-        """Ensure the default SR is found regardless of other-config."""
+        # Ensure the default SR is found regardless of other-config.
         self.flags(sr_matching_filter='default-sr:true')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
@@ -2283,7 +2283,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                         matchers.DictMatches(result['metadetails']))
 
     def test_join_slave(self):
-        """Ensure join_slave gets called when the request gets to master."""
+        # Ensure join_slave gets called when the request gets to master.
         def fake_join_slave(id, compute_uuid, host, url, user, password):
             fake_join_slave.called = True
         self.stubs.Set(self.conn._pool, "_join_slave", fake_join_slave)
@@ -2338,7 +2338,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                           self.context, result, "test_host")
 
     def test_remove_slave(self):
-        """Ensure eject slave gets called."""
+        # Ensure eject slave gets called.
         def fake_eject_slave(id, compute_uuid, host_uuid):
             fake_eject_slave.called = True
         self.stubs.Set(self.conn._pool, "_eject_slave", fake_eject_slave)
@@ -2350,7 +2350,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.assertTrue(fake_eject_slave.called)
 
     def test_remove_master_solo(self):
-        """Ensure metadata are cleared after removal."""
+        # Ensure metadata are cleared after removal.
         def fake_clear_pool(id):
             fake_clear_pool.called = True
         self.stubs.Set(self.conn._pool, "_clear_pool", fake_clear_pool)
@@ -2365,7 +2365,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                 matchers.DictMatches(result['metadetails']))
 
     def test_remote_master_non_empty_pool(self):
-        """Ensure AggregateError is raised if removing the master."""
+        # Ensure AggregateError is raised if removing the master.
         aggregate = self._aggregate_setup(hosts=['host', 'host2'],
                                           metadata=self.fake_metadata)
 
@@ -2415,7 +2415,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                           aggregate, 'fake_host')
 
     def test_remove_host_from_aggregate_error(self):
-        """Ensure we can remove a host from an aggregate even if in error."""
+        # Ensure we can remove a host from an aggregate even if in error.
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         aggr = self.api.create_aggregate(self.context,
@@ -2453,7 +2453,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                           aggregate, 'fake_host')
 
     def test_add_aggregate_host_raise_err(self):
-        """Ensure the undo operation works correctly on add."""
+        # Ensure the undo operation works correctly on add.
         def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):
             raise exception.AggregateError(
                     aggregate_id='', action='', reason='')
@@ -2492,7 +2492,7 @@ class MockComputeAPI(object):
 
 
 class StubDependencies(object):
-    """Stub dependencies for ResourcePool"""
+    """Stub dependencies for ResourcePool."""
 
     def __init__(self):
         self.compute_rpcapi = MockComputeAPI()
@@ -2511,7 +2511,7 @@ class StubDependencies(object):
 
 
 class ResourcePoolWithStubs(StubDependencies, pool.ResourcePool):
-    """A ResourcePool, use stub dependencies """
+    """A ResourcePool, use stub dependencies."""
 
 
 class HypervisorPoolTestCase(test.TestCase):

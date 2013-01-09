@@ -101,7 +101,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         return request
 
     def test_empty_index_json(self):
-        """Test getting empty limit details in JSON."""
+        # Test getting empty limit details in JSON.
         request = self._get_index_request()
         response = request.get_response(self.controller)
         expected = {
@@ -114,7 +114,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         self.assertEqual(expected, body)
 
     def test_index_json(self):
-        """Test getting limit details in JSON."""
+        # Test getting limit details in JSON.
         request = self._get_index_request()
         request = self._populate_limits(request)
         self.absolute_limits = {
@@ -189,7 +189,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         return request
 
     def test_index_diff_regex(self):
-        """Test getting limit details in JSON."""
+        # Test getting limit details in JSON.
         request = self._get_index_request()
         request = self._populate_limits_diff_regex(request)
         response = request.get_response(self.controller)
@@ -308,17 +308,17 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
                                                  self.__class__.__module__)
 
     def test_limit_class(self):
-        """Test that middleware selected correct limiter class."""
+        # Test that middleware selected correct limiter class.
         assert isinstance(self.app._limiter, TestLimiter)
 
     def test_good_request(self):
-        """Test successful GET request through middleware."""
+        # Test successful GET request through middleware.
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
         self.assertEqual(200, response.status_int)
 
     def test_limited_request_json(self):
-        """Test a rate-limited (413) GET request through middleware."""
+        # Test a rate-limited (413) GET request through middleware.
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
         self.assertEqual(200, response.status_int)
@@ -341,7 +341,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         self.assertEqual(retryAfter, "60")
 
     def test_limited_request_xml(self):
-        """Test a rate-limited (413) response as XML"""
+        # Test a rate-limited (413) response as XML.
         request = webob.Request.blank("/")
         response = request.get_response(self.app)
         self.assertEqual(200, response.status_int)
@@ -371,7 +371,7 @@ class LimitTest(BaseLimitTestSuite):
     """
 
     def test_GET_no_delay(self):
-        """Test a limit handles 1 GET per second."""
+        # Test a limit handles 1 GET per second.
         limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
         self.assertEqual(None, delay)
@@ -379,7 +379,7 @@ class LimitTest(BaseLimitTestSuite):
         self.assertEqual(0, limit.last_request)
 
     def test_GET_delay(self):
-        """Test two calls to 1 GET per second limit."""
+        # Test two calls to 1 GET per second limit.
         limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
         self.assertEqual(None, delay)
@@ -404,32 +404,32 @@ class ParseLimitsTest(BaseLimitTestSuite):
     """
 
     def test_invalid(self):
-        """Test that parse_limits() handles invalid input correctly."""
+        # Test that parse_limits() handles invalid input correctly.
         self.assertRaises(ValueError, limits.Limiter.parse_limits,
                           ';;;;;')
 
     def test_bad_rule(self):
-        """Test that parse_limits() handles bad rules correctly."""
+        # Test that parse_limits() handles bad rules correctly.
         self.assertRaises(ValueError, limits.Limiter.parse_limits,
                           'GET, *, .*, 20, minute')
 
     def test_missing_arg(self):
-        """Test that parse_limits() handles missing args correctly."""
+        # Test that parse_limits() handles missing args correctly.
         self.assertRaises(ValueError, limits.Limiter.parse_limits,
                           '(GET, *, .*, 20)')
 
     def test_bad_value(self):
-        """Test that parse_limits() handles bad values correctly."""
+        # Test that parse_limits() handles bad values correctly.
         self.assertRaises(ValueError, limits.Limiter.parse_limits,
                           '(GET, *, .*, foo, minute)')
 
     def test_bad_unit(self):
-        """Test that parse_limits() handles bad units correctly."""
+        # Test that parse_limits() handles bad units correctly.
         self.assertRaises(ValueError, limits.Limiter.parse_limits,
                           '(GET, *, .*, 20, lightyears)')
 
     def test_multiple_rules(self):
-        """Test that parse_limits() handles multiple rules correctly."""
+        # Test that parse_limits() handles multiple rules correctly.
         try:
             l = limits.Limiter.parse_limits('(get, *, .*, 20, minute);'
                                             '(PUT, /foo*, /foo.*, 10, hour);'
@@ -493,9 +493,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(delay, (None, None))
 
     def test_no_delay_PUT(self):
-        """
-        Simple test to ensure no delay on a single call for a known limit.
-        """
+        # Simple test to ensure no delay on a single call for a known limit.
         delay = self.limiter.check_for_delay("PUT", "/anything")
         self.assertEqual(delay, (None, None))
 
@@ -523,9 +521,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.failUnlessAlmostEqual(expected, results, 8)
 
     def test_delay_GET(self):
-        """
-        Ensure the 11th GET will result in NO delay.
-        """
+        # Ensure the 11th GET will result in NO delay.
         expected = [None] * 11
         results = list(self._check(11, "GET", "/anything"))
 
@@ -564,9 +560,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(expected, results)
 
     def test_multiple_delays(self):
-        """
-        Ensure multiple requests still get a delay.
-        """
+        # Ensure multiple requests still get a delay.
         expected = [None] * 10 + [6.0] * 10
         results = list(self._check(20, "PUT", "/anything"))
         self.assertEqual(expected, results)
@@ -578,15 +572,11 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(expected, results)
 
     def test_user_limit(self):
-        """
-        Test user-specific limits.
-        """
+        # Test user-specific limits.
         self.assertEqual(self.limiter.levels['user3'], [])
 
     def test_multiple_users(self):
-        """
-        Tests involving multiple users.
-        """
+        # Tests involving multiple users.
         # User1
         expected = [None] * 10 + [6.0] * 10
         results = list(self._check(20, "PUT", "/anything", "user1"))
@@ -652,7 +642,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
         self.assertEqual(response.status_int, 204)
 
     def test_invalid_methods(self):
-        """Only POSTs should work."""
+        # Only POSTs should work.
         requests = []
         for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
             request = webob.Request.blank("/", method=method)
@@ -794,12 +784,12 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
         self.proxy = limits.WsgiLimiterProxy("169.254.0.1:80")
 
     def test_200(self):
-        """Successful request test."""
+        # Successful request test.
         delay = self.proxy.check_for_delay("GET", "/anything")
         self.assertEqual(delay, (None, None))
 
     def test_403(self):
-        """Forbidden request test."""
+        # Forbidden request test.
         delay = self.proxy.check_for_delay("GET", "/delayed")
         self.assertEqual(delay, (None, None))
 

@@ -45,7 +45,7 @@ class FakeDefaultScheduler(driver.Scheduler):
 
 
 class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
-    """Test case for multi driver"""
+    """Test case for multi driver."""
 
     driver_cls = multi.MultiScheduler
 

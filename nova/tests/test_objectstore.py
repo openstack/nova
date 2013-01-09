@@ -94,11 +94,11 @@ class S3APITestCase(test.TestCase):
         return True
 
     def test_list_buckets(self):
-        """Make sure we are starting with no buckets."""
+        # Make sure we are starting with no buckets.
         self._ensure_no_buckets(self.conn.get_all_buckets())
 
     def test_create_and_delete_bucket(self):
-        """Test bucket creation and deletion."""
+        # Test bucket creation and deletion.
         bucket_name = 'testbucket'
 
         self.conn.create_bucket(bucket_name)
@@ -107,7 +107,7 @@ class S3APITestCase(test.TestCase):
         self._ensure_no_buckets(self.conn.get_all_buckets())
 
     def test_create_bucket_and_key_and_delete_key_again(self):
-        """Test key operations on buckets."""
+        # Test key operations on buckets.
         bucket_name = 'testbucket'
         key_name = 'somekey'
         key_contents = 'somekey'

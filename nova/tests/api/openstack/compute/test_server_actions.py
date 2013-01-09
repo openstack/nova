@@ -796,7 +796,7 @@ class ServerActionsControllerTest(test.TestCase):
                                        delete_on_termination=False)
 
                 def __getattr__(self, name):
-                    """Properly delegate dotted lookups"""
+                    """Properly delegate dotted lookups."""
                     if name in self.__dict__['values']:
                         return self.values.get(name)
                     try:

@@ -23,9 +23,9 @@ from nova import version
 
 
 class VersionTestCase(test.TestCase):
-    """Test cases for Versions code"""
+    """Test cases for Versions code."""
     def setUp(self):
-        """setup test with unchanging values"""
+        """setup test with unchanging values."""
         super(VersionTestCase, self).setUp()
         self.version = version
         self.version.FINAL = False
@@ -37,15 +37,15 @@ class VersionTestCase(test.TestCase):
         self.version.NOVA_PACKAGE = "g9ec3421"
 
     def test_version_string_is_good(self):
-        """Ensure version string works"""
+        # Ensure version string works.
         self.assertEqual("2012.10-dev", self.version.version_string())
 
     def test_canonical_version_string_is_good(self):
-        """Ensure canonical version works"""
+        # Ensure canonical version works.
         self.assertEqual("2012.10", self.version.canonical_version_string())
 
     def test_final_version_strings_are_identical(self):
-        """Ensure final version strings match only at release"""
+        # Ensure final version strings match only at release.
         self.assertNotEqual(self.version.canonical_version_string(),
                         self.version.version_string())
         self.version.FINAL = True
@@ -53,7 +53,7 @@ class VersionTestCase(test.TestCase):
                         self.version.version_string())
 
     def test_version_string_with_package_is_good(self):
-        """Ensure uninstalled code get version string"""
+        # Ensure uninstalled code get version string.
         self.assertEqual("2012.10-g9ec3421",
                         self.version.version_string_with_package())
 

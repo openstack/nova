@@ -473,7 +473,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
-        """Ensures that the same fname cache runs at a sequentially"""
+        # Ensures that the same fname cache runs at a sequentially.
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
@@ -507,7 +507,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         thr2.wait()
 
     def test_different_fname_concurrency(self):
-        """Ensures that two different fname caches are concurrent"""
+        # Ensures that two different fname caches are concurrent.
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
@@ -2043,7 +2043,7 @@ class LibvirtConnTestCase(test.TestCase):
         db.instance_destroy(user_context, instance_ref['uuid'])
 
     def test_ensure_filtering_rules_for_instance_timeout(self):
-        """ensure_filtering_fules_for_instance() finishes with timeout."""
+        # ensure_filtering_fules_for_instance() finishes with timeout.
         # Preparing mocks
         def fake_none(self, *args):
             return
@@ -2288,7 +2288,7 @@ class LibvirtConnTestCase(test.TestCase):
                           self.context, instance_ref, dest_check_data)
 
     def test_live_migration_raises_exception(self):
-        """Confirms recover method is called when exceptions are raised."""
+        # Confirms recover method is called when exceptions are raised.
         # Preparing data
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = {'host': 'fake',
@@ -2933,7 +2933,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn._destroy(instance)
 
     def test_available_least_handles_missing(self):
-        """Ensure destroy calls managedSaveRemove for saved instance"""
+        # Ensure destroy calls managedSaveRemove for saved instance.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         def list_instances():
@@ -3424,7 +3424,7 @@ class HostStateTestCase(test.TestCase):
     instance_caps = [("x86_64", "kvm", "hvm"), ("i686", "kvm", "hvm")]
 
     class FakeConnection(object):
-        """Fake connection object"""
+        """Fake connection object."""
 
         def get_vcpu_total(self):
             return 1
@@ -3936,7 +3936,7 @@ class NWFilterTestCase(test.TestCase):
                                    'instance_type_id': 1})
 
     def _create_instance_type(self, params=None):
-        """Create a test instance"""
+        """Create a test instance."""
         if not params:
             params = {}
 
@@ -4274,7 +4274,7 @@ class LibvirtDriverTestCase(test.TestCase):
             fake.FakeVirtAPI(), read_only=True)
 
     def _create_instance(self, params=None):
-        """Create a test instance"""
+        """Create a test instance."""
         if not params:
             params = {}
 
@@ -4630,14 +4630,14 @@ class LibvirtVolumeUsageTestCase(test.TestCase):
 
 
 class LibvirtNonblockingTestCase(test.TestCase):
-    """Test libvirt_nonblocking option"""
+    """Test libvirt_nonblocking option."""
 
     def setUp(self):
         super(LibvirtNonblockingTestCase, self).setUp()
         self.flags(libvirt_nonblocking=True, libvirt_uri="test:///default")
 
     def test_connection_to_primitive(self):
-        """Test bug 962840"""
+        # Test bug 962840.
         import nova.virt.libvirt.driver as libvirt_driver
         connection = libvirt_driver.LibvirtDriver('')
         jsonutils.to_primitive(connection._conn, convert_instances=True)

@@ -57,7 +57,7 @@ class MockEntrypoint(pkg_resources.EntryPoint):
 
 
 class APITestCase(test.TestCase):
-    """Test case for the plugin api extension interface"""
+    """Test case for the plugin api extension interface."""
     def test_add_extension(self):
         def mock_load(_s):
             return TestPluginClass()

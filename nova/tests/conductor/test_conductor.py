@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for the conductor service"""
+"""Tests for the conductor service."""
 
 import mox
 
@@ -345,7 +345,7 @@ class _BaseTestCase(object):
 
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
-    """Conductor Manager Tests"""
+    """Conductor Manager Tests."""
     def setUp(self):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
@@ -438,7 +438,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
-    """Conductor RPC API Tests"""
+    """Conductor RPC API Tests."""
     def setUp(self):
         super(ConductorRPCAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
@@ -529,7 +529,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
-    """Conductor API Tests"""
+    """Conductor API Tests."""
     def setUp(self):
         super(ConductorAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
@@ -629,7 +629,7 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):
-    """Conductor LocalAPI Tests"""
+    """Conductor LocalAPI Tests."""
     def setUp(self):
         super(ConductorLocalAPITestCase, self).setUp()
         self.conductor = conductor_api.LocalAPI()

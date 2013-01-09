@@ -31,7 +31,7 @@ CONF.import_opt('scheduler_retries', 'nova.cells.scheduler', group='cells')
 
 
 class CellsSchedulerTestCase(test.TestCase):
-    """Test case for CellsScheduler class"""
+    """Test case for CellsScheduler class."""
 
     def setUp(self):
         super(CellsSchedulerTestCase, self).setUp()

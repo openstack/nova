@@ -38,7 +38,7 @@ class TestFilter(filters.BaseHostFilter):
 
 
 class TestBogusFilter(object):
-    """Class that doesn't inherit from BaseHostFilter"""
+    """Class that doesn't inherit from BaseHostFilter."""
     pass
 
 
@@ -928,7 +928,7 @@ class HostFiltersTestCase(test.TestCase):
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_happy_day(self):
-        """Test json filter more thoroughly"""
+        # Test json filter more thoroughly.
         filt_cls = self.class_map['JsonFilter']()
         raw = ['and',
                   '$capabilities.enabled',
@@ -1246,14 +1246,14 @@ class HostFiltersTestCase(test.TestCase):
         self.assertFalse(filt_cls.host_passes(host, request))
 
     def test_retry_filter_disabled(self):
-        """Test case where retry/re-scheduling is disabled"""
+        # Test case where retry/re-scheduling is disabled.
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
         filter_properties = {}
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_retry_filter_pass(self):
-        """Node not previously tried"""
+        # Node not previously tried.
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'nodeX', {})
         retry = dict(num_attempts=2,
@@ -1264,7 +1264,7 @@ class HostFiltersTestCase(test.TestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_retry_filter_fail(self):
-        """Node was already tried"""
+        # Node was already tried.
         filt_cls = self.class_map['RetryFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
         retry = dict(num_attempts=1,

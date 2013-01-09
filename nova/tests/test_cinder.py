@@ -88,7 +88,7 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
         raise cinder_exception.NotFound(code=404, message='Resource not found')
 
     def get_volumes_5678(self, **kw):
-        """Volume with image metadata"""
+        """Volume with image metadata."""
         volume = {'volume': _stub_volume(id='1234',
                                          volume_image_metadata=_image_metadata)
         }

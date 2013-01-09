@@ -162,7 +162,7 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEqual(state, power_state.RUNNING)
 
     def test_spawn_cleanup_on_fail(self):
-        """Verify on a failed spawn, we get the original exception raised"""
+        # Verify on a failed spawn, we get the original exception raised.
         # helper function
         def raise_(ex):
             raise ex

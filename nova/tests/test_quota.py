@@ -59,7 +59,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         orig_rpc_call = rpc.call
 
         def rpc_call_wrapper(context, topic, msg, timeout=None):
-            """Stub out the scheduler creating the instance entry"""
+            """Stub out the scheduler creating the instance entry."""
             if (topic == CONF.scheduler_topic and
                 msg['method'] == 'run_instance'):
                 scheduler = scheduler_driver.Scheduler
@@ -79,7 +79,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         nova.tests.image.fake.FakeImageService_reset()
 
     def _create_instance(self, cores=2):
-        """Create a test instance"""
+        """Create a test instance."""
         inst = {}
         inst['image_id'] = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst['reservation_id'] = 'r-fakeres'

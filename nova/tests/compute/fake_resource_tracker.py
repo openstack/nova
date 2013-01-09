@@ -19,7 +19,7 @@ from nova.compute import resource_tracker
 
 
 class FakeResourceTracker(resource_tracker.ResourceTracker):
-    """Version without a DB requirement"""
+    """Version without a DB requirement."""
 
     def _create(self, context, values):
         self.compute_node = values

@@ -187,7 +187,7 @@ class CloudTestCase(test.TestCase):
                                            name)
 
     def test_describe_regions(self):
-        """Makes sure describe regions runs without raising an exception"""
+        # Makes sure describe regions runs without raising an exception.
         result = self.cloud.describe_regions(self.context)
         self.assertEqual(len(result['regionInfo']), 1)
         self.flags(region_list=["one=test_host1", "two=test_host2"])
@@ -195,7 +195,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['regionInfo']), 2)
 
     def test_describe_addresses(self):
-        """Makes sure describe addresses runs without raising an exception"""
+        # Makes sure describe addresses runs without raising an exception.
         address = "10.10.10.10"
         db.floating_ip_create(self.context,
                               {'address': address,
@@ -207,7 +207,7 @@ class CloudTestCase(test.TestCase):
         db.floating_ip_destroy(self.context, address)
 
     def test_describe_specific_address(self):
-        """Makes sure describe specific address works"""
+        # Makes sure describe specific address works.
         addresses = ["10.10.10.10", "10.10.10.11"]
         for address in addresses:
             db.floating_ip_create(self.context,
@@ -246,7 +246,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(result.get('return', None), 'true')
 
     def test_associate_disassociate_address(self):
-        """Verifies associate runs cleanly without raising an exception"""
+        # Verifies associate runs cleanly without raising an exception.
         address = "10.10.10.10"
         db.floating_ip_create(self.context,
                               {'address': address,
@@ -326,7 +326,7 @@ class CloudTestCase(test.TestCase):
         db.floating_ip_destroy(self.context, address)
 
     def test_describe_security_groups(self):
-        """Makes sure describe_security_groups works and filters results."""
+        # Makes sure describe_security_groups works and filters results.
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,
                                         'name': 'test'})
@@ -342,7 +342,7 @@ class CloudTestCase(test.TestCase):
         db.security_group_destroy(self.context, sec['id'])
 
     def test_describe_security_groups_all_tenants(self):
-        """Makes sure describe_security_groups works and filters results."""
+        # Makes sure describe_security_groups works and filters results.
         sec = db.security_group_create(self.context,
                                        {'project_id': 'foobar',
                                         'name': 'test'})
@@ -673,7 +673,7 @@ class CloudTestCase(test.TestCase):
         self.assertFalse(get_rules(self.context, group1['id']))
 
     def test_delete_security_group_in_use_by_instance(self):
-        """Ensure that a group can not be deleted if in use by an instance."""
+        # Ensure that a group can not be deleted if in use by an instance.
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         args = {'reservation_id': 'a',
                  'image_ref': image_uuid,
@@ -699,7 +699,7 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_security_group(self.context, 'testgrp')
 
     def test_describe_availability_zones(self):
-        """Makes sure describe_availability_zones works and filters results."""
+        # Makes sure describe_availability_zones works and filters results.
         service1 = db.service_create(self.context, {'host': 'host1_zones',
                                          'binary': "nova-compute",
                                          'topic': 'compute',
@@ -725,7 +725,7 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service2['id'])
 
     def test_describe_availability_zones_verbose(self):
-        """Makes sure describe_availability_zones works and filters results."""
+        # Makes sure describe_availability_zones works and filters results.
         service1 = db.service_create(self.context, {'host': 'host1_zones',
                                          'binary': "nova-compute",
                                          'topic': 'compute',
@@ -747,7 +747,7 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service2['id'])
 
     def test_describe_instances(self):
-        """Makes sure describe_instances works and filters results."""
+        # Makes sure describe_instances works and filters results.
         self.flags(use_ipv6=True)
 
         self._stub_instance_get_with_fixed_ips('get_all')
@@ -812,7 +812,7 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_describe_instances_all_invalid(self):
-        """Makes sure describe_instances works and filters results."""
+        # Makes sure describe_instances works and filters results.
         self.flags(use_ipv6=True)
 
         self._stub_instance_get_with_fixed_ips('get_all')
@@ -824,7 +824,7 @@ class CloudTestCase(test.TestCase):
                           instance_id=[instance_id])
 
     def test_describe_instances_sorting(self):
-        """Makes sure describe_instances works and is sorted as expected."""
+        # Makes sure describe_instances works and is sorted as expected.
         self.flags(use_ipv6=True)
 
         self._stub_instance_get_with_fixed_ips('get_all')
@@ -878,7 +878,7 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_describe_instance_state(self):
-        """Makes sure describe_instances for instanceState works."""
+        # Makes sure describe_instances for instanceState works.
 
         def test_instance_state(expected_code, expected_name,
                                 power_state_, vm_state_, values=None):
@@ -908,7 +908,7 @@ class CloudTestCase(test.TestCase):
                             {'shutdown_terminate': False})
 
     def test_describe_instances_no_ipv6(self):
-        """Makes sure describe_instances w/ no ipv6 works."""
+        # Makes sure describe_instances w/ no ipv6 works.
         self.flags(use_ipv6=False)
 
         self._stub_instance_get_with_fixed_ips('get_all')
@@ -1153,7 +1153,7 @@ class CloudTestCase(test.TestCase):
     #    deleteOnTermination
     #  noDevice
     def test_describe_image_mapping(self):
-        """test for rootDeviceName and blockDeiceMapping"""
+        # test for rootDeviceName and blockDeiceMapping.
         describe_images = self.cloud.describe_images
         self._setUpImageSet()
 
@@ -1645,7 +1645,7 @@ class CloudTestCase(test.TestCase):
             self.compute = self.start_service('compute')
 
     def test_stop_start_instance(self):
-        """Makes sure stop/start instance works"""
+        # Makes sure stop/start instance works.
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval_max=0.3)
 
@@ -1848,7 +1848,7 @@ class CloudTestCase(test.TestCase):
         return result['snapshotId']
 
     def _do_test_create_image(self, no_reboot):
-        """Make sure that CreateImage works"""
+        """Make sure that CreateImage works."""
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval_max=0.3)
 
@@ -1891,7 +1891,7 @@ class CloudTestCase(test.TestCase):
                                        connection_info='{"foo":"bar"}')
 
                 def __getattr__(self, name):
-                    """Properly delegate dotted lookups"""
+                    """Properly delegate dotted lookups."""
                     if name in self.__dict__['values']:
                         return self.values.get(name)
                     try:
@@ -1945,11 +1945,11 @@ class CloudTestCase(test.TestCase):
         self._restart_compute_service()
 
     def test_create_image_no_reboot(self):
-        """Make sure that CreateImage works"""
+        # Make sure that CreateImage works.
         self._do_test_create_image(True)
 
     def test_create_image_with_reboot(self):
-        """Make sure that CreateImage works"""
+        # Make sure that CreateImage works.
         self._do_test_create_image(False)
 
     def test_create_image_instance_store(self):
@@ -1980,7 +1980,7 @@ class CloudTestCase(test.TestCase):
                                        delete_on_termination=False)
 
                 def __getattr__(self, name):
-                    """Properly delegate dotted lookups"""
+                    """Properly delegate dotted lookups."""
                     if name in self.__dict__['values']:
                         return self.values.get(name)
                     try:
@@ -2052,7 +2052,7 @@ class CloudTestCase(test.TestCase):
                     ]
 
     def test_describe_instance_attribute(self):
-        """Make sure that describe_instance_attribute works"""
+        # Make sure that describe_instance_attribute works.
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        self._fake_bdm_get)
 

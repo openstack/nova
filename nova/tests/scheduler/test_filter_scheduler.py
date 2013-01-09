@@ -216,7 +216,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertRaises(exception.NovaException, sched._max_attempts)
 
     def test_retry_disabled(self):
-        """Retry info should not get populated when re-scheduling is off"""
+        # Retry info should not get populated when re-scheduling is off.
         self.flags(scheduler_max_attempts=1)
         sched = fakes.FakeFilterScheduler()
 
@@ -231,7 +231,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertFalse("retry" in filter_properties)
 
     def test_retry_attempt_one(self):
-        """Test retry logic on initial scheduling attempt"""
+        # Test retry logic on initial scheduling attempt.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
@@ -246,7 +246,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(1, num_attempts)
 
     def test_retry_attempt_two(self):
-        """Test retry logic when re-scheduling"""
+        # Test retry logic when re-scheduling.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
@@ -263,7 +263,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(2, num_attempts)
 
     def test_retry_exceeded_max_attempts(self):
-        """Test for necessary explosion when max retries is exceeded"""
+        # Test for necessary explosion when max retries is exceeded.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
 
@@ -290,7 +290,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual([host, node], hosts[0])
 
     def test_post_select_populate(self):
-        """Test addition of certain filter props after a node is selected"""
+        # Test addition of certain filter props after a node is selected.
         retry = {'hosts': [], 'num_attempts': 1}
         filter_properties = {'retry': retry}
         sched = fakes.FakeFilterScheduler()
@@ -306,7 +306,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
     def test_prep_resize_post_populates_retry(self):
-        """Prep resize should add a ('host', 'node') entry to the retry dict"""
+        # Prep resize should add a ('host', 'node') entry to the retry dict.
         sched = fakes.FakeFilterScheduler()
 
         image = 'image'

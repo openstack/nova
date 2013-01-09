@@ -34,7 +34,7 @@ CONF.import_opt('console_driver', 'nova.console.manager')
 
 
 class ConsoleTestCase(test.TestCase):
-    """Test case for console proxy manager"""
+    """Test case for console proxy manager."""
     def setUp(self):
         super(ConsoleTestCase, self).setUp()
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
@@ -46,7 +46,7 @@ class ConsoleTestCase(test.TestCase):
         self.host = 'test_compute_host'
 
     def _create_instance(self):
-        """Create a test instance"""
+        """Create a test instance."""
         inst = {}
         #inst['host'] = self.host
         #inst['name'] = 'instance-1234'
@@ -123,7 +123,7 @@ class ConsoleTestCase(test.TestCase):
 
 
 class ConsoleAPITestCase(test.TestCase):
-    """Test case for console API"""
+    """Test case for console API."""
     def setUp(self):
         super(ConsoleAPITestCase, self).setUp()
 

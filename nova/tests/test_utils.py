@@ -674,7 +674,7 @@ class AuditPeriodTest(test.TestCase):
 
 
 class DiffDict(test.TestCase):
-    """Unit tests for diff_dict()"""
+    """Unit tests for diff_dict()."""
 
     def test_no_change(self):
         old = dict(a=1, b=2, c=3)

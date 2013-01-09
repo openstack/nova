@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Implementation of a fake volume API"""
+"""Implementation of a fake volume API."""
 
 import uuid
 
