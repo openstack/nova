@@ -57,6 +57,9 @@ service_opts = [
                help='range of seconds to randomly delay when starting the'
                     ' periodic task scheduler to reduce stampeding.'
                     ' (Disable by setting to 0)'),
+    cfg.ListOpt('enabled_apis',
+                default=['ec2', 'osapi_compute', 'metadata'],
+                help='a list of APIs to enable by default'),
     cfg.StrOpt('ec2_listen',
                default="0.0.0.0",
                help='IP address for EC2 API to listen'),
