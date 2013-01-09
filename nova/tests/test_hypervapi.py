@@ -508,7 +508,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             self._volume_target_portal, self._volume_id)
 
         self._conn.attach_volume(connection_info,
-            self._instance_data["name"], '/dev/sdc')
+            self._instance_data, '/dev/sdc')
 
     def test_attach_volume(self):
         self._attach_volume()
@@ -527,7 +527,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             self._volume_target_portal, self._volume_id)
 
         self._conn.detach_volume(connection_info,
-            self._instance_data["name"], '/dev/sdc')
+            self._instance_data, '/dev/sdc')
 
         (_, volumes_paths, _) = self._hypervutils.get_vm_disks(
             self._instance_data["name"])

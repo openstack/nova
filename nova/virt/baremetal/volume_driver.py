@@ -50,22 +50,9 @@ CONF.import_opt('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
 LOG = logging.getLogger(__name__)
 
 
-def _get_baremetal_node_by_instance_name(virtapi, instance_name):
+def _get_baremetal_node_by_instance_uuid(instance_uuid):
     context = nova_context.get_admin_context()
-    # TODO(deva): optimize this DB query.
-    #             I don't think it should be _get_all
-    for node in bmdb.bm_node_get_all(context, service_host=CONF.host):
-        if not node['instance_uuid']:
-            continue
-        try:
-            inst = virtapi.instance_get_by_uuid(context, node['instance_uuid'])
-            if inst['name'] == instance_name:
-                return node
-        except exception.InstanceNotFound:
-            continue
-
-    # raise exception if we found no matching instance
-    raise exception.InstanceNotFound(instance_name)
+    return bmdb.bm_node_get_by_instance_uuid(context, instance_uuid)
 
 
 def _create_iscsi_export_tgtadm(path, tid, iqn):
@@ -200,10 +187,10 @@ class VolumeDriver(object):
             'host': CONF.host,
         }
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance, mountpoint):
         raise NotImplementedError()
 
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
         raise NotImplementedError()
 
 
@@ -227,22 +214,21 @@ class LibvirtVolumeDriver(VolumeDriver):
         method = getattr(driver, method_name)
         return method(connection_info, *args, **kwargs)
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
-        node = _get_baremetal_node_by_instance_name(self.virtapi,
-                                                    instance_name)
+    def attach_volume(self, connection_info, instance, mountpoint):
+        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         ctx = nova_context.get_admin_context()
         pxe_ip = bmdb.bm_pxe_ip_get_by_bm_node_id(ctx, node['id'])
         if not pxe_ip:
             if not CONF.baremetal.use_unsafe_iscsi:
                 raise exception.NovaException(_(
-                    'No fixed PXE IP is associated to %s') % instance_name)
+                    'No fixed PXE IP is associated to %s') % instance['uuid'])
 
         mount_device = mountpoint.rpartition("/")[2]
         self._volume_driver_method('connect_volume',
                                    connection_info,
                                    mount_device)
         device_path = connection_info['data']['device_path']
-        iqn = _get_iqn(instance_name, mountpoint)
+        iqn = _get_iqn(instance['name'], mountpoint)
         tid = _get_next_tid()
         _create_iscsi_export_tgtadm(device_path, tid, iqn)
 
@@ -259,10 +245,10 @@ class LibvirtVolumeDriver(VolumeDriver):
             _allow_iscsi_tgtadm(tid, 'ALL')
 
     @exception.wrap_exception()
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
         try:
-            iqn = _get_iqn(instance_name, mountpoint)
+            iqn = _get_iqn(instance['name'], mountpoint)
             tid = _find_tid(iqn)
             if tid is not None:
                 _delete_iscsi_export_tgtadm(tid)

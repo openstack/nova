@@ -105,16 +105,16 @@ class HyperVDriver(driver.ComputeDriver):
     def get_info(self, instance):
         return self._vmops.get_info(instance)
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance, mountpoint):
         """Attach volume storage to VM instance"""
         return self._volumeops.attach_volume(connection_info,
-                                             instance_name,
+                                             instance['name'],
                                              mountpoint)
 
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance"""
         return self._volumeops.detach_volume(connection_info,
-                                             instance_name,
+                                             instance['name'],
                                              mountpoint)
 
     def get_volume_connector(self, instance):

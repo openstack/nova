@@ -271,7 +271,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance['name'], 'Running')
         result = conn.attach_volume(self._make_connection_info(),
-                                    instance['name'], '/dev/sdc')
+                                    instance, '/dev/sdc')
 
         # check that the VM has a VBD attached to it
         # Get XenAPI record for VBD
@@ -290,7 +290,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
                           {'driver_volume_type': 'nonexist'},
-                          instance['name'],
+                          instance,
                           '/dev/sdc')
 
 

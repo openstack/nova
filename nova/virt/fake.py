@@ -199,17 +199,18 @@ class FakeDriver(driver.ComputeDriver):
                         {'key': key,
                          'inst': self.instances}, instance=instance)
 
-    def attach_volume(self, connection_info, instance_name, mountpoint):
+    def attach_volume(self, connection_info, instance, mountpoint):
         """Attach the disk to the instance at mountpoint using info"""
+        instance_name = instance['name']
         if not instance_name in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = connection_info
         return True
 
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint):
         """Detach the disk attached to the instance"""
         try:
-            del self._mounts[instance_name][mountpoint]
+            del self._mounts[instance['name']][mountpoint]
         except KeyError:
             pass
         return True

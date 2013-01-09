@@ -379,10 +379,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_attach_detach_volume(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.attach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref['name'],
+                                      instance_ref,
                                       '/mnt/nova/something')
         self.connection.detach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref['name'],
+                                      instance_ref,
                                       '/mnt/nova/something')
 
     @catch_notimplementederror
@@ -390,11 +390,11 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         instance_ref, network_info = self._get_running_instance()
         self.connection.power_off(instance_ref)
         self.connection.attach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref['name'],
+                                      instance_ref,
                                       '/mnt/nova/something')
         self.connection.power_on(instance_ref)
         self.connection.detach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref['name'],
+                                      instance_ref,
                                       '/mnt/nova/something')
 
     @catch_notimplementederror
