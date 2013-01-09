@@ -1782,17 +1782,12 @@ class ServersControllerCreateTest(test.TestCase):
                        fake_method)
 
     def _check_admin_pass_len(self, server_dict):
-        """ utility function - check server_dict for adminPass
-        length.
-
-        """
+        """utility function - check server_dict for adminPass length."""
         self.assertEqual(CONF.password_length,
                          len(server_dict["adminPass"]))
 
     def _check_admin_pass_missing(self, server_dict):
-        """ utility function - check server_dict for absence
-        of adminPass
-        """
+        """utility function - check server_dict for absence of adminPass."""
         self.assertTrue("adminPass" not in server_dict)
 
     def _test_create_instance(self):

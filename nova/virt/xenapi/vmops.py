@@ -1509,15 +1509,15 @@ class VMOps(object):
         self._session.call_xenapi('VM.remove_from_xenstore_data', vm_ref, key)
 
     def refresh_security_group_rules(self, security_group_id):
-        """ recreates security group rules for every instance """
+        """recreates security group rules for every instance """
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
     def refresh_security_group_members(self, security_group_id):
-        """ recreates security group rules for every instance """
+        """recreates security group rules for every instance """
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
     def refresh_instance_security_rules(self, instance):
-        """ recreates security group rules for specified instance """
+        """recreates security group rules for specified instance """
         self.firewall_driver.refresh_instance_security_rules(instance)
 
     def refresh_provider_fw_rules(self):
@@ -1600,8 +1600,8 @@ class VMOps(object):
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
-        """ Check if it is possible to execute live migration
-            on the source side.
+        """Check if it's possible to execute live migration on the source side.
+
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest_check_data: data returned by the check on the

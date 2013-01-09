@@ -27,14 +27,16 @@ LOG = logging.getLogger(__name__)
 
 
 class MiniDNS(dns_driver.DNSDriver):
-    """ Trivial DNS driver. This will read/write to a local, flat file
-        and have no effect on your actual DNS system. This class is
-        strictly for testing purposes, and should keep you out of dependency
-        hell.
+    """
+    Trivial DNS driver. This will read/write to a local, flat file
+    and have no effect on your actual DNS system. This class is
+    strictly for testing purposes, and should keep you out of dependency
+    hell.
 
-        Note that there is almost certainly a race condition here that
-        will manifest anytime instances are rapidly created and deleted.
-        A proper implementation will need some manner of locking."""
+    Note that there is almost certainly a race condition here that
+    will manifest anytime instances are rapidly created and deleted.
+    A proper implementation will need some manner of locking.
+    """
 
     def __init__(self):
         if CONF.log_dir:

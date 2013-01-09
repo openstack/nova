@@ -39,7 +39,7 @@ class HostOps(baseops.BaseOps):
         self._stats = None
 
     def _get_cpu_info(self):
-        """ Get the CPU information.
+        """Get the CPU information.
         :returns: A dictionary containing the main properties
         of the central processor in the hypervisor.
         """
@@ -107,7 +107,7 @@ class HostOps(baseops.BaseOps):
         return total_gb, used_gb
 
     def _get_vcpu_used(self):
-        """ Get vcpu usage number of physical computer.
+        """Get vcpu usage number of physical computer.
         :returns: The total number of vcpu that currently used.
         """
         #TODO(jordanrinke) figure out a way to count assigned VCPUs

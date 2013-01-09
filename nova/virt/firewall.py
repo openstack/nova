@@ -50,7 +50,7 @@ def load_driver(default, *args, **kwargs):
 
 
 class FirewallDriver(object):
-    """ Firewall Driver base class.
+    """Firewall Driver base class.
 
         Defines methods that any driver providing security groups
         and provider firewall functionality should implement.

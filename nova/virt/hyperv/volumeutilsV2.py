@@ -53,7 +53,7 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
             time.sleep(CONF.hyperv_wait_between_attach_retry)
 
         def logout_storage_target(self, target_iqn):
-            """ Logs out storage target through its session id """
+            """Logs out storage target through its session id """
 
             target = self._conn_storage.MSFT_iSCSITarget(
                     NodeAddress=target_iqn)[0]

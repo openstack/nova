@@ -119,7 +119,7 @@ function run_pep8 {
   srcfiles+=" setup.py"
 
   # Until all these issues get fixed, ignore.
-  ignore='--ignore=N4,E12,E711,E721,E712'
+  ignore='--ignore=N402,E12,E711,E721,E712'
 
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
 

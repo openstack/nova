@@ -1533,7 +1533,7 @@ class AgentsJsonTest(ApiSampleTestBase):
         return project
 
     def test_agent_list(self):
-        """ Return a list of all agent builds."""
+        """Return a list of all agent builds."""
         response = self._do_get('os-agents')
         self.assertEqual(response.status, 200)
         project = {'url': 'xxxxxxxxxxxx',

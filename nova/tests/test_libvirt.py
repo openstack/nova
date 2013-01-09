@@ -4303,12 +4303,12 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
         ins_ref = self._create_instance()
-        """ dest is different host case """
+        # dest is different host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
                None, ins_ref, '10.0.0.2', None, None)
         self.assertEquals(out, disk_info_text)
 
-        """ dest is same host case """
+        # dest is same host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
                None, ins_ref, '10.0.0.1', None, None)
         self.assertEquals(out, disk_info_text)
@@ -4325,19 +4325,19 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, 'get_info',
                        fake_get_info)
 
-        """ instance not found case """
+        # instance not found case
         self.assertRaises(exception.NotFound,
                 self.libvirtconnection._wait_for_running,
                     {'name': 'not_found',
                      'uuid': 'not_found_uuid'})
 
-        """ instance is running case """
+        # instance is running case
         self.assertRaises(utils.LoopingCallDone,
                 self.libvirtconnection._wait_for_running,
                     {'name': 'running',
                      'uuid': 'running_uuid'})
 
-        """ else case """
+        # else case
         self.libvirtconnection._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 

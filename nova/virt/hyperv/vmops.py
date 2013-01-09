@@ -69,7 +69,7 @@ class VMOps(baseops.BaseOps):
         self._volumeops = volumeops
 
     def list_instances(self):
-        """ Return the names of all the instances known to Hyper-V. """
+        """Return the names of all the instances known to Hyper-V. """
         vms = [v.ElementName
                 for v in self._conn.Msvm_ComputerSystem(['ElementName'],
                     Caption="Virtual Machine")]
@@ -118,7 +118,7 @@ class VMOps(baseops.BaseOps):
 
     def spawn(self, context, instance, image_meta, injected_files,
         admin_password, network_info, block_device_info=None):
-        """ Create a new VM and start it."""
+        """Create a new VM and start it."""
         vm = self._vmutils.lookup(self._conn, instance['name'])
         if vm is not None:
             raise exception.InstanceExists(name=instance['name'])
@@ -271,7 +271,7 @@ class VMOps(baseops.BaseOps):
         LOG.debug(_('Set vcpus for vm %s...'), instance["name"])
 
     def _create_scsi_controller(self, vm_name):
-        """ Create an iscsi controller ready to mount volumes """
+        """Create an iscsi controller ready to mount volumes """
         LOG.debug(_('Creating a scsi controller for %(vm_name)s for volume '
                 'attaching') % locals())
         vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)

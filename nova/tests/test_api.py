@@ -350,7 +350,7 @@ class ApiEc2TestCase(test.TestCase):
         self.ec2.delete_security_group(security_group_name)
 
     def test_group_name_valid_chars_security_group(self):
-        """ Test that we sanely handle invalid security group names.
+        """Test that we sanely handle invalid security group names.
          EC2 API Spec states we should only accept alphanumeric characters,
          spaces, dashes, and underscores. Amazon implementation
          accepts more characters - so, [:print:] is ok. """

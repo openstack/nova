@@ -913,7 +913,7 @@ def is_valid_cidr(address):
 
 
 def monkey_patch():
-    """  If the Flags.monkey_patch set as True,
+    """If the Flags.monkey_patch set as True,
     this function patches a decorator
     for all functions in specified modules.
     You can set decorators for each modules

@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" The instance type extra specs extension"""
+"""The instance type extra specs extension"""
 
 from webob import exc
 
@@ -35,7 +35,7 @@ class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
 
 
 class FlavorExtraSpecsController(object):
-    """ The flavor extra specs API controller for the OpenStack API """
+    """The flavor extra specs API controller for the OpenStack API """
 
     def _get_extra_specs(self, context, flavor_id):
         extra_specs = db.instance_type_extra_specs_get(context, flavor_id)
@@ -51,7 +51,7 @@ class FlavorExtraSpecsController(object):
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
-        """ Returns the list of extra specs for a givenflavor """
+        """Returns the list of extra specs for a givenflavor """
         context = req.environ['nova.context']
         authorize(context)
         return self._get_extra_specs(context, flavor_id)
@@ -92,7 +92,7 @@ class FlavorExtraSpecsController(object):
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def show(self, req, flavor_id, id):
-        """ Return a single extra spec item """
+        """Return a single extra spec item """
         context = req.environ['nova.context']
         authorize(context)
         specs = self._get_extra_specs(context, flavor_id)
@@ -102,7 +102,7 @@ class FlavorExtraSpecsController(object):
             raise exc.HTTPNotFound()
 
     def delete(self, req, flavor_id, id):
-        """ Deletes an existing extra spec """
+        """Deletes an existing extra spec """
         context = req.environ['nova.context']
         authorize(context)
         db.instance_type_extra_specs_delete(context, flavor_id, id)

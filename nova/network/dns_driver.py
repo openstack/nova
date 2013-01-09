@@ -14,7 +14,7 @@
 
 
 class DNSDriver(object):
-    """ Defines the DNS manager interface.  Does nothing. """
+    """Defines the DNS manager interface.  Does nothing. """
 
     def __init__(self):
         pass
