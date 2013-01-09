@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for compute node stats"""
+"""Tests for compute node stats."""
 
 from nova.compute import stats
 from nova.compute import task_states

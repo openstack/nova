@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 
 class LoginTest(integrated_helpers._IntegratedTestBase):
     def test_login(self):
-        """Simple check - we list flavors - so we know we're logged in."""
+        # Simple check - we list flavors - so we know we're logged in.
         flavors = self.api.get_flavors()
         for flavor in flavors:
             LOG.debug(_("flavor: %s") % flavor)

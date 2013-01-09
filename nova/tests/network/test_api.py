@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for network API"""
+"""Tests for network API."""
 
 import random
 
@@ -38,7 +38,7 @@ class ApiTestCase(test.TestCase):
                                               'fake-project')
 
     def _do_test_associate_floating_ip(self, orig_instance_uuid):
-        """Test post-association logic"""
+        """Test post-association logic."""
 
         new_instance = {'uuid': 'new-uuid'}
 

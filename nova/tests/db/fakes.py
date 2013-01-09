@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Stubouts, mocks and fixtures for the test suite"""
+"""Stubouts, mocks and fixtures for the test suite."""
 
 from nova import db
 from nova import exception

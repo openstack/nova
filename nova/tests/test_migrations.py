@@ -77,7 +77,7 @@ def _have_mysql():
 
 
 class TestMigrations(test.TestCase):
-    """Test sqlalchemy-migrate migrations"""
+    """Test sqlalchemy-migrate migrations."""
 
     DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
                                        'test_migrations.conf')
@@ -211,9 +211,7 @@ class TestMigrations(test.TestCase):
             self.fail("Shouldn't have connected")
 
     def test_mysql_innodb(self):
-        """
-        Test that table creation on mysql only builds InnoDB tables
-        """
+        # Test that table creation on mysql only builds InnoDB tables
         if not _have_mysql():
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed

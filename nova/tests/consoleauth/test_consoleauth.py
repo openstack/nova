@@ -38,7 +38,7 @@ class ConsoleauthTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
     def test_tokens_expire(self):
-        """Test that tokens expire correctly."""
+        # Test that tokens expire correctly.
         self.useFixture(test.TimeOverride())
         token = 'mytok'
         self.flags(console_token_ttl=1)

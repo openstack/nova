@@ -38,7 +38,7 @@ class FakeFilterClass2(filters.BaseHostFilter):
 
 
 class HostManagerTestCase(test.TestCase):
-    """Test case for HostManager class"""
+    """Test case for HostManager class."""
 
     def setUp(self):
         super(HostManagerTestCase, self).setUp()
@@ -159,7 +159,7 @@ class HostManagerTestCase(test.TestCase):
         self._verify_result(info, result)
 
     def test_get_filtered_hosts_with_ignore_and_force(self):
-        """Ensure ignore_hosts processed before force_hosts in host filters"""
+        # Ensure ignore_hosts processed before force_hosts in host filters.
         fake_properties = {'force_hosts': ['fake_host3', 'fake_host1'],
                            'ignore_hosts': ['fake_host1']}
 
@@ -268,7 +268,7 @@ class HostManagerTestCase(test.TestCase):
 
 
 class HostStateTestCase(test.TestCase):
-    """Test case for HostState class"""
+    """Test case for HostState class."""
 
     # update_from_compute_node() and consume_from_instance() are tested
     # in HostManagerTestCase.test_get_all_host_states()

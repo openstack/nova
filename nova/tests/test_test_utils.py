@@ -21,7 +21,7 @@ from nova.tests import utils as test_utils
 
 class TestUtilsTestCase(test.TestCase):
     def test_get_test_admin_context(self):
-        """get_test_admin_context's return value behaves like admin context"""
+        # get_test_admin_context's return value behaves like admin context.
         ctxt = test_utils.get_test_admin_context()
 
         # TODO(soren): This should verify the full interface context
@@ -29,13 +29,13 @@ class TestUtilsTestCase(test.TestCase):
         self.assertTrue(ctxt.is_admin)
 
     def test_get_test_instance(self):
-        """get_test_instance's return value looks like an instance_ref"""
+        # get_test_instance's return value looks like an instance_ref.
         instance_ref = test_utils.get_test_instance()
         ctxt = test_utils.get_test_admin_context()
         db.instance_get(ctxt, instance_ref['id'])
 
     def _test_get_test_network_info(self):
-        """Does the return value match a real network_info structure"""
+        """Does the return value match a real network_info structure."""
         # The challenge here is to define what exactly such a structure
         # must look like.
         pass

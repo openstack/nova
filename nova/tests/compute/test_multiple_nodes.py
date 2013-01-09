@@ -14,7 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Tests for compute service with multiple compute nodes"""
+"""Tests for compute service with multiple compute nodes."""
 
 from nova import context
 from nova import exception

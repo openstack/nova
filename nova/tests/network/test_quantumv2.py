@@ -270,21 +270,21 @@ class TestQuantumv2(test.TestCase):
             self._verify_nw_info(nw_inf, i)
 
     def test_get_instance_nw_info_1(self):
-        """Test to get one port in one network and subnet."""
+        # Test to get one port in one network and subnet.
         quantumv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self._get_instance_nw_info(1)
 
     def test_get_instance_nw_info_2(self):
-        """Test to get one port in each of two networks and subnets."""
+        # Test to get one port in each of two networks and subnets.
         quantumv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self._get_instance_nw_info(2)
 
     def test_get_instance_nw_info_with_nets(self):
-        """Test get instance_nw_info with networks passed in."""
+        # Test get instance_nw_info with networks passed in.
         api = quantumapi.API()
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
@@ -311,7 +311,7 @@ class TestQuantumv2(test.TestCase):
         self._verify_nw_info(nw_inf, 0)
 
     def test_get_instance_nw_info_without_subnet(self):
-        """Test get instance_nw_info for a port without subnet."""
+        # Test get instance_nw_info for a port without subnet.
         api = quantumapi.API()
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
@@ -413,11 +413,11 @@ class TestQuantumv2(test.TestCase):
         api.allocate_for_instance(self.context, self.instance, **kwargs)
 
     def test_allocate_for_instance_1(self):
-        """Allocate one port in one network env."""
+        # Allocate one port in one network env.
         self._allocate_for_instance(1)
 
     def test_allocate_for_instance_2(self):
-        """Allocate one port in two networks env."""
+        # Allocate one port in two networks env.
         self._allocate_for_instance(2)
 
     def test_allocate_for_instance_with_requested_networks(self):
@@ -520,11 +520,11 @@ class TestQuantumv2(test.TestCase):
         api.deallocate_for_instance(self.context, self.instance)
 
     def test_deallocate_for_instance_1(self):
-        """Test to deallocate in one port env."""
+        # Test to deallocate in one port env.
         self._deallocate_for_instance(1)
 
     def test_deallocate_for_instance_2(self):
-        """Test to deallocate in two ports env."""
+        # Test to deallocate in two ports env.
         self._deallocate_for_instance(2)
 
     def test_validate_networks(self):

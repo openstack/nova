@@ -21,7 +21,7 @@ from nova.openstack.common import jsonutils
 
 
 def webob_factory(url):
-    """Factory for removing duplicate webob code from tests"""
+    """Factory for removing duplicate webob code from tests."""
 
     base_url = url
 

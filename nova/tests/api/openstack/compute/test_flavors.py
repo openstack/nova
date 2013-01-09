@@ -350,7 +350,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavors, expected)
 
     def test_get_flavor_list_filter_min_ram(self):
-        """Flavor lists may be filtered by minRam."""
+        # Flavor lists may be filtered by minRam.
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=512')
         flavor = self.controller.index(req)
         expected = {
@@ -374,13 +374,13 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_filter_invalid_min_ram(self):
-        """Ensure you cannot list flavors with invalid minRam param."""
+        # Ensure you cannot list flavors with invalid minRam param.
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=NaN')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_get_flavor_list_filter_min_disk(self):
-        """Flavor lists may be filtered by minDisk."""
+        # Flavor lists may be filtered by minDisk.
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minDisk=20')
         flavor = self.controller.index(req)
         expected = {
@@ -404,7 +404,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_filter_invalid_min_disk(self):
-        """Ensure you cannot list flavors with invalid minDisk param."""
+        # Ensure you cannot list flavors with invalid minDisk param.
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minDisk=NaN')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)

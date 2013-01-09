@@ -67,7 +67,7 @@ class FakeVIFDriver(object):
 
 
 class FakeModel(dict):
-    """Represent a model from the db"""
+    """Represent a model from the db."""
     def __init__(self, *args, **kwargs):
         self.update(kwargs)
 

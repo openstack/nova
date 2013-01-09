@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Test of Policy Engine For Nova"""
+"""Test of Policy Engine For Nova."""
 
 import os.path
 import StringIO
@@ -48,10 +48,10 @@ class PolicyFileTestCase(test.TestCase):
 
             action = "example:test"
             with open(tmpfilename, "w") as policyfile:
-                policyfile.write("""{"example:test": ""}""")
+                policyfile.write('{"example:test": ""}')
             policy.enforce(self.context, action, self.target)
             with open(tmpfilename, "w") as policyfile:
-                policyfile.write("""{"example:test": "!"}""")
+                policyfile.write('{"example:test": "!"}')
             # NOTE(vish): reset stored policy cache so we don't have to
             # sleep(1)
             policy._POLICY_CACHE = {}

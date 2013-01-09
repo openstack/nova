@@ -330,7 +330,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
 
 class ApiSamplesTrap(ApiSampleTestBase):
-    """Make sure extensions don't get added without tests"""
+    """Make sure extensions don't get added without tests."""
 
     all_extensions = True
 
@@ -488,12 +488,12 @@ class ServersMetadataJsonTest(ServersSampleBase):
         return subs
 
     def test_metadata_put_all(self):
-        """Test setting all metadata for a server"""
+        # Test setting all metadata for a server.
         subs = {'value': 'Foo Value'}
         return self._create_and_set(subs)
 
     def test_metadata_post_all(self):
-        """Test updating all metadata for a server"""
+        # Test updating all metadata for a server.
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         subs['value'] = 'Bar Value'
@@ -504,7 +504,7 @@ class ServersMetadataJsonTest(ServersSampleBase):
         self._verify_response('server-metadata-all-resp', subs, response)
 
     def test_metadata_get_all(self):
-        """Test getting all metadata for a server"""
+        # Test getting all metadata for a server.
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         response = self._do_get('servers/%s/metadata' % uuid)
@@ -512,7 +512,7 @@ class ServersMetadataJsonTest(ServersSampleBase):
         self._verify_response('server-metadata-all-resp', subs, response)
 
     def test_metadata_put(self):
-        """Test putting an individual metadata item for a server"""
+        # Test putting an individual metadata item for a server.
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         subs['value'] = 'Bar Value'
@@ -523,7 +523,7 @@ class ServersMetadataJsonTest(ServersSampleBase):
         return self._verify_response('server-metadata-resp', subs, response)
 
     def test_metadata_get(self):
-        """Test getting an individual metadata item for a server"""
+        # Test getting an individual metadata item for a server.
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         response = self._do_get('servers/%s/metadata/foo' % uuid)
@@ -531,7 +531,7 @@ class ServersMetadataJsonTest(ServersSampleBase):
         return self._verify_response('server-metadata-resp', subs, response)
 
     def test_metadata_delete(self):
-        """Test deleting an individual metadata item for a server"""
+        # Test deleting an individual metadata item for a server.
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         response = self._do_delete('servers/%s/metadata/foo' % uuid)
@@ -545,14 +545,14 @@ class ServersMetadataXmlTest(ServersMetadataJsonTest):
 
 class ServersIpsJsonTest(ServersSampleBase):
     def test_get(self):
-        """Test getting a server's IP information"""
+        # Test getting a server's IP information.
         uuid = self._post_server()
         response = self._do_get('servers/%s/ips' % uuid)
         subs = self._get_regexes()
         return self._verify_response('server-ips-resp', subs, response)
 
     def test_get_by_network(self):
-        """Test getting a server's IP information by network id"""
+        # Test getting a server's IP information by network id.
         uuid = self._post_server()
         response = self._do_get('servers/%s/ips/private' % uuid)
         subs = self._get_regexes()
@@ -649,13 +649,13 @@ class FlavorsSampleAllExtensionXmlTest(FlavorsSampleXmlTest):
 
 class ImagesSampleJsonTest(ApiSampleTestBase):
     def test_images_list(self):
-        """Get api sample of images get list request"""
+        # Get api sample of images get list request.
         response = self._do_get('images')
         subs = self._get_regexes()
         return self._verify_response('images-list-get-resp', subs, response)
 
     def test_image_get(self):
-        """Get api sample of one single image details request"""
+        # Get api sample of one single image details request.
         image_id = fake.get_valid_image_id()
         response = self._do_get('images/%s' % image_id)
         self.assertEqual(response.status, 200)
@@ -664,13 +664,13 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
         return self._verify_response('image-get-resp', subs, response)
 
     def test_images_details(self):
-        """Get api sample of all images details request"""
+        # Get api sample of all images details request.
         response = self._do_get('images/detail')
         subs = self._get_regexes()
         return self._verify_response('images-details-get-resp', subs, response)
 
     def test_image_metadata_get(self):
-        """Get api sample of a image metadata request"""
+        # Get api sample of a image metadata request.
         image_id = fake.get_valid_image_id()
         response = self._do_get('images/%s/metadata' % image_id)
         subs = self._get_regexes()
@@ -678,7 +678,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
         return self._verify_response('image-metadata-get-resp', subs, response)
 
     def test_image_metadata_post(self):
-        """Get api sample to update metadata of an image metadata request"""
+        # Get api sample to update metadata of an image metadata request.
         image_id = fake.get_valid_image_id()
         response = self._do_post(
                 'images/%s/metadata' % image_id,
@@ -689,7 +689,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
                                      subs, response)
 
     def test_image_metadata_put(self):
-        """Get api sample of image metadata put request"""
+        # Get api sample of image metadata put request.
         image_id = fake.get_valid_image_id()
         response = self._do_put('images/%s/metadata' % image_id,
                                 'image-metadata-put-req', {})
@@ -699,7 +699,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
                                      subs, response)
 
     def test_image_meta_key_get(self):
-        """Get api sample of a image metadata key request"""
+        # Get api sample of a image metadata key request.
         image_id = fake.get_valid_image_id()
         key = "kernel_id"
         response = self._do_get('images/%s/metadata/%s' % (image_id, key))
@@ -707,7 +707,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
         return self._verify_response('image-meta-key-get', subs, response)
 
     def test_image_meta_key_put(self):
-        """Get api sample of image metadata key put request"""
+        # Get api sample of image metadata key put request.
         image_id = fake.get_valid_image_id()
         key = "auto_disk_config"
         response = self._do_put('images/%s/metadata/%s' % (image_id, key),
@@ -752,21 +752,21 @@ class CoverageExtJsonTests(ApiSampleTestBase):
         self.stubs.Set(coverage, 'xml_report', _fake_xml_report)
 
     def test_start_coverage(self):
-        """Start coverage data collection"""
+        # Start coverage data collection.
         subs = {}
         response = self._do_post('os-coverage/action',
                                  'coverage-start-post-req', subs)
         self.assertEqual(response.status, 200)
 
     def test_start_coverage_combine(self):
-        """Start coverage data collection"""
+        # Start coverage data collection.
         subs = {}
         response = self._do_post('os-coverage/action',
                                  'coverage-start-combine-post-req', subs)
         self.assertEqual(response.status, 200)
 
     def test_stop_coverage(self):
-        """Stop coverage data collection"""
+        # Stop coverage data collection.
         subs = {
             'path': '/.*',
         }
@@ -778,7 +778,7 @@ class CoverageExtJsonTests(ApiSampleTestBase):
                                      subs, response)
 
     def test_report_coverage(self):
-        """Generate a coverage report"""
+        # Generate a coverage report.
         subs = {
             'filename': 'report',
             'path': '/.*/report',
@@ -1044,14 +1044,14 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         self._verify_response('security-groups-create-resp', subs, response)
 
     def test_security_groups_list(self):
-        """Get api sample of security groups get list request"""
+        # Get api sample of security groups get list request.
         response = self._do_get('os-security-groups')
         subs = self._get_regexes()
         return self._verify_response('security-groups-list-get-resp',
                                       subs, response)
 
     def test_security_groups_get(self):
-        """Get api sample of security groups get request"""
+        # Get api sample of security groups get request.
         security_group_id = '1'
         response = self._do_get('os-security-groups/%s' % security_group_id)
         subs = self._get_regexes()
@@ -1059,7 +1059,7 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
                                       subs, response)
 
     def test_security_groups_list_server(self):
-        """Get api sample of security groups for a specific server."""
+        # Get api sample of security groups for a specific server.
         uuid = self._post_server()
         response = self._do_get('servers/%s/os-security-groups' % uuid)
         subs = self._get_regexes()
@@ -1076,7 +1076,7 @@ class SchedulerHintsJsonTest(ApiSampleTestBase):
                      "Scheduler_hints")
 
     def test_scheduler_hints_post(self):
-        """Get api sample of scheduler hint post request"""
+        # Get api sample of scheduler hint post request.
         hints = {'image_id': fake.get_valid_image_id(),
                  'image_near': str(uuid_lib.uuid4())
         }
@@ -1321,7 +1321,7 @@ class KeyPairsSampleJsonTest(ApiSampleTestBase):
         return subs
 
     def test_keypairs_post(self, public_key=None):
-        """Get api sample of key pairs post request"""
+        """Get api sample of key pairs post request."""
         key_name = 'keypair-' + str(uuid_lib.uuid4())
         response = self._do_post('os-keypairs', 'keypairs-post-req',
                                  {'keypair_name': key_name})
@@ -1335,7 +1335,7 @@ class KeyPairsSampleJsonTest(ApiSampleTestBase):
         return key_name
 
     def test_keypairs_import_key_post(self):
-        """Get api sample of key pairs post to import user's key"""
+        # Get api sample of key pairs post to import user's key.
         key_name = 'keypair-' + str(uuid_lib.uuid4())
         subs = {
             'keypair_name': key_name,
@@ -1353,7 +1353,7 @@ class KeyPairsSampleJsonTest(ApiSampleTestBase):
         self._verify_response('keypairs-import-post-resp', subs, response)
 
     def test_keypairs_get(self):
-        """Get api sample of key pairs get request"""
+        # Get api sample of key pairs get request.
         key_name = self.test_keypairs_post()
         response = self._do_get('os-keypairs')
         subs = self._get_regexes()
@@ -1443,11 +1443,11 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
         super(CloudPipeSampleJsonTest, self).setUp()
 
         def get_user_data(self, project_id):
-            """Stub method to generate user data for cloudpipe tests"""
+            """Stub method to generate user data for cloudpipe tests."""
             return "VVNFUiBEQVRB\n"
 
         def network_api_get(self, context, network_uuid):
-            """Stub to get a valid network and its information"""
+            """Stub to get a valid network and its information."""
             return {'vpn_public_address': '127.0.0.1',
                     'vpn_public_port': 22}
 
@@ -1459,7 +1459,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
         return subs
 
     def test_cloud_pipe_create(self):
-        """Get api samples of cloud pipe extension creation"""
+        # Get api samples of cloud pipe extension creation.
         self.flags(vpn_image_id=fake.get_valid_image_id())
         project = {'project_id': 'cloudpipe-' + str(uuid_lib.uuid4())}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
@@ -1472,7 +1472,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
         return project
 
     def test_cloud_pipe_list(self):
-        """Get api samples of cloud pipe extension get request"""
+        # Get api samples of cloud pipe extension get request.
         project = self.test_cloud_pipe_create()
         response = self._do_get('os-cloudpipe')
         self.assertEqual(response.status, 200)
@@ -1565,7 +1565,7 @@ class AgentsJsonTest(ApiSampleTestBase):
                        fake_agent_build_destroy)
 
     def test_agent_create(self):
-        """Creates a new agent build."""
+        # Creates a new agent build.
         project = {'url': 'xxxxxxxxxxxx',
                 'hypervisor': 'hypervisor',
                 'architecture': 'x86',
@@ -1581,7 +1581,7 @@ class AgentsJsonTest(ApiSampleTestBase):
         return project
 
     def test_agent_list(self):
-        """Return a list of all agent builds."""
+        # Return a list of all agent builds.
         response = self._do_get('os-agents')
         self.assertEqual(response.status, 200)
         project = {'url': 'xxxxxxxxxxxx',
@@ -1595,7 +1595,7 @@ class AgentsJsonTest(ApiSampleTestBase):
         return self._verify_response('agents-get-resp', project, response)
 
     def test_agent_update(self):
-        """Update an existing agent build."""
+        # Update an existing agent build.
         agent_id = 1
         subs = {'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
@@ -1607,7 +1607,7 @@ class AgentsJsonTest(ApiSampleTestBase):
         return self._verify_response('agent-update-put-resp', subs, response)
 
     def test_agent_delete(self):
-        """Deletes an existing agent build."""
+        # Deletes an existing agent build.
         agent_id = 1
         response = self._do_delete('os-agents/%s' % agent_id)
         self.assertEqual(response.status, 200)
@@ -1679,7 +1679,7 @@ class FixedIpJsonTest(ApiSampleTestBase):
         self.stubs.Set(db, "fixed_ip_update", fake_fixed_ip_update)
 
     def test_fixed_ip_reserve(self):
-        """Reserve a Fixed IP"""
+        # Reserve a Fixed IP.
         project = {'reserve': None}
         response = self._do_post('os-fixed-ips/192.168.1.1/action',
                                  'fixedip-post-req',
@@ -1687,7 +1687,7 @@ class FixedIpJsonTest(ApiSampleTestBase):
         self.assertEqual(response.status, 202)
 
     def test_get_fixed_ip(self):
-        """Return data about the given fixed ip."""
+        # Return data about the given fixed ip.
         response = self._do_get('os-fixed-ips/192.168.1.1')
         self.assertEqual(response.status, 200)
         project = {'cidr': '192.168.1.0/24',
@@ -1802,7 +1802,7 @@ class UsedLimitsSamplesJsonTest(ApiSampleTestBase):
                       "Used_limits")
 
     def test_get_used_limits(self):
-        """Get api sample to used limits"""
+        # Get api sample to used limits.
         response = self._do_get('limits')
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
@@ -1854,7 +1854,7 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
                       "Simple_tenant_usage")
 
     def setUp(self):
-        """setUp method for simple tenant usage"""
+        """setUp method for simple tenant usage."""
         super(SimpleTenantUsageSampleJsonTest, self).setUp()
         self._post_server()
         timeutils.set_time_override(timeutils.utcnow() +
@@ -1865,12 +1865,12 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
         }
 
     def tearDown(self):
-        """tearDown method for simple tenant usage"""
+        """tearDown method for simple tenant usage."""
         super(SimpleTenantUsageSampleJsonTest, self).tearDown()
         timeutils.clear_time_override()
 
     def test_get_tenants_usage(self):
-        """Get api sample to get all tenants usage request"""
+        # Get api sample to get all tenants usage request.
         response = self._do_get('os-simple-tenant-usage?%s' % (
                                                 urllib.urlencode(self.query)))
         self.assertEqual(response.status, 200)
@@ -1878,7 +1878,7 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
         self._verify_response('simple-tenant-usage-get', subs, response)
 
     def test_get_tenant_usage_details(self):
-        """Get api sample to get specific tenant usage request"""
+        # Get api sample to get specific tenant usage request.
         tenant_id = 'openstack'
         response = self._do_get('os-simple-tenant-usage/%s?%s' % (tenant_id,
                                                 urllib.urlencode(self.query)))
@@ -1941,64 +1941,64 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         self.uuid = self._post_server()
 
     def test_post_pause(self):
-        """Get api samples to pause server request"""
+        # Get api samples to pause server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-pause', {})
         self.assertEqual(response.status, 202)
 
     def test_post_unpause(self):
-        """Get api samples to unpause server request"""
+        # Get api samples to unpause server request.
         self.test_post_pause()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-unpause', {})
         self.assertEqual(response.status, 202)
 
     def test_post_suspend(self):
-        """Get api samples to suspend server request"""
+        # Get api samples to suspend server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-suspend', {})
         self.assertEqual(response.status, 202)
 
     def test_post_resume(self):
-        """Get api samples to server resume request"""
+        # Get api samples to server resume request.
         self.test_post_suspend()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-resume', {})
         self.assertEqual(response.status, 202)
 
     def test_post_migrate(self):
-        """Get api samples to migrate server request"""
+        # Get api samples to migrate server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-migrate', {})
         self.assertEqual(response.status, 202)
 
     def test_post_reset_network(self):
-        """Get api samples to reset server network request"""
+        # Get api samples to reset server network request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-reset-network', {})
         self.assertEqual(response.status, 202)
 
     def test_post_inject_network_info(self):
-        """Get api samples to inject network info request"""
+        # Get api samples to inject network info request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-inject-network-info', {})
         self.assertEqual(response.status, 202)
 
     def test_post_lock_server(self):
-        """Get api samples to lock server request"""
+        # Get api samples to lock server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-lock-server', {})
         self.assertEqual(response.status, 202)
 
     def test_post_unlock_server(self):
-        """Get api samples to unlock server request"""
+        # Get api samples to unlock server request.
         self.test_post_lock_server()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-unlock-server', {})
         self.assertEqual(response.status, 202)
 
     def test_post_backup_server(self):
-        """Get api samples to backup server request"""
+        # Get api samples to backup server request.
         def image_details(self, context, **kwargs):
             """This stub is specifically used on the backup action."""
             # NOTE(maurosr): I've added this simple stub cause backup action
@@ -2013,17 +2013,17 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         self.assertEqual(response.status, 202)
 
     def test_post_live_migrate_server(self):
-        """Get api samples to server live migrate request"""
+        # Get api samples to server live migrate request.
         def fake_live_migration_src_check(self, context, instance_ref):
-            """Skip live migration scheduler checks"""
+            """Skip live migration scheduler checks."""
             return
 
         def fake_live_migration_dest_check(self, context, instance_ref, dest):
-            """Skip live migration scheduler checks"""
+            """Skip live migration scheduler checks."""
             return
 
         def fake_live_migration_common(self, context, instance_ref, dest):
-            """Skip live migration scheduler checks"""
+            """Skip live migration scheduler checks."""
             return
         self.stubs.Set(driver.Scheduler, '_live_migration_src_check',
                        fake_live_migration_src_check)
@@ -2050,7 +2050,7 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         self.assertEqual(response.status, 202)
 
     def test_post_reset_state(self):
-        """get api samples to server reset state request"""
+        # get api samples to server reset state request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-reset-server-state', {})
         self.assertEqual(response.status, 202)
@@ -2116,20 +2116,20 @@ class QuotasSampleJsonTests(ApiSampleTestBase):
     extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
 
     def test_show_quotas(self):
-        """Get api sample to show quotas"""
+        # Get api sample to show quotas.
         response = self._do_get('os-quota-sets/fake_tenant')
         self.assertEqual(response.status, 200)
         return self._verify_response('quotas-show-get-resp', {}, response)
 
     def test_show_quotas_defaults(self):
-        """Get api sample to show quotas defaults"""
+        # Get api sample to show quotas defaults.
         response = self._do_get('os-quota-sets/fake_tenant/defaults')
         self.assertEqual(response.status, 200)
         return self._verify_response('quotas-show-defaults-get-resp',
                                      {}, response)
 
     def test_update_quotas(self):
-        """Get api sample to update quotas"""
+        # Get api sample to update quotas.
         response = self._do_put('os-quota-sets/fake_tenant',
                                 'quotas-update-post-req',
                                 {})
@@ -2172,7 +2172,7 @@ class FlavorManageSampleJsonTests(ApiSampleTestBase):
                       "Flavormanage")
 
     def _create_flavor(self):
-        """Create a flavor"""
+        """Create a flavor."""
         subs = {
             'flavor_id': 10,
             'flavor_name': "test_flavor"
@@ -2185,11 +2185,11 @@ class FlavorManageSampleJsonTests(ApiSampleTestBase):
         return self._verify_response("flavor-create-post-resp", subs, response)
 
     def test_create_flavor(self):
-        """Get api sample to create a flavor"""
+        # Get api sample to create a flavor.
         self._create_flavor()
 
     def test_delete_flavor(self):
-        """Get api sample to delete a flavor"""
+        # Get api sample to delete a flavor.
         self._create_flavor()
         response = self._do_delete("flavors/10")
         self.assertEqual(response.status, 202)
@@ -2366,7 +2366,7 @@ class FlavorDisabledSampleJsonTests(ApiSampleTestBase):
                       "Flavor_disabled")
 
     def test_show_flavor(self):
-        """Get api sample to show flavor_disabled attr. of a flavor"""
+        # Get api sample to show flavor_disabled attr. of a flavor.
         flavor_id = 1
         response = self._do_get('flavors/%s' % flavor_id)
         self.assertEqual(response.status, 200)
@@ -2376,7 +2376,7 @@ class FlavorDisabledSampleJsonTests(ApiSampleTestBase):
                                      response)
 
     def test_detail_flavor(self):
-        """Get api sample to show details of a flavor"""
+        # Get api sample to show details of a flavor.
         response = self._do_get('flavors/detail')
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
@@ -2394,7 +2394,7 @@ class QuotaClassesSampleJsonTests(ApiSampleTestBase):
     set_id = 'test_class'
 
     def test_show_quota_classes(self):
-        """Get api sample to show quota classes"""
+        # Get api sample to show quota classes.
         response = self._do_get('os-quota-class-sets/%s' % self.set_id)
         self.assertEqual(response.status, 200)
         subs = {'set_id': self.set_id}
@@ -2402,7 +2402,7 @@ class QuotaClassesSampleJsonTests(ApiSampleTestBase):
                                      response)
 
     def test_update_quota_classes(self):
-        """Get api sample to update quota classes"""
+        # Get api sample to update quota classes.
         response = self._do_put('os-quota-class-sets/%s' % self.set_id,
                                 'quota-classes-update-post-req',
                                 {})

@@ -22,13 +22,13 @@ class TestFaults(test.TestCase):
     """Tests covering ec2 Fault class."""
 
     def test_fault_exception(self):
-        """Ensure the status_int is set correctly on faults"""
+        # Ensure the status_int is set correctly on faults.
         fault = faults.Fault(webob.exc.HTTPBadRequest(
                              explanation='test'))
         self.assertTrue(isinstance(fault.wrapped_exc,
                          webob.exc.HTTPBadRequest))
 
     def test_fault_exception_status_int(self):
-        """Ensure the status_int is set correctly on faults"""
+        # Ensure the status_int is set correctly on faults.
         fault = faults.Fault(webob.exc.HTTPNotFound(explanation='test'))
         self.assertEquals(fault.wrapped_exc.status_int, 404)

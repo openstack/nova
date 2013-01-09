@@ -235,7 +235,7 @@ class UsageInfoTestCase(test.TestCase):
         fake_network.set_stub_network_methods(self.stubs)
 
     def _create_instance(self, params={}):
-        """Create a test instance"""
+        """Create a test instance."""
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
@@ -251,7 +251,7 @@ class UsageInfoTestCase(test.TestCase):
         return db.instance_create(self.context, inst)['id']
 
     def test_notify_usage_exists(self):
-        """Ensure 'exists' notification generates appropriate usage data."""
+        # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
         # Set some system metadata
@@ -286,7 +286,7 @@ class UsageInfoTestCase(test.TestCase):
         self.compute.terminate_instance(self.context, instance)
 
     def test_notify_usage_exists_deleted_instance(self):
-        """Ensure 'exists' notification generates appropriate usage data."""
+        # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
         # Set some system metadata
@@ -321,7 +321,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_notify_usage_exists_instance_not_found(self):
-        """Ensure 'exists' notification generates appropriate usage data."""
+        # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance)

@@ -196,7 +196,7 @@ class XMLDeserializerTest(test.TestCase):
         self.assertEqual(deserializer.deserialize(xml), as_dict)
 
     def test_xml_empty(self):
-        xml = """<a></a>"""
+        xml = '<a></a>'
         as_dict = {"body": {"a": {}}}
         deserializer = wsgi.XMLDeserializer()
         self.assertEqual(deserializer.deserialize(xml), as_dict)
@@ -753,7 +753,7 @@ class ResourceTest(test.TestCase):
         self.assertEqual(response, 'foo')
 
     def test_resource_exception_handler_type_error(self):
-        """A TypeError should be translated to a Fault/HTTP 400"""
+        # A TypeError should be translated to a Fault/HTTP 400.
         def foo(a,):
             return a
 

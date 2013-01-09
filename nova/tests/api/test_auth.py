@@ -93,7 +93,7 @@ class TestKeystoneMiddlewareRoles(test.TestCase):
         self.roles = "pawn, knight, rook"
 
     def test_roles(self):
-        """Test that the newer style role header takes precedence"""
+        # Test that the newer style role header takes precedence.
         self.request.headers['X_ROLES'] = 'pawn,knight,rook'
         self.request.headers['X_ROLE'] = 'bad'
 
@@ -106,7 +106,7 @@ class TestKeystoneMiddlewareRoles(test.TestCase):
         self.assertEqual(response.status, '200 No Roles')
 
     def test_deprecated_role(self):
-        """Test fallback to older role header"""
+        # Test fallback to older role header.
         self.request.headers['X_ROLE'] = 'pawn,knight,rook'
 
         response = self.request.get_response(self.middleware)
@@ -118,7 +118,7 @@ class TestKeystoneMiddlewareRoles(test.TestCase):
         self.assertEqual(response.status, '200 No Roles')
 
     def test_no_role_headers(self):
-        """Test with no role headers set"""
+        # Test with no role headers set.
 
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '200 No Roles')

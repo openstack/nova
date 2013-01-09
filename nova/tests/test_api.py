@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Unit tests for the API endpoint"""
+"""Unit tests for the API endpoint."""
 
 import random
 import StringIO
@@ -45,13 +45,13 @@ from nova.tests import matchers
 
 
 class FakeHttplibSocket(object):
-    """a fake socket implementation for httplib.HTTPResponse, trivial"""
+    """a fake socket implementation for httplib.HTTPResponse, trivial."""
     def __init__(self, response_string):
         self.response_string = response_string
         self._buffer = StringIO.StringIO(response_string)
 
     def makefile(self, _mode, _other):
-        """Returns the socket's internal buffer"""
+        """Returns the socket's internal buffer."""
         return self._buffer
 
 
@@ -91,12 +91,12 @@ class FakeHttplibConnection(object):
         return self.sock.response_string
 
     def close(self):
-        """Required for compatibility with boto/tornado"""
+        """Required for compatibility with boto/tornado."""
         pass
 
 
 class XmlConversionTestCase(test.TestCase):
-    """Unit test api xml conversion"""
+    """Unit test api xml conversion."""
     def test_number_conversion(self):
         conv = ec2utils._try_convert
         self.assertEqual(conv('None'), None)
@@ -212,7 +212,7 @@ class Ec2utilsTestCase(test.TestCase):
 
 
 class ApiEc2TestCase(test.TestCase):
-    """Unit test for the cloud controller on an EC2 API"""
+    """Unit test for the cloud controller on an EC2 API."""
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
         self.host = '127.0.0.1'
@@ -225,7 +225,7 @@ class ApiEc2TestCase(test.TestCase):
         self.useFixture(fixtures.FakeLogger('boto'))
 
     def expect_http(self, host=None, is_secure=False, api_version=None):
-        """Returns a new EC2 connection"""
+        """Returns a new EC2 connection."""
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
@@ -281,7 +281,7 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(self.ec2.get_all_instances(), [])
 
     def test_terminate_invalid_instance(self):
-        """Attempt to terminate an invalid instance"""
+        # Attempt to terminate an invalid instance.
         self.expect_http()
         self.mox.ReplayAll()
         self.assertRaises(boto_exc.EC2ResponseError,
@@ -318,7 +318,7 @@ class ApiEc2TestCase(test.TestCase):
             self.fail('Exception not raised.')
 
     def test_get_all_security_groups(self):
-        """Test that we can retrieve security groups"""
+        # Test that we can retrieve security groups.
         self.expect_http()
         self.mox.ReplayAll()
 
@@ -328,7 +328,7 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEquals(rv[0].name, 'default')
 
     def test_create_delete_security_group(self):
-        """Test that we can create a security group"""
+        # Test that we can create a security group.
         self.expect_http()
         self.mox.ReplayAll()
 

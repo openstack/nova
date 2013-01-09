@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Unit tests for the DB API"""
+"""Unit tests for the DB API."""
 
 import datetime
 import uuid as stdlib_uuid
@@ -114,7 +114,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_by_filters_regex_unsupported_db(self):
-        """Ensure that the 'LIKE' operator is used for unsupported dbs."""
+        # Ensure that the 'LIKE' operator is used for unsupported dbs.
         self.flags(sql_connection="notdb://")
         self.create_instances_with_args(display_name='test1')
         self.create_instances_with_args(display_name='test.*')
@@ -321,7 +321,7 @@ class DbApiTestCase(test.TestCase):
                           inst['uuid'], 'vm_state', [None, 'disable'], 'run')
 
     def test_instance_update_with_instance_uuid(self):
-        """test instance_update() works when an instance UUID is passed """
+        # test instance_update() works when an instance UUID is passed.
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
@@ -428,7 +428,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEquals("needscoffee", new_ref["vm_state"])
 
     def test_instance_update_with_extra_specs(self):
-        """Ensure _extra_specs are returned from _instance_update"""
+        # Ensure _extra_specs are returned from _instance_update.
         ctxt = context.get_admin_context()
 
         # create a flavor
@@ -463,7 +463,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEquals(spec, new_ref['extra_specs'])
 
     def test_instance_fault_create(self):
-        """Ensure we can create an instance fault"""
+        # Ensure we can create an instance fault.
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
 
@@ -481,7 +481,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(404, faults[uuid][0]['code'])
 
     def test_instance_fault_get_by_instance(self):
-        """ensure we can retrieve an instance fault by  instance UUID """
+        # ensure we can retrieve an instance fault by  instance UUID.
         ctxt = context.get_admin_context()
         instance1 = db.instance_create(ctxt, {})
         instance2 = db.instance_create(ctxt, {})
@@ -530,7 +530,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(instance_faults, expected)
 
     def test_instance_faults_get_by_instance_uuids_no_faults(self):
-        """None should be returned when no faults exist"""
+        # None should be returned when no faults exist.
         ctxt = context.get_admin_context()
         instance1 = db.instance_create(ctxt, {})
         instance2 = db.instance_create(ctxt, {})

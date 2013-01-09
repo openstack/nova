@@ -167,7 +167,7 @@ class CinderCloudTestCase(test.TestCase):
                                            name)
 
     def test_describe_volumes(self):
-        """Makes sure describe_volumes works and filters results."""
+        # Makes sure describe_volumes works and filters results.
 
         vol1 = self.cloud.create_volume(self.context,
                                         size=1,
@@ -208,7 +208,7 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_volume(self.context, volume_id)
 
     def test_create_volume_from_snapshot(self):
-        """Makes sure create_volume works when we specify a snapshot."""
+        # Makes sure create_volume works when we specify a snapshot.
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
@@ -233,7 +233,7 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_volume(self.context, volume1_id)
 
     def test_describe_snapshots(self):
-        """Makes sure describe_snapshots works and filters results."""
+        # Makes sure describe_snapshots works and filters results.
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
@@ -309,7 +309,7 @@ class CinderCloudTestCase(test.TestCase):
                          'banana')
 
     def test_create_snapshot(self):
-        """Makes sure create_snapshot works."""
+        # Makes sure create_snapshot works.
         availability_zone = 'zone1:host1'
         result = self.cloud.describe_snapshots(self.context)
         vol1 = self.cloud.create_volume(self.context,
@@ -330,7 +330,7 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_volume(self.context, vol1['volumeId'])
 
     def test_delete_snapshot(self):
-        """Makes sure delete_snapshot works."""
+        # Makes sure delete_snapshot works.
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
@@ -707,7 +707,7 @@ class CinderCloudTestCase(test.TestCase):
         self.assertEqual(vol['attach_status'], "detached")
 
     def test_stop_start_with_volume(self):
-        """Make sure run instance with block device mapping works"""
+        # Make sure run instance with block device mapping works.
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
@@ -788,7 +788,7 @@ class CinderCloudTestCase(test.TestCase):
         self._restart_compute_service()
 
     def test_stop_with_attached_volume(self):
-        """Make sure attach info is reflected to block device mapping"""
+        # Make sure attach info is reflected to block device mapping.
 
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
@@ -863,7 +863,7 @@ class CinderCloudTestCase(test.TestCase):
         return result['snapshotId']
 
     def test_run_with_snapshot(self):
-        """Makes sure run/stop/start instance with snapshot works."""
+        # Makes sure run/stop/start instance with snapshot works.
         availability_zone = 'zone1:host1'
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
@@ -936,7 +936,7 @@ class CinderCloudTestCase(test.TestCase):
         #    self.cloud.delete_snapshot(self.context, snapshot_id)
 
     def test_create_image(self):
-        """Make sure that CreateImage works"""
+        # Make sure that CreateImage works.
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval_max=0.3)
 

@@ -35,7 +35,7 @@ CONF = cfg.CONF
 
 
 class NullWriter(object):
-    """Used to test ImageService.get which takes a writer object"""
+    """Used to test ImageService.get which takes a writer object."""
 
     def write(self, *arg, **kwargs):
         pass
@@ -134,7 +134,7 @@ class TestGlanceImageService(test.TestCase):
                                   deleted_at=self.NOW_GLANCE_FORMAT)
 
     def test_create_with_instance_id(self):
-        """Ensure instance_id is persisted as an image-property"""
+        # Ensure instance_id is persisted as an image-property.
         fixture = {'name': 'test image',
                    'is_public': False,
                    'properties': {'instance_id': '42', 'user_id': 'fake'}}

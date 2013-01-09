@@ -49,7 +49,7 @@ def serialize_obj(obj):
 
 
 def serialize_args(*args, **kwargs):
-    """Workaround for float string conversion issues in Python 2.6"""
+    """Workaround for float string conversion issues in Python 2.6."""
     return serialize_obj((args, kwargs))
 
 

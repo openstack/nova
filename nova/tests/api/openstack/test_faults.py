@@ -38,7 +38,7 @@ class TestFaults(test.TestCase):
         return xml_string
 
     def test_400_fault_json(self):
-        """Test fault serialized to JSON via file-extension and/or header."""
+        # Test fault serialized to JSON via file-extension and/or header.
         requests = [
             webob.Request.blank('/.json'),
             webob.Request.blank('/', headers={"Accept": "application/json"}),
@@ -60,7 +60,7 @@ class TestFaults(test.TestCase):
             self.assertEqual(expected, actual)
 
     def test_413_fault_json(self):
-        """Test fault serialized to JSON via file-extension and/or header."""
+        # Test fault serialized to JSON via file-extension and/or header.
         requests = [
             webob.Request.blank('/.json'),
             webob.Request.blank('/', headers={"Accept": "application/json"}),
@@ -85,7 +85,7 @@ class TestFaults(test.TestCase):
             self.assertEqual(expected, actual)
 
     def test_raise(self):
-        """Ensure the ability to raise :class:`Fault` in WSGI-ified methods."""
+        # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
         @webob.dec.wsgify
         def raiser(req):
             raise wsgi.Fault(webob.exc.HTTPNotFound(explanation='whut?'))
@@ -97,7 +97,7 @@ class TestFaults(test.TestCase):
         self.assertTrue('whut?' in resp.body)
 
     def test_raise_403(self):
-        """Ensure the ability to raise :class:`Fault` in WSGI-ified methods."""
+        # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
         @webob.dec.wsgify
         def raiser(req):
             raise wsgi.Fault(webob.exc.HTTPForbidden(explanation='whut?'))
@@ -110,12 +110,12 @@ class TestFaults(test.TestCase):
         self.assertTrue('forbidden' in resp.body)
 
     def test_fault_has_status_int(self):
-        """Ensure the status_int is set correctly on faults"""
+        # Ensure the status_int is set correctly on faults.
         fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
         self.assertEqual(fault.status_int, 400)
 
     def test_xml_serializer(self):
-        """Ensure that a v1.1 request responds with a v1.1 xmlns"""
+        # Ensure that a v1.1 request responds with a v1.1 xmlns.
         request = webob.Request.blank('/v1.1',
                                       headers={"Accept": "application/xml"})
 

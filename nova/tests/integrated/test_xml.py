@@ -40,7 +40,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         self.assertEqual(root.nsmap.get(None), xmlutil.XMLNS_COMMON_V10)
 
     def test_namespace_servers(self):
-        """/servers should have v1.1 namespace (has changed in 1.1)."""
+        # /servers should have v1.1 namespace (has changed in 1.1).
         headers = {}
         headers['Accept'] = 'application/xml'
 

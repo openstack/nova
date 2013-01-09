@@ -40,7 +40,7 @@ from nova.tests.scheduler import fakes
 
 
 class SchedulerManagerTestCase(test.TestCase):
-    """Test case for scheduler manager"""
+    """Test case for scheduler manager."""
 
     manager_cls = manager.SchedulerManager
     driver_cls = driver.Scheduler
@@ -268,7 +268,7 @@ class SchedulerManagerTestCase(test.TestCase):
 
 
 class SchedulerTestCase(test.TestCase):
-    """Test case for base scheduler driver class"""
+    """Test case for base scheduler driver class."""
 
     # So we can subclass this test and re-use tests if we need.
     driver_cls = driver.Scheduler
@@ -325,7 +325,7 @@ class SchedulerTestCase(test.TestCase):
                 'task_state': ''}
 
     def test_live_migration_basic(self):
-        """Test basic schedule_live_migration functionality"""
+        # Test basic schedule_live_migration functionality.
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
@@ -359,7 +359,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_all_checks_pass(self):
-        """Test live migration when all checks pass."""
+        # Test live migration when all checks pass.
 
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -422,7 +422,7 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual(result, None)
 
     def test_live_migration_instance_not_running(self):
-        """The instance given by instance_id is not running."""
+        # The instance given by instance_id is not running.
 
         dest = 'fake_host2'
         block_migration = False
@@ -437,7 +437,7 @@ class SchedulerTestCase(test.TestCase):
                     disk_over_commit=disk_over_commit)
 
     def test_live_migration_compute_src_not_exist(self):
-        """Raise exception when src compute node is does not exist."""
+        # Raise exception when src compute node is does not exist.
 
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -460,7 +460,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_compute_src_not_alive(self):
-        """Raise exception when src compute node is not alive."""
+        # Raise exception when src compute node is not alive.
 
         self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -483,7 +483,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_compute_dest_not_alive(self):
-        """Raise exception when dest compute node is not alive."""
+        # Raise exception when dest compute node is not alive.
 
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -508,7 +508,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_dest_check_service_same_host(self):
-        """Confirms exception raises in case dest and src is same host."""
+        # Confirms exception raises in case dest and src is same host.
 
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -532,7 +532,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=False)
 
     def test_live_migration_dest_check_service_lack_memory(self):
-        """Confirms exception raises when dest doesn't have enough memory."""
+        # Confirms exception raises when dest doesn't have enough memory.
 
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
@@ -563,7 +563,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_different_hypervisor_type_raises(self):
-        """Confirm live_migration to hypervisor of different type raises"""
+        # Confirm live_migration to hypervisor of different type raises.
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(rpc, 'queue_get_for')
@@ -595,7 +595,7 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_dest_hypervisor_version_older_raises(self):
-        """Confirm live migration to older hypervisor raises"""
+        # Confirm live migration to older hypervisor raises.
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(rpc, 'queue_get_for')
@@ -654,7 +654,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
 
 class SchedulerDriverModuleTestCase(test.TestCase):
-    """Test case for scheduler driver module methods"""
+    """Test case for scheduler driver module methods."""
 
     def setUp(self):
         super(SchedulerDriverModuleTestCase, self).setUp()

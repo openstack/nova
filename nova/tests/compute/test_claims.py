@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for resource tracker claims"""
+"""Tests for resource tracker claims."""
 
 import uuid
 

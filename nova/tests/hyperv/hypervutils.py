@@ -87,7 +87,7 @@ class HyperVUtils(object):
                     % (path, ret_val))
 
     def _check_job_status(self, jobpath):
-        """Poll WMI job state for completion"""
+        """Poll WMI job state for completion."""
         job_wmi_path = jobpath.replace('\\', '/')
         job = wmi.WMI(moniker=job_wmi_path)
 

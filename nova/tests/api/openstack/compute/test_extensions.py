@@ -99,7 +99,7 @@ class StubLateExtensionController(wsgi.Controller):
 
 
 class StubExtensionManager(object):
-    """Provides access to Tweedle Beetles"""
+    """Provides access to Tweedle Beetles."""
 
     name = "Tweedle Beetle Extension"
     alias = "TWDLBETL"
