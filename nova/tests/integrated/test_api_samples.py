@@ -46,6 +46,7 @@ from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
+from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests import fake_network
 from nova.tests.image import fake
@@ -381,7 +382,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-hypervisors')
-        do_not_approve_additions.append('os-services')
         do_not_approve_additions.append('os-volumes')
 
         tests = self._get_extensions_tested()
@@ -1906,6 +1906,61 @@ class MultipleCreateJsonTest(ServersSampleBase):
 
 class MultipleCreateXmlTest(MultipleCreateJsonTest):
     ctype = 'xml'
+
+
+class ServicesJsonTest(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.services.Services"
+
+    def setUp(self):
+        super(ServicesJsonTest, self).setUp()
+        self.stubs.Set(db, "service_get_all",
+                       test_services.fake_service_get_all)
+        self.stubs.Set(timeutils, "utcnow", test_services.fake_utcnow)
+        self.stubs.Set(db, "service_get_by_args",
+                       test_services.fake_service_get_by_host_binary)
+        self.stubs.Set(db, "service_update",
+                       test_services.fake_service_update)
+
+    def tearDown(self):
+        super(ServicesJsonTest, self).tearDown()
+        timeutils.clear_time_override()
+
+    def test_services_list(self):
+        """Return a list of all agent builds."""
+        response = self._do_get('os-services')
+        self.assertEqual(response.status, 200)
+        subs = {'binary': 'nova-compute',
+                'host': 'host1',
+                'zone': 'nova',
+                'status': 'disabled',
+                'state': 'up'}
+        subs.update(self._get_regexes())
+        return self._verify_response('services-list-get-resp',
+                                     subs, response)
+
+    def test_service_enable(self):
+        """Enable an existing agent build."""
+        subs = {"host": "host1",
+                'service': 'nova-compute'}
+        response = self._do_put('/os-services/enable',
+                                'service-enable-put-req', subs)
+        self.assertEqual(response.status, 200)
+        subs = {"host": "host1",
+                "service": "nova-compute"}
+        return self._verify_response('service-enable-put-resp',
+                                      subs, response)
+
+    def test_service_disable(self):
+        """Disable an existing agent build."""
+        subs = {"host": "host1",
+                'service': 'nova-compute'}
+        response = self._do_put('/os-services/disable',
+                                'service-disable-put-req', subs)
+        self.assertEqual(response.status, 200)
+        subs = {"host": "host1",
+                "service": "nova-compute"}
+        return self._verify_response('service-disable-put-resp',
+                                     subs, response)
 
 
 class SimpleTenantUsageSampleJsonTest(ServersSampleBase):

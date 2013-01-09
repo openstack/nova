@@ -1,0 +1,5 @@
+{
+    "disabled": false,
+    "host": "host1",
+    "service": "nova-compute"
+}

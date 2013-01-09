@@ -1,0 +1,4 @@
+{
+    "host": "host1",
+    "service": "nova-compute"
+}
