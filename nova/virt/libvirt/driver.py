@@ -263,6 +263,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     capabilities = {
         "has_imagecache": True,
+        "supports_recreate": True,
         }
 
     def __init__(self, virtapi, read_only=False):

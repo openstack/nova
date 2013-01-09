@@ -3253,6 +3253,255 @@ class ComputeTestCase(BaseTestCase):
         for instance in instances:
             db.instance_destroy(c, instance['uuid'])
 
+    def test_rebuild_on_host_updated_target(self):
+        """Confirm evacuate scenario updates host."""
+
+        # creating testdata
+        c = self.context.elevated()
+
+        inst_ref = self._create_fake_instance({'host': 'someotherhost'})
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+        inst_id = inst_ref["id"]
+        inst_uuid = inst_ref["uuid"]
+        dest = self.compute.host
+
+        def set_shared_storage(instance):
+            return True
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       set_shared_storage)
+
+        self.compute.rebuild_instance(c, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass=None,
+                                      orig_sys_metadata=None, bdms=[],
+                                      recreate=True, on_shared_storage=True)
+
+        # make sure instance is updated with destination hostname.
+        instance = db.instance_get(c, inst_id)
+        self.assertTrue(instance['host'])
+        self.assertEqual(instance['host'], dest)
+
+        # cleanup
+        db.instance_destroy(c, inst_uuid)
+
+    def test_rebuild_with_wrong_shared_storage(self):
+        """Confirm evacuate scenario updates host."""
+
+        # creating testdata
+        c = self.context.elevated()
+
+        inst_ref = self._create_fake_instance({'host': 'srchost'})
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+        inst_id = inst_ref["id"]
+        inst_uuid = inst_ref["uuid"]
+        dest = self.compute.host
+
+        def set_shared_storage(instance):
+            return True
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       set_shared_storage)
+
+        self.assertRaises(exception.Invalid,
+                          self.compute.rebuild_instance, c, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass=None,
+                                      orig_sys_metadata=None,
+                                      recreate=True, on_shared_storage=False)
+
+        # make sure instance was not updated with destination hostname.
+        instance = db.instance_get(c, inst_id)
+        self.assertTrue(instance['host'])
+        self.assertEqual(instance['host'], 'srchost')
+
+        # cleanup
+        db.instance_destroy(c, inst_uuid)
+
+    def test_rebuild_on_host_with_volumes(self):
+        """Confirm evacuate scenario reconnects volumes."""
+
+        # creating testdata
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance
+                                          ({'host': 'fake_host_2'}))
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+
+        inst_id = inst_ref["id"]
+        inst_uuid = inst_ref["uuid"]
+
+        volume_id = 'fake'
+        values = {'instance_uuid': inst_ref['uuid'],
+                  'device_name': '/dev/vdc',
+                  'delete_on_termination': False,
+                  'volume_id': volume_id,
+                  }
+
+        admin = context.get_admin_context()
+        db.block_device_mapping_create(admin, values)
+
+        def set_shared_storage(instance):
+            return True
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       set_shared_storage)
+
+        def fake_volume_get(self, context, volume):
+            return {'id': volume_id}
+        self.stubs.Set(cinder.API, "get", fake_volume_get)
+
+        # Stub out and record whether it gets detached
+        result = {"detached": False}
+
+        def fake_detach(self, context, volume):
+            result["detached"] = volume["id"] == volume_id
+        self.stubs.Set(cinder.API, "detach", fake_detach)
+
+        def fake_terminate_connection(self, context, volume, connector):
+            return {}
+        self.stubs.Set(cinder.API, "terminate_connection",
+                       fake_terminate_connection)
+
+        # make sure volumes attach, detach are called
+        self.mox.StubOutWithMock(self.compute.volume_api, 'detach')
+        self.compute.volume_api.detach(mox.IsA(admin), mox.IgnoreArg())
+
+        self.mox.StubOutWithMock(self.compute, '_setup_block_device_mapping')
+        self.compute._setup_block_device_mapping(mox.IsA(admin),
+                                                 mox.IsA(inst_ref),
+                                                 mox.IgnoreArg())
+
+        # start test
+        self.mox.ReplayAll()
+
+        self.compute.rebuild_instance(admin, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass=None,
+                                      orig_sys_metadata=None, bdms=[],
+                                      recreate=True, on_shared_storage=True)
+
+        # cleanup
+        for bdms in db.block_device_mapping_get_all_by_instance(
+            admin, inst_uuid):
+            db.block_device_mapping_destroy(admin, bdms['id'])
+        db.instance_destroy(admin, inst_uuid)
+
+    def test_rebuild_on_host_with_shared_storage(self):
+        """Confirm evacuate scenario on shared storage."""
+
+        # creating testdata
+        c = self.context.elevated()
+
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance
+                                          ({'host': 'fake_host_2'}))
+
+        inst_uuid = inst_ref["uuid"]
+        dest = self.compute.host
+
+        def set_shared_storage(instance):
+            return True
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       set_shared_storage)
+
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'spawn')
+        self.compute.driver.spawn(mox.IsA(c), mox.IsA(inst_ref), {},
+                              mox.IgnoreArg(), None,
+                              mox.IgnoreArg(), mox.IgnoreArg())
+
+        # start test
+        self.mox.ReplayAll()
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+
+        self.compute.rebuild_instance(c, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass=None,
+                                      orig_sys_metadata=None, bdms=[],
+                                      recreate=True, on_shared_storage=True)
+
+        # cleanup
+        db.instance_destroy(c, inst_uuid)
+
+    def test_rebuild_on_host_without_shared_storage(self):
+        """Confirm evacuate scenario without shared storage
+        (rebuild from image)"""
+
+        # creating testdata
+        c = self.context.elevated()
+
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance
+                                          ({'host': 'fake_host_2'}))
+
+        inst_uuid = inst_ref["uuid"]
+        dest = self.compute.host
+
+        fake_image = {
+            'id': 1,
+            'name': 'fake_name',
+            'properties': {'kernel_id': 'fake_kernel_id',
+                           'ramdisk_id': 'fake_ramdisk_id'},
+        }
+
+        def set_shared_storage(instance):
+            return False
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       set_shared_storage)
+
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'spawn')
+        self.compute.driver.spawn(mox.IsA(c), mox.IsA(inst_ref),
+                                  mox.IsA(fake_image), mox.IgnoreArg(),
+                                  mox.IgnoreArg(), mox.IgnoreArg(),
+                                  mox.IgnoreArg())
+
+        # start test
+        self.mox.ReplayAll()
+
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+
+        self.compute.rebuild_instance(c, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass='newpass',
+                                      orig_sys_metadata=None, bdms=[],
+                                      recreate=True, on_shared_storage=False)
+
+        # cleanup
+        db.instance_destroy(c, inst_uuid)
+
+    def test_rebuild_on_host_instance_exists(self):
+        """Rebuild if instance exists raise an exception"""
+
+        # creating testdata
+        c = self.context.elevated()
+        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        dest = self.compute.host
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        dest = self.compute.host
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        db.instance_update(self.context, inst_ref['uuid'],
+                           {"task_state": task_states.REBUILDING})
+
+        self.assertRaises(exception.Invalid,
+                          self.compute.rebuild_instance, c, instance=inst_ref,
+                                      injected_files=None, image_ref=None,
+                                      orig_image_ref=None, new_pass=None,
+                                      orig_sys_metadata=None,
+                                      recreate=True, on_shared_storage=True)
+
+        # cleanup
+        db.instance_destroy(c, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
+
 
 class ComputeAPITestCase(BaseTestCase):
 

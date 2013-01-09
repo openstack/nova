@@ -76,6 +76,7 @@ class FakeInstance(object):
 class FakeDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
+        "supports_recreate": True,
         }
 
     """Fake hypervisor driver"""

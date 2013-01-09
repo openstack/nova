@@ -109,6 +109,7 @@ class ComputeDriver(object):
 
     capabilities = {
         "has_imagecache": False,
+        "supports_recreate": False,
         }
 
     def __init__(self, virtapi):
