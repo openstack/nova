@@ -144,6 +144,36 @@ def volume_group_free_space(vg):
     return int(out.strip())
 
 
+def volume_group_total_space(vg):
+    """Return total space on volume group in bytes.
+
+    :param vg: volume group name
+    """
+
+    out, err = execute('vgs', '--noheadings', '--nosuffix',
+                       '--units', 'b', '-o', 'vg_size', vg,
+                       run_as_root=True)
+    return int(out.strip())
+
+
+def volume_group_used_space(vg):
+    """Return available space on volume group in bytes.
+
+    :param vg: volume group name
+    """
+
+    out, err = execute('vgs', '--noheadings', '--nosuffix',
+                       '--separator', '|',
+                       '--units', 'b', '-o', 'vg_size,vg_free', vg,
+                       run_as_root=True)
+
+    info = out.split('|')
+    if len(info) != 2:
+        raise RuntimeError(_("vg %s must be LVM volume group") % vg)
+
+    return int(info[0]) - int(info[1])
+
+
 def list_logical_volumes(vg):
     """List logical volumes paths for given volume group.
 

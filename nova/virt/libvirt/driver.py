@@ -2032,8 +2032,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        stats = libvirt_utils.get_fs_info(CONF.instances_path)
-        return stats['total'] / (1024 ** 3)
+        if CONF.libvirt_images_type == 'lvm':
+            vg_total = libvirt_utils.volume_group_total_space(
+                                 CONF.libvirt_images_volume_group)
+            return vg_total / (1024 ** 3)
+        else:
+            stats = libvirt_utils.get_fs_info(CONF.instances_path)
+            return stats['total'] / (1024 ** 3)
 
     def get_vcpu_used(self):
         """Get vcpu usage number of physical computer.
@@ -2101,8 +2106,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        stats = libvirt_utils.get_fs_info(CONF.instances_path)
-        return stats['used'] / (1024 ** 3)
+        if CONF.libvirt_images_type == 'lvm':
+            vg_used = libvirt_utils.volume_group_used_space(
+                                  CONF.libvirt_images_volume_group)
+            return vg_used / (1024 ** 3)
+        else:
+            stats = libvirt_utils.get_fs_info(CONF.instances_path)
+            return stats['used'] / (1024 ** 3)
 
     def get_hypervisor_type(self):
         """Get hypervisor type.
