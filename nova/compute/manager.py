@@ -386,70 +386,71 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return self.conductor_api.instance_get_all_by_host(context, self.host)
 
-    def _destroy_evacuated_instances(self, context):
-        """Destroys evacuated instances.
-
-        While the compute was down the instances running on it could be
-        evacuated to another host. Checking that instance host identical to
-        current host. Otherwise destroying it
+    def _get_instances_on_driver(self, context):
+        """Return a list of instance records that match the instances found
+        on the hypervisor.
         """
-
-        # getting all vms on this host
         local_instances = []
         try:
-            # try to find all local instances by uuid
+            # Try to find all local instances by uuid.
+            # FIXME(comstud): Would be nice to consolidate this into
+            # a single query to nova-conductor.
             for uuid in self.driver.list_instance_uuids():
                 try:
-                    local_instances.append(self.conductor_api.
-                                           instance_get_by_uuid(context, uuid))
+                    instance = self.conductor_api.instance_get_by_uuid(
+                            context, uuid)
+                    local_instances.append(instance)
                 except exception.InstanceNotFound as e:
                     LOG.error(_('Instance %(uuid)s found in the '
                             'hypervisor, but not in the database'),
                          locals())
                 continue
+            return local_instances
         except NotImplementedError:
-            # the driver doesn't support uuids listing, will do it in ugly way
-            for instance_name in self.driver.list_instances():
-                try:
-                    # couldn't find better way to find instance in db by it's
-                    # name if i will run on the list of this host instances it
-                    # will be hard to ignore instances that were created
-                    # outside openstack. returns -1 if instance name doesn't
-                    # match template
-                    instance_id = compute_utils.parse_decimal_id(CONF
-                                        .instance_name_template, instance_name)
+            pass
 
-                    if instance_id == -1:
-                        continue
+        # The driver doesn't support uuids listing, so we'll have
+        # to brute force.
+        driver_instances = self.driver.list_instances()
+        all_instances = self.conductor_api.instance_get_all(context)
+        name_map = dict([(instance['name'], instance)
+                         for instance in all_instances])
+        local_instances = []
+        for driver_instance in driver_instances:
+            instance = name_map.get(driver_instance)
+            if not instance:
+                LOG.error(_('Instance %(driver_instance)s found in the '
+                            'hypervisor, but not in the database'),
+                          locals())
+                continue
+            local_instances.append(instance)
+        return local_instances
 
-                    local_instances.append(self.conductor_api.
-                                           instance_get(context, instance_id))
-                except exception.InstanceNotFound as e:
-                    LOG.error(_('Instance %(instance_name)s found in the '
-                                'hypervisor, but not in the database'),
-                             locals())
-                    continue
+    def _destroy_evacuated_instances(self, context):
+        """Destroys evacuated instances.
 
+        While nova-compute was down, the instances running on it could be
+        evacuated to another host. Check that the instances reported
+        by the driver are still associated with this host.  If they are
+        not, destroy them.
+        """
+        our_host = self.host
+        local_instances = self._get_instances_on_driver(context)
         for instance in local_instances:
             instance_host = instance['host']
-            host = self.host
             instance_name = instance['name']
-            if instance['host'] != host:
-                LOG.info(_('instance host %(instance_host)s is not equal to '
-                           'current host %(host)s. '
-                           'Deleting zombie instance %(instance_name)s'),
-                         locals())
-
+            if instance['host'] != our_host:
+                LOG.info(_('Deleting instance as its host ('
+                           '%(instance_host)s) is not equal to our '
+                           'host (%(our_host)s).'),
+                         locals(), instance=instance)
                 network_info = self._get_instance_nw_info(context, instance)
                 bdi = self._get_instance_volume_block_device_info(context,
-                                                          instance['uuid'])
-
+                                                                  instance)
                 self.driver.destroy(instance,
                                     self._legacy_nw_info(network_info),
                                     bdi,
                                     False)
-
-                LOG.info(_('zombie vm destroyed'))
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
