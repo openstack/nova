@@ -105,6 +105,9 @@ service_opts = [
     cfg.StrOpt('scheduler_manager',
                default='nova.scheduler.manager.SchedulerManager',
                help='full class name for the Manager for scheduler'),
+    cfg.IntOpt('service_down_time',
+               default=60,
+               help='maximum time since last check-in for up service'),
     ]
 
 CONF = cfg.CONF

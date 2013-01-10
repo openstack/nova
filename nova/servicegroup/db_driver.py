@@ -25,6 +25,8 @@ from nova import utils
 
 
 CONF = cfg.CONF
+CONF.import_opt('service_down_time', 'nova.service')
+
 LOG = logging.getLogger(__name__)
 
 

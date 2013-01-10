@@ -60,9 +60,6 @@ global_opts = [
     cfg.BoolOpt('use_ipv6',
                 default=False,
                 help='use ipv6'),
-    cfg.IntOpt('service_down_time',
-               default=60,
-               help='maximum time since last check-in for up service'),
 ]
 
 cfg.CONF.register_opts(global_opts)

@@ -91,7 +91,7 @@ from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('network_manager', 'nova.service')
-CONF.import_opt('service_down_time', 'nova.config')
+CONF.import_opt('service_down_time', 'nova.service')
 CONF.import_opt('flat_network_bridge', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('multi_host', 'nova.network.manager')
