@@ -50,6 +50,9 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
         # no support for getting resource usage info
         return {}
 
+    def legacy_nwinfo(self):
+        return True
+
 
 class FakeVirtDriver(driver.ComputeDriver):
 
@@ -79,6 +82,9 @@ class FakeVirtDriver(driver.ComputeDriver):
             'cpu_info': '',
         }
         return d
+
+    def legacy_nwinfo(self):
+        return True
 
 
 class BaseTestCase(test.TestCase):

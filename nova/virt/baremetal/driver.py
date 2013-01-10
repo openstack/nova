@@ -166,6 +166,9 @@ class BareMetalDriver(driver.ComputeDriver):
         # TODO(deva): define the version properly elsewhere
         return 1
 
+    def legacy_nwinfo(self):
+        return True
+
     def list_instances(self):
         l = []
         ctx = nova_context.get_admin_context()

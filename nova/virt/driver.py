@@ -727,11 +727,10 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def legacy_nwinfo(self):
-        """
-        Indicate if the driver requires the legacy network_info format.
-        """
-        # TODO(tr3buchet): update all subclasses and remove this
-        return True
+        """True if the driver requires the legacy network_info format."""
+        # TODO(tr3buchet): update all subclasses and remove this method and
+        # related helpers.
+        raise NotImplementedError(self.legacy_nwinfo)
 
     def manage_image_cache(self, context, all_instances):
         """
