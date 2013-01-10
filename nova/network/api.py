@@ -50,11 +50,8 @@ def refresh_cache(f):
             msg = _('instance is a required argument to use @refresh_cache')
             raise Exception(msg)
 
-        # get nw_info from return if possible, otherwise call for it
-        nw_info = res if isinstance(res, network_model.NetworkInfo) else None
-
-        update_instance_cache_with_nw_info(self, context, instance, nw_info,
-                                           *args, **kwargs)
+        update_instance_cache_with_nw_info(self, context, instance,
+                                           nw_info=res)
 
         # return the original function's return value
         return res
@@ -62,20 +59,18 @@ def refresh_cache(f):
 
 
 def update_instance_cache_with_nw_info(api, context, instance,
-                                       nw_info=None,
-                                       *args,
-                                       **kwargs):
+                                        nw_info=None):
 
     try:
-        nw_info = nw_info or api._get_instance_nw_info(context, instance)
-
+        if not isinstance(nw_info, network_model.NetworkInfo):
+            nw_info = None
+        if not nw_info:
+            nw_info = api._get_instance_nw_info(context, instance)
         # update cache
         cache = {'network_info': nw_info.json()}
         api.db.instance_info_cache_update(context, instance['uuid'], cache)
-    except Exception as e:
+    except Exception:
         LOG.exception(_('Failed storing info cache'), instance=instance)
-        LOG.debug(_('args: %s') % (args or {}))
-        LOG.debug(_('kwargs: %s') % (kwargs or {}))
 
 
 class API(base.Base):
@@ -243,10 +238,13 @@ class API(base.Base):
             associations['project'] = project
         self.network_rpcapi.associate(context, network_uuid, associations)
 
-    @refresh_cache
-    def get_instance_nw_info(self, context, instance):
+    def get_instance_nw_info(self, context, instance, update_cache=True):
         """Returns all network info related to an instance."""
-        return self._get_instance_nw_info(context, instance)
+        result = self._get_instance_nw_info(context, instance)
+        if update_cache:
+            update_instance_cache_with_nw_info(self, context, instance,
+                                                result)
+        return result
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""

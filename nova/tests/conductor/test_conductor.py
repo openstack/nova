@@ -324,6 +324,17 @@ class _BaseTestCase(object):
         self.conductor.instance_info_cache_delete(self.context,
                                                   {'uuid': 'fake-uuid'})
 
+    def test_instance_info_cache_update(self):
+        fake_values = {'key1': 'val1', 'key2': 'val2'}
+        fake_instance = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        db.instance_info_cache_update(self.context, 'fake-uuid',
+                                      fake_values)
+        self.mox.ReplayAll()
+        self.conductor.instance_info_cache_update(self.context,
+                                                  fake_instance,
+                                                  fake_values)
+
     def test_instance_type_get(self):
         self.mox.StubOutWithMock(db, 'instance_type_get')
         db.instance_type_get(self.context, 'fake-id').AndReturn('fake-type')

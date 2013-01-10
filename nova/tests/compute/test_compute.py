@@ -2782,6 +2782,31 @@ class ComputeTestCase(BaseTestCase):
         val = self.compute._running_deleted_instances('context')
         self.assertEqual(val, [instance1])
 
+    def test_get_instance_nw_info(self):
+        fake_network.unset_stub_network_methods(self.stubs)
+
+        fake_instance = 'fake-instance'
+        fake_nw_info = network_model.NetworkInfo()
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
+        self.mox.StubOutWithMock(fake_nw_info, 'json')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_info_cache_update')
+
+        self.compute.network_api.get_instance_nw_info(self.context,
+                fake_instance, update_cache=False).AndReturn(fake_nw_info)
+        fake_nw_info.json().AndReturn('fake-nw-info')
+        expected_cache = {'network_info': 'fake-nw-info'}
+        self.compute.conductor_api.instance_info_cache_update(self.context,
+                fake_instance, expected_cache)
+
+        self.mox.ReplayAll()
+
+        result = self.compute._get_instance_nw_info(self.context,
+                                                    fake_instance)
+        self.assertEqual(fake_nw_info, result)
+
     def test_heal_instance_info_cache(self):
         # Update on every call for the test
         self.flags(heal_instance_info_cache_interval=-1)
@@ -2813,27 +2838,27 @@ class ComputeTestCase(BaseTestCase):
             # and is ignored.  However, the below increment of
             # 'get_nw_info' won't happen, and you'll get an assert
             # failure checking it below.
-            self.assertEqual(instance, call_info['expected_instance'])
+            self.assertEqual(call_info['expected_instance'], instance)
             call_info['get_nw_info'] += 1
 
         self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
                 fake_instance_get_all_by_host)
-        self.stubs.Set(db, 'instance_get_by_uuid',
+        self.stubs.Set(self.compute.conductor_api, 'instance_get_by_uuid',
                 fake_instance_get_by_uuid)
-        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+        self.stubs.Set(self.compute, '_get_instance_nw_info',
                 fake_get_instance_nw_info)
 
         call_info['expected_instance'] = instances[0]
         self.compute._heal_instance_info_cache(ctxt)
-        self.assertEqual(call_info['get_all_by_host'], 1)
-        self.assertEqual(call_info['get_by_uuid'], 0)
-        self.assertEqual(call_info['get_nw_info'], 1)
+        self.assertEqual(1, call_info['get_all_by_host'])
+        self.assertEqual(0, call_info['get_by_uuid'])
+        self.assertEqual(1, call_info['get_nw_info'])
 
         call_info['expected_instance'] = instances[1]
         self.compute._heal_instance_info_cache(ctxt)
-        self.assertEqual(call_info['get_all_by_host'], 1)
-        self.assertEqual(call_info['get_by_uuid'], 1)
-        self.assertEqual(call_info['get_nw_info'], 2)
+        self.assertEqual(1, call_info['get_all_by_host'])
+        self.assertEqual(1, call_info['get_by_uuid'])
+        self.assertEqual(2, call_info['get_nw_info'])
 
         # Make an instance switch hosts
         instances[2]['host'] = 'not-me'
