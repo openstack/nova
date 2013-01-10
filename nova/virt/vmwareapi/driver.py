@@ -52,29 +52,29 @@ LOG = logging.getLogger(__name__)
 vmwareapi_opts = [
     cfg.StrOpt('vmwareapi_host_ip',
                default=None,
-               help='URL for connection to VMWare ESX host.Required if '
-                    'compute_driver is vmwareapi.VMWareESXDriver.'),
+               help='URL for connection to VMware ESX host.Required if '
+                    'compute_driver is vmwareapi.VMwareESXDriver.'),
     cfg.StrOpt('vmwareapi_host_username',
                default=None,
-               help='Username for connection to VMWare ESX host. '
+               help='Username for connection to VMware ESX host. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMWareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver.'),
     cfg.StrOpt('vmwareapi_host_password',
                default=None,
-               help='Password for connection to VMWare ESX host. '
+               help='Password for connection to VMware ESX host. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMWareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver.'),
     cfg.FloatOpt('vmwareapi_task_poll_interval',
                  default=5.0,
                  help='The interval used for polling of remote tasks. '
                        'Used only if compute_driver is '
-                       'vmwareapi.VMWareESXDriver.'),
+                       'vmwareapi.VMwareESXDriver.'),
     cfg.IntOpt('vmwareapi_api_retry_count',
                default=10,
                help='The number of times we retry on failures, e.g., '
                     'socket error, etc. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMWareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver.'),
     ]
 
 CONF = cfg.CONF
@@ -93,11 +93,11 @@ class Failure(Exception):
         return str(self.details)
 
 
-class VMWareESXDriver(driver.ComputeDriver):
+class VMwareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
-        super(VMWareESXDriver, self).__init__(virtapi)
+        super(VMwareESXDriver, self).__init__(virtapi)
 
         host_ip = CONF.vmwareapi_host_ip
         host_username = CONF.vmwareapi_host_username
@@ -107,11 +107,11 @@ class VMWareESXDriver(driver.ComputeDriver):
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
                               "and vmwareapi_host_password to use"
-                              "compute_driver=vmwareapi.VMWareESXDriver"))
+                              "compute_driver=vmwareapi.VMwareESXDriver"))
 
-        session = VMWareAPISession(host_ip, host_username, host_password,
+        session = VMwareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
-        self._vmops = vmops.VMWareVMOps(session)
+        self._vmops = vmops.VMwareVMOps(session)
 
     def init_host(self, host):
         """Do the initialization that needs to be done."""
@@ -209,7 +209,7 @@ class VMWareESXDriver(driver.ComputeDriver):
         self._vmops.unplug_vifs(instance, network_info)
 
 
-class VMWareAPISession(object):
+class VMwareAPISession(object):
     """
     Sets up a session with the ESX host and handles all
     the calls made to the host.

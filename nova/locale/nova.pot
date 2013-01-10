@@ -7538,7 +7538,7 @@ msgstr ""
 #: nova/virt/vmwareapi/driver.py:107
 msgid ""
 "Must specify vmwareapi_host_ip,vmwareapi_host_username and "
-"vmwareapi_host_password to usecompute_driver=vmwareapi.VMWareESXDriver"
+"vmwareapi_host_password to usecompute_driver=vmwareapi.VMwareESXDriver"
 msgstr ""
 
 #: nova/virt/vmwareapi/driver.py:258
@@ -7635,7 +7635,7 @@ msgstr ""
 
 #: nova/virt/vmwareapi/read_write_util.py:142
 #, python-format
-msgid "Exception during HTTP connection close in VMWareHTTpWrite. Exception is %s"
+msgid "Exception during HTTP connection close in VMwareHTTPWrite. Exception is %s"
 msgstr ""
 
 #: nova/virt/vmwareapi/vim.py:83

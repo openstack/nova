@@ -26,7 +26,7 @@ def build_datastore_path(datastore_name, path):
 
 def split_datastore_path(datastore_path):
     """
-    Split the VMWare style datastore path to get the Datastore
+    Split the VMware style datastore path to get the Datastore
     name and the entity path.
     """
     spl = datastore_path.split('[', 1)[1].split(']', 1)

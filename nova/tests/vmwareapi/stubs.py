@@ -21,31 +21,31 @@ Stubouts for the test suite
 
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake
-from nova.virt.vmwareapi import network_utils
+from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 
 
 def fake_get_vim_object(arg):
-    """Stubs out the VMWareAPISession's get_vim_object method."""
+    """Stubs out the VMwareAPISession's get_vim_object method."""
     return fake.FakeVim()
 
 
 def fake_is_vim_object(arg, module):
-    """Stubs out the VMWareAPISession's is_vim_object method."""
+    """Stubs out the VMwareAPISession's is_vim_object method."""
     return isinstance(module, fake.FakeVim)
 
 
 def set_stubs(stubs):
     """Set the stubs."""
-    stubs.Set(vmops.VMWareVMOps, 'plug_vifs', fake.fake_plug_vifs)
-    stubs.Set(network_utils, 'get_network_with_the_name',
+    stubs.Set(vmops.VMwareVMOps, 'plug_vifs', fake.fake_plug_vifs)
+    stubs.Set(network_util, 'get_network_with_the_name',
               fake.fake_get_network)
     stubs.Set(vmware_images, 'fetch_image', fake.fake_fetch_image)
     stubs.Set(vmware_images, 'get_vmdk_size_and_properties',
               fake.fake_get_vmdk_size_and_properties)
     stubs.Set(vmware_images, 'upload_image', fake.fake_upload_image)
-    stubs.Set(driver.VMWareAPISession, "_get_vim_object",
+    stubs.Set(driver.VMwareAPISession, "_get_vim_object",
               fake_get_vim_object)
-    stubs.Set(driver.VMWareAPISession, "_is_vim_object",
+    stubs.Set(driver.VMwareAPISession, "_is_vim_object",
               fake_is_vim_object)
