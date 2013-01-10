@@ -17,7 +17,10 @@
 
 
 import datetime
+import filecmp
+import os
 import random
+import tempfile
 import time
 
 import glanceclient.exc
@@ -467,6 +470,40 @@ class TestGlanceImageService(test.TestCase):
         tries = [0]
         self.flags(glance_num_retries=1)
         service.download(self.context, image_id, writer)
+
+    def test_download_file_url(self):
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that returns a file url."""
+
+            (outfd, s_tmpfname) = tempfile.mkstemp(prefix='directURLsrc')
+            outf = os.fdopen(outfd, 'w')
+            inf = open('/dev/urandom', 'r')
+            for i in range(10):
+                _data = inf.read(1024)
+                outf.write(_data)
+            outf.close()
+
+            def get(self, image_id):
+                return type('GlanceTestDirectUrlMeta', (object,),
+                            {'direct_url': 'file://%s' + self.s_tmpfname})
+
+        client = MyGlanceStubClient()
+        (outfd, tmpfname) = tempfile.mkstemp(prefix='directURLdst')
+        writer = os.fdopen(outfd, 'w')
+
+        service = self._create_image_service(client)
+        image_id = 1  # doesn't matter
+
+        self.flags(allowed_direct_url_schemes=['file'])
+        service.download(self.context, image_id, writer)
+        writer.close()
+
+        # compare the two files
+        rc = filecmp.cmp(tmpfname, client.s_tmpfname)
+        self.assertTrue(rc, "The file %s and %s should be the same" %
+                        (tmpfname, client.s_tmpfname))
+        os.remove(client.s_tmpfname)
+        os.remove(tmpfname)
 
     def test_client_forbidden_converts_to_imagenotauthed(self):
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):

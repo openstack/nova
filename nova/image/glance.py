@@ -22,6 +22,7 @@ from __future__ import absolute_import
 import copy
 import itertools
 import random
+import shutil
 import sys
 import time
 import urlparse
@@ -58,7 +59,12 @@ glance_opts = [
     cfg.IntOpt('glance_num_retries',
                default=0,
                help='Number retries when downloading an image from glance'),
-]
+    cfg.ListOpt('allowed_direct_url_schemes',
+                default=[],
+                help='A list of url scheme that can be downloaded directly '
+                     'via the direct_url.  Currently supported schemes: '
+                     '[file].'),
+    ]
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -254,6 +260,18 @@ class GlanceImageService(object):
 
     def download(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
+        if 'file' in CONF.allowed_direct_url_schemes:
+            location = self.get_location(context, image_id)
+            o = urlparse.urlparse(location)
+            if o.scheme == "file":
+                with open(o.path, "r") as f:
+                    # FIXME(jbresnah) a system call to cp could have
+                    # significant performance advantages, however we
+                    # do not have the path to files at this point in
+                    # the abstraction.
+                    shutil.copyfileobj(f, data)
+                return
+
         try:
             image_chunks = self._client.call(context, 1, 'data', image_id)
         except Exception:
