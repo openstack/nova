@@ -47,10 +47,7 @@ WORDWRAP_WIDTH = 60
 
 
 def main(srcfiles):
-    print '\n'.join(['#' * 20, '# nova.conf sample #', '#' * 20,
-                     '', '[DEFAULT]', ''])
-    _list_opts(cfg.CommonConfigOpts,
-               cfg.__name__ + ':' + cfg.CommonConfigOpts.__name__)
+    print '\n'.join(['#' * 20, '# nova.conf sample #', '#' * 20, ''])
     mods_by_pkg = dict()
     for filepath in srcfiles:
         pkg_name = filepath.split(os.sep)[1]
@@ -63,31 +60,94 @@ def main(srcfiles):
     ext_names = filter(lambda x: x not in pkg_names, mods_by_pkg.keys())
     ext_names.sort()
     pkg_names.extend(ext_names)
+
+    # opts_by_group is a mapping of group name to an options list
+    # The options list is a list of (module, options) tuples
+    opts_by_group = {'DEFAULT': []}
+
+    opts_by_group['DEFAULT'].append(
+            (cfg.__name__ + ':' + cfg.CommonConfigOpts.__name__,
+             _list_opts(cfg.CommonConfigOpts)[0][1]))
+
     for pkg_name in pkg_names:
         mods = mods_by_pkg.get(pkg_name)
         mods.sort()
         for mod_str in mods:
-            _print_module(mod_str)
+            if mod_str.endswith('.__init__'):
+                mod_str = mod_str[:mod_str.rfind(".")]
+
+            mod_obj = _import_module(mod_str)
+            if not mod_obj:
+                continue
+
+            for group, opts in _list_opts(mod_obj):
+                opts_by_group.setdefault(group, []).append((mod_str, opts))
+
+    print_group_opts('DEFAULT', opts_by_group.pop('DEFAULT', []))
+    for group, opts in opts_by_group.items():
+        print_group_opts(group, opts)
+
     print "# Total option count: %d" % OPTION_COUNT
 
 
-def _print_module(mod_str):
-    mod_obj = None
-    if mod_str.endswith('.__init__'):
-        mod_str = mod_str[:mod_str.rfind(".")]
+def _import_module(mod_str):
     try:
-        mod_obj = importutils.import_module(mod_str)
+        return importutils.import_module(mod_str)
     except (ValueError, AttributeError), err:
-        return
+        return None
     except ImportError, ie:
         sys.stderr.write("%s\n" % str(ie))
-        return
+        return None
     except Exception, e:
-        return
-    _list_opts(mod_obj, mod_str)
+        return None
 
 
-def _list_opts(obj, name):
+def _guess_groups(opt, mod_obj):
+    groups = []
+
+    # is it in the DEFAULT group?
+    if (opt.dest in cfg.CONF and
+        not isinstance(cfg.CONF[opt.dest], cfg.CONF.GroupAttr)):
+        groups.append('DEFAULT')
+
+    # what other groups is it in?
+    for key, value in cfg.CONF.items():
+        if not isinstance(value, cfg.CONF.GroupAttr):
+            continue
+        if opt.dest not in value:
+            continue
+        groups.append(key)
+
+    if len(groups) == 1:
+        return groups[0]
+
+    group = None
+    for g in groups:
+        if g in mod_obj.__name__:
+            group = g
+            break
+
+    if group is None and 'DEFAULT' in groups:
+        sys.stderr.write("Guessing that " + opt.dest +
+                         " in " + mod_obj.__name__ +
+                         " is in DEFAULT group out of " +
+                         ','.join(groups) + "\n")
+        return 'DEFAULT'
+
+    if group is None:
+        sys.stderr("Unable to guess what group " + opt.dest +
+                   " in " + mod_obj.__name__ +
+                   " is in out of " + ','.join(groups) + "\n")
+        sys.exit(1)
+
+    sys.stderr.write("Guessing that " + opt.dest +
+                     " in " + mod_obj.__name__ +
+                     " is in the " + group +
+                     " group out of " + ','.join(groups) + "\n")
+    return group
+
+
+def _list_opts(obj):
     opts = list()
     for attr_str in dir(obj):
         attr_obj = getattr(obj, attr_str)
@@ -96,14 +156,23 @@ def _list_opts(obj, name):
         elif (isinstance(attr_obj, list) and
               all(map(lambda x: isinstance(x, cfg.Opt), attr_obj))):
             opts.extend(attr_obj)
-    if not opts:
-        return
-    global OPTION_COUNT
-    OPTION_COUNT += len(opts)
-    print '######## defined in %s ########\n' % name
+
+    ret = {}
     for opt in opts:
-        _print_opt(opt)
+        ret.setdefault(_guess_groups(opt, obj), []).append(opt)
+    return ret.items()
+
+
+def print_group_opts(group, opts_by_module):
+    print "[%s]" % group
     print
+    global OPTION_COUNT
+    for mod, opts in opts_by_module:
+        OPTION_COUNT += len(opts)
+        print '######## defined in %s ########\n' % mod
+        for opt in opts:
+            _print_opt(opt)
+        print
 
 
 def _get_my_ip():
