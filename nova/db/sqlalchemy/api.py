@@ -481,7 +481,7 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
 
 
 def _prep_stats_dict(values):
-    """Make list of ComputeNodeStats"""
+    """Make list of ComputeNodeStats."""
     stats = []
     d = values.get('stats', {})
     for k, v in d.iteritems():
@@ -541,7 +541,7 @@ def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
 
 @require_admin_context
 def compute_node_update(context, compute_id, values, prune_stats=False):
-    """Updates the ComputeNode record with the most recent data"""
+    """Updates the ComputeNode record with the most recent data."""
     stats = values.pop('stats', {})
 
     session = get_session()
@@ -1344,7 +1344,7 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
 
 @require_context
 def virtual_interface_get_all(context):
-    """Get all vifs"""
+    """Get all vifs."""
     vif_refs = _virtual_interface_query(context).all()
     return vif_refs
 
@@ -1933,7 +1933,7 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
 
 
 def instance_add_security_group(context, instance_uuid, security_group_id):
-    """Associate the given security group with the given instance"""
+    """Associate the given security group with the given instance."""
     sec_group_ref = models.SecurityGroupInstanceAssociation()
     sec_group_ref.update({'instance_uuid': instance_uuid,
                           'security_group_id': security_group_id})
@@ -1942,7 +1942,7 @@ def instance_add_security_group(context, instance_uuid, security_group_id):
 
 @require_context
 def instance_remove_security_group(context, instance_uuid, security_group_id):
-    """Disassociate the given security group from the given instance"""
+    """Disassociate the given security group from the given instance."""
     model_query(context, models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_uuid=instance_uuid).\
                 filter_by(security_group_id=security_group_id).\
@@ -2882,7 +2882,7 @@ def volume_get_iscsi_target_num(context, volume_id):
 
 @require_context
 def ec2_volume_create(context, volume_uuid, id=None):
-    """Create ec2 compatable volume by provided uuid"""
+    """Create ec2 compatable volume by provided uuid."""
     ec2_volume_ref = models.VolumeIdMapping()
     ec2_volume_ref.update({'uuid': volume_uuid})
     if id is not None:
@@ -2919,7 +2919,7 @@ def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
 
 @require_context
 def ec2_snapshot_create(context, snapshot_uuid, id=None):
-    """Create ec2 compatable snapshot by provided uuid"""
+    """Create ec2 compatable snapshot by provided uuid."""
     ec2_snapshot_ref = models.SnapshotIdMapping()
     ec2_snapshot_ref.update({'uuid': snapshot_uuid})
     if id is not None:
@@ -3625,7 +3625,7 @@ def instance_type_get_all(context, inactive=False, filters=None):
 
 @require_context
 def instance_type_get(context, id, session=None):
-    """Returns a dict describing specific instance_type"""
+    """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context, session=session).\
                     filter_by(id=id).\
                     first()
@@ -3638,7 +3638,7 @@ def instance_type_get(context, id, session=None):
 
 @require_context
 def instance_type_get_by_name(context, name, session=None):
-    """Returns a dict describing specific instance_type"""
+    """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context, session=session).\
                     filter_by(name=name).\
                     first()
@@ -3651,7 +3651,7 @@ def instance_type_get_by_name(context, name, session=None):
 
 @require_context
 def instance_type_get_by_flavor_id(context, flavor_id, session=None):
-    """Returns a dict describing specific flavor_id"""
+    """Returns a dict describing specific flavor_id."""
     result = _instance_type_get_query(context, session=session).\
                     filter_by(flavorid=flavor_id).\
                     first()
@@ -3664,7 +3664,7 @@ def instance_type_get_by_flavor_id(context, flavor_id, session=None):
 
 @require_admin_context
 def instance_type_destroy(context, name):
-    """Marks specific instance_type as deleted"""
+    """Marks specific instance_type as deleted."""
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_name(context, name,
@@ -3686,7 +3686,7 @@ def _instance_type_access_query(context, session=None):
 
 @require_admin_context
 def instance_type_access_get_by_flavor_id(context, flavor_id):
-    """Get flavor access list by flavor id"""
+    """Get flavor access list by flavor id."""
     instance_type_ref = _instance_type_get_query(context).\
                     filter_by(flavorid=flavor_id).\
                     first()
@@ -3696,7 +3696,7 @@ def instance_type_access_get_by_flavor_id(context, flavor_id):
 
 @require_admin_context
 def instance_type_access_add(context, flavor_id, project_id):
-    """Add given tenant to the flavor access list"""
+    """Add given tenant to the flavor access list."""
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
@@ -3724,7 +3724,7 @@ def instance_type_access_add(context, flavor_id, project_id):
 
 @require_admin_context
 def instance_type_access_remove(context, flavor_id, project_id):
-    """Remove given tenant from the flavor access list"""
+    """Remove given tenant from the flavor access list."""
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
@@ -4129,7 +4129,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
 
 @require_context
 def vol_get_usage_by_time(context, begin):
-    """Return volumes usage that have been updated after a specified time"""
+    """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
                    filter(or_(models.VolumeUsage.tot_last_refreshed == None,
                               models.VolumeUsage.tot_last_refreshed > begin,
@@ -4207,7 +4207,7 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
 
 
 def s3_image_get(context, image_id):
-    """Find local s3 image represented by the provided id"""
+    """Find local s3 image represented by the provided id."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
                  filter_by(id=image_id).\
                  first()
@@ -4219,7 +4219,7 @@ def s3_image_get(context, image_id):
 
 
 def s3_image_get_by_uuid(context, image_uuid):
-    """Find local s3 image represented by the provided uuid"""
+    """Find local s3 image represented by the provided uuid."""
     result = model_query(context, models.S3Image, read_deleted="yes").\
                  filter_by(uuid=image_uuid).\
                  first()
@@ -4231,7 +4231,7 @@ def s3_image_get_by_uuid(context, image_uuid):
 
 
 def s3_image_create(context, image_uuid):
-    """Create local s3 image represented by provided uuid"""
+    """Create local s3 image represented by provided uuid."""
     try:
         s3_image_ref = models.S3Image()
         s3_image_ref.update({'uuid': image_uuid})
@@ -4681,7 +4681,7 @@ def action_event_get_by_id(context, action_id, event_id):
 
 @require_context
 def ec2_instance_create(context, instance_uuid, id=None):
-    """Create ec2 compatable instance by provided uuid"""
+    """Create ec2 compatable instance by provided uuid."""
     ec2_instance_ref = models.InstanceIdMapping()
     ec2_instance_ref.update({'uuid': instance_uuid})
     if id is not None:
