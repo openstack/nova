@@ -1153,7 +1153,7 @@ class CloudTestCase(test.TestCase):
     #    deleteOnTermination
     #  noDevice
     def test_describe_image_mapping(self):
-        # test for rootDeviceName and blockDeiceMapping.
+        # test for rootDeviceName and blockDeviceMapping.
         describe_images = self.cloud.describe_images
         self._setUpImageSet()
 
