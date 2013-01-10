@@ -20,6 +20,7 @@
 
 import time
 
+from nova.common import memorycache
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
@@ -39,7 +40,6 @@ consoleauth_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(consoleauth_opts)
-CONF.import_opt('memcached_servers', 'nova.config')
 
 
 class ConsoleAuthManager(manager.Manager):
@@ -49,13 +49,7 @@ class ConsoleAuthManager(manager.Manager):
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
-
-        if CONF.memcached_servers:
-            import memcache
-        else:
-            from nova.common import memorycache as memcache
-        self.mc = memcache.Client(CONF.memcached_servers,
-                                  debug=0)
+        self.mc = memorycache.get_client()
 
     def authorize_console(self, context, token, console_type, host, port,
                           internal_access_path):
