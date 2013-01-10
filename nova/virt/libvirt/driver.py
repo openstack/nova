@@ -2043,15 +2043,26 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         total = 0
-        for dom_id in self.list_instance_ids():
-            dom = self._conn.lookupByID(dom_id)
-            vcpus = dom.vcpus()
-            if vcpus is None:
-                # dom.vcpus is not implemented for lxc, but returning 0 for
-                # a used count is hardly useful for something measuring usage
-                total += 1
-            else:
-                total += len(vcpus[1])
+        dom_ids = self.list_instance_ids()
+        for dom_id in dom_ids:
+            try:
+                dom = self._conn.lookupByID(dom_id)
+                vcpus = dom.vcpus()
+                if vcpus is None:
+                    # dom.vcpus is not implemented for lxc, but returning 0 for
+                    # a used count is hardly useful for something measuring
+                    # usage
+                    total += 1
+                else:
+                    total += len(vcpus[1])
+            except libvirt.libvirtError as err:
+                if err.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
+                    LOG.debug(_("List of domains returned by libVirt: %s")
+                              % dom_ids)
+                    LOG.warn(_("libVirt can't find a domain with id: %s")
+                             % dom_id)
+                    continue
+                raise
             # NOTE(gtt116): give change to do other task.
             greenthread.sleep(0)
         return total
