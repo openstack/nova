@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 #
@@ -56,6 +57,14 @@ class ThreadSafePipe(queue.LightQueue):
     def write(self, data):
         """Put a data item in the pipe."""
         self.put(data)
+
+    def seek(self, offset, whence=0):
+        """Set the file's current position at the offset."""
+        pass
+
+    def tell(self):
+        """Get size of the file to be read."""
+        return self.transfer_size
 
     def close(self):
         """A place-holder to maintain consistency."""

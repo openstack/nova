@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 #
@@ -140,16 +141,30 @@ class DataObject(object):
 
 class VirtualDisk(DataObject):
     """
-    Virtual Disk class. Does nothing special except setting
-    __class__.__name__ to 'VirtualDisk'. Refer place where __class__.__name__
-    is used in the code.
+    Virtual Disk class.
     """
-    pass
+
+    def __init__(self):
+        super(VirtualDisk, self).__init__()
+        self.key = 0
+        self.unitNumber = 0
 
 
 class VirtualDiskFlatVer2BackingInfo(DataObject):
     """VirtualDiskFlatVer2BackingInfo class."""
-    pass
+
+    def __init__(self):
+        super(VirtualDiskFlatVer2BackingInfo, self).__init__()
+        self.thinProvisioned = False
+        self.eagerlyScrub = False
+
+
+class VirtualDiskRawDiskMappingVer1BackingInfo(DataObject):
+    """VirtualDiskRawDiskMappingVer1BackingInfo class."""
+
+    def __init__(self):
+        super(VirtualDiskRawDiskMappingVer1BackingInfo, self).__init__()
+        self.lunUuid = ""
 
 
 class VirtualLsiLogicController(DataObject):

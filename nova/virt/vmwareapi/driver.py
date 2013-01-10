@@ -45,6 +45,7 @@ from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vmops
+from nova.virt.vmwareapi import volumeops
 
 
 LOG = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ LOG = logging.getLogger(__name__)
 vmwareapi_opts = [
     cfg.StrOpt('vmwareapi_host_ip',
                default=None,
-               help='URL for connection to VMware ESX host.Required if '
+               help='URL for connection to VMware ESX host. Required if '
                     'compute_driver is vmwareapi.VMwareESXDriver.'),
     cfg.StrOpt('vmwareapi_host_username',
                default=None,
@@ -109,9 +110,10 @@ class VMwareESXDriver(driver.ComputeDriver):
                               "and vmwareapi_host_password to use"
                               "compute_driver=vmwareapi.VMwareESXDriver"))
 
-        session = VMwareAPISession(host_ip, host_username, host_password,
+        self._session = VMwareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
-        self._vmops = vmops.VMwareVMOps(session)
+        self._volumeops = volumeops.VMwareVolumeOps(self._session)
+        self._vmops = vmops.VMwareVMOps(self._session)
 
     def init_host(self, host):
         """Do the initialization that needs to be done."""
@@ -172,23 +174,21 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Return snapshot of console."""
         return self._vmops.get_console_output(instance)
 
-    def get_volume_connector(self, _instance):
+    def get_volume_connector(self, instance):
         """Return volume connector information."""
-        # TODO(vish): When volume attaching is supported, return the
-        #             proper initiator iqn and host.
-        return {
-            'ip': CONF.vmwareapi_host_ip,
-            'initiator': None,
-            'host': None
-        }
+        return self._volumeops.get_volume_connector(instance)
 
     def attach_volume(self, connection_info, instance, mountpoint):
         """Attach volume storage to VM instance."""
-        pass
+        return self._volumeops.attach_volume(connection_info,
+                                             instance,
+                                             mountpoint)
 
     def detach_volume(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance."""
-        pass
+        return self._volumeops.detach_volume(connection_info,
+                                             instance,
+                                             mountpoint)
 
     def get_console_pool_info(self, console_type):
         """Get info about the host on which the VM resides."""
