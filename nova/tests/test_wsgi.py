@@ -90,3 +90,12 @@ class TestWSGIServer(test.TestCase):
         self.assertNotEqual(0, server.port)
         server.stop()
         server.wait()
+
+    def test_start_random_port_with_ipv6(self):
+        server = nova.wsgi.Server("test_random_port", None,
+            host="::1", port=0)
+        server.start()
+        self.assertEqual("::1", server.host)
+        self.assertNotEqual(0, server.port)
+        server.stop()
+        server.wait()
