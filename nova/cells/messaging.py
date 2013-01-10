@@ -690,17 +690,16 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         if not self._at_the_top():
             return
         instance_uuid = instance['uuid']
-        routing_path = message.routing_path
-        instance['cell_name'] = _reverse_path(routing_path)
+
         # Remove things that we can't update in the top level cells.
-        # 'cell_name' is included in this list.. because we'll set it
-        # ourselves based on the reverse of the routing path.  metadata
-        # is only updated in the API cell, so we don't listen to what
-        # the child cell tells us.
+        # 'metadata' is only updated in the API cell, so don't overwrite
+        # it based on what child cells say.  Make sure to update
+        # 'cell_name' based on the routing path.
         items_to_remove = ['id', 'security_groups', 'instance_type',
                 'volumes', 'cell_name', 'name', 'metadata']
         for key in items_to_remove:
             instance.pop(key, None)
+        instance['cell_name'] = _reverse_path(message.routing_path)
 
         # Fixup info_cache.  We'll have to update this separately if
         # it exists.
