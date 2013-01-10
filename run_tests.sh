@@ -81,7 +81,7 @@ function run_tests {
   if [ $coverage -eq 1 ]; then
     # Do not test test_coverage_ext when gathering coverage.
     if [ "x$testrargs" = "x" ]; then
-      testrargs = "^(?!.*test_coverage_ext).*$"
+      testrargs="^(?!.*test_coverage_ext).*$"
     fi
     export PYTHON="${wrapper} coverage run --source nova --parallel-mode"
   fi
