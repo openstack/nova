@@ -794,7 +794,9 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         expected_sys_metadata = {'key1': 'value1',
                                  'key2': 'value2'}
         expected_info_cache = {'other': 'moo'}
+        expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
         expected_instance = {'system_metadata': expected_sys_metadata,
+                             'cell_name': expected_cell_name,
                              'other': 'meow',
                              'uuid': 'fake_uuid'}
 
