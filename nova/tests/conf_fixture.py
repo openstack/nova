@@ -25,6 +25,7 @@ from nova import paths
 from nova.tests.utils import cleanup_dns_managers
 
 CONF = cfg.CONF
+CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
 CONF.import_opt('fake_network', 'nova.network.manager')
 CONF.import_opt('network_size', 'nova.network.manager')

@@ -174,11 +174,9 @@ CONF.register_opts(timeout_opts)
 CONF.register_opts(running_deleted_opts)
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
-CONF.import_opt('host', 'nova.config')
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
-CONF.import_opt('reclaim_instance_interval', 'nova.config')
-CONF.import_opt('my_ip', 'nova.config')
 
 QUOTAS = quota.QUOTAS
 

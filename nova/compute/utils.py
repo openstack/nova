@@ -33,7 +33,7 @@ from nova import utils
 from nova.virt import driver
 
 CONF = cfg.CONF
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 LOG = log.getLogger(__name__)
 
 

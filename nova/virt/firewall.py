@@ -41,7 +41,7 @@ firewall_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(firewall_opts)
-CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 def load_driver(default, *args, **kwargs):

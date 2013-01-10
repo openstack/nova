@@ -68,7 +68,7 @@ s3_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(s3_opts)
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class S3ImageService(object):

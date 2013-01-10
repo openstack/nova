@@ -22,7 +22,6 @@ from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers
 
 CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension', 'nova.config')
 LOG = logging.getLogger(__name__)
 
 

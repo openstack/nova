@@ -72,7 +72,7 @@ imagecache_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 

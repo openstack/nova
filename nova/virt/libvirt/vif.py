@@ -42,7 +42,7 @@ libvirt_vif_opts = [
 CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts)
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
-CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 LINUX_DEV_LEN = 14
 

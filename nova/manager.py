@@ -75,7 +75,7 @@ periodic_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(periodic_opts)
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL = 60.0

@@ -24,7 +24,6 @@ from nova.tests.cells import fakes
 
 
 CONF = cfg.CONF
-CONF.import_opt('host', 'nova.config')
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('allowed_rpc_exception_modules',
                 'nova.openstack.common.rpc')

@@ -190,8 +190,8 @@ libvirt_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(libvirt_opts)
-CONF.import_opt('host', 'nova.config')
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')

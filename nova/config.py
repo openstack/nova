@@ -17,49 +17,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-import socket
-
 from nova.openstack.common import cfg
 from nova.openstack.common import rpc
-
-
-def _get_my_ip():
-    """
-    Returns the actual ip of the local machine.
-
-    This code figures out what source address would be used if some traffic
-    were to be sent out to some well known address on the Internet. In this
-    case, a Google DNS server is used, but the specific address does not
-    matter much.  No traffic is actually sent.
-    """
-    try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.error:
-        return "127.0.0.1"
-
-
-global_opts = [
-    cfg.StrOpt('my_ip',
-               default=_get_my_ip(),
-               help='ip address of this host'),
-    cfg.StrOpt('host',
-               default=socket.getfqdn(),
-               help='Name of this node.  This can be an opaque identifier.  '
-                    'It is not necessarily a hostname, FQDN, or IP address. '
-                    'However, the node name must be valid within '
-                    'an AMQP key, and if using ZeroMQ, a valid '
-                    'hostname, FQDN, or IP address'),
-    cfg.BoolOpt('use_ipv6',
-                default=False,
-                help='use ipv6'),
-]
-
-cfg.CONF.register_opts(global_opts)
 
 
 def parse_args(argv, default_config_files=None):

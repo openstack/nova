@@ -31,7 +31,7 @@ from nova.virt.libvirt import config as libvirt_config
 
 HOST = "testhost"
 CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.config')
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 
 class FakeIptablesFirewallDriver(object):

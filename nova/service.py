@@ -112,7 +112,7 @@ service_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(service_opts)
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 
 
 class SignalExit(SystemExit):

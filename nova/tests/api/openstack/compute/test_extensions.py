@@ -32,7 +32,6 @@ from nova.tests.api.openstack import fakes
 from nova.tests import matchers
 
 CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension', 'nova.config')
 
 NS = "{http://docs.openstack.org/common/api/v1.0}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"

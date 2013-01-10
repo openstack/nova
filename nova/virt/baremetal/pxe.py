@@ -70,7 +70,7 @@ baremetal_group = cfg.OptGroup(name='baremetal',
 CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(pxe_opts, baremetal_group)
-
+CONF.import_opt('use_ipv6', 'nova.netconf')
 
 CHEETAH = None
 

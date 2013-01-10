@@ -117,7 +117,7 @@ xenapi_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(xenapi_opts)
-CONF.import_opt('host', 'nova.config')
+CONF.import_opt('host', 'nova.netconf')
 
 
 class XenAPIDriver(driver.ComputeDriver):

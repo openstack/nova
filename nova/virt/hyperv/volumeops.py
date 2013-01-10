@@ -45,7 +45,7 @@ hyper_volumeops_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(hyper_volumeops_opts)
-CONF.import_opt('my_ip', 'nova.config')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class VolumeOps(baseops.BaseOps):
