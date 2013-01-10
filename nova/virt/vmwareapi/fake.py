@@ -172,6 +172,14 @@ class VirtualLsiLogicController(DataObject):
     pass
 
 
+class VirtualPCNet32(DataObject):
+    """VirtualPCNet32 class."""
+
+    def __init__(self):
+        super(VirtualPCNet32, self).__init__()
+        self.key = 4000
+
+
 class VirtualMachine(ManagedObject):
     """Virtual Machine class."""
 
@@ -192,7 +200,7 @@ class VirtualMachine(ManagedObject):
         self.set("config.files.vmPathName", kwargs.get("vmPathName"))
         self.set("summary.config.numCpu", kwargs.get("numCpu", 1))
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
-        self.set("config.hardware.device", kwargs.get("virtual_disk", None))
+        self.set("config.hardware.device", kwargs.get("virtual_device", None))
         self.set("config.extraConfig", kwargs.get("extra_config", None))
 
     def reconfig(self, factory, val):
@@ -216,7 +224,9 @@ class VirtualMachine(ManagedObject):
             controller = VirtualLsiLogicController()
             controller.key = controller_key
 
-            self.set("config.hardware.device", [disk, controller])
+            nic = VirtualPCNet32()
+
+            self.set("config.hardware.device", [disk, controller, nic])
         except AttributeError:
             # Case of Reconfig of VM to set extra params
             self.set("config.extraConfig", val.extraConfig)
