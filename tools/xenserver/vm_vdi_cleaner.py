@@ -50,7 +50,7 @@ ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",
 
 
 def call_xenapi(xenapi, method, *args):
-    """Make a call to xapi"""
+    """Make a call to xapi."""
     return xenapi._session.call_xenapi(method, *args)
 
 
