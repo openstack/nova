@@ -307,7 +307,6 @@ class FixedIpCommands(object):
         for fixed_ip in fixed_ips:
             hostname = None
             host = None
-            mac_address = None
             network = all_networks.get(fixed_ip['network_id'])
             if network:
                 has_ip = True
@@ -627,7 +626,7 @@ class ServiceCommands(object):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
-        services = availability_zone.set_availability_zones(ctxt, services)
+        services = availability_zones.set_availability_zones(ctxt, services)
         if host:
             services = [s for s in services if s['host'] == host]
         if service:
@@ -741,7 +740,6 @@ class HostCommands(object):
         print "%-25s\t%-15s" % (_('host'),
                                 _('zone'))
         ctxt = context.get_admin_context()
-        now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
         services = availability_zones.set_availability_zones(ctxt, services)
         if zone:
@@ -776,7 +774,6 @@ class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
     def _print_instance_types(self, name, val):
-        deleted = ('', ', inactive')[val["deleted"] == 1]
         is_public = ('private', 'public')[val["is_public"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
             "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
