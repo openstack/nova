@@ -124,7 +124,9 @@ class RequestContext(object):
                 'user_name': self.user_name,
                 'service_catalog': self.service_catalog,
                 'project_name': self.project_name,
-                'instance_lock_checked': self.instance_lock_checked}
+                'instance_lock_checked': self.instance_lock_checked,
+                'tenant': self.tenant,
+                'user': self.user}
 
     @classmethod
     def from_dict(cls, values):
@@ -142,6 +144,19 @@ class RequestContext(object):
             context.read_deleted = read_deleted
 
         return context
+
+    # NOTE(sirp): the openstack/common version of RequestContext uses
+    # tenant/user whereas the Nova version uses project_id/user_id. We need
+    # this shim in order to use context-aware code from openstack/common, like
+    # logging, until we make the switch to using openstack/common's version of
+    # RequestContext.
+    @property
+    def tenant(self):
+        return self.project_id
+
+    @property
+    def user(self):
+        return self.user_id
 
 
 def get_admin_context(read_deleted="no"):
