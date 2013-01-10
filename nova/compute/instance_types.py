@@ -189,7 +189,7 @@ def get_instance_type_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
 
 
 def get_instance_type_access_by_flavor_id(flavorid, ctxt=None):
-    """Retrieve instance type access list by flavor id"""
+    """Retrieve instance type access list by flavor id."""
     if ctxt is None:
         ctxt = context.get_admin_context()
 
@@ -197,7 +197,7 @@ def get_instance_type_access_by_flavor_id(flavorid, ctxt=None):
 
 
 def add_instance_type_access(flavorid, projectid, ctxt=None):
-    """Add instance type access for project"""
+    """Add instance type access for project."""
     if ctxt is None:
         ctxt = context.get_admin_context()
 
@@ -205,7 +205,7 @@ def add_instance_type_access(flavorid, projectid, ctxt=None):
 
 
 def remove_instance_type_access(flavorid, projectid, ctxt=None):
-    """Remove instance type access for project"""
+    """Remove instance type access for project."""
     if ctxt is None:
         ctxt = context.get_admin_context()
 

@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Handles all requests to the conductor service"""
+"""Handles all requests to the conductor service."""
 
 import functools
 
@@ -72,7 +72,7 @@ class LocalAPI(object):
         return self._manager.ping(context, arg)
 
     def instance_update(self, context, instance_uuid, **updates):
-        """Perform an instance update in the database"""
+        """Perform an instance update in the database."""
         return self._manager.instance_update(context, instance_uuid, updates)
 
     def instance_get(self, context, instance_id):
@@ -245,7 +245,7 @@ class LocalAPI(object):
 
 
 class API(object):
-    """Conductor API that does updates via RPC to the ConductorManager"""
+    """Conductor API that does updates via RPC to the ConductorManager."""
 
     def __init__(self):
         self.conductor_rpcapi = rpcapi.ConductorAPI()
@@ -254,7 +254,7 @@ class API(object):
         return self.conductor_rpcapi.ping(context, arg, timeout)
 
     def instance_update(self, context, instance_uuid, **updates):
-        """Perform an instance update in the database"""
+        """Perform an instance update in the database."""
         return self.conductor_rpcapi.instance_update(context, instance_uuid,
                                                      updates)
 

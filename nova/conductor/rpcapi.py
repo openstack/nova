@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Client side of the conductor RPC API"""
+"""Client side of the conductor RPC API."""
 
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils

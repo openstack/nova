@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Handles database requests from other nova services"""
+"""Handles database requests from other nova services."""
 
 from nova import exception
 from nova import manager
@@ -41,7 +41,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 
 
 class ConductorManager(manager.SchedulerDependentManager):
-    """Mission: TBD"""
+    """Mission: TBD."""
 
     RPC_API_VERSION = '1.25'
 

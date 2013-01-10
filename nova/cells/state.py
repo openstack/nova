@@ -59,7 +59,7 @@ class CellState(object):
         self.driver = rpc_driver.CellsRPCDriver()
 
     def update_db_info(self, cell_db_info):
-        """Update cell credentials from db"""
+        """Update cell credentials from db."""
         self.db_info = dict(
                 [(k, v) for k, v in cell_db_info.iteritems()
                         if k != 'name'])

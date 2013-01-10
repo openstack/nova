@@ -26,7 +26,7 @@ COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 
 
 class NopClaim(object):
-    """For use with compute drivers that do not support resource tracking"""
+    """For use with compute drivers that do not support resource tracking."""
 
     def __init__(self, migration=None):
         self.migration = migration
