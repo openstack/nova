@@ -4595,7 +4595,7 @@ def actions_get(context, instance_uuid):
 
 
 def action_get_by_id(context, instance_uuid, action_id):
-    """Get the action by id and given instance"""
+    """Get the action by id and given instance."""
     action = model_query(context, models.InstanceAction).\
                          filter_by(instance_uuid=instance_uuid).\
                          filter_by(id=action_id).\
@@ -4614,7 +4614,7 @@ def _action_get_by_request_id(context, instance_uuid, request_id,
 
 
 def action_event_start(context, values):
-    """Start an event on an instance action"""
+    """Start an event on an instance action."""
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
@@ -4634,7 +4634,7 @@ def action_event_start(context, values):
 
 
 def action_event_finish(context, values):
-    """Finish an event on an instance action"""
+    """Finish an event on an instance action."""
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],

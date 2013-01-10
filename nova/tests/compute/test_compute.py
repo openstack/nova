@@ -3491,7 +3491,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_destroy(c, inst_uuid)
 
     def test_rebuild_on_host_instance_exists(self):
-        """Rebuild if instance exists raise an exception"""
+        """Rebuild if instance exists raise an exception."""
 
         # creating testdata
         c = self.context.elevated()

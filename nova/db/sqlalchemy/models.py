@@ -985,7 +985,7 @@ class InstanceFault(BASE, NovaBase):
 
 
 class InstanceAction(BASE, NovaBase):
-    """Track client actions on an instance"""
+    """Track client actions on an instance."""
     __tablename__ = 'instance_actions'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     action = Column(String(255))
@@ -1001,7 +1001,7 @@ class InstanceAction(BASE, NovaBase):
 
 
 class InstanceActionEvent(BASE, NovaBase):
-    """Track events that occur during an InstanceAction"""
+    """Track events that occur during an InstanceAction."""
     __tablename__ = 'instance_actions_events'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     event = Column(String(255))

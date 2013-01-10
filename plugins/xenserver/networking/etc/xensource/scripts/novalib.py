@@ -22,7 +22,7 @@ import subprocess
 
 
 def execute_get_output(*command):
-    """Execute and return stdout"""
+    """Execute and return stdout."""
     devnull = open(os.devnull, 'w')
     command = map(str, command)
     proc = subprocess.Popen(command, close_fds=True,
@@ -32,7 +32,7 @@ def execute_get_output(*command):
 
 
 def execute(*command):
-    """Execute without returning stdout"""
+    """Execute without returning stdout."""
     devnull = open(os.devnull, 'w')
     command = map(str, command)
     proc = subprocess.Popen(command, close_fds=True,

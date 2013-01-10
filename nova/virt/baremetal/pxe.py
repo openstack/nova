@@ -154,17 +154,17 @@ def get_deploy_ari_id(instance):
 
 
 def get_image_dir_path(instance):
-    """Generate the dir for an instances disk"""
+    """Generate the dir for an instances disk."""
     return os.path.join(CONF.instances_path, instance['name'])
 
 
 def get_image_file_path(instance):
-    """Generate the full path for an instances disk"""
+    """Generate the full path for an instances disk."""
     return os.path.join(CONF.instances_path, instance['name'], 'disk')
 
 
 def get_pxe_config_file_path(instance):
-    """Generate the path for an instances PXE config file"""
+    """Generate the path for an instances PXE config file."""
     return os.path.join(CONF.baremetal.tftp_root, instance['uuid'], 'config')
 
 
@@ -185,7 +185,7 @@ def get_partition_sizes(instance):
 
 
 def get_pxe_mac_path(mac):
-    """Convert a MAC address into a PXE config file name"""
+    """Convert a MAC address into a PXE config file name."""
     return os.path.join(
             CONF.baremetal.tftp_root,
             'pxelinux.cfg',
@@ -232,7 +232,7 @@ def get_tftp_image_info(instance):
 
 
 class PXE(base.NodeDriver):
-    """PXE bare metal driver"""
+    """PXE bare metal driver."""
 
     def __init__(self):
         super(PXE, self).__init__()
@@ -352,7 +352,7 @@ class PXE(base.NodeDriver):
 
     def cache_images(self, context, node, instance,
             admin_password, image_meta, injected_files, network_info):
-        """Prepare all the images for this instance"""
+        """Prepare all the images for this instance."""
         tftp_image_info = get_tftp_image_info(instance)
         self._cache_tftp_images(context, instance, tftp_image_info)
 
@@ -361,7 +361,7 @@ class PXE(base.NodeDriver):
                 injected_files, admin_password)
 
     def destroy_images(self, context, node, instance):
-        """Delete instance's image file"""
+        """Delete instance's image file."""
         bm_utils.unlink_without_raise(get_image_file_path(instance))
         bm_utils.unlink_without_raise(get_image_dir_path(instance))
 
@@ -420,7 +420,7 @@ class PXE(base.NodeDriver):
             bm_utils.create_link_without_raise(pxe_config_file_path, mac_path)
 
     def deactivate_bootloader(self, context, node, instance):
-        """Delete PXE bootloader images and config"""
+        """Delete PXE bootloader images and config."""
         try:
             image_info = get_tftp_image_info(instance)
         except exception.NovaException:

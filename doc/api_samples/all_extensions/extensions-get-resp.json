@@ -298,7 +298,7 @@
         },
         {
             "alias": "os-admin-networks",
-            "description": "Admin-only Network Management Extension",
+            "description": "Admin-only Network Management Extension.",
             "links": [],
             "name": "AdminNetworks",
             "namespace": "http://docs.openstack.org/compute/ext/os-admin-networks/api/v1.1",
@@ -306,7 +306,7 @@
         },
         {
             "alias": "os-networks",
-            "description": "Tenant-based Network Management Extension",
+            "description": "Tenant-based Network Management Extension.",
             "links": [],
             "name": "OSNetworks",
             "namespace": "http://docs.openstack.org/compute/ext/os-networks/api/v1.1",
