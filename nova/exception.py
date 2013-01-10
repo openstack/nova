@@ -317,7 +317,15 @@ class InstanceSuspendFailure(Invalid):
 
 
 class InstanceResumeFailure(Invalid):
-    message = _("Failed to resume server") + ": %(reason)s."
+    message = _("Failed to resume instance: %(reason)s.")
+
+
+class InstancePowerOnFailure(Invalid):
+    message = _("Failed to power on instance: %(reason)s.")
+
+
+class InstancePowerOffFailure(Invalid):
+    message = _("Failed to power off instance: %(reason)s.")
 
 
 class InstanceRebootFailure(Invalid):

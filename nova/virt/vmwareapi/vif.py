@@ -45,7 +45,7 @@ def ensure_vlan_bridge(self, session, network):
     # Check if the vlan_interface physical network adapter exists on the
     # host.
     if not network_util.check_if_vlan_interface_exists(session,
-                                                        vlan_interface):
+                                                       vlan_interface):
         raise exception.NetworkAdapterNotFound(adapter=vlan_interface)
 
     # Get the vSwitch associated with the Physical Adapter

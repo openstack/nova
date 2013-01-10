@@ -18,7 +18,6 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from nova import context
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -110,7 +109,8 @@ class VMwareVolumeOps(object):
         iqn = volume_util.get_host_iqn(self._session)
         return {
             'ip': CONF.vmwareapi_host_ip,
-            'initiator': iqn
+            'initiator': iqn,
+            'host': CONF.vmwareapi_host_ip
         }
 
     def attach_volume(self, connection_info, instance, mountpoint):
