@@ -352,7 +352,7 @@ class ProcessLauncher(object):
         return wrap
 
     def wait(self):
-        """Loop waiting on children to die and respawning as necessary"""
+        """Loop waiting on children to die and respawning as necessary."""
         while self.running:
             wrap = self._wait_child()
             if not wrap:

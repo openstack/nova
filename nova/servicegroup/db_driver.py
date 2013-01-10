@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 class DbDriver(api.ServiceGroupDriver):
 
     def join(self, member_id, group_id, service=None):
-        """Join the given service with it's group"""
+        """Join the given service with it's group."""
 
         msg = _('DB_Driver: join new ServiceGroup member %(member_id)s to '
                     'the %(group_id)s group, service = %(service)s')

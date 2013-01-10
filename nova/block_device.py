@@ -62,7 +62,7 @@ def is_swap_or_ephemeral(device_name):
 
 
 def mappings_prepend_dev(mappings):
-    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type"""
+    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type."""
     for m in mappings:
         virtual = m['virtual']
         if (is_swap_or_ephemeral(virtual) and
@@ -75,7 +75,7 @@ _dev = re.compile('^/dev/')
 
 
 def strip_dev(device_name):
-    """remove leading '/dev/'"""
+    """remove leading '/dev/'."""
     return _dev.sub('', device_name) if device_name else device_name
 
 
@@ -83,7 +83,7 @@ _pref = re.compile('^((x?v|s)d)')
 
 
 def strip_prefix(device_name):
-    """remove both leading /dev/ and xvd or sd or vd """
+    """remove both leading /dev/ and xvd or sd or vd."""
     device_name = strip_dev(device_name)
     return _pref.sub('', device_name)
 
@@ -139,7 +139,7 @@ def instance_block_mapping(instance, bdms):
 
 
 def match_device(device):
-    """Matches device name and returns prefix, suffix"""
+    """Matches device name and returns prefix, suffix."""
     match = re.match("(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$", device)
     if not match:
         return None

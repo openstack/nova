@@ -692,7 +692,7 @@ def to_bytes(text, default=0):
 
 
 def delete_if_exists(pathname):
-    """delete a file, but ignore file not found error"""
+    """delete a file, but ignore file not found error."""
 
     try:
         os.unlink(pathname)
@@ -848,7 +848,7 @@ def parse_server_string(server_str):
 
 
 def bool_from_str(val):
-    """Convert a string representation of a bool into a bool value"""
+    """Convert a string representation of a bool into a bool value."""
 
     if not val:
         return False
@@ -861,7 +861,7 @@ def bool_from_str(val):
 
 
 def is_valid_boolstr(val):
-    """Check if the provided string is a valid bool string or not. """
+    """Check if the provided string is a valid bool string or not."""
     val = str(val).lower()
     return val == 'true' or val == 'false' or \
            val == 'yes' or val == 'no' or \
@@ -950,7 +950,7 @@ def monkey_patch():
 
 
 def convert_to_list_dict(lst, label):
-    """Convert a value or list into a list of dicts"""
+    """Convert a value or list into a list of dicts."""
     if not lst:
         return None
     if not isinstance(lst, list):
@@ -959,7 +959,7 @@ def convert_to_list_dict(lst, label):
 
 
 def timefunc(func):
-    """Decorator that logs how long a particular function took to execute"""
+    """Decorator that logs how long a particular function took to execute."""
     @functools.wraps(func)
     def inner(*args, **kwargs):
         start_time = time.time()
@@ -1000,7 +1000,7 @@ def make_dev_path(dev, partition=None, base='/dev'):
 
 
 def total_seconds(td):
-    """Local total_seconds implementation for compatibility with python 2.6"""
+    """Local total_seconds implementation for compatibility with python 2.6."""
     if hasattr(td, 'total_seconds'):
         return td.total_seconds()
     else:
@@ -1167,7 +1167,7 @@ def strcmp_const_time(s1, s2):
 
 
 def walk_class_hierarchy(clazz, encountered=None):
-    """Walk class hierarchy, yielding most derived classes first"""
+    """Walk class hierarchy, yielding most derived classes first."""
     if not encountered:
         encountered = []
     for subclass in clazz.__subclasses__():

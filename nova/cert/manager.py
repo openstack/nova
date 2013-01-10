@@ -52,15 +52,15 @@ class CertManager(manager.Manager):
         return crypto.revoke_certs_by_user_and_project(user_id, project_id)
 
     def generate_x509_cert(self, context, user_id, project_id):
-        """Generate and sign a cert for user in project"""
+        """Generate and sign a cert for user in project."""
         return crypto.generate_x509_cert(user_id, project_id)
 
     def fetch_ca(self, context, project_id):
-        """Get root ca for a project"""
+        """Get root ca for a project."""
         return crypto.fetch_ca(project_id)
 
     def fetch_crl(self, context, project_id):
-        """Get crl for a project"""
+        """Get crl for a project."""
         return crypto.fetch_crl(project_id)
 
     def decrypt_text(self, context, project_id, text):

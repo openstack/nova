@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Implementation of an image service that uses Glance as the backend"""
+"""Implementation of an image service that uses Glance as the backend."""
 
 from __future__ import absolute_import
 
@@ -95,7 +95,7 @@ def _parse_image_ref(image_href):
 
 
 def _create_glance_client(context, host, port, use_ssl, version=1):
-    """Instantiate a new glanceclient.Client object"""
+    """Instantiate a new glanceclient.Client object."""
     if use_ssl:
         scheme = 'https'
     else:
