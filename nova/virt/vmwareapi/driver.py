@@ -38,10 +38,12 @@ from eventlet import event
 
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
 from nova.virt.vmwareapi import error_util
+from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vmops
@@ -100,20 +102,30 @@ class VMwareESXDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
 
-        host_ip = CONF.vmwareapi_host_ip
+        self._host_ip = CONF.vmwareapi_host_ip
         host_username = CONF.vmwareapi_host_username
         host_password = CONF.vmwareapi_host_password
         api_retry_count = CONF.vmwareapi_api_retry_count
-        if not host_ip or host_username is None or host_password is None:
+        if not self._host_ip or host_username is None or host_password is None:
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
                               "and vmwareapi_host_password to use"
                               "compute_driver=vmwareapi.VMwareESXDriver"))
 
-        self._session = VMwareAPISession(host_ip, host_username, host_password,
-                                   api_retry_count, scheme=scheme)
+        self._session = VMwareAPISession(self._host_ip,
+                                         host_username, host_password,
+                                         api_retry_count, scheme=scheme)
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session)
+        self._host = host.Host(self._session)
+        self._host_state = None
+
+    @property
+    def host_state(self):
+        if not self._host_state:
+            self._host_state = host.HostState(self._session,
+                                              self._host_ip)
+        return self._host_state
 
     def init_host(self, host):
         """Do the initialization that needs to be done."""
@@ -178,6 +190,10 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Return volume connector information."""
         return self._volumeops.get_volume_connector(instance)
 
+    def get_host_ip_addr(self):
+        """Retrieves the IP address of the ESX host."""
+        return self._host_ip
+
     def attach_volume(self, connection_info, instance, mountpoint):
         """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info,
@@ -197,8 +213,53 @@ class VMwareESXDriver(driver.ComputeDriver):
                 'password': CONF.vmwareapi_host_password}
 
     def get_available_resource(self, nodename):
-        """This method is supported only by libvirt."""
-        return
+        """Retrieve resource info.
+
+        This method is called when nova-compute launches, and
+        as part of a periodic task.
+
+        :returns: dictionary describing resources
+
+        """
+        host_stats = self.get_host_stats(refresh=True)
+
+        # Updating host information
+        dic = {'vcpus': host_stats["vcpus"],
+               'memory_mb': host_stats['host_memory_total'],
+               'local_gb': host_stats['disk_total'],
+               'vcpus_used': 0,
+               'memory_mb_used': host_stats['host_memory_total'] -
+                                 host_stats['host_memory_free'],
+               'local_gb_used': host_stats['disk_used'],
+               'hypervisor_type': host_stats['hypervisor_type'],
+               'hypervisor_version': host_stats['hypervisor_version'],
+               'hypervisor_hostname': host_stats['hypervisor_hostname'],
+               'cpu_info': jsonutils.dumps(host_stats['cpu_info'])}
+
+        return dic
+
+    def update_host_status(self):
+        """Update the status info of the host, and return those values
+           to the calling program."""
+        return self.host_state.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+           True, run the update first."""
+        return self.host_state.get_host_stats(refresh=refresh)
+
+    def host_power_action(self, host, action):
+        """Reboots, shuts down or powers up the host."""
+        return self._host.host_power_action(host, action)
+
+    def host_maintenance_mode(self, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+           guest VMs evacuation."""
+        return self._host.host_maintenance_mode(host, mode)
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+        return self._host.set_host_enabled(host, enabled)
 
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""

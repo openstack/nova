@@ -282,3 +282,48 @@ class VMwareAPIVMTestCase(test.TestCase):
 
     def test_get_console_output(self):
         pass
+
+
+class VMwareAPIHostTestCase(test.TestCase):
+    """Unit tests for Vmware API host calls."""
+
+    def setUp(self):
+        super(VMwareAPIHostTestCase, self).setUp()
+        self.flags(vmwareapi_host_ip='test_url',
+                   vmwareapi_host_username='test_username',
+                   vmwareapi_host_password='test_pass')
+        vmwareapi_fake.reset()
+        stubs.set_stubs(self.stubs)
+        self.conn = driver.VMwareESXDriver(False)
+
+    def tearDown(self):
+        super(VMwareAPIHostTestCase, self).tearDown()
+        vmwareapi_fake.cleanup()
+
+    def test_host_state(self):
+        stats = self.conn.get_host_stats()
+        self.assertEquals(stats['vcpus'], 16)
+        self.assertEquals(stats['disk_total'], 1024)
+        self.assertEquals(stats['disk_available'], 500)
+        self.assertEquals(stats['disk_used'], 1024 - 500)
+        self.assertEquals(stats['host_memory_total'], 1024)
+        self.assertEquals(stats['host_memory_free'], 1024 - 500)
+
+    def _test_host_action(self, method, action, expected=None):
+        result = method('host', action)
+        self.assertEqual(result, expected)
+
+    def test_host_reboot(self):
+        self._test_host_action(self.conn.host_power_action, 'reboot')
+
+    def test_host_shutdown(self):
+        self._test_host_action(self.conn.host_power_action, 'shutdown')
+
+    def test_host_startup(self):
+        self._test_host_action(self.conn.host_power_action, 'startup')
+
+    def test_host_maintenance_on(self):
+        self._test_host_action(self.conn.host_maintenance_mode, True)
+
+    def test_host_maintenance_off(self):
+        self._test_host_action(self.conn.host_maintenance_mode, False)
