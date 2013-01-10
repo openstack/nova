@@ -47,9 +47,6 @@ global_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),
                help='ip address of this host'),
-    cfg.StrOpt('vpn_key_suffix',
-               default='-vpn',
-               help='Suffix to add to project name for vpn key and secgroups'),
     cfg.StrOpt('host',
                default=socket.getfqdn(),
                help='Name of this node.  This can be an opaque identifier.  '
