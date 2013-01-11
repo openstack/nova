@@ -48,8 +48,17 @@ class NovaBase(object):
         """Save this object."""
         if not session:
             session = get_session()
-        session.add(self)
-        session.flush()
+        # NOTE(boris-42): This part of code should be look like:
+        #                       sesssion.add(self)
+        #                       session.flush()
+        #                 But there is a bug in sqlalchemy and eventlet that
+        #                 raises NoneType exception if there is no running
+        #                 transaction and rollback is called. As long as
+        #                 sqlalchemy has this bug we have to create transaction
+        #                 explicity.
+        with session.begin(subtransactions=True):
+            session.add(self)
+            session.flush()
 
     def soft_delete(self, session=None):
         """Mark this object as deleted."""
