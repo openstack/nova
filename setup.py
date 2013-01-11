@@ -18,12 +18,13 @@
 import setuptools
 
 from nova.openstack.common import setup as common_setup
-from nova import version
 
 requires = common_setup.parse_requirements()
+project = 'nova'
 
-setuptools.setup(name='nova',
-      version=version.canonical_version_string(),
+setuptools.setup(
+      name=project,
+      version=common_setup.get_version(project, '2013.1'),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
