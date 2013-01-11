@@ -74,7 +74,11 @@ def update_instance_cache_with_nw_info(api, context, instance,
 
 
 class API(base.Base):
-    """API for interacting with the network manager."""
+    """API for doing networking via the nova-network network manager.
+
+    This is a pluggable module - other implementations do networking via
+    other services (such as Quantum).
+    """
 
     _sentinel = object()
 
