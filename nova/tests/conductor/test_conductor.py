@@ -459,6 +459,11 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            ('host',),
                            dict(topic='compute', host='host'))
 
+    def test_service_get_by_args(self):
+        self._test_stubbed('service_get_by_args',
+                           ('host', 'binary'),
+                           dict(host='host', binary='binary'))
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""

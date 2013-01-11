@@ -422,9 +422,9 @@ class Service(object):
         self.model_disconnected = False
         ctxt = context.get_admin_context()
         try:
-            service_ref = db.service_get_by_args(ctxt,
-                                                 self.host,
-                                                 self.binary)
+            service_ref = self.conductor_api.service_get_by_args(ctxt,
+                                                                 self.host,
+                                                                 self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
             self._create_service_ref(ctxt)

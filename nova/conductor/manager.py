@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.27'
+    RPC_API_VERSION = '1.28'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -248,8 +248,9 @@ class ConductorManager(manager.SchedulerDependentManager):
                                  wr_bytes, instance['uuid'], last_refreshed,
                                  update_totals)
 
-    def service_get_all_by(self, context, topic=None, host=None):
-        if not any((topic, host)):
+    @rpc_common.client_exceptions(exception.HostBinaryNotFound)
+    def service_get_all_by(self, context, topic=None, host=None, binary=None):
+        if not any((topic, host, binary)):
             result = self.db.service_get_all(context)
         elif all((topic, host)):
             if topic == 'compute':
@@ -258,6 +259,8 @@ class ConductorManager(manager.SchedulerDependentManager):
             else:
                 result = self.db.service_get_by_host_and_topic(context,
                                                                host, topic)
+        elif all((host, binary)):
+            result = self.db.service_get_by_args(context, host, binary)
         elif topic:
             result = self.db.service_get_all_by_topic(context, topic)
         elif host:

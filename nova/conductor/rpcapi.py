@@ -60,6 +60,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.25 - Added action_event_start and action_event_finish
     1.26 - Added instance_info_cache_update
     1.27 - Added service_create
+    1.28 - Added binary arg to service_get_all_by
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -253,9 +254,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             update_totals=update_totals)
         return self.call(context, msg, version='1.19')
 
-    def service_get_all_by(self, context, topic=None, host=None):
-        msg = self.make_msg('service_get_all_by', topic=topic, host=host)
-        return self.call(context, msg, version='1.21')
+    def service_get_all_by(self, context, topic=None, host=None, binary=None):
+        msg = self.make_msg('service_get_all_by', topic=topic, host=host,
+                            binary=binary)
+        return self.call(context, msg, version='1.28')
 
     def instance_get_all(self, context):
         msg = self.make_msg('instance_get_all')
