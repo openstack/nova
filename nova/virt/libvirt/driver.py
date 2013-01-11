@@ -967,8 +967,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        xml = self._get_domain_xml(instance, network_info,
-                                   block_device_info=None)
+        xml = self._get_domain_xml(instance, network_info, block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
