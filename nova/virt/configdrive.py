@@ -54,6 +54,9 @@ configdrive_opts = [
 CONF = cfg.CONF
 CONF.register_opts(configdrive_opts)
 
+# Config drives are 64mb, if we can't size to the exact size of the data
+CONFIGDRIVESIZE_BYTES = 64 * 1024 * 1024
+
 
 @contextlib.contextmanager
 def config_drive_helper(instance_md=None):
@@ -116,10 +119,9 @@ class _ConfigDriveBuilder(object):
 
     def _make_vfat(self, path):
         # NOTE(mikal): This is a little horrible, but I couldn't find an
-        # equivalent to genisoimage for vfat filesystems. vfat images are
-        # always 64mb.
+        # equivalent to genisoimage for vfat filesystems.
         with open(path, 'w') as f:
-            f.truncate(64 * 1024 * 1024)
+            f.truncate(CONFIGDRIVESIZE_BYTES)
 
         utils.mkfs('vfat', path, label='config-2')
 

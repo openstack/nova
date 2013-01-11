@@ -34,6 +34,7 @@ from xml.parsers import expat
 
 from eventlet import greenthread
 
+from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
@@ -43,6 +44,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import driver
@@ -153,6 +155,7 @@ class ImageType(object):
     | 4 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
     |     linux, HVM assumed for Windows)
     | 5 - ISO disk image (local SR, NOT partitioned by plugin)
+    | 6 - config drive
     """
 
     KERNEL = 0
@@ -161,7 +164,9 @@ class ImageType(object):
     DISK_RAW = 3
     DISK_VHD = 4
     DISK_ISO = 5
-    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD, DISK_ISO)
+    DISK_CONFIGDRIVE = 6
+    _ids = (KERNEL, RAMDISK, DISK, DISK_RAW, DISK_VHD, DISK_ISO,
+            DISK_CONFIGDRIVE)
 
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
@@ -169,8 +174,9 @@ class ImageType(object):
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
     DISK_ISO_STR = "iso"
+    DISK_CONFIGDRIVE_STR = "configdrive"
     _strs = (KERNEL_STR, RAMDISK_STR, DISK_STR, DISK_RAW_STR, DISK_VHD_STR,
-                DISK_ISO_STR)
+             DISK_ISO_STR, DISK_CONFIGDRIVE_STR)
 
     @classmethod
     def to_string(cls, image_type):
@@ -178,14 +184,15 @@ class ImageType(object):
 
     @classmethod
     def get_role(cls, image_type_id):
-        " Get the role played by the image, based on its type "
+        """Get the role played by the image, based on its type."""
         return {
             cls.KERNEL: 'kernel',
             cls.RAMDISK: 'ramdisk',
             cls.DISK: 'root',
             cls.DISK_RAW: 'root',
             cls.DISK_VHD: 'root',
-            cls.DISK_ISO: 'iso'
+            cls.DISK_ISO: 'iso',
+            cls.DISK_CONFIGDRIVE: 'configdrive'
         }.get(image_type_id)
 
 
@@ -866,6 +873,42 @@ def generate_ephemeral(session, instance, vm_ref, userdevice, name_label,
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'ephemeral', size_gb * 1024,
                    CONF.default_ephemeral_format)
+
+
+def generate_configdrive(session, instance, vm_ref, userdevice,
+                         admin_password=None, files=None):
+    sr_ref = safe_find_sr(session)
+    vdi_ref = create_vdi(session, sr_ref, instance, 'config-2',
+                         'configdrive', configdrive.CONFIGDRIVESIZE_BYTES)
+
+    try:
+        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+            dev_path = utils.make_dev_path(dev)
+
+            # NOTE(mikal): libvirt supports injecting the admin password as
+            # well. This is not currently implemented for xenapi as it is not
+            # supported by the existing file injection
+            extra_md = {}
+            if admin_password:
+                extra_md['admin_pass'] = admin_password
+            inst_md = instance_metadata.InstanceMetadata(instance,
+                                                         content=files,
+                                                         extra_md=extra_md)
+            with configdrive.config_drive_helper(instance_md=inst_md) as cdb:
+                with utils.tempdir() as tmp_path:
+                    tmp_file = os.path.join(tmp_path, 'configdrive')
+                    cdb.make_drive(tmp_file)
+
+                    utils.execute('dd',
+                                  'if=%s' % tmp_file,
+                                  'of=%s' % dev_path,
+                                  run_as_root=True)
+
+        create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False,
+                   read_only=True)
+    except Exception:
+        with excutils.save_and_reraise_exception():
+            destroy_vdi(session, vdi_ref)
 
 
 def create_kernel_image(context, session, instance, name_label, image_id,
