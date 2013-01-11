@@ -24,6 +24,7 @@ import string
 
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
+from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
 
@@ -35,33 +36,33 @@ class StorageError(Exception):
         super(StorageError, self).__init__(message)
 
 
-def get_host_iqn(session):
+def get_host_iqn(session, cluster=None):
     """
     Return the host iSCSI IQN.
     """
-    host_mor = session._call_method(vim_util, "get_objects",
-                                    "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
     hbas_ret = session._call_method(vim_util, "get_dynamic_property",
                                     host_mor, "HostSystem",
                                     "config.storageDevice.hostBusAdapter")
 
     # Meaning there are no host bus adapters on the host
-    if not hbas_ret:
+    if hbas_ret is None:
         return
     host_hbas = hbas_ret.HostHostBusAdapter
+    if not host_hbas:
+        return
     for hba in host_hbas:
         if hba.__class__.__name__ == 'HostInternetScsiHba':
             return hba.iScsiName
 
 
-def find_st(session, data):
+def find_st(session, data, cluster=None):
     """
     Return the iSCSI Target given a volume info.
     """
     target_portal = data['target_portal']
     target_iqn = data['target_iqn']
-    host_mor = session._call_method(vim_util, "get_objects",
-                                    "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
 
     lst_properties = ["config.storageDevice.hostBusAdapter",
                       "config.storageDevice.scsiTopology",
@@ -133,13 +134,14 @@ def find_st(session, data):
     return result
 
 
-def rescan_iscsi_hba(session):
+def rescan_iscsi_hba(session, cluster=None):
     """
     Rescan the iSCSI HBA to discover iSCSI targets.
     """
-    # There is only one default storage system in a standalone ESX host
-    storage_system_mor = session._call_method(vim_util, "get_objects",
-        "HostSystem", ["configManager.storageSystem"])[0].propSet[0].val
+    host_mor = vm_util.get_host_ref(session, cluster)
+    storage_system_mor = session._call_method(vim_util, "get_dynamic_property",
+                                              host_mor, "HostSystem",
+                                              "configManager.storageSystem")
     hbas_ret = session._call_method(vim_util,
                                     "get_dynamic_property",
                                     storage_system_mor,

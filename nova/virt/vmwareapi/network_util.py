@@ -29,14 +29,22 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 
 
-def get_network_with_the_name(session, network_name="vmnet0"):
+def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
     """
     Gets reference to the network whose name is passed as the
     argument.
     """
-    hostsystems = session._call_method(vim_util, "get_objects",
-                "HostSystem", ["network"])
-    vm_networks_ret = hostsystems[0].propSet[0].val
+    host = vm_util.get_host_ref(session, cluster)
+    if cluster is not None:
+        vm_networks_ret = session._call_method(vim_util,
+                                               "get_dynamic_property", cluster,
+                                               "ClusterComputeResource",
+                                               "network")
+    else:
+        vm_networks_ret = session._call_method(vim_util,
+                                               "get_dynamic_property", host,
+                                               "HostSystem", "network")
+
     # Meaning there are no networks on the host. suds responds with a ""
     # in the parent property field rather than a [] in the
     # ManagedObjectReference property field of the parent
@@ -77,14 +85,13 @@ def get_network_with_the_name(session, network_name="vmnet0"):
         return None
 
 
-def get_vswitch_for_vlan_interface(session, vlan_interface):
+def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
     """
     Gets the vswitch associated with the physical network adapter
     with the name supplied.
     """
     # Get the list of vSwicthes on the Host System
-    host_mor = session._call_method(vim_util, "get_objects",
-         "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
     vswitches_ret = session._call_method(vim_util,
                 "get_dynamic_property", host_mor,
                 "HostSystem", "config.network.vswitch")
@@ -105,10 +112,9 @@ def get_vswitch_for_vlan_interface(session, vlan_interface):
             pass
 
 
-def check_if_vlan_interface_exists(session, vlan_interface):
+def check_if_vlan_interface_exists(session, vlan_interface, cluster=None):
     """Checks if the vlan_inteface exists on the esx host."""
-    host_mor = session._call_method(vim_util, "get_objects",
-         "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
     physical_nics_ret = session._call_method(vim_util,
                 "get_dynamic_property", host_mor,
                 "HostSystem", "config.network.pnic")
@@ -122,10 +128,9 @@ def check_if_vlan_interface_exists(session, vlan_interface):
     return False
 
 
-def get_vlanid_and_vswitch_for_portgroup(session, pg_name):
+def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
     """Get the vlan id and vswicth associated with the port group."""
-    host_mor = session._call_method(vim_util, "get_objects",
-         "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
     port_grps_on_host_ret = session._call_method(vim_util,
                 "get_dynamic_property", host_mor,
                 "HostSystem", "config.network.portgroup")
@@ -141,7 +146,7 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name):
             return p_gp.spec.vlanId, p_grp_vswitch_name
 
 
-def create_port_group(session, pg_name, vswitch_name, vlan_id=0):
+def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
     """
     Creates a port group on the host system with the vlan tags
     supplied. VLAN id 0 means no vlan id association.
@@ -152,8 +157,7 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0):
                     vswitch_name,
                     pg_name,
                     vlan_id)
-    host_mor = session._call_method(vim_util, "get_objects",
-         "HostSystem")[0].obj
+    host_mor = vm_util.get_host_ref(session, cluster)
     network_system_mor = session._call_method(vim_util,
         "get_dynamic_property", host_mor,
         "HostSystem", "configManager.networkSystem")

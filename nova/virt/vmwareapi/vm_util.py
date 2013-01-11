@@ -480,11 +480,61 @@ def get_vm_ref_from_name(session, vm_name):
     return None
 
 
-def get_datastore_ref_and_name(session):
+def get_cluster_ref_from_name(session, cluster_name):
+    """Get reference to the cluster with the name specified."""
+    cls = session._call_method(vim_util, "get_objects",
+                               "ClusterComputeResource", ["name"])
+    for cluster in cls:
+        if cluster.propSet[0].val == cluster_name:
+            return cluster.obj
+    return None
+
+
+def get_host_ref(session, cluster=None):
+    """Get reference to a host within the cluster specified."""
+    if cluster is None:
+        host_mor = session._call_method(vim_util, "get_objects",
+                                        "HostSystem")[0].obj
+    else:
+        host_ret = session._call_method(vim_util, "get_dynamic_property",
+                                        cluster, "ClusterComputeResource",
+                                        "host")
+        if host_ret is None:
+            return
+        if not host_ret.ManagedObjectReference:
+            return
+        host_mor = host_ret.ManagedObjectReference[0]
+
+    return host_mor
+
+
+def get_datastore_ref_and_name(session, cluster=None, host=None):
     """Get the datastore list and choose the first local storage."""
-    data_stores = session._call_method(vim_util, "get_objects",
-                "Datastore", ["summary.type", "summary.name",
-                              "summary.capacity", "summary.freeSpace"])
+    if cluster is None and host is None:
+        data_stores = session._call_method(vim_util, "get_objects",
+                    "Datastore", ["summary.type", "summary.name",
+                                  "summary.capacity", "summary.freeSpace"])
+    else:
+        if cluster is not None:
+            datastore_ret = session._call_method(
+                                        vim_util,
+                                        "get_dynamic_property", cluster,
+                                        "ClusterComputeResource", "datastore")
+        else:
+            datastore_ret = session._call_method(
+                                        vim_util,
+                                        "get_dynamic_property", host,
+                                        "HostSystem", "datastore")
+
+        if datastore_ret is None:
+            raise exception.DatastoreNotFound()
+        data_store_mors = datastore_ret.ManagedObjectReference
+        data_stores = session._call_method(vim_util,
+                                "get_properties_for_a_collection_of_objects",
+                                "Datastore", data_store_mors,
+                                ["summary.type", "summary.name",
+                                 "summary.capacity", "summary.freeSpace"])
+
     for elem in data_stores:
         ds_name = None
         ds_type = None
