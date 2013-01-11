@@ -973,8 +973,8 @@ class API(base.Base):
                     QUOTAS.rollback(context, reservations)
 
     def _local_delete(self, context, instance, bdms):
-        LOG.warning(_('host for instance is down, deleting from '
-                      'database'), instance=instance)
+        LOG.warning(_("instance's host %s is down, deleting from "
+                      "database") % instance['host'], instance=instance)
         instance_uuid = instance['uuid']
         self.db.instance_info_cache_delete(context, instance_uuid)
         compute_utils.notify_about_instance_usage(
