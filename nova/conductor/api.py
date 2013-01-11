@@ -20,6 +20,7 @@ from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova import exception as exc
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 
 conductor_opts = [
@@ -38,6 +39,8 @@ conductor_group = cfg.OptGroup(name='conductor',
 CONF = cfg.CONF
 CONF.register_group(conductor_group)
 CONF.register_opts(conductor_opts, conductor_group)
+
+LOG = logging.getLogger(__name__)
 
 
 class ExceptionHelper(object):
@@ -67,6 +70,10 @@ class LocalAPI(object):
         # TODO(danms): This needs to be something more generic for
         # other/future users of this sort of functionality.
         self._manager = ExceptionHelper(manager.ConductorManager())
+
+    def wait_until_ready(self, context, *args, **kwargs):
+        # nothing to wait for in the local case.
+        pass
 
     def ping(self, context, arg, timeout=None):
         return self._manager.ping(context, arg)
@@ -254,6 +261,35 @@ class API(object):
 
     def __init__(self):
         self.conductor_rpcapi = rpcapi.ConductorAPI()
+
+    def wait_until_ready(self, context, early_timeout=10, early_attempts=10):
+        '''Wait until a conductor service is up and running.
+
+        This method calls the remote ping() method on the conductor topic until
+        it gets a response.  It starts with a shorter timeout in the loop
+        (early_timeout) up to early_attempts number of tries.  It then drops
+        back to the globally configured timeout for rpc calls for each retry.
+        '''
+        attempt = 0
+        timeout = early_timeout
+        while True:
+            # NOTE(danms): Try ten times with a short timeout, and then punt
+            # to the configured RPC timeout after that
+            if attempt == early_attempts:
+                timeout = None
+            attempt += 1
+
+            # NOTE(russellb): This is running during service startup. If we
+            # allow an exception to be raised, the service will shut down.
+            # This may fail the first time around if nova-conductor wasn't
+            # running when this service started.
+            try:
+                self.ping(context, '1.21 GigaWatts', timeout=timeout)
+                break
+            except rpc_common.Timeout as e:
+                LOG.exception(_('Timed out waiting for nova-conductor. '
+                                'Is it running? Or did this service start '
+                                'before nova-conductor?'))
 
     def ping(self, context, arg, timeout=None):
         return self.conductor_rpcapi.ping(context, arg, timeout)

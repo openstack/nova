@@ -3121,21 +3121,6 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance(params)
         self.compute._instance_update(self.context, instance['uuid'])
 
-    def test_startup_conductor_ping(self):
-        timeouts = []
-        calls = dict(count=0)
-
-        def fake_ping(context, message, timeout):
-            timeouts.append(timeout)
-            calls['count'] += 1
-            if calls['count'] < 15:
-                raise rpc_common.Timeout("fake")
-
-        self.stubs.Set(self.compute.conductor_api, 'ping', fake_ping)
-        self.compute._get_instances_at_startup(self.context)
-        self.assertEqual(timeouts.count(10), 10)
-        self.assertTrue(None in timeouts)
-
     def test_destroy_evacuated_instances(self):
         fake_context = context.get_admin_context()
 
