@@ -39,7 +39,9 @@ CONF.register_opt(servicegroup_driver_opt)
 class API(object):
 
     _driver = None
-    _driver_name_class_mapping = {"db": "nova.servicegroup.db_driver.DbDriver"}
+    _driver_name_class_mapping = {
+        'db': 'nova.servicegroup.drivers.db.DbDriver'
+    }
 
     @lockutils.synchronized('nova.servicegroup.api.new', 'nova-')
     def __new__(cls, *args, **kwargs):
