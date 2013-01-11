@@ -593,9 +593,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_instance_nw_info(self, context, instance):
         """Get a list of dictionaries of network data of an instance."""
-        # get the network info from network
+        # Get the network info from network API, but don't let it
+        # update the cache, as that will hit the DB.  We'll update
+        # the cache ourselves via the conductor.
         network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
+                instance, update_cache=False)
+        cache = {'network_info': network_info.json()}
+        self.conductor_api.instance_info_cache_update(context,
+                                                      instance,
+                                                      cache)
         return network_info
 
     def _legacy_nw_info(self, network_info):
@@ -1407,8 +1413,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   expected_task_state=task_states.REBUILDING)
 
             instance['injected_files'] = injected_files
-            network_info = self.network_api.get_instance_nw_info(context,
-                                                                 instance)
+            network_info = self._get_instance_nw_info(context, instance)
             if bdms is None:
                 capi = self.conductor_api
                 bdms = capi.block_device_mapping_get_all_by_instance(
@@ -3002,7 +3007,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             # Call to network API to get instance info.. this will
             # force an update to the instance's info_cache
-            self.network_api.get_instance_nw_info(context, instance)
+            self._get_instance_nw_info(context, instance)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
         except Exception:

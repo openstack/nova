@@ -19,7 +19,7 @@
 from nova.compute import api as compute_api
 from nova.db import base
 from nova import exception
-from nova.network.api import refresh_cache
+from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network import quantumv2
 from nova.openstack.common import cfg
@@ -56,6 +56,9 @@ CONF.import_opt('default_floating_pool', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
 
 NET_EXTERNAL = 'router:external'
+
+refresh_cache = network_api.refresh_cache
+update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 
 
 class API(base.Base):
@@ -181,9 +184,12 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
-    @refresh_cache
-    def get_instance_nw_info(self, context, instance, networks=None):
-        return self._get_instance_nw_info(context, instance, networks)
+    def get_instance_nw_info(self, context, instance, networks=None,
+            update_cache=True):
+        result = self._get_instance_nw_info(context, instance, networks)
+        if update_cache:
+            update_instance_info_cache(self, context, instance, result)
+        return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):
         LOG.debug(_('get_instance_nw_info() for %s'),
