@@ -172,3 +172,9 @@ vgs: CommandFilter, /sbin/vgs, root
 
 # nova/virt/baremetal/volume_driver.py: 'tgtadm', '--lld', 'iscsi', ...
 tgtadm: CommandFilter, /usr/sbin/tgtadm, root
+
+# nova/utils.py:read_file_as_root: 'cat', file_path
+# (called from nova/virt/disk/vfs/localfs.py:VFSLocalFS.read_file)
+read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
+read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
+
