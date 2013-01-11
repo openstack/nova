@@ -24,6 +24,7 @@ import uuid
 from nova.api.metadata import base as instance_metadata
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -35,10 +36,6 @@ from nova.virt.hyperv import vmutils
 LOG = logging.getLogger(__name__)
 
 hyperv_opts = [
-    cfg.StrOpt('vswitch_name',
-                default=None,
-                help='Default vSwitch Name, '
-                    'if none provided first external is used'),
     cfg.BoolOpt('limit_cpu_features',
                default=False,
                help='Required for live migration among '
@@ -59,14 +56,32 @@ hyperv_opts = [
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts)
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
+CONF.import_opt('network_api_class', 'nova.network')
 
 
 class VMOps(baseops.BaseOps):
+    _vif_driver_class_map = {
+        'nova.network.quantumv2.api.API':
+            'nova.virt.hyperv.vif.HyperVQuantumVIFDriver',
+        'nova.network.api.API':
+            'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
+    }
+
     def __init__(self, volumeops):
         super(VMOps, self).__init__()
 
         self._vmutils = vmutils.VMUtils()
         self._volumeops = volumeops
+        self._load_vif_driver_class()
+
+    def _load_vif_driver_class(self):
+        try:
+            class_name = self._vif_driver_class_map[CONF.network_api_class]
+            self._vif_driver = importutils.import_object(class_name)
+        except KeyError:
+            raise TypeError(_("VIF driver not found for "
+                              "network_api_class: %s") %
+                            CONF.network_api_class)
 
     def list_instances(self):
         """Return the names of all the instances known to Hyper-V."""
@@ -158,8 +173,8 @@ class VMOps(baseops.BaseOps):
             self._create_scsi_controller(instance['name'])
 
             for vif in network_info:
-                mac_address = vif['address'].replace(':', '')
-                self._create_nic(instance['name'], mac_address)
+                self._create_nic(instance['name'], vif)
+                self._vif_driver.plug(instance, vif)
 
             if configdrive.required_by(instance):
                 self._create_config_drive(instance, injected_files,
@@ -367,79 +382,34 @@ class VMOps(baseops.BaseOps):
         LOG.info(_('Created drive type %(drive_type)s for %(vm_name)s') %
             locals())
 
-    def _create_nic(self, vm_name, mac):
+    def _create_nic(self, vm_name, vif):
         """Create a (synthetic) nic and attach it to the vm."""
         LOG.debug(_('Creating nic for %s '), vm_name)
-        #Find the vswitch that is connected to the physical nic.
-        vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
-        extswitch = self._find_external_network()
-        if extswitch is None:
-            raise vmutils.HyperVException(_('Cannot find vSwitch'))
 
-        vm = vms[0]
-        switch_svc = self._conn.Msvm_VirtualSwitchManagementService()[0]
-        #Find the default nic and clone it to create a new nic for the vm.
-        #Use Msvm_SyntheticEthernetPortSettingData for Windows or Linux with
-        #Linux Integration Components installed.
+        #Create a new nic
         syntheticnics_data = self._conn.Msvm_SyntheticEthernetPortSettingData()
         default_nic_data = [n for n in syntheticnics_data
                             if n.InstanceID.rfind('Default') > 0]
         new_nic_data = self._vmutils.clone_wmi_obj(self._conn,
                 'Msvm_SyntheticEthernetPortSettingData',
                 default_nic_data[0])
-        #Create a port on the vswitch.
-        (new_port, ret_val) = switch_svc.CreateSwitchPort(
-            Name=str(uuid.uuid4()),
-            FriendlyName=vm_name,
-            ScopeOfResidence="",
-            VirtualSwitch=extswitch.path_())
-        if ret_val != 0:
-            LOG.error(_('Failed creating a port on the external vswitch'))
-            raise vmutils.HyperVException(_('Failed creating port for %s') %
-                    vm_name)
-        ext_path = extswitch.path_()
-        LOG.debug(_("Created switch port %(vm_name)s on switch %(ext_path)s")
-                % locals())
-        #Connect the new nic to the new port.
-        new_nic_data.Connection = [new_port]
-        new_nic_data.ElementName = vm_name + ' nic'
-        new_nic_data.Address = mac
+
+        #Configure the nic
+        new_nic_data.ElementName = vif['id']
+        new_nic_data.Address = vif['address'].replace(':', '')
         new_nic_data.StaticMacAddress = 'True'
         new_nic_data.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
-        #Add the new nic to the vm.
+
+        #Add the new nic to the vm
+        vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
+        vm = vms[0]
+
         new_resources = self._vmutils.add_virt_resource(self._conn,
             new_nic_data, vm)
         if new_resources is None:
             raise vmutils.HyperVException(_('Failed to add nic to VM %s') %
                     vm_name)
         LOG.info(_("Created nic for %s "), vm_name)
-
-    def _find_external_network(self):
-        """Find the vswitch that is connected to the physical nic.
-           Assumes only one physical nic on the host
-        """
-        #If there are no physical nics connected to networks, return.
-        LOG.debug(_("Attempting to bind NIC to %s ")
-                % CONF.vswitch_name)
-        if CONF.vswitch_name:
-            LOG.debug(_("Attempting to bind NIC to %s ")
-                % CONF.vswitch_name)
-            bound = self._conn.Msvm_VirtualSwitch(
-                ElementName=CONF.vswitch_name)
-        else:
-            LOG.debug(_("No vSwitch specified, attaching to default"))
-            self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')
-        if len(bound) == 0:
-            return None
-        if CONF.vswitch_name:
-            return self._conn.Msvm_VirtualSwitch(
-                ElementName=CONF.vswitch_name)[0]\
-                .associators(wmi_result_class='Msvm_SwitchPort')[0]\
-                .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
-        else:
-            return self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')\
-                .associators(wmi_result_class='Msvm_SwitchPort')[0]\
-                .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
 
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""

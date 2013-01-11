@@ -68,7 +68,8 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self._setup_stubs()
 
         self.flags(instances_path=r'C:\Hyper-V\test\instances',
-                        vswitch_name='external')
+                   vswitch_name='external',
+                   network_api_class='nova.network.quantumv2.api.API')
 
         self._hypervutils = hypervutils.HyperVUtils()
         self._conn = driver_hyperv.HyperVDriver(None)
@@ -119,6 +120,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         from nova.virt.hyperv import hostops
         from nova.virt.hyperv import livemigrationops
         from nova.virt.hyperv import snapshotops
+        from nova.virt.hyperv import vif
         from nova.virt.hyperv import vmops
         from nova.virt.hyperv import volumeops
         from nova.virt.hyperv import volumeutils
@@ -129,6 +131,7 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
             basevolumeutils,
             baseops,
             hostops,
+            vif,
             vmops,
             vmutils,
             volumeops,
@@ -240,6 +243,9 @@ class HyperVAPITestCase(basetestcase.BaseTestCase):
         self.assertEquals(len(dvd_paths), 0)
 
     def test_spawn_no_vswitch_exception(self):
+        self.flags(network_api_class='nova.network.api.API')
+        # Reinstantiate driver, as the VIF plugin is loaded during __init__
+        self._conn = driver_hyperv.HyperVDriver(None)
         # Set flag to a non existing vswitch
         self.flags(vswitch_name=str(uuid.uuid4()))
         self.assertRaises(vmutils.HyperVException, self._spawn_instance, True)
