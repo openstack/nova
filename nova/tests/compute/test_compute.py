@@ -3175,8 +3175,8 @@ class ComputeTestCase(BaseTestCase):
         def _do_mock_calls(defer_iptables_apply):
             self.compute.driver.init_host(host=our_host)
             context.get_admin_context().AndReturn(fake_context)
-            self.compute._get_instances_at_startup(fake_context).AndReturn(
-                    startup_instances)
+            self.compute.conductor_api.instance_get_all_by_host(
+                    fake_context, our_host).AndReturn(startup_instances)
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_on()
             self.compute._destroy_evacuated_instances(fake_context)
@@ -3193,8 +3193,8 @@ class ComputeTestCase(BaseTestCase):
                                  'filter_defer_apply_on')
         self.mox.StubOutWithMock(self.compute.driver,
                 'filter_defer_apply_off')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instances_at_startup')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_get_all_by_host')
         self.mox.StubOutWithMock(context, 'get_admin_context')
         self.mox.StubOutWithMock(self.compute,
                 '_destroy_evacuated_instances')

@@ -478,15 +478,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warning(_('Hypervisor driver does not support '
                               'firewall rules'), instance=instance)
 
-    def _get_instances_at_startup(self, context):
-        self.conductor_api.wait_until_ready(context)
-        return self.conductor_api.instance_get_all_by_host(context, self.host)
-
     def init_host(self):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
-        instances = self._get_instances_at_startup(context)
+        instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                self.host)
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()

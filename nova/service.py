@@ -30,6 +30,7 @@ import time
 import eventlet
 import greenlet
 
+from nova import conductor
 from nova import context
 from nova import db
 from nova import exception
@@ -38,6 +39,7 @@ from nova.openstack.common import eventlet_backdoor
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 from nova import servicegroup
 from nova import utils
 from nova import version
@@ -392,7 +394,7 @@ class Service(object):
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
                  periodic_enable=None, periodic_fuzzy_delay=None,
-                 periodic_interval_max=None,
+                 periodic_interval_max=None, db_allowed=True,
                  *args, **kwargs):
         self.host = host
         self.binary = binary
@@ -407,6 +409,9 @@ class Service(object):
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
         self.backdoor_port = None
+        self.db_allowed = db_allowed
+        self.conductor_api = conductor.API(use_local=db_allowed)
+        self.conductor_api.wait_until_ready(context.get_admin_context())
         self.servicegroup_api = servicegroup.API()
 
     def start(self):
@@ -481,7 +486,8 @@ class Service(object):
     @classmethod
     def create(cls, host=None, binary=None, topic=None, manager=None,
                report_interval=None, periodic_enable=None,
-               periodic_fuzzy_delay=None, periodic_interval_max=None):
+               periodic_fuzzy_delay=None, periodic_interval_max=None,
+               db_allowed=True):
         """Instantiates class and passes back application object.
 
         :param host: defaults to CONF.host
@@ -514,7 +520,8 @@ class Service(object):
                           report_interval=report_interval,
                           periodic_enable=periodic_enable,
                           periodic_fuzzy_delay=periodic_fuzzy_delay,
-                          periodic_interval_max=periodic_interval_max)
+                          periodic_interval_max=periodic_interval_max,
+                          db_allowed=db_allowed)
 
         return service_obj
 
