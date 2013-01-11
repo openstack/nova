@@ -1010,6 +1010,10 @@ class ComputeTestCase(BaseTestCase):
 
         instance = dict(uuid='fake-instance',
                         power_state='unknown')
+        updated_instance1 = dict(uuid='updated-instance1',
+                                 power_state='fake')
+        updated_instance2 = dict(uuid='updated-instance2',
+                                 power_state='fake')
 
         fake_nw_info = 'fake-network-info'
         fake_nw_model = network_model.NetworkInfo()
@@ -1040,7 +1044,7 @@ class ComputeTestCase(BaseTestCase):
                 instance).AndReturn(fake_power_state1)
         self.compute._instance_update(econtext, instance['uuid'],
                 power_state=fake_power_state1,
-                vm_state=vm_states.ACTIVE)
+                vm_state=vm_states.ACTIVE).AndReturn(updated_instance1)
 
         # Reboot should check the driver to see if legacy nwinfo is
         # needed.  If it is, the model's legacy() method should be
@@ -1058,7 +1062,7 @@ class ComputeTestCase(BaseTestCase):
         # this is called with the wrong args, so we have to hack
         # around it.
         reboot_call_info = {}
-        expected_call_info = {'args': (instance, expected_nw_info,
+        expected_call_info = {'args': (updated_instance1, expected_nw_info,
                                        reboot_type, fake_block_dev_info),
                               'kwargs': {}}
 
@@ -1070,13 +1074,13 @@ class ComputeTestCase(BaseTestCase):
 
         # Power state should be updated again
         self.compute._get_power_state(econtext,
-                instance).AndReturn(fake_power_state2)
-        self.compute._instance_update(econtext, instance['uuid'],
+                updated_instance1).AndReturn(fake_power_state2)
+        self.compute._instance_update(econtext, updated_instance1['uuid'],
                 power_state=fake_power_state2,
                 task_state=None,
-                vm_state=vm_states.ACTIVE)
+                vm_state=vm_states.ACTIVE).AndReturn(updated_instance2)
         self.compute._notify_about_instance_usage(econtext,
-                                                  instance,
+                                                  updated_instance2,
                                                   'reboot.end')
 
         self.mox.ReplayAll()
