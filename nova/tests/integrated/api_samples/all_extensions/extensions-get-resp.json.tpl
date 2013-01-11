@@ -305,19 +305,19 @@
             "updated": "%(timestamp)s"
         },
         {
-            "alias": "os-admin-networks",
-            "description": "%(text)s",
-            "links": [],
-            "name": "AdminNetworks",
-            "namespace": "http://docs.openstack.org/compute/ext/os-admin-networks/api/v1.1",
-            "updated": "%(timestamp)s"
-        },
-        {
             "alias": "os-networks",
             "description": "%(text)s",
             "links": [],
-            "name": "OSNetworks",
+            "name": "Networks",
             "namespace": "http://docs.openstack.org/compute/ext/os-networks/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-tenant-networks",
+            "description": "%(text)s",
+            "links": [],
+            "name": "OSTenantNetworks",
+            "namespace": "http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2",
             "updated": "%(timestamp)s"
         },
         {

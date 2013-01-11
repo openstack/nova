@@ -125,13 +125,13 @@
   <extension alias="os-multiple-create" updated="2012-08-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/multiplecreate/api/v1.1" name="MultipleCreate">
     <description>Allow multiple create in the Create Server v1.1 API.</description>
   </extension>
-  <extension alias="os-admin-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-admin-networks/api/v1.1" name="AdminNetworks">
+  <extension alias="os-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-networks/api/v1.1" name="Networks">
     <description>Admin-only Network Management Extension.</description>
   </extension>
   <extension alias="os-networks-associate" updated="2012-11-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/networks_associate/api/v2" name="NetworkAssociationSupport">
     <description>Network association support.</description>
   </extension>
-  <extension alias="os-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-networks/api/v1.1" name="OSNetworks">
+  <extension alias="os-tenant-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2" name="OSTenantNetworks">
     <description>Tenant-based Network Management Extension.</description>
   </extension>
   <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">

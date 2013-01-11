@@ -114,10 +114,10 @@
   <extension alias="os-multiple-create" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/multiplecreate/api/v1.1" name="MultipleCreate">
     <description>%(text)s</description>
   </extension>
-  <extension alias="os-admin-networks" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-admin-networks/api/v1.1" name="AdminNetworks">
+  <extension alias="os-networks" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-networks/api/v1.1" name="Networks">
     <description>%(text)s</description>
   </extension>
-  <extension alias="os-networks" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-networks/api/v1.1" name="OSNetworks">
+  <extension alias="os-tenant-networks" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2" name="OSTenantNetworks">
     <description>%(text)s</description>
   </extension>
   <extension alias="os-networks-associate" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/networks_associate/api/v2" name="NetworkAssociationSupport">

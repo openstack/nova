@@ -185,7 +185,6 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Keypairs",
             "Multinic",
             "MultipleCreate",
-            "OSNetworks",
             "QuotaClasses",
             "Quotas",
             "Rescue",
