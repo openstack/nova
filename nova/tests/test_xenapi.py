@@ -1780,19 +1780,12 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
                 }
 
     def test_get_all_bw_counters(self):
-        class testinstance(object):
-            def __init__(self, name, uuid):
-                self.name = name
-                self.uuid = uuid
+        instances = [dict(name='test1', uuid='1-2-3'),
+                     dict(name='test2', uuid='4-5-6')]
 
         self.stubs.Set(vm_utils, 'fetch_bandwidth',
                        XenAPIBWCountersTestCase._fake_fetch_bandwidth)
-        result = self.conn.get_all_bw_counters([testinstance(
-                                                   name='test1',
-                                                   uuid='1-2-3'),
-                                                testinstance(
-                                                   name='test2',
-                                                   uuid='4-5-6')])
+        result = self.conn.get_all_bw_counters(instances)
         self.assertEqual(len(result), 4)
         self.assertIn(dict(uuid='1-2-3',
                            mac_address="a:b:c:d...",
@@ -1816,14 +1809,11 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
         """Test that get_all_bw_conters returns an empty list when
         no data returned from Xenserver.  c.f. bug #910045.
         """
-        class testinstance(object):
-            def __init__(self):
-                self.name = "instance-0001"
-                self.uuid = "1-2-3-4-5"
+        instances = [dict(name='instance-0001', uuid='1-2-3-4-5')]
 
         self.stubs.Set(vm_utils, 'fetch_bandwidth',
                        XenAPIBWCountersTestCase._fake_fetch_bandwidth_mt)
-        result = self.conn.get_all_bw_counters([testinstance()])
+        result = self.conn.get_all_bw_counters(instances)
         self.assertEqual(result, [])
 
 

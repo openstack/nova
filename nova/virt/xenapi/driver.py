@@ -311,7 +311,7 @@ class XenAPIDriver(driver.ComputeDriver):
 
         # we only care about VMs that correspond to a nova-managed
         # instance:
-        imap = dict([(inst.name, inst.uuid) for inst in instances])
+        imap = dict([(inst['name'], inst['uuid']) for inst in instances])
         bwcounters = []
 
         # get a dictionary of instance names.  values are dictionaries
