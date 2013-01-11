@@ -62,6 +62,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.27 - Added service_create
     1.28 - Added binary arg to service_get_all_by
     1.29 - Added service_destroy
+    1.30 - Added migration_create
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -104,6 +105,12 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             confirm_window=confirm_window,
                             dest_compute=dest_compute)
         return self.call(context, msg, version='1.20')
+
+    def migration_create(self, context, instance, values):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('migration_create', instance=instance_p,
+                            values=values)
+        return self.call(context, msg, version='1.30')
 
     def migration_update(self, context, migration, status):
         migration_p = jsonutils.to_primitive(migration)

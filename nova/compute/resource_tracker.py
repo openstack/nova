@@ -166,11 +166,8 @@ class ResourceTracker(object):
         old_instance_type = instance_types.get_instance_type(
                 old_instance_type_id)
 
-        return db.migration_create(context.elevated(),
-                {'instance_uuid': instance['uuid'],
-                 'source_compute': instance['host'],
-                 'source_node': instance['node'],
-                 'dest_compute': self.host,
+        return self.conductor_api.migration_create(context, instance,
+                {'dest_compute': self.host,
                  'dest_node': self.nodename,
                  'dest_host': self.driver.get_host_ip_addr(),
                  'old_instance_type_id': old_instance_type['id'],

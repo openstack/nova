@@ -35,14 +35,21 @@ from nova import test
 FAKE_IMAGE_REF = 'fake-image-ref'
 
 
+class FakeContext(context.RequestContext):
+    def elevated(self):
+        """Return a consistent elevated context so we can detect it."""
+        if not hasattr(self, '_elevated'):
+            self._elevated = super(FakeContext, self).elevated()
+        return self._elevated
+
+
 class _BaseTestCase(object):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
         self.db = None
         self.user_id = 'fake'
         self.project_id = 'fake'
-        self.context = context.RequestContext(self.user_id,
-                                              self.project_id)
+        self.context = FakeContext(self.user_id, self.project_id)
 
     def stub_out_client_exceptions(self):
         def passthru(exceptions, func, *args, **kwargs):
@@ -122,6 +129,21 @@ class _BaseTestCase(object):
         self.conductor.migration_get_unconfirmed_by_dest_compute(self.context,
                                                                  'fake-window',
                                                                  'fake-host')
+
+    def test_migration_create(self):
+        inst = {'uuid': 'fake-uuid',
+                'host': 'fake-host',
+                'node': 'fake-node'}
+        self.mox.StubOutWithMock(db, 'migration_create')
+        db.migration_create(self.context.elevated(),
+                            {'instance_uuid': inst['uuid'],
+                             'source_compute': inst['host'],
+                             'source_node': inst['node'],
+                             'fake-key': 'fake-value'}).AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.migration_create(self.context, inst,
+                                                 {'fake-key': 'fake-value'})
+        self.assertEqual(result, 'result')
 
     def test_migration_update(self):
         migration = db.migration_create(self.context.elevated(),

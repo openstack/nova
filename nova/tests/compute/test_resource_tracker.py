@@ -24,6 +24,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
@@ -35,6 +36,7 @@ LOG = logging.getLogger(__name__)
 FAKE_VIRT_MEMORY_MB = 5
 FAKE_VIRT_LOCAL_GB = 6
 FAKE_VIRT_VCPUS = 1
+CONF = cfg.CONF
 
 
 class UnsupportedVirtDriver(driver.ComputeDriver):
@@ -97,14 +99,21 @@ class BaseTestCase(test.TestCase):
 
         self.context = context.get_admin_context()
 
+        self.flags(use_local=True, group='conductor')
+        self.conductor = self.start_service('conductor',
+                                            manager=CONF.conductor.manager)
+
         self._instances = {}
         self._instance_types = {}
 
-        self.stubs.Set(db, 'instance_get_all_by_host_and_node',
+        self.stubs.Set(self.conductor.db,
+                       'instance_get_all_by_host_and_node',
                        self._fake_instance_get_all_by_host_and_node)
-        self.stubs.Set(db, 'instance_update_and_get_original',
+        self.stubs.Set(self.conductor.db,
+                       'instance_update_and_get_original',
                        self._fake_instance_update_and_get_original)
-        self.stubs.Set(db, 'instance_type_get', self._fake_instance_type_get)
+        self.stubs.Set(self.conductor.db,
+                       'instance_type_get', self._fake_instance_type_get)
 
         self.host = 'fakehost'
 
@@ -622,7 +631,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def setUp(self):
         super(ResizeClaimTestCase, self).setUp()
 
-        self.stubs.Set(db, 'migration_create', self._fake_migration_create)
+        self.stubs.Set(self.conductor.db,
+                       'migration_create', self._fake_migration_create)
 
         self.instance = self._fake_instance()
         self.instance_type = self._fake_instance_type_create()
@@ -645,7 +655,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         if values:
             migration.update(values)
 
-        self._migrations[instance_uuid] = migration
+        self._migrations[migration['instance_uuid']] = migration
         return migration
 
     def test_claim(self):
