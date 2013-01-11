@@ -633,12 +633,19 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
                                                    {'name': 'fake-inst'},
                                                    'updated_at', 'asc')
 
-    def _test_stubbed(self, name, *args):
+    def _test_stubbed(self, name, *args, **kwargs):
         self.mox.StubOutWithMock(db, name)
         getattr(db, name)(self.context, *args).AndReturn('fake-result')
+        if name == 'service_destroy':
+            # TODO(russellb) This is a hack ... SetUp() starts the conductor()
+            # service.  There is a cleanup step that runs after this test which
+            # also deletes the associated service record. This involves a call
+            # to db.service_destroy(), which we have stubbed out.
+            db.service_destroy(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
         result = getattr(self.conductor, name)(self.context, *args)
-        self.assertEqual(result, 'fake-result')
+        self.assertEqual(
+                result, 'fake-result' if kwargs.get('returns', True) else None)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all')
@@ -657,6 +664,9 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
     def test_service_create(self):
         self._test_stubbed('service_create', {})
+
+    def test_service_destroy(self):
+        self._test_stubbed('service_destroy', '', returns=False)
 
     def test_ping(self):
         timeouts = []

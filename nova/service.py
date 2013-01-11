@@ -531,7 +531,8 @@ class Service(object):
         """Destroy the service object in the datastore."""
         self.stop()
         try:
-            db.service_destroy(context.get_admin_context(), self.service_id)
+            self.conductor_api.service_destroy(context.get_admin_context(),
+                                               self.service_id)
         except exception.NotFound:
             LOG.warn(_('Service killed that has no database entry'))
 

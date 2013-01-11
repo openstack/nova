@@ -61,6 +61,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.26 - Added instance_info_cache_update
     1.27 - Added service_create
     1.28 - Added binary arg to service_get_all_by
+    1.29 - Added service_destroy
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -285,3 +286,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def service_create(self, context, values):
         msg = self.make_msg('service_create', values=values)
         return self.call(context, msg, version='1.27')
+
+    def service_destroy(self, context, service_id):
+        msg = self.make_msg('service_destroy', service_id=service_id)
+        return self.call(context, msg, version='1.29')
