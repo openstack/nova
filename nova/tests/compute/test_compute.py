@@ -1000,8 +1000,7 @@ class ComputeTestCase(BaseTestCase):
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self.stubs)
 
-        self.mox.StubOutWithMock(network_model.NetworkInfo,
-                                 'hydrate')
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
@@ -1015,7 +1014,6 @@ class ComputeTestCase(BaseTestCase):
         updated_instance2 = dict(uuid='updated-instance2',
                                  power_state='fake')
 
-        fake_nw_info = 'fake-network-info'
         fake_nw_model = network_model.NetworkInfo()
         self.mox.StubOutWithMock(fake_nw_model, 'legacy')
 
@@ -1035,8 +1033,9 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.context.elevated().AndReturn(econtext)
 
-        network_model.NetworkInfo.hydrate(fake_nw_info).AndReturn(
-                fake_nw_model)
+        self.compute._get_instance_nw_info(econtext,
+                                           instance).AndReturn(
+                                                   fake_nw_model)
         self.compute._notify_about_instance_usage(econtext,
                                                   instance,
                                                   'reboot.start')
@@ -1086,7 +1085,6 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute.reboot_instance(self.context, instance=instance,
                                      block_device_info=fake_block_dev_info,
-                                     network_info=fake_nw_info,
                                      reboot_type=reboot_type)
         self.assertEqual(expected_call_info, reboot_call_info)
 
@@ -4236,12 +4234,10 @@ class ComputeAPITestCase(BaseTestCase):
     def _stub_out_reboot(self, device_name):
         def fake_reboot_instance(rpcapi, context, instance,
                                  block_device_info,
-                                 network_info,
                                  reboot_type):
             self.assertEqual(
                 block_device_info['block_device_mapping'][0]['mount_device'],
                 device_name)
-            self.assertEqual(network_info[0]['network']['bridge'], 'fake_br1')
         self.stubs.Set(nova.compute.rpcapi.ComputeAPI, 'reboot_instance',
                        fake_reboot_instance)
 

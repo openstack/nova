@@ -1510,12 +1510,9 @@ class API(base.Base):
         elevated = context.elevated()
         block_info = self._get_block_device_info(elevated,
                                                         instance['uuid'])
-        network_info = self.network_api.get_instance_nw_info(elevated,
-                                                             instance)
 
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                                             block_device_info=block_info,
-                                            network_info=network_info,
                                             reboot_type=reboot_type)
 
     def _get_image(self, context, image_href):

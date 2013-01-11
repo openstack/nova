@@ -297,7 +297,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.22'
+    RPC_API_VERSION = '2.23'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1476,12 +1476,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_device_info is None:
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
-        # NOTE(danms): remove this when RPC API < 2.5 compatibility
-        # is no longer needed
-        if network_info is None:
-            network_info = self._get_instance_nw_info(context, instance)
-        else:
-            network_info = network_model.NetworkInfo.hydrate(network_info)
+        network_info = self._get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
