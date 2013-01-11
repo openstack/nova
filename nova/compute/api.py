@@ -29,6 +29,7 @@ import time
 import urllib
 import uuid
 
+from nova import availability_zones
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -150,7 +151,7 @@ def policy_decorator(scope):
 
 wrap_check_policy = policy_decorator(scope='compute')
 wrap_check_security_groups_policy = policy_decorator(
-                                     scope='compute:security_groups')
+                                    scope='compute:security_groups')
 
 
 def check_policy(context, action, target, scope='compute'):
@@ -844,10 +845,10 @@ class API(base.Base):
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall."""
 
-        hosts = [x['host'] for (x, idx)
-                           in self.db.service_get_all_compute_sorted(context)]
-        for host in hosts:
-            self.compute_rpcapi.refresh_provider_fw_rules(context, host)
+        host_names = [x['host'] for (x, idx)
+                      in self.db.service_get_all_compute_sorted(context)]
+        for host_name in host_names:
+            self.compute_rpcapi.refresh_provider_fw_rules(context, host_name)
 
     @wrap_check_policy
     def update(self, context, instance, **kwargs):
@@ -944,13 +945,14 @@ class API(base.Base):
                             host=src_host, cast=False,
                             reservations=downsize_reservations)
 
-            is_up = False
             # NOTE(jogo): db allows for multiple compute services per host
             try:
                 services = self.db.service_get_all_compute_by_host(
                         context.elevated(), instance['host'])
             except exception.ComputeHostNotFound:
                 services = []
+
+            is_up = False
             for service in services:
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
@@ -1865,9 +1867,9 @@ class API(base.Base):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
-    def get_backdoor_port(self, context, host):
+    def get_backdoor_port(self, context, host_name):
         """Retrieve backdoor port."""
-        return self.compute_rpcapi.get_backdoor_port(context, host)
+        return self.compute_rpcapi.get_backdoor_port(context, host_name)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2133,45 +2135,148 @@ class API(base.Base):
 
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host):
+                     disk_over_commit, host_name):
         """Migrate a server lively to a new host."""
         LOG.debug(_("Going to try to live migrate instance to %s"),
-                  host, instance=instance)
+                  host_name, instance=instance)
 
         instance = self.update(context, instance,
                                task_state=task_states.MIGRATING,
                                expected_task_state=None)
 
         self.scheduler_rpcapi.live_migration(context, block_migration,
-                disk_over_commit, instance, host)
+                disk_over_commit, instance, host_name)
+
+
+def check_host(fn):
+    """Decorator that makes sure that the host exists."""
+    def wrapped(self, context, host_name, *args, **kwargs):
+        if self.does_host_exist(context, host_name):
+            return fn(self, context, host_name, *args, **kwargs)
+        else:
+            raise exception.HostNotFound(host=host_name)
+    return wrapped
 
 
 class HostAPI(base.Base):
+    """Sub-set of the Compute Manager API for managing host operations."""
+
     def __init__(self):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(HostAPI, self).__init__()
 
-    """Sub-set of the Compute Manager API for managing host operations."""
-    def set_host_enabled(self, context, host, enabled):
+    @check_host
+    def set_host_enabled(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances."""
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
         return self.compute_rpcapi.set_host_enabled(context, enabled=enabled,
-                host=host)
+                host=host_name)
 
-    def get_host_uptime(self, context, host):
+    @check_host
+    def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
-        return self.compute_rpcapi.get_host_uptime(context, host=host)
+        return self.compute_rpcapi.get_host_uptime(context, host=host_name)
 
-    def host_power_action(self, context, host, action):
+    @check_host
+    def host_power_action(self, context, host_name, action):
         """Reboots, shuts down or powers up the host."""
-        # NOTE(comstud): No instance_uuid argument to this compute manager
-        # call
         return self.compute_rpcapi.host_power_action(context, action=action,
-                host=host)
+                host=host_name)
 
+    def list_hosts(self, context, zone=None, service=None):
+        """Returns a summary list of enabled hosts, optionally filtering
+        by zone and/or service type.
+        """
+        LOG.debug(_("Listing hosts"))
+        services = self.db.service_get_all(context, False)
+        services = availability_zones.set_availability_zones(context, services)
+        if zone:
+            services = [s for s in services if s['availability_zone'] == zone]
+        hosts = []
+        for host in services:
+            hosts.append({'host_name': host['host'], 'service': host['topic'],
+                          'zone': host['availability_zone']})
+        if service:
+            hosts = [host for host in hosts
+                     if host["service"] == service]
+        return hosts
+
+    def does_host_exist(self, context, host_name):
+        """
+        Returns True if the host with host_name exists, False otherwise
+        """
+        return self.db.service_does_host_exist(context, host_name)
+
+    def describe_host(self, context, host_name):
+        """
+        Returns information about a host in this kind of format:
+        :returns:
+            ex.::
+                {'host': 'hostname',
+                 'project': 'admin',
+                 'cpu': 1,
+                 'memory_mb': 2048,
+                 'disk_gb': 30}
+        """
+        # Getting compute node info and related instances info
+        try:
+            compute_ref = self.db.service_get_all_compute_by_host(context,
+                host_name)
+            compute_ref = compute_ref[0]
+        except exception.ComputeHostNotFound:
+            raise exception.HostNotFound(host=host_name)
+        instance_refs = self.db.instance_get_all_by_host(context,
+                                                    compute_ref['host'])
+
+        # Getting total available/used resource
+        compute_ref = compute_ref['compute_node'][0]
+        resources = [{'resource': {'host': host_name, 'project': '(total)',
+                      'cpu': compute_ref['vcpus'],
+                      'memory_mb': compute_ref['memory_mb'],
+                      'disk_gb': compute_ref['local_gb']}},
+                     {'resource': {'host': host_name, 'project': '(used_now)',
+                      'cpu': compute_ref['vcpus_used'],
+                      'memory_mb': compute_ref['memory_mb_used'],
+                      'disk_gb': compute_ref['local_gb_used']}}]
+
+        cpu_sum = 0
+        mem_sum = 0
+        hdd_sum = 0
+        for i in instance_refs:
+            cpu_sum += i['vcpus']
+            mem_sum += i['memory_mb']
+            hdd_sum += i['root_gb'] + i['ephemeral_gb']
+
+        resources.append({'resource': {'host': host_name,
+                          'project': '(used_max)',
+                          'cpu': cpu_sum,
+                          'memory_mb': mem_sum,
+                          'disk_gb': hdd_sum}})
+
+        # Getting usage resource per project
+        project_ids = [i['project_id'] for i in instance_refs]
+        project_ids = list(set(project_ids))
+        for project_id in project_ids:
+            vcpus = [i['vcpus'] for i in instance_refs
+                     if i['project_id'] == project_id]
+
+            mem = [i['memory_mb'] for i in instance_refs
+                   if i['project_id'] == project_id]
+
+            disk = [i['root_gb'] + i['ephemeral_gb'] for i in instance_refs
+                    if i['project_id'] == project_id]
+
+            resources.append({'resource': {'host': host_name,
+                              'project': project_id,
+                              'cpu': sum(vcpus),
+                              'memory_mb': sum(mem),
+                              'disk_gb': sum(disk)}})
+        return resources
+
+    @check_host
     def set_host_maintenance(self, context, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation."""
@@ -2237,25 +2342,27 @@ class AggregateAPI(base.Base):
                                                    reason='not empty')
         self.db.aggregate_delete(context, aggregate_id)
 
-    def add_host_to_aggregate(self, context, aggregate_id, host):
+    def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
-        service = self.db.service_get_all_compute_by_host(context, host)[0]
+        service = self.db.service_get_all_compute_by_host(
+                context, host_name)[0]
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        self.db.aggregate_host_add(context, aggregate_id, host)
+        self.db.aggregate_host_add(context, aggregate_id, host_name)
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
-                aggregate=aggregate, host_param=host, host=host)
+                aggregate=aggregate, host_param=host_name, host=host_name)
         return self.get_aggregate(context, aggregate_id)
 
-    def remove_host_from_aggregate(self, context, aggregate_id, host):
+    def remove_host_from_aggregate(self, context, aggregate_id, host_name):
         """Removes host from the aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
-        service = self.db.service_get_all_compute_by_host(context, host)[0]
+        service = self.db.service_get_all_compute_by_host(
+                context, host_name)[0]
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        self.db.aggregate_host_delete(context, aggregate_id, host)
+        self.db.aggregate_host_delete(context, aggregate_id, host_name)
         self.compute_rpcapi.remove_aggregate_host(context,
-                aggregate=aggregate, host_param=host, host=host)
+                aggregate=aggregate, host_param=host_name, host=host_name)
         return self.get_aggregate(context, aggregate_id)
 
     def _get_aggregate_info(self, context, aggregate):

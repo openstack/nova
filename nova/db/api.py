@@ -132,6 +132,15 @@ def service_get_all(context, disabled=None):
     return IMPL.service_get_all(context, disabled)
 
 
+def service_does_host_exist(context, host_name, include_disabled=False):
+    """Returns True if 'host_name' is found in the services table, False
+    otherwise
+    :param: host_name - the name of the host we want to check if it exists
+    :param: include_disabled - Set to True to include hosts from disabled
+    services"""
+    return IMPL.service_does_host_exist(context, host_name, include_disabled)
+
+
 def service_get_all_by_topic(context, topic):
     """Get all services for a given topic."""
     return IMPL.service_get_all_by_topic(context, topic)

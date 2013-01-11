@@ -33,6 +33,17 @@ nova.openstack.common.cfg.CONF.register_opts(_compute_opts)
 
 def API(*args, **kwargs):
     importutils = nova.openstack.common.importutils
-    compute_api_class = nova.openstack.common.cfg.CONF.compute_api_class
-    cls = importutils.import_class(compute_api_class)
-    return cls(*args, **kwargs)
+    class_name = nova.openstack.common.cfg.CONF.compute_api_class
+    return importutils.import_object(class_name, *args, **kwargs)
+
+
+def HostAPI(*args, **kwargs):
+    """
+    Returns the 'HostAPI' class from the same module as the configured compute
+    api
+    """
+    importutils = nova.openstack.common.importutils
+    compute_api_class_name = nova.openstack.common.cfg.CONF.compute_api_class
+    compute_api_class = importutils.import_class(compute_api_class_name)
+    class_name = compute_api_class.__module__ + ".HostAPI"
+    return importutils.import_object(class_name, *args, **kwargs)
