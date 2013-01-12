@@ -266,7 +266,9 @@ class ConductorManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(result)
 
     def action_event_start(self, context, values):
-        return self.db.action_event_start(context, values)
+        evt = self.db.action_event_start(context, values)
+        return jsonutils.to_primitive(evt)
 
     def action_event_finish(self, context, values):
-        return self.db.action_event_finish(context, values)
+        evt = self.db.action_event_finish(context, values)
+        return jsonutils.to_primitive(evt)
