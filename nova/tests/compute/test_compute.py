@@ -2368,80 +2368,60 @@ class ComputeTestCase(BaseTestCase):
         # cleanup
         db.instance_destroy(c, instance['uuid'])
 
-    def test_live_migration_dest_raises_exception(self):
+    def test_live_migration_exception_rolls_back(self):
         # Confirm exception when pre_live_migration fails.
-        # creating instance testdata
-        instance_ref = self._create_fake_instance({'host': 'dummy'})
-        instance = jsonutils.to_primitive(instance_ref)
-        inst_uuid = instance['uuid']
-        inst_id = instance['id']
-
         c = context.get_admin_context()
-        topic = rpc.queue_get_for(c, CONF.compute_topic, instance['host'])
 
-        # creating volume testdata
-        volume_id = 'fake'
-        values = {'instance_uuid': inst_uuid, 'device_name': '/dev/vdc',
-                  'delete_on_termination': False, 'volume_id': volume_id}
-        db.block_device_mapping_create(c, values)
-
-        def fake_volume_get(self, context, volume_id):
-            return {'id': volume_id}
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-
-        def fake_instance_update(context, instance_uuid, **updates):
-            return db.instance_update_and_get_original(context, instance_uuid,
-                                                       updates)
-        self.stubs.Set(self.compute, '_instance_update',
-                       fake_instance_update)
+        src_host = 'fake-src-host'
+        dest_host = 'fake-dest-host'
+        instance = dict(uuid='fake_instance', host=src_host,
+                        name='fake-name')
+        updated_instance = 'fake_updated_instance'
+        fake_bdms = [dict(volume_id='vol1-id'), dict(volume_id='vol2-id')]
 
         # creating mocks
         self.mox.StubOutWithMock(rpc, 'call')
-
         self.mox.StubOutWithMock(self.compute.driver,
                                  'get_instance_disk_info')
-        self.compute.driver.get_instance_disk_info(instance['name'])
-
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
-        self.compute.compute_rpcapi.pre_live_migration(c,
-                mox.IsA(instance), True, None, instance['host'],
-                None).AndRaise(rpc.common.RemoteError('', '', ''))
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdms')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'remove_volume_connection')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'rollback_live_migration_at_destination')
 
-        db.instance_update(self.context, instance['uuid'],
-                           {'task_state': task_states.MIGRATING})
-        # mocks for rollback
-        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'args': {'instance_id': inst_id,
-                                         'host': self.compute.host,
-                                         'teardown': False},
-                                'version': '1.0'}, None)
-        rpcinst = jsonutils.to_primitive(
-                db.instance_get_by_uuid(self.context, instance['uuid']))
-        rpc.call(c, topic,
-                {"method": "remove_volume_connection",
-                 "args": {'instance': rpcinst,
-                          'volume_id': volume_id},
-                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                 None)
-        rpc.cast(c, topic,
-                {"method": "rollback_live_migration_at_destination",
-                 "args": {'instance': rpcinst},
-                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
+        self.compute.driver.get_instance_disk_info(
+                instance['name']).AndReturn('fake_disk')
+        self.compute.compute_rpcapi.pre_live_migration(c,
+                instance, True, 'fake_disk', dest_host,
+                None).AndRaise(test.TestingException())
+
+        self.compute._instance_update(c, instance['uuid'],
+                host=src_host, vm_state=vm_states.ACTIVE,
+                task_state=None,
+                expected_task_state=task_states.MIGRATING).AndReturn(
+                        updated_instance)
+        self.compute.network_api.setup_networks_on_host(c,
+                updated_instance, self.compute.host)
+        self.compute._get_instance_volume_bdms(c,
+                updated_instance).AndReturn(fake_bdms)
+        self.compute.compute_rpcapi.remove_volume_connection(
+                c, updated_instance, 'vol1-id', dest_host)
+        self.compute.compute_rpcapi.remove_volume_connection(
+                c, updated_instance, 'vol2-id', dest_host)
+        self.compute.compute_rpcapi.rollback_live_migration_at_destination(
+                c, updated_instance, dest_host)
 
         # start test
         self.mox.ReplayAll()
-        self.assertRaises(rpc_common.RemoteError,
+        self.assertRaises(test.TestingException,
                           self.compute.live_migration,
-                          c, dest=instance['host'], block_migration=True,
-                          instance=rpcinst)
-
-        # cleanup
-        for bdms in db.block_device_mapping_get_all_by_instance(
-            c, inst_uuid):
-            db.block_device_mapping_destroy(c, bdms['id'])
-        db.instance_destroy(c, inst_uuid)
+                          c, dest=dest_host, block_migration=True,
+                          instance=instance)
 
     def test_live_migration_works_correctly(self):
         # Confirm live_migration() works as expected correctly.
@@ -2559,38 +2539,50 @@ class ComputeTestCase(BaseTestCase):
         self.compute._post_live_migration(c, inst_ref, dest)
 
     def test_post_live_migration_at_destination(self):
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_finish')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'post_live_migration_at_destination')
+        self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+
         params = {'task_state': task_states.MIGRATING,
                   'power_state': power_state.PAUSED, }
         instance = jsonutils.to_primitive(self._create_fake_instance(params))
 
         admin_ctxt = context.get_admin_context()
         instance = db.instance_get_by_uuid(admin_ctxt, instance['uuid'])
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
+
         self.compute.network_api.setup_networks_on_host(admin_ctxt, instance,
                                                         self.compute.host)
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'migrate_instance_finish')
         migration = {'source_compute': instance['host'],
                      'dest_compute': self.compute.host, }
         self.compute.network_api.migrate_instance_finish(admin_ctxt,
                                                          instance, migration)
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'post_live_migration_at_destination')
         fake_net_info = []
         self.compute.driver.post_live_migration_at_destination(admin_ctxt,
                                                                instance,
                                                                fake_net_info,
                                                                False)
-        self.compute.network_api.setup_networks_on_host(admin_ctxt, instance,
-                                                        self.compute.host)
+        self.compute._get_power_state(admin_ctxt, instance).AndReturn(
+                'fake_power_state')
+
+        updated_instance = 'fake_updated_instance'
+        self.compute._instance_update(admin_ctxt, instance['uuid'],
+                host=self.compute.host,
+                power_state='fake_power_state',
+                vm_state=vm_states.ACTIVE,
+                task_state=None,
+                expected_task_state=task_states.MIGRATING).AndReturn(
+                        updated_instance)
+        self.compute.network_api.setup_networks_on_host(admin_ctxt,
+                updated_instance, self.compute.host)
 
         self.mox.ReplayAll()
+
         self.compute.post_live_migration_at_destination(admin_ctxt, instance)
-        instance = db.instance_get_by_uuid(admin_ctxt, instance['uuid'])
-        self.assertEqual(instance['host'], self.compute.host)
-        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(instance['task_state'], None)
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.
