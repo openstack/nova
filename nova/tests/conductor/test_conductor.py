@@ -650,6 +650,23 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     def test_service_get_all_compute_by_host(self):
         self._test_stubbed('service_get_all_compute_by_host', 'host')
 
+    def test_ping(self):
+        timeouts = []
+        calls = dict(count=0)
+
+        def fake_ping(_self, context, message, timeout):
+            timeouts.append(timeout)
+            calls['count'] += 1
+            if calls['count'] < 15:
+                raise rpc_common.Timeout("fake")
+
+        self.stubs.Set(conductor_api.API, 'ping', fake_ping)
+
+        self.conductor.wait_until_ready(self.context)
+
+        self.assertEqual(timeouts.count(10), 10)
+        self.assertTrue(None in timeouts)
+
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):
     """Conductor LocalAPI Tests."""
@@ -666,6 +683,10 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
         # update key is passed, so use that to validate.
         self.assertRaises(KeyError,
                           self._do_update, instance['uuid'], foo='bar')
+
+    def test_ping(self):
+        # Override test in ConductorAPITestCase
+        pass
 
 
 class ConductorImportTest(test.TestCase):

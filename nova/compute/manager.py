@@ -358,32 +358,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance_uuid)
 
-    def _get_instances_at_startup(self, context):
-        '''Get instances for this host during service init.'''
-        attempt = 0
-        timeout = 10
-        while True:
-            # NOTE(danms): Try ten times with a short timeout, and then punt
-            # to the configured RPC timeout after that
-            if attempt == 10:
-                timeout = None
-            attempt += 1
-
-            # NOTE(russellb): This is running during service startup. If we
-            # allow an exception to be raised, the service will shut down.
-            # This may fail the first time around if nova-conductor wasn't
-            # running when nova-compute started.
-            try:
-                self.conductor_api.ping(context, '1.21 GigaWatts',
-                                        timeout=timeout)
-                break
-            except rpc_common.Timeout as e:
-                LOG.exception(_('Timed out waiting for nova-conductor. '
-                                'Is it running? Or did nova-compute start '
-                                'before nova-conductor?'))
-
-        return self.conductor_api.instance_get_all_by_host(context, self.host)
-
     def _get_instances_on_driver(self, context):
         """Return a list of instance records that match the instances found
         on the hypervisor.
@@ -503,6 +477,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             except NotImplementedError:
                 LOG.warning(_('Hypervisor driver does not support '
                               'firewall rules'), instance=instance)
+
+    def _get_instances_at_startup(self, context):
+        self.conductor_api.wait_until_ready(context)
+        return self.conductor_api.instance_get_all_by_host(context, self.host)
 
     def init_host(self):
         """Initialization for a standalone compute service."""
