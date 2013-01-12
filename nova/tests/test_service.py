@@ -113,6 +113,8 @@ class ServiceTestCase(test.TestCase):
         self.binary = 'nova-fake'
         self.topic = 'fake'
         self.mox.StubOutWithMock(service, 'db')
+        self.mox.StubOutWithMock(db, 'service_create')
+        self.flags(use_local=True, group='conductor')
 
     def test_create(self):
 
@@ -136,7 +138,7 @@ class ServiceTestCase(test.TestCase):
 
         service.db.service_get_by_args(mox.IgnoreArg(),
                 self.host, self.binary).AndRaise(exception.NotFound())
-        service.db.service_create(mox.IgnoreArg(),
+        db.service_create(mox.IgnoreArg(),
                 service_create).AndReturn(service_ref)
         return service_ref
 

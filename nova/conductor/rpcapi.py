@@ -59,6 +59,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.24 - Added instance_get
     1.25 - Added action_event_start and action_event_finish
     1.26 - Added instance_info_cache_update
+    1.27 - Added service_create
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -278,3 +279,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             instance=instance_p,
                             values=values)
         return self.call(context, msg, version='1.26')
+
+    def service_create(self, context, values):
+        msg = self.make_msg('service_create', values=values)
+        return self.call(context, msg, version='1.27')

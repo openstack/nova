@@ -650,6 +650,9 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     def test_service_get_all_compute_by_host(self):
         self._test_stubbed('service_get_all_compute_by_host', 'host')
 
+    def test_service_create(self):
+        self._test_stubbed('service_create', {})
+
     def test_ping(self):
         timeouts = []
         calls = dict(count=0)
