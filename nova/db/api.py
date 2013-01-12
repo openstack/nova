@@ -494,6 +494,11 @@ def fixed_ip_get_by_address_detailed(context, address):
     return IMPL.fixed_ip_get_by_address_detailed(context, address)
 
 
+def fixed_ip_get_by_floating_address(context, floating_address):
+    """Get a fixed ip by a floating address."""
+    return IMPL.fixed_ip_get_by_floating_address(context, floating_address)
+
+
 def fixed_ip_get_by_instance(context, instance_uuid):
     """Get fixed ips by instance or raise if none exist."""
     return IMPL.fixed_ip_get_by_instance(context, instance_uuid)
