@@ -700,6 +700,11 @@ class ConductorImportTest(test.TestCase):
         self.assertTrue(isinstance(conductor.API(),
                                    conductor_api.API))
 
+    def test_import_conductor_override_to_local(self):
+        self.flags(use_local=False, group='conductor')
+        self.assertTrue(isinstance(conductor.API(use_local=True),
+                                   conductor_api.LocalAPI))
+
 
 class ConductorPolicyTest(test.TestCase):
     def test_all_allowed_keys(self):

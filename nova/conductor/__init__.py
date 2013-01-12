@@ -18,7 +18,8 @@ import nova.openstack.common.importutils
 
 
 def API(*args, **kwargs):
-    if nova.openstack.common.cfg.CONF.conductor.use_local:
+    use_local = kwargs.pop('use_local', False)
+    if nova.openstack.common.cfg.CONF.conductor.use_local or use_local:
         api = conductor_api.LocalAPI
     else:
         api = conductor_api.API
