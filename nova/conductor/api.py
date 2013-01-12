@@ -249,6 +249,10 @@ class LocalAPI(object):
     def service_get_all_compute_by_host(self, context, host):
         return self._manager.service_get_all_by(context, 'compute', host)
 
+    def service_get_by_args(self, context, host, binary):
+        return self._manager.service_get_all_by(context, host=host,
+                                                binary=binary)
+
     def action_event_start(self, context, values):
         return self._manager.action_event_start(context, values)
 
@@ -482,6 +486,10 @@ class API(object):
     def service_get_all_compute_by_host(self, context, host):
         return self.conductor_rpcapi.service_get_all_by(context, 'compute',
                                                         host)
+
+    def service_get_by_args(self, context, host, binary):
+        return self.conductor_rpcapi.service_get_all_by(context, host=host,
+                                                        binary=binary)
 
     def action_event_start(self, context, values):
         return self.conductor_rpcapi.action_event_start(context, values)

@@ -114,6 +114,7 @@ class ServiceTestCase(test.TestCase):
         self.topic = 'fake'
         self.mox.StubOutWithMock(service, 'db')
         self.mox.StubOutWithMock(db, 'service_create')
+        self.mox.StubOutWithMock(db, 'service_get_by_args')
         self.flags(use_local=True, group='conductor')
 
     def test_create(self):
@@ -136,7 +137,7 @@ class ServiceTestCase(test.TestCase):
                           'report_count': 0,
                           'id': 1}
 
-        service.db.service_get_by_args(mox.IgnoreArg(),
+        db.service_get_by_args(mox.IgnoreArg(),
                 self.host, self.binary).AndRaise(exception.NotFound())
         db.service_create(mox.IgnoreArg(),
                 service_create).AndReturn(service_ref)
