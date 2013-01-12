@@ -883,11 +883,6 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
 
     try:
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            dev_path = utils.make_dev_path(dev)
-
-            # NOTE(mikal): libvirt supports injecting the admin password as
-            # well. This is not currently implemented for xenapi as it is not
-            # supported by the existing file injection
             extra_md = {}
             if admin_password:
                 extra_md['admin_pass'] = admin_password
@@ -899,6 +894,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                     tmp_file = os.path.join(tmp_path, 'configdrive')
                     cdb.make_drive(tmp_file)
 
+                    dev_path = utils.make_dev_path(dev)
                     utils.execute('dd',
                                   'if=%s' % tmp_file,
                                   'of=%s' % dev_path,
