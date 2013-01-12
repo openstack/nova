@@ -367,7 +367,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-flavor-extra-specs')
-        do_not_approve_additions.append('os-flavor-swap')
         do_not_approve_additions.append('os-floating-ip-dns')
         do_not_approve_additions.append('os-floating-ip-pools')
         do_not_approve_additions.append('os-fping')
@@ -1027,6 +1026,55 @@ class FlavorRxtxJsonTest(ApiSampleTestBase):
 
 
 class FlavorRxtxXmlTest(FlavorRxtxJsonTest):
+    ctype = 'xml'
+
+
+class FlavorSwapJsonTest(ApiSampleTestBase):
+    extension_name = ('nova.api.openstack.compute.contrib.flavor_swap.'
+                      'Flavor_swap')
+
+    def _get_flags(self):
+        f = super(FlavorSwapJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # FlavorSwap extension also needs Flavormanage to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
+        return f
+
+    def test_flavor_swap_get(self):
+        flavor_id = 1
+        response = self._do_get('flavors/%s' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'flavor_id': flavor_id,
+            'flavor_name': 'm1.tiny'
+        }
+        subs.update(self._get_regexes())
+        return self._verify_response('flavor-swap-get-resp', subs,
+                                     response)
+
+    def test_flavor_swap_list(self):
+        response = self._do_get('flavors/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavor-swap-list-resp', subs,
+                                     response)
+
+    def test_flavor_swap_create(self):
+        subs = {
+            'flavor_id': 100,
+            'flavor_name': 'flavortest'
+        }
+        response = self._do_post('flavors',
+                                 'flavor-swap-post-req',
+                                 subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('flavor-swap-post-resp',
+                                     subs, response)
+
+
+class FlavorSwapXmlTest(FlavorSwapJsonTest):
     ctype = 'xml'
 
 
