@@ -51,8 +51,6 @@ scheduler_driver_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(scheduler_driver_opts)
-CONF.import_opt('instances_path', 'nova.compute.manager')
-CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 
 
 def handle_schedule_error(context, ex, instance_uuid, request_spec):
