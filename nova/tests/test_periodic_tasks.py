@@ -17,6 +17,7 @@
 
 
 import fixtures
+import time
 
 from nova import manager
 from nova import test
@@ -75,6 +76,19 @@ class Manager(test.TestCase):
         m = Manager()
         idle = m.periodic_tasks(None)
         self.assertAlmostEqual(60, idle, 1)
+
+    def test_periodic_tasks_idle_calculation(self):
+        class Manager(manager.Manager):
+            @manager.periodic_task(spacing=10)
+            def bar(self):
+                return 'bar'
+
+        m = Manager()
+        m.periodic_tasks(None)
+        time.sleep(0.1)
+        idle = m.periodic_tasks(None)
+        self.assertTrue(idle > 9.7)
+        self.assertTrue(idle < 9.9)
 
     def test_periodic_tasks_disabled(self):
         class Manager(manager.Manager):

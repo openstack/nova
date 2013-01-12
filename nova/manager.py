@@ -215,8 +215,9 @@ class Manager(base.Base):
             if self._periodic_spacing[task_name] is None:
                 wait = 0
             else:
-                wait = time.time() - (self._periodic_last_run[task_name] +
-                                      self._periodic_spacing[task_name])
+                due = (self._periodic_last_run[task_name] +
+                       self._periodic_spacing[task_name])
+                wait = max(0, due - time.time())
                 if wait > 0.2:
                     if wait < idle_for:
                         idle_for = wait
