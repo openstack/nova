@@ -894,7 +894,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
             inst_md = instance_metadata.InstanceMetadata(instance,
                                                          content=files,
                                                          extra_md=extra_md)
-            with configdrive.config_drive_helper(instance_md=inst_md) as cdb:
+            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:
                     tmp_file = os.path.join(tmp_path, 'configdrive')
                     cdb.make_drive(tmp_file)

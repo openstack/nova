@@ -17,7 +17,6 @@
 
 """Config Drive v2 helper."""
 
-import contextlib
 import os
 import shutil
 import tempfile
@@ -58,17 +57,8 @@ CONF.register_opts(configdrive_opts)
 CONFIGDRIVESIZE_BYTES = 64 * 1024 * 1024
 
 
-@contextlib.contextmanager
-def config_drive_helper(instance_md=None):
-    cdb = _ConfigDriveBuilder(instance_md=instance_md)
-    try:
-        yield cdb
-    finally:
-        cdb.cleanup()
-
-
-class _ConfigDriveBuilder(object):
-    """Don't use this directly, use the fancy pants contextlib helper above!"""
+class ConfigDriveBuilder(object):
+    """Build config drives, optionally as a context manager."""
 
     def __init__(self, instance_md=None):
         self.imagefile = None
@@ -81,6 +71,17 @@ class _ConfigDriveBuilder(object):
 
         if instance_md is not None:
             self.add_instance_metadata(instance_md)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exctype, excval, exctb):
+        if exctype is not None:
+            # NOTE(mikal): this means we're being cleaned up because an
+            # exception was thrown. All bets are off now, and we should not
+            # swallow the exception
+            return False
+        self.cleanup()
 
     def _add_file(self, path, data):
         filepath = os.path.join(self.tempdir, path)

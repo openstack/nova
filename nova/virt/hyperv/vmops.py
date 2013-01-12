@@ -192,7 +192,7 @@ class VMOps(baseops.BaseOps):
         LOG.info(_('Creating config drive at %(path)s'),
                  {'path': configdrive_path_iso}, instance=instance)
 
-        with configdrive.config_drive_helper(instance_md=inst_md) as cdb:
+        with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
             try:
                 cdb.make_drive(configdrive_path_iso)
             except exception.ProcessExecutionError, e:
