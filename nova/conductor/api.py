@@ -262,6 +262,9 @@ class LocalAPI(object):
     def service_create(self, context, values):
         return self._manager.service_create(context, values)
 
+    def service_destroy(self, context, service_id):
+        return self._manager.service_destroy(context, service_id)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -499,3 +502,6 @@ class API(object):
 
     def service_create(self, context, values):
         return self.conductor_rpcapi.service_create(context, values)
+
+    def service_destroy(self, context, service_id):
+        return self.conductor_rpcapi.service_destroy(context, service_id)
