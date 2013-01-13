@@ -299,27 +299,6 @@ class DbApiTestCase(test.TestCase):
         self.assertRaises(exception.DuplicateVlan,
                           db.network_create_safe, ctxt, values2)
 
-    def test_instance_test_and_set(self):
-        ctxt = context.get_admin_context()
-        states = [
-            (None, [None, 'some'], 'building'),
-            (None, [None], 'building'),
-            ('building', ['building'], 'ready'),
-            ('building', [None, 'building'], 'ready')]
-        for st in states:
-            inst = db.instance_create(ctxt, {'vm_state': st[0]})
-            uuid = inst['uuid']
-            db.instance_test_and_set(ctxt, uuid, 'vm_state', st[1], st[2])
-            inst = db.instance_get_by_uuid(ctxt, uuid)
-            self.assertEqual(inst["vm_state"], st[2])
-
-    def test_instance_test_and_set_exception(self):
-        ctxt = context.get_admin_context()
-        inst = db.instance_create(ctxt, {'vm_state': 'building'})
-        self.assertRaises(exception.InstanceInvalidState,
-                          db.instance_test_and_set, ctxt,
-                          inst['uuid'], 'vm_state', [None, 'disable'], 'run')
-
     def test_instance_update_with_instance_uuid(self):
         # test instance_update() works when an instance UUID is passed.
         ctxt = context.get_admin_context()
