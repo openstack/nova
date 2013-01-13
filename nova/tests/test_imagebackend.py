@@ -22,6 +22,7 @@ from nova.openstack.common import cfg
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 
@@ -38,12 +39,12 @@ class _ImageTestCase(object):
         super(_ImageTestCase, self).setUp()
         self.flags(disable_process_locking=True,
                    instances_path=self.INSTANCES_PATH)
-        self.INSTANCE = 'instance'
+        self.INSTANCE = {'name': 'instance'}
         self.NAME = 'fake.vm'
         self.TEMPLATE = 'template'
 
-        self.PATH = os.path.join(CONF.instances_path, self.INSTANCE,
-                                 self.NAME)
+        self.PATH = os.path.join(
+            libvirt_utils.get_instance_path(self.INSTANCE), self.NAME)
         self.TEMPLATE_DIR = os.path.join(CONF.instances_path,
                                          '_base')
         self.TEMPLATE_PATH = os.path.join(self.TEMPLATE_DIR, 'template')
@@ -215,7 +216,7 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
         self.image_class = imagebackend.Lvm
         super(LvmTestCase, self).setUp()
         self.flags(libvirt_images_volume_group=self.VG)
-        self.LV = '%s_%s' % (self.INSTANCE, self.NAME)
+        self.LV = '%s_%s' % (self.INSTANCE['name'], self.NAME)
         self.PATH = os.path.join('/dev', self.VG, self.LV)
 
         self.disk = imagebackend.disk
@@ -342,7 +343,7 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
 
 
 class BackendTestCase(test.TestCase):
-    INSTANCE = 'fake-instance'
+    INSTANCE = {'name': 'fake-instance'}
     NAME = 'fake-name.suffix'
 
     def get_image(self, use_cow, image_type):

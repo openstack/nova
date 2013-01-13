@@ -586,7 +586,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       mount_device)
 
         if destroy_disks:
-            target = os.path.join(CONF.instances_path, instance['name'])
+            target = libvirt_utils.get_instance_path(instance)
             LOG.info(_('Deleting instance files %(target)s') % locals(),
                      instance=instance)
             if os.path.exists(target):
@@ -642,8 +642,7 @@ class LibvirtDriver(driver.ComputeDriver):
         }
 
     def _cleanup_resize(self, instance, network_info):
-        target = os.path.join(CONF.instances_path,
-                              instance['name'] + "_resize")
+        target = libvirt_utils.get_instance_path(instance) + "_resize"
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -990,11 +989,9 @@ class LibvirtDriver(driver.ComputeDriver):
         data recovery.
 
         """
-
+        instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml = self._get_domain_xml(instance, network_info)
-        unrescue_xml_path = os.path.join(CONF.instances_path,
-                                         instance['name'],
-                                         'unrescue.xml')
+        unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
         rescue_images = {
@@ -1014,16 +1011,14 @@ class LibvirtDriver(driver.ComputeDriver):
     def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
         """
-        unrescue_xml_path = os.path.join(CONF.instances_path,
-                                         instance['name'],
-                                         'unrescue.xml')
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
         virt_dom = self._lookup_by_name(instance['name'])
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
         libvirt_utils.file_delete(unrescue_xml_path)
-        rescue_files = os.path.join(CONF.instances_path, instance['name'],
-                                    "*.rescue")
+        rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
             libvirt_utils.file_delete(rescue_file)
 
@@ -1134,9 +1129,9 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = _("Guest does not have a console available")
             raise exception.NovaException(msg)
 
-        self._chown_console_log_for_instance(instance['name'])
+        self._chown_console_log_for_instance(instance)
         data = self._flush_libvirt_console(pty)
-        console_log = self._get_console_log_path(instance['name'])
+        console_log = self._get_console_log_path(instance)
         fpath = self._append_to_file(data, console_log)
 
         with libvirt_utils.file_open(fpath, 'rb') as fp:
@@ -1227,11 +1222,12 @@ class LibvirtDriver(driver.ComputeDriver):
         utils.mkfs('swap', target)
 
     @staticmethod
-    def _get_console_log_path(instance_name):
-        return os.path.join(CONF.instances_path, instance_name, 'console.log')
+    def _get_console_log_path(instance):
+        return os.path.join(libvirt_utils.get_instance_path(instance),
+                            'console.log')
 
-    def _chown_console_log_for_instance(self, instance_name):
-        console_log = self._get_console_log_path(instance_name)
+    def _chown_console_log_for_instance(self, instance):
+        console_log = self._get_console_log_path(instance)
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
 
@@ -1243,12 +1239,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
-            return os.path.join(CONF.instances_path,
-                                instance['name'],
+            return os.path.join(libvirt_utils.get_instance_path(instance),
                                 fname + suffix)
 
         def image(fname, image_type=CONF.libvirt_images_type):
-            return self.image_backend.image(instance['name'],
+            return self.image_backend.image(instance,
                                             fname + suffix, image_type)
 
         def raw(fname):
@@ -1261,11 +1256,11 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.write_to_file(basepath('libvirt.xml'), libvirt_xml)
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
-        self._chown_console_log_for_instance(instance['name'])
+        self._chown_console_log_for_instance(instance)
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(
-            self._get_console_log_path(instance['name']), '', 007)
+            self._get_console_log_path(instance), '', 007)
 
         if not disk_images:
             disk_images = {'image_id': instance['image_ref'],
@@ -1537,9 +1532,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt_type == "lxc":
             fs = vconfig.LibvirtConfigGuestFilesys()
             fs.source_type = "mount"
-            fs.source_dir = os.path.join(CONF.instances_path,
-                                         instance['name'],
-                                         'rootfs')
+            fs.source_dir = os.path.join(
+                libvirt_utils.get_instance_path(instance), 'rootfs')
             devices.append(fs)
         else:
             if image_meta and image_meta.get('disk_format') == 'iso':
@@ -1557,8 +1551,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             def disk_info(name, disk_dev, disk_bus=default_disk_bus,
                           device_type="disk"):
-                image = self.image_backend.image(instance['name'],
-                                                 name)
+                image = self.image_backend.image(instance, name)
                 return image.libvirt_info(disk_bus,
                                           disk_dev,
                                           device_type,
@@ -1645,9 +1638,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 diskconfig.source_type = "file"
                 diskconfig.driver_format = "raw"
                 diskconfig.driver_cache = self.disk_cachemode
-                diskconfig.source_path = os.path.join(CONF.instances_path,
-                                                      instance['name'],
-                                                      "disk.config")
+                diskconfig.source_path = os.path.join(
+                    libvirt_utils.get_instance_path(instane), "disk.config")
                 diskconfig.target_dev = self.default_last_device
                 diskconfig.target_bus = default_disk_bus
                 devices.append(diskconfig)
@@ -1675,6 +1667,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
         inst_type = instance['instance_type']
+        inst_path = libvirt_utils.get_instance_path(instance)
 
         guest = vconfig.LibvirtConfigGuest()
         guest.virt_type = CONF.libvirt_type
@@ -1733,9 +1726,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if rescue:
                 if rescue.get('kernel_id'):
-                    guest.os_kernel = os.path.join(CONF.instances_path,
-                                                   instance['name'],
-                                                   "kernel.rescue")
+                    guest.os_kernel = os.path.join(inst_path, "kernel.rescue")
                     if CONF.libvirt_type == "xen":
                         guest.os_cmdline = "ro"
                     else:
@@ -1743,22 +1734,16 @@ class LibvirtDriver(driver.ComputeDriver):
                             (root_device_name or "/dev/vda",))
 
                 if rescue.get('ramdisk_id'):
-                    guest.os_initrd = os.path.join(CONF.instances_path,
-                                                   instance['name'],
-                                                   "ramdisk.rescue")
+                    guest.os_initrd = os.path.join(inst_path, "ramdisk.rescue")
             elif instance['kernel_id']:
-                guest.os_kernel = os.path.join(CONF.instances_path,
-                                               instance['name'],
-                                               "kernel")
+                guest.os_kernel = os.path.join(inst_path, "kernel")
                 if CONF.libvirt_type == "xen":
                     guest.os_cmdline = "ro"
                 else:
                     guest.os_cmdline = ("root=%s console=ttyS0" %
                         (root_device_name or "/dev/vda",))
                 if instance['ramdisk_id']:
-                    guest.os_initrd = os.path.join(CONF.instances_path,
-                                                   instance['name'],
-                                                   "ramdisk")
+                    guest.os_initrd = os.path.join(inst_path, "ramdisk")
             else:
                 guest.os_boot_dev = "hd"
 
@@ -1806,8 +1791,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # to configure two separate consoles.
             consolelog = vconfig.LibvirtConfigGuestSerial()
             consolelog.type = "file"
-            consolelog.source_path = self._get_console_log_path(
-                instance['name'])
+            consolelog.source_path = self._get_console_log_path(instance)
             guest.add_device(consolelog)
 
             consolepty = vconfig.LibvirtConfigGuestSerial()
@@ -1877,18 +1861,23 @@ class LibvirtDriver(driver.ComputeDriver):
                 'cpu_time': cpu_time}
 
     def _create_domain(self, xml=None, domain=None,
-                       inst_name='', launch_flags=0):
+                       instance=None, launch_flags=0):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
         the domain definition is overwritten from the xml.
         """
+        inst_path = None
+        if instance:
+            inst_path = libvirt_utils.get_instance_path(instance)
+
         if CONF.libvirt_type == 'lxc':
-            container_dir = os.path.join(CONF.instances_path,
-                                         inst_name,
-                                         'rootfs')
+            if not inst_path:
+                inst_path = None
+
+            container_dir = os.path.join(inst_path, 'rootfs')
             fileutils.ensure_tree(container_dir)
-            image = self.image_backend.image(inst_name, 'disk')
+            image = self.image_backend.image(instance, 'disk')
             disk.setup_container(image.path,
                                  container_dir=container_dir,
                                  use_cow=CONF.use_cow_images)
@@ -1902,9 +1891,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # namespace and so there is no need to keep the container rootfs
         # mounted in the host namespace
         if CONF.libvirt_type == 'lxc':
-            container_dir = os.path.join(CONF.instances_path,
-                                         inst_name,
-                                         'rootfs')
+            container_dir = os.path.join(inst_path, 'rootfs')
             disk.teardown_container(container_dir=container_dir)
 
         return domain
@@ -1926,7 +1913,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        domain = self._create_domain(xml, inst_name=instance['name'])
+        domain = self._create_domain(xml, instance=instance)
 
         self.firewall_driver.apply_instance_filter(instance, network_info)
         return domain
@@ -2615,7 +2602,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):
         """Download kernel and ramdisk for instance in instance directory."""
-        instance_dir = os.path.join(CONF.instances_path, instance['name'])
+        instance_dir = libvirt_utils.get_instance_path(instance)
         if instance['kernel_id']:
             libvirt_utils.fetch_image(context,
                                       os.path.join(instance_dir, 'kernel'),
@@ -2645,14 +2632,13 @@ class LibvirtDriver(driver.ComputeDriver):
         if is_volume_backed and not (is_block_migration or is_shared_storage):
 
             # Create the instance directory on destination compute node.
-            instance_dir = os.path.join(CONF.instances_path,
-                                        instance_ref['name'])
+            instance_dir = libvirt_utils.get_instance_path(instance_ref)
             if os.path.exists(instance_dir):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
 
             # Touch the console.log file, required by libvirt.
-            console_file = self._get_console_log_path(instance_ref['name'])
+            console_file = self._get_console_log_path(instance_ref)
             libvirt_utils.file_open(console_file, 'a').close()
 
             # if image has kernel and ramdisk, just download
@@ -2701,7 +2687,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = jsonutils.loads(disk_info_json)
 
         # make instance directory
-        instance_dir = os.path.join(CONF.instances_path, instance['name'])
+        instance_dir = libvirt_utils.get_instance_path(instance)
         if os.path.exists(instance_dir):
             raise exception.DestinationDiskExists(path=instance_dir)
         os.mkdir(instance_dir)
@@ -2720,7 +2706,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Remove any size tags which the cache manages
                 cache_name = cache_name.split('_')[0]
 
-                image = self.image_backend.image(instance['name'],
+                image = self.image_backend.image(instance,
                                                  instance_disk,
                                                  CONF.libvirt_images_type)
                 image.cache(fetch_func=libvirt_utils.fetch_image,
@@ -2751,8 +2737,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
         if instance_ref["name"] not in dom_list:
-            instance_dir = os.path.join(CONF.instances_path,
-                                        instance_ref["name"])
+            instance_dir = libvirt_utils.get_instance_path(instance_ref)
             xml_path = os.path.join(instance_dir, 'libvirt.xml')
             # In case of block migration, destination does not have
             # libvirt.xml
@@ -2915,7 +2900,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # rename instance dir to +_resize at first for using
         # shared storage for instance dir (eg. NFS).
         same_host = (dest == self.get_host_ip_addr())
-        inst_base = "%s/%s" % (CONF.instances_path, instance['name'])
+        inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
         try:
             utils.execute('mv', inst_base, inst_base_resize)
@@ -3016,7 +3001,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(_("Starting finish_revert_migration"),
                    instance=instance)
 
-        inst_base = "%s/%s" % (CONF.instances_path, instance['name'])
+        inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
         utils.execute('mv', inst_base_resize, inst_base)
 
@@ -3122,12 +3107,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable
-        instance_path = os.path.join(CONF.instances_path, instance["name"])
-
+        instance_path = libvirt_utils.get_instance_path(instance)
         LOG.debug(_('Checking instance files accessability'
                    '%(instance_path)s')
                  % locals())
-
         return os.access(instance_path, os.W_OK)
 
 

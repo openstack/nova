@@ -28,7 +28,7 @@ class Backend(object):
     def image(self, instance, name, image_type=''):
         class FakeImage(imagebackend.Image):
             def __init__(self, instance, name):
-                self.path = os.path.join(instance, name)
+                self.path = os.path.join(instance['name'], name)
 
             def create_image(self, prepare_template, base,
                               size, *args, **kwargs):

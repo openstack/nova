@@ -142,8 +142,9 @@ class Raw(Image):
     def __init__(self, instance=None, name=None, path=None):
         super(Raw, self).__init__("file", "raw", is_block_dev=False)
 
-        self.path = path or os.path.join(CONF.instances_path,
-                                         instance, name)
+        self.path = (path or
+                     os.path.join(libvirt_utils.get_instance_path(instance),
+                                  name))
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
@@ -170,8 +171,9 @@ class Qcow2(Image):
     def __init__(self, instance=None, name=None, path=None):
         super(Qcow2, self).__init__("file", "qcow2", is_block_dev=False)
 
-        self.path = path or os.path.join(CONF.instances_path,
-                                         instance, name)
+        self.path = (path or
+                     os.path.join(libvirt_utils.get_instance_path(instance),
+                                  name))
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
@@ -208,7 +210,7 @@ class Lvm(Image):
                                      ' libvirt_images_volume_group'
                                      ' flag to use LVM images.'))
             self.vg = CONF.libvirt_images_volume_group
-            self.lv = '%s_%s' % (self.escape(instance),
+            self.lv = '%s_%s' % (self.escape(instance['name']),
                                  self.escape(name))
             self.path = os.path.join('/dev', self.vg, self.lv)
 

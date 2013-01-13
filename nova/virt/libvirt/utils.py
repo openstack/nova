@@ -30,6 +30,7 @@ from nova import utils
 from nova.virt import images
 
 CONF = cfg.CONF
+CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
 
@@ -498,3 +499,19 @@ def get_fs_info(path):
 def fetch_image(context, target, image_id, user_id, project_id):
     """Grab image."""
     images.fetch_to_raw(context, image_id, target, user_id, project_id)
+
+
+def get_instance_path(instance):
+    """Determine the correct path for instance storage.
+
+    This used to be calculated all over the place. This method centralizes
+    this into one location, which will make it easier to change the
+    algorithm used to name instance storage directories.
+
+    :param instance: the instance we want a path for
+
+    :returns: a path to store information about that instance
+    """
+    # TODO(mikal): we should use UUID instead of name, as name isn't
+    # nessesarily unique
+    return os.path.join(CONF.instances_path, instance['name'])
