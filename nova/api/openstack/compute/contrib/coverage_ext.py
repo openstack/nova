@@ -203,6 +203,9 @@ class CoverageController(object):
             if xml:
                 self.coverInst.xml_report(outfile=path)
             elif html:
+                if os.path.isdir(path):
+                    msg = _("Directory conflict: %s already exists")
+                    raise exc.HTTPBadRequest(explanation=msg)
                 self.coverInst.html_report(directory=path)
             else:
                 output = open(path, 'w')
