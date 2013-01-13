@@ -129,19 +129,15 @@ class _ConfigDriveBuilder(object):
         try:
             mountdir = tempfile.mkdtemp(dir=CONF.config_drive_tempdir,
                                         prefix='cd_mnt_')
-            _out, err = utils.trycmd('mount', '-o', 'loop', path, mountdir,
+            _out, err = utils.trycmd('mount', '-o',
+                                     'loop,uid=%d,gid=%d' % (os.getuid(),
+                                                             os.getgid()),
+                                     path, mountdir,
                                      run_as_root=True)
             if err:
                 raise exception.ConfigDriveMountFailed(operation='mount',
                                                        error=err)
             mounted = True
-
-            _out, err = utils.trycmd('chown',
-                                     '%s.%s' % (os.getuid(), os.getgid()),
-                                     mountdir, run_as_root=True)
-            if err:
-                raise exception.ConfigDriveMountFailed(operation='chown',
-                                                       error=err)
 
             # NOTE(mikal): I can't just use shutils.copytree here, because the
             # destination directory already exists. This is annoying.
