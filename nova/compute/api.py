@@ -404,20 +404,20 @@ class API(base.Base):
         options_from_image['auto_disk_config'] = auto_disk_config
         return options_from_image
 
-    def _create_instance(self, context, instance_type,
-               image_href, kernel_id, ramdisk_id,
-               min_count, max_count,
-               display_name, display_description,
-               key_name, key_data, security_group,
-               availability_zone, user_data, metadata,
-               injected_files, admin_password,
-               access_ip_v4, access_ip_v6,
-               requested_networks, config_drive,
-               block_device_mapping, auto_disk_config,
-               reservation_id=None, scheduler_hints=None):
+    def _validate_and_provision_instance(self, context, instance_type,
+                                         image_href, kernel_id, ramdisk_id,
+                                         min_count, max_count,
+                                         display_name, display_description,
+                                         key_name, key_data, security_group,
+                                         availability_zone, user_data,
+                                         metadata, injected_files,
+                                         access_ip_v4, access_ip_v6,
+                                         requested_networks, config_drive,
+                                         block_device_mapping,
+                                         auto_disk_config, reservation_id,
+                                         scheduler_hints):
         """Verify all the input parameters regardless of the provisioning
-        strategy being performed and schedule the instance(s) for
-        creation."""
+        strategy being performed."""
 
         if not metadata:
             metadata = {}
@@ -436,6 +436,19 @@ class API(base.Base):
         if instance_type['disabled']:
             raise exception.InstanceTypeNotFound(
                     instance_type_id=instance_type['id'])
+
+        if user_data:
+            l = len(user_data)
+            if l > MAX_USERDATA_SIZE:
+                # NOTE(mikal): user_data is stored in a text column, and
+                # the database might silently truncate if its over length.
+                raise exception.InstanceUserDataTooLarge(
+                    length=l, maxsize=MAX_USERDATA_SIZE)
+
+            try:
+                base64.decodestring(user_data)
+            except base64.binascii.Error:
+                raise exception.InstanceUserDataMalformed()
 
         # Reserve quotas
         num_instances, quota_reservations = self._check_num_instances_quota(
@@ -484,9 +497,6 @@ class API(base.Base):
                         key_name)
                 key_data = key_pair['public_key']
 
-            if reservation_id is None:
-                reservation_id = utils.generate_uid('r')
-
             root_device_name = block_device.properties_root_device_name(
                 image.get('properties', {}))
 
@@ -523,19 +533,6 @@ class API(base.Base):
                 'availability_zone': availability_zone,
                 'root_device_name': root_device_name,
                 'progress': 0}
-
-            if user_data:
-                l = len(user_data)
-                if l > MAX_USERDATA_SIZE:
-                    # NOTE(mikal): user_data is stored in a text column, and
-                    # the database might silently truncate if its over length.
-                    raise exception.InstanceUserDataTooLarge(
-                        length=l, maxsize=MAX_USERDATA_SIZE)
-
-                try:
-                    base64.decodestring(user_data)
-                except base64.binascii.Error:
-                    raise exception.InstanceUserDataMalformed()
 
             options_from_image = self._inherit_properties_from_image(
                     image, auto_disk_config)
@@ -578,6 +575,36 @@ class API(base.Base):
             'block_device_mapping': block_device_mapping,
             'security_group': security_group,
         }
+
+        return (instances, request_spec, filter_properties)
+
+    def _create_instance(self, context, instance_type,
+               image_href, kernel_id, ramdisk_id,
+               min_count, max_count,
+               display_name, display_description,
+               key_name, key_data, security_group,
+               availability_zone, user_data, metadata,
+               injected_files, admin_password,
+               access_ip_v4, access_ip_v6,
+               requested_networks, config_drive,
+               block_device_mapping, auto_disk_config,
+               reservation_id=None, scheduler_hints=None):
+        """Verify all the input parameters regardless of the provisioning
+        strategy being performed and schedule the instance(s) for
+        creation."""
+
+        if reservation_id is None:
+            reservation_id = utils.generate_uid('r')
+
+        (instances, request_spec, filter_properties) = \
+                self._validate_and_provision_instance(context, instance_type,
+                        image_href, kernel_id, ramdisk_id, min_count,
+                        max_count, display_name, display_description,
+                        key_name, key_data, security_group, availability_zone,
+                        user_data, metadata, injected_files, access_ip_v4,
+                        access_ip_v6, requested_networks, config_drive,
+                        block_device_mapping, auto_disk_config,
+                        reservation_id, scheduler_hints)
 
         self.scheduler_rpcapi.run_instance(context,
                 request_spec=request_spec,
