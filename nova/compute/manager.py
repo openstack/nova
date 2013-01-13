@@ -25,10 +25,6 @@ building a disk image, launching it via the underlying virtualization driver,
 responding to calls to check its state, attaching persistent storage, and
 terminating it.
 
-**Related Flags**
-
-:instances_path:  Where instances are kept on disk
-
 """
 
 import contextlib
