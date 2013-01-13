@@ -3919,12 +3919,12 @@ class ComputeAPITestCase(BaseTestCase):
     def test_repeated_delete_quota(self):
         in_use = {'instances': 1}
 
-        def fake_reserve(context, **deltas):
+        def fake_reserve(context, expire=None, project_id=None, **deltas):
             return dict(deltas.iteritems())
 
         self.stubs.Set(QUOTAS, 'reserve', fake_reserve)
 
-        def fake_commit(context, deltas):
+        def fake_commit(context, deltas, project_id=None):
             for k, v in deltas.iteritems():
                 in_use[k] = in_use.get(k, 0) + v
 
@@ -3978,7 +3978,8 @@ class ComputeAPITestCase(BaseTestCase):
                 'host': CONF.host})
 
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
-        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
+        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg(),
+                                 project_id=mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute_api.soft_delete(self.context, instance)
@@ -4006,7 +4007,8 @@ class ComputeAPITestCase(BaseTestCase):
                 'host': CONF.host})
 
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
-        nova.quota.QUOTAS.rollback(mox.IgnoreArg(), mox.IgnoreArg())
+        nova.quota.QUOTAS.rollback(mox.IgnoreArg(), mox.IgnoreArg(),
+                                   project_id=mox.IgnoreArg())
         self.mox.ReplayAll()
 
         def fail(*args, **kwargs):

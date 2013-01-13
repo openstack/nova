@@ -198,7 +198,7 @@ class DbQuotaDriver(object):
 
         return quotas
 
-    def _get_quotas(self, context, resources, keys, has_sync):
+    def _get_quotas(self, context, resources, keys, has_sync, project_id=None):
         """
         A helper method which retrieves the quotas for the specific
         resources identified by keys, and which apply to the current
@@ -211,6 +211,9 @@ class DbQuotaDriver(object):
                          have a sync attribute; if False, indicates
                          that the resource must NOT have a sync
                          attribute.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         # Filter resources
@@ -229,12 +232,12 @@ class DbQuotaDriver(object):
 
         # Grab and return the quotas (without usages)
         quotas = self.get_project_quotas(context, sub_resources,
-                                         context.project_id,
+                                         project_id,
                                          context.quota_class, usages=False)
 
         return dict((k, v['limit']) for k, v in quotas.items())
 
-    def limit_check(self, context, resources, values):
+    def limit_check(self, context, resources, values, project_id=None):
         """Check simple quota limits.
 
         For limits--those quotas for which there is no usage
@@ -254,6 +257,9 @@ class DbQuotaDriver(object):
         :param resources: A dictionary of the registered resources.
         :param values: A dictionary of the values to check against the
                        quota.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         # Ensure no value is less than zero
@@ -261,9 +267,13 @@ class DbQuotaDriver(object):
         if unders:
             raise exception.InvalidQuotaValue(unders=sorted(unders))
 
+        # If project_id is None, then we use the project_id in context
+        if project_id is None:
+            project_id = context.project_id
+
         # Get the applicable quotas
         quotas = self._get_quotas(context, resources, values.keys(),
-                                  has_sync=False)
+                                  has_sync=False, project_id=project_id)
 
         # Check the quotas and construct a list of the resources that
         # would be put over limit by the desired values
@@ -273,7 +283,8 @@ class DbQuotaDriver(object):
             raise exception.OverQuota(overs=sorted(overs), quotas=quotas,
                                       usages={})
 
-    def reserve(self, context, resources, deltas, expire=None):
+    def reserve(self, context, resources, deltas, expire=None,
+                project_id=None):
         """Check quotas and reserve resources.
 
         For counting quotas--those quotas for which there is a usage
@@ -303,6 +314,9 @@ class DbQuotaDriver(object):
                        default expiration time set by
                        --default-reservation-expire will be used (this
                        value will be treated as a number of seconds).
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         # Set up the reservation expiration
@@ -315,12 +329,16 @@ class DbQuotaDriver(object):
         if not isinstance(expire, datetime.datetime):
             raise exception.InvalidReservationExpiration(expire=expire)
 
+        # If project_id is None, then we use the project_id in context
+        if project_id is None:
+            project_id = context.project_id
+
         # Get the applicable quotas.
         # NOTE(Vek): We're not worried about races at this point.
         #            Yes, the admin may be in the process of reducing
         #            quotas, but that's a pretty rare thing.
         quotas = self._get_quotas(context, resources, deltas.keys(),
-                                  has_sync=True)
+                                  has_sync=True, project_id=project_id)
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
@@ -328,27 +346,40 @@ class DbQuotaDriver(object):
         #            session isn't available outside the DBAPI, we
         #            have to do the work there.
         return db.quota_reserve(context, resources, quotas, deltas, expire,
-                                CONF.until_refresh, CONF.max_age)
+                                CONF.until_refresh, CONF.max_age,
+                                project_id=project_id)
 
-    def commit(self, context, reservations):
+    def commit(self, context, reservations, project_id=None):
         """Commit reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
+        # If project_id is None, then we use the project_id in context
+        if project_id is None:
+            project_id = context.project_id
 
-        db.reservation_commit(context, reservations)
+        db.reservation_commit(context, reservations, project_id=project_id)
 
-    def rollback(self, context, reservations):
+    def rollback(self, context, reservations, project_id=None):
         """Roll back reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
+        # If project_id is None, then we use the project_id in context
+        if project_id is None:
+            project_id = context.project_id
 
-        db.reservation_rollback(context, reservations)
+        db.reservation_rollback(context, reservations, project_id=project_id)
 
     def usage_reset(self, context, resources):
         """
@@ -843,7 +874,7 @@ class QuotaEngine(object):
 
         return res.count(context, *args, **kwargs)
 
-    def limit_check(self, context, **values):
+    def limit_check(self, context, project_id=None, **values):
         """Check simple quota limits.
 
         For limits--those quotas for which there is no usage
@@ -863,11 +894,15 @@ class QuotaEngine(object):
         nothing.
 
         :param context: The request context, for access checks.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
-        return self._driver.limit_check(context, self._resources, values)
+        return self._driver.limit_check(context, self._resources, values,
+                                        project_id=project_id)
 
-    def reserve(self, context, expire=None, **deltas):
+    def reserve(self, context, expire=None, project_id=None, **deltas):
         """Check quotas and reserve resources.
 
         For counting quotas--those quotas for which there is a usage
@@ -897,25 +932,32 @@ class QuotaEngine(object):
                        default expiration time set by
                        --default-reservation-expire will be used (this
                        value will be treated as a number of seconds).
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         reservations = self._driver.reserve(context, self._resources, deltas,
-                                            expire=expire)
+                                            expire=expire,
+                                            project_id=project_id)
 
         LOG.debug(_("Created reservations %(reservations)s") % locals())
 
         return reservations
 
-    def commit(self, context, reservations):
+    def commit(self, context, reservations, project_id=None):
         """Commit reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         try:
-            self._driver.commit(context, reservations)
+            self._driver.commit(context, reservations, project_id=project_id)
         except Exception:
             # NOTE(Vek): Ignoring exceptions here is safe, because the
             # usage resynchronization and the reservation expiration
@@ -924,16 +966,19 @@ class QuotaEngine(object):
             LOG.exception(_("Failed to commit reservations "
                             "%(reservations)s") % locals())
 
-    def rollback(self, context, reservations):
+    def rollback(self, context, reservations, project_id=None):
         """Roll back reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
 
         try:
-            self._driver.rollback(context, reservations)
+            self._driver.rollback(context, reservations, project_id=project_id)
         except Exception:
             # NOTE(Vek): Ignoring exceptions here is safe, because the
             # usage resynchronization and the reservation expiration

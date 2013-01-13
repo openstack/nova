@@ -2642,12 +2642,12 @@ def reservation_destroy(context, uuid):
 # code always acquires the lock on quota_usages before acquiring the lock
 # on reservations.
 
-def _get_quota_usages(context, session):
+def _get_quota_usages(context, session, project_id):
     # Broken out for testability
     rows = model_query(context, models.QuotaUsage,
                        read_deleted="no",
                        session=session).\
-                   filter_by(project_id=context.project_id).\
+                   filter_by(project_id=project_id).\
                    with_lockmode('update').\
                    all()
     return dict((row.resource, row) for row in rows)
@@ -2655,12 +2655,16 @@ def _get_quota_usages(context, session):
 
 @require_context
 def quota_reserve(context, resources, quotas, deltas, expire,
-                  until_refresh, max_age):
+                  until_refresh, max_age, project_id=None):
     elevated = context.elevated()
     session = get_session()
     with session.begin():
+
+        if project_id is None:
+            project_id = context.project_id
+
         # Get the current usages
-        usages = _get_quota_usages(context, session)
+        usages = _get_quota_usages(context, session, project_id)
 
         # Handle usage refresh
         work = set(deltas.keys())
@@ -2671,7 +2675,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             refresh = False
             if resource not in usages:
                 usages[resource] = _quota_usage_create(elevated,
-                                                      context.project_id,
+                                                      project_id,
                                                       resource,
                                                       0, 0,
                                                       until_refresh or None,
@@ -2694,12 +2698,12 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                 # Grab the sync routine
                 sync = resources[resource].sync
 
-                updates = sync(elevated, context.project_id, session)
+                updates = sync(elevated, project_id, session)
                 for res, in_use in updates.items():
                     # Make sure we have a destination for the usage!
                     if res not in usages:
                         usages[res] = _quota_usage_create(elevated,
-                                                         context.project_id,
+                                                         project_id,
                                                          res,
                                                          0, 0,
                                                          until_refresh or None,
@@ -2749,7 +2753,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                 reservation = reservation_create(elevated,
                                                  str(uuid.uuid4()),
                                                  usages[resource],
-                                                 context.project_id,
+                                                 project_id,
                                                  resource, delta, expire,
                                                  session=session)
                 reservations.append(reservation.uuid)
@@ -2797,10 +2801,10 @@ def _quota_reservations_query(session, context, reservations):
 
 
 @require_context
-def reservation_commit(context, reservations):
+def reservation_commit(context, reservations, project_id=None):
     session = get_session()
     with session.begin():
-        usages = _get_quota_usages(context, session)
+        usages = _get_quota_usages(context, session, project_id)
         reservation_query = _quota_reservations_query(session, context,
                                                       reservations)
         for reservation in reservation_query.all():
@@ -2812,10 +2816,10 @@ def reservation_commit(context, reservations):
 
 
 @require_context
-def reservation_rollback(context, reservations):
+def reservation_rollback(context, reservations, project_id=None):
     session = get_session()
     with session.begin():
-        usages = _get_quota_usages(context, session)
+        usages = _get_quota_usages(context, session, project_id)
         reservation_query = _quota_reservations_query(session, context,
                                                       reservations)
         for reservation in reservation_query.all():
