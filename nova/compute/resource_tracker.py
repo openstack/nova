@@ -354,8 +354,7 @@ class ResourceTracker(object):
     def confirm_resize(self, context, migration, status='confirmed'):
         """Cleanup usage for a confirmed resize."""
         elevated = context.elevated()
-        db.migration_update(elevated, migration['id'],
-                            {'status': status})
+        self.conductor_api.migration_update(elevated, migration, status)
         self.update_available_resource(elevated)
 
     def revert_resize(self, context, migration, status='reverted'):
