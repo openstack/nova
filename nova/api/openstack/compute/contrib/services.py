@@ -21,6 +21,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import availability_zones
 from nova import db
 from nova import exception
 from nova.openstack.common import cfg
@@ -69,6 +70,7 @@ class ServiceController(object):
         authorize(context)
         now = timeutils.utcnow()
         services = db.service_get_all(context)
+        services = availability_zones.set_availability_zones(context, services)
 
         host = ''
         if 'host' in req.GET:
