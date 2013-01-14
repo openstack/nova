@@ -309,7 +309,8 @@ class ResourceTracker(object):
 
     def _get_service(self, context):
         try:
-            return db.service_get_by_compute_host(context, self.host)
+            return self.conductor_api.service_get_by_compute_host(context,
+                                                                  self.host)
         except exception.NotFound:
             LOG.warn(_("No service record for host %s"), self.host)
 
