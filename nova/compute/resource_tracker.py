@@ -252,8 +252,8 @@ class ResourceTracker(object):
         self._report_hypervisor_resource_view(resources)
 
         # Grab all instances assigned to this node:
-        instances = db.instance_get_all_by_host_and_node(context, self.host,
-                                                         self.nodename)
+        instances = self.conductor_api.instance_get_all_by_host_and_node(
+            context, self.host, self.nodename)
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(resources, instances)
