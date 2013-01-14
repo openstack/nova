@@ -205,7 +205,7 @@ class ShellCommands(object):
 
     @args('--path', dest='path', metavar='<path>', help='Script path')
     def script(self, path):
-        """Runs the script from the specifed path with flags set properly.
+        """Runs the script from the specified path with flags set properly.
         arguments: path"""
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
