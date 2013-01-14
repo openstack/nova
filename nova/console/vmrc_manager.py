@@ -75,7 +75,6 @@ class ConsoleVMRCManager(manager.Manager):
         self.driver.setup_console(context, console)
         return console
 
-    @exception.wrap_exception()
     def add_console(self, context, instance_id, password=None,
                     port=None, **kwargs):
         """Adds a console for the instance.
@@ -105,7 +104,6 @@ class ConsoleVMRCManager(manager.Manager):
                                              instance)
         return console['id']
 
-    @exception.wrap_exception()
     def remove_console(self, context, console_id, **_kwargs):
         """Removes a console entry."""
         try:
