@@ -370,12 +370,12 @@ def service_get_all_by_host(context, host):
 
 
 @require_admin_context
-def service_get_all_compute_by_host(context, host):
+def service_get_by_compute_host(context, host):
     result = model_query(context, models.Service, read_deleted="no").\
                 options(joinedload('compute_node')).\
                 filter_by(host=host).\
                 filter_by(topic=CONF.compute_topic).\
-                all()
+                first()
 
     if not result:
         raise exception.ComputeHostNotFound(host=host)

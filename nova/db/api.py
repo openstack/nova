@@ -151,9 +151,12 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
-def service_get_all_compute_by_host(context, host):
-    """Get all compute services for a given host."""
-    return IMPL.service_get_all_compute_by_host(context, host)
+def service_get_by_compute_host(context, host):
+    """Get the service entry for a given compute host.
+
+    Returns the service entry joined with the compute_node entry.
+    """
+    return IMPL.service_get_by_compute_host(context, host)
 
 
 def service_get_all_compute_sorted(context):

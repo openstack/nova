@@ -57,19 +57,19 @@ class HostApiTestCase(test.TestCase):
         given our fake input.
         """
         ctx = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
+        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
         host_name = 'host_c1'
-        db.service_get_all_compute_by_host(ctx, host_name).AndReturn(
-            [{'host': 'fake_host',
-              'compute_node': [
-                {'vcpus': 4,
-                 'vcpus_used': 1,
-                 'memory_mb': 8192,
-                 'memory_mb_used': 2048,
-                 'local_gb': 1024,
-                 'local_gb_used': 648}
-              ]
-            }])
+        db.service_get_by_compute_host(ctx, host_name).AndReturn(
+            {'host': 'fake_host',
+             'compute_node': [
+               {'vcpus': 4,
+                'vcpus_used': 1,
+                'memory_mb': 8192,
+                'memory_mb_used': 2048,
+                'local_gb': 1024,
+                'local_gb_used': 648}
+             ]
+            })
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
         db.instance_get_all_by_host(ctx, 'fake_host').AndReturn(
             [{'project_id': 42,

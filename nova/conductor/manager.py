@@ -261,8 +261,9 @@ class ConductorManager(manager.SchedulerDependentManager):
             result = self.db.service_get_all(context)
         elif all((topic, host)):
             if topic == 'compute':
-                result = self.db.service_get_all_compute_by_host(context,
-                                                                 host)
+                result = self.db.service_get_by_compute_host(context, host)
+                # FIXME(comstud) Potentially remove this on bump to v2.0
+                result = [result]
             else:
                 result = self.db.service_get_by_host_and_topic(context,
                                                                host, topic)

@@ -220,13 +220,12 @@ class SchedulerManager(manager.Manager):
 
         """
         # Getting compute node info and related instances info
-        compute_ref = db.service_get_all_compute_by_host(context, host)
-        compute_ref = compute_ref[0]
+        service_ref = db.service_get_by_compute_host(context, host)
         instance_refs = db.instance_get_all_by_host(context,
-                                                    compute_ref['host'])
+                                                    service_ref['host'])
 
         # Getting total available/used resource
-        compute_ref = compute_ref['compute_node'][0]
+        compute_ref = service_ref['compute_node'][0]
         resource = {'vcpus': compute_ref['vcpus'],
                     'memory_mb': compute_ref['memory_mb'],
                     'local_gb': compute_ref['local_gb'],
