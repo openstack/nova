@@ -229,7 +229,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(node.get("type"), "bridge")
 
         br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, CONF.libvirt_ovs_bridge)
+        self.assertEqual(br_name, "br0")
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
         vp = node.find("virtualport")
@@ -257,7 +257,7 @@ class LibvirtVifTestCase(test.TestCase):
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
         br_name = node.find("source").get("bridge")
-        self.assertTrue(br_name.startswith("brq"))
+        self.assertEqual(br_name, "br0")
 
     def test_quantum_hybrid_driver(self):
         d = vif.LibvirtHybridOVSBridgeDriver()
