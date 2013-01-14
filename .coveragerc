@@ -1,7 +1,6 @@
 [run]
 branch = True
-source = nova
-omit = nova/tests/*,DynamicallyCompiledCheetahTemplate.py
+omit = /usr*,setup.py,*egg*,.venv/*,.tox/*,nova/tests/*
 
 [report]
 ignore-errors = True
