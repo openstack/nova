@@ -15,12 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""VIF drivers for VMWare."""
+"""VIF drivers for VMware."""
 
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import network_utils
+from nova.virt.vmwareapi import network_util
 
 
 LOG = logging.getLogger(__name__)
@@ -44,28 +44,28 @@ def ensure_vlan_bridge(self, session, network):
 
     # Check if the vlan_interface physical network adapter exists on the
     # host.
-    if not network_utils.check_if_vlan_interface_exists(session,
+    if not network_util.check_if_vlan_interface_exists(session,
                                                         vlan_interface):
         raise exception.NetworkAdapterNotFound(adapter=vlan_interface)
 
     # Get the vSwitch associated with the Physical Adapter
-    vswitch_associated = network_utils.get_vswitch_for_vlan_interface(
+    vswitch_associated = network_util.get_vswitch_for_vlan_interface(
                                         session, vlan_interface)
     if vswitch_associated is None:
         raise exception.SwitchNotFoundForNetworkAdapter(
             adapter=vlan_interface)
     # Check whether bridge already exists and retrieve the the ref of the
     # network whose name_label is "bridge"
-    network_ref = network_utils.get_network_with_the_name(session, bridge)
+    network_ref = network_util.get_network_with_the_name(session, bridge)
     if network_ref is None:
         # Create a port group on the vSwitch associated with the
         # vlan_interface corresponding physical network adapter on the ESX
         # host.
-        network_utils.create_port_group(session, bridge,
+        network_util.create_port_group(session, bridge,
                                         vswitch_associated, vlan_num)
     else:
         # Get the vlan id and vswitch corresponding to the port group
-        _get_pg_info = network_utils.get_vlanid_and_vswitch_for_portgroup
+        _get_pg_info = network_util.get_vlanid_and_vswitch_for_portgroup
         pg_vlanid, pg_vswitch = _get_pg_info(session, bridge)
 
         # Check if the vswitch associated is proper

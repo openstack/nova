@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-A fake VMWare VI API implementation.
+A fake VMware VI API implementation.
 """
 
 import pprint

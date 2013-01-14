@@ -50,11 +50,11 @@ def start_transfer(context, read_file_handle, data_size,
     # to read.
     read_thread = io_util.IOThread(read_file_handle, thread_safe_pipe)
 
-    # In case of Glance - VMWare transfer, we just need a handle to the
-    # HTTP Connection that is to send transfer data to the VMWare datastore.
+    # In case of Glance - VMware transfer, we just need a handle to the
+    # HTTP Connection that is to send transfer data to the VMware datastore.
     if write_file_handle:
         write_thread = io_util.IOThread(thread_safe_pipe, write_file_handle)
-    # In case of VMWare - Glance transfer, we relinquish VMWare HTTP file read
+    # In case of VMware - Glance transfer, we relinquish VMware HTTP file read
     # handle to Glance Client instance, but to be sure of the transfer we need
     # to be sure of the status of the image on glnace changing to active.
     # The GlanceWriteThread handles the same for us.
@@ -96,7 +96,7 @@ def fetch_image(context, image, instance, **kwargs):
     f = StringIO.StringIO()
     image_service.download(context, image_id, f)
     read_file_handle = read_write_util.GlanceFileRead(f)
-    write_file_handle = read_write_util.VMWareHTTPWriteFile(
+    write_file_handle = read_write_util.VMwareHTTPWriteFile(
                                 kwargs.get("host"),
                                 kwargs.get("data_center_name"),
                                 kwargs.get("datastore_name"),
@@ -113,7 +113,7 @@ def upload_image(context, image, instance, **kwargs):
     """Upload the snapshotted vm disk file to Glance image server."""
     LOG.debug(_("Uploading image %s to the Glance image server") % image,
               instance=instance)
-    read_file_handle = read_write_util.VmWareHTTPReadFile(
+    read_file_handle = read_write_util.VMwareHTTPReadFile(
                                 kwargs.get("host"),
                                 kwargs.get("data_center_name"),
                                 kwargs.get("datastore_name"),

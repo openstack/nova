@@ -32,7 +32,7 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import network_utils
+from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -49,7 +49,7 @@ VMWARE_POWER_STATES = {
                     'suspended': power_state.PAUSED}
 
 
-class VMWareVMOps(object):
+class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
     def __init__(self, session):
@@ -157,7 +157,7 @@ class VMWareVMOps(object):
         vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
 
         def _check_if_network_bridge_exists(network_name):
-            network_ref = network_utils.get_network_with_the_name(
+            network_ref = network_util.get_network_with_the_name(
                           self._session, network_name)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=network_name)

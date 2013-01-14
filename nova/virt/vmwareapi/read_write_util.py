@@ -108,8 +108,8 @@ class VMwareHTTPFile(object):
         raise NotImplementedError
 
 
-class VMWareHTTPWriteFile(VMwareHTTPFile):
-    """VMWare file write handler class."""
+class VMwareHTTPWriteFile(VMwareHTTPFile):
+    """VMware file write handler class."""
 
     def __init__(self, host, data_center_name, datastore_name, cookies,
                  file_path, file_size, scheme="https"):
@@ -140,12 +140,12 @@ class VMWareHTTPWriteFile(VMwareHTTPFile):
             self.conn.getresponse()
         except Exception, excep:
             LOG.debug(_("Exception during HTTP connection close in "
-                      "VMWareHTTpWrite. Exception is %s") % excep)
-        super(VMWareHTTPWriteFile, self).close()
+                      "VMwareHTTpWrite. Exception is %s") % excep)
+        super(VMwareHTTPWriteFile, self).close()
 
 
-class VmWareHTTPReadFile(VMwareHTTPFile):
-    """VMWare file read handler class."""
+class VMwareHTTPReadFile(VMwareHTTPFile):
+    """VMware file read handler class."""
 
     def __init__(self, host, data_center_name, datastore_name, cookies,
                  file_path, scheme="https"):
