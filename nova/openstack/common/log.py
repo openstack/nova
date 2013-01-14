@@ -49,19 +49,19 @@ from nova.openstack.common import notifier
 
 log_opts = [
     cfg.StrOpt('logging_context_format_string',
-               default='%(asctime)s.%(msecs)d %(levelname)s %(name)s '
+               default='%(asctime)s.%(msecs)03d %(levelname)s %(name)s '
                        '[%(request_id)s %(user)s %(tenant)s] %(instance)s'
                        '%(message)s',
                help='format string to use for log messages with context'),
     cfg.StrOpt('logging_default_format_string',
-               default='%(asctime)s.%(msecs)d %(process)d %(levelname)s '
+               default='%(asctime)s.%(msecs)03d %(process)d %(levelname)s '
                        '%(name)s [-] %(instance)s%(message)s',
                help='format string to use for log messages without context'),
     cfg.StrOpt('logging_debug_format_suffix',
                default='%(funcName)s %(pathname)s:%(lineno)d',
                help='data to append to log format when level is DEBUG'),
     cfg.StrOpt('logging_exception_prefix',
-               default='%(asctime)s.%(msecs)d %(process)d TRACE %(name)s '
+               default='%(asctime)s.%(msecs)03d %(process)d TRACE %(name)s '
                '%(instance)s',
                help='prefix each line of exception output with this format'),
     cfg.ListOpt('default_log_levels',
@@ -259,7 +259,7 @@ class JSONFormatter(logging.Formatter):
 class PublishErrorsHandler(logging.Handler):
     def emit(self, record):
         if ('nova.openstack.common.notifier.log_notifier' in
-            CONF.notification_driver):
+                CONF.notification_driver):
             return
         notifier.api.notify(None, 'error.publisher',
                             'error_notification',
@@ -361,10 +361,12 @@ def _setup_logging_from_conf(product_name):
                                                    datefmt=datefmt))
         handler.setFormatter(LegacyFormatter(datefmt=datefmt))
 
-    if CONF.verbose or CONF.debug:
+    if CONF.debug:
         log_root.setLevel(logging.DEBUG)
-    else:
+    elif CONF.verbose:
         log_root.setLevel(logging.INFO)
+    else:
+        log_root.setLevel(logging.WARNING)
 
     level = logging.NOTSET
     for pair in CONF.default_log_levels:
@@ -425,7 +427,7 @@ class LegacyFormatter(logging.Formatter):
             self._fmt = CONF.logging_default_format_string
 
         if (record.levelno == logging.DEBUG and
-            CONF.logging_debug_format_suffix):
+                CONF.logging_debug_format_suffix):
             self._fmt += " " + CONF.logging_debug_format_suffix
 
         # Cache this on the record, Logger will respect our formated copy
