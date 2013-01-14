@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 Red Hat, Inc.
+# Copyright (C) 2012-2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,7 +18,11 @@
 Configuration for libvirt objects.
 
 Classes to represent the configuration of various libvirt objects
-and support conversion to/from XML
+and support conversion to/from XML. These classes are solely concerned
+by providing direct Object <-> XML document conversions. No policy or
+operational decisions should be made by code in these classes. Such
+policy belongs in the 'designer.py' module which provides simplified
+helpers for populating up config object instances.
 """
 
 from nova import exception
