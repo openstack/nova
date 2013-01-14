@@ -478,7 +478,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
+        thr1 = eventlet.spawn(backend.image({'name': 'instance'},
+                                            'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
         eventlet.sleep(0)
@@ -488,7 +489,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
+        thr2 = eventlet.spawn(backend.image({'name': 'instance'},
+                                            'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
 
@@ -512,7 +514,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image('instance', 'name').cache,
+        thr1 = eventlet.spawn(backend.image({'name': 'instance'},
+                                            'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
         eventlet.sleep(0)
@@ -522,7 +525,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image('instance', 'name').cache,
+        thr2 = eventlet.spawn(backend.image({'name': 'instance'},
+                                            'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
         eventlet.sleep(0)
@@ -4453,7 +4457,7 @@ class LibvirtDriverTestCase(test.TestCase):
                       block_device_info=None):
             pass
 
-        def fake_create_domain(xml, inst_name=''):
+        def fake_create_domain(xml, instance=None):
             return None
 
         def fake_enable_hairpin(instance):
@@ -4499,7 +4503,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml, inst_name=''):
+        def fake_create_domain(xml, instance=None):
             return None
 
         def fake_enable_hairpin(instance):
