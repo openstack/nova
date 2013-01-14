@@ -337,15 +337,6 @@ def service_get_all(context, disabled=None):
 
 
 @require_admin_context
-def service_does_host_exist(context, host_name, include_disabled):
-    query = get_session().query(func.count(models.Service.host)).\
-        filter_by(host=host_name)
-    if not include_disabled:
-        query = query.filter_by(disabled=False)
-    return query.scalar() > 0
-
-
-@require_admin_context
 def service_get_all_by_topic(context, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\

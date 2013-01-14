@@ -124,10 +124,17 @@ class HostController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
+        filters = {}
         zone = req.GET.get('zone', None)
-        data = self.api.list_hosts(context, zone)
-
-        return {'hosts': data}
+        if zone:
+            filters['availability_zone'] = zone
+        services = self.api.service_get_all(context, filters=filters)
+        hosts = []
+        for service in services:
+            hosts.append({'host_name': service['host'],
+                          'service': service['topic'],
+                          'zone': service['availability_zone']})
+        return {'hosts': hosts}
 
     @wsgi.serializers(xml=HostUpdateTemplate)
     @wsgi.deserializers(xml=HostUpdateDeserializer)
@@ -243,6 +250,55 @@ class HostController(object):
     def reboot(self, req, id):
         return self._host_power_action(req, host_name=id, action="reboot")
 
+    @staticmethod
+    def _get_total_resources(host_name, compute_node):
+        return {'resource': {'host': host_name,
+                             'project': '(total)',
+                             'cpu': compute_node['vcpus'],
+                             'memory_mb': compute_node['memory_mb'],
+                             'disk_gb': compute_node['local_gb']}}
+
+    @staticmethod
+    def _get_used_now_resources(host_name, compute_node):
+        return {'resource': {'host': host_name,
+                             'project': '(used_now)',
+                             'cpu': compute_node['vcpus_used'],
+                             'memory_mb': compute_node['memory_mb_used'],
+                             'disk_gb': compute_node['local_gb_used']}}
+
+    @staticmethod
+    def _get_resource_totals_from_instances(host_name, instances):
+        cpu_sum = 0
+        mem_sum = 0
+        hdd_sum = 0
+        for instance in instances:
+            cpu_sum += instance['vcpus']
+            mem_sum += instance['memory_mb']
+            hdd_sum += instance['root_gb'] + instance['ephemeral_gb']
+
+        return {'resource': {'host': host_name,
+                             'project': '(used_max)',
+                             'cpu': cpu_sum,
+                             'memory_mb': mem_sum,
+                             'disk_gb': hdd_sum}}
+
+    @staticmethod
+    def _get_resources_by_project(host_name, instances):
+        # Getting usage resource per project
+        project_map = {}
+        for instance in instances:
+            resource = project_map.setdefault(instance['project_id'],
+                    {'host': host_name,
+                     'project': instance['project_id'],
+                     'cpu': 0,
+                     'memory_mb': 0,
+                     'disk_gb': 0})
+            resource['cpu'] += instance['vcpus']
+            resource['memory_mb'] += instance['memory_mb']
+            resource['disk_gb'] += (instance['root_gb'] +
+                                    instance['ephemeral_gb'])
+        return project_map
+
     @wsgi.serializers(xml=HostShowTemplate)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
@@ -256,14 +312,26 @@ class HostController(object):
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         context = req.environ['nova.context']
+        host_name = id
         try:
-            data = self.api.describe_host(context, id)
+            service = self.api.service_get_by_compute_host(context, host_name)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.message)
         except exception.AdminRequired:
             msg = _("Describe-resource is admin only functionality")
             raise webob.exc.HTTPForbidden(explanation=msg)
-        return {'host': data}
+        compute_node = service['compute_node'][0]
+        instances = self.api.instance_get_all_by_host(context, host_name)
+        resources = [self._get_total_resources(host_name, compute_node)]
+        resources.append(self._get_used_now_resources(host_name,
+                                                      compute_node))
+        resources.append(self._get_resource_totals_from_instances(host_name,
+                                                                  instances))
+        by_proj_resources = self._get_resources_by_project(host_name,
+                                                           instances)
+        for resource in by_proj_resources.itervalues():
+            resources.append({'resource': resource})
+        return {'host': resources}
 
 
 class Hosts(extensions.ExtensionDescriptor):
