@@ -272,7 +272,7 @@ def pick_disk_driver_name(is_block_dev=False):
         if is_block_dev:
             return "phy"
         else:
-            return "file"
+            return "tap"
     elif CONF.libvirt_type in ('kvm', 'qemu'):
         return "qemu"
     else:
