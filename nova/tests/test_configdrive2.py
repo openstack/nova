@@ -67,10 +67,8 @@ class ConfigDriveTestCase(test.TestCase):
 
             utils.mkfs('vfat', mox.IgnoreArg(),
                        label='config-2').AndReturn(None)
-            utils.trycmd('mount', '-o', 'loop', mox.IgnoreArg(),
+            utils.trycmd('mount', '-o', mox.IgnoreArg(), mox.IgnoreArg(),
                          mox.IgnoreArg(),
-                         run_as_root=True).AndReturn((None, None))
-            utils.trycmd('chown', mox.IgnoreArg(), mox.IgnoreArg(),
                          run_as_root=True).AndReturn((None, None))
             utils.execute('umount', mox.IgnoreArg(),
                           run_as_root=True).AndReturn(None)
