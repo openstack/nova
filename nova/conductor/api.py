@@ -134,6 +134,10 @@ class LocalAPI(object):
         return self._manager.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute)
 
+    def migration_get_in_progress_by_host_and_node(self, context, host, node):
+        return self._manager.migration_get_in_progress_by_host_and_node(
+            context, host, node)
+
     def migration_create(self, context, instance, values):
         return self._manager.migration_create(context, instance, values)
 
@@ -369,6 +373,11 @@ class API(object):
         crpcapi = self.conductor_rpcapi
         return crpcapi.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute)
+
+    def migration_get_in_progress_by_host_and_node(self, context, host, node):
+        crpcapi = self.conductor_rpcapi
+        return crpcapi.migration_get_in_progress_by_host_and_node(context,
+                                                                  host, node)
 
     def migration_create(self, context, instance, values):
         return self.conductor_rpcapi.migration_create(context, instance,

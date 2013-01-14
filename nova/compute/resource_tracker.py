@@ -259,7 +259,8 @@ class ResourceTracker(object):
         self._update_usage_from_instances(resources, instances)
 
         # Grab all in-progress migrations:
-        migrations = db.migration_get_in_progress_by_host_and_node(context,
+        capi = self.conductor_api
+        migrations = capi.migration_get_in_progress_by_host_and_node(context,
                 self.host, self.nodename)
 
         self._update_usage_from_migrations(resources, migrations)

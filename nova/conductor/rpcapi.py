@@ -63,6 +63,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.28 - Added binary arg to service_get_all_by
     1.29 - Added service_destroy
     1.30 - Added migration_create
+    1.31 - Added migration_get_in_progress_by_host_and_node
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -105,6 +106,12 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             confirm_window=confirm_window,
                             dest_compute=dest_compute)
         return self.call(context, msg, version='1.20')
+
+    def migration_get_in_progress_by_host_and_node(self, context,
+                                                   host, node):
+        msg = self.make_msg('migration_get_in_progress_by_host_and_node',
+                            host=host, node=node)
+        return self.call(context, msg, version='1.31')
 
     def migration_create(self, context, instance, values):
         instance_p = jsonutils.to_primitive(instance)
