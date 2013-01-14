@@ -130,7 +130,7 @@ class VMUtils(object):
         return newinst
 
     def add_virt_resource(self, conn, res_setting_data, target_vm):
-        """Add a new resource (disk/nic) to the VM."""
+        """Adds a new resource to the VM."""
         vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
         (job, new_resources, ret_val) = vs_man_svc.\
                     AddVirtualSystemResources([res_setting_data.GetText_(1)],
@@ -145,8 +145,20 @@ class VMUtils(object):
         else:
             return None
 
+    def modify_virt_resource(self, conn, res_setting_data, target_vm):
+        """Updates a VM resource."""
+        vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
+        (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
+            ResourceSettingData=[res_setting_data.GetText_(1)],
+            ComputerSystem=target_vm.path_())
+        if ret_val == constants.WMI_JOB_STATUS_STARTED:
+            success = self.check_job_status(job)
+        else:
+            success = (ret_val == 0)
+        return success
+
     def remove_virt_resource(self, conn, res_setting_data, target_vm):
-        """Add a new resource (disk/nic) to the VM."""
+        """Removes a VM resource."""
         vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
         (job, ret_val) = vs_man_svc.\
                     RemoveVirtualSystemResources([res_setting_data.path_()],
