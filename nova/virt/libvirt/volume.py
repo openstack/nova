@@ -21,6 +21,8 @@
 import hashlib
 import os
 import time
+import urllib2
+import urlparse
 
 from oslo.config import cfg
 
@@ -63,6 +65,12 @@ volume_opts = [
     cfg.BoolOpt('libvirt_iscsi_use_multipath',
                 default=False,
                 help='use multipath connection of the iSCSI volume'),
+    cfg.StrOpt('scality_sofs_config',
+               default=None,
+               help='Path or URL to Scality SOFS configuration file'),
+    cfg.StrOpt('scality_sofs_mount_point',
+               default='$state_path/scality',
+               help='Base dir where Scality SOFS shall be mounted'),
     ]
 
 CONF = cfg.CONF
@@ -749,3 +757,74 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         # all of them
         for device in devices:
             linuxscsi.remove_device(device)
+
+
+class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
+    """Scality SOFS Nova driver. Provide hypervisors with access
+    to sparse files on SOFS. """
+
+    def __init__(self, connection):
+        """Create back-end to SOFS and check connection."""
+        super(LibvirtScalityVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def connect_volume(self, connection_info, disk_info):
+        """Connect the volume. Returns xml for libvirt."""
+        self._check_prerequisites()
+        self._mount_sofs()
+        conf = super(LibvirtScalityVolumeDriver,
+                     self).connect_volume(connection_info, disk_info)
+        path = os.path.join(CONF.scality_sofs_mount_point,
+                            connection_info['data']['sofs_path'])
+        conf.source_type = 'file'
+        conf.source_path = path
+
+        # The default driver cache policy is 'none', and this causes
+        # qemu/kvm to open the volume file with O_DIRECT, which is
+        # rejected by FUSE (on kernels older than 3.3). Scality SOFS
+        # is FUSE based, so we must provide a more sensible default.
+        conf.driver_cache = 'writethrough'
+
+        return conf
+
+    def _check_prerequisites(self):
+        """Sanity checks before attempting to mount SOFS."""
+
+        # config is mandatory
+        config = CONF.scality_sofs_config
+        if not config:
+            msg = _("Value required for 'scality_sofs_config'")
+            LOG.warn(msg)
+            raise exception.NovaException(msg)
+
+        # config can be a file path or a URL, check it
+        if urlparse.urlparse(config).scheme == '':
+            # turn local path into URL
+            config = 'file://%s' % config
+        try:
+            urllib2.urlopen(config, timeout=5).close()
+        except urllib2.URLError as e:
+            msg = _("Cannot access 'scality_sofs_config': %s") % e
+            LOG.warn(msg)
+            raise exception.NovaException(msg)
+
+        # mount.sofs must be installed
+        if not os.access('/sbin/mount.sofs', os.X_OK):
+            msg = _("Cannot execute /sbin/mount.sofs")
+            LOG.warn(msg)
+            raise exception.NovaException(msg)
+
+    def _mount_sofs(self):
+        config = CONF.scality_sofs_config
+        mount_path = CONF.scality_sofs_mount_point
+        sysdir = os.path.join(mount_path, 'sys')
+
+        if not os.path.isdir(mount_path):
+            utils.execute('mkdir', '-p', mount_path)
+        if not os.path.isdir(sysdir):
+            utils.execute('mount', '-t', 'sofs', config, mount_path,
+                          run_as_root=True)
+        if not os.path.isdir(sysdir):
+            msg = _("Cannot mount Scality SOFS, check syslog for errors")
+            LOG.warn(msg)
+            raise exception.NovaException(msg)

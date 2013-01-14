@@ -166,7 +166,9 @@ libvirt_opts = [
                   'glusterfs='
                       'nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver',
                   'fibre_channel=nova.virt.libvirt.volume.'
-                      'LibvirtFibreChannelVolumeDriver'
+                      'LibvirtFibreChannelVolumeDriver',
+                  'scality='
+                      'nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
                   ],
                 help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('libvirt_disk_prefix',
