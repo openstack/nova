@@ -24,6 +24,7 @@ Scheduler Service
 import functools
 import sys
 
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import db
@@ -88,6 +89,16 @@ class SchedulerManager(manager.Manager):
             return self.driver.schedule_live_migration(
                 context, instance, dest,
                 block_migration, disk_over_commit)
+        except exception.ComputeServiceUnavailable as ex:
+            request_spec = {'instance_properties': {
+                'uuid': instance['uuid'], },
+            }
+            with excutils.save_and_reraise_exception():
+                self._set_vm_state_and_notify('live_migration',
+                            dict(vm_state=instance['vm_state'],
+                                 task_state=None,
+                                 expected_task_state=task_states.MIGRATING,),
+                                              context, ex, request_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('live_migration',

@@ -274,8 +274,11 @@ class Scheduler(object):
         """
 
         # Checking dest exists and compute node.
-        dservice_refs = db.service_get_all_compute_by_host(context, dest)
-        dservice_ref = dservice_refs[0]
+        try:
+            dservice_refs = db.service_get_all_compute_by_host(context, dest)
+            dservice_ref = dservice_refs[0]
+        except exception.NotFound:
+            raise exception.ComputeServiceUnavailable(host=dest)
 
         # Checking dest host is alive.
         if not utils.service_is_up(dservice_ref):

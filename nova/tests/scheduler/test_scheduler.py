@@ -24,6 +24,7 @@ import mox
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
@@ -186,6 +187,37 @@ class SchedulerManagerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost, self.manager.create_volume,
                           self.context, '1', '2')
+
+    def test_live_migration_compute_service_notavailable(self):
+        inst = {"uuid": "fake-instance-id",
+                "vm_state": vm_states.ACTIVE,
+                "task_state": task_states.MIGRATING, }
+
+        dest = 'fake_host'
+        block_migration = False
+        disk_over_commit = False
+
+        self._mox_schedule_method_helper('schedule_live_migration')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+
+        self.manager.driver.schedule_live_migration(self.context,
+                    inst, dest, block_migration, disk_over_commit).AndRaise(
+                    exception.ComputeServiceUnavailable(host="src"))
+        db.instance_update_and_get_original(self.context, inst["uuid"],
+                                {"vm_state": inst['vm_state'],
+                                 "task_state": None,
+                                 "expected_task_state": task_states.MIGRATING,
+                                }).AndReturn((inst, inst))
+        compute_utils.add_instance_fault_from_exc(self.context, inst["uuid"],
+                                mox.IsA(exception.ComputeServiceUnavailable),
+                                mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                          self.manager.live_migration,
+                          self.context, inst, dest, block_migration,
+                          disk_over_commit)
 
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         fake_instance_uuid = 'fake-instance-id'
@@ -469,6 +501,29 @@ class SchedulerTestCase(test.TestCase):
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
         utils.service_is_up('fake_service2').AndReturn(False)
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                self.driver.schedule_live_migration, self.context,
+                instance=instance, dest=dest,
+                block_migration=block_migration,
+                disk_over_commit=disk_over_commit)
+
+    def test_live_migration_compute_dest_not_exist(self):
+        # Raise exception when dest compute node does not exist.
+
+        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
+        self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
+
+        dest = 'fake_host2'
+        block_migration = False
+        disk_over_commit = False
+        instance = self._live_migration_instance()
+
+        self.driver._live_migration_src_check(self.context, instance)
+        # Compute down
+        db.service_get_all_compute_by_host(self.context,
+                            dest).AndRaise(exception.NotFound())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
