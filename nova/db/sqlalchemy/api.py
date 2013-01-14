@@ -448,6 +448,7 @@ def service_update(context, service_id, values):
         service_ref = service_get(context, service_id, session=session)
         service_ref.update(values)
         service_ref.save(session=session)
+    return service_ref
 
 
 ###################
