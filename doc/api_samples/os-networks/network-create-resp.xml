@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<network>
+  <bridge>None</bridge>
+  <vpn_public_port>None</vpn_public_port>
+  <dhcp_start>10.20.105.2</dhcp_start>
+  <bridge_interface>None</bridge_interface>
+  <updated_at>None</updated_at>
+  <id>1bbbed2b-0daa-47a1-b869-1981c29150b1</id>
+  <cidr_v6>None</cidr_v6>
+  <deleted_at>None</deleted_at>
+  <gateway>10.20.105.1</gateway>
+  <rxtx_base>None</rxtx_base>
+  <label>new net 111</label>
+  <priority>None</priority>
+  <project_id>None</project_id>
+  <vpn_private_address>None</vpn_private_address>
+  <deleted>False</deleted>
+  <vlan>None</vlan>
+  <broadcast>10.20.105.255</broadcast>
+  <netmask>255.255.255.0</netmask>
+  <injected>None</injected>
+  <cidr>10.20.105.0/24</cidr>
+  <vpn_public_address>None</vpn_public_address>
+  <multi_host>None</multi_host>
+  <dns2>None</dns2>
+  <created_at>None</created_at>
+  <host>None</host>
+  <gateway_v6>None</gateway_v6>
+  <netmask_v6>None</netmask_v6>
+  <dns1>None</dns1>
+</network>

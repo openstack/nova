@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<networks>
+  <network>
+    <bridge>br100</bridge>
+    <vpn_public_port>1000</vpn_public_port>
+    <dhcp_start>10.0.0.3</dhcp_start>
+    <bridge_interface>eth0</bridge_interface>
+    <updated_at>2011-08-16 09:26:13.048257</updated_at>
+    <id>20c8acc0-f747-4d71-a389-46d078ebf047</id>
+    <cidr_v6>None</cidr_v6>
+    <deleted_at>None</deleted_at>
+    <gateway>10.0.0.1</gateway>
+    <rxtx_base>None</rxtx_base>
+    <label>mynet_0</label>
+    <priority>None</priority>
+    <project_id>1234</project_id>
+    <vpn_private_address>10.0.0.2</vpn_private_address>
+    <deleted>False</deleted>
+    <vlan>100</vlan>
+    <broadcast>10.0.0.7</broadcast>
+    <netmask>255.255.255.248</netmask>
+    <injected>False</injected>
+    <cidr>10.0.0.0/29</cidr>
+    <vpn_public_address>127.0.0.1</vpn_public_address>
+    <multi_host>False</multi_host>
+    <dns2>None</dns2>
+    <created_at>2011-08-15 06:19:19.387525</created_at>
+    <host>nsokolov-desktop</host>
+    <gateway_v6>None</gateway_v6>
+    <netmask_v6>None</netmask_v6>
+    <dns1>None</dns1>
+  </network>
+  <network>
+    <bridge>br101</bridge>
+    <vpn_public_port>1001</vpn_public_port>
+    <dhcp_start>10.0.0.11</dhcp_start>
+    <bridge_interface>eth0</bridge_interface>
+    <updated_at>None</updated_at>
+    <id>20c8acc0-f747-4d71-a389-46d078ebf000</id>
+    <cidr_v6>None</cidr_v6>
+    <deleted_at>None</deleted_at>
+    <gateway>10.0.0.9</gateway>
+    <rxtx_base>None</rxtx_base>
+    <label>mynet_1</label>
+    <priority>None</priority>
+    <project_id>None</project_id>
+    <vpn_private_address>10.0.0.10</vpn_private_address>
+    <deleted>False</deleted>
+    <vlan>101</vlan>
+    <broadcast>10.0.0.15</broadcast>
+    <netmask>255.255.255.248</netmask>
+    <injected>False</injected>
+    <cidr>10.0.0.10/29</cidr>
+    <vpn_public_address>None</vpn_public_address>
+    <multi_host>False</multi_host>
+    <dns2>None</dns2>
+    <created_at>2011-08-15 06:19:19.885495</created_at>
+    <host>None</host>
+    <gateway_v6>None</gateway_v6>
+    <netmask_v6>None</netmask_v6>
+    <dns1>None</dns1>
+  </network>
+</networks>
