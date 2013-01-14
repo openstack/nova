@@ -15,10 +15,13 @@
 
 """Compute API that proxies via Cells Service."""
 
+from nova import availability_zones
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
+from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import instance_types
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import excutils
@@ -59,6 +62,27 @@ class SchedulerRPCAPIRedirect(object):
 
     def run_instance(self, context, **kwargs):
         self.cells_rpcapi.schedule_run_instance(context, **kwargs)
+
+
+class ComputeRPCProxyAPI(compute_rpcapi.ComputeAPI):
+    """Class used to substitute Compute RPC API that will proxy
+    via the cells manager to a compute manager in a child cell.
+    """
+    def __init__(self, *args, **kwargs):
+        super(ComputeRPCProxyAPI, self).__init__(*args, **kwargs)
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
+
+    def cast(self, ctxt, msg, topic=None, version=None):
+        self._set_version(msg, version)
+        topic = self._get_topic(topic)
+        self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic)
+
+    def call(self, ctxt, msg, topic=None, version=None, timeout=None):
+        self._set_version(msg, version)
+        topic = self._get_topic(topic)
+        return self.cells_rpcapi.proxy_rpc_to_manager(ctxt, msg, topic,
+                                                      call=True,
+                                                      timeout=timeout)
 
 
 class ComputeCellsAPI(compute_api.API):
@@ -545,3 +569,64 @@ class ComputeCellsAPI(compute_api.API):
         except exception.InstanceUnknownCell:
             pass
         return rv
+
+
+class HostAPI(compute_api.HostAPI):
+    """HostAPI() class for cells.
+
+    Implements host management related operations.  Works by setting the
+    RPC API used by the base class to proxy via the cells manager to the
+    compute manager in the correct cell.  Hosts specified with cells will
+    need to be of the format 'path!to!cell@host'.
+
+    DB methods in the base class are also overridden to proxy via the
+    cells manager.
+    """
+    def __init__(self):
+        super(HostAPI, self).__init__(rpcapi=ComputeRPCProxyAPI())
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
+
+    def _assert_host_exists(self, context, host_name):
+        """Cannot check this in API cell.  This will be checked in the
+        target child cell.
+        """
+        pass
+
+    def service_get_all(self, context, filters=None, set_zones=False):
+        if filters is None:
+            filters = {}
+        if 'availability_zone' in filters:
+            zone_filter = filters.pop('availability_zone')
+            set_zones = True
+        else:
+            zone_filter = None
+        services = self.cells_rpcapi.service_get_all(context,
+                                                     filters=filters)
+        if set_zones:
+            services = availability_zones.set_availability_zones(context,
+                                                                 services)
+            if zone_filter is not None:
+                services = [s for s in services
+                            if s['availability_zone'] == zone_filter]
+        return services
+
+    def service_get_by_compute_host(self, context, host_name):
+        return self.cells_rpcapi.service_get_by_compute_host(context,
+                                                             host_name)
+
+    def instance_get_all_by_host(self, context, host_name):
+        """Get all instances by host.  Host might have a cell prepended
+        to it, so we'll need to strip it out.  We don't need to proxy
+        this call to cells, as we have instance information here in
+        the API cell.
+        """
+        try:
+            cell_name, host_name = cells_utils.split_cell_and_item(host_name)
+        except ValueError:
+            cell_name = None
+        instances = super(HostAPI, self).instance_get_all_by_host(context,
+                                                                  host_name)
+        if cell_name:
+            instances = [i for i in instances
+                         if i['cell_name'] == cell_name]
+        return instances

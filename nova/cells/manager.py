@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.1'
+    RPC_API_VERSION = '1.2'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -229,3 +229,34 @@ class CellsManager(manager.Manager):
         """
         self.msg_runner.sync_instances(ctxt, project_id, updated_since,
                                        deleted)
+
+    def service_get_all(self, ctxt, filters):
+        """Return services in this cell and in all child cells."""
+        responses = self.msg_runner.service_get_all(ctxt, filters)
+        ret_services = []
+        # 1 response per cell.  Each response is a list of services.
+        for response in responses:
+            services = response.value_or_raise()
+            for service in services:
+                cells_utils.add_cell_to_service(service, response.cell_name)
+                ret_services.append(service)
+        return ret_services
+
+    def service_get_by_compute_host(self, ctxt, host_name):
+        """Return a service entry for a compute host in a certain cell."""
+        cell_name, host_name = cells_utils.split_cell_and_item(host_name)
+        response = self.msg_runner.service_get_by_compute_host(ctxt,
+                                                               cell_name,
+                                                               host_name)
+        service = response.value_or_raise()
+        cells_utils.add_cell_to_service(service, response.cell_name)
+        return service
+
+    def proxy_rpc_to_manager(self, ctxt, topic, rpc_message, call, timeout):
+        """Proxy an RPC message as-is to a manager."""
+        compute_topic = CONF.compute_topic
+        cell_and_host = topic[len(compute_topic) + 1:]
+        cell_name, host_name = cells_utils.split_cell_and_item(cell_and_host)
+        response = self.msg_runner.proxy_rpc_to_manager(ctxt, cell_name,
+                host_name, topic, rpc_message, call, timeout)
+        return response.value_or_raise()

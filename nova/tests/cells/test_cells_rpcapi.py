@@ -224,3 +224,38 @@ class CellsAPITestCase(test.TestCase):
                          'deleted': True}
         self._check_result(call_info, 'sync_instances', expected_args,
                            version='1.1')
+
+    def test_service_get_all(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        fake_filters = {'key1': 'val1', 'key2': 'val2'}
+        result = self.cells_rpcapi.service_get_all(self.fake_context,
+                filters=fake_filters)
+
+        expected_args = {'filters': fake_filters}
+        self._check_result(call_info, 'service_get_all', expected_args,
+                           version='1.2')
+        self.assertEqual(result, 'fake_response')
+
+    def test_service_get_by_compute_host(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.service_get_by_compute_host(
+                self.fake_context, host_name='fake-host-name')
+        expected_args = {'host_name': 'fake-host-name'}
+        self._check_result(call_info, 'service_get_by_compute_host',
+                           expected_args,
+                           version='1.2')
+        self.assertEqual(result, 'fake_response')
+
+    def test_proxy_rpc_to_manager(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.proxy_rpc_to_manager(
+                self.fake_context, rpc_message='fake-msg',
+                topic='fake-topic', call=True, timeout=-1)
+        expected_args = {'rpc_message': 'fake-msg',
+                         'topic': 'fake-topic',
+                         'call': True,
+                         'timeout': -1}
+        self._check_result(call_info, 'proxy_rpc_to_manager',
+                           expected_args,
+                           version='1.2')
+        self.assertEqual(result, 'fake_response')

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.cells import utils as cells_utils
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -84,6 +85,42 @@ class ComputeHostAPITestCase(test.TestCase):
                                                     'fake_mode')
         self.assertEqual('fake-result', result)
 
+    def test_service_get_all_no_zones(self):
+        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
+                         host='host1'),
+                    dict(id=2, key1='val2', key3='val3', topic='compute',
+                         host='host2')]
+
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'service_get_all')
+
+        # Test no filters
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt)
+        self.mox.VerifyAll()
+        self.assertEqual(services, result)
+
+        # Test no filters #2
+        self.mox.ResetAll()
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt, filters={})
+        self.mox.VerifyAll()
+        self.assertEqual(services, result)
+
+        # Test w/ filter
+        self.mox.ResetAll()
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=dict(key1='val2'))
+        self.mox.VerifyAll()
+        self.assertEqual([services[1]], result)
+
     def test_service_get_all(self):
         services = [dict(id=1, key1='val1', key2='val2', topic='compute',
                          host='host1'),
@@ -99,28 +136,163 @@ class ComputeHostAPITestCase(test.TestCase):
                                  'service_get_all')
 
         # Test no filters
-        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
-                services)
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
         self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt)
+        result = self.host_api.service_get_all(self.ctxt, set_zones=True)
         self.mox.VerifyAll()
         self.assertEqual(exp_services, result)
 
         # Test no filters #2
         self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
-                services)
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
         self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt, filters={})
+        result = self.host_api.service_get_all(self.ctxt, filters={},
+                                               set_zones=True)
         self.mox.VerifyAll()
         self.assertEqual(exp_services, result)
 
         # Test w/ filter
         self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
-                services)
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
-                                               filters=dict(key1='val2'))
+                                               filters=dict(key1='val2'),
+                                               set_zones=True)
         self.mox.VerifyAll()
         self.assertEqual([exp_services[1]], result)
+
+        # Test w/ zone filter but no set_zones arg.
+        self.mox.ResetAll()
+        self.host_api.db.service_get_all(self.ctxt,
+                                         disabled=None).AndReturn(services)
+        self.mox.ReplayAll()
+        filters = {'availability_zone': 'nova'}
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=filters)
+        self.mox.VerifyAll()
+        self.assertEqual(exp_services, result)
+
+    def test_service_get_by_compute_host(self):
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'service_get_by_compute_host')
+
+        self.host_api.db.service_get_by_compute_host(self.ctxt,
+                'fake-host').AndReturn('fake-response')
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_by_compute_host(self.ctxt,
+                                                           'fake-host')
+        self.assertEqual('fake-response', result)
+
+    def test_instance_get_all_by_host(self):
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'instance_get_all_by_host')
+
+        self.host_api.db.instance_get_all_by_host(self.ctxt,
+                'fake-host').AndReturn(['fake-responses'])
+        self.mox.ReplayAll()
+        result = self.host_api.instance_get_all_by_host(self.ctxt,
+                                                        'fake-host')
+        self.assertEqual(['fake-responses'], result)
+
+
+class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
+    def setUp(self):
+        self.flags(compute_api_class='nova.compute.cells_api.ComputeCellsAPI')
+        super(ComputeHostAPICellsTestCase, self).setUp()
+
+    def _mock_rpc_call(self, expected_message, result=None):
+        if result is None:
+            result = 'fake-result'
+        # Wrapped with cells call
+        expected_message = {'method': 'proxy_rpc_to_manager',
+                            'args': {'topic': 'compute.fake_host',
+                                     'rpc_message': expected_message,
+                                     'call': True,
+                                     'timeout': None},
+                            'version': '1.2'}
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(self.ctxt, 'cells', expected_message,
+                 None).AndReturn(result)
+
+    def test_service_get_all_no_zones(self):
+        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
+                         host='host1'),
+                    dict(id=2, key1='val2', key3='val3', topic='compute',
+                         host='host2')]
+
+        fake_filters = {'key1': 'val1'}
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'service_get_all')
+        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
+                filters=fake_filters).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=fake_filters)
+        self.assertEqual(services, result)
+
+    def test_service_get_all(self):
+        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
+                         host='host1'),
+                    dict(id=2, key1='val2', key3='val3', topic='compute',
+                         host='host2')]
+        exp_services = []
+        for service in services:
+            exp_service = {}
+            exp_service.update(availability_zone='nova', **service)
+            exp_services.append(exp_service)
+
+        fake_filters = {'key1': 'val1'}
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'service_get_all')
+        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
+                filters=fake_filters).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=fake_filters,
+                                               set_zones=True)
+        self.mox.VerifyAll()
+        self.assertEqual(exp_services, result)
+
+        # Test w/ zone filter but no set_zones arg.
+        self.mox.ResetAll()
+        fake_filters = {'availability_zone': 'nova'}
+        # Zone filter is done client-size, so should be stripped
+        # from this call.
+        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
+                filters={}).AndReturn(services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=fake_filters)
+        self.mox.VerifyAll()
+        self.assertEqual(exp_services, result)
+
+    def test_service_get_by_compute_host(self):
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'service_get_by_compute_host')
+
+        self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
+                'fake-host').AndReturn('fake-response')
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_by_compute_host(self.ctxt,
+                                                           'fake-host')
+        self.assertEqual('fake-response', result)
+
+    def test_instance_get_all_by_host(self):
+        instances = [dict(id=1, cell_name='cell1', host='host1'),
+                     dict(id=2, cell_name='cell2', host='host1'),
+                     dict(id=3, cell_name='cell1', host='host2')]
+
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'instance_get_all_by_host')
+
+        self.host_api.db.instance_get_all_by_host(self.ctxt,
+                'fake-host').AndReturn(instances)
+        self.mox.ReplayAll()
+        expected_result = [instances[0], instances[2]]
+        cell_and_host = cells_utils.cell_with_item('cell1', 'fake-host')
+        result = self.host_api.instance_get_all_by_host(self.ctxt,
+                cell_and_host)
+        self.assertEqual(expected_result, result)
