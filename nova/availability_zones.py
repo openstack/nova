@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""utilities for multiple APIs."""
+"""Availability zone helper functions."""
 
 from nova import db
 from nova.openstack.common import cfg
