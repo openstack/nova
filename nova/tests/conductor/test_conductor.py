@@ -451,12 +451,16 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
 
-    def _test_stubbed(self, name, dbargs, condargs):
+    def _test_stubbed(self, name, dbargs, condargs,
+                      db_result_listified=False):
         self.mox.StubOutWithMock(db, name)
         getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.service_get_all_by(self.context, **condargs)
-        self.assertEqual(result, 'fake-result')
+        if db_result_listified:
+            self.assertEqual(['fake-result'], result)
+        else:
+            self.assertEqual('fake-result', result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (), {})
@@ -476,10 +480,11 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            ('host',),
                            dict(host='host'))
 
-    def test_service_get_all_compute_by_host(self):
-        self._test_stubbed('service_get_all_compute_by_host',
+    def test_service_get_by_compute_host(self):
+        self._test_stubbed('service_get_by_compute_host',
                            ('host',),
-                           dict(topic='compute', host='host'))
+                           dict(topic='compute', host='host'),
+                           db_result_listified=True)
 
     def test_service_get_by_args(self):
         self._test_stubbed('service_get_by_args',
@@ -547,12 +552,16 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
 
-    def _test_stubbed(self, name, dbargs, condargs):
+    def _test_stubbed(self, name, dbargs, condargs,
+                      db_result_listified=False):
         self.mox.StubOutWithMock(db, name)
         getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.service_get_all_by(self.context, **condargs)
-        self.assertEqual(result, 'fake-result')
+        if db_result_listified:
+            self.assertEqual(['fake-result'], result)
+        else:
+            self.assertEqual('fake-result', result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (), {})
@@ -572,10 +581,11 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                            ('host',),
                            dict(host='host'))
 
-    def test_service_get_all_compute_by_host(self):
-        self._test_stubbed('service_get_all_compute_by_host',
+    def test_service_get_by_compute_host(self):
+        self._test_stubbed('service_get_by_compute_host',
                            ('host',),
-                           dict(topic='compute', host='host'))
+                           dict(topic='compute', host='host'),
+                           db_result_listified=True)
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -681,8 +691,8 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     def test_service_get_all_by_host(self):
         self._test_stubbed('service_get_all_by_host', 'host')
 
-    def test_service_get_all_compute_by_host(self):
-        self._test_stubbed('service_get_all_compute_by_host', 'host')
+    def test_service_get_by_compute_host(self):
+        self._test_stubbed('service_get_by_compute_host', 'host')
 
     def test_service_create(self):
         self._test_stubbed('service_create', {})

@@ -192,12 +192,12 @@ class Scheduler(object):
         # Checking src host exists and compute node
         src = instance_ref['host']
         try:
-            services = db.service_get_all_compute_by_host(context, src)
+            service = db.service_get_by_compute_host(context, src)
         except exception.NotFound:
             raise exception.ComputeServiceUnavailable(host=src)
 
         # Checking src host is alive.
-        if not self.servicegroup_api.service_is_up(services[0]):
+        if not self.servicegroup_api.service_is_up(service):
             raise exception.ComputeServiceUnavailable(host=src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest):
@@ -209,8 +209,7 @@ class Scheduler(object):
         """
 
         # Checking dest exists and compute node.
-        dservice_refs = db.service_get_all_compute_by_host(context, dest)
-        dservice_ref = dservice_refs[0]
+        dservice_ref = db.service_get_by_compute_host(context, dest)
 
         # Checking dest host is alive.
         if not self.servicegroup_api.service_is_up(dservice_ref):
@@ -290,5 +289,5 @@ class Scheduler(object):
         :return: value specified by key
 
         """
-        compute_node_ref = db.service_get_all_compute_by_host(context, host)
-        return compute_node_ref[0]['compute_node'][0]
+        service_ref = db.service_get_by_compute_host(context, host)
+        return service_ref['compute_node'][0]

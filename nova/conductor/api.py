@@ -249,8 +249,11 @@ class LocalAPI(object):
     def service_get_by_host_and_topic(self, context, host, topic):
         return self._manager.service_get_all_by(context, topic, host)
 
-    def service_get_all_compute_by_host(self, context, host):
-        return self._manager.service_get_all_by(context, 'compute', host)
+    def service_get_by_compute_host(self, context, host):
+        result = self._manager.service_get_all_by(context, 'compute', host)
+        # FIXME(comstud): A major revision bump to 2.0 should return a
+        # single entry, so we should just return 'result' at that point.
+        return result[0]
 
     def service_get_by_args(self, context, host, binary):
         return self._manager.service_get_all_by(context, host=host,
@@ -493,9 +496,12 @@ class API(object):
     def service_get_by_host_and_topic(self, context, host, topic):
         return self.conductor_rpcapi.service_get_all_by(context, topic, host)
 
-    def service_get_all_compute_by_host(self, context, host):
-        return self.conductor_rpcapi.service_get_all_by(context, 'compute',
-                                                        host)
+    def service_get_by_compute_host(self, context, host):
+        result = self.conductor_rpcapi.service_get_all_by(context, 'compute',
+                                                          host)
+        # FIXME(comstud): A major revision bump to 2.0 should return a
+        # single entry, so we should just return 'result' at that point.
+        return result[0]
 
     def service_get_by_args(self, context, host, binary):
         return self.conductor_rpcapi.service_get_all_by(context, host=host,

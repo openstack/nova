@@ -981,19 +981,16 @@ class API(base.Base):
                             host=src_host, cast=False,
                             reservations=downsize_reservations)
 
-            # NOTE(jogo): db allows for multiple compute services per host
-            try:
-                services = self.db.service_get_all_compute_by_host(
-                        context.elevated(), instance['host'])
-            except exception.ComputeHostNotFound:
-                services = []
-
             is_up = False
-            for service in services:
+            try:
+                service = self.db.service_get_by_compute_host(
+                        context.elevated(), instance['host'])
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
                     cb(context, instance, bdms)
-                    break
+            except exception.ComputeHostNotFound:
+                pass
+
             if not is_up:
                 # If compute node isn't up, just delete from DB
                 self._local_delete(context, instance, bdms)
@@ -2265,9 +2262,8 @@ class HostAPI(base.Base):
         """
         # Getting compute node info and related instances info
         try:
-            compute_ref = self.db.service_get_all_compute_by_host(context,
-                host_name)
-            compute_ref = compute_ref[0]
+            compute_ref = self.db.service_get_by_compute_host(context,
+                                                              host_name)
         except exception.ComputeHostNotFound:
             raise exception.HostNotFound(host=host_name)
         instance_refs = self.db.instance_get_all_by_host(context,
@@ -2387,8 +2383,7 @@ class AggregateAPI(base.Base):
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
-        service = self.db.service_get_all_compute_by_host(
-                context, host_name)[0]
+        self.db.service_get_by_compute_host(context, host_name)
         aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_add(context, aggregate_id, host_name)
         #NOTE(jogo): Send message to host to support resource pools
@@ -2399,8 +2394,7 @@ class AggregateAPI(base.Base):
     def remove_host_from_aggregate(self, context, aggregate_id, host_name):
         """Removes host from the aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
-        service = self.db.service_get_all_compute_by_host(
-                context, host_name)[0]
+        self.db.service_get_by_compute_host(context, host_name)
         aggregate = self.db.aggregate_get(context, aggregate_id)
         self.db.aggregate_host_delete(context, aggregate_id, host_name)
         self.compute_rpcapi.remove_aggregate_host(context,

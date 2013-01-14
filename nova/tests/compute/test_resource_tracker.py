@@ -297,8 +297,8 @@ class MissingComputeNodeTestCase(BaseTestCase):
         super(MissingComputeNodeTestCase, self).setUp()
         self.tracker = self._tracker()
 
-        self.stubs.Set(db, 'service_get_all_compute_by_host',
-                self._fake_service_get_all_compute_by_host)
+        self.stubs.Set(db, 'service_get_by_compute_host',
+                self._fake_service_get_by_compute_host)
         self.stubs.Set(db, 'compute_node_create',
                 self._fake_create_compute_node)
 
@@ -306,10 +306,10 @@ class MissingComputeNodeTestCase(BaseTestCase):
         self.created = True
         return self._create_compute_node()
 
-    def _fake_service_get_all_compute_by_host(self, ctx, host):
+    def _fake_service_get_by_compute_host(self, ctx, host):
         # return a service with no joined compute
         service = self._create_service()
-        return [service]
+        return service
 
     def test_create_compute_node(self):
         self.tracker.update_available_resource(self.context)
@@ -330,8 +330,8 @@ class BaseTrackerTestCase(BaseTestCase):
         self.tracker = self._tracker()
         self._migrations = {}
 
-        self.stubs.Set(db, 'service_get_all_compute_by_host',
-                self._fake_service_get_all_compute_by_host)
+        self.stubs.Set(db, 'service_get_by_compute_host',
+                self._fake_service_get_by_compute_host)
         self.stubs.Set(db, 'compute_node_update',
                 self._fake_compute_node_update)
         self.stubs.Set(db, 'migration_update',
@@ -342,10 +342,10 @@ class BaseTrackerTestCase(BaseTestCase):
         self.tracker.update_available_resource(self.context)
         self.limits = self._limits()
 
-    def _fake_service_get_all_compute_by_host(self, ctx, host):
+    def _fake_service_get_by_compute_host(self, ctx, host):
         self.compute = self._create_compute_node()
         self.service = self._create_service(host, compute=self.compute)
-        return [self.service]
+        return self.service
 
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):

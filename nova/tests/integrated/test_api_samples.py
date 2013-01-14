@@ -2091,8 +2091,8 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
                            hypervisor_type='bar',
                            hypervisor_version='1',
                            disabled=False)
-            return [{'compute_node': [service]}]
-        self.stubs.Set(db, "service_get_all_compute_by_host", fake_get_compute)
+            return {'compute_node': [service]}
+        self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-live-migrate',
