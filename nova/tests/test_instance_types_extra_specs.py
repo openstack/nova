@@ -18,6 +18,7 @@ Unit Tests for instance types extra specs code
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import test
 
 
@@ -86,6 +87,13 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                               self.context,
                               self.flavorid)
         self.assertEquals(expected_specs, actual_specs)
+
+    def test_instance_type_extra_specs_update_with_nonexisting_flavor(self):
+        extra_specs = dict(cpu_arch="x86_64")
+        nonexisting_flavorid = "some_flavor_that_doesnt_exists"
+        self.assertRaises(exception.FlavorNotFound,
+                          db.instance_type_extra_specs_update_or_create,
+                          self.context, nonexisting_flavorid, extra_specs)
 
     def test_instance_type_extra_specs_create(self):
         expected_specs = dict(cpu_arch="x86_64",
