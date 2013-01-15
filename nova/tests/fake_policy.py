@@ -104,6 +104,7 @@ policy_data = """
     "compute_extension:admin_actions:migrate": "",
     "compute_extension:aggregates": "",
     "compute_extension:agents": "",
+    "compute_extension:cells": "",
     "compute_extension:certificates": "",
     "compute_extension:cloudpipe": "",
     "compute_extension:cloudpipe_update": "",

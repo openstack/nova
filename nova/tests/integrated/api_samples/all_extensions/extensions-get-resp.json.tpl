@@ -89,6 +89,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-cells",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Cells",
+            "namespace": "http://docs.openstack.org/compute/ext/cells/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-certificates",
             "description": "%(text)s",
             "links": [],

@@ -37,6 +37,12 @@
   <extension alias="os-availability-zone" updated="2012-08-09T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1" name="AvailabilityZone">
     <description>Add availability_zone to the Create Server v1.1 API.</description>
   </extension>
+  <extension alias="os-cells" updated="2011-09-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
+    <description>Enables cells-related functionality such as adding child cells,
+    listing child cells, getting the capabilities of the local cell,
+    and returning build plans to parent cells' schedulers
+    </description>
+  </extension>
   <extension alias="os-certificates" updated="2012-01-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
     <description>Certificates support.</description>
   </extension>

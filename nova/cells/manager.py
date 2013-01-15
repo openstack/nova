@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -186,6 +186,10 @@ class CellsManager(manager.Manager):
         self.msg_runner.schedule_run_instance(ctxt, our_cell,
                                               host_sched_kwargs)
 
+    def get_cell_info_for_neighbors(self, _ctxt):
+        """Return cell information for our neighbor cells."""
+        return self.state_manager.get_cell_info_for_neighbors()
+
     def run_compute_api_method(self, ctxt, cell_name, method_info, call):
         """Call a compute API method in a specific cell."""
         response = self.msg_runner.run_compute_api_method(ctxt,
@@ -218,3 +222,10 @@ class CellsManager(manager.Manager):
     def bw_usage_update_at_top(self, ctxt, bw_update_info):
         """Update bandwidth usage at top level cell."""
         self.msg_runner.bw_usage_update_at_top(ctxt, bw_update_info)
+
+    def sync_instances(self, ctxt, project_id, updated_since, deleted):
+        """Force a sync of all instances, potentially by project_id,
+        and potentially since a certain date/time.
+        """
+        self.msg_runner.sync_instances(ctxt, project_id, updated_since,
+                                       deleted)

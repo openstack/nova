@@ -3719,34 +3719,30 @@ def cell_create(context, values):
     return cell
 
 
-def _cell_get_by_id_query(context, cell_id, session=None):
-    return model_query(context, models.Cell, session=session).\
-                       filter_by(id=cell_id)
+def _cell_get_by_name_query(context, cell_name, session=None):
+    return model_query(context, models.Cell,
+                       session=session).filter_by(name=cell_name)
 
 
 @require_admin_context
-def cell_update(context, cell_id, values):
-    cell = cell_get(context, cell_id)
-    cell.update(values)
-    cell.save()
+def cell_update(context, cell_name, values):
+    session = get_session()
+    with session.begin():
+        cell = _cell_get_by_name_query(context, cell_name, session=session)
+        cell.update(values)
     return cell
 
 
 @require_admin_context
-def cell_delete(context, cell_id):
-    session = get_session()
-    with session.begin():
-        return _cell_get_by_id_query(context, cell_id, session=session).\
-                delete()
+def cell_delete(context, cell_name):
+    return _cell_get_by_name_query(context, cell_name).soft_delete()
 
 
 @require_admin_context
-def cell_get(context, cell_id):
-    result = _cell_get_by_id_query(context, cell_id).first()
-
+def cell_get(context, cell_name):
+    result = _cell_get_by_name_query(context, cell_name).first()
     if not result:
-        raise exception.CellNotFound(cell_id=cell_id)
-
+        raise exception.CellNotFound(cell_name=cell_name)
     return result
 
 

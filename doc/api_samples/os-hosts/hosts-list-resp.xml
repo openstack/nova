@@ -5,4 +5,5 @@
   <host host_name="2d1bdd671b5d41fd89dec74be5770c63" service="network"/>
   <host host_name="7c2dd5ecb7494dd1bf4240b7f7f9bf3a" service="scheduler"/>
   <host host_name="f9c273d8e03141a2a01def0ad18e5be4" service="conductor"/>
+  <host host_name="2b893569cd824b979bd80a2c94570a1f" service="cells"/>
 </hosts>

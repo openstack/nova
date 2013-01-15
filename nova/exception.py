@@ -768,7 +768,7 @@ class FlavorAccessNotFound(NotFound):
 
 
 class CellNotFound(NotFound):
-    message = _("Cell %(cell_id)s could not be found.")
+    message = _("Cell %(cell_name)s doesn't exist.")
 
 
 class CellRoutingInconsistency(NovaException):
