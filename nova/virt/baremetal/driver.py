@@ -188,13 +188,22 @@ class BareMetalDriver(driver.ComputeDriver):
             l.append(inst['name'])
         return l
 
-    def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+    def _require_node(self, instance):
+        """Get a node_id out of a manager instance dict.
 
+        The compute manager is meant to know the node id, so a missing node is
+        a significant issue - it may mean we've been passed someone elses data.
+        """
         node_id = instance.get('node')
         if not node_id:
             raise exception.NovaException(_(
-                    "Baremetal node id not supplied to driver"))
+                    "Baremetal node id not supplied to driver for %r")
+                    % instance['uuid'])
+        return node_id
+
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+        node_id = self._require_node(instance)
 
         # NOTE(deva): this db method will raise an exception if the node is
         #             already in use. We call it here to ensure no one else
