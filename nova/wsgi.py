@@ -83,13 +83,21 @@ class Server(object):
             raise exception.InvalidInput(
                     reason='The backlog must be more than 1')
 
+        bind_addr = (host, port)
+        # TODO(dims): eventlet's green dns/socket module does not actually
+        # support IPv6 in getaddrinfo(). We need to get around this in the
+        # future or monitor upstream for a fix
         try:
-            socket.inet_pton(socket.AF_INET6, host)
-            family = socket.AF_INET6
+            info = socket.getaddrinfo(bind_addr[0],
+                                      bind_addr[1],
+                                      socket.AF_UNSPEC,
+                                      socket.SOCK_STREAM)[0]
+            family = info[0]
+            bind_addr = info[-1]
         except Exception:
             family = socket.AF_INET
 
-        self._socket = eventlet.listen((host, port), family, backlog=backlog)
+        self._socket = eventlet.listen(bind_addr, family, backlog=backlog)
         (self.host, self.port) = self._socket.getsockname()[0:2]
         LOG.info(_("%(name)s listening on %(host)s:%(port)s") % self.__dict__)
 
