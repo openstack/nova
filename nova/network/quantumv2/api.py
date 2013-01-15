@@ -113,6 +113,7 @@ class API(base.Base):
             with requested_networks which is user supplied).
             NB: QuantumV2 does not yet honour mac address limits.
         """
+        hypervisor_macs = kwargs.get('macs', None)
         quantum = quantumv2.get_client(context)
         LOG.debug(_('allocate_for_instance() for %s'),
                   instance['display_name'])
@@ -127,7 +128,11 @@ class API(base.Base):
         if requested_networks:
             for network_id, fixed_ip, port_id in requested_networks:
                 if port_id:
-                    port = quantum.show_port(port_id).get('port')
+                    port = quantum.show_port(port_id)['port']
+                    if hypervisor_macs is not None:
+                        if port['mac_address'] not in hypervisor_macs:
+                            raise exception.PortNotUsable(port_id=port_id,
+                                instance=instance['display_name'])
                     network_id = port['network_id']
                     ports[network_id] = port
                 elif fixed_ip:
