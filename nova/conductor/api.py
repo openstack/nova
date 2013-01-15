@@ -278,6 +278,13 @@ class LocalAPI(object):
     def service_destroy(self, context, service_id):
         return self._manager.service_destroy(context, service_id)
 
+    def compute_node_create(self, context, values):
+        return self._manager.compute_node_create(context, values)
+
+    def compute_node_update(self, context, node, values, prune_stats=False):
+        return self._manager.compute_node_update(context, node, values,
+                                                 prune_stats)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -534,3 +541,10 @@ class API(object):
 
     def service_destroy(self, context, service_id):
         return self.conductor_rpcapi.service_destroy(context, service_id)
+
+    def compute_node_create(self, context, values):
+        return self.conductor_rpcapi.compute_node_create(context, values)
+
+    def compute_node_update(self, context, node, values, prune_stats=False):
+        return self.conductor_rpcapi.compute_node_update(context, node,
+                                                         values, prune_stats)

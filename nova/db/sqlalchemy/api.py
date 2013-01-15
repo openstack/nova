@@ -253,6 +253,12 @@ def exact_filter(query, model, filters, legal_keys):
     return query
 
 
+def convert_datetimes(values, *datetime_keys):
+    for key in values:
+        if key in datetime_keys and isinstance(values[key], basestring):
+            values[key] = timeutils.parse_strtime(values[key])
+    return values
+
 ###################
 
 
@@ -497,6 +503,7 @@ def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data."""
     _prep_stats_dict(values)
+    convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
@@ -545,9 +552,10 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
     stats = values.pop('stats', {})
 
     session = get_session()
-    with session.begin(subtransactions=True):
+    with session.begin():
         _update_stats(context, stats, compute_id, session, prune_stats)
         compute_ref = _compute_node_get(context, compute_id, session=session)
+        convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
         compute_ref.update(values)
     return compute_ref
 
