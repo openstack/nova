@@ -1298,10 +1298,16 @@ class API(base.Base):
             None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
         """
-        recv_meta = self._create_image(context, instance, name, 'backup',
+        instance = self.update(context, instance,
+                               task_state=task_states.IMAGE_BACKUP,
+                               expected_task_state=None)
+        image_meta = self._create_image(context, instance, name, 'backup',
                             backup_type=backup_type, rotation=rotation,
                             extra_properties=extra_properties)
-        return recv_meta
+        self.compute_rpcapi.snapshot_instance(context, instance=instance,
+                image_id=image_meta['id'], image_type='backup',
+                backup_type=backup_type, rotation=rotation)
+        return image_meta
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -1314,12 +1320,20 @@ class API(base.Base):
 
         :returns: A dict containing image metadata
         """
-        return self._create_image(context, instance, name, 'snapshot',
-                                  extra_properties=extra_properties)
+        instance = self.update(context, instance,
+                               task_state=task_states.IMAGE_SNAPSHOT,
+                               expected_task_state=None)
+        image_meta = self._create_image(context, instance, name,
+                'snapshot', extra_properties=extra_properties)
+        self.compute_rpcapi.snapshot_instance(context, instance=instance,
+                image_id=image_meta['id'], image_type='snapshot')
+        return image_meta
 
     def _create_image(self, context, instance, name, image_type,
                       backup_type=None, rotation=None, extra_properties=None):
-        """Create snapshot or backup for an instance on this host.
+        """Create new image entry in the image service.  This new image
+        will be reserved for the compute manager to upload a snapshot
+        or backup.
 
         :param context: security context
         :param instance: nova.db.sqlalchemy.models.Instance
@@ -1332,29 +1346,6 @@ class API(base.Base):
 
         """
         instance_uuid = instance['uuid']
-
-        if image_type == "snapshot":
-            task_state = task_states.IMAGE_SNAPSHOT
-        elif image_type == "backup":
-            task_state = task_states.IMAGE_BACKUP
-        else:
-            raise Exception(_('Image type not recognized %s') % image_type)
-
-        # change instance state and notify
-        old_vm_state = instance["vm_state"]
-        old_task_state = instance["task_state"]
-
-        self.db.instance_test_and_set(
-                context, instance_uuid, 'task_state', [None], task_state)
-
-        # NOTE(sirp): `instance_test_and_set` only sets the task-state in the
-        # DB, but we also need to set it on the current instance so that the
-        # correct value is passed down to the compute manager.
-        instance['task_state'] = task_state
-
-        notifications.send_update_with_states(context, instance, old_vm_state,
-                instance["vm_state"], old_task_state, instance["task_state"],
-                service="api", verify_states=True)
 
         properties = {
             'instance_uuid': instance_uuid,
@@ -1402,11 +1393,7 @@ class API(base.Base):
             # up above will not be overwritten by inherited values
             properties.setdefault(key, value)
 
-        recv_meta = self.image_service.create(context, sent_meta)
-        self.compute_rpcapi.snapshot_instance(context, instance=instance,
-                image_id=recv_meta['id'], image_type=image_type,
-                backup_type=backup_type, rotation=rotation)
-        return recv_meta
+        return self.image_service.create(context, sent_meta)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def snapshot_volume_backed(self, context, instance, image_meta, name,

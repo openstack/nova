@@ -4383,26 +4383,24 @@ class ComputeAPITestCase(BaseTestCase):
         and min_disk set to that of the original instances flavor.
         """
 
-        self.fake_image['disk_format'] = 'vhd'
+        self.fake_image.update(disk_format='vhd',
+                               min_ram=1, min_disk=1)
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        instance = self._create_fake_instance()
-        inst_params = {'root_gb': 2, 'memory_mb': 256}
-        instance['instance_type'].update(inst_params)
+        instance = self._create_fake_instance(type_name='m1.small')
 
         image = self.compute_api.snapshot(self.context, instance, 'snap1',
                                           {'extra_param': 'value1'})
 
         self.assertEqual(image['name'], 'snap1')
-        self.assertEqual(image['min_ram'], 256)
-        self.assertEqual(image['min_disk'], 2)
+        instance_type = instance['instance_type']
+        self.assertEqual(image['min_ram'], instance_type['memory_mb'])
+        self.assertEqual(image['min_disk'], instance_type['root_gb'])
         properties = image['properties']
         self.assertTrue('backup_type' not in properties)
         self.assertEqual(properties['image_type'], 'snapshot')
         self.assertEqual(properties['instance_uuid'], instance['uuid'])
         self.assertEqual(properties['extra_param'], 'value1')
-
-        db.instance_destroy(self.context, instance['uuid'])
 
     def test_snapshot_minram_mindisk(self):
         """Ensure a snapshots min_ram and min_disk are correct.

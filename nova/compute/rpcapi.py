@@ -525,7 +525,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='2.3')
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
-            backup_type, rotation):
+            backup_type=None, rotation=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('snapshot_instance',
                 instance=instance_p, image_id=image_id,
