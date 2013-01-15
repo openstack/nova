@@ -171,13 +171,44 @@ def decrypt_text(project_id, text):
         raise exception.ProjectNotFound(project_id=project_id)
     try:
         dec, _err = utils.execute('openssl',
-                                 'rsautl',
-                                 '-decrypt',
-                                 '-inkey', '%s' % private_key,
-                                 process_input=text)
+                                  'rsautl',
+                                  '-decrypt',
+                                  '-inkey', '%s' % private_key,
+                                  process_input=text)
         return dec
-    except exception.ProcessExecutionError:
-        raise exception.DecryptionFailure()
+    except exception.ProcessExecutionError as exc:
+        raise exception.DecryptionFailure(reason=exc.stderr)
+
+
+def ssh_encrypt_text(ssh_public_key, text):
+    """Encrypt text with an ssh public key.
+
+    Requires recent ssh-keygen binary in addition to openssl binary.
+    """
+    with utils.tempdir() as tmpdir:
+        sshkey = os.path.abspath(os.path.join(tmpdir, 'ssh.key'))
+        with open(sshkey, 'w') as f:
+            f.write(ssh_public_key)
+        sslkey = os.path.abspath(os.path.join(tmpdir, 'ssl.key'))
+        try:
+            # NOTE(vish): -P is to skip prompt on bad keys
+            out, _err = utils.execute('ssh-keygen',
+                                      '-P', '',
+                                      '-e',
+                                      '-f', sshkey,
+                                      '-m', 'PKCS8')
+            with open(sslkey, 'w') as f:
+                f.write(out)
+            enc, _err = utils.execute('openssl',
+                                      'rsautl',
+                                      '-encrypt',
+                                      '-pubin',
+                                      '-inkey', sslkey,
+                                      '-keyform', 'PEM',
+                                      process_input=text)
+            return enc
+        except exception.ProcessExecutionError as exc:
+            raise exception.EncryptionFailure(reason=exc.stderr)
 
 
 def revoke_cert(project_id, file_name):

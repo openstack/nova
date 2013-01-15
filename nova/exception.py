@@ -179,8 +179,12 @@ class DBDuplicateEntry(DBError):
         super(DBDuplicateEntry, self).__init__(inner_exception)
 
 
+class EncryptionFailure(NovaException):
+    message = _("Failed to encrypt text: %(reason)s")
+
+
 class DecryptionFailure(NovaException):
-    message = _("Failed to decrypt text")
+    message = _("Failed to decrypt text: %(reason)s")
 
 
 class VirtualInterfaceCreateException(NovaException):
