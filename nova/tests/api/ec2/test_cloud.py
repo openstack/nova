@@ -30,6 +30,7 @@ import fixtures
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
+from nova.api.metadata import password
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
@@ -1386,6 +1387,17 @@ class CloudTestCase(test.TestCase):
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         return instance_id
+
+    def test_get_password_data(self):
+        instance_id = self._run_instance(
+            image_id='ami-1',
+            instance_type=CONF.default_instance_type,
+            max_count=1)
+        self.stubs.Set(password, 'extract_password', lambda i: 'fakepass')
+        output = self.cloud.get_password_data(context=self.context,
+                                              instance_id=[instance_id])
+        self.assertEquals(output['passwordData'], 'fakepass')
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_console_output(self):
         instance_id = self._run_instance(

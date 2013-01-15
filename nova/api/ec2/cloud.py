@@ -27,6 +27,7 @@ import time
 
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
+from nova.api.metadata import password
 from nova.api import validator
 from nova import availability_zones
 from nova import block_device
@@ -757,6 +758,23 @@ class CloudController(object):
         self.security_group_api.destroy(context, security_group)
 
         return True
+
+    def get_password_data(self, context, instance_id, **kwargs):
+        # instance_id may be passed in as a list of instances
+        if isinstance(instance_id, list):
+            ec2_id = instance_id[0]
+        else:
+            ec2_id = instance_id
+        validate_ec2_id(ec2_id)
+        instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+        instance = self.compute_api.get(context, instance_uuid)
+        output = password.extract_password(instance)
+        # NOTE(vish): this should be timestamp from the metadata fields
+        #             but it isn't important enough to implement properly
+        now = timeutils.utcnow()
+        return {"InstanceId": ec2_id,
+                "Timestamp": now,
+                "passwordData": output}
 
     def get_console_output(self, context, instance_id, **kwargs):
         LOG.audit(_("Get console output for instance %s"), instance_id,
