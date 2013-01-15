@@ -18,7 +18,7 @@
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute_api
-from nova.compute import task_states
+from nova.compute import instance_types
 from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import excutils
@@ -254,22 +254,14 @@ class ComputeCellsAPI(compute_api.API):
     @validate_cell
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
-        # NOTE(markwash): regular api manipulates the migration here, but we
-        # don't have access to it. So to preserve the interface just update the
-        # vm and task state.
-        self.update(context, instance,
-                    task_state=task_states.RESIZE_REVERTING)
+        super(ComputeCellsAPI, self).revert_resize(context, instance)
         self._cast_to_cells(context, instance, 'revert_resize')
 
     @check_instance_state(vm_state=[vm_states.RESIZED])
     @validate_cell
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
-        # NOTE(markwash): regular api manipulates migration here, but we don't
-        # have the migration in the api database. So to preserve the interface
-        # just update the vm and task state without calling super()
-        self.update(context, instance, task_state=None,
-                    vm_state=vm_states.ACTIVE)
+        super(ComputeCellsAPI, self).confirm_resize(context, instance)
         self._cast_to_cells(context, instance, 'confirm_resize')
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
@@ -282,8 +274,36 @@ class ComputeCellsAPI(compute_api.API):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        super(ComputeCellsAPI, self).resize(context, instance, *args,
-                **kwargs)
+        super(ComputeCellsAPI, self).resize(context, instance, *args, **kwargs)
+
+        # NOTE(johannes): If we get to this point, then we know the
+        # specified flavor_id is valid and exists. We'll need to load
+        # it again, but that should be safe.
+
+        old_instance_type_id = instance['instance_type_id']
+        old_instance_type = instance_types.get_instance_type(
+                old_instance_type_id)
+
+        flavor_id = kwargs.get('flavor_id')
+
+        if not flavor_id:
+            new_instance_type = old_instance_type
+        else:
+            new_instance_type = instance_types.get_instance_type_by_flavor_id(
+                    flavor_id)
+
+        # NOTE(johannes): Later, when the resize is confirmed or reverted,
+        # the superclass implementations of those methods will need access
+        # to a local migration record for quota reasons. We don't need
+        # source and/or destination information, just the old and new
+        # instance_types. Status is set to 'finished' since nothing else
+        # will update the status along the way.
+        self.db.migration_create(context.elevated(),
+                    {'instance_uuid': instance['uuid'],
+                     'old_instance_type_id': old_instance_type['id'],
+                     'new_instance_type_id': new_instance_type['id'],
+                     'status': 'finished'})
+
         # FIXME(comstud): pass new instance_type object down to a method
         # that'll unfold it
         self._cast_to_cells(context, instance, 'resize', *args, **kwargs)
