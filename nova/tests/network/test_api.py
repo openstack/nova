@@ -17,7 +17,10 @@
 
 """Tests for network API."""
 
+import itertools
 import random
+
+import mox
 
 from nova import context
 from nova import exception
@@ -36,6 +39,25 @@ class ApiTestCase(test.TestCase):
         self.network_api = network.API()
         self.context = context.RequestContext('fake-user',
                                               'fake-project')
+
+    def test_allocate_for_instance_handles_macs_passed(self):
+        # If a macs argument is supplied to the 'nova-network' API, it is just
+        # ignored. This test checks that the call down to the rpcapi layer
+        # doesn't pass macs down: nova-network doesn't support hypervisor
+        # mac address limits (today anyhow).
+        macs = set(['ab:cd:ef:01:23:34'])
+        self.mox.StubOutWithMock(
+            self.network_api.network_rpcapi, "allocate_for_instance")
+        kwargs = dict(zip(['host', 'instance_id', 'instance_uuid',
+            'project_id', 'requested_networks', 'rxtx_factor', 'vpn'],
+            itertools.repeat(mox.IgnoreArg())))
+        self.network_api.network_rpcapi.allocate_for_instance(
+            mox.IgnoreArg(), **kwargs).AndReturn([])
+        self.mox.ReplayAll()
+        instance = dict(id='id', uuid='uuid', project_id='project_id',
+            host='host', instance_type={'rxtx_factor': 0})
+        self.network_api.allocate_for_instance(
+            'context', instance, 'vpn', 'requested_networks', macs=macs)
 
     def _do_test_associate_floating_ip(self, orig_instance_uuid):
         """Test post-association logic."""

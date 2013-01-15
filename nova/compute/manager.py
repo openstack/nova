@@ -678,9 +678,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             try:
                 limits = filter_properties.get('limits', {})
                 with rt.instance_claim(context, instance, limits):
-
+                    macs = self.driver.macs_for_instance(instance)
                     network_info = self._allocate_network(context, instance,
-                            requested_networks)
+                            requested_networks, macs)
                     block_device_info = self._prep_block_device(context,
                             instance, bdms)
                     instance = self._spawn(context, instance, image_meta,
@@ -911,7 +911,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=(task_states.SCHEDULING,
                                                    None))
 
-    def _allocate_network(self, context, instance, requested_networks):
+    def _allocate_network(self, context, instance, requested_networks, macs):
         """Allocate networks for an instance and return the network info."""
         instance = self._instance_update(context, instance['uuid'],
                                          vm_state=vm_states.BUILDING,
@@ -922,7 +922,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # allocate and get network info
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
-                                requested_networks=requested_networks)
+                                requested_networks=requested_networks,
+                                macs=macs)
         except Exception:
             LOG.exception(_('Instance failed network setup'),
                           instance=instance)

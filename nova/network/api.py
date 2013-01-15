@@ -184,9 +184,15 @@ class API(base.Base):
 
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
-                              requested_networks):
+                              requested_networks, macs=None):
         """Allocates all network structures for an instance.
 
+        TODO(someone): document the rest of these parameters.
+
+        :param macs: None or a set of MAC addresses that the instance
+            should use. macs is supplied by the hypervisor driver (contrast
+            with requested_networks which is user supplied).
+            NB: macs is ignored by nova-network.
         :returns: network info as from get_instance_nw_info() below
         """
         args = {}
