@@ -136,6 +136,19 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         row = db.bm_node_get(self.context, self.node['id'])
         self.assertEqual(row['task_state'], baremetal_states.ACTIVE)
 
+    def test_macs_for_instance(self):
+        self._create_node()
+        expected = set(['01:23:45:67:89:01', '01:23:45:67:89:02'])
+        self.assertEqual(
+            expected, self.driver.macs_for_instance(self.test_instance))
+
+    def test_macs_for_instance_no_interfaces(self):
+        # Nodes cannot boot with no MACs, so we raise an error if that happens.
+        self.nic_info = []
+        self._create_node()
+        self.assertRaises(exception.NovaException,
+            self.driver.macs_for_instance, self.test_instance)
+
     def test_spawn_node_in_use(self):
         self._create_node()
         db.bm_node_update(self.context, self.node['id'],
