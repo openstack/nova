@@ -157,6 +157,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.21 - Add migrate_data dict param to pre_live_migration()
         2.22 - Add recreate, on_shared_storage and host arguments to
                rebuild_instance()
+        2.23 - Remove network_info from reboot_instance
     '''
 
     #
@@ -383,16 +384,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 _compute_topic(self.topic, ctxt, host, None),
                 version='2.20')
 
-    def reboot_instance(self, ctxt, instance,
-                        block_device_info, network_info, reboot_type):
+    def reboot_instance(self, ctxt, instance, block_device_info,
+                        reboot_type):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reboot_instance',
                 instance=instance_p,
                 block_device_info=block_device_info,
-                network_info=network_info,
                 reboot_type=reboot_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.5')
+                version='2.23')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
