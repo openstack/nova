@@ -593,7 +593,10 @@ class API(base.Base):
                 bridge = "brq" + port['network_id']
 
             if bridge is not None:
-                bridge = bridge[:network_model.BRIDGE_NAME_LEN]
+                bridge = bridge[:network_model.NIC_NAME_LEN]
+
+            devname = "tap" + port['id']
+            devname = devname[:network_model.NIC_NAME_LEN]
 
             network = network_model.Network(
                 id=port['network_id'],
@@ -607,7 +610,8 @@ class API(base.Base):
                 id=port['id'],
                 address=port['mac_address'],
                 network=network,
-                type=port.get('binding:vif_type')))
+                type=port.get('binding:vif_type'),
+                devname=devname))
         return nw_info
 
     def _get_subnets_from_port(self, context, port):

@@ -32,9 +32,10 @@ VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'
 VIF_TYPE_OTHER = 'other'
 
-# Constant for max length of 'bridge' in Network class
-# Chosen to match max Linux NIC name length
-BRIDGE_NAME_LEN = 14
+# Constant for max length of network interface names
+# eg 'bridge' in the Network class or 'devname' in
+# the VIF class
+NIC_NAME_LEN = 14
 
 
 class Model(dict):
@@ -206,13 +207,14 @@ class Network(Model):
 class VIF(Model):
     """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
-                 **kwargs):
+                 devname=None, **kwargs):
         super(VIF, self).__init__()
 
         self['id'] = id
         self['address'] = address
         self['network'] = network or None
         self['type'] = type
+        self['devname'] = devname
 
         self._set_meta(kwargs)
 
@@ -377,6 +379,7 @@ class NetworkInfo(list):
                          'broadcast': str(subnet_v4.as_netaddr().broadcast),
                          'mac': vif['address'],
                          'vif_type': vif['type'],
+                         'vif_devname': vif.get('devname'),
                          'vif_uuid': vif['id'],
                          'rxtx_cap': vif.get_meta('rxtx_cap', 0),
                          'dns': [get_ip(ip) for ip in subnet_v4['dns']],
