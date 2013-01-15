@@ -104,22 +104,26 @@ class SchedulerManager(manager.Manager):
         """Tries to call schedule_run_instance on the driver.
         Sets instance vm_state to ERROR on exceptions
         """
-        try:
-            return self.driver.schedule_run_instance(context,
-                    request_spec, admin_password, injected_files,
-                    requested_networks, is_first_time, filter_properties)
-        except exception.NoValidHost as ex:
-            # don't re-raise
-            self._set_vm_state_and_notify('run_instance',
-                                         {'vm_state': vm_states.ERROR,
-                                          'task_state': None},
-                                          context, ex, request_spec)
-        except Exception as ex:
-            with excutils.save_and_reraise_exception():
+        instance_uuids = request_spec['instance_uuids']
+        with compute_utils.EventReporter(context, conductor_api.LocalAPI(),
+                                         'schedule', *instance_uuids):
+            try:
+                return self.driver.schedule_run_instance(context,
+                        request_spec, admin_password, injected_files,
+                        requested_networks, is_first_time, filter_properties)
+
+            except exception.NoValidHost as ex:
+                # don't re-raise
                 self._set_vm_state_and_notify('run_instance',
-                                             {'vm_state': vm_states.ERROR,
+                                              {'vm_state': vm_states.ERROR,
                                               'task_state': None},
-                                             context, ex, request_spec)
+                                              context, ex, request_spec)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    self._set_vm_state_and_notify('run_instance',
+                                                  {'vm_state': vm_states.ERROR,
+                                                  'task_state': None},
+                                                  context, ex, request_spec)
 
     def prep_resize(self, context, image, request_spec, filter_properties,
                     instance, instance_type, reservations):
@@ -127,32 +131,35 @@ class SchedulerManager(manager.Manager):
         Sets instance vm_state to ACTIVE on NoHostFound
         Sets vm_state to ERROR on other exceptions
         """
-        try:
-            kwargs = {
-                'context': context,
-                'image': image,
-                'request_spec': request_spec,
-                'filter_properties': filter_properties,
-                'instance': instance,
-                'instance_type': instance_type,
-                'reservations': reservations,
-            }
-            return self.driver.schedule_prep_resize(**kwargs)
-        except exception.NoValidHost as ex:
-            self._set_vm_state_and_notify('prep_resize',
-                                         {'vm_state': vm_states.ACTIVE,
-                                          'task_state': None},
-                                         context, ex, request_spec)
-            if reservations:
-                QUOTAS.rollback(context, reservations)
-        except Exception as ex:
-            with excutils.save_and_reraise_exception():
+        instance_uuid = instance['uuid']
+        with compute_utils.EventReporter(context, conductor_api.LocalAPI(),
+                                         'schedule', instance_uuid):
+            try:
+                kwargs = {
+                    'context': context,
+                    'image': image,
+                    'request_spec': request_spec,
+                    'filter_properties': filter_properties,
+                    'instance': instance,
+                    'instance_type': instance_type,
+                    'reservations': reservations,
+                }
+                return self.driver.schedule_prep_resize(**kwargs)
+            except exception.NoValidHost as ex:
                 self._set_vm_state_and_notify('prep_resize',
-                                             {'vm_state': vm_states.ERROR,
+                                             {'vm_state': vm_states.ACTIVE,
                                               'task_state': None},
                                              context, ex, request_spec)
                 if reservations:
                     QUOTAS.rollback(context, reservations)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    self._set_vm_state_and_notify('prep_resize',
+                                                 {'vm_state': vm_states.ERROR,
+                                                  'task_state': None},
+                                                 context, ex, request_spec)
+                    if reservations:
+                        QUOTAS.rollback(context, reservations)
 
     def _set_vm_state_and_notify(self, method, updates, context, ex,
                                  request_spec):

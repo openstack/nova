@@ -1005,7 +1005,11 @@ class InstanceFault(BASE, NovaBase):
 
 
 class InstanceAction(BASE, NovaBase):
-    """Track client actions on an instance."""
+    """Track client actions on an instance.
+
+    The intention is that there will only be one of these per user request.  A
+    lookup by (instance_uuid, request_id) should always return a single result.
+    """
     __tablename__ = 'instance_actions'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     action = Column(String(255))

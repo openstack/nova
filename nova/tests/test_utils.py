@@ -16,6 +16,7 @@
 
 import __builtin__
 import datetime
+import functools
 import hashlib
 import os
 import os.path
@@ -789,3 +790,137 @@ class MetadataToDictTestCase(test.TestCase):
 
     def test_metadata_to_dict_empty(self):
         self.assertEqual(utils.metadata_to_dict([]), {})
+
+
+class WrappedCodeTestCase(test.TestCase):
+    """Test the get_wrapped_function utility method."""
+
+    def _wrapper(self, function):
+        @functools.wraps(function)
+        def decorated_function(self, *args, **kwargs):
+            function(self, *args, **kwargs)
+        return decorated_function
+
+    def test_single_wrapped(self):
+        @self._wrapper
+        def wrapped(self, instance, red=None, blue=None):
+            pass
+
+        func = utils.get_wrapped_function(wrapped)
+        func_code = func.func_code
+        self.assertEqual(4, len(func_code.co_varnames))
+        self.assertTrue('self' in func_code.co_varnames)
+        self.assertTrue('instance' in func_code.co_varnames)
+        self.assertTrue('red' in func_code.co_varnames)
+        self.assertTrue('blue' in func_code.co_varnames)
+
+    def test_double_wrapped(self):
+        @self._wrapper
+        @self._wrapper
+        def wrapped(self, instance, red=None, blue=None):
+            pass
+
+        func = utils.get_wrapped_function(wrapped)
+        func_code = func.func_code
+        self.assertEqual(4, len(func_code.co_varnames))
+        self.assertTrue('self' in func_code.co_varnames)
+        self.assertTrue('instance' in func_code.co_varnames)
+        self.assertTrue('red' in func_code.co_varnames)
+        self.assertTrue('blue' in func_code.co_varnames)
+
+    def test_triple_wrapped(self):
+        @self._wrapper
+        @self._wrapper
+        @self._wrapper
+        def wrapped(self, instance, red=None, blue=None):
+            pass
+
+        func = utils.get_wrapped_function(wrapped)
+        func_code = func.func_code
+        self.assertEqual(4, len(func_code.co_varnames))
+        self.assertTrue('self' in func_code.co_varnames)
+        self.assertTrue('instance' in func_code.co_varnames)
+        self.assertTrue('red' in func_code.co_varnames)
+        self.assertTrue('blue' in func_code.co_varnames)
+
+
+class GetCallArgsTestCase(test.TestCase):
+    def _test_func(self, instance, red=None, blue=None):
+        pass
+
+    def test_all_kwargs(self):
+        args = ()
+        kwargs = {'instance': {'uuid': 1}, 'red': 3, 'blue': 4}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        #implicit self counts as an arg
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(4, callargs['blue'])
+
+    def test_all_args(self):
+        args = ({'uuid': 1}, 3, 4)
+        kwargs = {}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        #implicit self counts as an arg
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(4, callargs['blue'])
+
+    def test_mixed_args(self):
+        args = ({'uuid': 1}, 3)
+        kwargs = {'blue': 4}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        #implicit self counts as an arg
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(4, callargs['blue'])
+
+    def test_partial_kwargs(self):
+        args = ()
+        kwargs = {'instance': {'uuid': 1}, 'red': 3}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        #implicit self counts as an arg
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(None, callargs['blue'])
+
+    def test_partial_args(self):
+        args = ({'uuid': 1}, 3)
+        kwargs = {}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        #implicit self counts as an arg
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(None, callargs['blue'])
+
+    def test_partial_mixed_args(self):
+        args = (3,)
+        kwargs = {'instance': {'uuid': 1}}
+        callargs = utils.getcallargs(self._test_func, *args, **kwargs)
+        self.assertEqual(4, len(callargs))
+        self.assertTrue('instance' in callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
+        self.assertTrue('red' in callargs)
+        self.assertEqual(3, callargs['red'])
+        self.assertTrue('blue' in callargs)
+        self.assertEqual(None, callargs['blue'])

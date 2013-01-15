@@ -233,6 +233,29 @@ def wrap_instance_fault(function):
     return decorated_function
 
 
+def wrap_instance_event(function):
+    """Wraps a method to log the event taken on the instance, and result.
+
+    This decorator wraps a method to log the start and result of an event, as
+    part of an action taken on an instance.
+    """
+
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
+        wrapped_func = utils.get_wrapped_function(function)
+        keyed_args = utils.getcallargs(wrapped_func, context, *args,
+                                       **kwargs)
+        instance_uuid = keyed_args['instance']['uuid']
+
+        event_name = 'compute_{0}'.format(function.func_name)
+        with compute_utils.EventReporter(context, self.conductor_api,
+                                         event_name, instance_uuid):
+
+            function(self, context, *args, **kwargs)
+
+    return decorated_function
+
+
 def _get_image_meta(context, image_ref):
     image_service, image_id = glance.get_remote_image_service(context,
                                                               image_ref)
@@ -1036,6 +1059,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def run_instance(self, context, instance, request_spec=None,
                      filter_properties=None, requested_networks=None,
@@ -1142,6 +1166,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 system_metadata=system_meta)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_event
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms=None):
         """Terminate an instance on this host."""
@@ -1174,6 +1199,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # can't use that name in grizzly.
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def stop_instance(self, context, instance):
         """Stopping an instance on this host."""
@@ -1193,6 +1219,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     # can't use that name in grizzly.
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def start_instance(self, context, instance):
         """Starting an instance on this host."""
@@ -1209,6 +1236,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def soft_delete_instance(self, context, instance):
         """Soft delete an instance on this host."""
@@ -1230,6 +1258,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def restore_instance(self, context, instance):
         """Restore a soft-deleted instance on this host."""
@@ -1272,6 +1301,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata=None,
@@ -1417,6 +1447,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def reboot_instance(self, context, instance,
                         block_device_info=None,
@@ -1573,6 +1604,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def set_admin_password(self, context, instance, new_pass=None):
         """Set the root/admin password for an instance on this host.
@@ -1673,6 +1705,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def rescue_instance(self, context, instance, rescue_password=None):
         """
@@ -1710,6 +1743,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
         """Rescue an instance on this host."""
@@ -1740,6 +1774,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.change_instance_metadata(context, instance, diff)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_event
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations=None,
                        migration=None, migration_id=None):
@@ -1771,6 +1806,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def revert_resize(self, context, instance, migration=None,
                       migration_id=None, reservations=None):
@@ -1815,6 +1851,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def finish_revert_resize(self, context, instance, reservations=None,
                              migration=None, migration_id=None):
@@ -1923,6 +1960,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
                     reservations=None, request_spec=None,
@@ -2000,6 +2038,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
                         reservations=None, migration=None, migration_id=None,
@@ -2133,6 +2172,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
                       reservations=None, migration=None, migration_id=None):
@@ -2203,6 +2243,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def pause_instance(self, context, instance):
         """Pause an instance on this host."""
@@ -2220,6 +2261,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def unpause_instance(self, context, instance):
         """Unpause a paused instance on this host."""
@@ -2268,6 +2310,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def suspend_instance(self, context, instance):
         """Suspend the given instance."""
@@ -2287,6 +2330,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
+    @wrap_instance_event
     @wrap_instance_fault
     def resume_instance(self, context, instance):
         """Resume the given suspended instance."""

@@ -31,6 +31,7 @@ import uuid
 
 from nova import availability_zones
 from nova import block_device
+from nova.compute import instance_actions
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -189,6 +190,11 @@ class API(base.Base):
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
+
+    def _record_action_start(self, context, instance, action):
+        act = compute_utils.pack_action_start(context, instance['uuid'],
+                                              action)
+        self.db.action_start(context, act)
 
     def _check_injected_file_quota(self, context, injected_files):
         """Enforce quota limits on injected files.
@@ -624,6 +630,10 @@ class API(base.Base):
                         block_device_mapping, auto_disk_config,
                         reservation_id, scheduler_hints)
 
+        for instance in instances:
+            self._record_action_start(context, instance,
+                                      instance_actions.CREATE)
+
         self.scheduler_rpcapi.run_instance(context,
                 request_spec=request_spec,
                 admin_password=admin_password, injected_files=injected_files,
@@ -1030,6 +1040,10 @@ class API(base.Base):
                         context.elevated(), instance['host'])
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
+
+                    self._record_action_start(context, instance,
+                                              instance_actions.DELETE)
+
                     cb(context, instance, bdms)
             except exception.ComputeHostNotFound:
                 pass
@@ -1173,6 +1187,8 @@ class API(base.Base):
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, 1, 1)
 
+        self._record_action_start(context, instance, instance_actions.RESTORE)
+
         try:
             if instance['host']:
                 instance = self.update(context, instance,
@@ -1214,6 +1230,8 @@ class API(base.Base):
                     expected_task_state=None,
                     progress=0)
 
+        self._record_action_start(context, instance, instance_actions.STOP)
+
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
 
     @wrap_check_policy
@@ -1227,6 +1245,7 @@ class API(base.Base):
                                task_state=task_states.POWERING_ON,
                                expected_task_state=None)
 
+        self._record_action_start(context, instance, instance_actions.START)
         # TODO(yamahata): injected_files isn't supported right now.
         #                 It is used only for osapi. not for ec2 api.
         #                 availability_zone isn't used by run_instance.
@@ -1637,6 +1656,8 @@ class API(base.Base):
         block_info = self._get_block_device_info(elevated,
                                                         instance['uuid'])
 
+        self._record_action_start(context, instance, instance_actions.REBOOT)
+
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                                             block_device_info=block_info,
                                             reboot_type=reboot_type)
@@ -1727,6 +1748,8 @@ class API(base.Base):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,
                 instance['uuid'])
 
+        self._record_action_start(context, instance, instance_actions.REBUILD)
+
         self.compute_rpcapi.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
@@ -1757,6 +1780,9 @@ class API(base.Base):
             QUOTAS.commit(context, reservations)
             reservations = []
 
+        self._record_action_start(context, instance,
+                                  instance_actions.REVERT_RESIZE)
+
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration=migration_ref,
                 host=migration_ref['dest_compute'], reservations=reservations)
@@ -1785,6 +1811,9 @@ class API(base.Base):
         if CONF.cells.enable and reservations:
             QUOTAS.commit(context, reservations)
             reservations = []
+
+        self._record_action_start(context, instance,
+                                  instance_actions.CONFIRM_RESIZE)
 
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration=migration_ref,
@@ -1961,6 +1990,9 @@ class API(base.Base):
             "filter_properties": filter_properties,
             "reservations": reservations,
         }
+
+        self._record_action_start(context, instance, instance_actions.RESIZE)
+
         self.scheduler_rpcapi.prep_resize(context, **args)
 
     @wrap_check_policy
@@ -1987,6 +2019,9 @@ class API(base.Base):
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.PAUSING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.PAUSE)
+
         self.compute_rpcapi.pause_instance(context, instance=instance)
 
     @wrap_check_policy
@@ -1999,6 +2034,9 @@ class API(base.Base):
                     vm_state=vm_states.PAUSED,
                     task_state=task_states.UNPAUSING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.UNPAUSE)
+
         self.compute_rpcapi.unpause_instance(context, instance=instance)
 
     @wrap_check_policy
@@ -2020,6 +2058,9 @@ class API(base.Base):
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.SUSPENDING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.SUSPEND)
+
         self.compute_rpcapi.suspend_instance(context, instance=instance)
 
     @wrap_check_policy
@@ -2032,6 +2073,9 @@ class API(base.Base):
                     vm_state=vm_states.SUSPENDED,
                     task_state=task_states.RESUMING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.RESUME)
+
         self.compute_rpcapi.resume_instance(context, instance=instance)
 
     @wrap_check_policy
@@ -2044,6 +2088,8 @@ class API(base.Base):
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.RESCUE)
 
         self.compute_rpcapi.rescue_instance(context, instance=instance,
                 rescue_password=rescue_password)
@@ -2058,6 +2104,9 @@ class API(base.Base):
                     vm_state=vm_states.RESCUED,
                     task_state=task_states.UNRESCUING,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance, instance_actions.UNRESCUE)
+
         self.compute_rpcapi.unrescue_instance(context, instance=instance)
 
     @wrap_check_policy
@@ -2069,6 +2118,9 @@ class API(base.Base):
                     instance,
                     task_state=task_states.UPDATING_PASSWORD,
                     expected_task_state=None)
+
+        self._record_action_start(context, instance,
+                                  instance_actions.CHANGE_PASSWORD)
 
         self.compute_rpcapi.set_admin_password(context,
                                                instance=instance,
