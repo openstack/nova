@@ -112,7 +112,6 @@ class ServiceTestCase(test.TestCase):
         self.host = 'foo'
         self.binary = 'nova-fake'
         self.topic = 'fake'
-        self.mox.StubOutWithMock(service, 'db')
         self.mox.StubOutWithMock(db, 'service_create')
         self.mox.StubOutWithMock(db, 'service_get_by_args')
         self.flags(use_local=True, group='conductor')
