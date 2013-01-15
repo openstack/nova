@@ -1510,6 +1510,27 @@ class ComputeTestCase(BaseTestCase):
                           instance=instance)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_run_instance_queries_macs(self):
+        # run_instance should ask the driver for node mac addresses and pass
+        # that to the network_api in use.
+        fake_network.unset_stub_network_methods(self.stubs)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        macs = set(['01:23:45:67:89:ab'])
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 "allocate_for_instance")
+        self.compute.network_api.allocate_for_instance(
+            mox.IgnoreArg(),
+            mox.IgnoreArg(),
+            requested_networks=None,
+            vpn=False, macs=macs).AndReturn(
+                fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                       spectacular=True))
+        self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
+        self.compute.driver.macs_for_instance(instance).AndReturn(macs)
+        self.mox.ReplayAll()
+        self.compute.run_instance(self.context, instance=instance)
+
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -1520,7 +1541,8 @@ class ComputeTestCase(BaseTestCase):
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
                 requested_networks=None,
-                vpn=False).AndRaise(rpc_common.RemoteError())
+                vpn=False,
+                macs=None).AndRaise(rpc_common.RemoteError())
 
         fake_network.unset_stub_network_methods(self.stubs)
 

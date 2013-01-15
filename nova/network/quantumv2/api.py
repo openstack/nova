@@ -104,7 +104,15 @@ class API(base.Base):
         return nets
 
     def allocate_for_instance(self, context, instance, **kwargs):
-        """Allocate all network resources for the instance."""
+        """Allocate all network resources for the instance.
+
+        TODO(someone): document the rest of these parameters.
+
+        :param macs: None or a set of MAC addresses that the instance
+            should use. macs is supplied by the hypervisor driver (contrast
+            with requested_networks which is user supplied).
+            NB: QuantumV2 does not yet honour mac address limits.
+        """
         quantum = quantumv2.get_client(context)
         LOG.debug(_('allocate_for_instance() for %s'),
                   instance['display_name'])

@@ -420,6 +420,14 @@ class TestQuantumv2(test.TestCase):
         # Allocate one port in two networks env.
         self._allocate_for_instance(2)
 
+    def test_allocate_for_instance_accepts_macs_kwargs_None(self):
+        # The macs kwarg should be accepted as None.
+        self._allocate_for_instance(1, macs=None)
+
+    def test_allocate_for_instance_accepts_macs_kwargs_set(self):
+        # The macs kwarg should be accepted, as a set.
+        self._allocate_for_instance(1, macs=set(['ab:cd:ef:01:23:45']))
+
     def test_allocate_for_instance_with_requested_networks(self):
         # specify only first and last network
         requested_networks = [
