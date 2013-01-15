@@ -13,93 +13,114 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import api
+from nova import compute
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova import db
-from nova import exception
+from nova.openstack.common import rpc
 from nova import test
-from nova.tests import fake_hosts
 
 
-class HostApiTestCase(test.TestCase):
-    """
-    Tests 'host' subset of the compute api
-    """
-
+class ComputeHostAPITestCase(test.TestCase):
     def setUp(self):
-        super(HostApiTestCase, self).setUp()
-        self.compute_rpcapi = api.compute_rpcapi
-        self.api = api.HostAPI()
+        super(ComputeHostAPITestCase, self).setUp()
+        self.host_api = compute.HostAPI()
+        self.ctxt = context.get_admin_context()
 
-    def test_bad_host_set_enabled(self):
-        """
-        Tests that actions on single hosts that don't exist blow up without
-        having to reach the host via rpc.  Should raise HostNotFound if you
-        try to update a host that is not in the DB
-        """
-        self.assertRaises(exception.HostNotFound, self.api.set_host_enabled,
-                context.get_admin_context(), "bogus_host_name", False)
+    def _mock_rpc_call(self, expected_message, result=None):
+        if result is None:
+            result = 'fake-result'
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(self.ctxt, 'compute.fake_host',
+                 expected_message, None).AndReturn(result)
 
-    def test_list_compute_hosts(self):
-        ctx = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'service_get_all')
-        db.service_get_all(ctx, False).AndReturn(fake_hosts.SERVICES_LIST)
+    def _mock_assert_host_exists(self):
+        """Sets it so that the host API always thinks that 'fake_host'
+        exists.
+        """
+        self.mox.StubOutWithMock(self.host_api, '_assert_host_exists')
+        self.host_api._assert_host_exists(self.ctxt, 'fake_host')
+
+    def test_set_host_enabled(self):
+        self._mock_assert_host_exists()
+        self._mock_rpc_call(
+                {'method': 'set_host_enabled',
+                 'args': {'enabled': 'fake_enabled'},
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
+
         self.mox.ReplayAll()
-        compute_hosts = self.api.list_hosts(ctx, service="compute")
-        self.mox.VerifyAll()
-        expected = [host for host in fake_hosts.HOST_LIST
-                    if host["service"] == "compute"]
-        self.assertEqual(expected, compute_hosts)
+        result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
+                                                'fake_enabled')
+        self.assertEqual('fake-result', result)
 
-    def test_describe_host(self):
-        """
-        Makes sure that describe_host returns the correct information
-        given our fake input.
-        """
-        ctx = context.get_admin_context()
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
-        host_name = 'host_c1'
-        db.service_get_by_compute_host(ctx, host_name).AndReturn(
-            {'host': 'fake_host',
-             'compute_node': [
-               {'vcpus': 4,
-                'vcpus_used': 1,
-                'memory_mb': 8192,
-                'memory_mb_used': 2048,
-                'local_gb': 1024,
-                'local_gb_used': 648}
-             ]
-            })
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
-        db.instance_get_all_by_host(ctx, 'fake_host').AndReturn(
-            [{'project_id': 42,
-              'vcpus': 1,
-              'memory_mb': 2048,
-              'root_gb': 648,
-              'ephemeral_gb': 0,
-            }])
+    def test_get_host_uptime(self):
+        self._mock_assert_host_exists()
+        self._mock_rpc_call(
+                {'method': 'get_host_uptime',
+                 'args': {},
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
-        result = self.api.describe_host(ctx, host_name)
-        self.assertEqual(result,
-            [{'resource': {'cpu': 4,
-                           'disk_gb': 1024,
-                           'host': 'host_c1',
-                           'memory_mb': 8192,
-                           'project': '(total)'}},
-             {'resource': {'cpu': 1,
-                           'disk_gb': 648,
-                           'host': 'host_c1',
-                           'memory_mb': 2048,
-                           'project': '(used_now)'}},
-             {'resource': {'cpu': 1,
-                           'disk_gb': 648,
-                           'host': 'host_c1',
-                           'memory_mb': 2048,
-                           'project': '(used_max)'}},
-             {'resource': {'cpu': 1,
-                           'disk_gb': 648,
-                           'host': 'host_c1',
-                           'memory_mb': 2048,
-                           'project': 42}}]
-        )
+        result = self.host_api.get_host_uptime(self.ctxt, 'fake_host')
+        self.assertEqual('fake-result', result)
+
+    def test_host_power_action(self):
+        self._mock_assert_host_exists()
+        self._mock_rpc_call(
+                {'method': 'host_power_action',
+                 'args': {'action': 'fake_action'},
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
+        self.mox.ReplayAll()
+        result = self.host_api.host_power_action(self.ctxt, 'fake_host',
+                                                 'fake_action')
+        self.assertEqual('fake-result', result)
+
+    def test_set_host_maintenance(self):
+        self._mock_assert_host_exists()
+        self._mock_rpc_call(
+                {'method': 'host_maintenance_mode',
+                 'args': {'host': 'fake_host', 'mode': 'fake_mode'},
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
+        self.mox.ReplayAll()
+        result = self.host_api.set_host_maintenance(self.ctxt, 'fake_host',
+                                                    'fake_mode')
+        self.assertEqual('fake-result', result)
+
+    def test_service_get_all(self):
+        services = [dict(id=1, key1='val1', key2='val2', topic='compute',
+                         host='host1'),
+                    dict(id=2, key1='val2', key3='val3', topic='compute',
+                         host='host2')]
+        exp_services = []
+        for service in services:
+            exp_service = {}
+            exp_service.update(availability_zone='nova', **service)
+            exp_services.append(exp_service)
+
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'service_get_all')
+
+        # Test no filters
+        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
+                services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt)
         self.mox.VerifyAll()
+        self.assertEqual(exp_services, result)
+
+        # Test no filters #2
+        self.mox.ResetAll()
+        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
+                services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt, filters={})
+        self.mox.VerifyAll()
+        self.assertEqual(exp_services, result)
+
+        # Test w/ filter
+        self.mox.ResetAll()
+        self.host_api.db.service_get_all(self.ctxt, False).AndReturn(
+                services)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_all(self.ctxt,
+                                               filters=dict(key1='val2'))
+        self.mox.VerifyAll()
+        self.assertEqual([exp_services[1]], result)
