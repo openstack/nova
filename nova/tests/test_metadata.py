@@ -342,7 +342,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         # since this instance had no user-data it should not be there.
-        self.assertFalse('user-data' in mdinst.lookup("/openstack/2012-08-10"))
+        self.assertFalse('user_data' in mdinst.lookup("/openstack/2012-08-10"))
 
         self.assertRaises(base.InvalidMetadataPath,
             mdinst.lookup, "/openstack/2012-08-10/user_data")
@@ -361,6 +361,14 @@ class OpenStackMetadataTestCase(test.TestCase):
         # verify that older version do not have it
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
         self.assertFalse("random_seed" in json.loads(mdjson))
+
+    def test_no_dashes_in_metadata(self):
+        # top level entries in meta_data should not contain '-' in their name
+        inst = copy(self.instance)
+        mdinst = fake_InstanceMetadata(self.stubs, inst)
+        mdjson = json.loads(mdinst.lookup("/openstack/latest/meta_data.json"))
+
+        self.assertEqual([], [k for k in mdjson.keys() if k.find("-") != -1])
 
 
 class MetadataHandlerTestCase(test.TestCase):
