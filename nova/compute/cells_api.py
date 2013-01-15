@@ -115,15 +115,28 @@ class ComputeCellsAPI(compute_api.API):
         """
         return
 
-    def _create_image(self, context, instance, name, image_type,
-            backup_type=None, rotation=None, extra_properties=None):
-        if backup_type:
-            return self._call_to_cells(context, instance, 'backup',
-                    name, backup_type, rotation,
-                    extra_properties=extra_properties)
-        else:
-            return self._call_to_cells(context, instance, 'snapshot',
-                    name, extra_properties=extra_properties)
+    def backup(self, context, instance, name, backup_type, rotation,
+               extra_properties=None, image_id=None):
+        """Backup the given instance."""
+        image_meta = super(ComputeCellsAPI, self).backup(context,
+                instance, name, backup_type, rotation,
+                extra_properties=extra_properties, image_id=image_id)
+        image_id = image_meta['id']
+        self._cast_to_cells(context, instance, 'backup', name,
+                backup_type=backup_type, rotation=rotation,
+                extra_properties=extra_properties, image_id=image_id)
+        return image_meta
+
+    def snapshot(self, context, instance, name, extra_properties=None,
+                 image_id=None):
+        """Snapshot the given instance."""
+        image_meta = super(ComputeCellsAPI, self).snapshot(context,
+                instance, name, extra_properties=extra_properties,
+                image_id=image_id)
+        image_id = image_meta['id']
+        self._cast_to_cells(context, instance, 'snapshot',
+                name, extra_properties=extra_properties, image_id=image_id)
+        return image_meta
 
     def create(self, *args, **kwargs):
         """We can use the base functionality, but I left this here just

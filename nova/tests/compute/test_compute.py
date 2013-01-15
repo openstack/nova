@@ -4376,6 +4376,31 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_snapshot_given_image_uuid(self):
+        """Ensure a snapshot of an instance can be created when image UUID
+        is already known.
+        """
+        instance = self._create_fake_instance()
+        name = 'snap1'
+        extra_properties = {'extra_param': 'value1'}
+        recv_meta = self.compute_api.snapshot(self.context, instance, name,
+                                              extra_properties)
+        image_id = recv_meta['id']
+
+        def fake_show(meh, context, id):
+            return recv_meta
+
+        instance = db.instance_update(self.context, instance['uuid'],
+                {'task_state': None})
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        image = self.compute_api.snapshot(self.context, instance, name,
+                                          extra_properties,
+                                          image_id=image_id)
+        self.assertEqual(image, recv_meta)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_snapshot_minram_mindisk_VHD(self):
         """Ensure a snapshots min_ram and min_disk are correct.
 
@@ -4467,7 +4492,10 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_show(*args):
             raise exception.ImageNotFound(image_id="fake")
 
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        if not self.__class__.__name__ == "CellsComputeAPITestCase":
+            # Cells tests will call this a 2nd time in child cell with
+            # the newly created image_id, and we want that one to succeed.
+            self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
         instance = self._create_fake_instance()
 

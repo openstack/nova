@@ -1288,7 +1288,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def backup(self, context, instance, name, backup_type, rotation,
-               extra_properties=None):
+               extra_properties=None, image_id=None):
         """Backup the given instance
 
         :param instance: nova.db.sqlalchemy.models.Instance
@@ -1301,9 +1301,14 @@ class API(base.Base):
         instance = self.update(context, instance,
                                task_state=task_states.IMAGE_BACKUP,
                                expected_task_state=None)
-        image_meta = self._create_image(context, instance, name, 'backup',
-                            backup_type=backup_type, rotation=rotation,
-                            extra_properties=extra_properties)
+        if image_id:
+            # The image entry has already been created, so just pull the
+            # metadata.
+            image_meta = self.image_service.show(context, image_id)
+        else:
+            image_meta = self._create_image(context, instance, name,
+                    'backup', backup_type=backup_type,
+                    rotation=rotation, extra_properties=extra_properties)
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
                 image_id=image_meta['id'], image_type='backup',
                 backup_type=backup_type, rotation=rotation)
@@ -1311,7 +1316,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
-    def snapshot(self, context, instance, name, extra_properties=None):
+    def snapshot(self, context, instance, name, extra_properties=None,
+                 image_id=None):
         """Snapshot the given instance.
 
         :param instance: nova.db.sqlalchemy.models.Instance
@@ -1323,8 +1329,13 @@ class API(base.Base):
         instance = self.update(context, instance,
                                task_state=task_states.IMAGE_SNAPSHOT,
                                expected_task_state=None)
-        image_meta = self._create_image(context, instance, name,
-                'snapshot', extra_properties=extra_properties)
+        if image_id:
+            # The image entry has already been created, so just pull the
+            # metadata.
+            image_meta = self.image_service.show(context, image_id)
+        else:
+            image_meta = self._create_image(context, instance, name,
+                    'snapshot', extra_properties=extra_properties)
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
                 image_id=image_meta['id'], image_type='snapshot')
         return image_meta
