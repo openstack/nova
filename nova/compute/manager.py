@@ -1450,9 +1450,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context, instance['uuid'],
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE)
+        instance = self._instance_update(context, instance['uuid'],
+                                         power_state=current_power_state,
+                                         vm_state=vm_states.ACTIVE)
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
@@ -1473,10 +1473,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context, instance['uuid'],
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None)
+        instance = self._instance_update(context, instance['uuid'],
+                                         power_state=current_power_state,
+                                         vm_state=vm_states.ACTIVE,
+                                         task_state=None)
 
         self._notify_about_instance_usage(context, instance, "reboot.end")
 
