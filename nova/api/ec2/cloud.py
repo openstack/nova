@@ -148,7 +148,7 @@ def _properties_get_mappings(properties):
 
 
 def _format_block_device_mapping(bdm):
-    """Contruct BlockDeviceMappingItemType
+    """Construct BlockDeviceMappingItemType
     {'device_name': '...', 'snapshot_id': , ...}
     => BlockDeviceMappingItemType
     """

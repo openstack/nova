@@ -111,7 +111,7 @@ CONF.register_cli_opt(
 
 
 def main():
-    """Parse environment and arguments and call the approproate action."""
+    """Parse environment and arguments and call the appropriate action."""
     try:
         config_file = os.environ['CONFIG_FILE']
     except KeyError:
