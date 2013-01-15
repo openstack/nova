@@ -62,19 +62,20 @@ class LibvirtBaseVolumeDriver(object):
         self.connection = connection
         self.is_block_dev = is_block_dev
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         """Connect the volume. Returns xml for libvirt."""
 
         conf = vconfig.LibvirtConfigGuestDisk()
         conf.driver_name = virtutils.pick_disk_driver_name(self.is_block_dev)
+        conf.device_type = disk_info['type']
         conf.driver_format = "raw"
         conf.driver_cache = "none"
-        conf.target_dev = mount_device
-        conf.target_bus = "virtio"
+        conf.target_dev = disk_info['dev']
+        conf.target_bus = disk_info['bus']
         conf.serial = connection_info.get('serial')
         return conf
 
-    def disconnect_volume(self, connection_info, mount_device):
+    def disconnect_volume(self, connection_info, disk_dev):
         """Disconnect the volume."""
         pass
 
@@ -85,10 +86,11 @@ class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtVolumeDriver,
               self).__init__(connection, is_block_dev=True)
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         """Connect the volume to a local device."""
         conf = super(LibvirtVolumeDriver,
-                     self).connect_volume(connection_info, mount_device)
+                     self).connect_volume(connection_info,
+                                          disk_info)
         conf.source_type = "block"
         conf.source_path = connection_info['data']['device_path']
         return conf
@@ -100,10 +102,11 @@ class LibvirtFakeVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtFakeVolumeDriver,
               self).__init__(connection, is_block_dev=True)
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         """Connect the volume to a fake device."""
         conf = super(LibvirtFakeVolumeDriver,
-                     self).connect_volume(connection_info, mount_device)
+                     self).connect_volume(connection_info,
+                                          disk_info)
         conf.source_type = "network"
         conf.source_protocol = "fake"
         conf.source_host = "fake"
@@ -116,9 +119,10 @@ class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtNetVolumeDriver,
               self).__init__(connection, is_block_dev=False)
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         conf = super(LibvirtNetVolumeDriver,
-                     self).connect_volume(connection_info, mount_device)
+                     self).connect_volume(connection_info,
+                                          disk_info)
         conf.source_type = "network"
         conf.source_protocol = connection_info['driver_volume_type']
         conf.source_host = connection_info['data']['name']
@@ -163,10 +167,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         return self._run_iscsiadm(iscsi_properties, iscsi_command, **kwargs)
 
     @lockutils.synchronized('connect_volume', 'nova-')
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         conf = super(LibvirtISCSIVolumeDriver,
-                     self).connect_volume(connection_info, mount_device)
+                     self).connect_volume(connection_info,
+                                          disk_info)
 
         iscsi_properties = connection_info['data']
         # NOTE(vish): If we are on the same host as nova volume, the
@@ -210,12 +215,13 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         # The /dev/disk/by-path/... node is not always present immediately
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
         tries = 0
+        disk_dev = disk_info['dev']
         while not os.path.exists(host_device):
             if tries >= CONF.num_iscsi_scan_tries:
                 raise exception.NovaException(_("iSCSI device not found at %s")
                                               % (host_device))
 
-            LOG.warn(_("ISCSI volume not yet found at: %(mount_device)s. "
+            LOG.warn(_("ISCSI volume not yet found at: %(disk_dev)s. "
                        "Will rescan & retry.  Try number: %(tries)s") %
                      locals())
 
@@ -227,7 +233,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 time.sleep(tries ** 2)
 
         if tries != 0:
-            LOG.debug(_("Found iSCSI node %(mount_device)s "
+            LOG.debug(_("Found iSCSI node %(disk_dev)s "
                         "(after %(tries)s rescans)") %
                       locals())
 
@@ -236,10 +242,10 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         return conf
 
     @lockutils.synchronized('connect_volume', 'nova-')
-    def disconnect_volume(self, connection_info, mount_device):
+    def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
         super(LibvirtISCSIVolumeDriver,
-              self).disconnect_volume(connection_info, mount_device)
+              self).disconnect_volume(connection_info, disk_dev)
         iscsi_properties = connection_info['data']
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
@@ -265,10 +271,11 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtNFSVolumeDriver,
               self).__init__(connection, is_block_dev=False)
 
-    def connect_volume(self, connection_info, mount_device):
+    def connect_volume(self, connection_info, disk_info):
         """Connect the volume. Returns xml for libvirt."""
         conf = super(LibvirtNFSVolumeDriver,
-                     self).connect_volume(connection_info, mount_device)
+                     self).connect_volume(connection_info,
+                                          disk_info)
         path = self._ensure_mounted(connection_info['data']['export'])
         path = os.path.join(path, connection_info['data']['name'])
         conf.source_type = 'file'
