@@ -538,10 +538,10 @@ class Controller(wsgi.Controller):
                                                      marker=marker)
         except exception.MarkerNotFound as e:
             msg = _('marker [%s] not found') % marker
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as e:
             msg = _("Flavor could not be found")
-            raise webob.exc.HTTPUnprocessableEntity(explanation=msg)
+            raise exc.HTTPUnprocessableEntity(explanation=msg)
 
         if is_detail:
             self._add_instance_faults(context, instance_list)
@@ -828,21 +828,24 @@ class Controller(wsgi.Controller):
         try:
             min_count = int(min_count)
         except ValueError:
-            raise webob.exc.HTTPBadRequest(_('min_count must be an '
-                                             'integer value'))
+            msg = _('min_count must be an integer value')
+            raise exc.HTTPBadRequest(explanation=msg)
         if min_count < 1:
-            raise webob.exc.HTTPBadRequest(_('min_count must be > 0'))
+            msg = _('min_count must be > 0')
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             max_count = int(max_count)
         except ValueError:
-            raise webob.exc.HTTPBadRequest(_('max_count must be an '
-                                             'integer value'))
+            msg = _('max_count must be an integer value')
+            raise exc.HTTPBadRequest(explanation=msg)
         if max_count < 1:
-            raise webob.exc.HTTPBadRequest(_('max_count must be > 0'))
+            msg = _('max_count must be > 0')
+            raise exc.HTTPBadRequest(explanation=msg)
 
         if min_count > max_count:
-            raise webob.exc.HTTPBadRequest(_('min_count must be <= max_count'))
+            msg = _('min_count must be <= max_count')
+            raise exc.HTTPBadRequest(explanation=msg)
 
         auto_disk_config = False
         if self.ext_mgr.is_loaded('OS-DCF'):
@@ -1202,7 +1205,8 @@ class Controller(wsgi.Controller):
         try:
             body = body['rebuild']
         except (KeyError, TypeError):
-            raise exc.HTTPBadRequest(_("Invalid request body"))
+            msg = _('Invalid request body')
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             image_href = body["imageRef"]
