@@ -21,6 +21,9 @@ import os
 import time
 import uuid
 
+from nova.api.metadata import password
+from nova import context
+from nova import crypto
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -206,6 +209,12 @@ class XenAPIBasedAgent(object):
             msg = _('Failed to update password: %(resp)r') % locals()
             LOG.error(msg, instance=self.instance)
             raise Exception(msg)
+
+        sshkey = self.instance.get('key_data')
+        if sshkey:
+            enc = crypto.ssh_encrypt_text(sshkey, new_pass)
+            password.set_password(context.get_admin_context(),
+                                  self.instance['uuid'], base64.b64encode(enc))
 
         return resp['message']
 
