@@ -371,18 +371,31 @@ class IptablesManager(object):
             s += [('ip6tables', self.ipv6)]
 
         for cmd, tables in s:
+            all_tables, _err = self.execute('%s-save' % (cmd,), '-c',
+                                                run_as_root=True,
+                                                attempts=5)
+            all_lines = all_tables.split('\n')
             for table in tables:
-                current_table, _err = self.execute('%s-save' % (cmd,), '-c',
-                                                   '-t', '%s' % (table,),
-                                                   run_as_root=True,
-                                                   attempts=5)
-                current_lines = current_table.split('\n')
-                new_filter = self._modify_rules(current_lines,
-                                                tables[table])
-                self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
-                             process_input='\n'.join(new_filter),
-                             attempts=5)
+                start, end = self._find_table(all_lines, table)
+                all_lines[start:end] = self._modify_rules(
+                        all_lines[start:end], tables[table])
+            self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
+                         process_input='\n'.join(all_lines),
+                         attempts=5)
         LOG.debug(_("IPTablesManager.apply completed with success"))
+
+    def _find_table(self, lines, table_name):
+        if len(lines) < 3:
+            # length only <2 when fake iptables
+            return (0, 0)
+        try:
+            start = lines.index('*%s' % table_name) - 1
+        except ValueError:
+            # Couldn't find table_name
+            # For Unit Tests
+            return (0, 0)
+        end = lines[start:].index('COMMIT') + start + 2
+        return (start, end)
 
     def _modify_rules(self, current_lines, table, binary=None):
         unwrapped_chains = table.unwrapped_chains

@@ -469,13 +469,9 @@ class LinuxNetworkTestCase(test.TestCase):
              '--arp-ip-src', dhcp, '-j', 'DROP'),
             ('ebtables', '-I', 'OUTPUT', '-p', 'ARP', '-o', iface,
              '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('iptables-save', '-c', '-t', 'filter'),
+            ('iptables-save', '-c'),
             ('iptables-restore', '-c'),
-            ('iptables-save', '-c', '-t', 'mangle'),
-            ('iptables-restore', '-c'),
-            ('iptables-save', '-c', '-t', 'nat'),
-            ('iptables-restore', '-c'),
-            ('ip6tables-save', '-c', '-t', 'filter'),
+            ('ip6tables-save', '-c'),
             ('ip6tables-restore', '-c'),
         ]
         self.assertEqual(executes, expected)
@@ -508,13 +504,9 @@ class LinuxNetworkTestCase(test.TestCase):
              '--arp-ip-dst', dhcp, '-j', 'DROP'),
             ('ebtables', '-D', 'OUTPUT', '-p', 'ARP', '-o', iface,
              '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('iptables-save', '-c', '-t', 'filter'),
+            ('iptables-save', '-c'),
             ('iptables-restore', '-c'),
-            ('iptables-save', '-c', '-t', 'mangle'),
-            ('iptables-restore', '-c'),
-            ('iptables-save', '-c', '-t', 'nat'),
-            ('iptables-restore', '-c'),
-            ('ip6tables-save', '-c', '-t', 'filter'),
+            ('ip6tables-save', '-c'),
             ('ip6tables-restore', '-c'),
         ]
         self.assertEqual(executes, expected)
