@@ -38,7 +38,7 @@ LOG = logging.getLogger(__name__)
 
 
 class RequestBodySizeLimiter(wsgi.Middleware):
-    """Add a 'nova.context' to WSGI environ."""
+    """Limit the size of incoming requests."""
 
     def __init__(self, *args, **kwargs):
         super(RequestBodySizeLimiter, self).__init__(*args, **kwargs)
