@@ -965,6 +965,7 @@ class QuotaEngine(object):
             # logged, however, because this is less than optimal.
             LOG.exception(_("Failed to commit reservations "
                             "%(reservations)s") % locals())
+        LOG.debug(_("Committed reservations %(reservations)s") % locals())
 
     def rollback(self, context, reservations, project_id=None):
         """Roll back reservations.
@@ -986,6 +987,7 @@ class QuotaEngine(object):
             # logged, however, because this is less than optimal.
             LOG.exception(_("Failed to roll back reservations "
                             "%(reservations)s") % locals())
+        LOG.debug(_("Rolled back reservations %(reservations)s") % locals())
 
     def usage_reset(self, context, resources):
         """
