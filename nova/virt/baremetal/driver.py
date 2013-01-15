@@ -201,6 +201,12 @@ class BareMetalDriver(driver.ComputeDriver):
                     % instance['uuid'])
         return node_id
 
+    def macs_for_instance(self, instance):
+        context = nova_context.get_admin_context()
+        node_id = self._require_node(instance)
+        return set(iface['address'] for iface in
+            db.bm_interface_get_all_by_bm_node_id(context, node_id))
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         node_id = self._require_node(instance)
