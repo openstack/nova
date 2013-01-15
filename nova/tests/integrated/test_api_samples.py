@@ -371,7 +371,7 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-fping')
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-instance_usage_audit_log')
-        do_not_approve_additions.append('os-admin-networks')
+        do_not_approve_additions.append('os-networks')
         do_not_approve_additions.append('os-services')
         do_not_approve_additions.append('os-volumes')
 
@@ -2359,8 +2359,8 @@ class DiskConfigXmlTest(DiskConfigJsonTest):
 
 
 class OsNetworksJsonTests(ApiSampleTestBase):
-    extension_name = ("nova.api.openstack.compute.contrib.os_networks"
-                      ".Os_networks")
+    extension_name = ("nova.api.openstack.compute.contrib.os_tenant_networks"
+                      ".Os_tenant_networks")
 
     def setUp(self):
         super(OsNetworksJsonTests, self).setUp()
@@ -2377,21 +2377,22 @@ class OsNetworksJsonTests(ApiSampleTestBase):
         self.stubs.Set(nova.quota.QuotaEngine, "rollback", fake)
 
     def test_list_networks(self):
-        response = self._do_get('os-networks')
+        response = self._do_get('os-tenant-networks')
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         return self._verify_response('networks-list-res', subs, response)
 
     def test_create_network(self):
-        response = self._do_post('os-networks', "networks-post-req", {})
+        response = self._do_post('os-tenant-networks', "networks-post-req", {})
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
         self._verify_response('networks-post-res', subs, response)
 
-    def test_delete_networK(self):
-        response = self._do_post('os-networks', "networks-post-req", {})
+    def test_delete_network(self):
+        response = self._do_post('os-tenant-networks', "networks-post-req", {})
         net = json.loads(response.read())
-        response = self._do_delete('os-networks/%s' % net["network"]["id"])
+        response = self._do_delete('os-tenant-networks/%s' %
+                                                net["network"]["id"])
         self.assertEqual(response.status, 202)
 
 
@@ -2406,7 +2407,7 @@ class NetworksAssociateJsonTests(ApiSampleTestBase):
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         # Networks_associate requires Networks to be update
         f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.admin_networks.Admin_networks')
+            'nova.api.openstack.compute.contrib.os_networks.Os_networks')
         return f
 
     def setUp(self):
@@ -2420,25 +2421,25 @@ class NetworksAssociateJsonTests(ApiSampleTestBase):
         self.stubs.Set(network_api.API, "associate", fake_associate)
 
     def test_disassociate(self):
-        response = self._do_post('os-admin-networks/1/action',
+        response = self._do_post('os-networks/1/action',
                                  'network-disassociate-req',
                                  {})
         self.assertEqual(response.status, 202)
 
     def test_disassociate_host(self):
-        response = self._do_post('os-admin-networks/1/action',
+        response = self._do_post('os-networks/1/action',
                                  'network-disassociate-host-req',
                                  {})
         self.assertEqual(response.status, 202)
 
     def test_disassociate_project(self):
-        response = self._do_post('os-admin-networks/1/action',
+        response = self._do_post('os-networks/1/action',
                                  'network-disassociate-project-req',
                                  {})
         self.assertEqual(response.status, 202)
 
     def test_associate_host(self):
-        response = self._do_post('os-admin-networks/1/action',
+        response = self._do_post('os-networks/1/action',
                                  'network-associate-host-req',
                                  {"host": "testHost"})
         self.assertEqual(response.status, 202)
