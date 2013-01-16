@@ -539,6 +539,29 @@ class LibvirtConfigGuestConsoleTest(LibvirtConfigBaseTest):
             <console type="pty"/>""")
 
 
+class LibvirtConfigGuestChannelTest(LibvirtConfigBaseTest):
+    def test_config_spice_minimal(self):
+        obj = config.LibvirtConfigGuestChannel()
+        obj.type = "spicevmc"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <channel type="spicevmc">
+              <target type='virtio'/>
+            </channel>""")
+
+    def test_config_spice_full(self):
+        obj = config.LibvirtConfigGuestChannel()
+        obj.type = "spicevmc"
+        obj.target_name = "com.redhat.spice.0"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <channel type="spicevmc">
+              <target type='virtio' name='com.redhat.spice.0'/>
+            </channel>""")
+
+
 class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
     def test_config_ethernet(self):
         obj = config.LibvirtConfigGuestInterface()

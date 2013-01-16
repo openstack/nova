@@ -648,21 +648,34 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         return dev
 
 
-class LibvirtConfigGuestChar(LibvirtConfigGuestDevice):
+class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCharBase, self).__init__(**kwargs)
+
+        self.type = "pty"
+        self.source_path = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestCharBase, self).format_dom()
+
+        dev.set("type", self.type)
+        if self.type == "file":
+            dev.append(etree.Element("source", path=self.source_path))
+
+        return dev
+
+
+class LibvirtConfigGuestChar(LibvirtConfigGuestCharBase):
 
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestChar, self).__init__(**kwargs)
 
-        self.type = "pty"
-        self.source_path = None
         self.target_port = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestChar, self).format_dom()
 
-        dev.set("type", self.type)
-        if self.type == "file":
-            dev.append(etree.Element("source", path=self.source_path))
         if self.target_port is not None:
             dev.append(etree.Element("target", port=str(self.target_port)))
 
@@ -681,6 +694,26 @@ class LibvirtConfigGuestConsole(LibvirtConfigGuestChar):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestConsole, self).__init__(root_name="console",
                                                         **kwargs)
+
+
+class LibvirtConfigGuestChannel(LibvirtConfigGuestCharBase):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestChannel, self).__init__(root_name="channel",
+                                                        **kwargs)
+
+        self.target_type = "virtio"
+        self.target_name = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestChannel, self).format_dom()
+
+        target = etree.Element("target", type=self.target_type)
+        if self.target_name is not None:
+            target.set("name", self.target_name)
+        dev.append(target)
+
+        return dev
 
 
 class LibvirtConfigGuest(LibvirtConfigObject):
