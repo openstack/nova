@@ -227,6 +227,7 @@ def clear_logical_volume(path):
     vol_size = logical_volume_size(path)
     bs = 1024 * 1024
     direct_flags = ('oflag=direct',)
+    sync_flags = ()
     remaining_bytes = vol_size
 
     # The loop caters for versions of dd that
@@ -238,11 +239,14 @@ def clear_logical_volume(path):
                     'if=/dev/zero', 'of=%s' % path,
                     'seek=%s' % seek_blocks, 'count=%s' % zero_blocks)
         zero_cmd += direct_flags
+        zero_cmd += sync_flags
         if zero_blocks:
             utils.execute(*zero_cmd, run_as_root=True)
         remaining_bytes %= bs
         bs /= 1024  # Limit to 3 iterations
-        direct_flags = ()  # Only use O_DIRECT with initial block size
+        # Use O_DIRECT with initial block size and fdatasync otherwise
+        direct_flags = ()
+        sync_flags = ('conv=fdatasync',)
 
 
 def remove_logical_volumes(*paths):
