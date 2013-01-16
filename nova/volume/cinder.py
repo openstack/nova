@@ -48,6 +48,9 @@ cinder_opts = [
     cfg.IntOpt('cinder_http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
+    cfg.BoolOpt('cinder_api_insecure',
+               default=False,
+               help='Allow to perform insecure SSL requests to cinder'),
 ]
 
 CONF = cfg.CONF
@@ -88,6 +91,7 @@ def cinderclient(context):
                              context.auth_token,
                              project_id=context.project_id,
                              auth_url=url,
+                             insecure=CONF.cinder_api_insecure,
                              retries=CONF.cinder_http_retries)
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,

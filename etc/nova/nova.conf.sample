@@ -2282,6 +2282,10 @@
 # value)
 #cinder_http_retries=3
 
+# Allow to perform insecure SSL (https) requests to cinder
+# (boolean value)
+#cinder_api_insecure=false
+
 
 [conductor]
 
@@ -2546,4 +2550,4 @@
 #keymap=en-us
 
 
-# Total option count: 519
+# Total option count: 520
