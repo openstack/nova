@@ -16,8 +16,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import shutil
-import tempfile
 
+import fixtures
 import mox
 
 from nova import context
@@ -142,17 +142,13 @@ vifs = [{'id': 0,
 class FlatNetworkTestCase(test.TestCase):
     def setUp(self):
         super(FlatNetworkTestCase, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
         self.network = network_manager.FlatManager(host=HOST)
         self.network.instance_dns_domain = ''
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=False)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        super(FlatNetworkTestCase, self).tearDown()
 
     def test_get_instance_nw_info(self):
         fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
@@ -1629,17 +1625,13 @@ class FloatingIPTestCase(test.TestCase):
     """Tests nova.network.manager.FloatingIP."""
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'
         self.context = context.RequestContext('testuser', self.project_id,
             is_admin=False)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        super(FloatingIPTestCase, self).tearDown()
 
     def test_disassociate_floating_ip_multi_host_calls(self):
         floating_ip = {
@@ -2128,17 +2120,13 @@ class InstanceDNSTestCase(test.TestCase):
     """Tests nova.network.manager instance DNS."""
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'
         self.context = context.RequestContext('testuser', self.project_id,
             is_admin=False)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        super(InstanceDNSTestCase, self).tearDown()
 
     def test_dns_domains_private(self):
         zone1 = 'testzone'
