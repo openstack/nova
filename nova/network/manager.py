@@ -482,7 +482,7 @@ class FloatingIP(object):
     @wrap_check_policy
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
-        """Returns an floating ip to the pool."""
+        """Returns a floating ip to the pool."""
         floating_ip = self.db.floating_ip_get_by_address(context, address)
 
         # handle auto_assigned

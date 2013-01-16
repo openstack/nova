@@ -130,7 +130,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
-        """Permit admins to reset networking on an server."""
+        """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
         authorize(context, 'resetNetwork')
         try:
