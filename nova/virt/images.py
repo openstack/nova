@@ -123,7 +123,7 @@ class QemuImgInfo(object):
                 if len(line_pieces) != 6:
                     break
                 else:
-                    # Check against this pattern occuring in the final position
+                    # Check against this pattern in the final position
                     # "%02d:%02d:%02d.%03d"
                     date_pieces = line_pieces[5].split(":")
                     if len(date_pieces) != 3:

@@ -183,7 +183,7 @@ class VolumeOps(baseops.BaseOps):
                 "SELECT * FROM Msvm_ResourceAllocationSettingData \
                 WHERE ResourceSubType LIKE 'Microsoft Physical Disk Drive'\
                 AND Parent = '" + scsi_controller.path_() + "'")
-        #Slots starts from 0, so the lenght of the disks gives us the free slot
+        #Slots starts from 0, so the length of the disks gives us the free slot
         return len(volumes)
 
     def detach_volume(self, connection_info, instance_name, mountpoint):

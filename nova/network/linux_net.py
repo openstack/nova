@@ -1163,7 +1163,7 @@ class LinuxNetInterfaceDriver(object):
         raise NotImplementedError()
 
     def unplug(self, network):
-        """Destory Linux device, return device name."""
+        """Destroy Linux device, return device name."""
         raise NotImplementedError()
 
     def get_dev(self, network):
@@ -1403,7 +1403,7 @@ def remove_ebtables_rules(rules):
 
 
 def isolate_dhcp_address(interface, address):
-    # block arp traffic to address accross the interface
+    # block arp traffic to address across the interface
     rules = []
     rules.append('INPUT -p ARP -i %s --arp-ip-dst %s -j DROP'
                  % (interface, address))
@@ -1419,7 +1419,7 @@ def isolate_dhcp_address(interface, address):
     ipv4_filter.add_rule('FORWARD',
                          '-m physdev --physdev-out %s -d 255.255.255.255 '
                          '-p udp --dport 67 -j DROP' % interface, top=True)
-    # block ip traffic to address accross the interface
+    # block ip traffic to address across the interface
     ipv4_filter.add_rule('FORWARD',
                          '-m physdev --physdev-in %s -d %s -j DROP'
                          % (interface, address), top=True)
@@ -1429,7 +1429,7 @@ def isolate_dhcp_address(interface, address):
 
 
 def remove_isolate_dhcp_address(interface, address):
-    # block arp traffic to address accross the interface
+    # block arp traffic to address across the interface
     rules = []
     rules.append('INPUT -p ARP -i %s --arp-ip-dst %s -j DROP'
                  % (interface, address))
@@ -1445,7 +1445,7 @@ def remove_isolate_dhcp_address(interface, address):
     ipv4_filter.remove_rule('FORWARD',
                          '-m physdev --physdev-out %s -d 255.255.255.255 '
                          '-p udp --dport 67 -j DROP' % interface, top=True)
-    # block ip traffic to address accross the interface
+    # block ip traffic to address across the interface
     ipv4_filter.remove_rule('FORWARD',
                          '-m physdev --physdev-in %s -d %s -j DROP'
                          % (interface, address), top=True)

@@ -2961,7 +2961,7 @@ class ComputeTestCase(BaseTestCase):
         call_info['expected_instance'] = instances[0]
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(call_info['get_all_by_host'], 2)
-        # Stays the same, beacuse the instance came from the DB
+        # Stays the same, because the instance came from the DB
         self.assertEqual(call_info['get_by_uuid'], 3)
         self.assertEqual(call_info['get_nw_info'], 4)
 
@@ -5255,14 +5255,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(instance3['uuid'] in instance_uuids)
         self.assertTrue(instance4['uuid'] in instance_uuids)
 
-        # multiple criterias as a dict
+        # multiple criteria as a dict
         instances = self.compute_api.get_all(c,
                 search_opts={'metadata': {'key3': 'value3',
                                           'key4': 'value4'}})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance4['uuid'])
 
-        # multiple criterias as a list
+        # multiple criteria as a list
         instances = self.compute_api.get_all(c,
                 search_opts={'metadata': [{'key4': 'value4'},
                                           {'key3': 'value3'}]})
@@ -6430,7 +6430,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     """
     Some instance-types are marked 'disabled' which means that they will not
     show up in customer-facing listings. We do, however, want those
-    instance-types to be availble for emergency migrations and for rebuilding
+    instance-types to be available for emergency migrations and for rebuilding
     of existing instances.
 
     One legitimate use of the 'disabled' field would be when phasing out a

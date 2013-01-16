@@ -55,7 +55,7 @@ def get_powervm_disk_adapter():
 class PowerVMOperator(object):
     """PowerVM main operator.
 
-    The PowerVMOperator is intented to wrapper all operations
+    The PowerVMOperator is intended to wrap all operations
     from the driver and handle either IVM or HMC managed systems.
     """
 

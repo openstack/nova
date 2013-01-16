@@ -721,7 +721,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         def fq_path(path):
             return os.path.join('/instance_path/_base/', path)
 
-        # Fake base directory existance
+        # Fake base directory existence
         orig_exists = os.path.exists
 
         def exists(path):
@@ -747,7 +747,7 @@ class ImageCacheManagerTestCase(test.TestCase):
                         '/instance_path/_base/%s_sm' % hashed_42]:
                 return False
 
-            self.fail('Unexpected path existance check: %s' % path)
+            self.fail('Unexpected path existence check: %s' % path)
 
         self.stubs.Set(os.path, 'exists', lambda x: exists(x))
 

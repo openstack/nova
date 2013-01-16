@@ -129,7 +129,7 @@ class TestS3ImageService(test.TestCase):
                  'snapshot_id': 'snap-12345678',
                  'delete_on_termination': True},
                 {'device_name': '/dev/sda2',
-                 'virutal_name': 'ephemeral0'},
+                 'virtual_name': 'ephemeral0'},
                 {'device_name': '/dev/sdb0',
                  'no_device': True}]}}
         _manifest, image, image_uuid = self.image_service._s3_parse_manifest(
@@ -156,7 +156,7 @@ class TestS3ImageService(test.TestCase):
              'snapshot_id': 'snap-12345678',
              'delete_on_termination': True},
             {'device_name': '/dev/sda2',
-             'virutal_name': 'ephemeral0'},
+             'virtual_name': 'ephemeral0'},
             {'device_name': '/dev/sdb0',
              'no_device': True}]
         self.assertEqual(block_device_mapping, expected_bdm)

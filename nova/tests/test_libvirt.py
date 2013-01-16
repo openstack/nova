@@ -570,7 +570,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.flags(instances_path='')
         self.flags(libvirt_snapshots_directory='')
-        self.call_libvirt_dependant_setup = False
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
@@ -3100,7 +3099,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        # NOTE(vish): verifies destory doesn't raise if the instance disappears
+        # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         conn._destroy(instance)
 
     def test_available_least_handles_missing(self):

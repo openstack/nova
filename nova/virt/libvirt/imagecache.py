@@ -77,7 +77,7 @@ CONF.import_opt('instances_path', 'nova.compute.manager')
 
 
 def get_info_filename(base_path):
-    """Construct a filename for storing addtional information about a base
+    """Construct a filename for storing additional information about a base
     image.
 
     Returns a filename.

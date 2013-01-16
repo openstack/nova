@@ -146,7 +146,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.network_infos = {}
-        self.basicly_filtered = False
+        self.basically_filtered = False
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')

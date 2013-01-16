@@ -2566,7 +2566,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       mp)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
-                msg = _("Faild to detach volume %(volume_id)s from %(mp)s")
+                msg = _("Failed to detach volume %(volume_id)s from %(mp)s")
                 LOG.exception(msg % locals(), context=context,
                               instance=instance)
                 volume = self.volume_api.get(context, volume_id)

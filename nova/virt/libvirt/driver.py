@@ -2768,7 +2768,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :param network_info: instance network infomation
+        :param network_info: instance network information
         :param block_migration: if true, post operation of block_migraiton.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.

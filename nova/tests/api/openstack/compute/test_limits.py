@@ -618,7 +618,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
         self.app = limits.WsgiLimiter(TEST_LIMITS)
 
     def _request_data(self, verb, path):
-        """Get data decribing a limit request verb/path."""
+        """Get data describing a limit request verb/path."""
         return jsonutils.dumps({"verb": verb, "path": path})
 
     def _request(self, verb, url, username=None):
