@@ -2518,4 +2518,32 @@
 #attestation_auth_blob=<None>
 
 
-# Total option count: 514
+[spice]
+
+#
+# Options defined in nova.spice
+#
+
+# location of spice html5 console proxy, in the form
+# "http://127.0.0.1:6080/spice_auto.html" (string value)
+#html5proxy_base_url=http://127.0.0.1:6080/spice_auto.html
+
+# IP address on which instance spice server should listen
+# (string value)
+#server_listen=127.0.0.1
+
+# the address to which proxy clients (like nova-
+# spicehtml5proxy) should connect (string value)
+#server_proxyclient_address=127.0.0.1
+
+# enable spice related features (boolean value)
+#enabled=false
+
+# enable spice guest agent support (boolean value)
+#agent_enabled=true
+
+# keymap for spice (string value)
+#keymap=en-us
+
+
+# Total option count: 519
