@@ -166,7 +166,24 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
         dev_prefix)
 
 
-def get_disk_bus_for_device_type(virt_type, device_type="disk"):
+def is_disk_bus_valid_for_virt(virt_type, disk_bus):
+        valid_bus = {
+            'qemu': ['virtio', 'scsi', 'ide', 'usb'],
+            'kvm': ['virtio', 'scsi', 'ide', 'usb'],
+            'xen': ['xen', 'ide'],
+            'uml': ['uml'],
+            }
+
+        if virt_type not in valid_bus:
+            raise exception.NovaException(
+                _("Unsupported virt type %s") % virt_type)
+
+        return disk_bus in valid_bus[virt_type]
+
+
+def get_disk_bus_for_device_type(virt_type,
+                                 image_meta=None,
+                                 device_type="disk"):
     """Determine the best disk bus to use for a device type.
 
        Considering the currently configured virtualization
@@ -177,6 +194,18 @@ def get_disk_bus_for_device_type(virt_type, device_type="disk"):
        Returns the disk_bus, or returns None if the device
        type is not supported for this virtualization"""
 
+    # Prefer a disk bus set against the image first of all
+    if image_meta:
+        key = device_type + "_bus"
+        disk_bus = image_meta.get('properties', {}).get(key)
+        if disk_bus is not None:
+            if not is_disk_bus_valid_for_virt(virt_type, disk_bus):
+                raise exception.NovaException(
+                    _("Disk bus %(disk_bus)s is not valid for %(virt)s") %
+                    {'disk_bus': disk_bus, 'virt': virt_type})
+            return disk_bus
+
+    # Otherwise pick a hypervisor default disk bus
     if virt_type == "uml":
         if device_type == "disk":
             return "uml"
@@ -375,8 +404,8 @@ def get_disk_info(virt_type, instance, block_device_info=None,
 
        Returns the disk mapping disk."""
 
-    disk_bus = get_disk_bus_for_device_type(virt_type, "disk")
-    cdrom_bus = get_disk_bus_for_device_type(virt_type, "cdrom")
+    disk_bus = get_disk_bus_for_device_type(virt_type, image_meta, "disk")
+    cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom")
     mapping = get_disk_mapping(virt_type, instance,
                                disk_bus, cdrom_bus,
                                block_device_info,
