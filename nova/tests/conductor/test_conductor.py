@@ -461,8 +461,23 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort')
 
+    def test_instance_get_all_by_host(self):
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
+        db.instance_get_all_by_host(self.context.elevated(),
+                                    'host').AndReturn('result')
+        db.instance_get_all_by_host_and_node(self.context.elevated(), 'host',
+                                             'node').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_get_all_by_host(self.context, 'host')
+        self.assertEqual(result, 'result')
+        result = self.conductor.instance_get_all_by_host(self.context, 'host',
+                                                         'node')
+        self.assertEqual(result, 'result')
+
     def _test_stubbed(self, name, dbargs, condargs,
                       db_result_listified=False):
+
         self.mox.StubOutWithMock(db, name)
         getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
         self.mox.ReplayAll()
@@ -665,19 +680,22 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     def test_instance_get_all(self):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all(self.context)
-        db.instance_get_all_by_host(self.context.elevated(), 'fake-host')
         db.instance_get_all_by_filters(self.context, {'name': 'fake-inst'},
                                        'updated_at', 'asc')
         self.mox.ReplayAll()
         self.conductor.instance_get_all(self.context)
-        self.conductor.instance_get_all_by_host(self.context, 'fake-host')
         self.conductor.instance_get_all_by_filters(self.context,
                                                    {'name': 'fake-inst'},
                                                    'updated_at', 'asc')
 
     def _test_stubbed(self, name, *args, **kwargs):
+        if args and isinstance(args[0], FakeContext):
+            ctxt = args[0]
+            args = args[1:]
+        else:
+            ctxt = self.context
         self.mox.StubOutWithMock(db, name)
-        getattr(db, name)(self.context, *args).AndReturn('fake-result')
+        getattr(db, name)(ctxt, *args).AndReturn('fake-result')
         if name == 'service_destroy':
             # TODO(russellb) This is a hack ... SetUp() starts the conductor()
             # service.  There is a cleanup step that runs after this test which
@@ -709,6 +727,14 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
     def test_service_destroy(self):
         self._test_stubbed('service_destroy', '', returns=False)
+
+    def test_instance_get_all_by_host(self):
+        self._test_stubbed('instance_get_all_by_host',
+                           self.context.elevated(), 'host')
+
+    def test_instance_get_all_by_host_and_node(self):
+        self._test_stubbed('instance_get_all_by_host_and_node',
+                           self.context.elevated(), 'host', 'node')
 
     def test_ping(self):
         timeouts = []

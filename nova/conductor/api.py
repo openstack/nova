@@ -97,6 +97,9 @@ class LocalAPI(object):
     def instance_get_all_by_host(self, context, host):
         return self._manager.instance_get_all_by_host(context, host)
 
+    def instance_get_all_by_host_and_node(self, context, host, node):
+        return self._manager.instance_get_all_by_host(context, host, node)
+
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',
                                     sort_dir='desc'):
@@ -334,6 +337,10 @@ class API(object):
 
     def instance_get_all_by_host(self, context, host):
         return self.conductor_rpcapi.instance_get_all_by_host(context, host)
+
+    def instance_get_all_by_host_and_node(self, context, host, node):
+        return self.conductor_rpcapi.instance_get_all_by_host(context,
+                                                              host, node)
 
     def instance_get_all_by_filters(self, context, filters,
                                     sort_key='created_at',

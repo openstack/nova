@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.31'
+    RPC_API_VERSION = '1.32'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -83,9 +83,13 @@ class ConductorManager(manager.SchedulerDependentManager):
     def instance_get_all(self, context):
         return jsonutils.to_primitive(self.db.instance_get_all(context))
 
-    def instance_get_all_by_host(self, context, host):
-        return jsonutils.to_primitive(
-            self.db.instance_get_all_by_host(context.elevated(), host))
+    def instance_get_all_by_host(self, context, host, node=None):
+        if node is not None:
+            result = self.db.instance_get_all_by_host_and_node(
+                context.elevated(), host, node)
+        else:
+            result = self.db.instance_get_all_by_host(context.elevated(), host)
+        return jsonutils.to_primitive(result)
 
     @rpc_common.client_exceptions(exception.MigrationNotFound)
     def migration_get(self, context, migration_id):
