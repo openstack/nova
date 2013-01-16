@@ -568,7 +568,7 @@ class FloatingIP(object):
         else:
             host = network['host']
 
-        interface = CONF.public_interface or floating_ip['interface']
+        interface = floating_ip.get('interface')
         if host == self.host:
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
@@ -585,6 +585,7 @@ class FloatingIP(object):
     def _associate_floating_ip(self, context, floating_address, fixed_address,
                                interface, instance_uuid):
         """Performs db and driver calls to associate floating ip & fixed ip."""
+        interface = CONF.public_interface or interface
 
         @lockutils.synchronized(unicode(floating_address), 'nova-')
         def do_associate():
@@ -642,7 +643,7 @@ class FloatingIP(object):
 
         # send to correct host, unless i'm the correct host
         network = self._get_network_by_id(context, fixed_ip['network_id'])
-        interface = CONF.public_interface or floating_ip['interface']
+        interface = floating_ip.get('interface')
         if network['multi_host']:
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip['instance_uuid'])
@@ -672,7 +673,7 @@ class FloatingIP(object):
     def _disassociate_floating_ip(self, context, address, interface,
                                   instance_uuid):
         """Performs db and driver calls to disassociate floating ip."""
-        # disassociate floating ip
+        interface = CONF.public_interface or interface
 
         @lockutils.synchronized(unicode(address), 'nova-')
         def do_disassociate():
