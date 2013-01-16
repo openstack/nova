@@ -196,6 +196,7 @@ CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
+CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -1786,17 +1787,47 @@ class LibvirtDriver(driver.ComputeDriver):
             consolepty.type = "pty"
             guest.add_device(consolepty)
 
-        if CONF.vnc_enabled and CONF.libvirt_type not in ('lxc', 'uml'):
-            if CONF.use_usb_tablet and guest.os_type == vm_mode.HVM:
-                tablet = vconfig.LibvirtConfigGuestInput()
-                tablet.type = "tablet"
-                tablet.bus = "usb"
-                guest.add_device(tablet)
+        # We want a tablet if VNC is enabled,
+        # or SPICE is enabled and the SPICE agent is disabled
+        # NB: this implies that if both SPICE + VNC are enabled
+        # at the same time, we'll get the tablet whether the
+        # SPICE agent is used or not.
+        need_usb_tablet = False
+        if CONF.vnc_enabled:
+            need_usb_tablet = CONF.use_usb_tablet
+        elif CONF.spice.enabled and not CONF.spice.agent_enabled:
+            need_usb_tablet = CONF.use_usb_tablet
 
+        if need_usb_tablet and guest.os_type == vm_mode.HVM:
+            tablet = vconfig.LibvirtConfigGuestInput()
+            tablet.type = "tablet"
+            tablet.bus = "usb"
+            guest.add_device(tablet)
+
+        if CONF.spice.enabled and CONF.spice.agent_enabled and \
+                CONF.libvirt_type not in ('lxc', 'uml', 'xen'):
+            channel = vconfig.LibvirtConfigGuestChannel()
+            channel.target_name = "com.redhat.spice.0"
+            guest.add_device(channel)
+
+        # NB some versions of libvirt support both SPICE and VNC
+        # at the same time. We're not trying to second guess which
+        # those versions are. We'll just let libvirt report the
+        # errors appropriately if the user enables both.
+
+        if CONF.vnc_enabled and CONF.libvirt_type not in ('lxc', 'uml'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             graphics.keymap = CONF.vnc_keymap
             graphics.listen = CONF.vncserver_listen
+            guest.add_device(graphics)
+
+        if CONF.spice.enabled and \
+                CONF.libvirt_type not in ('lxc', 'uml', 'xen'):
+            graphics = vconfig.LibvirtConfigGuestGraphics()
+            graphics.type = "spice"
+            graphics.keymap = CONF.spice.keymap
+            graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
 
         return guest
