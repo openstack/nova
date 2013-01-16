@@ -789,6 +789,28 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 fake_topic,
                 fake_rpc_message, False, timeout=None)
 
+    def test_task_log_get_all_targetted(self):
+        task_name = 'fake_task_name'
+        begin = 'fake_begin'
+        end = 'fake_end'
+        host = 'fake_host'
+        state = 'fake_state'
+
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'task_log_get_all')
+        self.tgt_db_inst.task_log_get_all(self.ctxt, task_name,
+                begin, end, host=host,
+                state=state).AndReturn(['fake_result'])
+
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.task_log_get_all(self.ctxt,
+                self.tgt_cell_name, task_name, begin, end, host=host,
+                state=state)
+        self.assertTrue(isinstance(response, list))
+        self.assertEqual(1, len(response))
+        result = response[0].value_or_raise()
+        self.assertEqual(['fake_result'], result)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
@@ -1079,6 +1101,39 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         responses = self.src_msg_runner.service_get_all(ctxt,
                                                         filters=filters)
+        response_values = [(resp.cell_name, resp.value_or_raise())
+                           for resp in responses]
+        expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),
+                    ('api-cell!child-cell2', [3]),
+                    ('api-cell', [1, 2])]
+        self.assertEqual(expected, response_values)
+
+    def test_task_log_get_all_broadcast(self):
+        # Reset this, as this is a broadcast down.
+        self._setup_attrs(up=False)
+        task_name = 'fake_task_name'
+        begin = 'fake_begin'
+        end = 'fake_end'
+        host = 'fake_host'
+        state = 'fake_state'
+
+        ctxt = self.ctxt.elevated()
+
+        self.mox.StubOutWithMock(self.src_db_inst, 'task_log_get_all')
+        self.mox.StubOutWithMock(self.mid_db_inst, 'task_log_get_all')
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'task_log_get_all')
+
+        self.src_db_inst.task_log_get_all(ctxt, task_name,
+                begin, end, host=host, state=state).AndReturn([1, 2])
+        self.mid_db_inst.task_log_get_all(ctxt, task_name,
+                begin, end, host=host, state=state).AndReturn([3])
+        self.tgt_db_inst.task_log_get_all(ctxt, task_name,
+                begin, end, host=host, state=state).AndReturn([4, 5])
+
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.task_log_get_all(ctxt, None,
+                task_name, begin, end, host=host, state=state)
         response_values = [(resp.cell_name, resp.value_or_raise())
                            for resp in responses]
         expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),

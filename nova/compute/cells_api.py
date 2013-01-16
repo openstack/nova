@@ -635,3 +635,17 @@ class HostAPI(compute_api.HostAPI):
             instances = [i for i in instances
                          if i['cell_name'] == cell_name]
         return instances
+
+    def task_log_get_all(self, context, task_name, beginning, ending,
+                         host=None, state=None):
+        """Return the task logs within a given range from cells,
+        optionally filtering by the host and/or state.  For cells, the
+        host should be a path like 'path!to!cell@host'.  If no @host
+        is given, only task logs from a particular cell will be returned.
+        """
+        return self.cells_rpcapi.task_log_get_all(context,
+                                                  task_name,
+                                                  beginning,
+                                                  ending,
+                                                  host=host,
+                                                  state=state)

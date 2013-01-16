@@ -89,3 +89,11 @@ def add_cell_to_service(service, cell_name):
     compute_node = service.get('compute_node')
     if compute_node:
         add_cell_to_compute_node(compute_node[0], cell_name)
+
+
+def add_cell_to_task_log(task_log, cell_name):
+    """Fix task_log attributes that should be unique.  In particular,
+    the 'id' and 'host' fields should be prepended with cell name.
+    """
+    task_log['id'] = cell_with_item(cell_name, task_log['id'])
+    task_log['host'] = cell_with_item(cell_name, task_log['host'])

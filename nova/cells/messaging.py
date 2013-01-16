@@ -600,6 +600,22 @@ class _BaseMessageMethods(base.Base):
         self.state_manager = msg_runner.state_manager
         self.compute_api = compute.API()
 
+    def task_log_get_all(self, message, task_name, period_beginning,
+                         period_ending, host, state):
+        """Get task logs from the DB.  The message could have
+        directly targeted this cell, or it could have been a broadcast
+        message.
+
+        If 'host' is not None, filter by host.
+        If 'state' is not None, filter by state.
+        """
+        task_logs = self.db.task_log_get_all(message.ctxt, task_name,
+                                             period_beginning,
+                                             period_ending,
+                                             host=host,
+                                             state=state)
+        return jsonutils.to_primitive(task_logs)
+
 
 class _ResponseMessageMethods(_BaseMessageMethods):
     """Methods that are called from a ResponseMessage.  There's only
@@ -1095,6 +1111,33 @@ class MessageRunner(object):
                                    'proxy_rpc_to_manager',
                                    method_kwargs, 'down', cell_name,
                                    need_response=call)
+        return message.process()
+
+    def task_log_get_all(self, ctxt, cell_name, task_name,
+                         period_beginning, period_ending,
+                         host=None, state=None):
+        """Get task logs from the DB from all cells or a particular
+        cell.
+
+        If 'cell_name' is None or '', get responses from all cells.
+        If 'host' is not None, filter by host.
+        If 'state' is not None, filter by state.
+
+        Return a list of Response objects.
+        """
+        method_kwargs = dict(task_name=task_name,
+                             period_beginning=period_beginning,
+                             period_ending=period_ending,
+                             host=host, state=state)
+        if cell_name:
+            message = _TargetedMessage(self, ctxt, 'task_log_get_all',
+                                    method_kwargs, 'down',
+                                    cell_name, need_response=True)
+            # Caller should get a list of Responses.
+            return [message.process()]
+        message = _BroadcastMessage(self, ctxt, 'task_log_get_all',
+                                    method_kwargs, 'down',
+                                    run_locally=True, need_response=True)
         return message.process()
 
     @staticmethod

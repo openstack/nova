@@ -43,6 +43,7 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
         1.2 - Adds service_get_all(), service_get_by_compute_host(),
               and proxy_rpc_to_compute_manager()
+        1.3 - Adds task_log_get_all()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -185,3 +186,13 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                              timeout=timeout),
                          timeout=timeout,
                          version='1.2')
+
+    def task_log_get_all(self, ctxt, task_name, period_beginning,
+                         period_ending, host=None, state=None):
+        """Get the task logs from the DB in child cells."""
+        return self.call(ctxt, self.make_msg('task_log_get_all',
+                                   task_name=task_name,
+                                   period_beginning=period_beginning,
+                                   period_ending=period_ending,
+                                   host=host, state=state),
+                         version='1.3')

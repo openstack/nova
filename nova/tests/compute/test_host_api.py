@@ -197,6 +197,18 @@ class ComputeHostAPITestCase(test.TestCase):
                                                         'fake-host')
         self.assertEqual(['fake-responses'], result)
 
+    def test_task_log_get_all(self):
+        self.mox.StubOutWithMock(self.host_api.db, 'task_log_get_all')
+
+        self.host_api.db.task_log_get_all(self.ctxt,
+                'fake-name', 'fake-begin', 'fake-end', host='fake-host',
+                state='fake-state').AndReturn('fake-response')
+        self.mox.ReplayAll()
+        result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
+                'fake-begin', 'fake-end', host='fake-host',
+                state='fake-state')
+        self.assertEqual('fake-response', result)
+
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
@@ -296,3 +308,16 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         result = self.host_api.instance_get_all_by_host(self.ctxt,
                 cell_and_host)
         self.assertEqual(expected_result, result)
+
+    def test_task_log_get_all(self):
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'task_log_get_all')
+
+        self.host_api.cells_rpcapi.task_log_get_all(self.ctxt,
+                'fake-name', 'fake-begin', 'fake-end', host='fake-host',
+                state='fake-state').AndReturn('fake-response')
+        self.mox.ReplayAll()
+        result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
+                'fake-begin', 'fake-end', host='fake-host',
+                state='fake-state')
+        self.assertEqual('fake-response', result)

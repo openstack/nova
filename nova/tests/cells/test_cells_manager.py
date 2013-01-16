@@ -37,6 +37,8 @@ FAKE_SERVICES = [dict(id=1, host='host1',
                  dict(id=2, host='host2',
                       compute_node=[FAKE_COMPUTE_NODES[1]]),
                  dict(id=3, host='host3', compute_node=[])]
+FAKE_TASK_LOGS = [dict(id=1, host='host1'),
+                  dict(id=2, host='host2')]
 
 
 class CellsManagerClassTestCase(test.TestCase):
@@ -51,14 +53,6 @@ class CellsManagerClassTestCase(test.TestCase):
         self.msg_runner = self.cells_manager.msg_runner
         self.driver = self.cells_manager.driver
         self.ctxt = 'fake_context'
-
-    def _get_fake_responses(self):
-        responses = []
-        expected_responses = []
-        for x in xrange(1, 4):
-            responses.append(messaging.Response('cell%s' % x, x, False))
-            expected_responses.append(('cell%s' % x, x))
-        return expected_responses, responses
 
     def _get_fake_response(self, raw_response=None, exc=False):
         if exc:
@@ -313,3 +307,66 @@ class CellsManagerClassTestCase(test.TestCase):
                 topic=topic, rpc_message='fake-rpc-msg', call=True,
                 timeout=-1)
         self.assertEqual('fake-response', response)
+
+    def _build_task_log_responses(self, num):
+        responses = []
+        expected_response = []
+        # 3 cells... so 3 responses.  Each response is a list of task log
+        # entries. Manager should turn these into a single list of
+        # task log entries.
+        for i in xrange(num):
+            cell_name = 'path!to!cell%i' % i
+            task_logs = []
+            for task_log in FAKE_TASK_LOGS:
+                task_logs.append(copy.deepcopy(task_log))
+                expected_task_log = copy.deepcopy(task_log)
+                cells_utils.add_cell_to_task_log(expected_task_log,
+                                                 cell_name)
+                expected_response.append(expected_task_log)
+            response = messaging.Response(cell_name, task_logs, False)
+            responses.append(response)
+        return expected_response, responses
+
+    def test_task_log_get_all(self):
+        expected_response, responses = self._build_task_log_responses(3)
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'task_log_get_all')
+        self.msg_runner.task_log_get_all(self.ctxt, None,
+                'fake-name', 'fake-begin',
+                'fake-end', host=None, state=None).AndReturn(responses)
+        self.mox.ReplayAll()
+        response = self.cells_manager.task_log_get_all(self.ctxt,
+                task_name='fake-name',
+                period_beginning='fake-begin', period_ending='fake-end')
+        self.assertEqual(expected_response, response)
+
+    def test_task_log_get_all_with_filters(self):
+        expected_response, responses = self._build_task_log_responses(1)
+        cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'task_log_get_all')
+        self.msg_runner.task_log_get_all(self.ctxt, 'fake-cell',
+                'fake-name', 'fake-begin', 'fake-end', host='fake-host',
+                state='fake-state').AndReturn(responses)
+        self.mox.ReplayAll()
+        response = self.cells_manager.task_log_get_all(self.ctxt,
+                task_name='fake-name',
+                period_beginning='fake-begin', period_ending='fake-end',
+                host=cell_and_host, state='fake-state')
+        self.assertEqual(expected_response, response)
+
+    def test_task_log_get_all_with_cell_but_no_host_filters(self):
+        expected_response, responses = self._build_task_log_responses(1)
+        # Host filter only has cell name.
+        cell_and_host = 'fake-cell'
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'task_log_get_all')
+        self.msg_runner.task_log_get_all(self.ctxt, 'fake-cell',
+                'fake-name', 'fake-begin', 'fake-end', host=None,
+                state='fake-state').AndReturn(responses)
+        self.mox.ReplayAll()
+        response = self.cells_manager.task_log_get_all(self.ctxt,
+                task_name='fake-name',
+                period_beginning='fake-begin', period_ending='fake-end',
+                host=cell_and_host, state='fake-state')
+        self.assertEqual(expected_response, response)
