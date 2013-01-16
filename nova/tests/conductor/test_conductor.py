@@ -130,6 +130,16 @@ class _BaseTestCase(object):
                                                                  'fake-window',
                                                                  'fake-host')
 
+    def test_migration_get_in_progress_by_host_and_node(self):
+        self.mox.StubOutWithMock(db,
+                                 'migration_get_in_progress_by_host_and_node')
+        db.migration_get_in_progress_by_host_and_node(
+            self.context, 'fake-host', 'fake-node').AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.migration_get_in_progress_by_host_and_node(
+            self.context, 'fake-host', 'fake-node')
+        self.assertEqual(result, 'fake-result')
+
     def test_migration_create(self):
         inst = {'uuid': 'fake-uuid',
                 'host': 'fake-host',

@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.30'
+    RPC_API_VERSION = '1.31'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -98,6 +98,12 @@ class ConductorManager(manager.SchedulerDependentManager):
                                                   dest_compute):
         migrations = self.db.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute)
+        return jsonutils.to_primitive(migrations)
+
+    def migration_get_in_progress_by_host_and_node(self, context,
+                                                   host, node):
+        migrations = self.db.migration_get_in_progress_by_host_and_node(
+            context, host, node)
         return jsonutils.to_primitive(migrations)
 
     def migration_create(self, context, instance, values):

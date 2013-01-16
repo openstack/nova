@@ -80,6 +80,9 @@ class MultiNodeComputeTestCase(BaseTestCase):
         super(MultiNodeComputeTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver')
         self.compute = importutils.import_object(CONF.compute_manager)
+        self.flags(use_local=True, group='conductor')
+        self.conductor = self.start_service('conductor',
+                                            manager=CONF.conductor.manager)
 
     def test_update_available_resource_add_remove_node(self):
         ctx = context.get_admin_context()
