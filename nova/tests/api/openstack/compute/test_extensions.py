@@ -667,3 +667,31 @@ class ExtensionsXMLSerializerTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
         xmlutil.validate_schema(root, 'extensions')
+
+
+class ExtensionControllerIdFormatTest(test.TestCase):
+
+    def _bounce_id(self, test_id):
+
+        class BounceController(object):
+            def show(self, req, id):
+                return id
+        res_ext = base_extensions.ResourceExtension('bounce',
+                                                    BounceController())
+        manager = StubExtensionManager(res_ext)
+        app = compute.APIRouter(manager)
+        request = webob.Request.blank("/fake/bounce/%s" % test_id)
+        response = request.get_response(app)
+        return response.body
+
+    def test_id_with_xml_format(self):
+        result = self._bounce_id('foo.xml')
+        self.assertEqual(result, 'foo')
+
+    def test_id_with_json_format(self):
+        result = self._bounce_id('foo.json')
+        self.assertEqual(result, 'foo')
+
+    def test_id_with_bad_format(self):
+        result = self._bounce_id('foo.bad')
+        self.assertEqual(result, 'foo.bad')
