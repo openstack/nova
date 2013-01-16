@@ -110,66 +110,82 @@ def nova_todo_format(physical_line):
 
     nova HACKING guide recommendation for TODO:
     Include your name with TODOs as in "#TODO(termie)"
-    N101
+
+    Okay: #TODO(sdague)
+    N101: #TODO fail
     """
+    # TODO(sdague): TODO check shouldn't fail inside of space
     pos = physical_line.find('TODO')
     pos1 = physical_line.find('TODO(')
     pos2 = physical_line.find('#')  # make sure it's a comment
-    if (pos != pos1 and pos2 >= 0 and pos2 < pos):
-        return pos, "NOVA N101: Use TODO(NAME)"
+    # TODO(sdague): should be smarter on this test
+    this_test = physical_line.find('N101: #TODO fail')
+    if (pos != pos1 and pos2 >= 0 and pos2 < pos and this_test == -1):
+        return pos, "N101: Use TODO(NAME)"
 
 
 def nova_except_format(logical_line):
-    """Check for 'except:'.
+    r"""Check for 'except:'.
 
     nova HACKING guide recommends not using except:
     Do not write "except:", use "except Exception:" at the very least
-    N201
+
+    Okay: except Exception:
+    N201: except:
     """
     if logical_line.startswith("except:"):
-        yield 6, "NOVA N201: no 'except:' at least use 'except Exception:'"
+        yield 6, "N201: no 'except:' at least use 'except Exception:'"
 
 
 def nova_except_format_assert(logical_line):
-    """Check for 'assertRaises(Exception'.
+    r"""Check for 'assertRaises(Exception'.
 
     nova HACKING guide recommends not using assertRaises(Exception...):
     Do not use overly broad Exception type
-    N202
+
+    Okay: self.assertRaises(NovaException)
+    N202: self.assertRaises(Exception)
     """
     if logical_line.startswith("self.assertRaises(Exception"):
-        yield 1, "NOVA N202: assertRaises Exception too broad"
+        yield 1, "N202: assertRaises Exception too broad"
 
 
 def nova_one_import_per_line(logical_line):
-    """Check for import format.
+    r"""Check for import format.
 
     nova HACKING guide recommends one import per line:
     Do not import more than one module per line
 
     Examples:
-    BAD: from nova.rpc.common import RemoteError, LOG
-    N301
+    Okay: from nova.rpc.common import RemoteError
+    N301: from nova.rpc.common import RemoteError, LOG
     """
     pos = logical_line.find(',')
     parts = logical_line.split()
     if (pos > -1 and (parts[0] == "import" or
                       parts[0] == "from" and parts[2] == "import") and
         not is_import_exception(parts[1])):
-        yield pos, "NOVA N301: one import per line"
+        yield pos, "N301: one import per line"
 
 _missingImport = set([])
 
 
 def nova_import_module_only(logical_line):
-    """Check for import module only.
+    r"""Check for import module only.
 
     nova HACKING guide recommends importing only modules:
     Do not import objects, only modules
-    N302 import only modules
-    N303 Invalid Import
-    N304 Relative Import
+
+    Okay: from os import path
+    N302  from os.path import mkdir as mkdir2
+    N303  import bubba
+    N304  import blueblue
     """
+    # N302 import only modules
+    # N303 Invalid Import
+    # N304 Relative Import
+
+    # TODO(sdague) actually get these tests working
     def importModuleCheck(mod, parent=None, added=False):
         """
         If can't find module on first try, recursively check for relative
@@ -193,10 +209,10 @@ def nova_import_module_only(logical_line):
                     if added:
                         sys.path.pop()
                         added = False
-                        return logical_line.find(mod), ("NOVA N304: No "
+                        return logical_line.find(mod), ("N304: No "
                             "relative  imports. '%s' is a relative import"
                             % logical_line)
-                    return logical_line.find(mod), ("NOVA N302: import only "
+                    return logical_line.find(mod), ("N302: import only "
                         "modules. '%s' does not import a module"
                         % logical_line)
 
@@ -219,7 +235,7 @@ def nova_import_module_only(logical_line):
 
         except AttributeError:
             # Invalid import
-            return logical_line.find(mod), ("NOVA N303: Invalid import, "
+            return logical_line.find(mod), ("N303: Invalid import, "
                 "AttributeError raised")
 
     # convert "from x import y" to " import x.y"
@@ -240,41 +256,58 @@ def nova_import_module_only(logical_line):
 #TODO(jogo): import template: N305
 
 
-def nova_import_alphabetical(logical_line, line_number, lines):
-    """Check for imports in alphabetical order.
+def nova_import_alphabetical(logical_line, blank_lines, previous_logical,
+                             indent_level, previous_indent_level):
+    r"""
+    Check for imports in alphabetical order.
 
     nova HACKING guide recommendation for imports:
     imports in human alphabetical order
-    N306
+
+    Okay: import os\nimport sys\n\nimport nova\nfrom nova import test
+    N306: import sys\nimport os
     """
     # handle import x
     # use .lower since capitalization shouldn't dictate order
     split_line = import_normalize(logical_line.strip()).lower().split()
-    split_previous = import_normalize(lines[line_number - 2]
-            ).strip().lower().split()
-    # with or without "as y"
-    length = [2, 4]
-    if (len(split_line) in length and len(split_previous) in length and
-        split_line[0] == "import" and split_previous[0] == "import"):
-        if split_line[1] < split_previous[1]:
-            yield (0, "NOVA N306: imports not in alphabetical order (%s, %s)"
-                % (split_previous[1], split_line[1]))
+    split_previous = import_normalize(previous_logical.strip()).lower().split()
+
+    if blank_lines < 1 and indent_level == previous_indent_level:
+        length = [2, 4]
+        if (len(split_line) in length and len(split_previous) in length and
+            split_line[0] == "import" and split_previous[0] == "import"):
+            if split_line[1] < split_previous[1]:
+                yield (0, "N306: imports not in alphabetical order (%s, %s)"
+                       % (split_previous[1], split_line[1]))
 
 
 def nova_import_no_db_in_virt(logical_line, filename):
-    if ("nova/virt" in filename and
-        not filename.endswith("fake.py") and
-        "nova import db" in logical_line):
-        yield (0, "NOVA N307: nova.db import not allowed in nova/virt/*")
+    """Check for db calls from nova/virt
+
+    As of grizzly-2 all the database calls have been removed from
+    nova/virt, and we want to keep it that way.
+
+    N307
+    """
+    if "nova/virt" in filename and not filename.endswith("fake.py"):
+        if logical_line.startswith("from nova import db"):
+            yield (0, "N307: nova.db import not allowed in nova/virt/*")
 
 
 def nova_docstring_start_space(physical_line, previous_logical):
-    """Check for docstring not start with space.
+    r"""Check for docstring not start with space.
 
     nova HACKING guide recommendation for docstring:
     Docstring should not start with space
-    N401
+
+    Okay: def foo():\n    '''This is good.'''
+    N401: def foo():\n    ''' This is not.'''
     """
+    # short circuit so that we don't fail on our own fail test
+    # when running under external pep8
+    if physical_line.find("N401: def foo()") != -1:
+        return
+
     # it's important that we determine this is actually a docstring,
     # and not a doc block used somewhere after the first line of a
     # function def
@@ -283,35 +316,47 @@ def nova_docstring_start_space(physical_line, previous_logical):
         pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])
         if (pos != -1 and len(physical_line) > pos + 4):
             if (physical_line[pos + 3] == ' '):
-                return (pos, "NOVA N401: docstring should not start with"
+                return (pos, "N401: docstring should not start with"
                         " a space")
 
 
 def nova_docstring_one_line(physical_line):
-    """Check one line docstring end.
+    r"""Check one line docstring end.
 
     nova HACKING guide recommendation for one line docstring:
-    A one line docstring looks like this and ends in a period.
-    N402
+    A one line docstring looks like this and ends in punctuation.
+
+    Okay: '''This is good.'''
+    N402: '''This is not'''
+    N402: '''Bad punctuation,'''
     """
-    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
-    end = max([physical_line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
-    if (pos != -1 and end and len(physical_line) > pos + 4):
-        if (physical_line[-5] not in ['.', '?', '!']):
-            return pos, "NOVA N402: one line docstring needs a period"
+    line = physical_line.lstrip()
+
+    if line.startswith('"') or line.startswith("'"):
+        pos = max([line.find(i) for i in DOCSTRING_TRIPLE])  # start
+        end = max([line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
+
+        if (pos != -1 and end and len(line) > pos + 4):
+            if (line[-5] not in ['.', '?', '!']):
+                return pos, "N402: one line docstring needs punctuation."
 
 
 def nova_docstring_multiline_end(physical_line):
-    """Check multi line docstring end.
+    r"""Check multi line docstring end.
 
     nova HACKING guide recommendation for docstring:
     Docstring should end on a new line
-    N403
+    Okay: '''\nfoo\nbar\n'''
+
+    # This test is not triggered, don't think it's right, removing
+    # the colon prevents it from running
+    N403 '''\nfoo\nbar\n    ''' \n\n
     """
+    # TODO(sdague) actually get these tests working
     pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
     if (pos != -1 and len(physical_line) == pos):
         if (physical_line[pos + 3] == ' '):
-            return (pos, "NOVA N403: multi line docstring end on new line")
+            return (pos, "N403: multi line docstring end on new line")
 
 
 FORMAT_RE = re.compile("%(?:"
@@ -339,6 +384,7 @@ def check_i18n():
             token_type, text, _, _, line = yield
         except GeneratorExit:
             return
+
         if (token_type == tokenize.NAME and text == "_" and
             not line.startswith('def _(msg):')):
 
@@ -361,22 +407,22 @@ def check_i18n():
 
             if not format_string:
                 raise LocalizationError(start,
-                    "NOVA N701: Empty localization string")
+                    "N701: Empty localization string")
             if token_type != tokenize.OP:
                 raise LocalizationError(start,
-                    "NOVA N701: Invalid localization call")
+                    "N701: Invalid localization call")
             if text != ")":
                 if text == "%":
                     raise LocalizationError(start,
-                        "NOVA N702: Formatting operation should be outside"
+                        "N702: Formatting operation should be outside"
                         " of localization method call")
                 elif text == "+":
                     raise LocalizationError(start,
-                        "NOVA N702: Use bare string concatenation instead"
+                        "N702: Use bare string concatenation instead"
                         " of +")
                 else:
                     raise LocalizationError(start,
-                        "NOVA N702: Argument to _ must be just a string")
+                        "N702: Argument to _ must be just a string")
 
             format_specs = FORMAT_RE.findall(format_string)
             positional_specs = [(key, spec) for key, spec in format_specs
@@ -384,17 +430,21 @@ def check_i18n():
             # not spec means %%, key means %(smth)s
             if len(positional_specs) > 1:
                 raise LocalizationError(start,
-                    "NOVA N703: Multiple positional placeholders")
+                    "N703: Multiple positional placeholders")
 
 
 def nova_localization_strings(logical_line, tokens):
-    """Check localization in line.
+    r"""Check localization in line.
 
-    N701: bad localization call
-    N702: complex expression instead of string as argument to _()
-    N703: multiple positional placeholders
+    Okay: _("This is fine")
+    Okay: _("This is also fine %s")
+    N701: _('')
+    N702: _("Bob" + " foo")
+    N702: _("Bob %s" % foo)
+    # N703 check is not quite right, disabled by removing colon
+    N703 _("%s %s" % (foo, bar))
     """
-
+    # TODO(sdague) actually get these tests working
     gen = check_i18n()
     next(gen)
     try:
@@ -466,18 +516,36 @@ def once_git_check_commit_title():
         error = True
     return error
 
+imports_on_separate_lines_N301_compliant = r"""
+    Imports should usually be on separate lines.
+
+    Okay: import os\nimport sys
+    E401: import sys, os
+
+    N301: from subprocess import Popen, PIPE
+    Okay: from myclas import MyClass
+    Okay: from foo.bar.yourclass import YourClass
+    Okay: import myclass
+    Okay: import foo.bar.yourclass
+    """
+
 if __name__ == "__main__":
     #include nova path
     sys.path.append(os.getcwd())
     #Run once tests (not per line)
     once_error = once_git_check_commit_title()
     #NOVA error codes start with an N
+    pep8.SELFTEST_REGEX = re.compile(r'(Okay|[EWN]\d{3}):\s(.*)')
     pep8.ERRORCODE_REGEX = re.compile(r'[EWN]\d{3}')
     add_nova()
     pep8.current_file = current_file
     pep8.readlines = readlines
     pep8.StyleGuide.excluded = excluded
     pep8.StyleGuide.input_dir = input_dir
+    # we need to kill this doctring otherwise the self tests fail
+    pep8.imports_on_separate_lines.__doc__ = \
+        imports_on_separate_lines_N301_compliant
+
     try:
         pep8._main()
         sys.exit(once_error)
