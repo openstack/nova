@@ -556,3 +556,103 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         sched.schedule_run_instance(fake_context, request_spec1,
                 None, None, None, None, filter_properties)
+
+    def test_schedule_host_pool(self):
+        """Make sure the scheduler_host_subset_size property works properly."""
+
+        self.flags(scheduler_host_subset_size=2)
+        sched = fakes.FakeFilterScheduler()
+
+        fake_context = context.RequestContext('user', 'project',
+                is_admin=True)
+        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+                fake_get_filtered_hosts)
+        fakes.mox_host_manager_db_calls(self.mox, fake_context)
+
+        instance_properties = {'project_id': 1,
+                                    'root_gb': 512,
+                                    'memory_mb': 512,
+                                    'ephemeral_gb': 0,
+                                    'vcpus': 1,
+                                    'os_type': 'Linux'}
+
+        request_spec = dict(instance_properties=instance_properties)
+        filter_properties = {}
+        self.mox.ReplayAll()
+        hosts = sched._schedule(self.context, request_spec,
+                filter_properties=filter_properties)
+
+        # one host should be chosen
+        self.assertEqual(len(hosts), 1)
+
+    def test_schedule_large_host_pool(self):
+        """Hosts should still be chosen if pool size
+        is larger than number of filtered hosts"""
+
+        sched = fakes.FakeFilterScheduler()
+
+        fake_context = context.RequestContext('user', 'project',
+                is_admin=True)
+        self.flags(scheduler_host_subset_size=20)
+        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+                fake_get_filtered_hosts)
+        fakes.mox_host_manager_db_calls(self.mox, fake_context)
+
+        instance_properties = {'project_id': 1,
+                                    'root_gb': 512,
+                                    'memory_mb': 512,
+                                    'ephemeral_gb': 0,
+                                    'vcpus': 1,
+                                    'os_type': 'Linux'}
+        request_spec = dict(instance_properties=instance_properties)
+        filter_properties = {}
+        self.mox.ReplayAll()
+        hosts = sched._schedule(self.context, request_spec,
+                filter_properties=filter_properties)
+
+        # one host should be chose
+        self.assertEqual(len(hosts), 1)
+
+    def test_schedule_chooses_best_host(self):
+        """If scheduler_host_subset_size is 1, the largest host with greatest
+        weight should be returned"""
+
+        self.flags(scheduler_host_subset_size=1)
+
+        sched = fakes.FakeFilterScheduler()
+
+        fake_context = context.RequestContext('user', 'project',
+                is_admin=True)
+        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+                fake_get_filtered_hosts)
+        fakes.mox_host_manager_db_calls(self.mox, fake_context)
+
+        self.next_weight = 50
+
+        def _fake_weigh_objects(_self, functions, hosts, options):
+            this_weight = self.next_weight
+            self.next_weight = 0
+            host_state = hosts[0]
+            return [weights.WeighedHost(host_state, this_weight)]
+
+        instance_properties = {'project_id': 1,
+                                'root_gb': 512,
+                                'memory_mb': 512,
+                                'ephemeral_gb': 0,
+                                'vcpus': 1,
+                                'os_type': 'Linux'}
+
+        request_spec = dict(instance_properties=instance_properties)
+
+        self.stubs.Set(weights.HostWeightHandler,
+                        'get_weighed_objects', _fake_weigh_objects)
+
+        filter_properties = {}
+        self.mox.ReplayAll()
+        hosts = sched._schedule(self.context, request_spec,
+                filter_properties=filter_properties)
+
+        # one host should be chosen
+        self.assertEquals(1, len(hosts))
+
+        self.assertEquals(50, hosts[0].weight)

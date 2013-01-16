@@ -19,6 +19,8 @@ You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
 """
 
+import random
+
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -28,6 +30,21 @@ from nova.scheduler import scheduler_options
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+filter_scheduler_opts = [
+    cfg.IntOpt('scheduler_host_subset_size',
+               default=1,
+               help='New instances will be scheduled on a host chosen '
+                    'randomly from a subset of the N best hosts. This '
+                    'property defines the subset size that a host is '
+                    'chosen from. A value of 1 chooses the '
+                    'first host returned by the weighing functions. '
+                    'This value must be at least 1. Any value less than 1 '
+                    'will be ignored, and 1 will be used instead')
+]
+
+CONF.register_opts(filter_scheduler_opts)
 
 
 class FilterScheduler(driver.Scheduler):
@@ -314,15 +331,23 @@ class FilterScheduler(driver.Scheduler):
 
             weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
                     filter_properties)
-            best_host = weighed_hosts[0]
-            LOG.debug(_("Choosing host %(best_host)s") % locals())
-            selected_hosts.append(best_host)
+
+            scheduler_host_subset_size = CONF.scheduler_host_subset_size
+            if scheduler_host_subset_size > len(weighed_hosts):
+                scheduler_host_subset_size = len(weighed_hosts)
+            if scheduler_host_subset_size < 1:
+                scheduler_host_subset_size = 1
+
+            chosen_host = random.choice(
+                weighed_hosts[0:scheduler_host_subset_size])
+            LOG.debug(_("Choosing host %(chosen_host)s") % locals())
+            selected_hosts.append(chosen_host)
+
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            best_host.obj.consume_from_instance(instance_properties)
+            chosen_host.obj.consume_from_instance(instance_properties)
             if update_group_hosts is True:
-                filter_properties['group_hosts'].append(best_host.obj.host)
-
+                filter_properties['group_hosts'].append(chosen_host.obj.host)
         return selected_hosts
 
     def _assert_compute_node_has_enough_memory(self, context,
