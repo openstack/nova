@@ -23,7 +23,7 @@ Host aggregates can be regarded as a mechanism to further partition an availabil
 
 Xen Pool Host Aggregates
 ===============
-Originally all aggregates were Xen resource pools, now a aggregate can be set up as a resource pool by giving the aggregate the correct key-value pair.
+Originally all aggregates were Xen resource pools, now an aggregate can be set up as a resource pool by giving the aggregate the correct key-value pair.
 
 You can use aggregates for XenServer resource pools when you have multiple compute nodes installed (only XenServer/XCP via xenapi driver is currently supported), and you want to leverage the capabilities of the underlying hypervisor resource pools. For example, you want to enable VM live migration (i.e. VM migration within the pool) or enable host maintenance with zero-downtime for guest instances. Please, note that VM migration across pools (i.e. storage migration) is not yet supported in XenServer/XCP, but will be added when available. Bear in mind that the two migration techniques are not mutually exclusive and can be used in combination for a higher level of flexibility in your cloud management.
 

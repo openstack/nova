@@ -175,7 +175,7 @@ class QemuImgInfo(object):
 
 
 def qemu_img_info(path):
-    """Return a object containing the parsed output from qemu-img info."""
+    """Return an object containing the parsed output from qemu-img info."""
     if not os.path.exists(path):
         return QemuImgInfo()
 
