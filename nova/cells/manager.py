@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.3'
+    RPC_API_VERSION = '1.4'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -295,3 +295,39 @@ class CellsManager(manager.Manager):
                                                  response.cell_name)
                 ret_task_logs.append(task_log)
         return ret_task_logs
+
+    def compute_node_get(self, ctxt, compute_id):
+        """Get a compute node by ID in a specific cell."""
+        cell_name, compute_id = cells_utils.split_cell_and_item(
+                compute_id)
+        response = self.msg_runner.compute_node_get(ctxt, cell_name,
+                                                    compute_id)
+        node = response.value_or_raise()
+        cells_utils.add_cell_to_compute_node(node, cell_name)
+        return node
+
+    def compute_node_get_all(self, ctxt, hypervisor_match=None):
+        """Return list of compute nodes in all cells."""
+        responses = self.msg_runner.compute_node_get_all(ctxt,
+                hypervisor_match=hypervisor_match)
+        # 1 response per cell.  Each response is a list of compute_node
+        # entries.
+        ret_nodes = []
+        for response in responses:
+            nodes = response.value_or_raise()
+            for node in nodes:
+                cells_utils.add_cell_to_compute_node(node,
+                                                     response.cell_name)
+                ret_nodes.append(node)
+        return ret_nodes
+
+    def compute_node_stats(self, ctxt):
+        """Return compute node stats totals from all cells."""
+        responses = self.msg_runner.compute_node_stats(ctxt)
+        totals = {}
+        for response in responses:
+            data = response.value_or_raise()
+            for key, val in data.iteritems():
+                totals.setdefault(key, 0)
+                totals[key] += val
+        return totals

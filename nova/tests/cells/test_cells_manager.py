@@ -370,3 +370,61 @@ class CellsManagerClassTestCase(test.TestCase):
                 period_beginning='fake-begin', period_ending='fake-end',
                 host=cell_and_host, state='fake-state')
         self.assertEqual(expected_response, response)
+
+    def test_compute_node_get_all(self):
+        responses = []
+        expected_response = []
+        # 3 cells... so 3 responses.  Each response is a list of computes.
+        # Manager should turn these into a single list of responses.
+        for i in xrange(3):
+            cell_name = 'path!to!cell%i' % i
+            compute_nodes = []
+            for compute_node in FAKE_COMPUTE_NODES:
+                compute_nodes.append(copy.deepcopy(compute_node))
+                expected_compute_node = copy.deepcopy(compute_node)
+                cells_utils.add_cell_to_compute_node(expected_compute_node,
+                                                     cell_name)
+                expected_response.append(expected_compute_node)
+            response = messaging.Response(cell_name, compute_nodes, False)
+            responses.append(response)
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'compute_node_get_all')
+        self.msg_runner.compute_node_get_all(self.ctxt,
+                hypervisor_match='fake-match').AndReturn(responses)
+        self.mox.ReplayAll()
+        response = self.cells_manager.compute_node_get_all(self.ctxt,
+                hypervisor_match='fake-match')
+        self.assertEqual(expected_response, response)
+
+    def test_compute_node_stats(self):
+        raw_resp1 = {'key1': 1, 'key2': 2}
+        raw_resp2 = {'key2': 1, 'key3': 2}
+        raw_resp3 = {'key3': 1, 'key4': 2}
+        responses = [messaging.Response('cell1', raw_resp1, False),
+                     messaging.Response('cell2', raw_resp2, False),
+                     messaging.Response('cell2', raw_resp3, False)]
+        expected_resp = {'key1': 1, 'key2': 3, 'key3': 3, 'key4': 2}
+
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'compute_node_stats')
+        self.msg_runner.compute_node_stats(self.ctxt).AndReturn(responses)
+        self.mox.ReplayAll()
+        response = self.cells_manager.compute_node_stats(self.ctxt)
+        self.assertEqual(expected_resp, response)
+
+    def test_compute_node_get(self):
+        fake_cell = 'fake-cell'
+        fake_response = messaging.Response(fake_cell,
+                                           FAKE_COMPUTE_NODES[0],
+                                           False)
+        expected_response = copy.deepcopy(FAKE_COMPUTE_NODES[0])
+        cells_utils.add_cell_to_compute_node(expected_response, fake_cell)
+        cell_and_id = cells_utils.cell_with_item(fake_cell, 'fake-id')
+        self.mox.StubOutWithMock(self.msg_runner,
+                                 'compute_node_get')
+        self.msg_runner.compute_node_get(self.ctxt,
+                'fake-cell', 'fake-id').AndReturn(fake_response)
+        self.mox.ReplayAll()
+        response = self.cells_manager.compute_node_get(self.ctxt,
+                compute_id=cell_and_id)
+        self.assertEqual(expected_response, response)

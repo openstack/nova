@@ -277,3 +277,30 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'task_log_get_all', expected_args,
                            version='1.3')
         self.assertEqual(result, 'fake_response')
+
+    def test_compute_node_get_all(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.compute_node_get_all(self.fake_context,
+                hypervisor_match='fake-match')
+
+        expected_args = {'hypervisor_match': 'fake-match'}
+        self._check_result(call_info, 'compute_node_get_all', expected_args,
+                           version='1.4')
+        self.assertEqual(result, 'fake_response')
+
+    def test_compute_node_stats(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.compute_node_stats(self.fake_context)
+        expected_args = {}
+        self._check_result(call_info, 'compute_node_stats',
+                           expected_args, version='1.4')
+        self.assertEqual(result, 'fake_response')
+
+    def test_compute_node_get(self):
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.compute_node_get(self.fake_context,
+                'fake_compute_id')
+        expected_args = {'compute_id': 'fake_compute_id'}
+        self._check_result(call_info, 'compute_node_get',
+                           expected_args, version='1.4')
+        self.assertEqual(result, 'fake_response')
