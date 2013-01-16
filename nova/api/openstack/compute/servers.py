@@ -1163,7 +1163,11 @@ class Controller(wsgi.Controller):
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
         server = self._get_server(context, req, id)
-        self.compute_api.set_admin_password(context, server, password)
+        try:
+            self.compute_api.set_admin_password(context, server, password)
+        except NotImplementedError:
+            msg = _("Unable to set password on instance")
+            raise exc.HTTPNotImplemented(explanation=msg)
         return webob.Response(status_int=202)
 
     def _validate_metadata(self, metadata):

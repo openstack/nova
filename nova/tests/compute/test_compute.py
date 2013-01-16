@@ -1151,7 +1151,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=instance)
 
     def _do_test_set_admin_password_driver_error(self, exc, expected_vm_state,
-                                                 expected_task_state):
+                                                 expected_task_state,
+                                                 expected_exception):
         """Ensure expected exception is raised if set_admin_password fails."""
 
         def fake_sleep(_time):
@@ -1176,7 +1177,7 @@ class ComputeTestCase(BaseTestCase):
 
         #error raised from the driver should not reveal internal information
         #so a new error is raised
-        self.assertRaises(exception.InstancePasswordSetFailed,
+        self.assertRaises(expected_exception,
                           self.compute.set_admin_password,
                           self.context,
                           instance=jsonutils.to_primitive(inst_ref))
@@ -1194,9 +1195,11 @@ class ComputeTestCase(BaseTestCase):
         authorized.
         """
         exc = exception.NotAuthorized(_('Internal error'))
+        expected_exception = exception.InstancePasswordSetFailed
         self._do_test_set_admin_password_driver_error(exc,
                                                 vm_states.ERROR,
-                                                None)
+                                                None,
+                                                expected_exception)
 
     def test_set_admin_password_driver_not_implemented(self):
         """
@@ -1204,9 +1207,11 @@ class ComputeTestCase(BaseTestCase):
         implemented by driver.
         """
         exc = NotImplementedError()
+        expected_exception = NotImplementedError
         self._do_test_set_admin_password_driver_error(exc,
                                                       vm_states.ACTIVE,
-                                                      None)
+                                                      None,
+                                                      expected_exception)
 
     def test_inject_file(self):
         # Ensure we can write a file to an instance.
