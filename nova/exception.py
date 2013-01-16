@@ -522,6 +522,10 @@ class PortNotFound(NotFound):
     message = _("Port %(port_id)s could not be found.")
 
 
+class PortNotUsable(NovaException):
+    message = _("Port %(port_id)s not usable for instance %(instance)s.")
+
+
 class FixedIpNotFound(NotFound):
     message = _("No fixed IP associated with id %(id)s.")
 
