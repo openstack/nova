@@ -66,6 +66,7 @@ setuptools.setup(name='nova',
                'bin/nova-objectstore',
                'bin/nova-rootwrap',
                'bin/nova-scheduler',
+               'bin/nova-spicehtml5proxy',
                'bin/nova-xvpvncproxy',
               ],
         py_modules=[])
