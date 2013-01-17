@@ -2854,11 +2854,11 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
             self.mox.StubOutWithMock(conn, "_wrapped_conn")
-            self.mox.StubOutWithMock(conn._wrapped_conn, "getCapabilities")
+            self.mox.StubOutWithMock(conn._wrapped_conn, "getLibVersion")
             self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
             self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
 
-            conn._wrapped_conn.getCapabilities().AndRaise(
+            conn._wrapped_conn.getLibVersion().AndRaise(
                     libvirt.libvirtError("fake failure"))
 
             libvirt.libvirtError.get_error_code().AndReturn(error)
