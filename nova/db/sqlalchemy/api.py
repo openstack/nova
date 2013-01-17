@@ -890,15 +890,12 @@ def _floating_ip_get_by_address(context, address, session=None):
 
 @require_context
 def floating_ip_get_by_fixed_address(context, fixed_address):
-    subq = model_query(context, models.FixedIp.id).\
-            filter_by(address=fixed_address).\
-            limit(1).\
-            subquery()
     return model_query(context, models.FloatingIp).\
-            filter_by(fixed_ip_id=subq.as_scalar()).\
-            all()
-
-    # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
+                       outerjoin(models.FixedIp,
+                                 models.FixedIp.id ==
+                                 models.FloatingIp.fixed_ip_id).\
+                       filter(models.FixedIp.address == fixed_address).\
+                       all()
 
 
 @require_context
@@ -1196,15 +1193,12 @@ def fixed_ip_get_by_address_detailed(context, address, session=None):
 
 @require_context
 def fixed_ip_get_by_floating_address(context, floating_address):
-    subq = model_query(context, models.FloatingIp.fixed_ip_id,
-            read_deleted="no").\
-            filter_by(address=floating_address).\
-            limit(1).\
-            subquery()
-    return model_query(context, models.FixedIp, read_deleted="no").\
-            filter_by(id=subq.as_scalar()).\
-            first()
-
+    return model_query(context, models.FixedIp).\
+                       outerjoin(models.FloatingIp,
+                                 models.FloatingIp.fixed_ip_id ==
+                                 models.FixedIp.id).\
+                       filter(models.FloatingIp.address == floating_address).\
+                       first()
     # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
 
 
