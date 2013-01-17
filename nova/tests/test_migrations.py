@@ -42,37 +42,48 @@ from nova import test
 LOG = logging.getLogger(__name__)
 
 
-def _mysql_get_connect_string(user="openstack_citest",
-                              passwd="openstack_citest",
-                              database="openstack_citest"):
+def _get_connect_string(backend,
+                        user="openstack_citest",
+                        passwd="openstack_citest",
+                        database="openstack_citest"):
     """
     Try to get a connection with a very specfic set of values, if we get
-    these then we'll run the mysql tests, otherwise they are skipped
+    these then we'll run the tests, otherwise they are skipped
     """
-    return "mysql://%(user)s:%(passwd)s@localhost/%(database)s" % locals()
+    if backend == "postgres":
+        backend = "postgresql+psycopg2"
+
+    return ("%(backend)s://%(user)s:%(passwd)s@localhost/%(database)s"
+            % locals())
 
 
-def _is_mysql_avail(user="openstack_citest",
-                    passwd="openstack_citest",
-                    database="openstack_citest"):
+def _is_backend_avail(backend,
+                      user="openstack_citest",
+                      passwd="openstack_citest",
+                      database="openstack_citest"):
     try:
-        connect_uri = _mysql_get_connect_string(
-            user=user, passwd=passwd, database=database)
+        if backend == "mysql":
+            connect_uri = _get_connect_string("mysql",
+                user=user, passwd=passwd, database=database)
+        elif backend == "postgres":
+            connect_uri = _get_connect_string("postgres",
+                user=user, passwd=passwd, database=database)
         engine = sqlalchemy.create_engine(connect_uri)
         connection = engine.connect()
     except Exception:
         # intentionally catch all to handle exceptions even if we don't
-        # have mysql code loaded at all.
+        # have any backend code loaded.
         return False
     else:
         connection.close()
+        engine.dispose()
         return True
 
 
 def _have_mysql():
     present = os.environ.get('NOVA_TEST_MYSQL_PRESENT')
     if present is None:
-        return _is_mysql_avail()
+        return _is_backend_avail('mysql')
     return present.lower() in ('', 'true')
 
 
@@ -121,7 +132,6 @@ class TestMigrations(test.TestCase):
         self._reset_databases()
 
     def tearDown(self):
-
         # We destroy the test data store between each test case,
         # and recreate it, which ensures that we have no side-effects
         # from the tests
@@ -142,6 +152,7 @@ class TestMigrations(test.TestCase):
         for key, engine in self.engines.items():
             conn_string = self.test_databases[key]
             conn_pieces = urlparse.urlparse(conn_string)
+            engine.dispose()
             if conn_string.startswith('sqlite'):
                 # We can just delete the SQLite database, which is
                 # the easiest and cleanest solution
@@ -172,6 +183,7 @@ class TestMigrations(test.TestCase):
                 database = conn_pieces.path.strip('/')
                 loc_pieces = conn_pieces.netloc.split('@')
                 host = loc_pieces[1]
+
                 auth_pieces = loc_pieces[0].split(':')
                 user = auth_pieces[0]
                 password = ""
@@ -207,16 +219,16 @@ class TestMigrations(test.TestCase):
         Test that we can trigger a mysql connection failure and we fail
         gracefully to ensure we don't break people without mysql
         """
-        if _is_mysql_avail(user="openstack_cifail"):
+        if _is_backend_avail('mysql', user="openstack_cifail"):
             self.fail("Shouldn't have connected")
 
     def test_mysql_innodb(self):
         # Test that table creation on mysql only builds InnoDB tables
-        if not _have_mysql():
+        if not _is_backend_avail('mysql'):
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _mysql_get_connect_string()
+        connect_string = _get_connect_string("mysql")
         engine = sqlalchemy.create_engine(connect_string)
         self.engines["mysqlcitest"] = engine
         self.test_databases["mysqlcitest"] = connect_string
@@ -225,7 +237,7 @@ class TestMigrations(test.TestCase):
         self._reset_databases()
         self._walk_versions(engine, False, False)
 
-        uri = _mysql_get_connect_string(database="information_schema")
+        uri = _get_connect_string("mysql", database="information_schema")
         connection = sqlalchemy.create_engine(uri).connect()
 
         # sanity check
@@ -241,6 +253,99 @@ class TestMigrations(test.TestCase):
                                        "and TABLE_NAME!='migrate_version'")
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
+
+    def test_migration_149_postgres(self):
+        """Test updating a table with IPAddress columns."""
+        if not _is_backend_avail('postgres'):
+            self.skipTest("postgres not available")
+
+        connect_string = _get_connect_string("postgres")
+        engine = sqlalchemy.create_engine(connect_string)
+
+        self.engines["postgrescitest"] = engine
+        self.test_databases["postgrescitest"] = connect_string
+
+        self._reset_databases()
+        migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                      migration.INIT_VERSION)
+
+        connection = engine.connect()
+
+        self._migrate_up(engine, 148)
+        IPS = ("127.0.0.1", "255.255.255.255", "2001:db8::1:2", "::1")
+        connection.execute("INSERT INTO provider_fw_rules "
+                           "            (protocol, from_port, to_port, cidr)"
+                           "VALUES ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s')" % IPS)
+        self.assertEqual('character varying',
+                         connection.execute(
+                "SELECT data_type FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE table_name='provider_fw_rules' "
+                "AND table_catalog='openstack_citest' "
+                "AND column_name='cidr'").scalar())
+
+        self._migrate_up(engine, 149)
+        self.assertEqual(IPS,
+                         tuple(tup[0] for tup in connection.execute(
+                    "SELECT cidr from provider_fw_rules").fetchall()))
+        self.assertEqual('inet',
+                         connection.execute(
+                "SELECT data_type FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE table_name='provider_fw_rules' "
+                "AND table_catalog='openstack_citest' "
+                "AND column_name='cidr'").scalar())
+        connection.close()
+
+    def test_migration_149_mysql(self):
+        """Test updating a table with IPAddress columns."""
+        if not _have_mysql():
+            self.skipTest("mysql not available")
+
+        connect_string = _get_connect_string("mysql")
+        engine = sqlalchemy.create_engine(connect_string)
+        self.engines["mysqlcitest"] = engine
+        self.test_databases["mysqlcitest"] = connect_string
+
+        self._reset_databases()
+        migration_api.version_control(engine, TestMigrations.REPOSITORY,
+                                      migration.INIT_VERSION)
+
+        uri = _get_connect_string("mysql", database="openstack_citest")
+        connection = sqlalchemy.create_engine(uri).connect()
+
+        self._migrate_up(engine, 148)
+
+        IPS = ("127.0.0.1", "255.255.255.255", "2001:db8::1:2", "::1")
+        connection.execute("INSERT INTO provider_fw_rules "
+                           "            (protocol, from_port, to_port, cidr)"
+                           "VALUES ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s'), "
+                           "       ('tcp', 1234, 1234, '%s')" % IPS)
+        self.assertEqual('varchar(255)',
+                         connection.execute(
+                "SELECT column_type FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE table_name='provider_fw_rules' "
+                "AND table_schema='openstack_citest' "
+                "AND column_name='cidr'").scalar())
+
+        connection.close()
+
+        self._migrate_up(engine, 149)
+
+        connection = sqlalchemy.create_engine(uri).connect()
+
+        self.assertEqual(IPS,
+                         tuple(tup[0] for tup in connection.execute(
+                    "SELECT cidr from provider_fw_rules").fetchall()))
+        self.assertEqual('varchar(39)',
+                         connection.execute(
+                "SELECT column_type FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE table_name='provider_fw_rules' "
+                "AND table_schema='openstack_citest' "
+                "AND column_name='cidr'").scalar())
 
     def _walk_versions(self, engine=None, snake_walk=False, downgrade=True):
         # Determine latest version script from the repo, then
