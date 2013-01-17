@@ -227,7 +227,7 @@ class ResourceTracker(object):
                 "%(free_mem)d MB") % dict(
                         total_mem=self.compute_node['memory_mb'],
                         used_mem=self.compute_node['memory_mb_used'],
-                        free_mem=self.compute_node['local_gb_used'])
+                        free_mem=self.compute_node['free_ram_mb'])
         LOG.audit(msg)
 
         if memory_mb_limit is None:
