@@ -271,6 +271,12 @@ class FakeDriver(driver.ComputeDriver):
                 'host': 'fakevncconsole.com',
                 'port': 6969}
 
+    def get_spice_console(self, instance):
+        return {'internal_access_path': 'FAKE',
+                'host': 'fakespiceconsole.com',
+                'port': 6969,
+                'tlsPort': 6970}
+
     def get_console_pool_info(self, console_type):
         return {'address': '127.0.0.1',
                 'username': 'fakeuser',
