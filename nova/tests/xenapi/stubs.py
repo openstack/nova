@@ -208,12 +208,10 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
 
     def __init__(self, uri, test_case=None):
         super(FakeSessionForFirewallTests, self).__init__(uri)
-        if hasattr(test_case, '_in_filter_rules'):
-            self._in_filter_rules = test_case._in_filter_rules
+        if hasattr(test_case, '_in_rules'):
+            self._in_rules = test_case._in_rules
         if hasattr(test_case, '_in6_filter_rules'):
             self._in6_filter_rules = test_case._in6_filter_rules
-        if hasattr(test_case, '_in_nat_rules'):
-            self._in_nat_rules = test_case._in_nat_rules
         self._test_case = test_case
 
     def host_call_plugin(self, _1, _2, plugin, method, args):
@@ -230,12 +228,10 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
             else:
                 output = ''
                 process_input = args.get('process_input', None)
-                if cmd == ['ip6tables-save', '-c', '-t', 'filter']:
+                if cmd == ['ip6tables-save', '-c']:
                     output = '\n'.join(self._in6_filter_rules)
-                if cmd == ['iptables-save', '-c', '-t', 'filter']:
-                    output = '\n'.join(self._in_filter_rules)
-                if cmd == ['iptables-save', '-c', '-t', 'nat']:
-                    output = '\n'.join(self._in_nat_rules)
+                if cmd == ['iptables-save', '-c']:
+                    output = '\n'.join(self._in_rules)
                 if cmd == ['iptables-restore', '-c', ]:
                     lines = process_input.split('\n')
                     if '*filter' in lines:
