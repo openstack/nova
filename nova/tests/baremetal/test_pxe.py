@@ -254,6 +254,13 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 pxe.get_tftp_image_info,
                 self.instance)
 
+        # Test that other non-true values also raise an exception
+        CONF.baremetal.deploy_kernel = ""
+        CONF.baremetal.deploy_ramdisk = ""
+        self.assertRaises(exception.NovaException,
+                pxe.get_tftp_image_info,
+                self.instance)
+
         # Even if the instance includes kernel_id and ramdisk_id,
         # we still need deploy_kernel_id and deploy_ramdisk_id.
         # If those aren't present in instance[], and not specified in
@@ -294,6 +301,17 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         res = pxe.get_tftp_image_info(self.instance)
         self.assertEqual(res['deploy_kernel'][0], 'eeee')
         self.assertEqual(res['deploy_ramdisk'][0], 'ffff')
+
+        # However, if invalid values are passed on the image extra_specs,
+        # this should still raise an exception.
+        extra_specs = {
+                'deploy_kernel_id': '',
+                'deploy_ramdisk_id': '',
+            }
+        self.instance['extra_specs'] = extra_specs
+        self.assertRaises(exception.NovaException,
+                pxe.get_tftp_image_info,
+                self.instance)
 
 
 class PXEPrivateMethodsTestCase(BareMetalPXETestCase):

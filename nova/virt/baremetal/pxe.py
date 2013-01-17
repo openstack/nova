@@ -219,7 +219,7 @@ def get_tftp_image_info(instance):
     missing_labels = []
     for label in image_info.keys():
         (uuid, path) = image_info[label]
-        if uuid is None:
+        if not uuid:
             missing_labels.append(label)
         else:
             image_info[label][1] = os.path.join(CONF.baremetal.tftp_root,
