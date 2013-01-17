@@ -293,7 +293,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.23'
+    RPC_API_VERSION = '2.24'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2387,6 +2387,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_("Getting vnc console"), instance=instance)
         token = str(uuid.uuid4())
 
+        if not CONF.vnc_enabled:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
         if console_type == 'novnc':
             # For essex, novncproxy_base_url must include the full path
             # including the html file (like http://myhost/vnc_auto.html)
@@ -2399,6 +2402,33 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Retrieve connect info from driver, and then decorate with our
         # access info token
         connect_info = self.driver.get_vnc_console(instance)
+        connect_info['token'] = token
+        connect_info['access_url'] = access_url
+
+        return connect_info
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
+    def get_spice_console(self, context, console_type, instance):
+        """Return connection information for a spice console."""
+        context = context.elevated()
+        LOG.debug(_("Getting spice console"), instance=instance)
+        token = str(uuid.uuid4())
+
+        if not CONF.spice.enabled:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
+        if console_type == 'spice-html5':
+            # For essex, spicehtml5proxy_base_url must include the full path
+            # including the html file (like http://myhost/spice_auto.html)
+            access_url = '%s?token=%s' % (CONF.spice.html5proxy_base_url,
+                                          token)
+        else:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
+        # Retrieve connect info from driver, and then decorate with our
+        # access info token
+        connect_info = self.driver.get_spice_console(instance)
         connect_info['token'] = token
         connect_info['access_url'] = access_url
 

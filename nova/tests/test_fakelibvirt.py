@@ -53,6 +53,7 @@ def get_vm_xml(name="testname", uuid=None, source_type='file',
     </interface>
     <input type='mouse' bus='ps2'/>
     <graphics type='vnc' port='5901' autoport='yes' keymap='en-us'/>
+    <graphics type='spice' port='5901' autoport='yes' keymap='en-us'/>
   </devices>
 </domain>''' % {'name': name,
                 'uuid_tag': uuid_tag,

@@ -2116,6 +2116,11 @@ class ConsolesSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                                      ".consoles.Consoles")
 
+    def setUp(self):
+        super(ConsolesSampleJsonTests, self).setUp()
+        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='spice')
+
     def test_get_vnc_console(self):
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
@@ -2126,6 +2131,18 @@ class ConsolesSampleJsonTests(ServersSampleBase):
         subs["url"] = \
             "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
         return self._verify_response('get-vnc-console-post-resp',
+                                       subs, response)
+
+    def test_get_spice_console(self):
+        uuid = self._post_server()
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'get-spice-console-post-req',
+                                {'action': 'os-getSPICEConsole'})
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs["url"] = \
+            "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+        return self._verify_response('get-spice-console-post-resp',
                                        subs, response)
 
 
