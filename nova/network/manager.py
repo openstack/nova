@@ -1926,21 +1926,11 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def get_instance_id_by_floating_address(self, context, address):
         """Returns the instance id a floating ip's fixed ip is allocated to."""
-        floating_ip = self.db.floating_ip_get_by_address(context, address)
-        if floating_ip['fixed_ip_id'] is None:
+        fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
+        if fixed_ip is None:
             return None
-
-        fixed_ip = self.db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
-
-        # NOTE(tr3buchet): this can be None
-        # NOTE(mikal): we need to return the instance id here because its used
-        # by ec2 (and possibly others)
-        uuid = fixed_ip['instance_uuid']
-        if not uuid:
-            return uuid
-
-        instance = self.db.instance_get_by_uuid(context, uuid)
-        return instance['id']
+        else:
+            return fixed_ip['instance_uuid']
 
     @wrap_check_policy
     def get_network(self, context, network_uuid):

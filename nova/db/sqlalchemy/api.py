@@ -1195,6 +1195,20 @@ def fixed_ip_get_by_address_detailed(context, address, session=None):
 
 
 @require_context
+def fixed_ip_get_by_floating_address(context, floating_address):
+    subq = model_query(context, models.FloatingIp.fixed_ip_id,
+            read_deleted="no").\
+            filter_by(address=floating_address).\
+            limit(1).\
+            subquery()
+    return model_query(context, models.FixedIp, read_deleted="no").\
+            filter_by(id=subq.as_scalar()).\
+            first()
+
+    # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
+
+
+@require_context
 def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
