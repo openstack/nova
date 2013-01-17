@@ -296,6 +296,22 @@ class LocalAPI(object):
     def service_update(self, context, service, values):
         return self._manager.service_update(context, service, values)
 
+    def task_log_get(self, context, task_name, begin, end, host, state):
+        return self._manager.task_log_get(context, task_name, begin, end,
+                                          host, state)
+
+    def task_log_begin_task(self, context, task_name, begin, end, host,
+                            task_items=None, message=None):
+        return self._manager.task_log_begin_task(context, task_name,
+                                                 begin, end, host,
+                                                 task_items, message)
+
+    def task_log_end_task(self, context, task_name, begin, end, host,
+                          errors, message=None):
+        return self._manager.task_log_end_task(context, task_name,
+                                               begin, end, host,
+                                               errors, message)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -570,3 +586,19 @@ class API(object):
 
     def service_update(self, context, service, values):
         return self.conductor_rpcapi.service_update(context, service, values)
+
+    def task_log_get(self, context, task_name, begin, end, host, state):
+        return self.conductor_rpcapi.task_log_get(context, task_name, begin,
+                                                  end, host, state)
+
+    def task_log_begin_task(self, context, task_name, begin, end, host,
+                            task_items=None, message=None):
+        return self.conductor_rpcapi.task_log_begin_task(context, task_name,
+                                                         begin, end, host,
+                                                         task_items, message)
+
+    def task_log_end_task(self, context, task_name, begin, end, host,
+                          errors, message=None):
+        return self.conductor_rpcapi.task_log_end_task(context, task_name,
+                                                       begin, end, host,
+                                                       errors, message)

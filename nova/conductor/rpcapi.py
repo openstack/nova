@@ -69,6 +69,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.34 - Added service_update
     1.35 - Added instance_get_active_by_window_joined
     1.36 - Added instance_fault_create
+    1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -335,3 +336,22 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         service_p = jsonutils.to_primitive(service)
         msg = self.make_msg('service_update', service=service_p, values=values)
         return self.call(context, msg, version='1.34')
+
+    def task_log_get(self, context, task_name, begin, end, host, state=None):
+        msg = self.make_msg('task_log_get', task_name=task_name,
+                            begin=begin, end=end, host=host, state=state)
+        return self.call(context, msg, version='1.37')
+
+    def task_log_begin_task(self, context, task_name, begin, end, host,
+                            task_items=None, message=None):
+        msg = self.make_msg('task_log_begin_task', task_name=task_name,
+                            begin=begin, end=end, host=host,
+                            task_items=task_items, message=message)
+        return self.call(context, msg, version='1.37')
+
+    def task_log_end_task(self, context, task_name, begin, end, host, errors,
+                          message=None):
+        msg = self.make_msg('task_log_end_task', task_name=task_name,
+                            begin=begin, end=end, host=host, errors=errors,
+                            message=message)
+        return self.call(context, msg, version='1.37')
