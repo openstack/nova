@@ -130,11 +130,11 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # instance 1
         ctxt.elevated().AndReturn(ctxt_elevated)
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn([])
-        compute_utils.add_instance_fault_from_exc(ctxt,
-                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-        db.instance_update_and_get_original(ctxt, uuid,
+        old_ref, new_ref = db.instance_update_and_get_original(ctxt, uuid,
                 {'vm_state': vm_states.ERROR,
                  'task_state': None}).AndReturn(({}, {}))
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.driver.schedule_run_instance(

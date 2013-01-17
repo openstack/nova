@@ -180,8 +180,6 @@ class SchedulerManager(manager.Manager):
         uuids = [properties.get('uuid')]
         for instance_uuid in request_spec.get('instance_uuids') or uuids:
             if instance_uuid:
-                compute_utils.add_instance_fault_from_exc(context,
-                        instance_uuid, ex, sys.exc_info())
                 state = vm_state.upper()
                 LOG.warning(_('Setting instance to %(state)s state.'),
                             locals(), instance_uuid=instance_uuid)
@@ -191,6 +189,8 @@ class SchedulerManager(manager.Manager):
                         context, instance_uuid, updates)
                 notifications.send_update(context, old_ref, new_ref,
                         service="scheduler")
+                compute_utils.add_instance_fault_from_exc(context,
+                        new_ref, ex, sys.exc_info())
 
             payload = dict(request_spec=request_spec,
                            instance_properties=properties,

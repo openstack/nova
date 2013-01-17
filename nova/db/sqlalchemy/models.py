@@ -992,6 +992,7 @@ class InstanceFault(BASE, NovaBase):
     code = Column(Integer(), nullable=False)
     message = Column(String(255))
     details = Column(Text)
+    host = Column(String(255))
 
 
 class InstanceAction(BASE, NovaBase):

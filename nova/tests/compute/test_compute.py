@@ -2698,8 +2698,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(task_states.POWERING_OFF, instances[0]['task_state'])
 
     def test_add_instance_fault(self):
+        instance = self._create_fake_instance()
         exc_info = None
-        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
             self.assertTrue(values['details'].startswith('test'))
@@ -2709,7 +2709,8 @@ class ComputeTestCase(BaseTestCase):
             expected = {
                 'code': 500,
                 'message': 'NotImplementedError',
-                'instance_uuid': instance_uuid,
+                'instance_uuid': instance['uuid'],
+                'host': self.compute.host
             }
             self.assertEquals(expected, values)
 
@@ -2721,13 +2722,12 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                  NotImplementedError('test'),
-                                                  exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt, instance,
+                NotImplementedError('test'), exc_info)
 
     def test_add_instance_fault_with_remote_error(self):
+        instance = self._create_fake_instance()
         exc_info = None
-        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
             self.assertTrue(values['details'].startswith('Remote error'))
@@ -2737,8 +2737,9 @@ class ComputeTestCase(BaseTestCase):
 
             expected = {
                 'code': 500,
-                'instance_uuid': instance_uuid,
-                'message': 'My Test Message'
+                'instance_uuid': instance['uuid'],
+                'message': 'My Test Message',
+                'host': self.compute.host
             }
             self.assertEquals(expected, values)
 
@@ -2750,13 +2751,12 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
-            exc,
-            exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt, instance, exc,
+                exc_info)
 
     def test_add_instance_fault_user_error(self):
+        instance = self._create_fake_instance()
         exc_info = None
-        instance_uuid = str(uuid.uuid4())
 
         def fake_db_fault_create(ctxt, values):
 
@@ -2764,7 +2764,8 @@ class ComputeTestCase(BaseTestCase):
                 'code': 400,
                 'message': 'Invalid',
                 'details': 'fake details',
-                'instance_uuid': instance_uuid,
+                'instance_uuid': instance['uuid'],
+                'host': self.compute.host
             }
             self.assertEquals(expected, values)
 
@@ -2778,26 +2779,27 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
-            user_exc, exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt, instance, user_exc,
+                exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
-        instance_uuid = str(uuid.uuid4())
+        instance = self._create_fake_instance()
 
         def fake_db_fault_create(ctxt, values):
             expected = {
                 'code': 500,
                 'message': 'NotImplementedError',
                 'details': 'test',
-                'instance_uuid': instance_uuid,
+                'instance_uuid': instance['uuid'],
+                'host': self.compute.host
             }
             self.assertEquals(expected, values)
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
-                                                  NotImplementedError('test'))
+        compute_utils.add_instance_fault_from_exc(ctxt, instance,
+                NotImplementedError('test'))
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
@@ -6617,7 +6619,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
-                    instance_uuid, exc_info[0], exc_info=exc_info)
+                    self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance).AndRaise(InnerTestingException("Error"))
             self.compute._log_original_error(exc_info, instance_uuid)
@@ -6667,7 +6669,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         except Exception:
             exc_info = sys.exc_info()
             compute_utils.add_instance_fault_from_exc(self.context,
-                    instance_uuid, exc_info[0], exc_info=exc_info)
+                    self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance)
             self.compute._reschedule(self.context, None, {}, instance_uuid,
@@ -6695,7 +6697,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
-                    instance_uuid, exc_info[0], exc_info=exc_info)
+                    self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance)
             self.compute._reschedule(self.context, None, {}, instance_uuid,
