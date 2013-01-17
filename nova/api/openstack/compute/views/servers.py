@@ -211,9 +211,9 @@ class ViewBuilder(common.ViewBuilder):
 
         if fault.get('details', None):
             is_admin = False
-            context = getattr(request, 'context', None)
+            context = request.environ["nova.context"]
             if context:
-                is_admin = getattr(request.context, 'is_admin', False)
+                is_admin = getattr(context, 'is_admin', False)
 
             if is_admin or fault['code'] != 500:
                 fault_dict['details'] = fault["details"]
