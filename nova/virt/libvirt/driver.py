@@ -277,6 +277,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host_state = None
         self._initiator = None
         self._wrapped_conn = None
+        self._caps = None
         self.read_only = read_only
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
@@ -362,7 +363,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.getCapabilities()
+            self._wrapped_conn.getLibVersion()
             return True
         except libvirt.libvirtError as e:
             if (e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and
@@ -1443,11 +1444,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
            the capabilities of the host"""
-        xmlstr = self._conn.getCapabilities()
-
-        caps = vconfig.LibvirtConfigCaps()
-        caps.parse_str(xmlstr)
-        return caps
+        if not self._caps:
+            xmlstr = self._conn.getCapabilities()
+            self._caps = vconfig.LibvirtConfigCaps()
+            self._caps.parse_str(xmlstr)
+        return self._caps
 
     def get_host_uuid(self):
         """Returns a UUID representing the host."""
