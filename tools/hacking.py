@@ -18,7 +18,7 @@
 
 """nova HACKING file compliance testing
 
-built on top of pep8.py
+Built on top of pep8.py
 """
 
 import inspect
@@ -48,6 +48,8 @@ IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
 END_DOCSTRING_TRIPLE = ['"""', "'''"]
 VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
+
+_missingImport = set([])
 
 
 # Monkey patch broken excluded filter in pep8
@@ -103,7 +105,7 @@ def import_normalize(line):
         return line
 
 
-def nova_todo_format(physical_line):
+def nova_todo_format(physical_line, tokens):
     """Check for 'TODO()'.
 
     nova HACKING guide recommendation for TODO:
@@ -111,14 +113,13 @@ def nova_todo_format(physical_line):
 
     Okay: #TODO(sdague)
     N101: #TODO fail
+    N101: #TODO (jogo) fail
     """
     # TODO(sdague): TODO check shouldn't fail inside of space
     pos = physical_line.find('TODO')
     pos1 = physical_line.find('TODO(')
     pos2 = physical_line.find('#')  # make sure it's a comment
-    # TODO(sdague): should be smarter on this test
-    this_test = physical_line.find('N101: #TODO fail')
-    if pos != pos1 and pos2 >= 0 and pos2 < pos and this_test == -1:
+    if (pos != pos1 and pos2 >= 0 and pos2 < pos and len(tokens) == 0):
         return pos, "N101: Use TODO(NAME)"
 
 
@@ -165,8 +166,6 @@ def nova_one_import_per_line(logical_line):
         not is_import_exception(parts[1])):
         yield pos, "N301: one import per line"
 
-_missingImport = set([])
-
 
 def nova_import_module_only(logical_line):
     r"""Check for import module only.
@@ -175,20 +174,23 @@ def nova_import_module_only(logical_line):
     Do not import objects, only modules
 
     Okay: from os import path
-    N302  from os.path import mkdir as mkdir2
-    N303  import bubba
-    N304  import blueblue
+    Okay: import os.path
+    N302: from os.path import dirname as dirname2
+    N303  from os.path import *
+    N304  import flakes
     """
     # N302 import only modules
     # N303 Invalid Import
     # N304 Relative Import
 
     # TODO(sdague) actually get these tests working
-    def importModuleCheck(mod, parent=None, added=False):
-        """Import Module helper function.
+    # TODO(jogo) simplify this code
+    def import_module_check(mod, parent=None, added=False):
+        """Checks for relative, modules and invalid imports.
 
         If can't find module on first try, recursively check for relative
-        imports
+        imports.
+        When parsing 'from x import y,' x is the parent.
         """
         current_path = os.path.dirname(pep8.current_file)
         try:
@@ -196,8 +198,6 @@ def nova_import_module_only(logical_line):
                 warnings.simplefilter('ignore', DeprecationWarning)
                 valid = True
                 if parent:
-                    if is_import_exception(parent):
-                        return
                     parent_mod = __import__(parent, globals(), locals(),
                         [mod], -1)
                     valid = inspect.ismodule(getattr(parent_mod, mod))
@@ -209,7 +209,7 @@ def nova_import_module_only(logical_line):
                         sys.path.pop()
                         added = False
                         return logical_line.find(mod), ("N304: No "
-                            "relative  imports. '%s' is a relative import"
+                            "relative imports. '%s' is a relative import"
                             % logical_line)
                     return logical_line.find(mod), ("N302: import only "
                         "modules. '%s' does not import a module"
@@ -219,7 +219,7 @@ def nova_import_module_only(logical_line):
             if not added:
                 added = True
                 sys.path.append(current_path)
-                return importModuleCheck(mod, parent, added)
+                return import_module_check(mod, parent, added)
             else:
                 name = logical_line.split()[1]
                 if name not in _missingImport:
@@ -234,23 +234,27 @@ def nova_import_module_only(logical_line):
 
         except AttributeError:
             # Invalid import
+            if "import *" in logical_line:
+                # TODO(jogo): handle "from x import *, by checking all
+                #           "objects in x"
+                return
             return logical_line.find(mod), ("N303: Invalid import, "
-                "AttributeError raised")
+                "%s" % mod)
 
-    # convert "from x import y" to " import x.y"
-    # convert "from x import y as z" to " import x.y"
-    import_normalize(logical_line)
     split_line = logical_line.split()
-
-    if (logical_line.startswith("import ") and "," not in logical_line and
-            (len(split_line) == 2 or
-            (len(split_line) == 4 and split_line[2] == "as"))):
-        mod = split_line[1]
-        rval = importModuleCheck(mod)
+    if (", " not in logical_line and
+            split_line[0] in ('import', 'from') and
+            (len(split_line) in (2, 4, 6)) and
+            split_line[1] != "__future__"):
+        if is_import_exception(split_line[1]):
+            return
+        if "from" == split_line[0]:
+            rval = import_module_check(split_line[3], parent=split_line[1])
+        else:
+            rval = import_module_check(split_line[1])
         if rval is not None:
             yield rval
 
-    # TODO(jogo) handle "from x import *"
 
 #TODO(jogo): import template: N305
 
@@ -329,6 +333,8 @@ def nova_docstring_one_line(physical_line):
     A one line docstring looks like this and ends in punctuation.
 
     Okay: '''This is good.'''
+    Okay: '''This is good too!'''
+    Okay: '''How about this?'''
     N402: '''This is not'''
     N402: '''Bad punctuation,'''
     """

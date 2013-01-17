@@ -19,7 +19,7 @@
 """Tests for metadata service."""
 
 import base64
-from copy import copy
+import copy
 import json
 import re
 
@@ -120,14 +120,14 @@ class MetadataTestCase(test.TestCase):
                                                           spectacular=True)
 
     def test_user_data(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         inst['user_data'] = base64.b64encode("happy")
         md = fake_InstanceMetadata(self.stubs, inst)
         self.assertEqual(
             md.get_ec2_metadata(version='2009-04-04')['user-data'], "happy")
 
     def test_no_user_data(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         del inst['user_data']
         md = fake_InstanceMetadata(self.stubs, inst)
         obj = object()
@@ -136,7 +136,7 @@ class MetadataTestCase(test.TestCase):
             obj)
 
     def test_security_groups(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         sgroups = [{'name': 'default'}, {'name': 'other'}]
         expected = ['default', 'other']
 
@@ -145,7 +145,7 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(data['meta-data']['security-groups'], expected)
 
     def test_local_hostname_fqdn(self):
-        md = fake_InstanceMetadata(self.stubs, copy(self.instance))
+        md = fake_InstanceMetadata(self.stubs, copy.copy(self.instance))
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-hostname'],
             "%s.%s" % (self.instance['hostname'], CONF.dhcp_domain))
@@ -195,7 +195,7 @@ class MetadataTestCase(test.TestCase):
                          expected)
 
     def test_pubkey(self):
-        md = fake_InstanceMetadata(self.stubs, copy(self.instance))
+        md = fake_InstanceMetadata(self.stubs, copy.copy(self.instance))
         pubkey_ent = md.lookup("/2009-04-04/meta-data/public-keys")
 
         self.assertEqual(base.ec2_md_print(pubkey_ent),
@@ -204,7 +204,7 @@ class MetadataTestCase(test.TestCase):
             self.instance['key_data'])
 
     def test_image_type_ramdisk(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         inst['ramdisk_id'] = 'ari-853667c0'
         md = fake_InstanceMetadata(self.stubs, inst)
         data = md.lookup("/latest/meta-data/ramdisk-id")
@@ -213,7 +213,7 @@ class MetadataTestCase(test.TestCase):
         self.assertTrue(re.match('ari-[0-9a-f]{8}', data))
 
     def test_image_type_kernel(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         inst['kernel_id'] = 'aki-c2e26ff2'
         md = fake_InstanceMetadata(self.stubs, inst)
         data = md.lookup("/2009-04-04/meta-data/kernel-id")
@@ -229,7 +229,7 @@ class MetadataTestCase(test.TestCase):
             md.lookup, "/2009-04-04/meta-data/kernel-id")
 
     def test_check_version(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         md = fake_InstanceMetadata(self.stubs, inst)
 
         self.assertTrue(md._check_version('1.0', '2009-04-04'))
@@ -250,7 +250,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         listing = mdinst.lookup("/openstack/")
@@ -267,14 +267,14 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_version_content_listing(self):
         # request for /openstack/<version>/ should show metadata.json
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         listing = mdinst.lookup("/openstack/2012-08-10")
         self.assertTrue("meta_data.json" in listing)
 
     def test_metadata_json(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         content = [
             ('/etc/my.conf', "content of my.conf"),
             ('/root/hello', "content of /root/hello"),
@@ -309,7 +309,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_extra_md(self):
         # make sure extra_md makes it through to metadata
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         extra = {'foo': 'bar', 'mylist': [1, 2, 3],
                  'mydict': {"one": 1, "two": 2}}
         mdinst = fake_InstanceMetadata(self.stubs, inst, extra_md=extra)
@@ -322,14 +322,14 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_password(self):
         # make sure extra_md makes it through to metadata
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         result = mdinst.lookup("/openstack/latest/password")
         self.assertEqual(result, password.handle_password)
 
     def test_userdata(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         userdata_found = mdinst.lookup("/openstack/2012-08-10/user_data")
@@ -348,7 +348,7 @@ class OpenStackMetadataTestCase(test.TestCase):
             mdinst.lookup, "/openstack/2012-08-10/user_data")
 
     def test_random_seed(self):
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         # verify that 2013-04-04 has the 'random' field
@@ -364,7 +364,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
-        inst = copy(self.instance)
+        inst = copy.copy(self.instance)
         mdinst = fake_InstanceMetadata(self.stubs, inst)
         mdjson = json.loads(mdinst.lookup("/openstack/latest/meta_data.json"))
 
@@ -522,7 +522,7 @@ class MetadataPasswordTestCase(test.TestCase):
         super(MetadataPasswordTestCase, self).setUp()
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
-        self.instance = copy(INSTANCES[0])
+        self.instance = copy.copy(INSTANCES[0])
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
 

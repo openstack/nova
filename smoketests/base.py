@@ -17,7 +17,7 @@
 #    under the License.
 
 import boto
-from boto.ec2.regioninfo import RegionInfo
+from boto.ec2 import regioninfo
 import commands
 import httplib
 import os
@@ -123,7 +123,7 @@ class SmokeTestCase(unittest.TestCase):
             return boto_v6.connect_ec2(aws_access_key_id=access_key,
                                 aws_secret_access_key=secret_key,
                                 is_secure=parts['is_secure'],
-                                region=RegionInfo(None,
+                                region=regioninfo.RegionInfo(None,
                                                   'nova',
                                                   parts['ip']),
                                 port=parts['port'],
@@ -133,7 +133,7 @@ class SmokeTestCase(unittest.TestCase):
         return boto.connect_ec2(aws_access_key_id=access_key,
                                 aws_secret_access_key=secret_key,
                                 is_secure=parts['is_secure'],
-                                region=RegionInfo(None,
+                                region=regioninfo.RegionInfo(None,
                                                   'nova',
                                                   parts['ip']),
                                 port=parts['port'],
