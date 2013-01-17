@@ -21,7 +21,6 @@
 built on top of pep8.py
 """
 
-import fnmatch
 import inspect
 import logging
 import os
@@ -46,16 +45,15 @@ logging.disable('LOG')
 #N8xx git commit messages
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
-DOCSTRING_TRIPLE = ['"""', "'''"]
+START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
+END_DOCSTRING_TRIPLE = ['"""', "'''"]
 VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
 
 
 # Monkey patch broken excluded filter in pep8
 # See https://github.com/jcrocholl/pep8/pull/111
 def excluded(self, filename):
-    """
-    Check if options.exclude contains a pattern that matches filename.
-    """
+    """Check if options.exclude contains a pattern that matches filename."""
     basename = os.path.basename(filename)
     return any((pep8.filename_match(filename, self.options.exclude,
                                default=False),
@@ -120,7 +118,7 @@ def nova_todo_format(physical_line):
     pos2 = physical_line.find('#')  # make sure it's a comment
     # TODO(sdague): should be smarter on this test
     this_test = physical_line.find('N101: #TODO fail')
-    if (pos != pos1 and pos2 >= 0 and pos2 < pos and this_test == -1):
+    if pos != pos1 and pos2 >= 0 and pos2 < pos and this_test == -1:
         return pos, "N101: Use TODO(NAME)"
 
 
@@ -187,7 +185,8 @@ def nova_import_module_only(logical_line):
 
     # TODO(sdague) actually get these tests working
     def importModuleCheck(mod, parent=None, added=False):
-        """
+        """Import Module helper function.
+
         If can't find module on first try, recursively check for relative
         imports
         """
@@ -258,8 +257,7 @@ def nova_import_module_only(logical_line):
 
 def nova_import_alphabetical(logical_line, blank_lines, previous_logical,
                              indent_level, previous_indent_level):
-    r"""
-    Check for imports in alphabetical order.
+    r"""Check for imports in alphabetical order.
 
     nova HACKING guide recommendation for imports:
     imports in human alphabetical order
@@ -294,6 +292,11 @@ def nova_import_no_db_in_virt(logical_line, filename):
             yield (0, "N307: nova.db import not allowed in nova/virt/*")
 
 
+def in_docstring_position(previous_logical):
+    return (previous_logical.startswith("def ") or
+        previous_logical.startswith("class "))
+
+
 def nova_docstring_start_space(physical_line, previous_logical):
     r"""Check for docstring not start with space.
 
@@ -311,11 +314,10 @@ def nova_docstring_start_space(physical_line, previous_logical):
     # it's important that we determine this is actually a docstring,
     # and not a doc block used somewhere after the first line of a
     # function def
-    if (previous_logical.startswith("def ") or
-        previous_logical.startswith("class ")):
-        pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])
-        if (pos != -1 and len(physical_line) > pos + 4):
-            if (physical_line[pos + 3] == ' '):
+    if in_docstring_position(previous_logical):
+        pos = max([physical_line.find(i) for i in START_DOCSTRING_TRIPLE])
+        if pos != -1 and len(physical_line) > pos + 4:
+            if physical_line[pos + 3] == ' ':
                 return (pos, "N401: docstring should not start with"
                         " a space")
 
@@ -330,33 +332,50 @@ def nova_docstring_one_line(physical_line):
     N402: '''This is not'''
     N402: '''Bad punctuation,'''
     """
+    #TODO(jogo) make this apply to multi line docstrings as well
     line = physical_line.lstrip()
 
     if line.startswith('"') or line.startswith("'"):
-        pos = max([line.find(i) for i in DOCSTRING_TRIPLE])  # start
-        end = max([line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
+        pos = max([line.find(i) for i in START_DOCSTRING_TRIPLE])  # start
+        end = max([line[-4:-1] == i for i in END_DOCSTRING_TRIPLE])  # end
 
-        if (pos != -1 and end and len(line) > pos + 4):
-            if (line[-5] not in ['.', '?', '!']):
+        if pos != -1 and end and len(line) > pos + 4:
+            if line[-5] not in ['.', '?', '!']:
                 return pos, "N402: one line docstring needs punctuation."
 
 
-def nova_docstring_multiline_end(physical_line):
+def nova_docstring_multiline_end(physical_line, previous_logical):
     r"""Check multi line docstring end.
 
     nova HACKING guide recommendation for docstring:
     Docstring should end on a new line
-    Okay: '''\nfoo\nbar\n'''
 
-    # This test is not triggered, don't think it's right, removing
-    # the colon prevents it from running
-    N403 '''\nfoo\nbar\n    ''' \n\n
+    Okay: '''foobar\nfoo\nbar\n'''
+    N403: def foo():\n'''foobar\nfoo\nbar\n   d'''\n\n
     """
-    # TODO(sdague) actually get these tests working
-    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
-    if (pos != -1 and len(physical_line) == pos):
-        if (physical_line[pos + 3] == ' '):
-            return (pos, "N403: multi line docstring end on new line")
+    if in_docstring_position(previous_logical):
+        pos = max(physical_line.find(i) for i in END_DOCSTRING_TRIPLE)
+        if pos != -1 and len(physical_line) == pos + 4:
+            if physical_line.strip() not in START_DOCSTRING_TRIPLE:
+                return (pos, "N403: multi line docstring end on new line")
+
+
+def nova_docstring_multiline_start(physical_line, previous_logical, tokens):
+    r"""Check multi line docstring start with summary.
+
+    nova HACKING guide recommendation for docstring:
+    Docstring should start with A multi line docstring has a one-line summary
+
+    Okay: '''foobar\nfoo\nbar\n'''
+    N404: def foo():\n'''\nfoo\nbar\n''' \n\n
+    """
+    if in_docstring_position(previous_logical):
+        pos = max([physical_line.find(i) for i in START_DOCSTRING_TRIPLE])
+        # start of docstring when len(tokens)==0
+        if len(tokens) == 0 and pos != -1 and len(physical_line) == pos + 4:
+            if physical_line.strip() in START_DOCSTRING_TRIPLE:
+                return (pos, "N404: multi line docstring "
+                        "should start with a summary")
 
 
 FORMAT_RE = re.compile("%(?:"
