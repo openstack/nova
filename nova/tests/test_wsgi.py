@@ -21,9 +21,17 @@
 import os.path
 import tempfile
 
+import eventlet
+
 import nova.exception
 from nova import test
 import nova.wsgi
+import urllib2
+import webob
+
+SSL_CERT_DIR = os.path.normpath(os.path.join(
+                                os.path.dirname(os.path.abspath(__file__)),
+                                'ssl_cert'))
 
 
 class TestLoaderNothingExists(test.TestCase):
@@ -97,5 +105,94 @@ class TestWSGIServer(test.TestCase):
         server.start()
         self.assertEqual("::1", server.host)
         self.assertNotEqual(0, server.port)
+        server.stop()
+        server.wait()
+
+
+class TestWSGIServerWithSSL(test.TestCase):
+    """WSGI server with SSL tests."""
+
+    def setUp(self):
+        super(TestWSGIServerWithSSL, self).setUp()
+        self.flags(enabled_ssl_apis=['fake_ssl'],
+                ssl_cert_file=os.path.join(SSL_CERT_DIR, 'certificate.crt'),
+                ssl_key_file=os.path.join(SSL_CERT_DIR, 'privatekey.key'))
+
+    def test_ssl_server(self):
+
+        def test_app(env, start_response):
+            start_response('200 OK', {})
+            return ['PONG']
+
+        fake_ssl_server = nova.wsgi.Server("fake_ssl", test_app,
+                                           host="127.0.0.1", port=0,
+                                           use_ssl=True)
+        fake_ssl_server.start()
+        self.assertNotEqual(0, fake_ssl_server.port)
+
+        cli = eventlet.connect(("localhost", fake_ssl_server.port))
+        cli = eventlet.wrap_ssl(cli,
+                                ca_certs=os.path.join(SSL_CERT_DIR, 'ca.crt'))
+
+        cli.write('POST / HTTP/1.1\r\nHost: localhost\r\n'
+                  'Connection: close\r\nContent-length:4\r\n\r\nPING')
+        response = cli.read(8192)
+        self.assertEquals(response[-4:], "PONG")
+
+        fake_ssl_server.stop()
+        fake_ssl_server.wait()
+
+    def test_two_servers(self):
+
+        def test_app(env, start_response):
+            start_response('200 OK', {})
+            return ['PONG']
+
+        fake_ssl_server = nova.wsgi.Server("fake_ssl", test_app,
+            host="127.0.0.1", port=0, use_ssl=True)
+        fake_ssl_server.start()
+        self.assertNotEqual(0, fake_ssl_server.port)
+
+        fake_server = nova.wsgi.Server("fake", test_app,
+            host="127.0.0.1", port=0)
+        fake_server.start()
+        self.assertNotEquals(0, fake_server.port)
+
+        cli = eventlet.connect(("localhost", fake_ssl_server.port))
+        cli = eventlet.wrap_ssl(cli,
+                                ca_certs=os.path.join(SSL_CERT_DIR, 'ca.crt'))
+
+        cli.write('POST / HTTP/1.1\r\nHost: localhost\r\n'
+                  'Connection: close\r\nContent-length:4\r\n\r\nPING')
+        response = cli.read(8192)
+        self.assertEquals(response[-4:], "PONG")
+
+        cli = eventlet.connect(("localhost", fake_server.port))
+
+        cli.sendall('POST / HTTP/1.1\r\nHost: localhost\r\n'
+                  'Connection: close\r\nContent-length:4\r\n\r\nPING')
+        response = cli.recv(8192)
+        self.assertEquals(response[-4:], "PONG")
+
+        fake_ssl_server.stop()
+        fake_ssl_server.wait()
+
+    def test_app_using_ipv6_and_ssl(self):
+        greetings = 'Hello, World!!!'
+
+        @webob.dec.wsgify
+        def hello_world(req):
+            return greetings
+
+        server = nova.wsgi.Server("fake_ssl",
+                                  hello_world,
+                                  host="::1",
+                                  port=0,
+                                  use_ssl=True)
+        server.start()
+
+        response = urllib2.urlopen('https://[::1]:%d/' % server.port)
+        self.assertEquals(greetings, response.read())
+
         server.stop()
         server.wait()

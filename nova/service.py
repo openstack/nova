@@ -61,6 +61,9 @@ service_opts = [
     cfg.ListOpt('enabled_apis',
                 default=['ec2', 'osapi_compute', 'metadata'],
                 help='a list of APIs to enable by default'),
+    cfg.ListOpt('enabled_ssl_apis',
+                default=[],
+                help='a list of APIs with enabled SSL'),
     cfg.StrOpt('ec2_listen',
                default="0.0.0.0",
                help='IP address for EC2 API to listen'),
@@ -565,7 +568,7 @@ class Service(object):
 class WSGIService(object):
     """Provides ability to launch API from a 'paste' configuration."""
 
-    def __init__(self, name, loader=None):
+    def __init__(self, name, loader=None, use_ssl=False):
         """Initialize, but do not start the WSGI server.
 
         :param name: The name of the WSGI server given to the loader.
@@ -580,10 +583,12 @@ class WSGIService(object):
         self.host = getattr(CONF, '%s_listen' % name, "0.0.0.0")
         self.port = getattr(CONF, '%s_listen_port' % name, 0)
         self.workers = getattr(CONF, '%s_workers' % name, None)
+        self.use_ssl = use_ssl
         self.server = wsgi.Server(name,
                                   self.app,
                                   host=self.host,
-                                  port=self.port)
+                                  port=self.port,
+                                  use_ssl=self.use_ssl)
         # Pull back actual port used
         self.port = self.server.port
         self.backdoor_port = None
