@@ -25,6 +25,7 @@ from nova.compute import power_state
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import paths
@@ -266,7 +267,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 pm.state = baremetal_states.ERROR
             try:
                 _update_state(context, node, instance, pm.state)
-            except exception.DBError, e:
+            except db_session.DBError, e:
                 LOG.warning(_("Failed to update state record for "
                               "baremetal node %s") % instance['uuid'])
 

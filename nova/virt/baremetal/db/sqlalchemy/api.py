@@ -351,7 +351,7 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
         try:
             session.add(bm_interface)
             session.flush()
-        except exception.DBError, e:
+        except db_session.DBError, e:
             # TODO(deva): clean up when db layer raises DuplicateKeyError
             if str(e).find('IntegrityError') != -1:
                 raise exception.NovaException(_("Baremetal interface %s "

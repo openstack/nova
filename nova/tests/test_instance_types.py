@@ -21,8 +21,8 @@ from nova.compute import instance_types
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import session as sql_session
 from nova import exception
+from nova.openstack.common.db.sqlalchemy import session as sql_session
 from nova.openstack.common import log as logging
 from nova import test
 

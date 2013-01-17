@@ -18,6 +18,16 @@
 
 """Session Handling for SQLAlchemy backend.
 
+Initializing:
+
+* Call set_defaults with the minimal of the following kwargs:
+    sql_connection, sqlite_db
+
+  Example:
+
+    session.set_defaults(sql_connection="sqlite:///var/lib/nova/sqlite.db",
+                         sqlite_db="/var/lib/nova/sqlite.db")
+
 Recommended ways to use sessions within this framework:
 
 * Don't use them explicitly; this is like running with AUTOCOMMIT=1.
@@ -159,6 +169,15 @@ There are some things which it is best to avoid:
   proper UNIQUE constraints are added to the tables.
 
 
+Enabling soft deletes:
+
+* To use/enable soft-deletes, the SoftDeleteMixin must be added
+  to your model class. For example:
+
+      class NovaBase(models.SoftDeleteMixin, models.ModelBase):
+          pass
+
+
 Efficient use of soft deletes:
 
 * There are two possible ways to mark a record as deleted:
@@ -221,6 +240,7 @@ Efficient use of soft deletes:
         # This will produce count(bar_refs) db requests.
 """
 
+import os.path
 import re
 import time
 
@@ -238,16 +258,17 @@ import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
 
-import nova.exception
 from nova.openstack.common import cfg
-import nova.openstack.common.log as logging
+from nova.openstack.common import log as logging
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
-from nova import paths
 
 
 sql_opts = [
     cfg.StrOpt('sql_connection',
-               default='sqlite:///' + paths.state_path_def('$sqlite_db'),
+               default='sqlite:///' +
+                       os.path.abspath(os.path.join(os.path.dirname(__file__),
+                       '../', '$sqlite_db')),
                help='The SQLAlchemy connection string used to connect to the '
                     'database'),
     cfg.StrOpt('sqlite_db',
@@ -262,11 +283,11 @@ sql_opts = [
     cfg.IntOpt('sql_min_pool_size',
                default=1,
                help='Minimum number of SQL connections to keep open in a '
-                     'pool'),
+                    'pool'),
     cfg.IntOpt('sql_max_pool_size',
                default=5,
                help='Maximum number of SQL connections to keep open in a '
-                     'pool'),
+                    'pool'),
     cfg.IntOpt('sql_max_retries',
                default=10,
                help='maximum db connection retries during startup. '
@@ -297,6 +318,13 @@ _ENGINE = None
 _MAKER = None
 
 
+def set_defaults(sql_connection, sqlite_db):
+    """Set defaults for configuration variables."""
+    cfg.set_defaults(sql_opts,
+                     sql_connection=sql_connection,
+                     sqlite_db=sqlite_db)
+
+
 def get_session(autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy session."""
     global _MAKER
@@ -307,6 +335,25 @@ def get_session(autocommit=True, expire_on_commit=False):
 
     session = _MAKER()
     return session
+
+
+class DBError(Exception):
+    """Wraps an implementation specific exception."""
+    def __init__(self, inner_exception=None):
+        self.inner_exception = inner_exception
+        super(DBError, self).__init__(str(inner_exception))
+
+
+class DBDuplicateEntry(DBError):
+    """Wraps an implementation specific exception."""
+    def __init__(self, columns=[], inner_exception=None):
+        self.columns = columns
+        super(DBDuplicateEntry, self).__init__(inner_exception)
+
+
+class InvalidUnicodeParameter(Exception):
+    message = _("Invalid Parameter: "
+                "Unicode is not supported by the current database.")
 
 
 # note(boris-42): In current versions of DB backends unique constraint
@@ -362,7 +409,7 @@ def raise_if_duplicate_entry_error(integrity_error, engine_name):
         columns = columns.strip().split(", ")
     else:
         columns = get_columns_from_uniq_cons_or_name(columns)
-    raise nova.exception.DBDuplicateEntry(columns, integrity_error)
+    raise DBDuplicateEntry(columns, integrity_error)
 
 
 def wrap_db_error(f):
@@ -370,7 +417,7 @@ def wrap_db_error(f):
         try:
             return f(*args, **kwargs)
         except UnicodeEncodeError:
-            raise nova.exception.InvalidUnicodeParameter()
+            raise InvalidUnicodeParameter()
         # note(boris-42): We should catch unique constraint violation and
         # wrap it by our own DBDuplicateEntry exception. Unique constraint
         # violation is wrapped by IntegrityError.
@@ -381,10 +428,10 @@ def wrap_db_error(f):
             # means we should get names of columns, which values violate
             # unique constraint, from error message.
             raise_if_duplicate_entry_error(e, get_engine().name)
-            raise nova.exception.DBError(e)
+            raise DBError(e)
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
-            raise nova.exception.DBError(e)
+            raise DBError(e)
     _wrap.func_name = f.func_name
     return _wrap
 
@@ -473,19 +520,19 @@ def create_engine(sql_connection):
             engine_args["poolclass"] = StaticPool
             engine_args["connect_args"] = {'check_same_thread': False}
     elif all((CONF.sql_dbpool_enable, MySQLdb,
-            "mysql" in connection_dict.drivername)):
+              "mysql" in connection_dict.drivername)):
         LOG.info(_("Using mysql/eventlet db_pool."))
         # MySQLdb won't accept 'None' in the password field
         password = connection_dict.password or ''
         pool_args = {
-                'db': connection_dict.database,
-                'passwd': password,
-                'host': connection_dict.host,
-                'user': connection_dict.username,
-                'min_size': CONF.sql_min_pool_size,
-                'max_size': CONF.sql_max_pool_size,
-                'max_idle': CONF.sql_idle_timeout,
-                'client_flag': mysql_client_constants.FOUND_ROWS}
+            'db': connection_dict.database,
+            'passwd': password,
+            'host': connection_dict.host,
+            'user': connection_dict.username,
+            'min_size': CONF.sql_min_pool_size,
+            'max_size': CONF.sql_max_pool_size,
+            'max_idle': CONF.sql_idle_timeout,
+            'client_flag': mysql_client_constants.FOUND_ROWS}
 
         pool = db_pool.ConnectionPool(MySQLdb, **pool_args)
 
@@ -540,7 +587,7 @@ def create_engine(sql_connection):
                 break
             except OperationalError, e:
                 if (remaining != 'infinite' and remaining == 0) or \
-                   not is_db_connection_error(e.args[0]):
+                        not is_db_connection_error(e.args[0]):
                     raise
     return engine
 
@@ -599,15 +646,15 @@ def patch_mysqldb_with_stacktrace_comments():
                 continue
             if file.endswith('exception.py') and method == '_wrap':
                 continue
-            # nova/db/api is just a wrapper around nova/db/sqlalchemy/api
-            if file.endswith('nova/db/api.py'):
+            # db/api is just a wrapper around db/sqlalchemy/api
+            if file.endswith('db/api.py'):
                 continue
             # only trace inside nova
             index = file.rfind('nova')
             if index == -1:
                 continue
             stack += "File:%s:%s Method:%s() Line:%s | " \
-                    % (file[index:], line, method, function)
+                     % (file[index:], line, method, function)
 
         # strip trailing " | " from stack
         if stack:

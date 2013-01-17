@@ -20,8 +20,8 @@ import distutils.version as dist_version
 import os
 
 from nova.db import migration
-from nova.db.sqlalchemy.session import get_engine
 from nova import exception
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import log as logging
 
 
@@ -61,6 +61,8 @@ from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
 
 _REPOSITORY = None
+
+get_engine = db_session.get_engine
 
 
 def db_sync(version=None):
