@@ -22,7 +22,7 @@ import logging.handlers
 import os
 import string
 
-from nova.rootwrap import filters
+from nova.openstack.common.rootwrap import filters
 
 
 class NoFilterMatched(Exception):
@@ -93,7 +93,7 @@ def setup_syslog(execname, facility, level):
 
 
 def build_filter(class_name, *args):
-    """Returns a filter object of class class_name."""
+    """Returns a filter object of class class_name"""
     if not hasattr(filters, class_name):
         logging.warning("Skipping unknown filter class (%s) specified "
                         "in filter definitions" % class_name)
@@ -103,7 +103,7 @@ def build_filter(class_name, *args):
 
 
 def load_filters(filters_path):
-    """Load filters from a list of directories."""
+    """Load filters from a list of directories"""
     filterlist = []
     for filterdir in filters_path:
         if not os.path.isdir(filterdir):

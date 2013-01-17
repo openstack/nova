@@ -16,20 +16,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Root wrapper for Nova
+"""Root wrapper for OpenStack services
 
-   Filters which commands nova is allowed to run as another user.
+   Filters which commands a service is allowed to run as another user.
 
-   To use this, you should set the following in nova.conf:
+   To use this with nova, you should set the following in nova.conf:
    rootwrap_config=/etc/nova/rootwrap.conf
 
    You also need to let the nova user run nova-rootwrap as root in sudoers:
    nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap /etc/nova/rootwrap.conf *
 
-   To make allowed commands node-specific, your packaging should only
-   install {compute,network,volume}.filters respectively on compute, network
-   and volume nodes (i.e. nova-api nodes should not have any of those files
-   installed).
+   Service packaging should deploy .filters files only on nodes where they are
+   needed, to avoid allowing more than is necessary.
 """
 
 import ConfigParser
@@ -75,7 +73,7 @@ if __name__ == '__main__':
     if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
         sys.path.insert(0, possible_topdir)
 
-    from nova.rootwrap import wrapper
+    from nova.openstack.common.rootwrap import wrapper
 
     # Load configuration
     try:
