@@ -859,6 +859,14 @@ def bool_from_str(val):
                val.lower() == 'y'
 
 
+def is_int_like(val):
+    """Check if a value looks like an int."""
+    try:
+        return str(int(val)) == str(val)
+    except Exception:
+        return False
+
+
 def is_valid_boolstr(val):
     """Check if the provided string is a valid bool string or not."""
     val = str(val).lower()
