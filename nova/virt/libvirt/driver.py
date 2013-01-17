@@ -1516,6 +1516,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for hostfeat in hostcpu.features:
             guestfeat = config.LibvirtConfigGuestCPUFeature(hostfeat.name)
             guestfeat.policy = "require"
+            guestcpu.features.append(guestfeat)
 
         return guestcpu
 
