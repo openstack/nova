@@ -22,6 +22,22 @@ to use in the tests. For each connection found in the config file,
 the test case runs a series of test cases to ensure that migrations work
 properly both upgrading and downgrading, and that no data loss occurs
 if possible.
+
+There are also "opportunistic" tests for both mysql and postgresql in here,
+which allows testing against all 3 databases (sqlite in memory, mysql, pg) in
+a properly configured unit test environment.
+
+For the opportunistic testing you need to set up a db named 'openstack_citest'
+with user 'openstack_citest' and password 'openstack_citest' on localhost.
+The test will then use that db and u/p combo to run the tests.
+
+For postgres on Ubuntu this can be done with the following commands:
+
+sudo -u postgres psql
+postgres=# create user openstack_citest with createdb login password
+      'openstack_citest';
+postgres=# create database openstack_citest with owner openstack_citest;
+
 """
 
 import collections
@@ -53,6 +69,8 @@ def _get_connect_string(backend,
     """
     if backend == "postgres":
         backend = "postgresql+psycopg2"
+    elif backend == "mysql":
+        backend = "mysql+mysqldb"
 
     return ("%(backend)s://%(user)s:%(passwd)s@localhost/%(database)s"
             % locals())
@@ -194,11 +212,12 @@ class TestMigrations(test.TestCase):
                 password = ""
                 if len(auth_pieces) > 1:
                     password = auth_pieces[1].strip()
-                # note(boris-42): This file is used for authentication
-                # without password prompt.
-                createpgpass = ("echo '*:*:*:%(user)s:%(password)s' > "
-                                "~/.pgpass && chmod 0600 ~/.pgpass" % locals())
-                execute_cmd(createpgpass)
+                # note(krtaylor): File creation problems with tests in
+                # venv using .pgpass authentication, changed to
+                # PGPASSWORD environment variable which is no longer
+                # planned to be deprecated
+                os.environ['PGPASSWORD'] = password
+                os.environ['PGUSER'] = user
                 # note(boris-42): We must create and drop database, we can't
                 # drop database which we have connected to, so for such
                 # operations there is a special database template1.
@@ -210,6 +229,8 @@ class TestMigrations(test.TestCase):
                 sql = ("create database %(database)s;") % locals()
                 createtable = sqlcmd % locals()
                 execute_cmd(createtable)
+                os.unsetenv('PGPASSWORD')
+                os.unsetenv('PGUSER')
 
     def test_walk_versions(self):
         """
@@ -257,6 +278,29 @@ class TestMigrations(test.TestCase):
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
         connection.close()
+
+    def test_postgresql_connect_fail(self):
+        """
+        Test that we can trigger a postgres connection failure and we fail
+        gracefully to ensure we don't break people without postgres
+        """
+        if _is_backend_avail('postgresql', user="openstack_cifail"):
+            self.fail("Shouldn't have connected")
+
+    def test_postgresql_opportunistically(self):
+        # Test postgresql database migration walk
+        if not _is_backend_avail('postgres'):
+            self.skipTest("postgresql not available")
+        # add this to the global lists to make reset work with it, it's removed
+        # automatically in tearDown so no need to clean it up here.
+        connect_string = _get_connect_string("postgres")
+        engine = sqlalchemy.create_engine(connect_string)
+        self.engines["postgresqlcitest"] = engine
+        self.test_databases["postgresqlcitest"] = connect_string
+
+        # build a fully populated postgresql database with all the tables
+        self._reset_databases()
+        self._walk_versions(engine, False, False)
 
     def _walk_versions(self, engine=None, snake_walk=False, downgrade=True):
         # Determine latest version script from the repo, then
@@ -311,41 +355,51 @@ class TestMigrations(test.TestCase):
         migration version with special _prerun_### and
         _check_### functions in the main test.
         """
-        if with_data:
-            data = None
-            prerun = getattr(self, "_prerun_%d" % version, None)
-            if prerun:
-                data = prerun(engine)
+        # NOTE(sdague): try block is here because it's impossible to debug
+        # where a failed data migration happens otherwise
+        try:
+            if with_data:
+                data = None
+                prerun = getattr(self, "_prerun_%d" % version, None)
+                if prerun:
+                    data = prerun(engine)
 
-        migration_api.upgrade(engine,
-                              TestMigrations.REPOSITORY,
-                              version)
-        self.assertEqual(version,
-                migration_api.db_version(engine,
-                                         TestMigrations.REPOSITORY))
+                migration_api.upgrade(engine,
+                                          TestMigrations.REPOSITORY,
+                                          version)
+                self.assertEqual(
+                    version,
+                    migration_api.db_version(engine,
+                                             TestMigrations.REPOSITORY))
 
-        if with_data:
-            check = getattr(self, "_check_%d" % version, None)
-            if check:
-                check(engine, data)
+            if with_data:
+                check = getattr(self, "_check_%d" % version, None)
+                if check:
+                    check(engine, data)
+        except Exception:
+            LOG.error("Failed to migrate to version %s on engine %s" %
+                      (version, engine))
+            raise
 
     # migration 146, availability zone transition
     def _prerun_146(self, engine):
         data = {
-            'id': 1,
             'availability_zone': 'custom_az',
             'aggregate_name': 1,
             'name': 'name',
             }
 
         aggregates = get_table(engine, 'aggregates')
-        aggregates.insert().values(data).execute()
+        result = aggregates.insert().values(data).execute()
+        # NOTE(sdague) it's important you don't insert keys by value in
+        # postgresql, because it's autoincrement counter won't get updated
+        data['id'] = result.inserted_primary_key[0]
         return data
 
     def _check_146(self, engine, data):
         aggregate_md = get_table(engine, 'aggregate_metadata')
         md = aggregate_md.select(
-            aggregate_md.c.aggregate_id == 1).execute().first()
+            aggregate_md.c.aggregate_id == data['id']).execute().first()
         self.assertEqual(data['availability_zone'], md['value'])
 
     # migration 147, availability zone transition for services
