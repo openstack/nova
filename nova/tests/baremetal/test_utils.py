@@ -20,6 +20,9 @@
 
 import mox
 
+import errno
+import os
+
 from nova import exception
 from nova import test
 from nova.virt.baremetal import utils
@@ -32,3 +35,36 @@ class BareMetalUtilsTestCase(test.TestCase):
         self.assertEqual(len(s), 10)
         s = utils.random_alnum(100)
         self.assertEqual(len(s), 100)
+
+    def test_unlink(self):
+        self.mox.StubOutWithMock(os, "unlink")
+        os.unlink("/fake/path")
+
+        self.mox.ReplayAll()
+        utils.unlink_without_raise("/fake/path")
+        self.mox.VerifyAll()
+
+    def test_unlink_ENOENT(self):
+        self.mox.StubOutWithMock(os, "unlink")
+        os.unlink("/fake/path").AndRaise(OSError(errno.ENOENT))
+
+        self.mox.ReplayAll()
+        utils.unlink_without_raise("/fake/path")
+        self.mox.VerifyAll()
+
+    def test_create_link(self):
+        self.mox.StubOutWithMock(os, "symlink")
+        os.symlink("/fake/source", "/fake/link")
+
+        self.mox.ReplayAll()
+        utils.create_link_without_raise("/fake/source", "/fake/link")
+        self.mox.VerifyAll()
+
+    def test_create_link_EEXIST(self):
+        self.mox.StubOutWithMock(os, "symlink")
+        os.symlink("/fake/source", "/fake/link").AndRaise(
+                OSError(errno.EEXIST))
+
+        self.mox.ReplayAll()
+        utils.create_link_without_raise("/fake/source", "/fake/link")
+        self.mox.VerifyAll()
