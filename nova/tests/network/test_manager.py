@@ -33,7 +33,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
-import nova.policy
 from nova import test
 from nova.tests import fake_ldap
 from nova.tests import fake_network
@@ -2091,30 +2090,6 @@ class FloatingIPTestCase(test.TestCase):
         self.assertRaises(rpc_common.ClientException,
                           self.network.get_floating_ip,
                           self.context, 'fake-id')
-
-
-class NetworkPolicyTestCase(test.TestCase):
-    def setUp(self):
-        super(NetworkPolicyTestCase, self).setUp()
-
-        nova.policy.reset()
-        nova.policy.init()
-
-        self.context = context.get_admin_context()
-
-    def tearDown(self):
-        super(NetworkPolicyTestCase, self).tearDown()
-        nova.policy.reset()
-
-    def test_check_policy(self):
-        self.mox.StubOutWithMock(nova.policy, 'enforce')
-        target = {
-            'project_id': self.context.project_id,
-            'user_id': self.context.user_id,
-        }
-        nova.policy.enforce(self.context, 'network:get_all', target)
-        self.mox.ReplayAll()
-        network_manager.check_policy(self.context, 'get_all')
 
 
 class InstanceDNSTestCase(test.TestCase):
