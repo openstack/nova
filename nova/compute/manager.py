@@ -271,7 +271,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.filter_defer_apply_on()
 
         try:
-            for count, instance in enumerate(instances):
+            for instance in instances:
                 db_state = instance['power_state']
                 drv_state = self._get_power_state(context, instance)
                 closing_vm_states = (vm_states.DELETED,
@@ -291,10 +291,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 net_info = compute_utils.get_nw_info_for_instance(instance)
 
                 # We're calling plug_vifs to ensure bridge and iptables
-                # filters are present, calling it once is enough.
-                if count == 0:
-                    legacy_net_info = self._legacy_nw_info(net_info)
-                    self.driver.plug_vifs(instance, legacy_net_info)
+                # rules exist. This needs to be called for each instance.
+                legacy_net_info = self._legacy_nw_info(net_info)
+                self.driver.plug_vifs(instance, legacy_net_info)
 
                 if ((expect_running and FLAGS.resume_guests_state_on_host_boot)
                      or FLAGS.start_guests_on_host_boot):
