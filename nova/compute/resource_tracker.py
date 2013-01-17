@@ -25,7 +25,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
 from nova import context
-from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -304,8 +303,8 @@ class ResourceTracker(object):
     def _create(self, context, values):
         """Create the compute node in the DB."""
         # initialize load stats from existing instances:
-        compute_node = db.compute_node_create(context, values)
-        self.compute_node = dict(compute_node)
+        self.compute_node = self.conductor_api.compute_node_create(context,
+                                                                   values)
 
     def _get_service(self, context):
         try:
@@ -349,9 +348,10 @@ class ResourceTracker(object):
 
     def _update(self, context, values, prune_stats=False):
         """Persist the compute node updates to the DB."""
-        compute_node = db.compute_node_update(context,
-                self.compute_node['id'], values, prune_stats)
-        self.compute_node = dict(compute_node)
+        if "service" in self.compute_node:
+            del self.compute_node['service']
+        self.compute_node = self.conductor_api.compute_node_update(
+            context, self.compute_node, values, prune_stats)
 
     def confirm_resize(self, context, migration, status='confirmed'):
         """Cleanup usage for a confirmed resize."""

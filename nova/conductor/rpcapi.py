@@ -65,6 +65,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.30 - Added migration_create
     1.31 - Added migration_get_in_progress_by_host_and_node
     1.32 - Added optional node to instance_get_all_by_host
+    1.33 - Added compute_node_create and compute_node_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -305,3 +306,13 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def service_destroy(self, context, service_id):
         msg = self.make_msg('service_destroy', service_id=service_id)
         return self.call(context, msg, version='1.29')
+
+    def compute_node_create(self, context, values):
+        msg = self.make_msg('compute_node_create', values=values)
+        return self.call(context, msg, version='1.33')
+
+    def compute_node_update(self, context, node, values, prune_stats=False):
+        node_p = jsonutils.to_primitive(node)
+        msg = self.make_msg('compute_node_update', node=node_p, values=values,
+                            prune_stats=prune_stats)
+        return self.call(context, msg, version='1.33')
