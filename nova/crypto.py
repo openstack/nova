@@ -136,7 +136,7 @@ def generate_fingerprint(public_key):
 
 
 def generate_key_pair(bits=1024):
-    # what is the magic 65537?
+    # 65537 is constant public exponent defined in RFC for RSA cipher.
 
     with utils.tempdir() as tmpdir:
         keyfile = os.path.join(tmpdir, 'temp')
