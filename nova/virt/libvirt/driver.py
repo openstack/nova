@@ -148,7 +148,8 @@ libvirt_opts = [
                   'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
                   'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
                   'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-                  'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'
+                  'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+                  'nfs=nova.virt.libvirt.volume_nfs.NfsVolumeDriver'
                   ],
                 help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('libvirt_disk_prefix',
