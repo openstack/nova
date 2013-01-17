@@ -69,8 +69,11 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                        lambda context, instance: self.data)
 
     def _validate_device(self, device=None):
+        bdms = db.block_device_mapping_get_all_by_instance(
+            self.context, self.instance['uuid'])
         return compute_utils.get_device_name_for_instance(self.context,
                                                           self.instance,
+                                                          bdms,
                                                           device)
 
     @staticmethod

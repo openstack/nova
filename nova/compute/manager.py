@@ -2464,8 +2464,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         @lockutils.synchronized(instance['uuid'], 'nova-')
         def do_reserve():
+            bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
+                context, instance)
             result = compute_utils.get_device_name_for_instance(context,
                                                                 instance,
+                                                                bdms,
                                                                 device)
             # NOTE(vish): create bdm here to avoid race condition
             values = {'instance_uuid': instance['uuid'],
