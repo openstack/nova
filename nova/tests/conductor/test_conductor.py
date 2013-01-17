@@ -426,6 +426,15 @@ class _BaseTestCase(object):
                                                     'fake-values', False)
         self.assertEqual(result, 'fake-result')
 
+    def test_instance_fault_create(self):
+        self.mox.StubOutWithMock(db, 'instance_fault_create')
+        db.instance_fault_create(self.context, 'fake-values').AndReturn(
+            'fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_fault_create(self.context,
+                                                      'fake-values')
+        self.assertEqual(result, 'fake-result')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""

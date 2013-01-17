@@ -68,6 +68,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.33 - Added compute_node_create and compute_node_update
     1.34 - Added service_update
     1.35 - Added instance_get_active_by_window_joined
+    1.36 - Added instance_fault_create
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -292,6 +293,10 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def instance_get_all_by_host(self, context, host, node=None):
         msg = self.make_msg('instance_get_all_by_host', host=host, node=node)
         return self.call(context, msg, version='1.32')
+
+    def instance_fault_create(self, context, values):
+        msg = self.make_msg('instance_fault_create', values=values)
+        return self.call(context, msg, version='1.36')
 
     def action_event_start(self, context, values):
         msg = self.make_msg('action_event_start', values=values)

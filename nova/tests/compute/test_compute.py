@@ -2722,8 +2722,11 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance,
-                NotImplementedError('test'), exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                                                  self.compute.conductor_api,
+                                                  instance,
+                                                  NotImplementedError('test'),
+                                                  exc_info)
 
     def test_add_instance_fault_with_remote_error(self):
         instance = self._create_fake_instance()
@@ -2751,8 +2754,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance, exc,
-                exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt,
+            self.compute.conductor_api, instance, exc, exc_info)
 
     def test_add_instance_fault_user_error(self):
         instance = self._create_fake_instance()
@@ -2779,8 +2782,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance, user_exc,
-                exc_info)
+        compute_utils.add_instance_fault_from_exc(ctxt,
+            self.compute.conductor_api, instance, user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
         instance = self._create_fake_instance()
@@ -2798,8 +2801,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
-        compute_utils.add_instance_fault_from_exc(ctxt, instance,
-                NotImplementedError('test'))
+        compute_utils.add_instance_fault_from_exc(ctxt,
+                                                  self.compute.conductor_api,
+                                                  instance,
+                                                  NotImplementedError('test'))
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
@@ -6752,6 +6757,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
+                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance).AndRaise(InnerTestingException("Error"))
@@ -6802,6 +6808,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
         except Exception:
             exc_info = sys.exc_info()
             compute_utils.add_instance_fault_from_exc(self.context,
+                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance)
@@ -6830,6 +6837,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
+                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._deallocate_network(self.context,
                     self.instance)

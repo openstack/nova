@@ -229,7 +229,8 @@ def wrap_instance_fault(function):
 
             with excutils.save_and_reraise_exception():
                 compute_utils.add_instance_fault_from_exc(context,
-                        kwargs['instance'], e, sys.exc_info())
+                        self.conductor_api, kwargs['instance'],
+                        e, sys.exc_info())
 
     return decorated_function
 
@@ -732,8 +733,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_uuid = instance['uuid']
         rescheduled = False
 
-        compute_utils.add_instance_fault_from_exc(context, instance,
-                exc_info[1], exc_info=exc_info)
+        compute_utils.add_instance_fault_from_exc(context, self.conductor_api,
+                instance, exc_info[1], exc_info=exc_info)
 
         try:
             self._deallocate_network(context, instance)
@@ -1465,7 +1466,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)
             compute_utils.add_instance_fault_from_exc(context,
-                    instance, exc, sys.exc_info())
+                    self.conductor_api, instance, exc, sys.exc_info())
             # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
@@ -1995,8 +1996,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         rescheduled = False
         instance_uuid = instance['uuid']
 
-        compute_utils.add_instance_fault_from_exc(context, instance,
-                exc_info[0], exc_info=exc_info)
+        compute_utils.add_instance_fault_from_exc(context, self.conductor_api,
+                instance, exc_info[0], exc_info=exc_info)
 
         try:
             scheduler_method = self.scheduler_rpcapi.prep_resize
