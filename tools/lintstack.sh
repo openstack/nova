@@ -20,7 +20,16 @@
 # commit for review.
 set -e
 TOOLS_DIR=$(cd $(dirname "$0") && pwd)
-GITHEAD=`git rev-parse HEAD`
+# Get the current branch name.
+GITHEAD=`git rev-parse --abbrev-ref HEAD`
+if [[ "$GITHEAD" == "HEAD" ]]; then
+    # In detached head mode, get revision number instead
+    GITHEAD=`git rev-parse HEAD`
+    echo "Currently we are at commit $GITHEAD"
+else
+    echo "Currently we are at branch $GITHEAD"
+fi
+
 cp -f $TOOLS_DIR/lintstack.py $TOOLS_DIR/lintstack.head.py
 
 if git rev-parse HEAD^2 2>/dev/null; then
@@ -47,8 +56,4 @@ git checkout $GITHEAD
 $TOOLS_DIR/lintstack.head.py
 echo "Check passed. FYI: the pylint exceptions are:"
 cat $TOOLS_DIR/pylint_exceptions
-echo
-echo "You are in detached HEAD mode. If you are a developer"
-echo "and not very familiar with git, you might want to do"
-echo "'git checkout branch-name' to go back to your branch."
 
