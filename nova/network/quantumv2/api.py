@@ -111,9 +111,19 @@ class API(base.Base):
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
-            NB: QuantumV2 does not yet honour mac address limits.
+            NB: QuantumV2 currently assigns hypervisor supplied MAC addresses
+            to arbitrary networks, which requires openflow switches to
+            function correctly if more than one network is being used with
+            the bare metal hypervisor (which is the only one known to limit
+            MAC addresses).
         """
         hypervisor_macs = kwargs.get('macs', None)
+        available_macs = None
+        if hypervisor_macs is not None:
+            # Make a copy we can mutate: records macs that have not been used
+            # to create a port on a network. If we find a mac with a
+            # pre-allocated port we also remove it from this set.
+            available_macs = set(hypervisor_macs)
         quantum = quantumv2.get_client(context)
         LOG.debug(_('allocate_for_instance() for %s'),
                   instance['display_name'])
@@ -133,6 +143,12 @@ class API(base.Base):
                         if port['mac_address'] not in hypervisor_macs:
                             raise exception.PortNotUsable(port_id=port_id,
                                 instance=instance['display_name'])
+                        else:
+                            # Don't try to use this MAC if we need to create a
+                            # port on the fly later. Identical MACs may be
+                            # configured by users into multiple ports so we
+                            # discard rather than popping.
+                            available_macs.discard(port['mac_address'])
                     network_id = port['network_id']
                     ports[network_id] = port
                 elif fixed_ip:
@@ -141,7 +157,6 @@ class API(base.Base):
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
-
         touched_port_ids = []
         created_port_ids = []
         for network in nets:
@@ -161,6 +176,12 @@ class API(base.Base):
                     port_req_body['port']['network_id'] = network_id
                     port_req_body['port']['admin_state_up'] = True
                     port_req_body['port']['tenant_id'] = instance['project_id']
+                    if available_macs is not None:
+                        if not available_macs:
+                            raise exception.PortNotFree(
+                                instance=instance['display_name'])
+                        mac_address = available_macs.pop()
+                        port_req_body['port']['mac_address'] = mac_address
                     created_port_ids.append(
                         quantum.create_port(port_req_body)['port']['id'])
             except Exception:
