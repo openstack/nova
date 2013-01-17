@@ -16,6 +16,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""
+This version of the api is deprecated in Grizzly and will be removed.
+
+It is provided just in case a third party manager is in use.
+"""
 
 import functools
 import inspect
@@ -110,14 +115,11 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_all(self, context):
-        try:
-            return self.db.network_get_all(context)
-        except exception.NoNetworksFound:
-            return []
+        return self.network_rpcapi.get_all_networks(context)
 
     @wrap_check_policy
     def get(self, context, network_uuid):
-        return self.db.network_get_by_uuid(context.elevated(), network_uuid)
+        return self.network_rpcapi.get_network(context, network_uuid)
 
     @wrap_check_policy
     def create(self, context, **kwargs):
@@ -129,39 +131,36 @@ class API(base.Base):
 
     @wrap_check_policy
     def disassociate(self, context, network_uuid):
-        network = self.get(context, network_uuid)
-        self.db.network_disassociate(context, network['id'])
+        return self.network_rpcapi.disassociate_network(context, network_uuid)
 
     @wrap_check_policy
     def get_fixed_ip(self, context, id):
-        return self.db.fixed_ip_get(context, id)
+        return self.network_rpcapi.get_fixed_ip(context, id)
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
-        return self.db.fixed_ip_get_by_address(context, address)
+        return self.network_rpcapi.get_fixed_ip_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
-        return self.db.floating_ip_get(context, id)
+        return self.network_rpcapi.get_floating_ip(context, id)
 
     @wrap_check_policy
     def get_floating_ip_pools(self, context):
-        return self.db.floating_ip_get_pools(context)
+        return self.network_rpcapi.get_floating_ip_pools(context)
 
     @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
-        return self.db.floating_ip_get_by_address(context, address)
+        return self.network_rpcapi.get_floating_ip_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ips_by_project(self, context):
-        return self.db.floating_ip_get_all_by_project(context,
-                                                      context.project_id)
+        return self.network_rpcapi.get_floating_ips_by_project(context)
 
     @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        floating_ips = self.db.floating_ip_get_by_fixed_address(context,
-                                                                fixed_address)
-        return [floating_ip['address'] for floating_ip in floating_ips]
+        return self.network_rpcapi.get_floating_ips_by_fixed_address(context,
+                fixed_address)
 
     @wrap_check_policy
     def get_backdoor_port(self, context, host):
@@ -169,21 +168,18 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):
-        fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
-        if fixed_ip is None:
-            return None
-        else:
-            return fixed_ip['instance_uuid']
+        # NOTE(tr3buchet): i hate this
+        return self.network_rpcapi.get_instance_id_by_floating_address(context,
+                address)
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
-        return self.db.virtual_interface_get_by_instance(context,
-                                                         instance['uuid'])
+        return self.network_rpcapi.get_vifs_by_instance(context,
+                instance['id'])
 
     @wrap_check_policy
     def get_vif_by_mac_address(self, context, mac_address):
-        return self.db.virtual_interface_get_by_address(context,
-                                                        mac_address)
+        return self.network_rpcapi.get_vif_by_mac_address(context, mac_address)
 
     @wrap_check_policy
     def allocate_floating_ip(self, context, pool=None):
@@ -299,22 +295,11 @@ class API(base.Base):
                   project=_sentinel):
         """Associate or disassociate host or project to network."""
         associations = {}
-        network_id = self.get(context, network_uuid)['id']
         if host is not API._sentinel:
-            if host is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=True,
-                                             disassociate_project=False)
-            else:
-                self.db.network_set_host(context, network_id, host)
+            associations['host'] = host
         if project is not API._sentinel:
-            project = associations['project']
-            if project is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=False,
-                                             disassociate_project=True)
-            else:
-                self.db.network_associate(context, project, network_id, True)
+            associations['project'] = project
+        self.network_rpcapi.associate(context, network_uuid, associations)
 
     @wrap_check_policy
     def get_instance_nw_info(self, context, instance, update_cache=True):

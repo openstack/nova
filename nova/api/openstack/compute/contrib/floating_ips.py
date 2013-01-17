@@ -67,11 +67,11 @@ def _translate_floating_ip_view(floating_ip):
     }
     try:
         result['fixed_ip'] = floating_ip['fixed_ip']['address']
-    except (TypeError, KeyError):
+    except (TypeError, KeyError, AttributeError):
         result['fixed_ip'] = None
     try:
         result['instance_id'] = floating_ip['instance']['uuid']
-    except (TypeError, KeyError):
+    except (TypeError, KeyError, AttributeError):
         result['instance_id'] = None
     return {'floating_ip': result}
 
