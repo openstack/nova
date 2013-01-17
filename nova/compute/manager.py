@@ -731,7 +731,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         rescheduled = False
 
         compute_utils.add_instance_fault_from_exc(context, instance_uuid,
-                exc_info[0], exc_info=exc_info)
+                exc_info[1], exc_info=exc_info)
 
         try:
             self._deallocate_network(context, instance)
