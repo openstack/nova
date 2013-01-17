@@ -919,6 +919,10 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
+        if body:
+            LOG.info(_("Action: '%(action)s', body: %(body)s") % locals())
+        LOG.debug(_("Calling method %s") % meth)
+
         # Now, deserialize the request body...
         try:
             if content_type:
