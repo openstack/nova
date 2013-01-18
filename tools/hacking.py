@@ -359,6 +359,19 @@ def nova_docstring_multiline_end(physical_line):
             return (pos, "N403: multi line docstring end on new line")
 
 
+def nova_no_cr(physical_line):
+    r"""Check that we only use newlines not cariage returns.
+
+    Okay: import os\nimport sys
+    # pep8 doesn't yet replace \r in strings, will work on an
+    # upstream fix
+    N901 import os\r\nimport sys
+    """
+    pos = physical_line.find('\r')
+    if pos != -1 and pos == (len(physical_line) - 2):
+        return (pos, "N901: Windows style line endings not allowed in code")
+
+
 FORMAT_RE = re.compile("%(?:"
                             "%|"           # Ignore plain percents
                             "(\(\w+\))?"   # mapping key
