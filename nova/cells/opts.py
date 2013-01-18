@@ -55,6 +55,9 @@ cells_opts = [
                help='Number of seconds after which a lack of capability and '
                      'capacity updates signals the child cell is to be '
                      'treated as a mute.'),
+    cfg.IntOpt('bandwidth_update_interval',
+                default=600,
+                help='Seconds between bandwidth updates for cells.'),
 ]
 
 CONF = cfg.CONF

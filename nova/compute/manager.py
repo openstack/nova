@@ -358,6 +358,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._last_bw_usage_poll = 0
         self._last_vol_usage_poll = 0
         self._last_info_cache_heal = 0
+        self._last_bw_usage_cell_update = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.conductor_api = conductor.API()
@@ -3867,6 +3868,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 CONF.bandwidth_poll_interval):
             self._last_bw_usage_poll = curr_time
             LOG.info(_("Updating bandwidth usage cache"))
+            cells_update_interval = CONF.cells.bandwidth_update_interval
+            if (cells_update_interval > 0 and
+                   curr_time - self._last_bw_usage_cell_update >
+                           cells_update_interval):
+                self._last_bw_usage_cell_update = curr_time
+                update_cells = True
+            else:
+                update_cells = False
 
             instances = self.conductor_api.instance_get_all_by_host(
                 context, self.host, columns_to_join=[])
@@ -3925,7 +3934,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    bw_out,
                                                    bw_ctr['bw_in'],
                                                    bw_ctr['bw_out'],
-                                                   last_refreshed=refreshed)
+                                                   last_refreshed=refreshed,
+                                                   update_cells=update_cells)
 
     def _get_host_volume_bdms(self, context, host):
         """Return all block device mappings on a compute host."""

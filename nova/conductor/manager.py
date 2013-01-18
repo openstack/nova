@@ -68,7 +68,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.53'
+    RPC_API_VERSION = '1.54'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -226,11 +226,13 @@ class ConductorManager(manager.Manager):
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in=None, bw_out=None,
                         last_ctr_in=None, last_ctr_out=None,
-                        last_refreshed=None):
+                        last_refreshed=None,
+                        update_cells=True):
         if [bw_in, bw_out, last_ctr_in, last_ctr_out].count(None) != 4:
             self.db.bw_usage_update(context, uuid, mac, start_period,
                                     bw_in, bw_out, last_ctr_in, last_ctr_out,
-                                    last_refreshed)
+                                    last_refreshed,
+                                    update_cells=update_cells)
         usage = self.db.bw_usage_get(context, uuid, start_period, mac)
         return jsonutils.to_primitive(usage)
 
