@@ -6,6 +6,7 @@
 #    Copyright (c) 2010 Citrix Systems, Inc.
 #    Copyright (c) 2011 Piston Cloud Computing, Inc
 #    Copyright (c) 2011 OpenStack LLC
+#    (c) Copyright 2013 Hewlett-Packard Development Company, L.P.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -54,6 +55,93 @@ def get_iscsi_initiator():
     for l in contents.split('\n'):
         if l.startswith('InitiatorName='):
             return l[l.index('=') + 1:].strip()
+
+
+def get_fc_hbas():
+    """Get the Fibre Channel HBA information."""
+    try:
+        out, err = execute('systool', '-c', 'fc_host', '-v',
+                           run_as_root=True)
+    except exception.ProcessExecutionError as exc:
+        if exc.exit_code == 96:
+            LOG.warn(_("systool is not installed"))
+        return []
+
+    if out is None:
+        raise RuntimeError(_("Cannot find any Fibre Channel HBAs"))
+
+    lines = out.split('\n')
+    # ignore the first 2 lines
+    lines = lines[2:]
+    hbas = []
+    hba = {}
+    lastline = None
+    for line in lines:
+        line = line.strip()
+        # 2 newlines denotes a new hba port
+        if line == '' and lastline == '':
+            if len(hba) > 0:
+                hbas.append(hba)
+                hba = {}
+        else:
+            val = line.split('=')
+            if len(val) == 2:
+                key = val[0].strip().replace(" ", "")
+                value = val[1].strip()
+                hba[key] = value.replace('"', '')
+        lastline = line
+
+    return hbas
+
+
+def get_fc_hbas_info():
+    """Get Fibre Channel WWNs and device paths from the system, if any."""
+    # Note modern linux kernels contain the FC HBA's in /sys
+    # and are obtainable via the systool app
+    hbas = get_fc_hbas()
+    hbas_info = []
+    for hba in hbas:
+        wwpn = hba['port_name'].replace('0x', '')
+        wwnn = hba['node_name'].replace('0x', '')
+        device_path = hba['ClassDevicepath']
+        device = hba['ClassDevice']
+        hbas_info.append({'port_name': wwpn,
+                          'node_name': wwnn,
+                          'host_device': device,
+                          'device_path': device_path})
+    return hbas_info
+
+
+def get_fc_wwpns():
+    """Get Fibre Channel WWPNs from the system, if any."""
+    # Note modern linux kernels contain the FC HBA's in /sys
+    # and are obtainable via the systool app
+    hbas = get_fc_hbas()
+
+    wwpns = []
+    if hbas:
+        for hba in hbas:
+            if hba['port_state'] == 'Online':
+                wwpn = hba['port_name'].replace('0x', '')
+                wwpns.append(wwpn)
+
+    return wwpns
+
+
+def get_fc_wwnns():
+    """Get Fibre Channel WWNNs from the system, if any."""
+    # Note modern linux kernels contain the FC HBA's in /sys
+    # and are obtainable via the systool app
+    hbas = get_fc_hbas()
+
+    wwnns = []
+    if hbas:
+        for hba in hbas:
+            if hba['port_state'] == 'Online':
+                wwnn = hba['node_name'].replace('0x', '')
+                wwnns.append(wwnn)
+
+    return wwnns
 
 
 def create_image(disk_format, path, size):

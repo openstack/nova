@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack LLC.
+# (c) Copyright 2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,6 +27,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import paths
+from nova.storage import linuxscsi
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as virtutils
@@ -608,3 +610,141 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             return utils.execute('stat', path, run_as_root=True)
         except exception.ProcessExecutionError:
             return False
+
+
+class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
+    """Driver to attach Fibre Channel Network volumes to libvirt."""
+
+    def __init__(self, connection):
+        super(LibvirtFibreChannelVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def _get_pci_num(self, hba):
+        # NOTE(walter-boring)
+        # device path is in format of
+        # /sys/devices/pci0000:00/0000:00:03.0/0000:05:00.3/host2/fc_host/host2
+        # sometimes an extra entry exists before the host2 value
+        # we always want the value prior to the host2 value
+        pci_num = None
+        if hba is not None:
+            if "device_path" in hba:
+                index = 0
+                device_path = hba['device_path'].split('/')
+                for value in device_path:
+                    if value.startswith('host'):
+                        break
+                    index = index + 1
+
+                if index > 0:
+                    pci_num = device_path[index - 1]
+
+        return pci_num
+
+    @lockutils.synchronized('connect_volume', 'nova-')
+    def connect_volume(self, connection_info, disk_info):
+        """Attach the volume to instance_name."""
+        fc_properties = connection_info['data']
+        mount_device = disk_info["dev"]
+
+        ports = fc_properties['target_wwn']
+        wwns = []
+        # we support a list of wwns or a single wwn
+        if isinstance(ports, list):
+            for wwn in ports:
+                wwns.append(wwn)
+        elif isinstance(ports, str):
+            wwns.append(ports)
+
+        # We need to look for wwns on every hba
+        # because we don't know ahead of time
+        # where they will show up.
+        hbas = virtutils.get_fc_hbas_info()
+        host_devices = []
+        for hba in hbas:
+            pci_num = self._get_pci_num(hba)
+            if pci_num is not None:
+                for wwn in wwns:
+                    target_wwn = "0x%s" % wwn.lower()
+                    host_device = ("/dev/disk/by-path/pci-%s-fc-%s-lun-%s" %
+                                  (pci_num,
+                                   target_wwn,
+                                   fc_properties.get('target_lun', 0)))
+                    host_devices.append(host_device)
+
+        if len(host_devices) == 0:
+            # this is empty because we don't have any FC HBAs
+            msg = _("We are unable to locate any Fibre Channel devices")
+            raise exception.NovaException(msg)
+
+        # The /dev/disk/by-path/... node is not always present immediately
+        # We only need to find the first device.  Once we see the first device
+        # multipath will have any others.
+        def _wait_for_device_discovery(host_devices, mount_device):
+            tries = self.tries
+            for device in host_devices:
+                LOG.debug(_("Looking for Fibre Channel dev %(device)s")
+                          % locals())
+                if os.path.exists(device):
+                    self.host_device = device
+                    # get the /dev/sdX device.  This is used
+                    # to find the multipath device.
+                    self.device_name = os.path.realpath(device)
+                    raise utils.LoopingCallDone()
+
+            if self.tries >= CONF.num_iscsi_scan_tries:
+                msg = _("Fibre Channel device not found.")
+                raise exception.NovaException(msg)
+
+            LOG.warn(_("Fibre volume not yet found at: %(mount_device)s. "
+                       "Will rescan & retry.  Try number: %(tries)s") %
+                     locals())
+
+            linuxscsi.rescan_hosts(hbas)
+            self.tries = self.tries + 1
+
+        self.host_device = None
+        self.device_name = None
+        self.tries = 0
+        timer = utils.FixedIntervalLoopingCall(_wait_for_device_discovery,
+                                               host_devices, mount_device)
+        timer.start(interval=2).wait()
+
+        tries = self.tries
+        if self.host_device is not None and self.device_name is not None:
+            LOG.debug(_("Found Fibre Channel volume %(mount_device)s "
+                        "(after %(tries)s rescans)") % locals())
+
+        # see if the new drive is part of a multipath
+        # device.  If so, we'll use the multipath device.
+        mdev_info = linuxscsi.find_multipath_device(self.device_name)
+        if mdev_info is not None:
+            LOG.debug(_("Multipath device discovered %(device)s")
+                      % {'device': mdev_info['device']})
+            device_path = mdev_info['device']
+            connection_info['data']['devices'] = mdev_info['devices']
+        else:
+            # we didn't find a multipath device.
+            # so we assume the kernel only sees 1 device
+            device_path = self.host_device
+            device_info = linuxscsi.get_device_info(self.device_name)
+            connection_info['data']['devices'] = [device_info]
+
+        conf = super(LibvirtFibreChannelVolumeDriver,
+                     self).connect_volume(connection_info, disk_info)
+
+        conf.source_type = "block"
+        conf.source_path = device_path
+        return conf
+
+    @lockutils.synchronized('connect_volume', 'nova-')
+    def disconnect_volume(self, connection_info, mount_device):
+        """Detach the volume from instance_name."""
+        super(LibvirtFibreChannelVolumeDriver,
+              self).disconnect_volume(connection_info, mount_device)
+        devices = connection_info['data']['devices']
+
+        # There may have been more than 1 device mounted
+        # by the kernel for this volume.  We have to remove
+        # all of them
+        for device in devices:
+            linuxscsi.remove_device(device)

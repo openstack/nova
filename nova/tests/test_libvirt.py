@@ -338,6 +338,8 @@ class LibvirtConnTestCase(test.TestCase):
         initiator = 'fake.initiator.iqn'
         ip = 'fakeip'
         host = 'fakehost'
+        wwpns = ['100010604b019419']
+        wwnns = ['200010604b019419']
         self.flags(my_ip=ip)
         self.flags(host=host)
 
@@ -345,7 +347,9 @@ class LibvirtConnTestCase(test.TestCase):
         expected = {
             'ip': ip,
             'initiator': initiator,
-            'host': host
+            'host': host,
+            'wwpns': wwpns,
+            'wwnns': wwnns
         }
         volume = {
             'id': 'fake'

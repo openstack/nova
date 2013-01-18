@@ -17,10 +17,14 @@
 
 import os
 
+from nova import exception
 from nova.openstack.common import cfg
+from nova.storage import linuxscsi
 from nova import test
+from nova.tests import fake_libvirt_utils
 from nova import utils
 from nova.virt import fake
+from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 
 CONF = cfg.CONF
@@ -467,3 +471,78 @@ class LibvirtVolumeTestCase(test.TestCase):
             ('stat', export_mnt_base),
             ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
+
+    def fibrechan_connection(self, volume, location, wwn):
+        return {
+                'driver_volume_type': 'fibrechan',
+                'data': {
+                    'volume_id': volume['id'],
+                    'target_portal': location,
+                    'target_wwn': wwn,
+                    'target_lun': 1,
+                }
+        }
+
+    def test_libvirt_fibrechan_driver(self):
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas',
+                       fake_libvirt_utils.get_fc_hbas)
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
+                       fake_libvirt_utils.get_fc_hbas_info)
+        # NOTE(vish) exists is to make driver assume connecting worked
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        self.stubs.Set(os.path, 'realpath', lambda x: '/dev/sdb')
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        multipath_devname = '/dev/md-1'
+        devices = {"device": multipath_devname,
+                   "devices": [{'device': '/dev/sdb',
+                                'address': '1:0:0:1',
+                                'host': 1, 'channel': 0,
+                                'id': 0, 'lun': 1}]}
+        self.stubs.Set(linuxscsi, 'find_multipath_device', lambda x: devices)
+        self.stubs.Set(linuxscsi, 'remove_device', lambda x: None)
+        location = '10.0.2.15:3260'
+        name = 'volume-00000001'
+        wwn = '1234567890123456'
+        vol = {'id': 1, 'name': name}
+        connection_info = self.fibrechan_connection(vol, location, wwn)
+        mount_device = "vde"
+        disk_info = {
+            "bus": "virtio",
+            "dev": mount_device,
+            "type": "disk"
+        }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        dev_str = '/dev/disk/by-path/pci-0000:05:00.2-fc-0x%s-lun-1' % wwn
+        self.assertEqual(tree.get('type'), 'block')
+        self.assertEqual(tree.find('./source').get('dev'), multipath_devname)
+        connection_info["data"]["devices"] = devices["devices"]
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+        expected_commands = []
+        self.assertEqual(self.executes, expected_commands)
+
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas',
+                       lambda: [])
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
+                       lambda: [])
+        self.assertRaises(exception.NovaException,
+                          libvirt_driver.connect_volume,
+                          connection_info, disk_info)
+
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas', lambda: [])
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info', lambda: [])
+        self.assertRaises(exception.NovaException,
+                          libvirt_driver.connect_volume,
+                          connection_info, disk_info)
+
+    def test_libvirt_fibrechan_getpci_num(self):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        hba = {'device_path': "/sys/devices/pci0000:00/0000:00:03.0"
+                                  "/0000:05:00.3/host2/fc_host/host2"}
+        pci_num = libvirt_driver._get_pci_num(hba)
+        self.assertEqual("0000:05:00.3", pci_num)
+
+        hba = {'device_path': "/sys/devices/pci0000:00/0000:00:03.0"
+                              "/0000:05:00.3/0000:06:00.6/host2/fc_host/host2"}
+        pci_num = libvirt_driver._get_pci_num(hba)
+        self.assertEqual("0000:06:00.6", pci_num)

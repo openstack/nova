@@ -6,6 +6,7 @@
 # Copyright (c) 2010 Citrix Systems, Inc.
 # Copyright (c) 2011 Piston Cloud Computing, Inc
 # Copyright (c) 2012 University Of Minho
+# (c) Copyright 2013 Hewlett-Packard Development Company, L.P.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -154,7 +155,9 @@ libvirt_opts = [
                   'nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver',
                   'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver',
                   'glusterfs='
-                      'nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver'
+                      'nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver',
+                  'fibre_channel=nova.virt.libvirt.volume.'
+                      'LibvirtFibreChannelVolumeDriver'
                   ],
                 help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('libvirt_disk_prefix',
@@ -281,6 +284,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._host_state = None
         self._initiator = None
+        self._fc_wwnns = None
+        self._fc_wwpns = None
         self._wrapped_conn = None
         self._caps = None
         self.read_only = read_only
@@ -644,13 +649,37 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self._initiator:
             self._initiator = libvirt_utils.get_iscsi_initiator()
             if not self._initiator:
-                LOG.warn(_('Could not determine iscsi initiator name'),
-                         instance=instance)
-        return {
-            'ip': CONF.my_ip,
-            'initiator': self._initiator,
-            'host': CONF.host
-        }
+                LOG.debug(_('Could not determine iscsi initiator name'),
+                          instance=instance)
+
+        if not self._fc_wwnns:
+            self._fc_wwnns = libvirt_utils.get_fc_wwnns()
+            if not self._fc_wwnns or len(self._fc_wwnns) == 0:
+                LOG.debug(_('Could not determine fibre channel '
+                               'world wide node names'),
+                          instance=instance)
+
+        if not self._fc_wwpns:
+            self._fc_wwpns = libvirt_utils.get_fc_wwpns()
+            if not self._fc_wwpns or len(self._fc_wwpns) == 0:
+                LOG.debug(_('Could not determine fibre channel '
+                               'world wide port names'),
+                          instance=instance)
+
+        if not self._initiator and not self._fc_wwnns and not self._fc_wwpns:
+            msg = _("No Volume Connector found.")
+            LOG.error(msg)
+            raise exception.NovaException(msg)
+
+        connector = {'ip': CONF.my_ip,
+                     'initiator': self._initiator,
+                     'host': CONF.host}
+
+        if self._fc_wwnns and self._fc_wwpns:
+            connector["wwnns"] = self._fc_wwnns
+            connector["wwpns"] = self._fc_wwpns
+
+        return connector
 
     def _cleanup_resize(self, instance, network_info):
         target = libvirt_utils.get_instance_path(instance) + "_resize"

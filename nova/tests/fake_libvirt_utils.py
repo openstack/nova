@@ -34,6 +34,60 @@ def get_iscsi_initiator():
     return "fake.initiator.iqn"
 
 
+def get_fc_hbas():
+    return [{'ClassDevice': 'host1',
+             'ClassDevicePath': '/sys/devices/pci0000:00/0000:00:03.0'
+                                    '/0000:05:00.2/host1/fc_host/host1',
+             'dev_loss_tmo': '30',
+             'fabric_name': '0x1000000533f55566',
+             'issue_lip': '<store method only>',
+             'max_npiv_vports': '255',
+             'maxframe_size': '2048 bytes',
+             'node_name': '0x200010604b019419',
+             'npiv_vports_inuse': '0',
+             'port_id': '0x680409',
+             'port_name': '0x100010604b019419',
+             'port_state': 'Online',
+             'port_type': 'NPort (fabric via point-to-point)',
+             'speed': '10 Gbit',
+             'supported_classes': 'Class 3',
+             'supported_speeds': '10 Gbit',
+             'symbolic_name': 'Emulex 554M FV4.0.493.0 DV8.3.27',
+             'tgtid_bind_type': 'wwpn (World Wide Port Name)',
+             'uevent': None,
+             'vport_create': '<store method only>',
+             'vport_delete': '<store method only>'}]
+
+
+def get_fc_hbas_info():
+    hbas = get_fc_hbas()
+    info = [{'port_name': hbas[0]['port_name'].replace('0x', ''),
+             'node_name': hbas[0]['node_name'].replace('0x', ''),
+             'host_device': hbas[0]['ClassDevice'],
+             'device_path': hbas[0]['ClassDevicePath']}]
+    return info
+
+
+def get_fc_wwpns():
+    hbas = get_fc_hbas()
+    wwpns = []
+    for hba in hbas:
+        wwpn = hba['port_name'].replace('0x', '')
+        wwpns.append(wwpn)
+
+    return wwpns
+
+
+def get_fc_wwnns():
+    hbas = get_fc_hbas()
+    wwnns = []
+    for hba in hbas:
+        wwnn = hba['node_name'].replace('0x', '')
+    wwnns.append(wwnn)
+
+    return wwnns
+
+
 def create_image(disk_format, path, size):
     pass
 
