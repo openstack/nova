@@ -759,12 +759,13 @@ def instance_info_cache_update(context, instance_uuid, values,
     :param values: = dict containing column values to update
     """
     rv = IMPL.instance_info_cache_update(context, instance_uuid, values)
-    try:
-        cells_rpcapi.CellsAPI().instance_info_cache_update_at_top(context,
-                                                                  rv)
-    except Exception:
-        LOG.exception(_("Failed to notify cells of instance info cache "
-                        "update"))
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().instance_info_cache_update_at_top(
+                    context, rv)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance info "
+                            "cache update"))
     return rv
 
 
