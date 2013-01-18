@@ -808,7 +808,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(dkang): managedSave does not work for LXC
         if CONF.libvirt_type != 'lxc':
-            if state == power_state.RUNNING:
+            if state == power_state.RUNNING or state == power_state.PAUSED:
                 virt_dom.managedSave(0)
 
         # Make the snapshot
@@ -832,6 +832,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 if CONF.libvirt_type != 'lxc':
                     if state == power_state.RUNNING:
                         self._create_domain(domain=virt_dom)
+                    elif state == power_state.PAUSED:
+                        self._create_domain(domain=virt_dom,
+                                launch_flags=libvirt.VIR_DOMAIN_START_PAUSED)
 
             # Upload that image to the image service
 
