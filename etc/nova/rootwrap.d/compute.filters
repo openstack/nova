@@ -99,9 +99,11 @@ pygrub: CommandFilter, /usr/bin/pygrub, root
 fdisk: CommandFilter, /sbin/fdisk, root
 
 # nova/virt/xenapi/vm_utils.py: e2fsck, -f, -p, partition_path
+# nova/virt/disk/api.py: e2fsck, -f, -p, image
 e2fsck: CommandFilter, /sbin/e2fsck, root
 
 # nova/virt/xenapi/vm_utils.py: resize2fs, partition_path
+# nova/virt/disk/api.py: resize2fs, image
 resize2fs: CommandFilter, /sbin/resize2fs, root
 
 # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...

@@ -273,7 +273,7 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
         cmd = ('dd', 'if=%s' % self.TEMPLATE_PATH,
                'of=%s' % self.PATH, 'bs=4M')
         self.utils.execute(*cmd, run_as_root=True)
-        self.disk.resize2fs(self.PATH)
+        self.disk.resize2fs(self.PATH, run_as_root=True)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
