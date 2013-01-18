@@ -747,6 +747,14 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     def test_service_destroy(self):
         self._test_stubbed('service_destroy', '', returns=False)
 
+    def test_service_update(self):
+        ctxt = self.context
+        self.mox.StubOutWithMock(db, 'service_update')
+        db.service_update(ctxt, '', {}).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.service_update(self.context, {'id': ''}, {})
+        self.assertEqual(result, 'fake-result')
+
     def test_instance_get_all_by_host(self):
         self._test_stubbed('instance_get_all_by_host',
                            self.context.elevated(), 'host')

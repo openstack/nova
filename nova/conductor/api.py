@@ -285,6 +285,9 @@ class LocalAPI(object):
         return self._manager.compute_node_update(context, node, values,
                                                  prune_stats)
 
+    def service_update(self, context, service, values):
+        return self._manager.service_update(context, service, values)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -548,3 +551,6 @@ class API(object):
     def compute_node_update(self, context, node, values, prune_stats=False):
         return self.conductor_rpcapi.compute_node_update(context, node,
                                                          values, prune_stats)
+
+    def service_update(self, context, service, values):
+        return self.conductor_rpcapi.service_update(context, service, values)
