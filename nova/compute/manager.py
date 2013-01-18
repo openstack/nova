@@ -314,6 +314,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                     except NotImplementedError:
                         LOG.warning(_('Hypervisor driver does not support '
                                       'resume guests'), instance=instance)
+                    except Exception:
+                        # NOTE(vish): The instance failed to resume, so we
+                        #             set the instance to error and attempt
+                        #             to continue.
+                        LOG.warning(_('Failed to resume instance'),
+                                    instance=instance)
+                        self._set_instance_error_state(context,
+                                                       instance['uuid'])
 
                 elif drv_state == power_state.RUNNING:
                     # VMWareAPI drivers will raise an exception
