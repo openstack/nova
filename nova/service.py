@@ -421,12 +421,11 @@ class Service(object):
         self.model_disconnected = False
         ctxt = context.get_admin_context()
         try:
-            service_ref = self.conductor_api.service_get_by_args(ctxt,
-                                                                 self.host,
-                                                                 self.binary)
+            self.service_ref = self.conductor_api.service_get_by_args(ctxt,
+                    self.host, self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
-            self._create_service_ref(ctxt)
+            self.service_ref = self._create_service_ref(ctxt)
 
         if self.backdoor_port is not None:
             self.manager.backdoor_port = self.backdoor_port
@@ -479,6 +478,7 @@ class Service(object):
         }
         service = self.conductor_api.service_create(context, svc_values)
         self.service_id = service['id']
+        return service
 
     def __getattr__(self, key):
         manager = self.__dict__.get('manager', None)

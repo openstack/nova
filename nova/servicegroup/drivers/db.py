@@ -76,17 +76,10 @@ class DbDriver(api.ServiceGroupDriver):
         ctxt = context.get_admin_context()
         state_catalog = {}
         try:
-            try:
-                service_ref = db.service_get(ctxt, service.service_id)
-            except exception.NotFound:
-                LOG.debug(_('The service database object disappeared, '
-                            'Recreating it.'))
-                service._create_service_ref(ctxt)
-                service_ref = db.service_get(ctxt, service.service_id)
+            report_count = service.service_ref['report_count'] + 1
+            state_catalog['report_count'] = report_count
 
-            state_catalog['report_count'] = service_ref['report_count'] + 1
-
-            db.service_update(ctxt,
+            service.service_ref = db.service_update(ctxt,
                              service.service_id, state_catalog)
 
             # TODO(termie): make this pattern be more elegant.
