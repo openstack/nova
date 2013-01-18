@@ -3306,6 +3306,35 @@ class ComputeTestCase(BaseTestCase):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def test_init_instance_failed_resume_sets_error(self):
+        instance = {
+            'uuid': 'fake-uuid',
+            'info_cache': None,
+            'power_state': power_state.RUNNING,
+            'vm_state': vm_states.ACTIVE,
+        }
+        self.flags(resume_guests_state_on_host_boot=True)
+        self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'resume_state_on_host_boot')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_set_instance_error_state')
+        self.compute._get_power_state(mox.IgnoreArg(),
+                instance).AndReturn(power_state.SHUTDOWN)
+        self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
+        self.compute._get_instance_volume_block_device_info(mox.IgnoreArg(),
+                instance['uuid']).AndReturn('fake-bdm')
+        self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
+                instance, mox.IgnoreArg(),
+                'fake-bdm').AndRaise(test.TestingException)
+        self.compute._set_instance_error_state(mox.IgnoreArg(),
+                instance['uuid'])
+        self.mox.ReplayAll()
+        self.compute._init_instance('fake-context', instance)
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 
