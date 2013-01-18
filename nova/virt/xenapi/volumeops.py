@@ -125,6 +125,7 @@ class VolumeOps(object):
         try:
             vbd_ref = vm_utils.find_vbd_by_number(self._session, vm_ref,
                                                   device_number)
+            sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
             raise Exception(_('Unable to locate volume %s') % mountpoint)
@@ -143,7 +144,6 @@ class VolumeOps(object):
 
         # Forget SR only if no other volumes on this host are using it
         try:
-            sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
             volume_utils.purge_sr(self._session, sr_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
