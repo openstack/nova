@@ -44,7 +44,7 @@ def metadata_to_dict(metadata):
     return result
 
 
-def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
+def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
     code = 500
@@ -62,10 +62,11 @@ def add_instance_fault_from_exc(context, instance_uuid, fault, exc_info=None):
         details += '\n' + ''.join(traceback.format_tb(tb))
 
     values = {
-        'instance_uuid': instance_uuid,
+        'instance_uuid': instance['uuid'],
         'code': code,
         'message': unicode(message),
         'details': unicode(details),
+        'host': CONF.host
     }
     db.instance_fault_create(context, values)
 

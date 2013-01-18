@@ -56,8 +56,6 @@ CONF.register_opts(scheduler_driver_opts)
 def handle_schedule_error(context, ex, instance_uuid, request_spec):
     if not isinstance(ex, exception.NoValidHost):
         LOG.exception(_("Exception during scheduler.run_instance"))
-    compute_utils.add_instance_fault_from_exc(context,
-            instance_uuid, ex, sys.exc_info())
     state = vm_states.ERROR.upper()
     LOG.warning(_('Setting instance to %(state)s state.'),
                 locals(), instance_uuid=instance_uuid)
@@ -68,6 +66,8 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
                             'task_state': None})
     notifications.send_update(context, old_ref, new_ref,
             service="scheduler")
+    compute_utils.add_instance_fault_from_exc(context,
+            new_ref, ex, sys.exc_info())
 
     properties = request_spec.get('instance_properties', {})
     payload = dict(request_spec=request_spec,

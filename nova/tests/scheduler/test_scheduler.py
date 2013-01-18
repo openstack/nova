@@ -183,12 +183,12 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.driver.schedule_run_instance(self.context,
                 request_spec, None, None, None, None, {}).AndRaise(
                         exception.NoValidHost(reason=""))
-        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+        old, new_ref = db.instance_update_and_get_original(self.context,
+                fake_instance_uuid,
                 {"vm_state": vm_states.ERROR,
                  "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context,
-                fake_instance_uuid, mox.IsA(exception.NoValidHost),
-                mox.IgnoreArg())
+        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.manager.run_instance(self.context, request_spec,
@@ -217,12 +217,12 @@ class SchedulerManagerTestCase(test.TestCase):
         }
         self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
                 exception.NoValidHost(reason=""))
-        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+        old_ref, new_ref = db.instance_update_and_get_original(self.context,
+                fake_instance_uuid,
                 {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
                         (inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context,
-                fake_instance_uuid, mox.IsA(exception.NoValidHost),
-                mox.IgnoreArg())
+        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.manager.prep_resize(**kwargs)
@@ -254,12 +254,12 @@ class SchedulerManagerTestCase(test.TestCase):
             "vm_state": "",
             "task_state": "",
         }
-        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+        old_ref, new_ref = db.instance_update_and_get_original(self.context,
+                fake_instance_uuid,
                 {"vm_state": vm_states.ERROR,
                  "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context,
-                fake_instance_uuid, mox.IsA(test.TestingException),
-                mox.IgnoreArg())
+        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+                mox.IsA(test.TestingException), mox.IgnoreArg())
 
         self.mox.ReplayAll()
 

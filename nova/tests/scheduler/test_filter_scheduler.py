@@ -58,11 +58,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        old_ref, new_ref = db.instance_update_and_get_original(fake_context,
+                uuid, {'vm_state': vm_states.ERROR, 'task_state':
+                    None}).AndReturn(({}, {}))
         compute_utils.add_instance_fault_from_exc(fake_context,
-                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-        db.instance_update_and_get_original(fake_context, uuid,
-                {'vm_state': vm_states.ERROR,
-                 'task_state': None}).AndReturn(({}, {}))
+                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(
                 fake_context, request_spec, None, None, None, None, {})
@@ -88,11 +88,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                         'instance_uuids': [uuid]}
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        old_ref, new_ref = db.instance_update_and_get_original(fake_context,
+                uuid, {'vm_state': vm_states.ERROR, 'task_state':
+                    None}).AndReturn(({}, {}))
         compute_utils.add_instance_fault_from_exc(fake_context,
-                uuid, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-        db.instance_update_and_get_original(fake_context, uuid,
-                {'vm_state': vm_states.ERROR,
-                 'task_state': None}).AndReturn(({}, {}))
+                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(
                 fake_context, request_spec, None, None, None, None, {})
