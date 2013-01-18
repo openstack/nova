@@ -16,6 +16,7 @@
 #    under the License.
 
 import os
+import shutil
 
 from nova.openstack.common import log as logging
 from nova.virt.disk import api as disk_api
@@ -45,6 +46,14 @@ def unlink_without_raise(path):
         os.unlink(path)
     except OSError:
         LOG.exception(_("Failed to unlink %s") % path)
+
+
+def rmtree_without_raise(path):
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+    except OSError, e:
+        LOG.warn(_("Failed to remove dir %(path)s, error: %(e)s") % locals())
 
 
 def write_to_file(path, contents):

@@ -21,7 +21,6 @@ Class for PXE bare-metal nodes.
 """
 
 import os
-import shutil
 
 from nova.compute import instance_types
 from nova import exception
@@ -344,7 +343,7 @@ class PXE(base.NodeDriver):
     def destroy_images(self, context, node, instance):
         """Delete instance's image file."""
         bm_utils.unlink_without_raise(get_image_file_path(instance))
-        bm_utils.unlink_without_raise(get_image_dir_path(instance))
+        bm_utils.rmtree_without_raise(get_image_dir_path(instance))
 
     def activate_bootloader(self, context, node, instance):
         """Configure PXE boot loader for an instance
@@ -419,7 +418,7 @@ class PXE(base.NodeDriver):
             for mac in macs:
                 bm_utils.unlink_without_raise(get_pxe_mac_path(mac))
 
-        bm_utils.unlink_without_raise(
+        bm_utils.rmtree_without_raise(
                 os.path.join(CONF.baremetal.tftp_root, instance['uuid']))
 
     def activate_node(self, context, node, instance):
