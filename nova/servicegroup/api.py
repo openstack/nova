@@ -45,6 +45,15 @@ class API(object):
 
     @lockutils.synchronized('nova.servicegroup.api.new', 'nova-')
     def __new__(cls, *args, **kwargs):
+        '''Create an instance of the servicegroup API.
+
+        args and kwargs are passed down to the servicegroup driver when it gets
+        created.  No args currently exist, though.  Valid kwargs are:
+
+        db_allowed - Boolean. False if direct db access is not allowed and
+                     alternative data access (conductor) should be used
+                     instead.
+        '''
 
         if not cls._driver:
             LOG.debug(_('ServiceGroup driver defined as an instance of %s'),
@@ -55,7 +64,8 @@ class API(object):
             except KeyError:
                 raise TypeError(_("unknown ServiceGroup driver name: %s")
                                 % driver_name)
-            cls._driver = importutils.import_object(driver_class)
+            cls._driver = importutils.import_object(driver_class,
+                                                    *args, **kwargs)
             utils.check_isinstance(cls._driver, ServiceGroupDriver)
             # we don't have to check that cls._driver is not NONE,
             # check_isinstance does it

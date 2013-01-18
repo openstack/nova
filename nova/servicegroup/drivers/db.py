@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nova import conductor
 from nova import context
-from nova import db
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -31,6 +31,10 @@ LOG = logging.getLogger(__name__)
 
 
 class DbDriver(api.ServiceGroupDriver):
+
+    def __init__(self, *args, **kwargs):
+        self.db_allowed = kwargs.get('db_allowed', True)
+        self.conductor_api = conductor.API(use_local=self.db_allowed)
 
     def join(self, member_id, group_id, service=None):
         """Join the given service with it's group."""
@@ -53,6 +57,11 @@ class DbDriver(api.ServiceGroupDriver):
         Check whether a service is up based on last heartbeat.
         """
         last_heartbeat = service_ref['updated_at'] or service_ref['created_at']
+        if isinstance(last_heartbeat, basestring):
+            # NOTE(russellb) If this service_ref came in over rpc via
+            # conductor, then the timestamp will be a string and needs to be
+            # converted back to a datetime.
+            last_heartbeat = timeutils.parse_strtime(last_heartbeat)
         # Timestamps in DB are UTC.
         elapsed = utils.total_seconds(timeutils.utcnow() - last_heartbeat)
         LOG.debug('DB_Driver.is_up last_heartbeat = %(lhb)s elapsed = %(el)s',
@@ -66,7 +75,8 @@ class DbDriver(api.ServiceGroupDriver):
         LOG.debug(_('DB_Driver: get_all members of the %s group') % group_id)
         rs = []
         ctxt = context.get_admin_context()
-        for service in db.service_get_all_by_topic(ctxt, group_id):
+        services = self.conductor_api.service_get_all_by_topic(ctxt, group_id)
+        for service in services:
             if self.is_up(service):
                 rs.append(service['host'])
         return rs
@@ -79,8 +89,8 @@ class DbDriver(api.ServiceGroupDriver):
             report_count = service.service_ref['report_count'] + 1
             state_catalog['report_count'] = report_count
 
-            service.service_ref = db.service_update(ctxt,
-                             service.service_id, state_catalog)
+            service.service_ref = self.conductor_api.service_update(ctxt,
+                    service.service_ref, state_catalog)
 
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):

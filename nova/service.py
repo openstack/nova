@@ -411,7 +411,7 @@ class Service(object):
         self.db_allowed = db_allowed
         self.conductor_api = conductor.API(use_local=db_allowed)
         self.conductor_api.wait_until_ready(context.get_admin_context())
-        self.servicegroup_api = servicegroup.API()
+        self.servicegroup_api = servicegroup.API(db_allowed=db_allowed)
 
     def start(self):
         verstr = version.version_string_with_package()
