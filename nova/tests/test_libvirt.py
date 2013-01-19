@@ -4581,7 +4581,7 @@ class LibvirtDriverTestCase(test.TestCase):
             pass
 
         def fake_to_xml(instance, network_info, image_meta=None, rescue=None,
-                        block_device_info=None):
+                        block_device_info=None, write_to_disk=False):
             return ""
 
         def fake_plug_vifs(instance, network_info):

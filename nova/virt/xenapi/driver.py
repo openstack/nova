@@ -499,7 +499,8 @@ class XenAPIDriver(driver.ComputeDriver):
         pass
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
-                                           network_info, block_migration):
+                                           network_info, block_migration,
+                                           block_device_info=None):
         """Post operation of live migration at destination host.
 
         :params ctxt: security context
