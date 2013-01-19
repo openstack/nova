@@ -121,7 +121,6 @@ def build_network_config(network_info):
             gateway_v6 = mapping['gateway_v6']
         interface = {
                 'name': 'eth%d' % id,
-                'hwaddress': mapping['mac'],
                 'address': mapping['ips'][0]['ip'],
                 'gateway': mapping['gateway'],
                 'netmask': mapping['ips'][0]['netmask'],
@@ -238,27 +237,12 @@ class PXE(base.NodeDriver):
         super(PXE, self).__init__()
 
     def _collect_mac_addresses(self, context, node):
-        macs = []
-        macs.append(db.bm_node_get(context, node['id'])['prov_mac_address'])
+        macs = set()
+        macs.add(db.bm_node_get(context, node['id'])['prov_mac_address'])
         for nic in db.bm_interface_get_all_by_bm_node_id(context, node['id']):
             if nic['address']:
-                macs.append(nic['address'])
-        macs.sort()
-        return macs
-
-    def _generate_udev_rules(self, context, node):
-        # TODO(deva): fix assumption that device names begin with "eth"
-        #             and fix assumption of ordering
-        macs = self._collect_mac_addresses(context, node)
-        rules = ''
-        for (i, mac) in enumerate(macs):
-            rules += 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ' \
-                     'ATTR{address}=="%(mac)s", ATTR{dev_id}=="0x0", ' \
-                     'ATTR{type}=="1", KERNEL=="eth*", NAME="%(name)s"\n' \
-                     % {'mac': mac.lower(),
-                        'name': 'eth%d' % i,
-                        }
-        return rules
+                macs.add(nic['address'])
+        return sorted(macs)
 
     def _cache_tftp_images(self, context, instance, image_info):
         """Fetch the necessary kernels and ramdisks for the instance."""
@@ -330,9 +314,6 @@ class PXE(base.NodeDriver):
             injected_files = []
 
         net_config = build_network_config(network_info)
-        udev_rules = self._generate_udev_rules(context, node)
-        injected_files.append(
-                ('/etc/udev/rules.d/70-persistent-net.rules', udev_rules))
 
         if instance['hostname']:
             injected_files.append(('/etc/hostname', instance['hostname']))
@@ -385,7 +366,6 @@ class PXE(base.NodeDriver):
                  config
             ./pxelinux.cfg/
                  {mac} -> ../{uuid}/config
-
         """
         image_info = get_tftp_image_info(instance)
         (root_mb, swap_mb) = get_partition_sizes(instance)

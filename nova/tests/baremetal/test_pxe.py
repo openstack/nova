@@ -147,12 +147,6 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         config = pxe.build_network_config(net)
         self.assertIn('eth0', config)
         self.assertNotIn('eth1', config)
-        self.assertIn('hwaddress ether fake', config)
-        self.assertNotIn('hwaddress ether aa:bb:cc:dd', config)
-
-        net[0][1]['mac'] = 'aa:bb:cc:dd'
-        config = pxe.build_network_config(net)
-        self.assertIn('hwaddress ether aa:bb:cc:dd', config)
 
         net = utils.get_test_network_info(2)
         config = pxe.build_network_config(net)
@@ -306,15 +300,6 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         macs = self.driver._collect_mac_addresses(self.context, self.node)
         self.assertEqual(macs, address_list)
 
-    def test_generate_udev_rules(self):
-        self._create_node()
-        address_list = [nic['address'] for nic in self.nic_info]
-        address_list.append(self.node_info['prov_mac_address'])
-
-        rules = self.driver._generate_udev_rules(self.context, self.node)
-        for address in address_list:
-            self.assertIn('ATTR{address}=="%s"' % address, rules)
-
     def test_cache_tftp_images(self):
         self.instance['kernel_id'] = 'aaaa'
         self.instance['ramdisk_id'] = 'bbbb'
@@ -357,8 +342,6 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         #             nova.virt.disk.api._inject_*_into_fs
         self._create_node()
         files = []
-        files.append(('/etc/udev/rules.d/70-persistent-net.rules',
-                 self.driver._generate_udev_rules(self.context, self.node)))
         self.instance['hostname'] = 'fake hostname'
         files.append(('/etc/hostname', 'fake hostname'))
         self.instance['key_data'] = 'fake ssh key'
