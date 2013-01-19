@@ -946,11 +946,10 @@ class API(base.Base):
             if (old['vm_state'] != vm_states.SOFT_DELETED and
                 old['task_state'] not in (task_states.DELETING,
                                           task_states.SOFT_DELETING)):
-                reservations = QUOTAS.reserve(context,
-                                              project_id=project_id,
-                                              instances=-1,
-                                              cores=-instance['vcpus'],
-                                              ram=-instance['memory_mb'])
+                reservations = self._create_reservations(context,
+                                                         old,
+                                                         updated,
+                                                         project_id)
 
             if not host:
                 # Just update database, nothing else we can do
@@ -1025,6 +1024,45 @@ class API(base.Base):
                     QUOTAS.rollback(context,
                                     reservations,
                                     project_id=project_id)
+
+    def _create_reservations(self, context, old_instance, new_instance,
+                                                            project_id):
+        instance_vcpus = old_instance['vcpus']
+        instance_memory_mb = old_instance['memory_mb']
+        # NOTE(wangpan): if the instance is resizing, and the resources
+        #                are updated to new instance type, we should use
+        #                the old instance type to create reservation.
+        # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
+        if old_instance['task_state'] in (task_states.RESIZE_MIGRATED,
+                                          task_states.RESIZE_FINISH):
+            get_migration = self.db.migration_get_by_instance_and_status
+            try:
+                migration_ref = get_migration(context.elevated(),
+                                    old_instance['uuid'], 'post-migrating')
+            except exception.MigrationNotFoundByStatus:
+                migration_ref = None
+            if (migration_ref and
+                    new_instance['instance_type_id'] ==
+                        migration_ref['new_instance_type_id']):
+                old_inst_type_id = migration_ref['old_instance_type_id']
+                get_inst_type_by_id = instance_types.get_instance_type
+                try:
+                    old_inst_type = get_inst_type_by_id(old_inst_type_id)
+                except exception.InstanceTypeNotFound:
+                    LOG.warning(_("instance type %(old_inst_type_id)d "
+                                  "not found") % locals())
+                    pass
+                else:
+                    instance_vcpus = old_inst_type['vcpus']
+                    instance_memory_mb = old_inst_type['memory_mb']
+                    LOG.debug(_("going to delete a resizing instance"))
+
+        reservations = QUOTAS.reserve(context,
+                                      project_id=project_id,
+                                      instances=-1,
+                                      cores=-instance_vcpus,
+                                      ram=-instance_memory_mb)
+        return reservations
 
     def _local_delete(self, context, instance, bdms):
         LOG.warning(_("instance's host %s is down, deleting from "

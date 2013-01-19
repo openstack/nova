@@ -3987,6 +3987,38 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_delete_in_resizing(self):
+        def fake_quotas_reserve(context, expire=None, project_id=None,
+                                                             **deltas):
+            old_type = instance_types.get_instance_type_by_name('m1.tiny')
+            # ensure using old instance type to create reservations
+            self.assertEqual(deltas['cores'], -old_type['vcpus'])
+            self.assertEqual(deltas['ram'], -old_type['memory_mb'])
+
+        self.stubs.Set(QUOTAS, 'reserve', fake_quotas_reserve)
+
+        instance, instance_uuid = self._run_instance(params={
+                'host': CONF.host})
+
+        # create a fake migration record (manager does this)
+        new_inst_type = instance_types.get_instance_type_by_name('m1.small')
+        db.migration_create(self.context.elevated(),
+                 {'instance_uuid': instance['uuid'],
+                  'old_instance_type_id': instance['instance_type_id'],
+                  'new_instance_type_id': new_inst_type['id'],
+                  'status': 'post-migrating'})
+
+        # update instance type to resized one
+        db.instance_update(self.context, instance['uuid'],
+                           {'instance_type_id': new_inst_type['id'],
+                            'vcpus': new_inst_type['vcpus'],
+                            'memory_mb': new_inst_type['memory_mb'],
+                            'task_state': task_states.RESIZE_FINISH})
+
+        self.compute_api.delete(self.context, instance)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_delete_in_resized(self):
         instance, instance_uuid = self._run_instance(params={
                 'host': CONF.host})
