@@ -222,7 +222,7 @@ class TestMigrations(test.TestCase):
         if _is_backend_avail('mysql', user="openstack_cifail"):
             self.fail("Shouldn't have connected")
 
-    def test_mysql_innodb(self):
+    def test_mysql_opportunistically(self):
         # Test that table creation on mysql only builds InnoDB tables
         if not _is_backend_avail('mysql'):
             self.skipTest("mysql not available")
@@ -233,6 +233,12 @@ class TestMigrations(test.TestCase):
         self.engines["mysqlcitest"] = engine
         self.test_databases["mysqlcitest"] = connect_string
 
+        # Test that we end in an innodb
+        self._check_mysql_innodb(engine)
+        # Test IP transition
+        self._check_mysql_migration_149(engine)
+
+    def _check_mysql_innodb(self, engine):
         # build a fully populated mysql database with all the tables
         self._reset_databases()
         self._walk_versions(engine, False, False)
@@ -298,16 +304,8 @@ class TestMigrations(test.TestCase):
                 "AND column_name='cidr'").scalar())
         connection.close()
 
-    def test_migration_149_mysql(self):
+    def _check_mysql_migration_149(self, engine):
         """Test updating a table with IPAddress columns."""
-        if not _have_mysql():
-            self.skipTest("mysql not available")
-
-        connect_string = _get_connect_string("mysql")
-        engine = sqlalchemy.create_engine(connect_string)
-        self.engines["mysqlcitest"] = engine
-        self.test_databases["mysqlcitest"] = connect_string
-
         self._reset_databases()
         migration_api.version_control(engine, TestMigrations.REPOSITORY,
                                       migration.INIT_VERSION)
