@@ -1705,16 +1705,14 @@ def task_log_end_task(context, task_name,
                         period_ending,
                         host,
                         errors,
-                        message=None,
-                        session=None):
+                        message=None):
     """Mark a task as complete for a given host/time period."""
     return IMPL.task_log_end_task(context, task_name,
                                   period_beginning,
                                   period_ending,
                                   host,
                                   errors,
-                                  message,
-                                  session)
+                                  message)
 
 
 def task_log_begin_task(context, task_name,
@@ -1722,25 +1720,23 @@ def task_log_begin_task(context, task_name,
                         period_ending,
                         host,
                         task_items=None,
-                        message=None,
-                        session=None):
+                        message=None):
     """Mark a task as started for a given host/time period."""
     return IMPL.task_log_begin_task(context, task_name,
                                     period_beginning,
                                     period_ending,
                                     host,
                                     task_items,
-                                    message,
-                                    session)
+                                    message)
 
 
 def task_log_get_all(context, task_name, period_beginning,
-                 period_ending, host=None, state=None, session=None):
+                 period_ending, host=None, state=None):
     return IMPL.task_log_get_all(context, task_name, period_beginning,
-                 period_ending, host, state, session)
+                 period_ending, host, state)
 
 
 def task_log_get(context, task_name, period_beginning,
-                 period_ending, host, state=None, session=None):
+                 period_ending, host, state=None):
     return IMPL.task_log_get(context, task_name, period_beginning,
-                 period_ending, host, state, session)
+                 period_ending, host, state)
