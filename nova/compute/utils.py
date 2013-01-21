@@ -71,7 +71,7 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     db.instance_fault_create(context, values)
 
 
-def get_device_name_for_instance(context, instance, device):
+def get_device_name_for_instance(context, instance, bdms, device):
     """Validates (or generates) a device name for instance.
 
     If device is not set, it will generate a unique device appropriate
@@ -88,8 +88,6 @@ def get_device_name_for_instance(context, instance, device):
             req_prefix, req_letters = block_device.match_device(device)
         except (TypeError, AttributeError, ValueError):
             raise exception.InvalidDevicePath(path=device)
-    bdms = db.block_device_mapping_get_all_by_instance(context,
-                instance['uuid'])
     mappings = block_device.instance_block_mapping(instance, bdms)
     try:
         prefix = block_device.match_device(mappings['root'])[0]
