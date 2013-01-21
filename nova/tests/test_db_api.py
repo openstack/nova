@@ -261,6 +261,32 @@ class DbApiTestCase(test.TestCase):
         res = db.floating_ip_disassociate(ctxt, floating)
         self.assertEqual(res, None)
 
+    def test_fixed_ip_get_by_floating_address(self):
+        ctxt = context.get_admin_context()
+        values = {'address': 'fixed'}
+        fixed = db.fixed_ip_create(ctxt, values)
+        fixed_ip_ref = db.fixed_ip_get_by_address(ctxt, fixed)
+        values = {'address': 'floating',
+                  'fixed_ip_id': fixed_ip_ref['id']}
+        floating = db.floating_ip_create(ctxt, values)
+        fixed_ip_ref = db.fixed_ip_get_by_floating_address(ctxt, floating)
+        self.assertEqual(fixed, fixed_ip_ref['address'])
+
+    def test_floating_ip_get_by_fixed_address(self):
+        ctxt = context.get_admin_context()
+        values = {'address': 'fixed'}
+        fixed = db.fixed_ip_create(ctxt, values)
+        fixed_ip_ref = db.fixed_ip_get_by_address(ctxt, fixed)
+        values = {'address': 'floating1',
+                  'fixed_ip_id': fixed_ip_ref['id']}
+        floating1 = db.floating_ip_create(ctxt, values)
+        values = {'address': 'floating2',
+                  'fixed_ip_id': fixed_ip_ref['id']}
+        floating2 = db.floating_ip_create(ctxt, values)
+        floating_ip_refs = db.floating_ip_get_by_fixed_address(ctxt, fixed)
+        self.assertEqual(floating1, floating_ip_refs[0]['address'])
+        self.assertEqual(floating2, floating_ip_refs[1]['address'])
+
     def test_network_create_safe(self):
         ctxt = context.get_admin_context()
         values = {'host': 'localhost', 'project_id': 'project1'}
