@@ -142,6 +142,67 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(exception.InvalidInput, instance_types.create,
                 name, 256, 1, 120, 100, flavorid)
 
+    def test_add_instance_type_access(self):
+        user_id = 'fake'
+        project_id = 'fake'
+        ctxt = context.RequestContext(user_id, project_id, is_admin=True)
+        flavor_id = 'flavor1'
+        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+                                          flavorid=flavor_id)
+        access_ref = instance_types.add_instance_type_access(flavor_id,
+                                                             project_id,
+                                                             ctxt=ctxt)
+        self.assertEqual(access_ref["project_id"], project_id)
+        self.assertEqual(access_ref["instance_type_id"], type_ref["id"])
+
+    def test_add_instance_type_access_already_exists(self):
+        user_id = 'fake'
+        project_id = 'fake'
+        ctxt = context.RequestContext(user_id, project_id, is_admin=True)
+        flavor_id = 'flavor1'
+        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+                                          flavorid=flavor_id)
+        access_ref = instance_types.add_instance_type_access(flavor_id,
+                                                             project_id,
+                                                             ctxt=ctxt)
+        self.assertRaises(exception.FlavorAccessExists,
+                          instance_types.add_instance_type_access,
+                          flavor_id, project_id, ctxt)
+
+    def test_add_instance_type_access_invalid_flavor(self):
+        user_id = 'fake'
+        project_id = 'fake'
+        ctxt = context.RequestContext(user_id, project_id, is_admin=True)
+        flavor_id = 'no_such_flavor'
+        self.assertRaises(exception.FlavorNotFound,
+                          instance_types.add_instance_type_access,
+                          flavor_id, project_id, ctxt)
+
+    def test_remove_instance_type_access(self):
+        user_id = 'fake'
+        project_id = 'fake'
+        ctxt = context.RequestContext(user_id, project_id, is_admin=True)
+        flavor_id = 'flavor1'
+        it = instance_types
+        type_ref = it.create('some flavor', 256, 1, 120, 100,
+                                          flavorid=flavor_id)
+        access_ref = it.add_instance_type_access(flavor_id, project_id, ctxt)
+        it.remove_instance_type_access(flavor_id, project_id, ctxt)
+
+        projects = it.get_instance_type_access_by_flavor_id(flavor_id, ctxt)
+        self.assertEqual([], projects)
+
+    def test_remove_instance_type_access_doesnt_exists(self):
+        user_id = 'fake'
+        project_id = 'fake'
+        ctxt = context.RequestContext(user_id, project_id, is_admin=True)
+        flavor_id = 'flavor1'
+        type_ref = instance_types.create('some flavor', 256, 1, 120, 100,
+                                          flavorid=flavor_id)
+        self.assertRaises(exception.FlavorAccessNotFound,
+                          instance_types.remove_instance_type_access,
+                          flavor_id, project_id, ctxt=ctxt)
+
     def test_get_all_instance_types(self):
         # Ensures that all instance types can be retrieved.
         session = sql_session.get_session()

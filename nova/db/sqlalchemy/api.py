@@ -3672,7 +3672,7 @@ def instance_type_destroy(context, name):
 @require_context
 def _instance_type_access_query(context, session=None):
     return model_query(context, models.InstanceTypeProjects, session=session,
-                       read_deleted="yes")
+                       read_deleted="no")
 
 
 @require_admin_context
@@ -3688,6 +3688,8 @@ def instance_type_access_get_by_flavor_id(context, flavor_id):
 @require_admin_context
 def instance_type_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
+    # NOTE(boris-42): There is a race condition in this method and it will be
+    #                 rewritten after bp/db-unique-keys implementation.
     session = get_session()
     with session.begin():
         instance_type_ref = instance_type_get_by_flavor_id(context, flavor_id,
@@ -3695,21 +3697,16 @@ def instance_type_access_add(context, flavor_id, project_id):
         instance_type_id = instance_type_ref['id']
         access_ref = _instance_type_access_query(context, session=session).\
                         filter_by(instance_type_id=instance_type_id).\
-                        filter_by(project_id=project_id).first()
-
-        if not access_ref:
-            access_ref = models.InstanceTypeProjects()
-            access_ref.instance_type_id = instance_type_id
-            access_ref.project_id = project_id
-            access_ref.save(session=session)
-        elif access_ref.deleted:
-            access_ref.update({'deleted': False,
-                               'deleted_at': None})
-            access_ref.save(session=session)
-        else:
+                        filter_by(project_id=project_id).\
+                        first()
+        if access_ref:
             raise exception.FlavorAccessExists(flavor_id=flavor_id,
                                                project_id=project_id)
 
+        access_ref = models.InstanceTypeProjects()
+        access_ref.update({"instance_type_id": instance_type_id,
+                           "project_id": project_id})
+        access_ref.save(session=session)
         return access_ref
 
 
@@ -3725,7 +3722,6 @@ def instance_type_access_remove(context, flavor_id, project_id):
                         filter_by(instance_type_id=instance_type_id).\
                         filter_by(project_id=project_id).\
                         soft_delete()
-
         if count == 0:
             raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
                                                  project_id=project_id)
