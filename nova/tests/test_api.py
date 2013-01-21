@@ -309,11 +309,10 @@ class ApiEc2TestCase(test.TestCase):
         try:
             self.ec2.create_key_pair('test')
         except boto_exc.EC2ResponseError, e:
-            if e.code == 'KeyPairExists':
+            if e.code == 'InvalidKeyPair.Duplicate':
                 pass
             else:
-                self.fail("Unexpected EC2ResponseError: %s "
-                          "(expected KeyPairExists)" % e.code)
+                self.assertEqual('InvalidKeyPair.Duplicate', e.code)
         else:
             self.fail('Exception not raised.')
 

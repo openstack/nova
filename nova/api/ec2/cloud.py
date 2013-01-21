@@ -434,7 +434,8 @@ class CloudController(object):
         #If looking for non existent key pair
         if key_name is not None and not key_pairs:
             msg = _('Could not find key pair(s): %s') % ','.join(key_name)
-            raise exception.EC2APIError(msg)
+            raise exception.KeypairNotFound(msg,
+                                            code="InvalidKeyPair.Duplicate")
 
         result = []
         for key_pair in key_pairs:
@@ -457,13 +458,7 @@ class CloudController(object):
                                                        key_name)
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
-            raise exception.EC2APIError(msg)
-        except exception.InvalidKeypair:
-            msg = _("Keypair data is invalid")
-            raise exception.EC2APIError(msg)
-        except exception.KeyPairExists:
-            msg = _("Key pair '%s' already exists.") % key_name
-            raise exception.KeyPairExists(msg)
+            raise exception.EC2APIError(msg, code='ResourceLimitExceeded')
         return {'keyName': key_name,
                 'keyFingerprint': keypair['fingerprint'],
                 'keyMaterial': keypair['private_key']}
@@ -485,9 +480,6 @@ class CloudController(object):
             raise exception.EC2APIError(msg)
         except exception.InvalidKeypair:
             msg = _("Keypair data is invalid")
-            raise exception.EC2APIError(msg)
-        except exception.KeyPairExists:
-            msg = _("Key pair '%s' already exists.") % key_name
             raise exception.EC2APIError(msg)
 
         return {'keyName': key_name,

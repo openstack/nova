@@ -1440,7 +1440,7 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
     def test_describe_bad_key_pairs(self):
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.KeypairNotFound,
             self.cloud.describe_key_pairs, self.context,
             key_name=['DoesNotExist'])
 
@@ -1490,7 +1490,7 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(result['keyName'], key_name)
 
         for key_name in bad_names:
-            self.assertRaises(exception.EC2APIError,
+            self.assertRaises(exception.InvalidKeypair,
                               self.cloud.create_key_pair,
                               self.context,
                               key_name)
