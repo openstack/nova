@@ -423,7 +423,7 @@ class Service(object):
         try:
             self.service_ref = self.conductor_api.service_get_by_args(ctxt,
                     self.host, self.binary)
-            self.service_id = service_ref['id']
+            self.service_id = self.service_ref['id']
         except exception.NotFound:
             self.service_ref = self._create_service_ref(ctxt)
 
