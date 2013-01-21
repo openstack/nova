@@ -95,6 +95,13 @@ function run_tests {
 
   copy_subunit_log
 
+  if [ $coverage -eq 1 ]; then
+    echo "Generating coverage report in covhtml/"
+    # Don't compute coverage for common code, which is tested elsewhere
+    ${wrapper} coverage combine
+    ${wrapper} coverage html --include='nova/*' --omit='nova/openstack/common/*' -d covhtml -i
+  fi
+
   return $RESULT
 }
 
@@ -196,11 +203,4 @@ if [ -z "$testrargs" ]; then
   if [ $no_pep8 -eq 0 ]; then
     run_pep8
   fi
-fi
-
-if [ $coverage -eq 1 ]; then
-    echo "Generating coverage report in covhtml/"
-    # Don't compute coverage for common code, which is tested elsewhere
-    ${wrapper} coverage combine
-    ${wrapper} coverage html --include='nova/*' --omit='nova/openstack/common/*' -d covhtml -i
 fi
