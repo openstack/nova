@@ -238,11 +238,62 @@ class API(base.Base):
 
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed ip to the instance from specified network."""
-        raise NotImplementedError()
+        search_opts = {'network_id': network_id}
+        data = quantumv2.get_client(context).list_subnets(**search_opts)
+        ipam_subnets = data.get('subnets', [])
+        if not ipam_subnets:
+            raise exception.NetworkNotFoundForInstance(
+                instance_id=instance['uuid'])
+
+        zone = 'compute:%s' % instance['availability_zone']
+        search_opts = {'device_id': instance['uuid'],
+                       'device_owner': zone,
+                       'network_id': network_id}
+        data = quantumv2.get_client(context).list_ports(**search_opts)
+        ports = data['ports']
+        for p in ports:
+            fixed_ips = p['fixed_ips']
+            for subnet in ipam_subnets:
+                fixed_ip = {'subnet_id': subnet['id']}
+                fixed_ips.append(fixed_ip)
+            port_req_body = {'port': {'fixed_ips': fixed_ips}}
+            try:
+                quantumv2.get_client(context).update_port(p['id'],
+                                                          port_req_body)
+            except Exception as ex:
+                msg = _("Unable to update port %(portid)s with"
+                        " failure: %(exception)s")
+                LOG.debug(msg, {'portid': p['id'], 'exception': ex})
+            return
+        raise exception.NetworkNotFoundForInstance(
+                instance_id=instance['uuid'])
 
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
-        raise NotImplementedError()
+        zone = 'compute:%s' % instance['availability_zone']
+        search_opts = {'device_id': instance['uuid'],
+                       'device_owner': zone,
+                       'fixed_ips': 'ip_address=%s' % address}
+        data = quantumv2.get_client(context).list_ports(**search_opts)
+        ports = data['ports']
+        for p in ports:
+            fixed_ips = p['fixed_ips']
+            new_fixed_ips = []
+            for fixed_ip in fixed_ips:
+                if fixed_ip['ip_address'] != address:
+                    new_fixed_ips.append(fixed_ip)
+            port_req_body = {'port': {'fixed_ips': new_fixed_ips}}
+            try:
+                quantumv2.get_client(context).update_port(p['id'],
+                                                          port_req_body)
+            except Exception as ex:
+                msg = _("Unable to update port %(portid)s with"
+                        " failure: %(exception)s")
+                LOG.debug(msg, {'portid': p['id'], 'exception': ex})
+            return
+
+        raise exception.FixedIpNotFoundForSpecificInstance(
+                instance_uuid=instance['uuid'], ip=address)
 
     def validate_networks(self, context, requested_networks):
         """Validate that the tenant can use the requested networks."""

@@ -1002,6 +1002,54 @@ class TestQuantumv2(test.TestCase):
         self.mox.ReplayAll()
         api.disassociate_floating_ip(self.context, self.instance, address)
 
+    def test_add_fixed_ip_to_instance(self):
+        api = quantumapi.API()
+        network_id = 'my_netid1'
+        search_opts = {'network_id': network_id}
+        self.moxed_client.list_subnets(
+            **search_opts).AndReturn({'subnets': self.subnet_data1})
+
+        zone = 'compute:%s' % self.instance['availability_zone']
+        search_opts = {'device_id': self.instance['uuid'],
+                       'device_owner': 'compute:nova',
+                       'network_id': network_id}
+        self.moxed_client.list_ports(
+            **search_opts).AndReturn({'ports': self.port_data1})
+        port_req_body = {
+            'port': {
+                'fixed_ips': [{'subnet_id': 'my_subid1'}],
+            },
+        }
+        port = self.port_data1[0]
+        port['fixed_ips'] = [{'subnet_id': 'my_subid1'}]
+        self.moxed_client.update_port('my_portid1',
+            MyComparator(port_req_body)).AndReturn({'port': port})
+
+        self.mox.ReplayAll()
+        api.add_fixed_ip_to_instance(self.context, self.instance, network_id)
+
+    def test_remove_fixed_ip_from_instance(self):
+        api = quantumapi.API()
+        address = '10.0.0.3'
+        zone = 'compute:%s' % self.instance['availability_zone']
+        search_opts = {'device_id': self.instance['uuid'],
+                       'device_owner': zone,
+                       'fixed_ips': 'ip_address=%s' % address}
+        self.moxed_client.list_ports(
+            **search_opts).AndReturn({'ports': self.port_data1})
+        port_req_body = {
+            'port': {
+                'fixed_ips': [],
+            },
+        }
+        port = self.port_data1[0]
+        port['fixed_ips'] = []
+        self.moxed_client.update_port('my_portid1',
+            MyComparator(port_req_body)).AndReturn({'port': port})
+
+        self.mox.ReplayAll()
+        api.remove_fixed_ip_from_instance(self.context, self.instance, address)
+
 
 class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference(self):
