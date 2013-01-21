@@ -37,7 +37,7 @@ hyper_volumeops_opts = [
         help='The number of times we retry on attaching volume '),
     cfg.IntOpt('hyperv_wait_between_attach_retry',
         default=5,
-        help='The seconds to wait between an volume attachment attempt'),
+        help='The seconds to wait between a volume attachment attempt'),
     cfg.BoolOpt('force_volumeutils_v1',
         default=False,
         help='Force volumeutils v1'),

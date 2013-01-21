@@ -19,10 +19,10 @@
 
 A pool may be 'created', in which case the admin has triggered its
 creation, but the underlying hypervisor pool has not actually being set up
-yet. An pool may be 'changing', meaning that the underlying hypervisor
-pool is being setup. An pool may be 'active', in which case the underlying
-hypervisor pool is up and running. An pool may be 'dismissed' when it has
-no hosts and it has been deleted. An pool may be in 'error' in all other
+yet. A pool may be 'changing', meaning that the underlying hypervisor
+pool is being setup. A pool may be 'active', in which case the underlying
+hypervisor pool is up and running. A pool may be 'dismissed' when it has
+no hosts and it has been deleted. A pool may be in 'error' in all other
 cases.
 A 'created' pool becomes 'changing' during the first request of
 adding a host. During a 'changing' status no other requests will be accepted;
@@ -34,7 +34,7 @@ All other operations (e.g. add/remove hosts) that succeed will keep the
 pool in the 'active' state. If a number of continuous requests fail,
 an 'active' pool goes into an 'error' state. To recover from such a state,
 admin intervention is required. Currently an error state is irreversible,
-that is, in order to recover from it an pool must be deleted.
+that is, in order to recover from it a pool must be deleted.
 """
 
 CREATED = 'created'

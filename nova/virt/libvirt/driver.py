@@ -1995,7 +1995,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_interfaces(self, xml):
         """
-        Note that this function takes an domain xml.
+        Note that this function takes a domain xml.
 
         Returns a list of all network interfaces for this instance.
         """

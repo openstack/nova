@@ -1756,7 +1756,7 @@
 # value)
 #hyperv_attaching_volume_retry_count=10
 
-# The seconds to wait between an volume attachment attempt
+# The seconds to wait between a volume attachment attempt
 # (integer value)
 #hyperv_wait_between_attach_retry=5
 
@@ -2480,7 +2480,7 @@
 #
 
 # Do not set this out of dev/test environments. If a node does
-# not have an fixed PXE IP address, volumes are exported with
+# not have a fixed PXE IP address, volumes are exported with
 # globally opened ACL (boolean value)
 #use_unsafe_iscsi=false
 

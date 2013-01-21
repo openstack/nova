@@ -31,7 +31,7 @@ opts = [
     cfg.BoolOpt('use_unsafe_iscsi',
                  default=False,
                  help='Do not set this out of dev/test environments. '
-                      'If a node does not have an fixed PXE IP address, '
+                      'If a node does not have a fixed PXE IP address, '
                       'volumes are exported with globally opened ACL'),
     cfg.StrOpt('iscsi_iqn_prefix',
                default='iqn.2010-10.org.openstack.baremetal',
