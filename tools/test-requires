@@ -12,4 +12,5 @@ pylint==0.25.2
 python-subunit
 sphinx>=1.1.2
 testrepository>=0.0.13
-testtools>=0.9.22
+# testtools 0.9.25 is broken, change this when upstream is fixed (bug 1102400)
+testtools>=0.9.22,<=0.9.24
