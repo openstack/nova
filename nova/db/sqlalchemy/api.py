@@ -4093,21 +4093,42 @@ def instance_type_extra_specs_get_item(context, flavor_id, key,
 
 
 @require_context
-def instance_type_extra_specs_update_or_create(context, flavor_id,
-                                               specs):
+def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
+    # NOTE(boris-42): There is a race condition in this method. We should add
+    #                 UniqueConstraint on (instance_type_id, key, deleted) to
+    #                 avoid duplicated instance_type_extra_specs. This will be
+    #                 possible after bp/db-unique-keys implementation.
     session = get_session()
-    spec_ref = None
-    instance_type = instance_type_get_by_flavor_id(context, flavor_id)
-    for key, value in specs.iteritems():
-        try:
-            spec_ref = instance_type_extra_specs_get_item(
-                context, flavor_id, key, session)
-        except exception.InstanceTypeExtraSpecsNotFound:
+    with session.begin():
+        instance_type_id = model_query(context, models.InstanceTypes.id,
+                                       session=session, read_deleted="no").\
+            filter(models.InstanceTypes.flavorid == flavor_id).\
+            first()
+        if not instance_type_id:
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
+
+        instance_type_id = instance_type_id.id
+
+        spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
+                                session=session, read_deleted="no").\
+            filter_by(instance_type_id=instance_type_id).\
+            filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
+            all()
+
+        existing_keys = set()
+        for spec_ref in spec_refs:
+            key = spec_ref["key"]
+            existing_keys.add(key)
+            spec_ref.update({"value": specs[key]})
+
+        for key, value in specs.iteritems():
+            if key in existing_keys:
+                continue
             spec_ref = models.InstanceTypeExtraSpecs()
-        spec_ref.update({"key": key, "value": value,
-                         "instance_type_id": instance_type["id"],
-                         "deleted": False})
-        spec_ref.save(session=session)
+            spec_ref.update({"key": key, "value": value,
+                             "instance_type_id": instance_type_id})
+            session.add(spec_ref)
+
     return specs
 
 
@@ -4437,28 +4458,33 @@ def aggregate_metadata_get_item(context, aggregate_id, key, session=None):
 @require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
+    # NOTE(boris-42): There is a race condition in this method. We should add
+    #                 UniqueConstraint on (start_period, uuid, mac, deleted) to
+    #                 avoid duplicated aggregate_metadata. This will be
+    #                 possible after bp/db-unique-keys implementation.
     session = get_session()
     all_keys = metadata.keys()
     with session.begin():
         query = aggregate_metadata_get_query(context, aggregate_id,
+                                             read_deleted='no',
                                              session=session)
         if set_delete:
             query.filter(~models.AggregateMetadata.key.in_(all_keys)).\
                 soft_delete(synchronize_session=False)
 
         query = query.filter(models.AggregateMetadata.key.in_(all_keys))
-        already_existing_keys = []
+        already_existing_keys = set()
         for meta_ref in query.all():
             key = meta_ref.key
-            meta_ref.update({"value": metadata[key],
-                             "deleted": False,
-                             "deleted_at": None})
-            already_existing_keys.append(key)
+            meta_ref.update({"value": metadata[key]})
+            already_existing_keys.add(key)
 
-        for key in set(all_keys) - set(already_existing_keys):
+        for key, value in metadata.iteritems():
+            if key in already_existing_keys:
+                continue
             meta_ref = models.AggregateMetadata()
             meta_ref.update({"key": key,
-                             "value": metadata[key],
+                             "value": value,
                              "aggregate_id": aggregate_id})
             session.add(meta_ref)
 
@@ -4492,25 +4518,24 @@ def aggregate_host_delete(context, aggregate_id, host):
 @require_admin_context
 @require_aggregate_exists
 def aggregate_host_add(context, aggregate_id, host):
+    # NOTE(boris-42): There is a race condition in this method and it will be
+    #                 rewritten after bp/db-unique-keys implementation.
     session = get_session()
-    host_ref = _aggregate_get_query(context,
-                                    models.AggregateHost,
-                                    models.AggregateHost.aggregate_id,
-                                    aggregate_id,
-                                    session=session,
-                                    read_deleted='yes').\
-                                    filter_by(host=host).first()
-    if not host_ref:
-        host_ref = models.AggregateHost()
-        values = {"host": host, "aggregate_id": aggregate_id, }
-        host_ref.update(values)
-        host_ref.save(session=session)
-    elif host_ref.deleted:
-        host_ref.update({'deleted': False, 'deleted_at': None})
-        host_ref.save(session=session)
-    else:
-        raise exception.AggregateHostExists(host=host,
+    with session.begin():
+        host_ref = _aggregate_get_query(context,
+                                        models.AggregateHost,
+                                        models.AggregateHost.aggregate_id,
+                                        aggregate_id,
+                                        session=session,
+                                        read_deleted='no').\
+                            filter_by(host=host).\
+                            first()
+        if host_ref:
+            raise exception.AggregateHostExists(host=host,
                                             aggregate_id=aggregate_id)
+        host_ref = models.AggregateHost()
+        host_ref.update({"host": host, "aggregate_id": aggregate_id})
+        host_ref.save(session=session)
     return host_ref
 
 
