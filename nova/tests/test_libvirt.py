@@ -769,6 +769,20 @@ class LibvirtConnTestCase(test.TestCase):
                           vconfig.LibvirtConfigGuestDisk)
         self.assertEquals(cfg.devices[3].target_dev, 'vdd')
 
+    def test_get_guest_config_with_configdrive(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        # make configdrive.enabled_for() return True
+        instance_ref['config_drive'] = 'ANY_ID'
+
+        cfg = conn.get_guest_config(instance_ref, [], None, None)
+
+        self.assertEquals(type(cfg.devices[2]),
+                          vconfig.LibvirtConfigGuestDisk)
+        self.assertEquals(cfg.devices[2].target_dev,
+                          conn.default_last_device)
+
     def test_get_guest_config_with_vnc(self):
         self.flags(libvirt_type='kvm',
                    vnc_enabled=True,

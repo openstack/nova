@@ -1646,7 +1646,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 diskconfig.driver_format = "raw"
                 diskconfig.driver_cache = self.disk_cachemode
                 diskconfig.source_path = os.path.join(
-                    libvirt_utils.get_instance_path(instane), "disk.config")
+                    libvirt_utils.get_instance_path(instance), "disk.config")
                 diskconfig.target_dev = self.default_last_device
                 diskconfig.target_bus = default_disk_bus
                 devices.append(diskconfig)
