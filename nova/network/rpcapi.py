@@ -45,6 +45,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.4 - Add get_backdoor_port()
         1.5 - Adds associate
         1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
+        1.7 - Adds method get_floating_ip_pools to replace get_floating_pools
     '''
 
     #
@@ -94,8 +95,9 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def get_floating_ip(self, ctxt, id):
         return self.call(ctxt, self.make_msg('get_floating_ip', id=id))
 
-    def get_floating_pools(self, ctxt):
-        return self.call(ctxt, self.make_msg('get_floating_pools'))
+    def get_floating_ip_pools(self, ctxt):
+        return self.call(ctxt, self.make_msg('get_floating_ip_pools'),
+                         version="1.7")
 
     def get_floating_ip_by_address(self, ctxt, address):
         return self.call(ctxt, self.make_msg('get_floating_ip_by_address',

@@ -111,7 +111,7 @@ class API(base.Base):
         return self.network_rpcapi.get_floating_ip(context, id)
 
     def get_floating_ip_pools(self, context):
-        return self.network_rpcapi.get_floating_pools(context)
+        return self.network_rpcapi.get_floating_ip_pools(context)
 
     def get_floating_ip_by_address(self, context, address):
         return self.network_rpcapi.get_floating_ip_by_address(context, address)
