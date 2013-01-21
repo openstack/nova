@@ -63,10 +63,6 @@ def main(srcfiles):
     # The options list is a list of (module, options) tuples
     opts_by_group = {'DEFAULT': []}
 
-    opts_by_group['DEFAULT'].append(
-            (cfg.__name__ + ':' + cfg.CommonConfigOpts.__name__,
-             _list_opts(cfg.CommonConfigOpts)[0][1]))
-
     for pkg_name in pkg_names:
         mods = mods_by_pkg.get(pkg_name)
         mods.sort()

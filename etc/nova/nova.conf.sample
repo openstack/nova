@@ -1,47 +1,6 @@
 [DEFAULT]
 
 #
-# Options defined in nova.openstack.common.cfg:CommonConfigOpts
-#
-
-# Print debugging output (boolean value)
-#debug=false
-
-# Print more verbose output (boolean value)
-#verbose=false
-
-# If this option is specified, the logging configuration file
-# specified is used and overrides any other logging options
-# specified. Please see the Python logging module
-# documentation for details on logging configuration files.
-# (string value)
-#log_config=<None>
-
-# A logging.Formatter log message format string which may use
-# any of the available logging.LogRecord attributes. Default:
-# %(default)s (string value)
-#log_format=%(asctime)s %(levelname)8s [%(name)s] %(message)s
-
-# Format string for %%(asctime)s in log records. Default:
-# %(default)s (string value)
-#log_date_format=%Y-%m-%d %H:%M:%S
-
-# (Optional) Name of log file to output to. If not set,
-# logging will go to stdout. (string value)
-#log_file=<None>
-
-# (Optional) The directory to keep log files in (will be
-# prepended to --log-file) (string value)
-#log_dir=<None>
-
-# Use syslog for logging. (boolean value)
-#use_syslog=false
-
-# syslog facility to receive log lines (string value)
-#syslog_log_facility=LOG_USER
-
-
-#
 # Options defined in nova.availability_zones
 #
 
@@ -483,6 +442,22 @@
 # List of instance states that should hide network info (list
 # value)
 #osapi_hide_server_address_states=building
+
+
+#
+# Options defined in nova.api.openstack.compute.contrib.os_tenant_networks
+#
+
+# Enables or disables quotaing of tenant networks (boolean
+# value)
+#enable_network_quota=false
+
+# Control for checking for default networks (string value)
+#use_quantum_default_nets=False
+
+# Default tenant id when creating quantum networks (string
+# value)
+#quantum_default_tenant_id=default
 
 
 #
@@ -1123,10 +1098,6 @@
 # Autoassigning floating ip to VM (boolean value)
 #auto_assign_floating_ip=false
 
-# Network host to use for ip allocation in flat modes (string
-# value)
-#network_host=nova
-
 # If passed, use fake network devices and addresses (boolean
 # value)
 #fake_network=false
@@ -1207,6 +1178,10 @@
 # (string value)
 #quantum_auth_strategy=keystone
 
+# Name of Integration Bridge used by Open vSwitch (string
+# value)
+#quantum_ovs_bridge=br-int
+
 
 #
 # Options defined in nova.network.rpcapi
@@ -1253,6 +1228,14 @@
 # Options defined in nova.openstack.common.log
 #
 
+# Print debugging output (set logging level to DEBUG instead
+# of default WARNING level). (boolean value)
+#debug=false
+
+# Print more verbose output (set logging level to INFO instead
+# of default WARNING level). (boolean value)
+#verbose=false
+
 # Log output to standard error (boolean value)
 #use_stderr=true
 
@@ -1262,11 +1245,11 @@
 
 # format string to use for log messages with context (string
 # value)
-#logging_context_format_string=%(asctime)s %(levelname)s %(name)s [%(request_id)s %(user_id)s %(project_id)s] %(instance)s%(message)s
+#logging_context_format_string=%(asctime)s.%(msecs)03d %(levelname)s %(name)s [%(request_id)s %(user)s %(tenant)s] %(instance)s%(message)s
 
 # format string to use for log messages without context
 # (string value)
-#logging_default_format_string=%(asctime)s %(process)d %(levelname)s %(name)s [-] %(instance)s%(message)s
+#logging_default_format_string=%(asctime)s.%(msecs)03d %(process)d %(levelname)s %(name)s [-] %(instance)s%(message)s
 
 # data to append to log format when level is DEBUG (string
 # value)
@@ -1274,7 +1257,7 @@
 
 # prefix each line of exception output with this format
 # (string value)
-#logging_exception_prefix=%(asctime)s %(process)d TRACE %(name)s %(instance)s
+#logging_exception_prefix=%(asctime)s.%(msecs)03d %(process)d TRACE %(name)s %(instance)s
 
 # list of logger=LEVEL pairs (list value)
 #default_log_levels=amqplib=WARN,sqlalchemy=WARN,boto=WARN,suds=INFO,keystone=INFO,eventlet.wsgi.server=WARN
@@ -1292,6 +1275,36 @@
 # If an instance UUID is passed with the log message, format
 # it like this (string value)
 #instance_uuid_format="[instance: %(uuid)s] "
+
+# If this option is specified, the logging configuration file
+# specified is used and overrides any other logging options
+# specified. Please see the Python logging module
+# documentation for details on logging configuration files.
+# (string value)
+#log_config=<None>
+
+# A logging.Formatter log message format string which may use
+# any of the available logging.LogRecord attributes. Default:
+# %(default)s (string value)
+#log_format=%(asctime)s %(levelname)8s [%(name)s] %(message)s
+
+# Format string for %%(asctime)s in log records. Default:
+# %(default)s (string value)
+#log_date_format=%Y-%m-%d %H:%M:%S
+
+# (Optional) Name of log file to output to. If not set,
+# logging will go to stdout. (string value)
+#log_file=<None>
+
+# (Optional) The directory to keep log files in (will be
+# prepended to --log-file) (string value)
+#log_dir=<None>
+
+# Use syslog for logging. (boolean value)
+#use_syslog=false
+
+# syslog facility to receive log lines (string value)
+#syslog_log_facility=LOG_USER
 
 
 #
@@ -1724,12 +1737,17 @@
 
 
 #
-# Options defined in nova.virt.hyperv.vmops
+# Options defined in nova.virt.hyperv.vif
 #
 
-# Default vSwitch Name, if none provided first external is
-# used (string value)
+# External virtual switch Name, if not provided, the first
+# external virtual switch is used (string value)
 #vswitch_name=<None>
+
+
+#
+# Options defined in nova.virt.hyperv.vmops
+#
 
 # Required for live migration among hosts with different CPU
 # features (boolean value)
@@ -1985,26 +2003,26 @@
 # Options defined in nova.virt.vmwareapi.driver
 #
 
-# URL for connection to VMWare ESX host.Required if
-# compute_driver is vmwareapi.VMWareESXDriver. (string value)
+# URL for connection to VMware ESX host.Required if
+# compute_driver is vmwareapi.VMwareESXDriver. (string value)
 #vmwareapi_host_ip=<None>
 
-# Username for connection to VMWare ESX host. Used only if
-# compute_driver is vmwareapi.VMWareESXDriver. (string value)
+# Username for connection to VMware ESX host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver. (string value)
 #vmwareapi_host_username=<None>
 
-# Password for connection to VMWare ESX host. Used only if
-# compute_driver is vmwareapi.VMWareESXDriver. (string value)
+# Password for connection to VMware ESX host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver. (string value)
 #vmwareapi_host_password=<None>
 
 # The interval used for polling of remote tasks. Used only if
-# compute_driver is vmwareapi.VMWareESXDriver. (floating point
+# compute_driver is vmwareapi.VMwareESXDriver. (floating point
 # value)
 #vmwareapi_task_poll_interval=5.0
 
 # The number of times we retry on failures, e.g., socket
 # error, etc. Used only if compute_driver is
-# vmwareapi.VMWareESXDriver. (integer value)
+# vmwareapi.VMwareESXDriver. (integer value)
 #vmwareapi_api_retry_count=10
 
 
@@ -2278,12 +2296,15 @@
 # (string value)
 #cinder_endpoint_template=<None>
 
+# region name of this node (string value)
+#os_region_name=<None>
+
 # Number of cinderclient retries on failed http calls (integer
 # value)
 #cinder_http_retries=3
 
-# Allow to perform insecure SSL (https) requests to cinder
-# (boolean value)
+# Allow to perform insecure SSL requests to cinder (boolean
+# value)
 #cinder_api_insecure=false
 
 
@@ -2550,4 +2571,4 @@
 #keymap=en-us
 
 
-# Total option count: 520
+# Total option count: 525

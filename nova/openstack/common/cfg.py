@@ -217,7 +217,7 @@ log files::
         ...
      ]
 
-This module also contains a global instance of the CommonConfigOpts class
+This module also contains a global instance of the ConfigOpts class
 in order to support a common usage pattern in OpenStack::
 
     from nova.openstack.common import cfg
@@ -236,10 +236,11 @@ in order to support a common usage pattern in OpenStack::
 Positional command line arguments are supported via a 'positional' Opt
 constructor argument::
 
-    >>> CONF.register_cli_opt(MultiStrOpt('bar', positional=True))
+    >>> conf = ConfigOpts()
+    >>> conf.register_cli_opt(MultiStrOpt('bar', positional=True))
     True
-    >>> CONF(['a', 'b'])
-    >>> CONF.bar
+    >>> conf(['a', 'b'])
+    >>> conf.bar
     ['a', 'b']
 
 It is also possible to use argparse "sub-parsers" to parse additional
@@ -249,10 +250,11 @@ command line arguments using the SubCommandOpt class:
     ...     list_action = subparsers.add_parser('list')
     ...     list_action.add_argument('id')
     ...
-    >>> CONF.register_cli_opt(SubCommandOpt('action', handler=add_parsers))
+    >>> conf = ConfigOpts()
+    >>> conf.register_cli_opt(SubCommandOpt('action', handler=add_parsers))
     True
-    >>> CONF(['list', '10'])
-    >>> CONF.action.name, CONF.action.id
+    >>> conf(args=['list', '10'])
+    >>> conf.action.name, conf.action.id
     ('list', '10')
 
 """
@@ -1726,62 +1728,4 @@ class ConfigOpts(collections.Mapping):
             return value
 
 
-class CommonConfigOpts(ConfigOpts):
-
-    DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
-    DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-    common_cli_opts = [
-        BoolOpt('debug',
-                short='d',
-                default=False,
-                help='Print debugging output'),
-        BoolOpt('verbose',
-                short='v',
-                default=False,
-                help='Print more verbose output'),
-    ]
-
-    logging_cli_opts = [
-        StrOpt('log-config',
-               metavar='PATH',
-               help='If this option is specified, the logging configuration '
-                    'file specified is used and overrides any other logging '
-                    'options specified. Please see the Python logging module '
-                    'documentation for details on logging configuration '
-                    'files.'),
-        StrOpt('log-format',
-               default=DEFAULT_LOG_FORMAT,
-               metavar='FORMAT',
-               help='A logging.Formatter log message format string which may '
-                    'use any of the available logging.LogRecord attributes. '
-                    'Default: %(default)s'),
-        StrOpt('log-date-format',
-               default=DEFAULT_LOG_DATE_FORMAT,
-               metavar='DATE_FORMAT',
-               help='Format string for %%(asctime)s in log records. '
-                    'Default: %(default)s'),
-        StrOpt('log-file',
-               metavar='PATH',
-               deprecated_name='logfile',
-               help='(Optional) Name of log file to output to. '
-                    'If not set, logging will go to stdout.'),
-        StrOpt('log-dir',
-               deprecated_name='logdir',
-               help='(Optional) The directory to keep log files in '
-                    '(will be prepended to --log-file)'),
-        BoolOpt('use-syslog',
-                default=False,
-                help='Use syslog for logging.'),
-        StrOpt('syslog-log-facility',
-               default='LOG_USER',
-               help='syslog facility to receive log lines')
-    ]
-
-    def __init__(self):
-        super(CommonConfigOpts, self).__init__()
-        self.register_cli_opts(self.common_cli_opts)
-        self.register_cli_opts(self.logging_cli_opts)
-
-
-CONF = CommonConfigOpts()
+CONF = ConfigOpts()

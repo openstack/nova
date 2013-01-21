@@ -54,7 +54,7 @@ class BaseParser(object):
 
         value = value.strip()
         if ((value and value[0] == value[-1]) and
-            (value[0] == "\"" or value[0] == "'")):
+                (value[0] == "\"" or value[0] == "'")):
             value = value[1:-1]
         return key.strip(), [value]
 
