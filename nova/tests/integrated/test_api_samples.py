@@ -672,7 +672,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
         return self._verify_response('images-details-get-resp', subs, response)
 
     def test_image_metadata_get(self):
-        # Get api sample of a image metadata request.
+        # Get api sample of an image metadata request.
         image_id = fake.get_valid_image_id()
         response = self._do_get('images/%s/metadata' % image_id)
         subs = self._get_regexes()
@@ -701,7 +701,7 @@ class ImagesSampleJsonTest(ApiSampleTestBase):
                                      subs, response)
 
     def test_image_meta_key_get(self):
-        # Get api sample of a image metadata key request.
+        # Get api sample of an image metadata key request.
         image_id = fake.get_valid_image_id()
         key = "kernel_id"
         response = self._do_get('images/%s/metadata/%s' % (image_id, key))
