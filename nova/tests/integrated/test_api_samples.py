@@ -27,6 +27,7 @@ from lxml import etree
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
+from nova.api.openstack.compute.contrib import fping
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cloudpipe import pipelib
 from nova import context
@@ -43,10 +44,12 @@ from nova.openstack.common import timeutils
 import nova.quota
 from nova.scheduler import driver
 from nova import test
+from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
+from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
@@ -379,7 +382,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-flavor-extra-specs')
         do_not_approve_additions.append('os-floating-ip-dns')
-        do_not_approve_additions.append('os-fping')
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-networks')
         do_not_approve_additions.append('os-services')
@@ -2712,4 +2714,35 @@ class InstanceUsageAuditLogJsonTest(ApiSampleTestBase):
 
 
 class InstanceUsageAuditLogXmlTest(InstanceUsageAuditLogJsonTest):
+    ctype = 'xml'
+
+
+class FpingSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.fping.Fping")
+
+    def setUp(self):
+        super(FpingSampleJsonTests, self).setUp()
+
+        def fake_check_fping(self):
+            pass
+        self.stubs.Set(utils, "execute", test_fping.execute)
+        self.stubs.Set(fping.FpingController, "check_fping",
+                       fake_check_fping)
+
+    def test_get_fping(self):
+        self._post_server()
+        response = self._do_get('os-fping')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('fping-get-resp', subs, response)
+
+    def test_get_fping_details(self):
+        uuid = self._post_server()
+        response = self._do_get('os-fping/%s' % (uuid))
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('fping-get-details-resp', subs, response)
+
+
+class FpingSampleXmlTests(FpingSampleJsonTests):
     ctype = 'xml'
