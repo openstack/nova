@@ -46,7 +46,7 @@ def set_availability_zones(context, services):
         az = CONF.internal_service_availability_zone
         if service['topic'] == "compute":
             if metadata.get(service['host']):
-                az = str(metadata[service['host']])[5:-2]
+                az = u','.join(list(metadata[service['host']]))
             else:
                 az = CONF.default_availability_zone
         service['availability_zone'] = az
@@ -55,7 +55,7 @@ def set_availability_zones(context, services):
 
 def get_host_availability_zone(context, host):
     metadata = db.aggregate_metadata_get_by_host(
-                 context.get_admin_context(), host, key='availability_zone')
+        context, host, key='availability_zone')
     if 'availability_zone' in metadata:
         return list(metadata['availability_zone'])[0]
     else:
