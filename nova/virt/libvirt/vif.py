@@ -72,19 +72,22 @@ class LibvirtBaseVIFDriver(object):
 
         return conf
 
+    def plug(self, instance, vif):
+        pass
 
-class LibvirtBridgeDriver(LibvirtBaseVIFDriver):
-    """VIF driver for Linux bridge."""
+    def unplug(self, instance, vif):
+        pass
+
+
+class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
+    """Generic VIF driver for libvirt networking."""
 
     def get_bridge_name(self, network):
         return network['bridge']
 
-    def get_config(self, instance, network, mapping):
+    def get_config_bridge(self, instance, network, mapping):
         """Get VIF configurations for bridge type."""
-
-        mac_id = mapping['mac'].replace(':', '')
-
-        conf = super(LibvirtBridgeDriver,
+        conf = super(LibvirtGenericVIFDriver,
                      self).get_config(instance,
                                       network,
                                       mapping)
@@ -93,6 +96,7 @@ class LibvirtBridgeDriver(LibvirtBaseVIFDriver):
             conf, self.get_bridge_name(network),
             self.get_vif_devname(mapping))
 
+        mac_id = mapping['mac'].replace(':', '')
         name = "nova-instance-" + instance['name'] + "-" + mac_id
         primary_addr = mapping['ips'][0]['ip']
         dhcp_server = ra_server = ipv4_cidr = ipv6_cidr = None
@@ -112,8 +116,29 @@ class LibvirtBridgeDriver(LibvirtBaseVIFDriver):
 
         return conf
 
-    def plug(self, instance, vif):
+    def get_config(self, instance, network, mapping):
+        vif_type = mapping.get('vif_type')
+
+        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
+                    "network=%(network)s mapping=%(mapping)s")
+                  % locals())
+
+        if vif_type is None:
+            raise exception.NovaException(
+                _("vif_type parameter must be present "
+                  "for this vif_driver implementation"))
+
+        if vif_type == network_model.VIF_TYPE_BRIDGE:
+            return self.get_config_bridge(instance, network, mapping)
+        else:
+            raise exception.NovaException(
+                _("Unexpected vif_type=%s") % vif_type)
+
+    def plug_bridge(self, instance, vif):
         """Ensure that the bridge exists, and add VIF to it."""
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
         network, mapping = vif
         if (not network.get('multi_host') and
             mapping.get('should_create_bridge')):
@@ -135,9 +160,71 @@ class LibvirtBridgeDriver(LibvirtBaseVIFDriver):
                                         self.get_bridge_name(network),
                                         iface)
 
-    def unplug(self, instance, vif):
+    def plug(self, instance, vif):
+        network, mapping = vif
+        vif_type = mapping.get('vif_type')
+
+        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
+                    "network=%(network)s mapping=%(mapping)s")
+                  % locals())
+
+        if vif_type is None:
+            raise exception.NovaException(
+                _("vif_type parameter must be present "
+                  "for this vif_driver implementation"))
+
+        if vif_type == network_model.VIF_TYPE_BRIDGE:
+            self.plug_bridge(instance, vif)
+        else:
+            raise exception.NovaException(
+                _("Unexpected vif_type=%s") % vif_type)
+
+    def unplug_bridge(self, instance, vif):
         """No manual unplugging required."""
-        pass
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
+    def unplug(self, instance, vif):
+        network, mapping = vif
+        vif_type = mapping.get('vif_type')
+
+        LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
+                    "network=%(network)s mapping=%(mapping)s")
+                  % locals())
+
+        if vif_type is None:
+            raise exception.NovaException(
+                _("vif_type parameter must be present "
+                  "for this vif_driver implementation"))
+
+        if vif_type == network_model.VIF_TYPE_BRIDGE:
+            self.unplug_bridge(instance, vif)
+        else:
+            raise exception.NovaException(
+                _("Unexpected vif_type=%s") % vif_type)
+
+
+class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
+    """Deprecated in favour of LibvirtGenericVIFDriver.
+       Retained in Grizzly for compatibility with Quantum
+       drivers which do not yet report 'vif_type' port binding.
+       To be removed in Hxxxx."""
+
+    def __init__(self):
+        LOG.deprecated(
+            _("LibvirtBridgeDriver is deprecated and "
+              "will be removed in the Hxxxx release. Please "
+              "update the 'libvirt_vif_driver' config parameter "
+              "to use the LibvirtGenericVIFDriver class instead"))
+
+    def get_config(self, instance, network, mapping):
+        return self.get_config_bridge(instance, network, mapping)
+
+    def plug(self, instance, vif):
+        self.plug_bridge(instance, vif)
+
+    def unplug(self, instance, vif):
+        self.unplug_bridge(instance, vif)
 
 
 class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
