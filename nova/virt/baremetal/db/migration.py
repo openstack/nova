@@ -22,7 +22,8 @@ from nova import utils
 
 
 IMPL = utils.LazyPluggable(
-        'baremetal_db_backend',
+        'db_backend',
+        config_group='baremetal',
         sqlalchemy='nova.virt.baremetal.db.sqlalchemy.migration')
 
 INIT_VERSION = 0
