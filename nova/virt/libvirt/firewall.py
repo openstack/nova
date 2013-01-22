@@ -117,18 +117,31 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             if mapping['dhcp_server']:
                 allow_dhcp = True
                 break
+
+        base_filter = self.get_base_filter_list(instance, allow_dhcp)
+
+        for (network, mapping) in network_info:
+            nic_id = mapping['mac'].replace(':', '')
+            instance_filter_name = self._instance_filter_name(instance, nic_id)
+            self._define_filter(self._filter_container(instance_filter_name,
+                                                       base_filter))
+
+    def get_base_filter_list(self, instance, allow_dhcp):
+        """
+        Obtain a list of base filters to apply to an instance.
+        The return value should be a list of strings, each
+        specifying a filter name.  Subclasses can override this
+        function to add additional filters as needed.  Additional
+        filters added to the list must also be correctly defined
+        within the subclass.
+        """
         if pipelib.is_vpn_image(instance['image_ref']):
             base_filter = 'nova-vpn'
         elif allow_dhcp:
             base_filter = 'nova-base'
         else:
             base_filter = 'nova-nodhcp'
-
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
-            instance_filter_name = self._instance_filter_name(instance, nic_id)
-            self._define_filter(self._filter_container(instance_filter_name,
-                                                       [base_filter]))
+        return [base_filter]
 
     def _ensure_static_filters(self):
         """Static filters are filters that have no need to be IP aware.
