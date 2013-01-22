@@ -269,7 +269,8 @@ class CloudTestCase(test.TestCase):
                                                  host=inst['host'],
                                                  vpn=None,
                                                  rxtx_factor=3,
-                                                 project_id=project_id)
+                                                 project_id=project_id,
+                                                 macs=None)
 
         fixed_ips = nw_info.fixed_ips()
         ec2_id = ec2utils.id_to_ec2_inst_id(inst['uuid'])

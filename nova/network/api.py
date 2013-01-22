@@ -247,7 +247,6 @@ class API(base.Base):
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
-            NB: macs is ignored by nova-network.
         :returns: network info as from get_instance_nw_info() below
         """
         args = {}
@@ -258,6 +257,7 @@ class API(base.Base):
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
+        args['macs'] = macs
         nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
         return network_model.NetworkInfo.hydrate(nw_info)

@@ -46,6 +46,7 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.5 - Adds associate
         1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
         1.7 - Adds method get_floating_ip_pools to replace get_floating_pools
+        1.8 - Adds macs to allocate_for_instance
     '''
 
     #
@@ -151,11 +152,12 @@ class NetworkAPI(rpc_proxy.RpcProxy):
 
     def allocate_for_instance(self, ctxt, instance_id, instance_uuid,
                               project_id, host, rxtx_factor, vpn,
-                              requested_networks):
+                              requested_networks, macs=None):
         return self.call(ctxt, self.make_msg('allocate_for_instance',
                 instance_id=instance_id, instance_uuid=instance_uuid,
                 project_id=project_id, host=host, rxtx_factor=rxtx_factor,
-                vpn=vpn, requested_networks=requested_networks))
+                vpn=vpn, requested_networks=requested_networks, macs=macs),
+                version='1.8')
 
     def deallocate_for_instance(self, ctxt, instance_id, project_id, host):
         return self.call(ctxt, self.make_msg('deallocate_for_instance',

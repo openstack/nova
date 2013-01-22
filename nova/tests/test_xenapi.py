@@ -855,7 +855,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                           host=CONF.host,
                           vpn=None,
                           rxtx_factor=3,
-                          project_id=self.project_id)
+                          project_id=self.project_id,
+                          macs=None)
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK,
