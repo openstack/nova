@@ -98,7 +98,16 @@ class LibvirtVifTestCase(test.TestCase):
         'dhcp_server': '191.168.1.1',
         'vif_uuid': 'vif-xxx-yyy-zzz',
         'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_OVS,
         'ovs_interfaceid': 'aaa-bbb-ccc',
+    }
+
+    mapping_ovs_legacy = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'gateway_v6': net_ovs['gateway_v6'],
+        'ips': [{'ip': '101.168.1.9'}],
+        'dhcp_server': '191.168.1.1',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
     }
 
     mapping_none = {
@@ -300,11 +309,8 @@ class LibvirtVifTestCase(test.TestCase):
                                   self.mapping_bridge_quantum,
                                   br_want)
 
-    def test_ovs_ethernet_driver(self):
-        d = vif.LibvirtOpenVswitchDriver()
-        xml = self._get_instance_xml(d,
-                                     self.net_ovs,
-                                     self.mapping_ovs)
+    def _check_ovs_ethernet_driver(self, d, net, mapping):
+        xml = self._get_instance_xml(d, net, mapping)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -317,6 +323,18 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(mac, self.mapping_ovs['mac'])
         script = node.find("script").get("path")
         self.assertEquals(script, "")
+
+    def test_ovs_ethernet_driver(self):
+        d = vif.LibvirtOpenVswitchDriver()
+        self._check_ovs_ethernet_driver(d,
+                                        self.net_ovs,
+                                        self.mapping_ovs_legacy)
+
+    def test_ovs_ethernet_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        self._check_ovs_ethernet_driver(d,
+                                        self.net_ovs,
+                                        self.mapping_ovs)
 
     def test_ovs_virtualport_driver(self):
         d = vif.LibvirtOpenVswitchVirtualPortDriver()
