@@ -964,11 +964,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted."""
-        xml = self._get_existing_domain_xml(instance, network_info,
-                                            block_device_info)
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
-
         # Check if the instance is running already and avoid doing
         # anything if it is.
         if self.instance_exists(instance['name']):
