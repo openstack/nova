@@ -2,7 +2,6 @@
 
 # Copyright 2012 SINA Corporation
 # All Rights Reserved.
-# Author: Zhongyue Luo <lzyeval@gmail.com>
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,6 +14,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+#
+# @author: Zhongyue Luo, SINA Corporation.
+#
 
 """Extracts OpenStack config option info from module(s)."""
 
@@ -34,6 +36,15 @@ INTOPT = "IntOpt"
 FLOATOPT = "FloatOpt"
 LISTOPT = "ListOpt"
 MULTISTROPT = "MultiStrOpt"
+
+OPT_TYPES = {
+    STROPT: 'string value',
+    BOOLOPT: 'boolean value',
+    INTOPT: 'integer value',
+    FLOATOPT: 'floating point value',
+    LISTOPT: 'list value',
+    MULTISTROPT: 'multi valued',
+}
 
 OPTION_COUNT = 0
 OPTION_REGEX = re.compile(r"(%s)" % "|".join([STROPT, BOOLOPT, INTOPT,
@@ -187,31 +198,17 @@ def _get_my_ip():
         return None
 
 
-MY_IP = _get_my_ip()
-HOST = socket.getfqdn()
-
-
 def _sanitize_default(s):
     """Set up a reasonably sensible default for pybasedir, my_ip and host."""
     if s.startswith(BASEDIR):
         return s.replace(BASEDIR, '/usr/lib/python/site-packages')
-    elif s == MY_IP:
+    elif s == _get_my_ip():
         return '10.0.0.1'
-    elif s == HOST:
+    elif s == socket.getfqdn():
         return 'nova'
     elif s.strip() != s:
         return '"%s"' % s
     return s
-
-
-OPT_TYPES = {
-    'StrOpt': 'string value',
-    'BoolOpt': 'boolean value',
-    'IntOpt': 'integer value',
-    'FloatOpt': 'floating point value',
-    'ListOpt': 'list value',
-    'MultiStrOpt': 'multi valued',
-}
 
 
 def _print_opt(opt):
