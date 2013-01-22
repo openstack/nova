@@ -2872,9 +2872,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.migrate_instance_finish(context, instance, migration)
 
         network_info = self._get_instance_nw_info(context, instance)
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance)
+
         self.driver.post_live_migration_at_destination(context, instance,
                                             self._legacy_nw_info(network_info),
-                                            block_migration)
+                                            block_migration, block_device_info)
         # Restore instance state
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context, instance['uuid'],

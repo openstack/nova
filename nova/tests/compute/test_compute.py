@@ -2631,8 +2631,6 @@ class ComputeTestCase(BaseTestCase):
                                  'setup_networks_on_host')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'migrate_instance_finish')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'post_live_migration_at_destination')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
 
@@ -2650,10 +2648,12 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.migrate_instance_finish(admin_ctxt,
                                                          instance, migration)
         fake_net_info = []
+        fake_block_dev_info = {'foo': 'bar'}
         self.compute.driver.post_live_migration_at_destination(admin_ctxt,
-                                                               instance,
-                                                               fake_net_info,
-                                                               False)
+                instance,
+                fake_net_info,
+                False,
+                fake_block_dev_info)
         self.compute._get_power_state(admin_ctxt, instance).AndReturn(
                 'fake_power_state')
 

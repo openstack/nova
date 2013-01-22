@@ -166,6 +166,12 @@ class FakeDriver(driver.ComputeDriver):
                                 block_device_info=None):
         pass
 
+    def post_live_migration_at_destination(self, context, instance,
+                                           network_info,
+                                           block_migration=False,
+                                           block_device_info=None):
+        pass
+
     def power_off(self, instance):
         pass
 

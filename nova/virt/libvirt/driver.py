@@ -427,10 +427,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """Efficient override of base instance_exists method."""
         return self._conn.numOfDomains()
 
-    def instance_exists(self, instance_id):
+    def instance_exists(self, instance_name):
         """Efficient override of base instance_exists method."""
         try:
-            self._lookup_by_name(instance_id)
+            self._lookup_by_name(instance_name)
             return True
         except exception.NovaException:
             return False
@@ -707,7 +707,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     if child.get('dev') == device:
                         return etree.tostring(node)
 
-    def _get_domain_xml(self, instance, network_info, block_device_info=None):
+    def _get_existing_domain_xml(self, instance, network_info,
+                                 block_device_info=None):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
             xml = virt_dom.XMLDesc(0)
@@ -855,8 +856,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance, network_info,
-                                 block_device_info=block_device_info)
+        return self._hard_reboot(instance, network_info, block_device_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -895,8 +895,7 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, network_info, xml=None,
-                     block_device_info=None):
+    def _hard_reboot(self, instance, network_info, block_device_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         Performs a Libvirt reset (if supported) on the domain.
@@ -909,11 +908,10 @@ class LibvirtDriver(driver.ComputeDriver):
         existing domain.
         """
 
-        if not xml:
-            xml = self._get_domain_xml(instance, network_info,
-                                       block_device_info)
-
         self._destroy(instance)
+        xml = self.to_xml(instance, network_info,
+                          block_device_info=block_device_info,
+                          write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
@@ -958,16 +956,36 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        xml = self._get_domain_xml(instance, network_info, block_device_info)
+        xml = self._get_existing_domain_xml(instance, network_info,
+                                            block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         """resume guest state when a host is booted."""
-        xml = self._get_domain_xml(instance, network_info, block_device_info)
+        xml = self._get_existing_domain_xml(instance, network_info,
+                                            block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
+
+        # Check if the instance is running already and avoid doing
+        # anything if it is.
+        if self.instance_exists(instance['name']):
+            domain = self._lookup_by_name(instance['name'])
+            state = LIBVIRT_POWER_STATE[domain.info()[0]]
+
+            ignored_states = (power_state.RUNNING,
+                              power_state.SUSPENDED,
+                              power_state.PAUSED)
+
+            if state in ignored_states:
+                return
+
+        # Instance is not up and could be in an unknown state.
+        # Be as absolute as possible about getting it back into
+        # a known and running state.
+        self._hard_reboot(instance, network_info, block_device_info)
 
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
@@ -980,7 +998,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         instance_dir = libvirt_utils.get_instance_path(instance)
-        unrescue_xml = self._get_domain_xml(instance, network_info)
+        unrescue_xml = self._get_existing_domain_xml(instance, network_info)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
@@ -1855,11 +1873,18 @@ class LibvirtDriver(driver.ComputeDriver):
         return guest
 
     def to_xml(self, instance, network_info, image_meta=None, rescue=None,
-               block_device_info=None):
+               block_device_info=None, write_to_disk=False):
         LOG.debug(_('Starting toXML method'), instance=instance)
         conf = self.get_guest_config(instance, network_info, image_meta,
                                      rescue, block_device_info)
         xml = conf.to_xml()
+
+        if write_to_disk:
+            instance_dir = os.path.join(CONF.instances_path,
+                                        instance["name"])
+            xml_path = os.path.join(instance_dir, 'libvirt.xml')
+            libvirt_utils.write_to_file(xml_path, xml)
+
         LOG.debug(_('Finished toXML method'), instance=instance)
         return xml
 
@@ -2761,7 +2786,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def post_live_migration_at_destination(self, ctxt,
                                            instance_ref,
                                            network_info,
-                                           block_migration):
+                                           block_migration,
+                                           block_device_info=None):
         """Post operation of live migration at destination host.
 
         :param ctxt: security context
@@ -2774,15 +2800,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
         if instance_ref["name"] not in dom_list:
-            instance_dir = libvirt_utils.get_instance_path(instance_ref)
-            xml_path = os.path.join(instance_dir, 'libvirt.xml')
             # In case of block migration, destination does not have
             # libvirt.xml
-            if not os.path.isfile(xml_path):
-                xml = self.to_xml(instance_ref, network_info=network_info)
-                f = open(os.path.join(instance_dir, 'libvirt.xml'), 'w+')
-                f.write(xml)
-                f.close()
+            self.to_xml(instance_ref, network_info, block_device_info,
+                        write_to_disk=True)
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
             # included in to_xml() result.

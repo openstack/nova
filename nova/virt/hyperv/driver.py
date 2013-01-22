@@ -164,7 +164,7 @@ class HyperVDriver(driver.ComputeDriver):
             block_device_info, network_info)
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
-        network_info, block_migration):
+        network_info, block_migration, block_device_info=None):
         self._livemigrationops.post_live_migration_at_destination(ctxt,
             instance_ref, network_info, block_migration)
 

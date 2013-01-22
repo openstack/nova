@@ -447,7 +447,8 @@ class ComputeDriver(object):
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info,
-                                           block_migration=False):
+                                           block_migration=False,
+                                           block_device_info=None):
         """Post operation of live migration at destination host.
 
         :param ctxt: security context
