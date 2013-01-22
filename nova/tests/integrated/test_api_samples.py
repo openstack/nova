@@ -171,23 +171,32 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if not isinstance(result, list):
                 raise NoMatch(
                         _('Result: %(result)s is not a list.') % locals())
-            if len(expected) != len(result):
-                raise NoMatch(
-                        _('Length mismatch: %(result)s\n%(expected)s.')
-                        % locals())
+
+            expected = expected[:]
+            extra = []
             for res_obj in result:
-                for ex_obj in expected:
+                for i, ex_obj in enumerate(expected):
                     try:
-                        res = self._compare_result(subs, ex_obj, res_obj)
+                        matched_value = self._compare_result(subs, ex_obj,
+                                                             res_obj)
+                        del expected[i]
                         break
                     except NoMatch:
                         pass
                 else:
-                    raise NoMatch(
-                            _('Result: %(res_obj)s not in %(expected)s.')
-                            % locals())
-                matched_value = res or matched_value
+                    extra.append(res_obj)
 
+            error = []
+            if expected:
+                error.append(_('Extra items in expected:'))
+                error.extend([repr(o) for o in expected])
+
+            if extra:
+                error.append(_('Extra items in result:'))
+                error.extend([repr(o) for o in extra])
+
+            if error:
+                raise NoMatch('\n'.join(error))
         elif isinstance(expected, basestring) and '%' in expected:
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
