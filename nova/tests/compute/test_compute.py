@@ -5334,6 +5334,24 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(_context, instance['uuid'])
 
+    def test_disallow_metadata_changes_during_building(self):
+        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
+                                          instance_uuid=None):
+            pass
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
+
+        instance = self._create_fake_instance({'vm_state': vm_states.BUILDING})
+        instance = dict(instance)
+
+        self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.delete_instance_metadata, self.context,
+                instance, "key")
+
+        self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.update_instance_metadata, self.context,
+                instance, "key")
+
     def test_get_instance_faults(self):
         # Get an instances latest fault.
         instance = self._create_fake_instance()
