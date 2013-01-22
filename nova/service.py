@@ -399,6 +399,14 @@ class Service(object):
         self.binary = binary
         self.topic = topic
         self.manager_class_name = manager
+        # NOTE(russellb) We want to make sure to create the servicegroup API
+        # instance early, before creating other things such as the manager,
+        # that will also create a servicegroup API instance.  Internally, the
+        # servicegroup only allocates a single instance of the driver API and
+        # we want to make sure that our value of db_allowed is there when it
+        # gets created.  For that to happen, this has to be the first instance
+        # of the servicegroup API.
+        self.servicegroup_api = servicegroup.API(db_allowed=db_allowed)
         manager_class = importutils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.report_interval = report_interval
@@ -408,10 +416,8 @@ class Service(object):
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
         self.backdoor_port = None
-        self.db_allowed = db_allowed
         self.conductor_api = conductor.API(use_local=db_allowed)
         self.conductor_api.wait_until_ready(context.get_admin_context())
-        self.servicegroup_api = servicegroup.API(db_allowed=db_allowed)
 
     def start(self):
         verstr = version.version_string_with_package()
