@@ -117,6 +117,11 @@ class LocalAPI(object):
         return self._manager.instance_get_active_by_window(
             context, begin, end, project_id, host)
 
+    def instance_get_active_by_window_joined(self, context, begin, end=None,
+                                             project_id=None, host=None):
+        return self._manager.instance_get_active_by_window_joined(
+            context, begin, end, project_id, host)
+
     def instance_info_cache_update(self, context, instance, values):
         return self._manager.instance_info_cache_update(context,
                                                         instance,
@@ -367,6 +372,11 @@ class API(object):
     def instance_get_active_by_window(self, context, begin, end=None,
                                       project_id=None, host=None):
         return self.conductor_rpcapi.instance_get_active_by_window(
+            context, begin, end, project_id, host)
+
+    def instance_get_active_by_window_joined(self, context, begin, end=None,
+                                             project_id=None, host=None):
+        return self.conductor_rpcapi.instance_get_active_by_window_joined(
             context, begin, end, project_id, host)
 
     def instance_info_cache_update(self, context, instance, values):

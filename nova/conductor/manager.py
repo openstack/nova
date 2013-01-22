@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.34'
+    RPC_API_VERSION = '1.35'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -234,10 +234,14 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def instance_get_active_by_window(self, context, begin, end=None,
                                       project_id=None, host=None):
-        result = self.db.instance_get_active_by_window_joined(context,
-                                                              begin, end,
-                                                              project_id,
-                                                              host)
+        result = self.db.instance_get_active_by_window(context, begin, end,
+                                                       project_id, host)
+        return jsonutils.to_primitive(result)
+
+    def instance_get_active_by_window_joined(self, context, begin, end=None,
+                                             project_id=None, host=None):
+        result = self.db.instance_get_active_by_window_joined(
+            context, begin, end, project_id, host)
         return jsonutils.to_primitive(result)
 
     def instance_destroy(self, context, instance):

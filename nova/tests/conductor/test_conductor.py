@@ -335,13 +335,22 @@ class _BaseTestCase(object):
 
     def test_instance_get_active_by_window(self):
         self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
-        db.instance_get_active_by_window_joined(self.context, 'fake-begin',
-                                                'fake-end', 'fake-proj',
-                                                'fake-host')
+        db.instance_get_active_by_window(self.context, 'fake-begin',
+                                         'fake-end', 'fake-proj',
+                                         'fake-host')
         self.mox.ReplayAll()
         self.conductor.instance_get_active_by_window(self.context,
                                                      'fake-begin', 'fake-end',
                                                      'fake-proj', 'fake-host')
+
+    def test_instance_get_active_by_window_joined(self):
+        self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
+        db.instance_get_active_by_window_joined(self.context, 'fake-begin',
+                                                'fake-end', 'fake-proj',
+                                                'fake-host')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_active_by_window_joined(
+            self.context, 'fake-begin', 'fake-end', 'fake-proj', 'fake-host')
 
     def test_instance_destroy(self):
         self.mox.StubOutWithMock(db, 'instance_destroy')
