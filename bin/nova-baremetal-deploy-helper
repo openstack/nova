@@ -18,7 +18,10 @@
 """Starter script for Bare-Metal Deployment Service."""
 
 import eventlet
-eventlet.monkey_patch()
+
+# Do not monkey_patch in unittest
+if __name__ == '__main__':
+    eventlet.monkey_patch()
 
 import os
 import sys
