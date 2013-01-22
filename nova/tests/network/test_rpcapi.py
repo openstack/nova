@@ -108,8 +108,9 @@ class NetworkRpcAPITestCase(test.TestCase):
     def test_get_floating_ip(self):
         self._test_network_api('get_floating_ip', rpc_method='call', id='id')
 
-    def test_get_floating_pools(self):
-        self._test_network_api('get_floating_pools', rpc_method='call')
+    def test_get_floating_ip_pools(self):
+        self._test_network_api('get_floating_ip_pools', rpc_method='call',
+                               version="1.7")
 
     def test_get_floating_ip_by_address(self):
         self._test_network_api('get_floating_ip_by_address', rpc_method='call',

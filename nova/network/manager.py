@@ -708,6 +708,13 @@ class FloatingIP(object):
     @wrap_check_policy
     def get_floating_pools(self, context):
         """Returns list of floating pools."""
+        # NOTE(maurosr) This method should be removed in future, replaced by
+        # get_floating_ip_pools. See bug #1091668
+        return self.get_floating_ip_pools(context)
+
+    @wrap_check_policy
+    def get_floating_ip_pools(self, context):
+        """Returns list of floating ip pools."""
         pools = self.db.floating_ip_get_pools(context)
         return [dict(pool.iteritems()) for pool in pools]
 
@@ -2065,6 +2072,13 @@ class FlatManager(NetworkManager):
     @wrap_check_policy
     def get_floating_pools(self, context):
         """Returns list of floating pools."""
+        # NOTE(maurosr) This method should be removed in future, replaced by
+        # get_floating_ip_pools. See bug #1091668
+        return {}
+
+    @wrap_check_policy
+    def get_floating_ip_pools(self, context):
+        """Returns list of floating ip pools."""
         return {}
 
     @wrap_check_policy
