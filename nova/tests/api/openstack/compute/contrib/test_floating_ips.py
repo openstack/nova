@@ -380,16 +380,16 @@ class FloatingIpTest(test.TestCase):
             floating_ips = ["10.10.10.10", "10.10.10.11"]
             if floating_address not in floating_ips:
                     raise exception.FloatingIpNotFoundForAddress(
-                            address=flaoting_address)
+                            address=floating_address)
 
-            self.stubs.Set(network.api.API, "associate_floating_ip",
-                                             fake_network_api_associate)
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_network_api_associate)
 
-            body = dict(addFloatingIp=dict(address='1.1.1.1'))
-            req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-            self.assertRaises(webob.exc.HTTPNotFound,
-                              self.manager._add_floating_ip,
-                              req, 'test_inst', body)
+        body = dict(addFloatingIp=dict(address='1.1.1.1'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.manager._add_floating_ip,
+                          req, 'test_inst', body)
 
     def test_floating_ip_disassociate_non_existent_ip(self):
         def network_api_get_floating_ip_by_address(self, context,
@@ -400,7 +400,7 @@ class FloatingIpTest(test.TestCase):
                             address=floating_address)
 
         self.stubs.Set(network.api.API, "get_floating_ip_by_address",
-                                        network_api_get_floating_ip_by_address)
+                       network_api_get_floating_ip_by_address)
 
         body = dict(removeFloatingIp=dict(address='1.1.1.1'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
