@@ -63,8 +63,10 @@ def cinderclient(context):
 
     # FIXME: the cinderclient ServiceCatalog object is mis-named.
     #        It actually contains the entire access blob.
+    # Only needed parts of the service catalog are passed in, see
+    # nova/context.py.
     compat_catalog = {
-        'access': {'serviceCatalog': context.service_catalog or {}}
+        'access': {'serviceCatalog': context.service_catalog or []}
     }
     sc = service_catalog.ServiceCatalog(compat_catalog)
     if CONF.cinder_endpoint_template:
