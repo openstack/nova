@@ -835,6 +835,12 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    def test_get_servers_with_bad_flavor(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?flavor=abcde')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(len(servers), 0)
+
     def test_get_servers_allows_status(self):
         server_uuid = str(uuid.uuid4())
 

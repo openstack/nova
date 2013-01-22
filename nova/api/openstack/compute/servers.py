@@ -540,8 +540,9 @@ class Controller(wsgi.Controller):
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as e:
-            msg = _("Flavor could not be found")
-            raise exc.HTTPUnprocessableEntity(explanation=msg)
+            log_msg = _("Flavor '%s' could not be found ")
+            LOG.debug(log_msg, search_opts['flavor'])
+            instance_list = []
 
         if is_detail:
             self._add_instance_faults(context, instance_list)
