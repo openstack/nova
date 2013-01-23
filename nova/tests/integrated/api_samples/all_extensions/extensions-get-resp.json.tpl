@@ -89,6 +89,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-baremetal-nodes",
+            "description": "%(text)s",
+            "links": [],
+            "name": "BareMetalNodes",
+            "namespace": "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-cells",
             "description": "%(text)s",
             "links": [],

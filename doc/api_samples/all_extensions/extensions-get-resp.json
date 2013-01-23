@@ -89,6 +89,14 @@
             "updated": "2012-08-09T00:00:00+00:00"
         },
         {
+            "alias": "os-baremetal-nodes",
+            "description": "Admin-only bare-metal node administration.",
+            "links": [],
+            "name": "BareMetalNodes",
+            "namespace": "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2",
+            "updated": "2013-01-04T00:00:00+00:00"
+        },
+        {
             "alias": "os-cells",
             "description": "Enables cells-related functionality such as adding neighbor cells,\n    listing neighbor cells, and getting the capabilities of the local cell.\n    ",
             "links": [],
