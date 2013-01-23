@@ -126,7 +126,7 @@ class IPMI(base.PowerManager):
             args.append(pwfile)
             args.extend(command.split(" "))
             out, err = utils.execute(*args, attempts=3)
-            LOG.debug(_("ipmitool stdout: '%(out)s', stderr: '%(err)%s'"),
+            LOG.debug(_("ipmitool stdout: '%(out)s', stderr: '%(err)s'"),
                       locals())
             return out, err
         finally:
