@@ -1261,3 +1261,10 @@ def last_bytes(file_like_object, num):
 
     remaining = file_like_object.tell()
     return (file_like_object.read(), remaining)
+
+
+def metadata_to_dict(metadata):
+    result = {}
+    for item in metadata:
+        result[item['key']] = item['value']
+    return result

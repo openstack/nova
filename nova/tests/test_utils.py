@@ -778,3 +778,14 @@ class IntLikeTestCase(test.TestCase):
         self.assertFalse(
             utils.is_int_like("0cc3346e-9fef-4445-abe6-5d2b2690ec64"))
         self.assertFalse(utils.is_int_like("a1"))
+
+
+class MetadataToDictTestCase(test.TestCase):
+    def test_metadata_to_dict(self):
+        self.assertEqual(utils.metadata_to_dict(
+                [{'key': 'foo1', 'value': 'bar'},
+                 {'key': 'foo2', 'value': 'baz'}]),
+                         {'foo1': 'bar', 'foo2': 'baz'})
+
+    def test_metadata_to_dict_empty(self):
+        self.assertEqual(utils.metadata_to_dict([]), {})
