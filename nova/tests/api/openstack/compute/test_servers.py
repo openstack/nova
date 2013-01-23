@@ -2008,6 +2008,55 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertNotEqual(reservation_id, None)
         self.assertTrue(len(reservation_id) > 1)
 
+    def test_create_multiple_instances_with_multiple_volume_bdm(self):
+        """
+        Test that a BadRequest is raised if multiple instances
+        are requested with a list of block device mappings for volumes.
+        """
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        min_count = 2
+        bdm = [{'device_name': 'foo1', 'volume_id': 'vol-xxxx'},
+               {'device_name': 'foo2', 'volume_id': 'vol-yyyy'}
+        ]
+        params = {
+                  'block_device_mapping': bdm,
+                  'min_count': min_count
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(len(kwargs['block_device_mapping']), 2)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params, no_image=True)
+
+    def test_create_multiple_instances_with_single_volume_bdm(self):
+        """
+        Test that a BadRequest is raised if multiple instances
+        are requested to boot from a single volume.
+        """
+        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
+        min_count = 2
+        bdm = [{'device_name': 'foo1', 'volume_id': 'vol-xxxx'}]
+        params = {
+                 'block_device_mapping': bdm,
+                 'min_count': min_count
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['block_device_mapping']['volume_id'],
+                            'vol-xxxx')
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params, no_image=True)
+
     def test_create_instance_image_ref_is_bookmark(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         image_href = 'http://localhost/fake/images/%s' % image_uuid
