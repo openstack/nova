@@ -1124,6 +1124,24 @@ def _create_veth_pair(dev1_name, dev2_name):
                       run_as_root=True)
 
 
+def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
+    utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
+                  bridge, dev,
+                  '--', 'set', 'Interface', dev,
+                  'external-ids:iface-id=%s' % iface_id,
+                  'external-ids:iface-status=active',
+                  'external-ids:attached-mac=%s' % mac,
+                  'external-ids:vm-uuid=%s' % instance_id,
+                  run_as_root=True)
+
+
+def delete_ovs_vif_port(bridge, dev):
+    utils.execute('ovs-vsctl', 'del-port', bridge, dev,
+                  run_as_root=True)
+    utils.execute('ip', 'link', 'delete', dev,
+                  run_as_root=True)
+
+
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.
