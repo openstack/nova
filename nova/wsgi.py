@@ -28,6 +28,7 @@ import eventlet.wsgi
 import greenlet
 from paste import deploy
 import routes.middleware
+import ssl
 import webob.dec
 import webob.exc
 
@@ -45,7 +46,21 @@ wsgi_opts = [
             help='A python format string that is used as the template to '
                  'generate log lines. The following values can be formatted '
                  'into it: client_ip, date_time, request_line, status_code, '
-                 'body_length, wall_seconds.')
+                 'body_length, wall_seconds.'),
+    cfg.StrOpt('ssl_ca_file',
+               default=None,
+               help="CA certificate file to use to verify "
+                    "connecting clients"),
+    cfg.StrOpt('ssl_cert_file',
+                    default=None,
+                    help="SSL certificate of API server"),
+    cfg.StrOpt('ssl_key_file',
+                    default=None,
+                    help="SSL private key of API server"),
+    cfg.IntOpt('tcp_keepidle',
+               default=600,
+               help="Sets the value of TCP_KEEPIDLE in seconds for each "
+                    "server socket. Not supported on OS X.")
     ]
 CONF = cfg.CONF
 CONF.register_opts(wsgi_opts)
@@ -59,7 +74,8 @@ class Server(object):
     default_pool_size = 1000
 
     def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
-                       protocol=eventlet.wsgi.HttpProtocol, backlog=128):
+                       protocol=eventlet.wsgi.HttpProtocol, backlog=128,
+                       use_ssl=False):
         """Initialize, but do not start, a WSGI server.
 
         :param name: Pretty name for logging.
@@ -78,6 +94,7 @@ class Server(object):
         self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
         self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
         self._wsgi_logger = logging.WritableLogger(self._logger)
+        self._use_ssl = use_ssl
 
         if backlog < 1:
             raise exception.InvalidInput(
@@ -106,6 +123,60 @@ class Server(object):
 
         :returns: None
         """
+        if self._use_ssl:
+            try:
+                ca_file = CONF.ssl_ca_file
+                cert_file = CONF.ssl_cert_file
+                key_file = CONF.ssl_key_file
+
+                if cert_file and not os.path.exists(cert_file):
+                    raise RuntimeError(
+                          _("Unable to find cert_file : %s") % cert_file)
+
+                if ca_file and not os.path.exists(ca_file):
+                    raise RuntimeError(
+                          _("Unable to find ca_file : %s") % ca_file)
+
+                if key_file and not os.path.exists(key_file):
+                    raise RuntimeError(
+                          _("Unable to find key_file : %s") % key_file)
+
+                if self._use_ssl and (not cert_file or not key_file):
+                    raise RuntimeError(
+                          _("When running server in SSL mode, you must "
+                            "specify both a cert_file and key_file "
+                            "option value in your configuration file"))
+                ssl_kwargs = {
+                    'server_side': True,
+                    'certfile': cert_file,
+                    'keyfile': key_file,
+                    'cert_reqs': ssl.CERT_NONE,
+                }
+
+                if CONF.ssl_ca_file:
+                    ssl_kwargs['ca_certs'] = ca_file
+                    ssl_kwargs['cert_reqs'] = ssl.CERT_REQUIRED
+
+                self._socket = eventlet.wrap_ssl(self._socket,
+                                                 **ssl_kwargs)
+
+                self._socket.setsockopt(socket.SOL_SOCKET,
+                                        socket.SO_REUSEADDR, 1)
+                # sockets can hang around forever without keepalive
+                self._socket.setsockopt(socket.SOL_SOCKET,
+                                        socket.SO_KEEPALIVE, 1)
+
+                # This option isn't available in the OS X version of eventlet
+                if hasattr(socket, 'TCP_KEEPIDLE'):
+                    self._socket.setsockopt(socket.IPPROTO_TCP,
+                                    socket.TCP_KEEPIDLE,
+                                    CONF.tcp_keepidle)
+
+            except Exception:
+                LOG.error(_("Failed to start %(name)s on %(host)s"
+                            ":%(port)s with SSL support") % self.__dict__)
+                raise
+
         self._server = eventlet.spawn(eventlet.wsgi.server,
                                       self._socket,
                                       self.app,
