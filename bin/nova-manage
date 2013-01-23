@@ -1128,8 +1128,13 @@ def add_command_parsers(subparsers):
 
             action_kwargs = []
             for args, kwargs in getattr(action_fn, 'args', []):
-                action_kwargs.append(kwargs['dest'])
-                kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
+                if kwargs['dest'].startswith('action_kwarg_'):
+                    action_kwargs.append(
+                            kwargs['dest'][len('action_kwarg_'):])
+                else:
+                    action_kwargs.append(kwargs['dest'])
+                    kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
+
                 parser.add_argument(*args, **kwargs)
 
             parser.set_defaults(action_fn=action_fn)
