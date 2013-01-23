@@ -426,6 +426,7 @@ class Service(object):
         verstr = version.version_string_with_package()
         LOG.audit(_('Starting %(topic)s node (version %(version)s)'),
                   {'topic': self.topic, 'version': verstr})
+        self.basic_config_check()
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
@@ -569,6 +570,16 @@ class Service(object):
         """Tasks to be run at a periodic interval."""
         ctxt = context.get_admin_context()
         return self.manager.periodic_tasks(ctxt, raise_on_error=raise_on_error)
+
+    def basic_config_check(self):
+        """Perform basic config checks before starting processing."""
+        # Make sure the tempdir exists and is writable
+        try:
+            with utils.tempdir() as tmpdir:
+                pass
+        except Exception as e:
+            LOG.error(_('Temporary directory is invalid: %s'), e)
+            sys.exit(1)
 
 
 class WSGIService(object):
