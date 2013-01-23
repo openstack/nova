@@ -250,32 +250,10 @@ class CloudController(object):
         else:
             return self._describe_availability_zones(context, **kwargs)
 
-    def _get_zones(self, context):
-        """Return available and unavailable zones."""
-        enabled_services = db.service_get_all(context, False)
-        disabled_services = db.service_get_all(context, True)
-        enabled_services = availability_zones.set_availability_zones(context,
-                enabled_services)
-        disabled_services = availability_zones.set_availability_zones(context,
-                disabled_services)
-
-        available_zones = []
-        for zone in [service['availability_zone'] for service
-                     in enabled_services]:
-            if not zone in available_zones:
-                available_zones.append(zone)
-
-        not_available_zones = []
-        zones = [service['available_zones'] for service in disabled_services
-                if service['available_zones'] not in available_zones]
-        for zone in zones:
-            if zone not in not_available_zones:
-                not_available_zones.append(zone)
-        return (available_zones, not_available_zones)
-
     def _describe_availability_zones(self, context, **kwargs):
         ctxt = context.elevated()
-        available_zones, not_available_zones = self._get_zones(ctxt)
+        available_zones, not_available_zones = \
+            availability_zones.get_availability_zones(ctxt)
 
         result = []
         for zone in available_zones:
@@ -291,7 +269,8 @@ class CloudController(object):
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         ctxt = context.elevated()
-        available_zones, not_available_zones = self._get_zones(ctxt)
+        available_zones, not_available_zones = \
+            availability_zones.get_availability_zones(ctxt)
 
         # Available services
         enabled_services = db.service_get_all(context, False)

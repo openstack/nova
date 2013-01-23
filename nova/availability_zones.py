@@ -60,3 +60,25 @@ def get_host_availability_zone(context, host):
         return list(metadata['availability_zone'])[0]
     else:
         return CONF.default_availability_zone
+
+
+def get_availability_zones(context):
+    """Return available and unavailable zones."""
+    enabled_services = db.service_get_all(context, False)
+    disabled_services = db.service_get_all(context, True)
+    enabled_services = set_availability_zones(context, enabled_services)
+    disabled_services = set_availability_zones(context, disabled_services)
+
+    available_zones = []
+    for zone in [service['availability_zone'] for service
+                 in enabled_services]:
+        if not zone in available_zones:
+            available_zones.append(zone)
+
+    not_available_zones = []
+    zones = [service['available_zones'] for service in disabled_services
+            if service['available_zones'] not in available_zones]
+    for zone in zones:
+        if zone not in not_available_zones:
+            not_available_zones.append(zone)
+    return (available_zones, not_available_zones)
