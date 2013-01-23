@@ -158,6 +158,8 @@ policy_data = """
     "compute_extension:volumes": "",
     "compute_extension:volumetypes": "",
     "compute_extension:zones": "",
+    "compute_extension:availability_zone:list": "",
+    "compute_extension:availability_zone:detail": "is_admin:True",
 
 
     "volume:create": "",
