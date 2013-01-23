@@ -1142,6 +1142,22 @@ def delete_ovs_vif_port(bridge, dev):
                   run_as_root=True)
 
 
+def create_tap_dev(dev, mac_address=None):
+    if not device_exists(dev):
+        try:
+            # First, try with 'ip'
+            utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
+                          run_as_root=True, check_exit_code=[0, 2, 254])
+        except exception.ProcessExecutionError:
+            # Second option: tunctl
+            utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
+        if mac_address:
+            utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
+                          run_as_root=True, check_exit_code=[0, 2, 254])
+        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
+                      check_exit_code=[0, 2, 254])
+
+
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.
@@ -1553,7 +1569,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             iptables_manager.ipv4['filter'].add_rule('FORWARD',
                     '--out-interface %s -j ACCEPT' % bridge)
 
-        QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev, mac_address)
+        create_tap_dev(dev, mac_address)
 
         if not device_exists(bridge):
             LOG.debug(_("Starting bridge %s "), bridge)
@@ -1587,22 +1603,6 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 raise
             LOG.debug(_("Unplugged gateway interface '%s'"), dev)
             return dev
-
-    @classmethod
-    def create_tap_dev(_self, dev, mac_address=None):
-        if not device_exists(dev):
-            try:
-                # First, try with 'ip'
-                utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
-                              run_as_root=True, check_exit_code=[0, 2, 254])
-            except exception.ProcessExecutionError:
-                # Second option: tunctl
-                utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
-            if mac_address:
-                utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
-                              run_as_root=True, check_exit_code=[0, 2, 254])
-            utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
-                          check_exit_code=[0, 2, 254])
 
     def get_dev(self, network):
         dev = self.GATEWAY_INTERFACE_PREFIX + str(network['uuid'][0:11])
