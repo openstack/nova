@@ -61,6 +61,7 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_cli_opts(opts)
+CONF.import_opt('debug', 'nova.openstack.common.log')
 
 
 if __name__ == '__main__':

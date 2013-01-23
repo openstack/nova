@@ -42,6 +42,7 @@ cleaner_opts = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(cleaner_opts)
+CONF.import_opt('verbose', 'nova.openstack.common.log')
 CONF.import_opt("resize_confirm_window", "nova.compute.manager")
 
 
