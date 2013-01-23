@@ -1370,7 +1370,8 @@ class API(base.Base):
         return image_meta
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def snapshot(self, context, instance, name, extra_properties=None,
                  image_id=None):
         """Snapshot the given instance.
