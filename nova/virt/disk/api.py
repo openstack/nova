@@ -96,9 +96,13 @@ def mkfs(os_type, fs_label, target):
         utils.execute(*mkfs_command.split())
 
 
-def resize2fs(image, check_exit_code=False):
-    utils.execute('e2fsck', '-fp', image, check_exit_code=check_exit_code)
-    utils.execute('resize2fs', image, check_exit_code=check_exit_code)
+def resize2fs(image, check_exit_code=False, run_as_root=False):
+    utils.execute('e2fsck', '-fp', image,
+                  check_exit_code=check_exit_code,
+                  run_as_root=run_as_root)
+    utils.execute('resize2fs', image,
+                  check_exit_code=check_exit_code,
+                  run_as_root=run_as_root)
 
 
 def get_disk_size(path):

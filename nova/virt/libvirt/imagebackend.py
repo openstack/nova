@@ -228,7 +228,7 @@ class Lvm(Image):
             cmd = ('dd', 'if=%s' % base, 'of=%s' % self.path, 'bs=4M')
             utils.execute(*cmd, run_as_root=True)
             if resize:
-                disk.resize2fs(self.path)
+                disk.resize2fs(self.path, run_as_root=True)
 
         generated = 'ephemeral_size' in kwargs
 
