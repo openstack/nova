@@ -23,7 +23,6 @@ Scheduler base class that all Schedulers should inherit from
 
 import sys
 
-from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -115,7 +114,6 @@ class Scheduler(object):
     def __init__(self):
         self.host_manager = importutils.import_object(
                 CONF.scheduler_host_manager)
-        self.compute_api = compute_api.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
 
