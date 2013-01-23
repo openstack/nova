@@ -379,7 +379,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-flavor-extra-specs')
         do_not_approve_additions.append('os-floating-ip-dns')
-        do_not_approve_additions.append('os-floating-ip-pools')
         do_not_approve_additions.append('os-fping')
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-instance_usage_audit_log')
@@ -2662,3 +2661,30 @@ class BareMetalNodesJsonTest(ApiSampleTestBase, bm_db_base.BMDBTestCase):
 
 class BareMetalNodesXmlTest(BareMetalNodesJsonTest):
     ctype = 'xml'
+
+
+class FloatingIPPoolsSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.floating_ip_pools."
+                      "Floating_ip_pools")
+
+    def test_list_floatingippools(self):
+        pool_list = ["pool1", "pool2"]
+
+        def fake_get_floating_ip_pools(self, context):
+            return [{'name': pool_list[0]},
+                    {'name': pool_list[1]}]
+
+        self.stubs.Set(network_api.API, "get_floating_ip_pools",
+                       fake_get_floating_ip_pools)
+        response = self._do_get('os-floating-ip-pools')
+        self.assertEqual(response.status, 200)
+        subs = {
+            'pool1': pool_list[0],
+            'pool2': pool_list[1]
+        }
+        return self._verify_response('floatingippools-list-resp',
+                                     subs, response)
+
+
+class FloatingIPPoolsSampleXmlTests(FloatingIPPoolsSampleJsonTests):
+    ctype = "xml"
