@@ -47,14 +47,14 @@ class FilterScheduler(driver.Scheduler):
 
         Returns a list of the instances created.
         """
-        instance_uuids = request_spec.get('instance_uuids')
-        num_instances = len(instance_uuids)
-        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
-                locals())
-
         payload = dict(request_spec=request_spec)
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
+
+        instance_uuids = request_spec.pop('instance_uuids')
+        num_instances = len(instance_uuids)
+        LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
+                locals())
 
         weighed_hosts = self._schedule(context, request_spec,
                 filter_properties, instance_uuids)
@@ -124,6 +124,8 @@ class FilterScheduler(driver.Scheduler):
             filter_properties, requested_networks, injected_files,
             admin_password, is_first_time, instance_uuid=None):
         """Create the requested resource in this Zone."""
+        # NOTE(vish): add our current instance back into the request spec
+        request_spec['instance_uuids'] = [instance_uuid]
         payload = dict(request_spec=request_spec,
                        weighted_host=weighed_host.to_dict(),
                        instance_id=instance_uuid)
