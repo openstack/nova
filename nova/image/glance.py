@@ -258,8 +258,8 @@ class GlanceImageService(object):
 
         return getattr(image_meta, 'direct_url', None)
 
-    def download(self, context, image_id, data):
-        """Calls out to Glance for metadata and data and writes data."""
+    def download(self, context, image_id, data=None):
+        """Calls out to Glance for data and writes data."""
         if 'file' in CONF.allowed_direct_url_schemes:
             location = self.get_location(context, image_id)
             o = urlparse.urlparse(location)
@@ -277,8 +277,11 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
-        for chunk in image_chunks:
-            data.write(chunk)
+        if data is None:
+            return image_chunks
+        else:
+            for chunk in image_chunks:
+                data.write(chunk)
 
     def create(self, context, image_meta, data=None):
         """Store the image data and return the new image object."""
