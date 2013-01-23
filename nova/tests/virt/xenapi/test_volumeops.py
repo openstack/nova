@@ -21,6 +21,13 @@ from nova.virt.xenapi import volumeops
 
 class VolumeAttachTestCase(test.TestCase):
     def test_detach_volume_call(self):
+        registered_calls = []
+
+        def regcall(label):
+            def side_effect(*args, **kwargs):
+                registered_calls.append(label)
+            return side_effect
+
         ops = volumeops.VolumeOps('session')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'vm_ref_or_raise')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'find_vbd_by_number')
@@ -45,10 +52,12 @@ class VolumeAttachTestCase(test.TestCase):
 
         volumeops.vm_utils.unplug_vbd('session', 'vbdref')
 
-        volumeops.vm_utils.destroy_vbd('session', 'vbdref')
+        volumeops.vm_utils.destroy_vbd('session', 'vbdref').WithSideEffects(
+            regcall('destroy_vbd'))
 
         volumeops.volume_utils.find_sr_from_vbd(
-            'session', 'vbdref').AndReturn('srref')
+            'session', 'vbdref').WithSideEffects(
+                regcall('find_sr_from_vbd')).AndReturn('srref')
 
         volumeops.volume_utils.purge_sr('session', 'srref')
 
@@ -57,6 +66,9 @@ class VolumeAttachTestCase(test.TestCase):
         ops.detach_volume(
             dict(driver_volume_type='iscsi', data='conn_data'),
             'instance_1', 'mountpoint')
+
+        self.assertEquals(
+            ['find_sr_from_vbd', 'destroy_vbd'], registered_calls)
 
     def test_attach_volume_call(self):
         ops = volumeops.VolumeOps('session')
