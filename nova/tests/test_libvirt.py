@@ -4747,6 +4747,25 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection._cleanup_resize(ins_ref,
                                             _fake_network_info(self.stubs, 1))
 
+    def test_get_instance_disk_info_exception(self):
+        instance_name = "fake-instance-name"
+
+        class FakeExceptionDomain(FakeVirtDomain):
+            def __init__(self):
+                super(FakeExceptionDomain, self).__init__()
+
+            def XMLDesc(self, *args):
+                raise libvirt.libvirtError("Libvirt error")
+
+        def fake_lookup_by_name(instance_name):
+            return FakeExceptionDomain()
+
+        self.stubs.Set(self.libvirtconnection, '_lookup_by_name',
+                       fake_lookup_by_name)
+        self.assertRaises(exception.InstanceNotFound,
+            self.libvirtconnection.get_instance_disk_info,
+            instance_name)
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver
