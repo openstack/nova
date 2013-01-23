@@ -67,6 +67,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.32 - Added optional node to instance_get_all_by_host
     1.33 - Added compute_node_create and compute_node_update
     1.34 - Added service_update
+    1.35 - Added instance_get_active_by_window_joined
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -240,6 +241,13 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             begin=begin, end=end, project_id=project_id,
                             host=host)
         return self.call(context, msg, version='1.15')
+
+    def instance_get_active_by_window_joined(self, context, begin, end=None,
+                                             project_id=None, host=None):
+        msg = self.make_msg('instance_get_active_by_window_joined',
+                            begin=begin, end=end, project_id=project_id,
+                            host=host)
+        return self.call(context, msg, version='1.35')
 
     def instance_destroy(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
