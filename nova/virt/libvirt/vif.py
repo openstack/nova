@@ -150,6 +150,9 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
 
+    def get_ovs_interfaceid(self, mapping):
+        return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
+
     def get_config(self, instance, network, mapping):
         dev = self.get_vif_devname(mapping)
 
@@ -179,7 +182,7 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
 
     def plug(self, instance, vif):
         network, mapping = vif
-        iface_id = mapping['vif_uuid']
+        iface_id = self.get_ovs_interfaceid(mapping)
         dev = self.get_vif_devname(mapping)
         if not linux_net.device_exists(dev):
             # Older version of the command 'ip' from the iproute2 package
@@ -247,9 +250,9 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
         """
 
         network, mapping = vif
-        iface_id = mapping['vif_uuid']
-        br_name = self.get_br_name(iface_id)
-        v1_name, v2_name = self.get_veth_pair_names(iface_id)
+        iface_id = self.get_ovs_interfaceid(mapping)
+        br_name = self.get_br_name(mapping['vif_uuid'])
+        v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
 
         if not linux_net.device_exists(br_name):
             utils.execute('brctl', 'addbr', br_name, run_as_root=True)
@@ -270,9 +273,8 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver,
         """
         try:
             network, mapping = vif
-            iface_id = mapping['vif_uuid']
-            br_name = self.get_br_name(iface_id)
-            v1_name, v2_name = self.get_veth_pair_names(iface_id)
+            br_name = self.get_br_name(mapping['vif_uuid'])
+            v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
 
             utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
             utils.execute('ip', 'link', 'set', br_name, 'down',
@@ -291,6 +293,9 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
 
+    def get_ovs_interfaceid(self, mapping):
+        return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
+
     def get_config(self, instance, network, mapping):
         """Pass data required to create OVS virtual port element."""
         conf = super(LibvirtOpenVswitchVirtualPortDriver,
@@ -299,7 +304,8 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
                                       mapping)
 
         designer.set_vif_host_backend_ovs_config(
-            conf, self.get_bridge_name(network), mapping['vif_uuid'],
+            conf, self.get_bridge_name(network),
+            self.get_ovs_interfaceid(mapping),
             self.get_vif_devname(mapping))
 
         return conf
