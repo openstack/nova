@@ -83,13 +83,17 @@ function run_tests {
     if [ "x$testrargs" = "x" ]; then
       testrargs="^(?!.*test.*coverage).*$"
     fi
-    export PYTHON="${wrapper} coverage run --source nova --parallel-mode"
+    TESTRTESTS="$TESTRTESTS --coverage"
+  else
+    TESTRTESTS="$TESTRTESTS --slowest"
   fi
+
   # Just run the test suites in current environment
   set +e
-  TESTRTESTS="$TESTRTESTS $testrargs"
+  testrargs=`echo "$testrargs" | sed -e's/^\s*\(.*\)\s*$/\1/'`
+  TESTRTESTS="$TESTRTESTS --testr-args='$testrargs'"
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  ${wrapper} $TESTRTESTS
+  bash -c "${wrapper} $TESTRTESTS"
   RESULT=$?
   set -e
 
@@ -143,7 +147,7 @@ function run_pep8 {
 }
 
 
-TESTRTESTS="testr run --parallel $testropts"
+TESTRTESTS="python setup.py testr $testropts"
 
 if [ $never_venv -eq 0 ]
 then
