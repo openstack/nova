@@ -172,7 +172,6 @@ CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('network_manager', 'nova.service')
 
 QUOTAS = quota.QUOTAS
 
@@ -301,8 +300,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.network_api = network.API()
         self.volume_api = volume.API()
-        self.network_manager = importutils.import_object(
-            CONF.network_manager, host=kwargs.get('host', None))
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._last_vol_usage_poll = 0
