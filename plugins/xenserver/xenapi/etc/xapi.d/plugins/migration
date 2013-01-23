@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-XenAPI Plugin for transfering data between host nodes
+XenAPI Plugin for transferring data between host nodes
 """
 import utils
 

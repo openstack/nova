@@ -47,7 +47,7 @@ def _get_connect_string(backend,
                         passwd="openstack_citest",
                         database="openstack_citest"):
     """
-    Try to get a connection with a very specfic set of values, if we get
+    Try to get a connection with a very specific set of values, if we get
     these then we'll run the tests, otherwise they are skipped
     """
     if backend == "postgres":
@@ -195,7 +195,7 @@ class TestMigrations(test.TestCase):
                                 "~/.pgpass && chmod 0600 ~/.pgpass" % locals())
                 execute_cmd(createpgpass)
                 # note(boris-42): We must create and drop database, we can't
-                # drop database wich we have connected to, so for such
+                # drop database which we have connected to, so for such
                 # operations there is a special database template1.
                 sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
                                      " '%(sql)s' -d template1")

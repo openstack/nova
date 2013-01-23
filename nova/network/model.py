@@ -250,7 +250,7 @@ class VIF(Model):
                       'meta': {...}}]
         """
         if self['network']:
-            # remove unecessary fields on fixed_ips
+            # remove unnecessary fields on fixed_ips
             ips = [IP(**ensure_string_keys(ip)) for ip in self.fixed_ips()]
             for ip in ips:
                 # remove floating ips from IP, since this is a flat structure

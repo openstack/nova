@@ -60,7 +60,7 @@ class FakeRequest(object):
         GET = {}
 
 
-class FakeRequestWithSevice(object):
+class FakeRequestWithService(object):
         environ = {"nova.context": context.get_admin_context()}
         GET = {"service": "nova-compute"}
 
@@ -160,7 +160,7 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_service(self):
-        req = FakeRequestWithSevice()
+        req = FakeRequestWithService()
         res_dict = self.controller.index(req)
 
         response = {'services': [{'binary': 'nova-compute', 'host': 'host1',

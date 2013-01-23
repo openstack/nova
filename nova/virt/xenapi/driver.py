@@ -507,7 +507,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :params instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params network_info: instance network infomation
+        :params network_info: instance network information
         :params : block_migration: if true, post operation of block_migraiton.
         """
         # TODO(JohnGarbutt) look at moving/downloading ramdisk and kernel

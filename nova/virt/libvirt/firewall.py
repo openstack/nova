@@ -228,11 +228,11 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
     def setup_basic_filtering(self, instance, network_info):
         """Set up provider rules and basic NWFilter."""
         self.nwfilter.setup_basic_filtering(instance, network_info)
-        if not self.basicly_filtered:
+        if not self.basically_filtered:
             LOG.debug(_('iptables firewall: Setup Basic Filtering'),
                       instance=instance)
             self.refresh_provider_fw_rules()
-            self.basicly_filtered = True
+            self.basically_filtered = True
 
     def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter."""

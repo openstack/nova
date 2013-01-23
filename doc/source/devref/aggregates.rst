@@ -65,7 +65,7 @@ Usage
   * aggregate-add-host       <id> <host>                              Add the host to the specified aggregate.
   * aggregate-remove-host    <id> <host>                              Remove the specified host from the specfied aggregate.
   * aggregate-set-metadata   <id> <key=value> [<key=value> ...]       Update the metadata associated with the aggregate.
-  * aggregate-update         <id> <name> [<availability_zone>]        Update the aggregate's name and optionally availablity zone.
+  * aggregate-update         <id> <name> [<availability_zone>]        Update the aggregate's name and optionally availability zone.
 
   * host-list                                                         List all hosts by service
   * host-update              --maintenance [enable | disable]         Put/resume host into/from maintenance.

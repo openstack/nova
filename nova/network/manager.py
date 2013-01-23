@@ -678,7 +678,7 @@ class FloatingIP(object):
             #             actually remove the ip address on the host. We are
             #             safe from races on this host due to the decorator,
             #             but another host might grab the ip right away. We
-            #             don't worry about this case because the miniscule
+            #             don't worry about this case because the minuscule
             #             window where the ip is on both hosts shouldn't cause
             #             any problems.
             fixed_address = self.db.floating_ip_disassociate(context, address)

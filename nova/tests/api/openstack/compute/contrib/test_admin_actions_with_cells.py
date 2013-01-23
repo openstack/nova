@@ -54,10 +54,10 @@ class CellsAdminAPITestCase(test.TestCase):
 
         def fake_cast_to_cells(context, instance, method, *args, **kwargs):
             """
-            Makes sure that the cells recieve the cast to update
+            Makes sure that the cells receive the cast to update
             the cell state
             """
-            self.cells_recieved_kwargs.update(kwargs)
+            self.cells_received_kwargs.update(kwargs)
 
         self.admin_api = admin_actions.AdminActionsController()
         self.admin_api.compute_api = compute_cells_api.ComputeCellsAPI()
@@ -76,14 +76,14 @@ class CellsAdminAPITestCase(test.TestCase):
         self.uuid = uuidutils.generate_uuid()
         url = '/fake/servers/%s/action' % self.uuid
         self.request = fakes.HTTPRequest.blank(url)
-        self.cells_recieved_kwargs = {}
+        self.cells_received_kwargs = {}
 
     def test_reset_active(self):
         body = {"os-resetState": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, 'inst_id', body)
 
         self.assertEqual(result.status_int, 202)
-        # Make sure the cells recieved the update
-        self.assertEqual(self.cells_recieved_kwargs,
+        # Make sure the cells received the update
+        self.assertEqual(self.cells_received_kwargs,
                          dict(vm_state=vm_states.ERROR,
                               task_state=None))

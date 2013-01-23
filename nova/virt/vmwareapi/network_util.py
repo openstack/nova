@@ -38,7 +38,7 @@ def get_network_with_the_name(session, network_name="vmnet0"):
     vm_networks_ret = hostsystems[0].propSet[0].val
     # Meaning there are no networks on the host. suds responds with a ""
     # in the parent property field rather than a [] in the
-    # ManagedObjectRefernce property field of the parent
+    # ManagedObjectReference property field of the parent
     if not vm_networks_ret:
         return None
     vm_networks = vm_networks_ret.ManagedObjectReference
