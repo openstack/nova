@@ -18,8 +18,9 @@
 #    under the License.
 
 import copy
-import tempfile
 import uuid
+
+import fixtures
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -86,7 +87,7 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 class CinderCloudTestCase(test.TestCase):
     def setUp(self):
         super(CinderCloudTestCase, self).setUp()
-        vol_tmpdir = tempfile.mkdtemp()
+        vol_tmpdir = self.useFixture(fixtures.TempDir()).path
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API')
 
