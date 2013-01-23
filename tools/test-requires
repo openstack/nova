@@ -1,7 +1,7 @@
 # Packages needed for dev testing
 distribute>=0.6.24
 
-coverage
+coverage>=3.6
 discover
 feedparser
 fixtures>=0.3.12
