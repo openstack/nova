@@ -88,10 +88,13 @@ class PowerVMDriver(driver.ComputeDriver):
     def plug_vifs(self, instance, network_info):
         pass
 
+    def macs_for_instance(self, instance):
+        return self._powervm.macs_for_instance(instance)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create a new instance/VM/domain on powerVM."""
-        self._powervm.spawn(context, instance, image_meta['id'])
+        self._powervm.spawn(context, instance, image_meta['id'], network_info)
 
     def destroy(self, instance, network_info, block_device_info=None,
                 destroy_disks=True):

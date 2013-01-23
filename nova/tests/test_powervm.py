@@ -23,7 +23,9 @@ from nova import db
 from nova import test
 
 from nova.compute import power_state
+from nova.network import model as network_model
 from nova.openstack.common import log as logging
+from nova.tests import fake_network_cache_model
 from nova.virt import images
 from nova.virt.powervm import blockdev as powervm_blockdev
 from nova.virt.powervm import common
@@ -156,8 +158,11 @@ class PowerVMDriverTestCase(test.TestCase):
         self.stubs.Set(images, 'fetch_to_raw', fake_image_fetch_to_raw)
         image_meta = {}
         image_meta['id'] = '666'
+        fake_net_info = network_model.NetworkInfo([
+                                     fake_network_cache_model.new_vif()])
         self.powervm_connection.spawn(context.get_admin_context(),
-                                      self.instance, image_meta, 's3cr3t', [])
+                                      self.instance, image_meta, [], 's3cr3t',
+                                      fake_net_info)
         state = self.powervm_connection.get_info(self.instance)['state']
         self.assertEqual(state, power_state.RUNNING)
 
@@ -176,12 +181,13 @@ class PowerVMDriverTestCase(test.TestCase):
         self.stubs.Set(
             self.powervm_connection._powervm, '_cleanup',
             lambda *x, **y: raise_(Exception('This should be logged.')))
-
+        fake_net_info = network_model.NetworkInfo([
+                                     fake_network_cache_model.new_vif()])
         self.assertRaises(exception.PowerVMImageCreationFailed,
                           self.powervm_connection.spawn,
                           context.get_admin_context(),
                           self.instance,
-                          {'id': 'ANY_ID'}, 's3cr3t', [])
+                          {'id': 'ANY_ID'}, [], 's3cr3t', fake_net_info)
 
     def test_destroy(self):
         self.powervm_connection.destroy(self.instance, None)

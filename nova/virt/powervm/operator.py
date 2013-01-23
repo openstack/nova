@@ -15,6 +15,7 @@
 #    under the License.
 
 import decimal
+import random
 import re
 import time
 
@@ -170,7 +171,7 @@ class PowerVMOperator(object):
 
         self._host_stats = data
 
-    def spawn(self, context, instance, image_id):
+    def spawn(self, context, instance, image_id, network_info):
         def _create_lpar_instance(instance):
             host_stats = self.get_host_stats(refresh=True)
             inst_name = instance['name']
@@ -201,9 +202,21 @@ class PowerVMOperator(object):
 
             try:
                 # Network
+                # To ensure the MAC address on the guest matches the
+                # generated value, pull the first 10 characters off the
+                # MAC address for the mac_base_value parameter and then
+                # get the integer value of the final 2 characters as the
+                # slot_id parameter
+                mac = network_info[0]['address']
+                mac_base_value = (mac[:-2]).replace(':', '')
                 eth_id = self._operator.get_virtual_eth_adapter_id()
+                slot_id = int(mac[-2:], 16)
+                virtual_eth_adapters = ('%(slot_id)s/0/%(eth_id)s//0/0' %
+                                        locals())
 
                 # LPAR configuration data
+                # max_virtual_slots is hardcoded to 64 since we generate a MAC
+                # address that must be placed in slots 32 - 64
                 lpar_inst = LPAR.LPAR(
                                 name=inst_name, lpar_env='aixlinux',
                                 min_mem=mem_min, desired_mem=mem,
@@ -213,10 +226,14 @@ class PowerVMOperator(object):
                                 min_proc_units=cpus_units_min,
                                 desired_proc_units=cpus_units,
                                 max_proc_units=cpus_max,
-                                virtual_eth_adapters='4/0/%s//0/0' % eth_id)
+                                virtual_eth_mac_base_value=mac_base_value,
+                                max_virtual_slots=64,
+                                virtual_eth_adapters=virtual_eth_adapters)
 
                 LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
                 self._operator.create_lpar(lpar_inst)
+            #TODO(mjfork) capture the error and handle the error when the MAC
+            #             prefix already exists on the system (1 in 2^28)
             except nova_exception.ProcessExecutionError:
                 LOG.exception(_("LPAR instance '%s' creation failed") %
                             instance['name'])
@@ -344,6 +361,9 @@ class PowerVMOperator(object):
 
     def power_on(self, instance_name):
         self._operator.start_lpar(instance_name)
+
+    def macs_for_instance(self, instance):
+        return self._operator.macs_for_instance(instance)
 
 
 class BaseOperator(object):
@@ -573,6 +593,9 @@ class BaseOperator(object):
             self._connection, command, check_exit_code=check_exit_code)
         return stdout.read().splitlines()
 
+    def macs_for_instance(self, instance):
+        pass
+
 
 class IVMOperator(BaseOperator):
     """Integrated Virtualization Manager (IVM) Operator.
@@ -583,3 +606,32 @@ class IVMOperator(BaseOperator):
     def __init__(self, ivm_connection):
         self.command = command.IVMCommand()
         BaseOperator.__init__(self, ivm_connection)
+
+    def macs_for_instance(self, instance):
+        """Generates set of valid MAC addresses for an IVM instance."""
+        # NOTE(vish): We would prefer to use 0xfe here to ensure that linux
+        #             bridge mac addresses don't change, but it appears to
+        #             conflict with libvirt, so we use the next highest octet
+        #             that has the unicast and locally administered bits set
+        #             properly: 0xfa.
+        #             Discussion: https://bugs.launchpad.net/nova/+bug/921838
+        # NOTE(mjfork): For IVM-based PowerVM, we cannot directly set a MAC
+        #               address on an LPAR, but rather need to construct one
+        #               that can be used.  Retain the 0xfe as noted above,
+        #               but ensure the final 3 hex values represent a value
+        #               between 32 and 64 so we can assign as the slot id on
+        #               the system.
+        #               FA:xx:xx:xx:x0:[32-64]
+
+        macs = set()
+        mac_base = [0xfa,
+               random.randint(0x00, 0xff),
+               random.randint(0x00, 0xff),
+               random.randint(0x00, 0xff),
+               random.randint(0x00, 0xff) & 0xf0,
+               random.randint(0x00, 0x00)]
+        for n in range(32, 64):
+            mac_base[5] = n
+            macs.add(':'.join(map(lambda x: "%02x" % x, mac_base)))
+
+        return macs
