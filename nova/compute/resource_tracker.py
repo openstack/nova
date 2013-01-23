@@ -293,12 +293,14 @@ class ResourceTracker(object):
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
             self._create(context, resources)
-            LOG.info(_('Compute_service record created for %s ') % self.host)
+            LOG.info(_('Compute_service record created for %(host)s:%(node)s')
+                    % {'host': self.host, 'node': self.nodename})
 
         else:
             # just update the record:
             self._update(context, resources, prune_stats=True)
-            LOG.info(_('Compute_service record updated for %s ') % self.host)
+            LOG.info(_('Compute_service record updated for %(host)s:%(node)s')
+                    % {'host': self.host, 'node': self.nodename})
 
     def _create(self, context, values):
         """Create the compute node in the DB."""
