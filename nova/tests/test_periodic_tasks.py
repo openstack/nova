@@ -15,9 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
 
 import fixtures
-import time
+from testtools import matchers
 
 from nova import manager
 from nova import test
@@ -44,10 +45,11 @@ class ManagerMetaTestCase(test.TestCase):
                 return 'baz'
 
         m = Manager()
-        self.assertEqual(2, len(m._periodic_tasks))
+        self.assertThat(m._periodic_tasks, matchers.HasLength(2))
         self.assertEqual(None, m._periodic_spacing['foo'])
         self.assertEqual(4, m._periodic_spacing['bar'])
-        self.assertFalse('baz' in m._periodic_spacing)
+        self.assertThat(
+            m._periodic_spacing, matchers.Not(matchers.Contains('baz')))
 
 
 class Manager(test.TestCase):
@@ -60,7 +62,7 @@ class Manager(test.TestCase):
                 return 'bar'
 
         m = Manager()
-        self.assertEqual(1, len(m._periodic_tasks))
+        self.assertThat(m._periodic_tasks, matchers.HasLength(1))
         self.assertEqual(200, m._periodic_spacing['bar'])
 
         # Now a single pass of the periodic tasks
@@ -87,8 +89,8 @@ class Manager(test.TestCase):
         m.periodic_tasks(None)
         time.sleep(0.1)
         idle = m.periodic_tasks(None)
-        self.assertTrue(idle > 9.7)
-        self.assertTrue(idle < 9.9)
+        self.assertThat(idle, matchers.GreaterThan(9.7))
+        self.assertThat(idle, matchers.LessThan(9.9))
 
     def test_periodic_tasks_disabled(self):
         class Manager(manager.Manager):
@@ -109,7 +111,7 @@ class Manager(test.TestCase):
                 return 'bar'
 
         m = Manager()
-        self.assertEqual(1, len(m._periodic_tasks))
+        self.assertThat(m._periodic_tasks, matchers.HasLength(1))
 
     def test_external_running_elsewhere(self):
         self.flags(run_external_periodic_tasks=False)
@@ -120,4 +122,4 @@ class Manager(test.TestCase):
                 return 'bar'
 
         m = Manager()
-        self.assertEqual(0, len(m._periodic_tasks))
+        self.assertEqual([], m._periodic_tasks)
