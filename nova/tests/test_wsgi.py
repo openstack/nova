@@ -22,6 +22,8 @@ import os.path
 import tempfile
 
 import eventlet
+import httplib2
+import paste
 
 import nova.exception
 from nova import test
@@ -105,6 +107,25 @@ class TestWSGIServer(test.TestCase):
         server.start()
         self.assertEqual("::1", server.host)
         self.assertNotEqual(0, server.port)
+        server.stop()
+        server.wait()
+
+    def test_uri_length_limit(self):
+        server = nova.wsgi.Server("test_uri_length_limit", None,
+            host="127.0.0.1", max_url_len=16384)
+        server.start()
+
+        uri = "http://127.0.0.1:%d/%s" % (server.port, 10000 * 'x')
+        resp, _ = httplib2.Http().request(uri)
+        eventlet.sleep(0)
+        self.assertNotEqual(resp.status,
+                            paste.httpexceptions.HTTPRequestURITooLong.code)
+
+        uri = "http://127.0.0.1:%d/%s" % (server.port, 20000 * 'x')
+        resp, _ = httplib2.Http().request(uri)
+        eventlet.sleep(0)
+        self.assertEqual(resp.status,
+                         paste.httpexceptions.HTTPRequestURITooLong.code)
         server.stop()
         server.wait()
 

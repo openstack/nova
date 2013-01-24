@@ -574,7 +574,7 @@ class Service(object):
 class WSGIService(object):
     """Provides ability to launch API from a 'paste' configuration."""
 
-    def __init__(self, name, loader=None, use_ssl=False):
+    def __init__(self, name, loader=None, use_ssl=False, max_url_len=None):
         """Initialize, but do not start the WSGI server.
 
         :param name: The name of the WSGI server given to the loader.
@@ -594,7 +594,8 @@ class WSGIService(object):
                                   self.app,
                                   host=self.host,
                                   port=self.port,
-                                  use_ssl=self.use_ssl)
+                                  use_ssl=self.use_ssl,
+                                  max_url_len=max_url_len)
         # Pull back actual port used
         self.port = self.server.port
         self.backdoor_port = None
