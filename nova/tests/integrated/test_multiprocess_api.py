@@ -150,7 +150,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
 
         workers = self._get_workers()
         LOG.info('workers: %r' % workers)
-        self.assertFalse(workers, 'No OS processes left.')
+        self.assertFalse(workers, 'OS processes left %r' % workers)
 
     def test_terminate_sigkill(self):
         self._terminate_with_signal(signal.SIGKILL)
