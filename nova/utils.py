@@ -507,14 +507,18 @@ def str_dict_replace(s, mapping):
 class LazyPluggable(object):
     """A pluggable backend loaded lazily based on some value."""
 
-    def __init__(self, pivot, **backends):
+    def __init__(self, pivot, config_group=None, **backends):
         self.__backends = backends
         self.__pivot = pivot
         self.__backend = None
+        self.__config_group = config_group
 
     def __get_backend(self):
         if not self.__backend:
-            backend_name = CONF[self.__pivot]
+            if self.__config_group is None:
+                backend_name = CONF[self.__pivot]
+            else:
+                backend_name = CONF[self.__config_group][self.__pivot]
             if backend_name not in self.__backends:
                 msg = _('Invalid backend: %s') % backend_name
                 raise exception.NovaException(msg)

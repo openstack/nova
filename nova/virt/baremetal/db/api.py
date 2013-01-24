@@ -50,16 +50,21 @@ from nova import utils
 #             because utils.LazyPluggable doesn't support reading from
 #             option groups. See bug #1093043.
 db_opts = [
-    cfg.StrOpt('baremetal_db_backend',
+    cfg.StrOpt('db_backend',
                default='sqlalchemy',
-               help='The backend to use for db'),
+               help='The backend to use for bare-metal database'),
     ]
 
+baremetal_group = cfg.OptGroup(name='baremetal',
+                               title='Baremetal Options')
+
 CONF = cfg.CONF
-CONF.register_opts(db_opts)
+CONF.register_group(baremetal_group)
+CONF.register_opts(db_opts, baremetal_group)
 
 IMPL = utils.LazyPluggable(
-        'baremetal_db_backend',
+        'db_backend',
+        config_group='baremetal',
         sqlalchemy='nova.virt.baremetal.db.sqlalchemy.api')
 
 
