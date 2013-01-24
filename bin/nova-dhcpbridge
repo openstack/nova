@@ -96,10 +96,15 @@ def init_leases(network_id):
 def add_action_parsers(subparsers):
     parser = subparsers.add_parser('init')
 
+    # NOTE(cfb): dnsmasq always passes mac, and ip. hostname
+    #            is passed if known. We don't care about
+    #            hostname, but argparse will complain if we
+    #            do not accept it.
     for action in ['add', 'del', 'old']:
         parser = subparsers.add_parser(action)
         parser.add_argument('mac')
         parser.add_argument('ip')
+        parser.add_argument('hostname', nargs='?', default='')
         parser.set_defaults(func=globals()[action + '_lease'])
 
 
