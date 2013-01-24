@@ -85,6 +85,11 @@ linux_net_opts = [
                 default=False,
                 help='Use single default gateway. Only first nic of vm will '
                      'get default gateway from dhcp server'),
+    cfg.ListOpt('forward_bridge_interface',
+               default=['all'],
+               help='An interface that bridges can forward to. If this is '
+                    'set to all then all traffic will be forwarded. Can be '
+                    'specified multiple times.'),
     cfg.StrOpt('metadata_host',
                default='$my_ip',
                help='the ip for the metadata api server'),
@@ -1381,10 +1386,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             # Don't forward traffic unless we were told to be a gateway
             ipv4_filter = iptables_manager.ipv4['filter']
             if gateway:
-                ipv4_filter.add_rule('FORWARD',
-                                     '--in-interface %s -j ACCEPT' % bridge)
-                ipv4_filter.add_rule('FORWARD',
-                                     '--out-interface %s -j ACCEPT' % bridge)
+                for rule in get_gateway_rules(bridge):
+                    ipv4_filter.add_rule(*rule)
             else:
                 ipv4_filter.add_rule('FORWARD',
                                      '--in-interface %s -j DROP' % bridge)
@@ -1401,10 +1404,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             if filtering:
                 ipv4_filter = iptables_manager.ipv4['filter']
                 if gateway:
-                    ipv4_filter.remove_rule('FORWARD',
-                                    '--in-interface %s -j ACCEPT' % bridge)
-                    ipv4_filter.remove_rule('FORWARD',
-                                    '--out-interface %s -j ACCEPT' % bridge)
+                    for rule in get_gateway_rules(bridge):
+                        ipv4_filter.remove_rule(*rule)
                 else:
                     ipv4_filter.remove_rule('FORWARD',
                                     '--in-interface %s -j DROP' % bridge)
@@ -1488,6 +1489,24 @@ def remove_isolate_dhcp_address(interface, address):
                          % (interface, address), top=True)
 
 
+def get_gateway_rules(bridge):
+    interfaces = CONF.forward_bridge_interface
+    if 'all' in interfaces:
+        return [('FORWARD', '-i %s -j ACCEPT' % bridge),
+                ('FORWARD', '-o %s -j ACCEPT' % bridge)]
+    rules = []
+    for iface in CONF.forward_bridge_interface:
+        if iface:
+            rules.append(('FORWARD', '-i %s -o %s -j ACCEPT' % (bridge,
+                                                                iface)))
+            rules.append(('FORWARD', '-i %s -o %s -j ACCEPT' % (iface,
+                                                                bridge)))
+    rules.append(('FORWARD', '-i %s -o %s -j ACCEPT' % (bridge, bridge)))
+    rules.append(('FORWARD', '-i %s -j DROP' % bridge))
+    rules.append(('FORWARD', '-o %s -j DROP' % bridge))
+    return rules
+
+
 # plugs interfaces using Open vSwitch
 class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
 
@@ -1526,10 +1545,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
                         '--out-interface %s -j DROP' % bridge)
             else:
-                iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                        '--in-interface %s -j ACCEPT' % bridge)
-                iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                        '--out-interface %s -j ACCEPT' % bridge)
+                for rule in get_gateway_rules(bridge):
+                    iptables_manager.ipv4['filter'].add_rule(*rule)
 
         return dev
 
@@ -1564,10 +1581,8 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     '--out-interface %s -j DROP' % bridge)
             return bridge
         else:
-            iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    '--in-interface %s -j ACCEPT' % bridge)
-            iptables_manager.ipv4['filter'].add_rule('FORWARD',
-                    '--out-interface %s -j ACCEPT' % bridge)
+            for rule in get_gateway_rules(bridge):
+                iptables_manager.ipv4['filter'].add_rule(*rule)
 
         create_tap_dev(dev, mac_address)
 
