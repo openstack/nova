@@ -507,6 +507,11 @@ class API(base.Base):
                         security_group, block_device_mapping)
                 instances.append(instance)
                 instance_uuids.append(instance['uuid'])
+                self._validate_bdm(context, instance)
+                # send a state update notification for the initial create to
+                # show it going from non-existent to BUILDING
+                notifications.send_update_with_states(context, instance, None,
+                        vm_states.BUILDING, None, None, service="api")
 
         # In the case of any exceptions, attempt DB cleanup and rollback the
         # quota reservations.
@@ -623,6 +628,23 @@ class API(base.Base):
             self.db.block_device_mapping_update_or_create(elevated_context,
                                                           values)
 
+    def _validate_bdm(self, context, instance):
+        for bdm in self.db.block_device_mapping_get_all_by_instance(
+                context, instance['uuid']):
+            # NOTE(vish): For now, just make sure the volumes are accessible.
+            snapshot_id = bdm.get('snapshot_id')
+            volume_id = bdm.get('volume_id')
+            if volume_id is not None:
+                try:
+                    self.volume_api.get(context, volume_id)
+                except Exception:
+                    raise exception.InvalidBDMVolume(id=volume_id)
+            elif snapshot_id is not None:
+                try:
+                    self.volume_api.get_snapshot(context, snapshot_id)
+                except Exception:
+                    raise exception.InvalidBDMSnapshot(id=snapshot_id)
+
     def _populate_instance_for_bdm(self, context, instance, instance_type,
             image, block_device_mapping):
         """Populate instance block device mapping information."""
@@ -734,11 +756,6 @@ class API(base.Base):
 
         self._populate_instance_for_bdm(context, instance,
                 instance_type, image, block_device_mapping)
-
-        # send a state update notification for the initial create to
-        # show it going from non-existent to BUILDING
-        notifications.send_update_with_states(context, instance, None,
-                vm_states.BUILDING, None, None, service="api")
 
         return instance
 
