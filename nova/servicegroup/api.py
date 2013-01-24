@@ -23,7 +23,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 
-from random import choice
+import random
 
 
 LOG = logging.getLogger(__name__)
@@ -144,4 +144,4 @@ class ServiceGroupDriver(object):
         length = len(members)
         if length == 0:
             return None
-        return choice(members)
+        return random.choice(members)

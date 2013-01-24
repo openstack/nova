@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
+import datetime
 from lxml import etree
 import webob
 
@@ -40,29 +40,29 @@ def fake_service_get_all(context, disabled=None):
 
     if disabled:
         return [__fake_service("nova-compute", "zone-2",
-                               datetime(2012, 11, 14, 9, 53, 25, 0),
-                               datetime(2012, 12, 26, 14, 45, 25, 0),
+                               datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", True),
                 __fake_service("nova-scheduler", "internal",
-                               datetime(2012, 11, 14, 9, 57, 3, 0),
-                               datetime(2012, 12, 26, 14, 45, 25, 0),
+                               datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", True),
                 __fake_service("nova-network", "internal",
-                               datetime(2012, 11, 16, 7, 25, 46, 0),
-                               datetime(2012, 12, 26, 14, 45, 24, 0),
+                               datetime.datetime(2012, 11, 16, 7, 25, 46, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 24, 0),
                                "fake_host-2", True)]
     else:
         return [__fake_service("nova-compute", "zone-1",
-                               datetime(2012, 11, 14, 9, 53, 25, 0),
-                               datetime(2012, 12, 26, 14, 45, 25, 0),
+                               datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", False),
                 __fake_service("nova-sched", "internal",
-                               datetime(2012, 11, 14, 9, 57, 03, 0),
-                               datetime(2012, 12, 26, 14, 45, 25, 0),
+                               datetime.datetime(2012, 11, 14, 9, 57, 03, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
                                "fake_host-1", False),
                 __fake_service("nova-network", "internal",
-                               datetime(2012, 11, 16, 7, 25, 46, 0),
-                               datetime(2012, 12, 26, 14, 45, 24, 0),
+                               datetime.datetime(2012, 11, 16, 7, 25, 46, 0),
+                               datetime.datetime(2012, 12, 26, 14, 45, 24, 0),
                                "fake_host-2", False)]
 
 
@@ -218,18 +218,21 @@ class AvailabilityZoneSerializerTest(test.TestCase):
               'hosts': {'fake_host-1': {
                             'nova-compute': {'active': True, 'available': True,
                                 'updated_at':
-                                    datetime(2012, 12, 26, 14, 45, 25)}}}},
+                                    datetime.datetime(
+                                        2012, 12, 26, 14, 45, 25)}}}},
              {'zoneName': 'internal',
               'zoneState': {'available': True},
               'hosts': {'fake_host-1': {
                             'nova-sched': {'active': True, 'available': True,
                                 'updated_at':
-                                    datetime(2012, 12, 26, 14, 45, 25)}},
+                                    datetime.datetime(
+                                        2012, 12, 26, 14, 45, 25)}},
                         'fake_host-2': {
                             'nova-network': {'active': True,
                                              'available': False,
                                              'updated_at':
-                                    datetime(2012, 12, 26, 14, 45, 24)}}}},
+                                    datetime.datetime(
+                                        2012, 12, 26, 14, 45, 24)}}}},
              {'zoneName': 'zone-2',
               'zoneState': {'available': False},
               'hosts': None}]

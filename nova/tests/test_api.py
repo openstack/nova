@@ -26,9 +26,9 @@ from boto.ec2 import regioninfo
 from boto import exception as boto_exc
 # newer versions of boto use their own wrapper on top of httplib.HTTPResponse
 try:
-    from boto.connection import HTTPResponse
+    import boto.connection as httplib
 except ImportError:
-    from httplib import HTTPResponse
+    import httplib
 import fixtures
 import webob
 
@@ -79,7 +79,7 @@ class FakeHttplibConnection(object):
         # guess that's a function the web server usually provides.
         resp = "HTTP/1.0 %s" % resp
         self.sock = FakeHttplibSocket(resp)
-        self.http_response = HTTPResponse(self.sock)
+        self.http_response = httplib.HTTPResponse(self.sock)
         # NOTE(vish): boto is accessing private variables for some reason
         self._HTTPConnection__response = self.http_response
         self.http_response.begin()

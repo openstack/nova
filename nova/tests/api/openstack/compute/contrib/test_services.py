@@ -14,7 +14,8 @@
 #    under the License.
 
 
-from datetime import datetime
+import datetime
+
 from nova.api.openstack.compute.contrib import services
 from nova import context
 from nova import db
@@ -24,35 +25,36 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-fake_services_list = [{'binary': 'nova-scheduler',
-                       'host': 'host1',
-                       'id': 1,
-                       'disabled': True,
-                       'topic': 'scheduler',
-                       'updated_at': datetime(2012, 10, 29, 13, 42, 2),
-                       'created_at': datetime(2012, 9, 18, 2, 46, 27)},
-                      {'binary': 'nova-compute',
-                       'host': 'host1',
-                       'id': 2,
-                       'disabled': True,
-                       'topic': 'compute',
-                       'updated_at': datetime(2012, 10, 29, 13, 42, 5),
-                       'created_at': datetime(2012, 9, 18, 2, 46, 27)},
-                      {'binary': 'nova-scheduler',
-                       'host': 'host2',
-                       'id': 3,
-                       'disabled': False,
-                       'topic': 'scheduler',
-                       'updated_at': datetime(2012, 9, 19, 6, 55, 34),
-                       'created_at': datetime(2012, 9, 18, 2, 46, 28)},
-                      {'binary': 'nova-compute',
-                       'host': 'host2',
-                       'id': 4,
-                       'disabled': True,
-                       'topic': 'compute',
-                       'updated_at': datetime(2012, 9, 18, 8, 3, 38),
-                       'created_at': datetime(2012, 9, 18, 2, 46, 28)},
-                      ]
+fake_services_list = [
+        {'binary': 'nova-scheduler',
+         'host': 'host1',
+         'id': 1,
+         'disabled': True,
+         'topic': 'scheduler',
+         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27)},
+        {'binary': 'nova-compute',
+         'host': 'host1',
+         'id': 2,
+         'disabled': True,
+         'topic': 'compute',
+         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 27)},
+        {'binary': 'nova-scheduler',
+         'host': 'host2',
+         'id': 3,
+         'disabled': False,
+         'topic': 'scheduler',
+         'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28)},
+        {'binary': 'nova-compute',
+         'host': 'host2',
+         'id': 4,
+         'disabled': True,
+         'topic': 'compute',
+         'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+         'created_at': datetime.datetime(2012, 9, 18, 2, 46, 28)},
+        ]
 
 
 class FakeRequest(object):
@@ -103,7 +105,7 @@ def fake_service_update(context, service_id, values):
 
 
 def fake_utcnow():
-    return datetime(2012, 10, 29, 13, 42, 11)
+    return datetime.datetime(2012, 10, 29, 13, 42, 11)
 
 
 class ServicesTest(test.TestCase):
@@ -130,19 +132,19 @@ class ServicesTest(test.TestCase):
         response = {'services': [{'binary': 'nova-scheduler',
                     'host': 'host1', 'zone': 'internal',
                     'status': 'disabled', 'state': 'up',
-                    'updated_at': datetime(2012, 10, 29, 13, 42, 2)},
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
                     {'binary': 'nova-compute',
                      'host': 'host1', 'zone': 'nova',
                      'status': 'disabled', 'state': 'up',
-                     'updated_at': datetime(2012, 10, 29, 13, 42, 5)},
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
                     {'binary': 'nova-scheduler', 'host': 'host2',
                      'zone': 'internal',
                      'status': 'enabled', 'state': 'down',
-                     'updated_at': datetime(2012, 9, 19, 6, 55, 34)},
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
                     {'binary': 'nova-compute', 'host': 'host2',
                      'zone': 'nova',
                      'status': 'disabled', 'state': 'down',
-                     'updated_at': datetime(2012, 9, 18, 8, 3, 38)}]}
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host(self):
@@ -152,11 +154,11 @@ class ServicesTest(test.TestCase):
         response = {'services': [{'binary': 'nova-scheduler', 'host': 'host1',
                     'zone': 'internal',
                     'status': 'disabled', 'state': 'up',
-                    'updated_at': datetime(2012, 10, 29, 13, 42, 2)},
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
                    {'binary': 'nova-compute', 'host': 'host1',
                     'zone': 'nova',
                     'status': 'disabled', 'state': 'up',
-                    'updated_at': datetime(2012, 10, 29, 13, 42, 5)}]}
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_service(self):
@@ -166,11 +168,11 @@ class ServicesTest(test.TestCase):
         response = {'services': [{'binary': 'nova-compute', 'host': 'host1',
                     'zone': 'nova',
                     'status': 'disabled', 'state': 'up',
-                    'updated_at': datetime(2012, 10, 29, 13, 42, 5)},
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
                     {'binary': 'nova-compute', 'host': 'host2',
                      'zone': 'nova',
                      'status': 'disabled', 'state': 'down',
-                     'updated_at': datetime(2012, 9, 18, 8, 3, 38)}]}
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host_service(self):
@@ -180,7 +182,7 @@ class ServicesTest(test.TestCase):
         response = {'services': [{'binary': 'nova-compute', 'host': 'host1',
                     'zone': 'nova',
                     'status': 'disabled', 'state': 'up',
-                    'updated_at': datetime(2012, 10, 29, 13, 42, 5)}]}
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
         self.assertEqual(res_dict, response)
 
     def test_services_enable(self):

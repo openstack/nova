@@ -236,9 +236,7 @@ import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
 
-from nova.exception import DBDuplicateEntry
-from nova.exception import DBError
-from nova.exception import InvalidUnicodeParameter
+import nova.exception
 from nova.openstack.common import cfg
 import nova.openstack.common.log as logging
 from nova.openstack.common import timeutils
@@ -362,7 +360,7 @@ def raise_if_duplicate_entry_error(integrity_error, engine_name):
         columns = columns.strip().split(", ")
     else:
         columns = get_columns_from_uniq_cons_or_name(columns)
-    raise DBDuplicateEntry(columns, integrity_error)
+    raise nova.exception.DBDuplicateEntry(columns, integrity_error)
 
 
 def wrap_db_error(f):
@@ -370,7 +368,7 @@ def wrap_db_error(f):
         try:
             return f(*args, **kwargs)
         except UnicodeEncodeError:
-            raise InvalidUnicodeParameter()
+            raise nova.exception.InvalidUnicodeParameter()
         # note(boris-42): We should catch unique constraint violation and
         # wrap it by our own DBDuplicateEntry exception. Unique constraint
         # violation is wrapped by IntegrityError.
@@ -381,10 +379,10 @@ def wrap_db_error(f):
             # means we should get names of columns, which values violate
             # unique constraint, from error message.
             raise_if_duplicate_entry_error(e, get_engine().name)
-            raise DBError(e)
+            raise nova.exception.DBError(e)
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
-            raise DBError(e)
+            raise nova.exception.DBError(e)
     _wrap.func_name = f.func_name
     return _wrap
 

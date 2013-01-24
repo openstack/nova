@@ -22,7 +22,7 @@ from nova import config
 from nova import ipv6
 from nova.openstack.common import cfg
 from nova import paths
-from nova.tests.utils import cleanup_dns_managers
+from nova.tests import utils
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
@@ -70,5 +70,5 @@ class ConfFixture(fixtures.Fixture):
         self.conf.set_default('vlan_interface', 'eth0')
         config.parse_args([], default_config_files=[])
         self.addCleanup(self.conf.reset)
-        self.addCleanup(cleanup_dns_managers)
+        self.addCleanup(utils.cleanup_dns_managers)
         self.addCleanup(ipv6.api.reset_backend)

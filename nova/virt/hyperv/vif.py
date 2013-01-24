@@ -15,6 +15,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import abc
 import sys
 import uuid
 
@@ -22,10 +23,11 @@ import uuid
 if sys.platform == 'win32':
     import wmi
 
-from abc import abstractmethod
+
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import vmutils
+
 
 hyperv_opts = [
     cfg.StrOpt('vswitch_name',
@@ -42,11 +44,11 @@ LOG = logging.getLogger(__name__)
 
 
 class HyperVBaseVIFDriver(object):
-    @abstractmethod
+    @abc.abstractmethod
     def plug(self, instance, vif):
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def unplug(self, instance, vif):
         pass
 
