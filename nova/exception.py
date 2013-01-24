@@ -226,6 +226,20 @@ class Invalid(NovaException):
     code = 400
 
 
+class InvalidBDM(Invalid):
+    message = _("Block Device Mapping is Invalid.")
+
+
+class InvalidBDMSnapshot(InvalidBDM):
+    message = _("Block Device Mapping is Invalid: "
+                "failed to get snapshot %(id)s.")
+
+
+class InvalidBDMVolume(InvalidBDM):
+    message = _("Block Device Mapping is Invalid: "
+                "failed to get volume %(id)s.")
+
+
 class VolumeUnattached(Invalid):
     message = _("Volume %(volume_id)s is not attached to anything")
 
