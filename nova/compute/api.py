@@ -390,6 +390,22 @@ class API(BaseAPI):
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 
+        # Validate the correct devices have been specified
+        for bdm in block_device_mapping:
+            # NOTE(vish): For now, just make sure the volumes are accessible.
+            snapshot_id = bdm.get('snapshot_id')
+            volume_id = bdm.get('volume_id')
+            if volume_id is not None:
+                try:
+                    self.volume_api.get(context, volume_id)
+                except Exception:
+                    raise exception.InvalidBDMVolume(id=volume_id)
+            elif snapshot_id is not None:
+                try:
+                    self.volume_api.get_snapshot(context, snapshot_id)
+                except Exception:
+                    raise exception.InvalidBDMSnapshot(id=snapshot_id)
+
         if create_instance_here:
             instance = self.create_db_entry_for_new_instance(
                     context, instance_type, image, base_options,
