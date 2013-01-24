@@ -172,27 +172,43 @@ def model_query(context, model, *args, **kwargs):
     :param project_only: if present and context is user-type, then restrict
             query to match the context's project_id. If set to 'allow_none',
             restriction includes project_id = None.
+    :param base_model: Where model_query is passed a "model" parameter which is
+            not a subclass of NovaBase, we should pass an extra base_model
+            parameter that is a subclass of NovaBase and corresponds to the
+            model parameter.
     """
     session = kwargs.get('session') or get_session()
     read_deleted = kwargs.get('read_deleted') or context.read_deleted
     project_only = kwargs.get('project_only', False)
 
+    def issubclassof_nova_base(obj):
+        return isinstance(obj, type) and issubclass(obj, models.NovaBase)
+
+    base_model = model
+    if not issubclassof_nova_base(base_model):
+        base_model = kwargs.get('base_model', None)
+        if not issubclassof_nova_base(base_model):
+            raise Exception(_("model or base_model parameter should be "
+                              "subclass of NovaBase"))
+
     query = session.query(model, *args)
 
+    default_deleted_value = base_model.__mapper__.c.deleted.default.arg
     if read_deleted == 'no':
-        query = query.filter_by(deleted=False)
+        query = query.filter(base_model.deleted == default_deleted_value)
     elif read_deleted == 'yes':
         pass  # omit the filter to include deleted and active
     elif read_deleted == 'only':
-        query = query.filter_by(deleted=True)
+        query = query.filter(base_model.deleted != default_deleted_value)
     else:
-        raise Exception(
-                _("Unrecognized read_deleted value '%s'") % read_deleted)
+        raise Exception(_("Unrecognized read_deleted value '%s'")
+                            % read_deleted)
 
     if is_user_context(context) and project_only:
         if project_only == 'allow_none':
-            query = query.filter(or_(model.project_id == context.project_id,
-                                     model.project_id == None))
+            query = query.\
+                filter(or_(base_model.project_id == context.project_id,
+                           base_model.project_id == None))
         else:
             query = query.filter_by(project_id=context.project_id)
 
@@ -408,7 +424,8 @@ def service_get_all_compute_sorted(context):
         label = 'instance_cores'
         subq = model_query(context, models.Instance.host,
                            func.sum(models.Instance.vcpus).label(label),
-                           session=session, read_deleted="no").\
+                           base_model=models.Instance, session=session,
+                           read_deleted="no").\
                        group_by(models.Instance.host).\
                        subquery()
         return _service_get_all_topic_subquery(context,
@@ -540,7 +557,7 @@ def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
         # prune un-touched old stats:
         for stat in statmap.values():
             session.add(stat)
-            stat.update({'deleted': True})
+            stat.soft_delete(session=session)
 
     # add new and updated stats
     for stat in stats:
@@ -563,10 +580,9 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
 
 def compute_node_get_by_host(context, host):
     """Get all capacity entries for the given host."""
-    result = model_query(context, models.ComputeNode).\
+    result = model_query(context, models.ComputeNode, read_deleted="no").\
             join('service').\
             filter(models.Service.host == host).\
-            filter_by(deleted=False).\
             first()
     return result
 
@@ -586,6 +602,7 @@ def compute_node_statistics(context):
                          func.sum(models.ComputeNode.current_workload),
                          func.sum(models.ComputeNode.running_vms),
                          func.sum(models.ComputeNode.disk_available_least),
+                         base_model=models.ComputeNode,
                          read_deleted="no").first()
 
     # Build a dict of the info--making no assumptions about result
@@ -660,7 +677,8 @@ def floating_ip_get(context, id):
 @require_context
 def floating_ip_get_pools(context):
     pools = []
-    for result in model_query(context, models.FloatingIp.pool).distinct():
+    for result in model_query(context, models.FloatingIp.pool,
+                              base_model=models.FloatingIp).distinct():
         pools.append({'name': result[0]})
     return pools
 
@@ -1094,30 +1112,31 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     #             host; i.e. the network host or the instance
     #             host matches. Two queries necessary because
     #             join with update doesn't work.
-    host_filter = or_(and_(models.Instance.host == host,
-                           models.Network.multi_host == True),
-                      models.Network.host == host)
-    result = session.query(models.FixedIp.id).\
-                     filter(models.FixedIp.deleted == False).\
-                     filter(models.FixedIp.allocated == False).\
-                     filter(models.FixedIp.updated_at < time).\
-                     join((models.Network,
-                           models.Network.id == models.FixedIp.network_id)).\
-                     join((models.Instance,
-                           models.Instance.uuid ==
-                               models.FixedIp.instance_uuid)).\
-                     filter(host_filter).\
-                     all()
-    fixed_ip_ids = [fip[0] for fip in result]
-    if not fixed_ip_ids:
-        return 0
-    result = model_query(context, models.FixedIp, session=session).\
-                     filter(models.FixedIp.id.in_(fixed_ip_ids)).\
-                     update({'instance_uuid': None,
-                             'leased': False,
-                             'updated_at': timeutils.utcnow()},
-                             synchronize_session='fetch')
-    return result
+    with session.begin():
+        host_filter = or_(and_(models.Instance.host == host,
+                               models.Network.multi_host == True),
+                          models.Network.host == host)
+        result = model_query(context, models.FixedIp.id,
+                             base_model=models.FixedIp, read_deleted="no",
+                             session=session).\
+                filter(models.FixedIp.allocated == False).\
+                filter(models.FixedIp.updated_at < time).\
+                join((models.Network,
+                      models.Network.id == models.FixedIp.network_id)).\
+                join((models.Instance,
+                      models.Instance.uuid == models.FixedIp.instance_uuid)).\
+                filter(host_filter).\
+                all()
+        fixed_ip_ids = [fip[0] for fip in result]
+        if not fixed_ip_ids:
+            return 0
+        result = model_query(context, models.FixedIp, session=session).\
+                             filter(models.FixedIp.id.in_(fixed_ip_ids)).\
+                             update({'instance_uuid': None,
+                                     'leased': False,
+                                     'updated_at': timeutils.utcnow()},
+                                    synchronize_session='fetch')
+        return result
 
 
 @require_context
@@ -1468,7 +1487,7 @@ def instance_data_get_for_project(context, project_id, session=None):
                          func.count(models.Instance.id),
                          func.sum(models.Instance.vcpus),
                          func.sum(models.Instance.memory_mb),
-                         read_deleted="no",
+                         base_model=models.Instance,
                          session=session).\
                      filter_by(project_id=project_id).\
                      first()
@@ -1593,12 +1612,12 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
         # Instances can be soft or hard deleted and the query needs to
         # include or exclude both
         if filters.pop('deleted'):
-            deleted = or_(models.Instance.deleted == True,
+            deleted = or_(models.Instance.deleted == models.Instance.id,
                           models.Instance.vm_state == vm_states.SOFT_DELETED)
             query_prefix = query_prefix.filter(deleted)
         else:
             query_prefix = query_prefix.\
-                    filter_by(deleted=False).\
+                    filter_by(deleted=0).\
                     filter(models.Instance.vm_state != vm_states.SOFT_DELETED)
 
     if not context.is_admin:
@@ -2122,19 +2141,21 @@ def network_create_safe(context, values):
 def network_delete_safe(context, network_id):
     session = get_session()
     with session.begin():
-        result = session.query(models.FixedIp).\
+        result = model_query(context, models.FixedIp, session=session,
+                             read_deleted="no").\
                          filter_by(network_id=network_id).\
-                         filter_by(deleted=False).\
                          filter_by(allocated=True).\
                          count()
         if result != 0:
             raise exception.NetworkInUse(network_id=network_id)
         network_ref = network_get(context, network_id=network_id,
                                   session=session)
-        session.query(models.FixedIp).\
+
+        model_query(context, models.FixedIp, session=session,
+                    read_deleted="no").\
                 filter_by(network_id=network_id).\
-                filter_by(deleted=False).\
                 soft_delete()
+
         session.delete(network_ref)
 
 
@@ -2213,9 +2234,9 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     #             without regenerating the whole list
     vif_and = and_(models.VirtualInterface.id ==
                    models.FixedIp.virtual_interface_id,
-                   models.VirtualInterface.deleted == False)
+                   models.VirtualInterface.deleted == 0)
     inst_and = and_(models.Instance.uuid == models.FixedIp.instance_uuid,
-                    models.Instance.deleted == False)
+                    models.Instance.deleted == 0)
     session = get_session()
     query = session.query(models.FixedIp.address,
                           models.FixedIp.instance_uuid,
@@ -2225,7 +2246,7 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           models.Instance.hostname,
                           models.Instance.updated_at,
                           models.Instance.created_at).\
-                          filter(models.FixedIp.deleted == False).\
+                          filter(models.FixedIp.deleted == 0).\
                           filter(models.FixedIp.network_id == network_id).\
                           filter(models.FixedIp.allocated == True).\
                           join((models.VirtualInterface, vif_and)).\
@@ -2326,6 +2347,7 @@ def network_get_all_by_host(context, host):
     fixed_host_filter = or_(models.FixedIp.host == host,
                             models.Instance.host == host)
     fixed_ip_query = model_query(context, models.FixedIp.network_id,
+                                 base_model=models.FixedIp,
                                  session=session).\
                      outerjoin((models.VirtualInterface,
                            models.VirtualInterface.id ==
@@ -3138,13 +3160,14 @@ def security_group_in_use(context, group_id):
     with session.begin():
         # Are there any instances that haven't been deleted
         # that include this group?
-        inst_assoc = session.query(models.SecurityGroupInstanceAssociation).\
-                filter_by(security_group_id=group_id).\
-                filter_by(deleted=False).\
-                all()
+        inst_assoc = model_query(context,
+                                 models.SecurityGroupInstanceAssociation,
+                                 read_deleted="no", session=session).\
+                        filter_by(security_group_id=group_id).\
+                        all()
         for ia in inst_assoc:
-            num_instances = session.query(models.Instance).\
-                        filter_by(deleted=False).\
+            num_instances = model_query(context, models.Instance,
+                                        session=session, read_deleted="no").\
                         filter_by(uuid=ia.instance_uuid).\
                         count()
             if num_instances:
@@ -3595,7 +3618,7 @@ def instance_type_get_all(context, inactive=False, filters=None):
         if filters['is_public'] and context.project_id is not None:
             the_filter.extend([
                 models.InstanceTypes.projects.any(
-                    project_id=context.project_id, deleted=False)
+                    project_id=context.project_id, deleted=0)
             ])
         if len(the_filter) > 1:
             query = query.filter(or_(*the_filter))
@@ -4037,7 +4060,8 @@ def _instance_type_extra_specs_get_query(context, flavor_id,
                                          session=None):
     # Two queries necessary because join with update doesn't work.
     t = model_query(context, models.InstanceTypes.id,
-                    session=session, read_deleted="no").\
+                    base_model=models.InstanceTypes, session=session,
+                    read_deleted="no").\
               filter(models.InstanceTypes.flavorid == flavor_id).\
               subquery()
     return model_query(context, models.InstanceTypeExtraSpecs,
@@ -4091,6 +4115,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
     session = get_session()
     with session.begin():
         instance_type_id = model_query(context, models.InstanceTypes.id,
+                                       base_model=models.InstanceTypes,
                                        session=session, read_deleted="no").\
             filter(models.InstanceTypes.flavorid == flavor_id).\
             first()
