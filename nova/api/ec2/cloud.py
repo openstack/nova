@@ -991,18 +991,22 @@ class CloudController(object):
     def describe_instances(self, context, **kwargs):
         # Optional DescribeInstances argument
         instance_id = kwargs.get('instance_id', None)
-        instances = self._enforce_valid_instance_ids(context, instance_id)
-        return self._format_describe_instances(context,
-                                               instance_id=instance_id,
-                                               instance_cache=instances)
-
-    def describe_instances_v6(self, context, **kwargs):
-        # Optional DescribeInstancesV6 argument
-        instance_id = kwargs.get('instance_id', None)
+        filters = kwargs.get('filter', None)
         instances = self._enforce_valid_instance_ids(context, instance_id)
         return self._format_describe_instances(context,
                                                instance_id=instance_id,
                                                instance_cache=instances,
+                                               filter=filters)
+
+    def describe_instances_v6(self, context, **kwargs):
+        # Optional DescribeInstancesV6 argument
+        instance_id = kwargs.get('instance_id', None)
+        filters = kwargs.get('filter', None)
+        instances = self._enforce_valid_instance_ids(context, instance_id)
+        return self._format_describe_instances(context,
+                                               instance_id=instance_id,
+                                               instance_cache=instances,
+                                               filter=filters,
                                                use_v6=True)
 
     def _format_describe_instances(self, context, **kwargs):
