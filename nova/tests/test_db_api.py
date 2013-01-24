@@ -1510,6 +1510,25 @@ class MigrationTestCase(test.TestCase):
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
 
 
+class TestFixedIPGetByNetworkHost(test.TestCase):
+    def test_not_found_exception(self):
+        ctxt = context.get_admin_context()
+
+        self.assertRaises(
+            exception.FixedIpNotFoundForNetworkHost,
+            db.fixed_ip_get_by_network_host,
+            ctxt, 1, 'ignore')
+
+    def test_fixed_ip_found(self):
+        ctxt = context.get_admin_context()
+        db.fixed_ip_create(ctxt, dict(network_id=1, host='host'))
+
+        fip = db.fixed_ip_get_by_network_host(ctxt, 1, 'host')
+
+        self.assertEquals(1, fip['network_id'])
+        self.assertEquals('host', fip['host'])
+
+
 class TestIpAllocation(test.TestCase):
 
     def setUp(self):

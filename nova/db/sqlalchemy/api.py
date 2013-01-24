@@ -1245,7 +1245,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
                  first()
 
     if not result:
-        raise exception.FixedIpNotFoundForNetworkHost(network_uuid=network_id,
+        raise exception.FixedIpNotFoundForNetworkHost(network_id=network_id,
                                                       host=host)
     return result
 
