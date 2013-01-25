@@ -22,13 +22,13 @@ import re
 import urllib
 import uuid as uuid_lib
 
-from coverage import coverage
+import coverage
 from lxml import etree
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.cloudpipe.pipelib import CloudPipe
+from nova.cloudpipe import pipelib
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -761,7 +761,7 @@ class CoverageExtJsonTests(ApiSampleTestBase):
 
         self.stubs.Set(coverage_ext.CoverageController, '_check_coverage',
                        _fake_check_coverage)
-        self.stubs.Set(coverage, 'xml_report', _fake_xml_report)
+        self.stubs.Set(coverage.coverage, 'xml_report', _fake_xml_report)
 
     def test_start_coverage(self):
         # Start coverage data collection.
@@ -1512,7 +1512,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
             return {'vpn_public_address': '127.0.0.1',
                     'vpn_public_port': 22}
 
-        self.stubs.Set(CloudPipe, 'get_encoded_zip', get_user_data)
+        self.stubs.Set(pipelib.CloudPipe, 'get_encoded_zip', get_user_data)
         self.stubs.Set(network_manager.NetworkManager, "get_network",
                        network_api_get)
 

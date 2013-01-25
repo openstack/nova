@@ -35,7 +35,7 @@ from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql import func
 
 from nova import block_device
-from nova.common.sqlalchemyutils import paginate_query
+from nova.common import sqlalchemyutils
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
@@ -1645,7 +1645,8 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
             marker = _instance_get_by_uuid(context, marker, session=session)
         except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
-    query_prefix = paginate_query(query_prefix, models.Instance, limit,
+    query_prefix = sqlalchemyutils.paginate_query(query_prefix,
+                           models.Instance, limit,
                            [sort_key, 'created_at', 'id'],
                            marker=marker,
                            sort_dir=sort_dir)

@@ -16,7 +16,7 @@
 
 import telnetlib
 
-from coverage import coverage
+import coverage
 import webob
 
 from nova.api.openstack.compute.contrib import coverage_ext
@@ -48,8 +48,8 @@ class CoverageExtensionTest(test.TestCase):
         super(CoverageExtensionTest, self).setUp()
         self.stubs.Set(telnetlib.Telnet, 'write', fake_telnet)
         self.stubs.Set(telnetlib.Telnet, 'expect', fake_telnet)
-        self.stubs.Set(coverage, 'report', fake_report)
-        self.stubs.Set(coverage, 'xml_report', fake_xml_report)
+        self.stubs.Set(coverage.coverage, 'report', fake_report)
+        self.stubs.Set(coverage.coverage, 'xml_report', fake_xml_report)
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'fake',
                                                      is_admin=True)

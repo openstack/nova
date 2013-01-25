@@ -20,7 +20,7 @@ import netaddr
 import sys
 import traceback
 
-from nova.compute.manager import ComputeManager
+from nova.compute import manager
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -159,7 +159,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
             # NOTE(sdague) the try block is to make it easier to debug a
             # failure by knowing which driver broke
             try:
-                cm = ComputeManager()
+                cm = manager.ComputeManager()
             except Exception as e:
                 self.fail("Couldn't load driver %s - %s" % (cls, e))
 
@@ -173,7 +173,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
             raise test.TestingException()
 
         self.stubs.Set(sys, 'exit', _fake_exit)
-        self.assertRaises(test.TestingException, ComputeManager)
+        self.assertRaises(test.TestingException, manager.ComputeManager)
 
 
 class _VirtDriverTestCase(_FakeDriverBackendTestCase):

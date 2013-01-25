@@ -25,7 +25,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
-from nova.scheduler.filters.trusted_filter import AttestationService
+from nova.scheduler.filters import trusted_filter
 from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
@@ -242,7 +242,8 @@ class HostFiltersTestCase(test.TestCase):
         self.oat_data = ''
         self.oat_attested = False
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(AttestationService, '_request', self.fake_oat_request)
+        self.stubs.Set(trusted_filter.AttestationService, '_request',
+                self.fake_oat_request)
         self.context = context.RequestContext('fake', 'fake')
         self.json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],

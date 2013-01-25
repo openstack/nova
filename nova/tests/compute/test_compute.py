@@ -58,7 +58,7 @@ import nova.policy
 from nova import quota
 from nova import test
 from nova.tests.compute import fake_resource_tracker
-from nova.tests.db.fakes import FakeModel
+from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
@@ -5879,11 +5879,11 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
 
         def rule_get(*args, **kwargs):
-            mock_rule = FakeModel({'parent_group_id': 1})
+            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
             return [mock_rule]
 
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': [instance]})
+            mock_group = db_fakes.FakeModel({'instances': [instance]})
             return mock_group
 
         self.stubs.Set(
@@ -5908,11 +5908,11 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
 
         def rule_get(*args, **kwargs):
-            mock_rule = FakeModel({'parent_group_id': 1})
+            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
             return [mock_rule]
 
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': [instance]})
+            mock_group = db_fakes.FakeModel({'instances': [instance]})
             return mock_group
 
         self.stubs.Set(
@@ -5935,11 +5935,11 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_secgroup_refresh_none(self):
         def rule_get(*args, **kwargs):
-            mock_rule = FakeModel({'parent_group_id': 1})
+            mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
             return [mock_rule]
 
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': []})
+            mock_group = db_fakes.FakeModel({'instances': []})
             return mock_group
 
         self.stubs.Set(
@@ -5957,7 +5957,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
 
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': [instance]})
+            mock_group = db_fakes.FakeModel({'instances': [instance]})
             return mock_group
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
@@ -5978,7 +5978,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance()
 
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': [instance]})
+            mock_group = db_fakes.FakeModel({'instances': [instance]})
             return mock_group
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
@@ -5997,7 +5997,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_secrule_refresh_none(self):
         def group_get(*args, **kwargs):
-            mock_group = FakeModel({'instances': []})
+            mock_group = db_fakes.FakeModel({'instances': []})
             return mock_group
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)

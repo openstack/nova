@@ -14,4 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.virt.libvirt.driver import LibvirtDriver
+from nova.virt.libvirt import driver
+
+LibvirtDriver = driver.LibvirtDriver
