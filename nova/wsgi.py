@@ -75,7 +75,7 @@ class Server(object):
 
     def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
                        protocol=eventlet.wsgi.HttpProtocol, backlog=128,
-                       use_ssl=False):
+                       use_ssl=False, max_url_len=None):
         """Initialize, but do not start, a WSGI server.
 
         :param name: Pretty name for logging.
@@ -84,6 +84,7 @@ class Server(object):
         :param port: Port number to server the application.
         :param pool_size: Maximum number of eventlets to spawn concurrently.
         :param backlog: Maximum number of queued connections.
+        :param max_url_len: Maximum length of permitted URLs.
         :returns: None
         :raises: nova.exception.InvalidInput
         """
@@ -95,6 +96,7 @@ class Server(object):
         self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
         self._wsgi_logger = logging.WritableLogger(self._logger)
         self._use_ssl = use_ssl
+        self._max_url_len = max_url_len
 
         if backlog < 1:
             raise exception.InvalidInput(
@@ -177,13 +179,20 @@ class Server(object):
                             ":%(port)s with SSL support") % self.__dict__)
                 raise
 
-        self._server = eventlet.spawn(eventlet.wsgi.server,
-                                      self._socket,
-                                      self.app,
-                                      protocol=self._protocol,
-                                      custom_pool=self._pool,
-                                      log=self._wsgi_logger,
-                                      log_format=CONF.wsgi_log_format)
+        wsgi_kwargs = {
+            'func': eventlet.wsgi.server,
+            'sock': self._socket,
+            'site': self.app,
+            'protocol': self._protocol,
+            'custom_pool': self._pool,
+            'log': self._wsgi_logger,
+            'log_format': CONF.wsgi_log_format
+            }
+
+        if self._max_url_len:
+            wsgi_kwargs['url_length_limit'] = self._max_url_len
+
+        self._server = eventlet.spawn(**wsgi_kwargs)
 
     def stop(self):
         """Stop this server.

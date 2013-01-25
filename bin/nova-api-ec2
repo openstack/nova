@@ -41,6 +41,6 @@ if __name__ == '__main__':
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
-    server = service.WSGIService('ec2')
+    server = service.WSGIService('ec2', max_url_len=16384)
     service.serve(server, workers=server.workers)
     service.wait()
