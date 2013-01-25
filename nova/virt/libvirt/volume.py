@@ -17,6 +17,7 @@
 
 """Volume drivers for libvirt."""
 
+import hashlib
 import os
 import time
 
@@ -24,6 +25,7 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova import paths
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import utils as virtutils
@@ -40,7 +42,14 @@ volume_opts = [
     cfg.StrOpt('rbd_secret_uuid',
                default=None,
                help='the libvirt uuid of the secret for the rbd_user'
-                    'volumes')
+                    'volumes'),
+    cfg.StrOpt('nfs_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Dir where the nfs volume is mounted on the compute node'),
+    cfg.StrOpt('nfs_mount_options',
+               default=None,
+               help='Mount options passed to the nfs client. See section '
+                    'of the nfs man page for details'),
     ]
 
 CONF = cfg.CONF
@@ -246,3 +255,63 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                check_exit_code=[0, 21, 255])
             self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
                                check_exit_code=[0, 21, 255])
+
+
+class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
+    """Class implements libvirt part of volume driver for NFS."""
+
+    def __init__(self, connection):
+        """Create back-end to nfs."""
+        super(LibvirtNFSVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def connect_volume(self, connection_info, mount_device):
+        """Connect the volume. Returns xml for libvirt."""
+        conf = super(LibvirtNFSVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+        path = self._ensure_mounted(connection_info['data']['export'])
+        path = os.path.join(path, connection_info['data']['name'])
+        conf.source_type = 'file'
+        conf.source_path = path
+        return conf
+
+    def _ensure_mounted(self, nfs_export):
+        """
+        @type nfs_export: string
+        """
+        mount_path = os.path.join(CONF.nfs_mount_point_base,
+                                  self.get_hash_str(nfs_export))
+        self._mount_nfs(mount_path, nfs_export, ensure=True)
+        return mount_path
+
+    def _mount_nfs(self, mount_path, nfs_share, ensure=False):
+        """Mount nfs export to mount path."""
+        if not self._path_exists(mount_path):
+            utils.execute('mkdir', '-p', mount_path)
+
+        # Construct the NFS mount command.
+        nfs_cmd = ['mount', '-t', 'nfs']
+        if CONF.nfs_mount_options is not None:
+            nfs_cmd.extend(['-o', CONF.nfs_mount_options])
+        nfs_cmd.extend([nfs_share, mount_path])
+
+        try:
+            utils.execute(*nfs_cmd, run_as_root=True)
+        except exception.ProcessExecutionError as exc:
+            if ensure and 'already mounted' in exc.message:
+                LOG.warn(_("%s is already mounted"), nfs_share)
+            else:
+                raise
+
+    @staticmethod
+    def get_hash_str(base_str):
+        """returns string that represents hash of base_str (in hex format)."""
+        return hashlib.md5(base_str).hexdigest()
+
+    @staticmethod
+    def _path_exists(path):
+        """Check path."""
+        try:
+            return utils.execute('stat', path, run_as_root=True)
+        except exception.ProcessExecutionError:
+            return False
