@@ -1357,9 +1357,6 @@ class API(base.Base):
             None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
         """
-        instance = self.update(context, instance,
-                               task_state=task_states.IMAGE_BACKUP,
-                               expected_task_state=None)
         if image_id:
             # The image entry has already been created, so just pull the
             # metadata.
@@ -1368,6 +1365,11 @@ class API(base.Base):
             image_meta = self._create_image(context, instance, name,
                     'backup', backup_type=backup_type,
                     rotation=rotation, extra_properties=extra_properties)
+
+        instance = self.update(context, instance,
+                               task_state=task_states.IMAGE_BACKUP,
+                               expected_task_state=None)
+
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
                 image_id=image_meta['id'], image_type='backup',
                 backup_type=backup_type, rotation=rotation)
@@ -1386,9 +1388,6 @@ class API(base.Base):
 
         :returns: A dict containing image metadata
         """
-        instance = self.update(context, instance,
-                               task_state=task_states.IMAGE_SNAPSHOT,
-                               expected_task_state=None)
         if image_id:
             # The image entry has already been created, so just pull the
             # metadata.
@@ -1396,6 +1395,11 @@ class API(base.Base):
         else:
             image_meta = self._create_image(context, instance, name,
                     'snapshot', extra_properties=extra_properties)
+
+        instance = self.update(context, instance,
+                               task_state=task_states.IMAGE_SNAPSHOT,
+                               expected_task_state=None)
+
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
                 image_id=image_meta['id'], image_type='snapshot')
         return image_meta
