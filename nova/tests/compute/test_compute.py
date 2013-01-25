@@ -3610,6 +3610,46 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_snapshot_image_service_fails(self):
+        # Ensure task_state remains at None if image service fails.
+        def fake_create(*args, **kwargs):
+            raise test.TestingException()
+
+        restore = getattr(fake_image._FakeImageService, 'create')
+        self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
+
+        instance = self._create_fake_instance()
+        self.assertRaises(test.TestingException,
+                          self.compute_api.snapshot,
+                          self.context,
+                          instance,
+                          'no_image_snapshot')
+
+        self.stubs.Set(fake_image._FakeImageService, 'create', restore)
+        db_instance = db.instance_get_all(context.get_admin_context())[0]
+        self.assertTrue(db_instance['task_state'] is None)
+
+    def test_backup_image_service_fails(self):
+        # Ensure task_state remains at None if image service fails.
+        def fake_create(*args, **kwargs):
+            raise test.TestingException()
+
+        restore = getattr(fake_image._FakeImageService, 'create')
+        self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
+
+        instance = self._create_fake_instance()
+        self.assertRaises(test.TestingException,
+                          self.compute_api.backup,
+                          self.context,
+                          instance,
+                          'no_image_backup',
+                          'DAILY',
+                          0)
+
+        self.stubs.Set(fake_image._FakeImageService, 'create', restore)
+        db_instance = db.instance_get_all(context.get_admin_context())[0]
+        self.assertTrue(db_instance['task_state'] is None)
+
     def test_backup(self):
         """Can't backup an instance which is already being backed up."""
         instance = self._create_fake_instance()
