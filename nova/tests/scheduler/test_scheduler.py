@@ -31,6 +31,7 @@ from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
+from nova.image import glance
 from nova.openstack.common import jsonutils
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
@@ -39,6 +40,7 @@ from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
 from nova.tests import fake_instance_actions
+from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
 
@@ -337,6 +339,22 @@ class SchedulerTestCase(test.TestCase):
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
         self.stubs.Set(compute_api, 'API', fakes.FakeComputeAPI)
+
+        def fake_show(meh, context, id):
+            if id:
+                return {'id': id, 'min_disk': None, 'min_ram': None,
+                        'name': 'fake_name',
+                        'status': 'active',
+                        'properties': {'kernel_id': 'fake_kernel_id',
+                                       'ramdisk_id': 'fake_ramdisk_id',
+                                       'something_else': 'meow'}}
+            else:
+                raise exception.ImageNotFound(image_id=id)
+
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.image_service = glance.get_default_image_service()
+
         self.driver = self.driver_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
@@ -384,7 +402,8 @@ class SchedulerTestCase(test.TestCase):
                 'ephemeral_gb': 0,
                 'vm_state': '',
                 'task_state': '',
-                'instance_type': {'memory_mb': 1024}}
+                'instance_type': {'memory_mb': 1024},
+                'image_ref': 'fake-image-ref'}
 
     def test_live_migration_basic(self):
         # Test basic schedule_live_migration functionality.
@@ -402,7 +421,8 @@ class SchedulerTestCase(test.TestCase):
         instance = jsonutils.to_primitive(self._live_migration_instance())
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance, dest)
+        self.driver._live_migration_dest_check(self.context, instance,
+                                               dest).AndReturn(dest)
         self.driver._live_migration_common_check(self.context, instance,
                                                  dest)
         self.driver.compute_rpcapi.check_can_live_migrate_destination(
@@ -595,17 +615,12 @@ class SchedulerTestCase(test.TestCase):
         # Confirms exception raises in case dest and src is same host.
 
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
-        self.mox.StubOutWithMock(servicegroup.API, 'service_is_up')
         block_migration = False
         instance = self._live_migration_instance()
         # make dest same as src
         dest = instance['host']
 
         self.driver._live_migration_src_check(self.context, instance)
-        db.service_get_by_compute_host(self.context,
-                dest).AndReturn('fake_service3')
-        self.servicegroup_api.service_is_up('fake_service3').AndReturn(True)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnableToMigrateToSelf,
@@ -668,7 +683,8 @@ class SchedulerTestCase(test.TestCase):
         instance = self._live_migration_instance()
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance, dest)
+        self.driver._live_migration_dest_check(self.context, instance,
+                                               dest).AndReturn(dest)
 
         db.service_get_by_compute_host(self.context, dest).AndReturn(
                 {'compute_node': [{'hypervisor_type': 'xen',
@@ -700,7 +716,8 @@ class SchedulerTestCase(test.TestCase):
         instance = self._live_migration_instance()
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance, dest)
+        self.driver._live_migration_dest_check(self.context, instance,
+                                               dest).AndReturn(dest)
 
         db.service_get_by_compute_host(self.context, dest).AndReturn(
                 {'compute_node': [{'hypervisor_type': 'xen',
@@ -715,6 +732,94 @@ class SchedulerTestCase(test.TestCase):
                 instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
+
+    def test_live_migration_dest_check_auto_set_host(self):
+        # Confirm dest is picked by scheduler if not set.
+        self.mox.StubOutWithMock(self.driver, 'select_hosts')
+
+        instance = self._live_migration_instance()
+        request_spec = {'instance_properties': instance,
+                        'instance_type': instance['instance_type'],
+                        'instance_uuids': [instance['uuid']],
+                        'image': self.image_service.show(self.context,
+                                                         instance['image_ref'])
+                        }
+        ignore_hosts = [instance['host']]
+        filter_properties = {'ignore_hosts': ignore_hosts}
+
+        self.driver.select_hosts(self.context, request_spec,
+                                 filter_properties).AndReturn(['fake_host2'])
+
+        self.mox.ReplayAll()
+        result = self.driver._live_migration_dest_check(self.context, instance,
+                                                        None, ignore_hosts)
+        self.assertEqual('fake_host2', result)
+
+    def test_live_migration_auto_set_dest(self):
+        # Confirm scheduler picks target host if none given.
+        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
+        self.mox.StubOutWithMock(self.driver, 'select_hosts')
+        self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
+        self.mox.StubOutWithMock(rpc, 'call')
+        self.mox.StubOutWithMock(self.driver.compute_rpcapi, 'live_migration')
+
+        dest = None
+        block_migration = False
+        disk_over_commit = False
+        instance = self._live_migration_instance()
+        request_spec = {'instance_properties': instance,
+                        'instance_type': instance['instance_type'],
+                        'instance_uuids': [instance['uuid']],
+                        'image': self.image_service.show(self.context,
+                                                         instance['image_ref'])
+                        }
+
+        self.driver._live_migration_src_check(self.context, instance)
+
+        # First selected host raises exception.InvalidHypervisorType
+        self.driver.select_hosts(self.context, request_spec,
+                {'ignore_hosts': [instance['host']]}).AndReturn(['fake_host2'])
+        self.driver._live_migration_common_check(self.context, instance,
+                'fake_host2').AndRaise(exception.InvalidHypervisorType())
+
+        # Second selected host raises exception.InvalidCPUInfo
+        self.driver.select_hosts(self.context, request_spec,
+                {'ignore_hosts': [instance['host'],
+                                  'fake_host2']}).AndReturn(['fake_host3'])
+        self.driver._live_migration_common_check(self.context, instance,
+                                                 'fake_host3')
+        rpc.call(self.context, "compute.fake_host3",
+                   {"method": 'check_can_live_migrate_destination',
+                    "args": {'instance': instance,
+                             'block_migration': block_migration,
+                             'disk_over_commit': disk_over_commit},
+                    "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                 None).AndRaise(exception.InvalidCPUInfo(reason=""))
+
+        # Third selected host pass all checks
+        self.driver.select_hosts(self.context, request_spec,
+                {'ignore_hosts': [instance['host'],
+                                  'fake_host2',
+                                  'fake_host3']}).AndReturn(['fake_host4'])
+        self.driver._live_migration_common_check(self.context, instance,
+                                                 'fake_host4')
+        rpc.call(self.context, "compute.fake_host4",
+                   {"method": 'check_can_live_migrate_destination',
+                    "args": {'instance': instance,
+                             'block_migration': block_migration,
+                             'disk_over_commit': disk_over_commit},
+                    "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                 None).AndReturn({})
+        self.driver.compute_rpcapi.live_migration(self.context,
+                host=instance['host'], instance=instance, dest='fake_host4',
+                block_migration=block_migration, migrate_data={})
+
+        self.mox.ReplayAll()
+        result = self.driver.schedule_live_migration(self.context,
+                instance=instance, dest=dest,
+                block_migration=block_migration,
+                disk_over_commit=disk_over_commit)
+        self.assertEqual(result, None)
 
     def test_handle_schedule_error_adds_instance_fault(self):
         instance = {'uuid': 'fake-uuid'}

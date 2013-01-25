@@ -2367,7 +2367,7 @@ class API(base.Base):
                      disk_over_commit, host_name):
         """Migrate a server lively to a new host."""
         LOG.debug(_("Going to try to live migrate instance to %s"),
-                  host_name, instance=instance)
+                  host_name or "another host", instance=instance)
 
         instance = self.update(context, instance,
                                task_state=task_states.MIGRATING,

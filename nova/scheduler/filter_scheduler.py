@@ -139,8 +139,12 @@ class FilterScheduler(driver.Scheduler):
 
     def select_hosts(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts."""
-        return [host.obj.host for host in self._schedule(context, request_spec,
-            filter_properties)]
+        instance_uuids = request_spec.get('instance_uuids')
+        hosts = [host.obj.host for host in self._schedule(context,
+            request_spec, filter_properties, instance_uuids)]
+        if not hosts:
+            raise exception.NoValidHost(reason="")
+        return hosts
 
     def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,

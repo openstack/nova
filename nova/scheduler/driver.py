@@ -30,6 +30,7 @@ from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova import db
 from nova import exception
+from nova.image import glance
 from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
@@ -121,6 +122,7 @@ class Scheduler(object):
                 CONF.scheduler_host_manager)
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
+        self.image_service = glance.get_default_image_service()
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Process a capability update from a service node."""
@@ -182,10 +184,33 @@ class Scheduler(object):
         """
         # Check we can do live migration
         self._live_migration_src_check(context, instance)
-        self._live_migration_dest_check(context, instance, dest)
-        self._live_migration_common_check(context, instance, dest)
-        migrate_data = self.compute_rpcapi.check_can_live_migrate_destination(
-                context, instance, dest, block_migration, disk_over_commit)
+
+        if dest is None:
+            # Let scheduler select a dest host, retry next best until success
+            # or no more valid hosts.
+            ignore_hosts = [instance['host']]
+            while dest is None:
+                dest = self._live_migration_dest_check(context, instance, dest,
+                                                       ignore_hosts)
+                try:
+                    self._live_migration_common_check(context, instance, dest)
+                    migrate_data = self.compute_rpcapi.\
+                        check_can_live_migrate_destination(context, instance,
+                                                           dest,
+                                                           block_migration,
+                                                           disk_over_commit)
+                except exception.Invalid:
+                    ignore_hosts.append(dest)
+                    dest = None
+                    continue
+        else:
+            # Test the given dest host
+            self._live_migration_dest_check(context, instance, dest)
+            self._live_migration_common_check(context, instance, dest)
+            migrate_data = self.compute_rpcapi.\
+                check_can_live_migrate_destination(context, instance, dest,
+                                                   block_migration,
+                                                   disk_over_commit)
 
         # Perform migration
         src = instance['host']
@@ -218,13 +243,33 @@ class Scheduler(object):
         if not self.servicegroup_api.service_is_up(service):
             raise exception.ComputeServiceUnavailable(host=src)
 
-    def _live_migration_dest_check(self, context, instance_ref, dest):
+    def _live_migration_dest_check(self, context, instance_ref, dest,
+                                   ignore_hosts=None):
         """Live migration check routine (for destination host).
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
+        :param ignore_hosts: hosts that should be avoided as dest host
         """
+
+        # If dest is not specified, have scheduler pick one.
+        if dest is None:
+            image = self.image_service.show(context, instance_ref['image_ref'])
+            request_spec = {'instance_properties': instance_ref,
+                            'instance_type': instance_ref['instance_type'],
+                            'instance_uuids': [instance_ref['uuid']],
+                            'image': image}
+            filter_properties = {'ignore_hosts': ignore_hosts}
+            return self.select_hosts(context, request_spec,
+                                     filter_properties)[0]
+
+        # Checking whether The host where instance is running
+        # and dest is not same.
+        src = instance_ref['host']
+        if dest == src:
+            raise exception.UnableToMigrateToSelf(
+                    instance_id=instance_ref['uuid'], host=dest)
 
         # Checking dest exists and compute node.
         try:
@@ -236,16 +281,11 @@ class Scheduler(object):
         if not self.servicegroup_api.service_is_up(dservice_ref):
             raise exception.ComputeServiceUnavailable(host=dest)
 
-        # Checking whether The host where instance is running
-        # and dest is not same.
-        src = instance_ref['host']
-        if dest == src:
-            raise exception.UnableToMigrateToSelf(
-                    instance_id=instance_ref['uuid'], host=dest)
-
         # Check memory requirements
         self._assert_compute_node_has_enough_memory(context,
                                                    instance_ref, dest)
+
+        return dest
 
     def _live_migration_common_check(self, context, instance_ref, dest):
         """Live migration common check routine.
