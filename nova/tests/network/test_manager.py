@@ -639,7 +639,7 @@ class VlanNetworkTestCase(test.TestCase):
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            pass
+            return '10.0.0.1'
 
         # floating ip that's already associated
         def fake2(*args, **kwargs):

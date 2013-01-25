@@ -555,27 +555,34 @@ class FloatingIP(object):
     def _associate_floating_ip(self, context, floating_address, fixed_address,
                                interface):
         """Performs db and driver calls to associate floating ip & fixed ip"""
-        # associate floating ip
-        self.db.floating_ip_fixed_ip_associate(context,
-                                               floating_address,
-                                               fixed_address,
-                                               self.host)
-        try:
-            # gogo driver time
-            self.l3driver.add_floating_ip(floating_address, fixed_address,
-                    interface)
-        except exception.ProcessExecutionError as e:
-            fixed_address = self.db.floating_ip_disassociate(context,
-                                                             floating_address)
-            if "Cannot find device" in str(e):
-                LOG.error(_('Interface %(interface)s not found'), locals())
-                raise exception.NoFloatingIpInterface(interface=interface)
-        payload = dict(project_id=context.project_id,
-                       floating_ip=floating_address)
-        notifier.notify(context,
-                        notifier.publisher_id("network"),
-                        'network.floating_ip.associate',
-                        notifier.INFO, payload=payload)
+
+        @utils.synchronized(unicode(floating_address))
+        def do_associate():
+            # associate floating ip
+            res = self.db.floating_ip_fixed_ip_associate(context,
+                                                         floating_address,
+                                                         fixed_address,
+                                                         self.host)
+            if not res:
+                # NOTE(vish): ip was already associated
+                return
+            try:
+                # gogo driver time
+                self.l3driver.add_floating_ip(floating_address, fixed_address,
+                        interface)
+            except exception.ProcessExecutionError as e:
+                self.db.floating_ip_disassociate(context, floating_address)
+                if "Cannot find device" in str(e):
+                    LOG.error(_('Interface %(interface)s not found'), locals())
+                    raise exception.NoFloatingIpInterface(interface=interface)
+
+            payload = dict(project_id=context.project_id,
+                           floating_ip=floating_address)
+            notifier.notify(context,
+                            notifier.publisher_id("network"),
+                            'network.floating_ip.associate',
+                            notifier.INFO, payload=payload)
+        do_associate()
 
     @wrap_check_policy
     def disassociate_floating_ip(self, context, address,
@@ -635,16 +642,31 @@ class FloatingIP(object):
     def _disassociate_floating_ip(self, context, address, interface):
         """Performs db and driver calls to disassociate floating ip"""
         # disassociate floating ip
-        fixed_address = self.db.floating_ip_disassociate(context, address)
 
-        if interface:
-            # go go driver time
-            self.l3driver.remove_floating_ip(address, fixed_address, interface)
-        payload = dict(project_id=context.project_id, floating_ip=address)
-        notifier.notify(context,
-                        notifier.publisher_id("network"),
-                        'network.floating_ip.disassociate',
-                        notifier.INFO, payload=payload)
+        @utils.synchronized(unicode(address))
+        def do_disassociate():
+            # NOTE(vish): Note that we are disassociating in the db before we
+            #             actually remove the ip address on the host. We are
+            #             safe from races on this host due to the decorator,
+            #             but another host might grab the ip right away. We
+            #             don't worry about this case because the miniscule
+            #             window where the ip is on both hosts shouldn't cause
+            #             any problems.
+            fixed_address = self.db.floating_ip_disassociate(context, address)
+
+            if not fixed_address:
+                # NOTE(vish): ip was already disassociated
+                return
+            if interface:
+                # go go driver time
+                self.l3driver.remove_floating_ip(address, fixed_address,
+                                                 interface)
+            payload = dict(project_id=context.project_id, floating_ip=address)
+            notifier.notify(context,
+                            notifier.publisher_id("network"),
+                            'network.floating_ip.disassociate',
+                            notifier.INFO, payload=payload)
+        do_disassociate()
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
