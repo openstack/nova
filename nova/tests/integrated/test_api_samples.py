@@ -373,7 +373,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # NOT be allowed to grow, and should shrink to zero (and be
         # removed) soon.
         do_not_approve_additions = []
-        do_not_approve_additions.append('NMN')
         do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
@@ -2687,4 +2686,28 @@ class FloatingIPPoolsSampleJsonTests(ApiSampleTestBase):
 
 
 class FloatingIPPoolsSampleXmlTests(FloatingIPPoolsSampleJsonTests):
+    ctype = 'xml'
+
+
+class MultinicSampleJsonTest(ServersSampleBase):
+    extension_name = "nova.api.openstack.compute.contrib.multinic.Multinic"
+
+    def setUp(self):
+        super(MultinicSampleJsonTest, self).setUp()
+        self.uuid = self._post_server()
+
+    def test_add_fixed_ip(self):
+        subs = {"networkId": 1}
+        response = self._do_post('servers/%s/action' % (self.uuid),
+                                 'multinic-add-fixed-ip-req', subs)
+        self.assertEqual(response.status, 202)
+
+    def test_remove_fixed_ip(self):
+        subs = {"ip": "10.0.0.2"}
+        response = self._do_post('servers/%s/action' % (self.uuid),
+                                 'multinic-remove-fixed-ip-req', subs)
+        self.assertEqual(response.status, 202)
+
+
+class MultinicSampleXmlTest(MultinicSampleJsonTest):
     ctype = "xml"
