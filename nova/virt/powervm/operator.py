@@ -372,7 +372,7 @@ class BaseOperator(object):
         """
         cmd = self.command.lssyscfg('-r %s --filter "lpar_names=%s"'
                                     % (resource_type, instance_name))
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         if not output:
             return None
         lpar = LPAR.load_from_conf_data(output[0])
@@ -383,7 +383,8 @@ class BaseOperator(object):
 
         :returns: list -- list with instances names.
         """
-        lpar_names = self.run_command(self.command.lssyscfg('-r lpar -F name'))
+        lpar_names = self.run_vios_command(self.command.lssyscfg(
+                    '-r lpar -F name'))
         if not lpar_names:
             return []
         return lpar_names
@@ -394,14 +395,15 @@ class BaseOperator(object):
         :param lpar: LPAR object
         """
         conf_data = lpar.to_string()
-        self.run_command(self.command.mksyscfg('-r lpar -i "%s"' % conf_data))
+        self.run_vios_command(self.command.mksyscfg('-r lpar -i "%s"' %
+                                                    conf_data))
 
     def start_lpar(self, instance_name):
         """Start a LPAR instance.
 
         :param instance_name: LPAR instance name
         """
-        self.run_command(self.command.chsysstate('-r lpar -o on -n %s'
+        self.run_vios_command(self.command.chsysstate('-r lpar -o on -n %s'
                                                  % instance_name))
 
     def stop_lpar(self, instance_name, timeout=30):
@@ -413,7 +415,7 @@ class BaseOperator(object):
         """
         cmd = self.command.chsysstate('-r lpar -o shutdown --immed -n %s' %
                                       instance_name)
-        self.run_command(cmd)
+        self.run_vios_command(cmd)
 
         # poll instance until stopped or raise exception
         lpar_obj = self.get_lpar(instance_name)
@@ -435,7 +437,7 @@ class BaseOperator(object):
 
         :param instance_name: LPAR instance name
         """
-        self.run_command(self.command.rmsyscfg('-r lpar -n %s'
+        self.run_vios_command(self.command.rmsyscfg('-r lpar -n %s'
                                                % instance_name))
 
     def get_vhost_by_instance_id(self, instance_id):
@@ -446,7 +448,7 @@ class BaseOperator(object):
         """
         instance_hex_id = '%#010x' % int(instance_id)
         cmd = self.command.lsmap('-all -field clientid svsa -fmt :')
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         vhosts = dict(item.split(':') for item in list(output))
 
         if instance_hex_id in vhosts:
@@ -463,10 +465,10 @@ class BaseOperator(object):
         :returns: id of the virtual ethernet adapter.
         """
         cmd = self.command.lsmap('-all -net -field sea -fmt :')
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         sea = output[0]
         cmd = self.command.lsdev('-dev %s -attr pvid' % sea)
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         # Returned output looks like this: ['value', '', '1']
         if output:
             return output[2]
@@ -478,7 +480,7 @@ class BaseOperator(object):
 
         :returns: string -- hostname
         """
-        output = self.run_command(self.command.hostname())
+        output = self.run_vios_command(self.command.hostname())
         return output[0]
 
     def get_disk_name_by_vhost(self, vhost):
@@ -488,7 +490,7 @@ class BaseOperator(object):
         :returns: string -- disk name
         """
         cmd = self.command.lsmap('-vadapter %s -field backing -fmt :' % vhost)
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         if output:
             return output[0]
 
@@ -501,7 +503,7 @@ class BaseOperator(object):
         :param vhost: the vhost name
         """
         cmd = self.command.mkvdev('-vdev %s -vadapter %s') % (disk, vhost)
-        self.run_command(cmd)
+        self.run_vios_command(cmd)
 
     def get_memory_info(self):
         """Get memory info.
@@ -510,7 +512,7 @@ class BaseOperator(object):
         """
         cmd = self.command.lshwres(
             '-r mem --level sys -F configurable_sys_mem,curr_avail_sys_mem')
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         total_mem, avail_mem = output[0].split(',')
         return {'total_mem': int(total_mem),
                 'avail_mem': int(avail_mem)}
@@ -523,7 +525,7 @@ class BaseOperator(object):
         cmd = self.command.lshwres(
             '-r proc --level sys -F '
             'configurable_sys_proc_units,curr_avail_sys_proc_units')
-        output = self.run_command(cmd)
+        output = self.run_vios_command(cmd)
         total_procs, avail_procs = output[0].split(',')
         return {'total_procs': float(total_procs),
                 'avail_procs': float(avail_procs)}
@@ -533,12 +535,12 @@ class BaseOperator(object):
 
         :returns: tuple - disk info (disk_total, disk_used, disk_avail)
         """
-        vgs = self.run_command(self.command.lsvg())
+        vgs = self.run_vios_command(self.command.lsvg())
         (disk_total, disk_used, disk_avail) = [0, 0, 0]
         for vg in vgs:
             cmd = self.command.lsvg('%s -field totalpps usedpps freepps -fmt :'
                                     % vg)
-            output = self.run_command(cmd)
+            output = self.run_vios_command(cmd)
             # Output example:
             # 1271 (10168 megabytes):0 (0 megabytes):1271 (10168 megabytes)
             (d_total, d_used, d_avail) = re.findall(r'(\d+) megabytes',
@@ -551,7 +553,7 @@ class BaseOperator(object):
                 'disk_used': disk_used,
                 'disk_avail': disk_avail}
 
-    def run_command(self, cmd, check_exit_code=True):
+    def run_vios_command(self, cmd, check_exit_code=True):
         """Run a remote command using an active ssh connection.
 
         :param command: String with the command to run.
@@ -561,7 +563,7 @@ class BaseOperator(object):
                                            check_exit_code=check_exit_code)
         return stdout.strip().splitlines()
 
-    def run_command_as_root(self, command, check_exit_code=True):
+    def run_vios_command_as_root(self, command, check_exit_code=True):
         """Run a remote command as root using an active ssh connection.
 
         :param command: List of commands.
