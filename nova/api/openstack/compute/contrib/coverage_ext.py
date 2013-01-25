@@ -23,7 +23,7 @@ import sys
 import telnetlib
 import tempfile
 
-from coverage import coverage
+import coverage
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -47,7 +47,7 @@ class CoverageController(object):
     def __init__(self):
         self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
         data_out = os.path.join(self.data_path, '.nova-coverage')
-        self.coverInst = coverage(data_file=data_out)
+        self.coverInst = coverage.coverage(data_file=data_out)
         self.compute_api = compute_api.API()
         self.network_api = network_api.API()
         self.conductor_api = conductor_api.API()

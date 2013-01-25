@@ -67,7 +67,8 @@ CHEETAH = None
 def _get_cheetah():
     global CHEETAH
     if CHEETAH is None:
-        from Cheetah.Template import Template as CHEETAH
+        from Cheetah import Template
+        CHEETAH = Template.Template
     return CHEETAH
 
 

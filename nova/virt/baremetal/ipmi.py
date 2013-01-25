@@ -25,7 +25,7 @@ import os
 import stat
 import tempfile
 
-from nova.exception import InvalidParameterValue
+from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import paths
@@ -104,13 +104,17 @@ class IPMI(base.PowerManager):
         self.port = node['terminal_port']
 
         if self.node_id == None:
-            raise InvalidParameterValue(_("Node id not supplied to IPMI"))
+            raise exception.InvalidParameterValue(_("Node id not supplied "
+                "to IPMI"))
         if self.address == None:
-            raise InvalidParameterValue(_("Address not supplied to IPMI"))
+            raise exception.InvalidParameterValue(_("Address not supplied "
+                "to IPMI"))
         if self.user == None:
-            raise InvalidParameterValue(_("User not supplied to IPMI"))
+            raise exception.InvalidParameterValue(_("User not supplied "
+                "to IPMI"))
         if self.password == None:
-            raise InvalidParameterValue(_("Password not supplied to IPMI"))
+            raise exception.InvalidParameterValue(_("Password not supplied "
+                "to IPMI"))
 
     def _exec_ipmitool(self, command):
         args = ['ipmitool',

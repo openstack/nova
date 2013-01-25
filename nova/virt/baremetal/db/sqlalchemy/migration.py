@@ -25,7 +25,7 @@ import sqlalchemy
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.virt.baremetal.db import migration
-from nova.virt.baremetal.db.sqlalchemy.session import get_engine
+from nova.virt.baremetal.db.sqlalchemy import session
 
 LOG = logging.getLogger(__name__)
 
@@ -71,24 +71,25 @@ def db_sync(version=None):
     current_version = db_version()
     repository = _find_migrate_repo()
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(), repository, version)
+        return versioning_api.upgrade(session.get_engine(), repository,
+                version)
     else:
-        return versioning_api.downgrade(get_engine(), repository,
+        return versioning_api.downgrade(session.get_engine(), repository,
                                         version)
 
 
 def db_version():
     repository = _find_migrate_repo()
     try:
-        return versioning_api.db_version(get_engine(), repository)
+        return versioning_api.db_version(session.get_engine(), repository)
     except versioning_exceptions.DatabaseNotControlledError:
         meta = sqlalchemy.MetaData()
-        engine = get_engine()
+        engine = session.get_engine()
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
             db_version_control(migration.INIT_VERSION)
-            return versioning_api.db_version(get_engine(), repository)
+            return versioning_api.db_version(session.get_engine(), repository)
         else:
             # Some pre-Essex DB's may not be version controlled.
             # Require them to upgrade using Essex first.
@@ -98,7 +99,7 @@ def db_version():
 
 def db_version_control(version=None):
     repository = _find_migrate_repo()
-    versioning_api.version_control(get_engine(), repository, version)
+    versioning_api.version_control(session.get_engine(), repository, version)
     return version
 
 

@@ -26,4 +26,6 @@ refer to the IBM Redbook[1] publication.
     May 2011. <http://www.redbooks.ibm.com/abstracts/sg247940.html>
 """
 
-from nova.virt.powervm.driver import PowerVMDriver
+from nova.virt.powervm import driver
+
+PowerVMDriver = driver.PowerVMDriver

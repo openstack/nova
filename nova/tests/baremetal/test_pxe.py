@@ -22,10 +22,7 @@
 import os
 
 import mox
-from testtools.matchers import Contains
-from testtools.matchers import MatchesAll
-from testtools.matchers import Not
-from testtools.matchers import StartsWith
+from testtools import matchers
 
 from nova import exception
 from nova.openstack.common import cfg
@@ -120,26 +117,26 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'ari_path': 'ggg',
             }
         config = pxe.build_pxe_config(**args)
-        self.assertThat(config, StartsWith('default deploy'))
+        self.assertThat(config, matchers.StartsWith('default deploy'))
 
         # deploy bits are in the deploy section
         start = config.index('label deploy')
         end = config.index('label boot')
-        self.assertThat(config[start:end], MatchesAll(
-            Contains('kernel ddd'),
-            Contains('initrd=eee'),
-            Contains('deployment_id=aaa'),
-            Contains('deployment_key=bbb'),
-            Contains('iscsi_target_iqn=ccc'),
-            Not(Contains('kernel fff')),
+        self.assertThat(config[start:end], matchers.MatchesAll(
+            matchers.Contains('kernel ddd'),
+            matchers.Contains('initrd=eee'),
+            matchers.Contains('deployment_id=aaa'),
+            matchers.Contains('deployment_key=bbb'),
+            matchers.Contains('iscsi_target_iqn=ccc'),
+            matchers.Not(matchers.Contains('kernel fff')),
             ))
 
         # boot bits are in the boot section
         start = config.index('label boot')
-        self.assertThat(config[start:], MatchesAll(
-            Contains('kernel fff'),
-            Contains('initrd=ggg'),
-            Not(Contains('kernel ddd')),
+        self.assertThat(config[start:], matchers.MatchesAll(
+            matchers.Contains('kernel fff'),
+            matchers.Contains('initrd=ggg'),
+            matchers.Not(matchers.Contains('kernel ddd')),
             ))
 
     def test_build_network_config(self):

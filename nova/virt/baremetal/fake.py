@@ -17,7 +17,7 @@
 #    under the License.
 
 from nova.virt.baremetal import base
-from nova.virt.firewall import NoopFirewallDriver
+from nova.virt import firewall
 
 
 class FakeDriver(base.NodeDriver):
@@ -52,7 +52,7 @@ class FakePowerManager(base.PowerManager):
         super(FakePowerManager, self).__init__(**kwargs)
 
 
-class FakeFirewallDriver(NoopFirewallDriver):
+class FakeFirewallDriver(firewall.NoopFirewallDriver):
 
     def __init__(self):
         super(FakeFirewallDriver, self).__init__()
