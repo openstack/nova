@@ -196,13 +196,6 @@ class ImageType(object):
         }.get(image_type_id)
 
 
-def _system_metadata_to_dict(system_metadata):
-    result = {}
-    for item in system_metadata:
-        result[item['key']] = item['value']
-    return result
-
-
 def create_vm(session, instance, name_label, kernel, ramdisk,
               use_pv_kernel=False):
     """Create a VM record.  Returns new VM reference.
@@ -994,7 +987,7 @@ def _create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'all':
         cache = True
     elif cache_images == 'some':
-        sys_meta = _system_metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
             cache = utils.bool_from_str(sys_meta['image_cache_in_nova'])
         except KeyError:
@@ -1087,7 +1080,7 @@ def _image_uses_bittorrent(context, instance):
     if xenapi_torrent_images == 'all':
         bittorrent = True
     elif xenapi_torrent_images == 'some':
-        sys_meta = _system_metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         try:
             bittorrent = utils.bool_from_str(sys_meta['image_bittorrent'])
         except KeyError:
