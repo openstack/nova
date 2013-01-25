@@ -309,8 +309,8 @@ class VMwareVMOps(object):
             """
             vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
                                 client_factory,
-                                vmdk_file_size_in_kb, uploaded_vmdk_path,
-                                adapter_type)
+                                adapter_type, "preallocated",
+                                uploaded_vmdk_path, vmdk_file_size_in_kb)
             LOG.debug(_("Reconfiguring VM instance to attach the image disk"),
                       instance=instance)
             reconfig_task = self._session._call_method(
@@ -361,19 +361,19 @@ class VMwareVMOps(object):
             hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-            _vmdk_info = vm_util.get_vmdk_file_path_and_adapter_type(
-                         client_factory, hardware_devices)
-            vmdk_file_path_before_snapshot, adapter_type = _vmdk_info
+            (vmdk_file_path_before_snapshot, controller_key, adapter_type,
+             disk_type, unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+                                        hardware_devices)
             datastore_name = vm_util.split_datastore_path(
                                       vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "summary.config.guestId")
-            return (vmdk_file_path_before_snapshot, adapter_type,
+            return (vmdk_file_path_before_snapshot, adapter_type, disk_type,
                     datastore_name, os_type)
 
-        (vmdk_file_path_before_snapshot, adapter_type, datastore_name,
-         os_type) = _get_vm_and_vmdk_attribs()
+        (vmdk_file_path_before_snapshot, adapter_type, disk_type,
+         datastore_name, os_type) = _get_vm_and_vmdk_attribs()
 
         def _create_vm_snapshot():
             # Create a snapshot of the VM
@@ -384,7 +384,7 @@ class VMwareVMOps(object):
                         "CreateSnapshot_Task", vm_ref,
                         name="%s-snapshot" % instance.name,
                         description="Taking Snapshot of the VM",
-                        memory=True,
+                        memory=False,
                         quiesce=True)
             self._session._wait_for_task(instance['uuid'], snapshot_task)
             LOG.debug(_("Created Snapshot of the VM instance"),
