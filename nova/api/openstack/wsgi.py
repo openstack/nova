@@ -1182,10 +1182,18 @@ class Fault(webob.exc.HTTPException):
         # Replace the body with fault details.
         code = self.wrapped_exc.status_int
         fault_name = self._fault_names.get(code, "computeFault")
+        explanation = self.wrapped_exc.explanation
+        offset = explanation.find("Traceback")
+        if offset is not -1:
+            LOG.debug(_("API request failed, fault raised to the top of"
+                      " the stack. Detailed stacktrace %s") %
+                      explanation)
+            explanation = explanation[0:offset - 1]
+
         fault_data = {
             fault_name: {
                 'code': code,
-                'message': self.wrapped_exc.explanation}}
+                'message': explanation}}
         if code == 413:
             retry = self.wrapped_exc.headers.get('Retry-After', None)
             if retry:
