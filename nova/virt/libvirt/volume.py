@@ -47,19 +47,19 @@ CONF = cfg.CONF
 CONF.register_opts(volume_opts)
 
 
-class LibvirtVolumeDriver(object):
+class LibvirtBaseVolumeDriver(object):
     """Base class for volume drivers."""
-    def __init__(self, connection):
+    def __init__(self, connection, is_block_dev):
         self.connection = connection
+        self.is_block_dev = is_block_dev
 
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
+
         conf = vconfig.LibvirtConfigGuestDisk()
-        conf.source_type = "block"
-        conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=True)
+        conf.driver_name = virtutils.pick_disk_driver_name(self.is_block_dev)
         conf.driver_format = "raw"
         conf.driver_cache = "none"
-        conf.source_path = connection_info['data']['device_path']
         conf.target_dev = mount_device
         conf.target_bus = "virtio"
         conf.serial = connection_info.get('serial')
@@ -70,37 +70,49 @@ class LibvirtVolumeDriver(object):
         pass
 
 
-class LibvirtFakeVolumeDriver(LibvirtVolumeDriver):
-    """Driver to attach Network volumes to libvirt."""
+class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
+    """Class for volumes backed by local file."""
+    def __init__(self, connection):
+        super(LibvirtVolumeDriver,
+              self).__init__(connection, is_block_dev=True)
 
     def connect_volume(self, connection_info, mount_device):
-        conf = vconfig.LibvirtConfigGuestDisk()
-        conf.source_type = "network"
-        conf.driver_name = "qemu"
-        conf.driver_format = "raw"
-        conf.driver_cache = "none"
-        conf.source_protocol = "fake"
-        conf.source_host = "fake"
-        conf.target_dev = mount_device
-        conf.target_bus = "virtio"
-        conf.serial = connection_info.get('serial')
+        """Connect the volume to a local device."""
+        conf = super(LibvirtVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+        conf.source_type = "block"
+        conf.source_path = connection_info['data']['device_path']
         return conf
 
 
-class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
-    """Driver to attach Network volumes to libvirt."""
+class LibvirtFakeVolumeDriver(LibvirtBaseVolumeDriver):
+    """Driver to attach fake volumes to libvirt."""
+    def __init__(self, connection):
+        super(LibvirtFakeVolumeDriver,
+              self).__init__(connection, is_block_dev=True)
 
     def connect_volume(self, connection_info, mount_device):
-        conf = vconfig.LibvirtConfigGuestDisk()
+        """Connect the volume to a fake device."""
+        conf = super(LibvirtFakeVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
         conf.source_type = "network"
-        conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=False)
-        conf.driver_format = "raw"
-        conf.driver_cache = "none"
+        conf.source_protocol = "fake"
+        conf.source_host = "fake"
+        return conf
+
+
+class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
+    """Driver to attach Network volumes to libvirt."""
+    def __init__(self, connection):
+        super(LibvirtNetVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def connect_volume(self, connection_info, mount_device):
+        conf = super(LibvirtNetVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+        conf.source_type = "network"
         conf.source_protocol = connection_info['driver_volume_type']
         conf.source_host = connection_info['data']['name']
-        conf.target_dev = mount_device
-        conf.target_bus = "virtio"
-        conf.serial = connection_info.get('serial')
         netdisk_properties = connection_info['data']
         auth_enabled = netdisk_properties.get('auth_enabled')
         if (conf.source_protocol == 'rbd' and
@@ -118,8 +130,11 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         return conf
 
 
-class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
+class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
+    def __init__(self, connection):
+        super(LibvirtISCSIVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command, **kwargs):
         check_exit_code = kwargs.pop('check_exit_code', 0)
@@ -141,6 +156,9 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
     @lockutils.synchronized('connect_volume', 'nova-')
     def connect_volume(self, connection_info, mount_device):
         """Attach the volume to instance_name."""
+        conf = super(LibvirtISCSIVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+
         iscsi_properties = connection_info['data']
         # NOTE(vish): If we are on the same host as nova volume, the
         #             discovery makes the target so we don't need to
@@ -204,15 +222,15 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
                         "(after %(tries)s rescans)") %
                       locals())
 
-        connection_info['data']['device_path'] = host_device
-        sup = super(LibvirtISCSIVolumeDriver, self)
-        return sup.connect_volume(connection_info, mount_device)
+        conf.source_type = "block"
+        conf.source_path = host_device
+        return conf
 
     @lockutils.synchronized('connect_volume', 'nova-')
     def disconnect_volume(self, connection_info, mount_device):
         """Detach the volume from instance_name."""
-        sup = super(LibvirtISCSIVolumeDriver, self)
-        sup.disconnect_volume(connection_info, mount_device)
+        super(LibvirtISCSIVolumeDriver,
+              self).disconnect_volume(connection_info, mount_device)
         iscsi_properties = connection_info['data']
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
