@@ -17,7 +17,6 @@
 
 import time
 
-import fixtures
 from testtools import matchers
 
 from nova import manager

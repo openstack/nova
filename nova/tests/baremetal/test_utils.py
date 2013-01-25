@@ -18,12 +18,9 @@
 
 """Tests for baremetal utils."""
 
-import mox
-
 import errno
 import os
 
-from nova import exception
 from nova import test
 from nova.virt.baremetal import utils
 

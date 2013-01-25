@@ -4,8 +4,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData, Table, Column, Index
 from sqlalchemy import select
 from sqlalchemy.sql.expression import UpdateBase
-from sqlalchemy.sql import literal_column
-from sqlalchemy import String, Integer, Boolean
+from sqlalchemy import Integer, Boolean
 from sqlalchemy.types import NullType, BigInteger
 
 

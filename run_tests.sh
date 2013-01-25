@@ -142,6 +142,7 @@ function run_pep8 {
   echo "Running pep8"
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
 
+  ${wrapper} bash tools/unused_imports.sh
   # NOTE(sdague): as of grizzly-2 these are passing however leaving the comment
   # in here in case we need to break it out when we get more of our hacking working
   # again.

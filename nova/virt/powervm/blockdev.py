@@ -18,16 +18,11 @@ import hashlib
 import os
 import re
 
-from eventlet import greenthread
-
-from nova import utils
-
 from nova.image import glance
-
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-
+from nova import utils
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common

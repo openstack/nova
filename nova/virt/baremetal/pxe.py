@@ -27,11 +27,9 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
-from nova import utils
 from nova.virt.baremetal import base
 from nova.virt.baremetal import db
 from nova.virt.baremetal import utils as bm_utils
-from nova.virt.disk import api as disk
 
 
 pxe_opts = [

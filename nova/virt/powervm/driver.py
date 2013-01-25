@@ -14,19 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
 import time
 
-from nova.compute import task_states
-from nova.compute import vm_states
-
-from nova import context as nova_context
-
 from nova.image import glance
-
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
-
 from nova.virt import driver
 from nova.virt.powervm import operator
 

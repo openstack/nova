@@ -21,7 +21,6 @@ the system.
 
 import nova.context
 from nova import db
-from nova import exception
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model

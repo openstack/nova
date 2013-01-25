@@ -119,8 +119,6 @@ class _FakeDriverBackendTestCase(object):
 
     def _teardown_fakelibvirt(self):
         # Restore libvirt
-        import nova.virt.libvirt.driver
-        import nova.virt.libvirt.firewall
         if self.saved_libvirt:
             sys.modules['libvirt'] = self.saved_libvirt
 

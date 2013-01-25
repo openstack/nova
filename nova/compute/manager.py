@@ -57,13 +57,11 @@ from nova import network
 from nova.network import model as network_model
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import quota

@@ -20,10 +20,6 @@ import imp
 import os
 import sys
 
-from nova import context
-from nova import test
-from nova.virt.baremetal import db as bmdb
-
 from nova.tests.baremetal.db import base as bm_db_base
 
 TOPDIR = os.path.normpath(os.path.join(
