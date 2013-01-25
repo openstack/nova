@@ -424,7 +424,8 @@ class TestQuantumv2(test.TestCase):
                 return api
         api.get_instance_nw_info(mox.IgnoreArg(),
                                  self.instance,
-                                 networks=nets).AndReturn(None)
+                                 networks=nets,
+                                 conductor_api=mox.IgnoreArg()).AndReturn(None)
         self.mox.ReplayAll()
         return api
 

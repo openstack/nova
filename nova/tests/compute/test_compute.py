@@ -1589,7 +1589,8 @@ class ComputeTestCase(BaseTestCase):
             mox.IgnoreArg(),
             mox.IgnoreArg(),
             requested_networks=None,
-            vpn=False, macs=macs).AndReturn(
+            vpn=False, macs=macs,
+            conductor_api=self.compute.conductor_api).AndReturn(
                 fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
                                                        spectacular=True))
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
@@ -1607,8 +1608,9 @@ class ComputeTestCase(BaseTestCase):
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
                 requested_networks=None,
-                vpn=False,
-                macs=None).AndRaise(rpc_common.RemoteError())
+                vpn=False, macs=None,
+                conductor_api=self.compute.conductor_api
+                ).AndRaise(rpc_common.RemoteError())
 
         fake_network.unset_stub_network_methods(self.stubs)
 
@@ -2877,16 +2879,12 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'get_instance_nw_info')
-        self.mox.StubOutWithMock(fake_nw_info, 'json')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'instance_info_cache_update')
 
         self.compute.network_api.get_instance_nw_info(self.context,
-                fake_instance, update_cache=False).AndReturn(fake_nw_info)
-        fake_nw_info.json().AndReturn('fake-nw-info')
-        expected_cache = {'network_info': 'fake-nw-info'}
-        self.compute.conductor_api.instance_info_cache_update(self.context,
-                fake_instance, expected_cache)
+                fake_instance, conductor_api=self.compute.conductor_api
+                ).AndReturn(fake_nw_info)
 
         self.mox.ReplayAll()
 

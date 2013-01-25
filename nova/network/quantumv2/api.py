@@ -207,7 +207,8 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
 
-        return self.get_instance_nw_info(context, instance, networks=nets)
+        return self.get_instance_nw_info(context, instance, networks=nets,
+                conductor_api=kwargs.get('conductor_api'))
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
@@ -226,10 +227,10 @@ class API(base.Base):
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
     def get_instance_nw_info(self, context, instance, networks=None,
-            update_cache=True):
+            conductor_api=None):
         result = self._get_instance_nw_info(context, instance, networks)
-        if update_cache:
-            update_instance_info_cache(self, context, instance, result)
+        update_instance_info_cache(self, context, instance, result,
+                                   conductor_api)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):
@@ -238,7 +239,8 @@ class API(base.Base):
         nw_info = self._build_network_info_model(context, instance, networks)
         return network_model.NetworkInfo.hydrate(nw_info)
 
-    def add_fixed_ip_to_instance(self, context, instance, network_id):
+    def add_fixed_ip_to_instance(self, context, instance, network_id,
+                                 conductor_api=None):
         """Add a fixed ip to the instance from specified network."""
         search_opts = {'network_id': network_id}
         data = quantumv2.get_client(context).list_subnets(**search_opts)
@@ -270,7 +272,8 @@ class API(base.Base):
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance['uuid'])
 
-    def remove_fixed_ip_from_instance(self, context, instance, address):
+    def remove_fixed_ip_from_instance(self, context, instance, address,
+                                      conductor_api=None):
         """Remove a fixed ip from the instance."""
         zone = 'compute:%s' % instance['availability_zone']
         search_opts = {'device_id': instance['uuid'],
