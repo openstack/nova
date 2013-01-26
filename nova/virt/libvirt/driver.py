@@ -1425,22 +1425,21 @@ class LibvirtDriver(driver.ComputeDriver):
             injection_path = image('disk').path
             img_id = instance['image_ref']
 
-            for injection in ('metadata', 'key', 'net', 'admin_pass',
-                              'files'):
-                if locals()[injection]:
-                    LOG.info(_('Injecting %(injection)s into image'
+            for inject in ('key', 'net', 'metadata', 'admin_pass', 'files'):
+                if locals()[inject]:
+                    LOG.info(_('Injecting %(inject)s into image'
                                ' %(img_id)s'), locals(), instance=instance)
             try:
                 disk.inject_data(injection_path,
                                  key, net, metadata, admin_pass, files,
                                  partition=target_partition,
-                                 use_cow=CONF.use_cow_images)
-
+                                 use_cow=CONF.use_cow_images,
+                                 mandatory=('files',))
             except Exception as e:
-                # This could be a windows image, or a vmdk format disk
-                LOG.warn(_('Ignoring error injecting data into image '
-                           '%(img_id)s (%(e)s)') % locals(),
-                         instance=instance)
+                LOG.error(_('Error injecting data into image '
+                            '%(img_id)s (%(e)s)') % locals(),
+                            instance=instance)
+                raise
 
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
