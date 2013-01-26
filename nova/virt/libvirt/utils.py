@@ -63,7 +63,7 @@ def create_image(disk_format, path, size):
     execute('qemu-img', 'create', '-f', disk_format, path, size)
 
 
-def create_cow_image(backing_file, path):
+def create_cow_image(backing_file, path, size=None):
     """Create COW image
 
     Creates a COW image with the given backing file
@@ -89,6 +89,8 @@ def create_cow_image(backing_file, path):
     #     cow_opts += ['preallocation=%s' % base_details['preallocation']]
     if base_details and base_details.encryption:
         cow_opts += ['encryption=%s' % base_details.encryption]
+    if size is not None:
+        cow_opts += ['size=%s' % size]
     if cow_opts:
         # Format as a comma separated list
         csv_opts = ",".join(cow_opts)
@@ -292,14 +294,14 @@ def get_disk_size(path):
     return int(size)
 
 
-def get_disk_backing_file(path):
+def get_disk_backing_file(path, basename=True):
     """Get the backing file of a disk image
 
     :param path: Path to the disk image
     :returns: a path to the image's backing store
     """
     backing_file = images.qemu_img_info(path).backing_file
-    if backing_file:
+    if backing_file and basename:
         backing_file = os.path.basename(backing_file)
 
     return backing_file
@@ -403,16 +405,16 @@ def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
     # NOTE(markmc): ISO is just raw to qemu-img
     if dest_fmt == 'iso':
         dest_fmt = 'raw'
-    qemu_img_cmd = ('qemu-img',
-                    'convert',
-                    '-f',
-                    source_fmt,
-                    '-O',
-                    dest_fmt,
-                    '-s',
-                    snapshot_name,
-                    disk_path,
-                    out_path)
+
+    qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O',
+                    dest_fmt, '-s', snapshot_name, disk_path, out_path)
+
+    # When snapshot name is omitted we do a basic convert, which
+    # is used by live snapshots.
+    if snapshot_name is None:
+        qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O',
+                        dest_fmt, disk_path, out_path)
+
     execute(*qemu_img_cmd)
 
 
