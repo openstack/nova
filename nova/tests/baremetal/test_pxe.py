@@ -411,10 +411,11 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_destroy_images(self):
         self._create_node()
-        self.mox.StubOutWithMock(os, 'unlink')
+        self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
+        self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
 
-        os.unlink(pxe.get_image_file_path(self.instance))
-        os.unlink(pxe.get_image_dir_path(self.instance))
+        bm_utils.unlink_without_raise(pxe.get_image_file_path(self.instance))
+        bm_utils.rmtree_without_raise(pxe.get_image_dir_path(self.instance))
         self.mox.ReplayAll()
 
         self.driver.destroy_images(self.context, self.node, self.instance)
@@ -479,6 +480,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
 
         self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
+        self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(self.driver, '_collect_mac_addresses')
 
@@ -490,7 +492,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
                 AndReturn(macs)
         for mac in macs:
             bm_utils.unlink_without_raise(pxe.get_pxe_mac_path(mac))
-        bm_utils.unlink_without_raise(
+        bm_utils.rmtree_without_raise(
                 os.path.join(CONF.baremetal.tftp_root, 'fake-uuid'))
         self.mox.ReplayAll()
 
@@ -513,6 +515,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
 
         self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
+        self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(self.driver, '_collect_mac_addresses')
 
@@ -521,7 +524,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         bm_utils.unlink_without_raise(pxe_path)
         self.driver._collect_mac_addresses(self.context, self.node).\
                 AndRaise(exception.DBError)
-        bm_utils.unlink_without_raise(
+        bm_utils.rmtree_without_raise(
                 os.path.join(CONF.baremetal.tftp_root, 'fake-uuid'))
         self.mox.ReplayAll()
 
