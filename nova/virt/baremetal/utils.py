@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
 import os
 import shutil
 
@@ -44,8 +45,11 @@ def inject_into_image(image, key, net, metadata, admin_password,
 def unlink_without_raise(path):
     try:
         os.unlink(path)
-    except OSError:
-        LOG.exception(_("Failed to unlink %s") % path)
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            return
+        else:
+            LOG.warn(_("Failed to unlink %(path)s, error: %(e)s") % locals())
 
 
 def rmtree_without_raise(path):
@@ -64,9 +68,12 @@ def write_to_file(path, contents):
 def create_link_without_raise(source, link):
     try:
         os.symlink(source, link)
-    except OSError:
-        LOG.exception(_("Failed to create symlink from %(source)s to %(link)s")
-                % locals())
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return
+        else:
+            LOG.warn(_("Failed to create symlink from %(source)s to %(link)s"
+                       ", error: %(e)s") % locals())
 
 
 def random_alnum(count):
