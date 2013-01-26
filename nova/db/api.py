@@ -132,15 +132,6 @@ def service_get_all(context, disabled=None):
     return IMPL.service_get_all(context, disabled)
 
 
-def service_does_host_exist(context, host_name, include_disabled=False):
-    """Returns True if 'host_name' is found in the services table, False
-    otherwise
-    :param: host_name - the name of the host we want to check if it exists
-    :param: include_disabled - Set to True to include hosts from disabled
-    services"""
-    return IMPL.service_does_host_exist(context, host_name, include_disabled)
-
-
 def service_get_all_by_topic(context, topic):
     """Get all services for a given topic."""
     return IMPL.service_get_all_by_topic(context, topic)
@@ -157,15 +148,6 @@ def service_get_by_compute_host(context, host):
     Returns the service entry joined with the compute_node entry.
     """
     return IMPL.service_get_by_compute_host(context, host)
-
-
-def service_get_all_compute_sorted(context):
-    """Get all compute services sorted by instance count.
-
-    :returns: a list of (Service, instance_count) tuples.
-
-    """
-    return IMPL.service_get_all_compute_sorted(context)
 
 
 def service_get_by_args(context, host, binary):

@@ -954,8 +954,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.network_api = network_api.API()
         self.network_rpcapi = network_rpcapi.NetworkAPI()
         self.security_group_api = compute_api.SecurityGroupAPI()
-        self.compute_api = compute_api.API(
-                                   security_group_api=self.security_group_api)
         self.servicegroup_api = servicegroup.API()
 
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has
