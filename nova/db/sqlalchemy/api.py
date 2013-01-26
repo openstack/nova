@@ -4772,15 +4772,15 @@ def _task_log_get_query(context, task_name, period_beginning,
 @require_admin_context
 def task_log_get(context, task_name, period_beginning, period_ending, host,
                  state=None):
-    return _task_log_get_query(task_name, period_beginning, period_ending,
-                               host, state).first()
+    return _task_log_get_query(context, task_name, period_beginning,
+                               period_ending, host, state).first()
 
 
 @require_admin_context
 def task_log_get_all(context, task_name, period_beginning, period_ending,
                      host=None, state=None):
-    return _task_log_get_query(task_name, period_beginning, period_ending,
-                               host, state).all()
+    return _task_log_get_query(context, task_name, period_beginning,
+                               period_ending, host, state).all()
 
 
 @require_admin_context

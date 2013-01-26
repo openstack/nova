@@ -1671,3 +1671,47 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         for key, value in expected_vol_usages.items():
             self.assertEqual(vol_usages[0][key], value)
         timeutils.clear_time_override()
+
+
+class TaskLogTestCase(test.TestCase):
+
+    def setUp(self):
+        super(TaskLogTestCase, self).setUp()
+        self.context = context.get_admin_context()
+        now = timeutils.utcnow()
+        self.begin = now - datetime.timedelta(seconds=10)
+        self.end = now - datetime.timedelta(seconds=5)
+        self.task_name = 'fake-task-name'
+        self.host = 'fake-host'
+        self.message = 'Fake task message'
+        db.task_log_begin_task(self.context, self.task_name, self.begin,
+                               self.end, self.host, message=self.message)
+
+    def test_task_log_get(self):
+        result = db.task_log_get(self.context, self.task_name, self.begin,
+                                 self.end, self.host)
+        self.assertEqual(result['task_name'], self.task_name)
+        self.assertEqual(result['period_beginning'], self.begin)
+        self.assertEqual(result['period_ending'], self.end)
+        self.assertEqual(result['host'], self.host)
+        self.assertEqual(result['message'], self.message)
+
+    def test_task_log_get_all(self):
+        result = db.task_log_get_all(self.context, self.task_name, self.begin,
+                                     self.end, host=self.host)
+        self.assertEqual(len(result), 1)
+
+    def test_task_log_begin_task(self):
+        db.task_log_begin_task(self.context, 'fake', self.begin,
+                               self.end, self.host, message=self.message)
+        result = db.task_log_get(self.context, 'fake', self.begin,
+                                 self.end, self.host)
+        self.assertEqual(result['task_name'], 'fake')
+
+    def test_task_log_end_task(self):
+        errors = 1
+        db.task_log_end_task(self.context, self.task_name, self.begin,
+                            self.end, self.host, errors, message=self.message)
+        result = db.task_log_get(self.context, self.task_name, self.begin,
+                                 self.end, self.host)
+        self.assertEqual(result['errors'], 1)
