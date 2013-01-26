@@ -1715,6 +1715,7 @@ def instance_get_active_by_window_joined(context, begin, end=None,
                   options(joinedload('security_groups')).\
                   options(joinedload('metadata')).\
                   options(joinedload('instance_type')).\
+                  options(joinedload('system_metadata')).\
                   filter(or_(models.Instance.terminated_at == None,
                              models.Instance.terminated_at > begin))
     if end:
