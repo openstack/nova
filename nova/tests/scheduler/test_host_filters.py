@@ -1414,3 +1414,42 @@ class HostFiltersTestCase(test.TestCase):
         host = fakes.FakeHostState('host1', 'node1', {})
         filter_properties = {'group_hosts': ['host1']}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_multi_tenancy_isolation_with_meta_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateMultiTenancyIsolation']()
+        aggr_meta = {'filter_tenant_id': 'my_tenantid'}
+        self._create_aggregate_with_host(name='fake1', metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'instance_properties': {
+                                     'project_id': 'my_tenantid'}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_multi_tenancy_isolation_fails(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateMultiTenancyIsolation']()
+        aggr_meta = {'filter_tenant_id': 'other_tenantid'}
+        self._create_aggregate_with_host(name='fake1', metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'instance_properties': {
+                                     'project_id': 'my_tenantid'}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_multi_tenancy_isolation_no_meta_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateMultiTenancyIsolation']()
+        aggr_meta = {}
+        self._create_aggregate_with_host(name='fake1', metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'instance_properties': {
+                                     'project_id': 'my_tenantid'}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))

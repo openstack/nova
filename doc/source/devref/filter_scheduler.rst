@@ -93,6 +93,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
 * |GroupAntiAffinityFilter| - ensures that each instance in group is on a
   different host.
+* |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
 
 Now we can focus on these standard filter classes in details. I will pass the
 simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter| are,
@@ -350,3 +351,4 @@ in :mod:`nova.tests.scheduler`.
 .. |TypeAffinityFilter| replace:: :class:`TypeAffinityFilter <nova.scheduler.filters.type_filter.TypeAffinityFilter>`
 .. |AggregateTypeAffinityFilter| replace:: :class:`AggregateTypeAffinityFilter <nova.scheduler.filters.type_filter.AggregateTypeAffinityFilter>`
 .. |AggregateInstanceExtraSpecsFilter| replace:: :class:`AggregateInstanceExtraSpecsFilter <nova.scheduler.filters.aggregate_instance_extra_specs.AggregateInstanceExtraSpecsFilter>`
+.. |AggregateMultiTenancyIsolation| replace:: :class:`AggregateMultiTenancyIsolation <nova.scheduler.filters.aggregate_multitenancy_isolation.AggregateMultiTenancyIsolation>`
