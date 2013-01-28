@@ -25,6 +25,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import log as logging
+from nova import policy
 
 LOG = logging.getLogger(__name__)
 
@@ -73,6 +74,27 @@ def update_instance_cache_with_nw_info(api, context, instance,
         LOG.exception(_('Failed storing info cache'), instance=instance)
 
 
+def wrap_check_policy(func):
+    """Check policy corresponding to the wrapped methods prior to execution."""
+
+    @functools.wraps(func)
+    def wrapped(self, context, *args, **kwargs):
+        action = func.__name__
+        check_policy(context, action)
+        return func(self, context, *args, **kwargs)
+
+    return wrapped
+
+
+def check_policy(context, action):
+    target = {
+        'project_id': context.project_id,
+        'user_id': context.user_id,
+    }
+    _action = 'network:%s' % action
+    policy.enforce(context, _action, target)
+
+
 class API(base.Base):
     """API for doing networking via the nova-network network manager.
 
@@ -86,58 +108,75 @@ class API(base.Base):
         self.network_rpcapi = network_rpcapi.NetworkAPI()
         super(API, self).__init__(**kwargs)
 
+    @wrap_check_policy
     def get_all(self, context):
         return self.network_rpcapi.get_all_networks(context)
 
+    @wrap_check_policy
     def get(self, context, network_uuid):
         return self.network_rpcapi.get_network(context, network_uuid)
 
+    @wrap_check_policy
     def create(self, context, **kwargs):
         return self.network_rpcapi.create_networks(context, **kwargs)
 
+    @wrap_check_policy
     def delete(self, context, network_uuid):
         return self.network_rpcapi.delete_network(context, network_uuid, None)
 
+    @wrap_check_policy
     def disassociate(self, context, network_uuid):
         return self.network_rpcapi.disassociate_network(context, network_uuid)
 
+    @wrap_check_policy
     def get_fixed_ip(self, context, id):
         return self.network_rpcapi.get_fixed_ip(context, id)
 
+    @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
         return self.network_rpcapi.get_fixed_ip_by_address(context, address)
 
+    @wrap_check_policy
     def get_floating_ip(self, context, id):
         return self.network_rpcapi.get_floating_ip(context, id)
 
+    @wrap_check_policy
     def get_floating_ip_pools(self, context):
         return self.network_rpcapi.get_floating_ip_pools(context)
 
+    @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
         return self.network_rpcapi.get_floating_ip_by_address(context, address)
 
+    @wrap_check_policy
     def get_floating_ips_by_project(self, context):
         return self.network_rpcapi.get_floating_ips_by_project(context)
 
+    @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         return self.network_rpcapi.get_floating_ips_by_fixed_address(context,
                 fixed_address)
 
+    @wrap_check_policy
     def get_backdoor_port(self, context, host):
         return self.network_rpcapi.get_backdoor_port(context, host)
 
+    @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):
         # NOTE(tr3buchet): i hate this
         return self.network_rpcapi.get_instance_id_by_floating_address(context,
                 address)
 
+    @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
         return self.network_rpcapi.get_vifs_by_instance(context,
                 instance['id'])
 
+    @wrap_check_policy
     def get_vif_by_mac_address(self, context, mac_address):
         return self.network_rpcapi.get_vif_by_mac_address(context, mac_address)
 
+    @wrap_check_policy
     def allocate_floating_ip(self, context, pool=None):
         """Adds (allocates) a floating ip to a project from a pool."""
         # NOTE(vish): We don't know which network host should get the ip
@@ -147,12 +186,14 @@ class API(base.Base):
         return self.network_rpcapi.allocate_floating_ip(context,
                 context.project_id, pool, False)
 
+    @wrap_check_policy
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Removes (deallocates) a floating ip with address from a project."""
         return self.network_rpcapi.deallocate_floating_ip(context, address,
                 affect_auto_assigned)
 
+    @wrap_check_policy
     @refresh_cache
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
@@ -175,6 +216,7 @@ class API(base.Base):
             # purge cached nw info for the original instance
             update_instance_cache_with_nw_info(self, context, orig_instance)
 
+    @wrap_check_policy
     @refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
@@ -182,6 +224,7 @@ class API(base.Base):
         self.network_rpcapi.disassociate_floating_ip(context, address,
                 affect_auto_assigned)
 
+    @wrap_check_policy
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None):
@@ -207,6 +250,7 @@ class API(base.Base):
 
         return network_model.NetworkInfo.hydrate(nw_info)
 
+    @wrap_check_policy
     def deallocate_for_instance(self, context, instance):
         """Deallocates all network structures related to instance."""
 
@@ -216,6 +260,7 @@ class API(base.Base):
         args['host'] = instance['host']
         self.network_rpcapi.deallocate_for_instance(context, **args)
 
+    @wrap_check_policy
     @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
@@ -224,6 +269,7 @@ class API(base.Base):
                 'network_id': network_id}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
 
+    @wrap_check_policy
     @refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
@@ -233,11 +279,13 @@ class API(base.Base):
                 'address': address}
         self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
 
+    @wrap_check_policy
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
         self.network_rpcapi.add_network_to_project(context, project_id,
                 network_uuid)
 
+    @wrap_check_policy
     def associate(self, context, network_uuid, host=_sentinel,
                   project=_sentinel):
         """Associate or disassociate host or project to network."""
@@ -248,6 +296,7 @@ class API(base.Base):
             associations['project'] = project
         self.network_rpcapi.associate(context, network_uuid, associations)
 
+    @wrap_check_policy
     def get_instance_nw_info(self, context, instance, update_cache=True):
         """Returns all network info related to an instance."""
         result = self._get_instance_nw_info(context, instance)
@@ -267,6 +316,7 @@ class API(base.Base):
 
         return network_model.NetworkInfo.hydrate(nw_info)
 
+    @wrap_check_policy
     def validate_networks(self, context, requested_networks):
         """validate the networks passed at the time of creating
         the server
@@ -274,6 +324,7 @@ class API(base.Base):
         return self.network_rpcapi.validate_networks(context,
                                                      requested_networks)
 
+    @wrap_check_policy
     def get_instance_uuids_by_ip_filter(self, context, filters):
         """Returns a list of dicts in the form of
         {'instance_uuid': uuid, 'ip': ip} that matched the ip_filter
@@ -281,12 +332,14 @@ class API(base.Base):
         return self.network_rpcapi.get_instance_uuids_by_ip_filter(context,
                                                                    filters)
 
+    @wrap_check_policy
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
         These can be used to create DNS entries for floating ips.
         """
         return self.network_rpcapi.get_dns_domains(context)
 
+    @wrap_check_policy
     def add_dns_entry(self, context, address, name, dns_type, domain):
         """Create specified DNS entry for address."""
         args = {'address': address,
@@ -295,6 +348,7 @@ class API(base.Base):
                 'domain': domain}
         return self.network_rpcapi.add_dns_entry(context, **args)
 
+    @wrap_check_policy
     def modify_dns_entry(self, context, name, address, domain):
         """Create specified DNS entry for address."""
         args = {'address': address,
@@ -302,35 +356,42 @@ class API(base.Base):
                 'domain': domain}
         return self.network_rpcapi.modify_dns_entry(context, **args)
 
+    @wrap_check_policy
     def delete_dns_entry(self, context, name, domain):
         """Delete the specified dns entry."""
         args = {'name': name, 'domain': domain}
         return self.network_rpcapi.delete_dns_entry(context, **args)
 
+    @wrap_check_policy
     def delete_dns_domain(self, context, domain):
         """Delete the specified dns domain."""
         return self.network_rpcapi.delete_dns_domain(context, domain=domain)
 
+    @wrap_check_policy
     def get_dns_entries_by_address(self, context, address, domain):
         """Get entries for address and domain."""
         args = {'address': address, 'domain': domain}
         return self.network_rpcapi.get_dns_entries_by_address(context, **args)
 
+    @wrap_check_policy
     def get_dns_entries_by_name(self, context, name, domain):
         """Get entries for name and domain."""
         args = {'name': name, 'domain': domain}
         return self.network_rpcapi.get_dns_entries_by_name(context, **args)
 
+    @wrap_check_policy
     def create_private_dns_domain(self, context, domain, availability_zone):
         """Create a private DNS domain with nova availability zone."""
         args = {'domain': domain, 'av_zone': availability_zone}
         return self.network_rpcapi.create_private_dns_domain(context, **args)
 
+    @wrap_check_policy
     def create_public_dns_domain(self, context, domain, project=None):
         """Create a public DNS domain with optional nova project."""
         args = {'domain': domain, 'project': project}
         return self.network_rpcapi.create_public_dns_domain(context, **args)
 
+    @wrap_check_policy
     def setup_networks_on_host(self, context, instance, host=None,
                                                         teardown=False):
         """Setup or teardown the network structures on hosts related to
@@ -360,6 +421,7 @@ class API(base.Base):
                                                             instance['uuid'])
         return [floating_ip['address'] for floating_ip in floating_ips]
 
+    @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
         args = dict(
@@ -378,6 +440,7 @@ class API(base.Base):
 
         self.network_rpcapi.migrate_instance_start(context, **args)
 
+    @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
         args = dict(

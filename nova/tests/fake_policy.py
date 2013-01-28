@@ -195,16 +195,20 @@ policy_data = """
     "volume_extension:types_extra_specs": "",
 
 
-    "network:get_all_networks": "",
-    "network:get_network": "",
-    "network:create_networks": "",
-    "network:delete_network": "",
-    "network:disassociate_network": "",
+    "network:get_all": "",
+    "network:get": "",
+    "network:create": "",
+    "network:delete": "",
+    "network:associate": "",
+    "network:disassociate": "",
     "network:get_vifs_by_instance": "",
     "network:allocate_for_instance": "",
     "network:deallocate_for_instance": "",
     "network:validate_networks": "",
     "network:get_instance_uuids_by_ip_filter": "",
+    "network:get_instance_id_by_floating_address": "",
+    "network:setup_networks_on_host": "",
+    "network:get_backdoor_port": "",
 
     "network:get_floating_ip": "",
     "network:get_floating_ip_pools": "",
@@ -215,6 +219,7 @@ policy_data = """
     "network:deallocate_floating_ip": "",
     "network:associate_floating_ip": "",
     "network:disassociate_floating_ip": "",
+    "network:release_floating_ip": "",
     "network:migrate_instance_start": "",
     "network:migrate_instance_finish": "",
 

@@ -25,12 +25,38 @@ import mox
 from nova import context
 from nova import exception
 from nova import network
+from nova.network import api
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import rpc
+from nova import policy
 from nova import test
 
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
+
+
+class NetworkPolicyTestCase(test.TestCase):
+    def setUp(self):
+        super(NetworkPolicyTestCase, self).setUp()
+
+        policy.reset()
+        policy.init()
+
+        self.context = context.get_admin_context()
+
+    def tearDown(self):
+        super(NetworkPolicyTestCase, self).tearDown()
+        policy.reset()
+
+    def test_check_policy(self):
+        self.mox.StubOutWithMock(policy, 'enforce')
+        target = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+        }
+        policy.enforce(self.context, 'network:get_all', target)
+        self.mox.ReplayAll()
+        api.check_policy(self.context, 'get_all')
 
 
 class ApiTestCase(test.TestCase):
@@ -57,7 +83,7 @@ class ApiTestCase(test.TestCase):
         instance = dict(id='id', uuid='uuid', project_id='project_id',
             host='host', instance_type={'rxtx_factor': 0})
         self.network_api.allocate_for_instance(
-            'context', instance, 'vpn', 'requested_networks', macs=macs)
+            self.context, instance, 'vpn', 'requested_networks', macs=macs)
 
     def _do_test_associate_floating_ip(self, orig_instance_uuid):
         """Test post-association logic."""

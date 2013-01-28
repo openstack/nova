@@ -44,7 +44,6 @@ topologies.  All of the network commands are issued to a subclass of
 """
 
 import datetime
-import functools
 import itertools
 import math
 import re
@@ -73,7 +72,6 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
-import nova.policy
 from nova import quota
 from nova import servicegroup
 from nova import utils
@@ -277,27 +275,6 @@ class RPCAllocateFixedIP(object):
         self.network_rpcapi.deallocate_fixed_ip(context, address, host)
 
 
-def wrap_check_policy(func):
-    """Check policy corresponding to the wrapped methods prior to execution."""
-
-    @functools.wraps(func)
-    def wrapped(self, context, *args, **kwargs):
-        action = func.__name__
-        check_policy(context, action)
-        return func(self, context, *args, **kwargs)
-
-    return wrapped
-
-
-def check_policy(context, action):
-    target = {
-        'project_id': context.project_id,
-        'user_id': context.user_id,
-    }
-    _action = 'network:%s' % action
-    nova.policy.enforce(context, _action, target)
-
-
 class FloatingIP(object):
     """Mixin class for adding floating IP functionality to a manager."""
 
@@ -332,7 +309,6 @@ class FloatingIP(object):
                     LOG.debug(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
 
-    @wrap_check_policy
     def allocate_for_instance(self, context, **kwargs):
         """Handles allocating the floating IP resources for an instance.
 
@@ -373,7 +349,6 @@ class FloatingIP(object):
 
         return nw_info
 
-    @wrap_check_policy
     def deallocate_for_instance(self, context, **kwargs):
         """Handles deallocating floating IP resources for an instance.
 
@@ -436,7 +411,6 @@ class FloatingIP(object):
                            'project': context.project_id})
                 raise exception.NotAuthorized()
 
-    @wrap_check_policy
     def allocate_floating_ip(self, context, project_id, auto_assigned=False,
                              pool=None):
         """Gets a floating ip from the pool."""
@@ -476,7 +450,6 @@ class FloatingIP(object):
         return floating_ip
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
-    @wrap_check_policy
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
         """Returns a floating ip to the pool."""
@@ -523,7 +496,6 @@ class FloatingIP(object):
             QUOTAS.commit(context, reservations)
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
-    @wrap_check_policy
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
         """Associates a floating ip with a fixed ip.
@@ -614,7 +586,6 @@ class FloatingIP(object):
         do_associate()
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
-    @wrap_check_policy
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from its fixed ip.
@@ -700,38 +671,32 @@ class FloatingIP(object):
         do_disassociate()
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFound)
-    @wrap_check_policy
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict."""
         return dict(self.db.floating_ip_get(context, id).iteritems())
 
-    @wrap_check_policy
     def get_floating_pools(self, context):
         """Returns list of floating pools."""
         # NOTE(maurosr) This method should be removed in future, replaced by
         # get_floating_ip_pools. See bug #1091668
         return self.get_floating_ip_pools(context)
 
-    @wrap_check_policy
     def get_floating_ip_pools(self, context):
         """Returns list of floating ip pools."""
         pools = self.db.floating_ip_get_pools(context)
         return [dict(pool.iteritems()) for pool in pools]
 
-    @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
         """Returns a floating IP as a dict."""
         return dict(self.db.floating_ip_get_by_address(context,
                                                        address).iteritems())
 
-    @wrap_check_policy
     def get_floating_ips_by_project(self, context):
         """Returns the floating IPs allocated to a project."""
         ips = self.db.floating_ip_get_all_by_project(context,
                                                      context.project_id)
         return [dict(ip.iteritems()) for ip in ips]
 
-    @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address."""
         floating_ips = self.db.floating_ip_get_by_fixed_address(context,
@@ -745,7 +710,6 @@ class FloatingIP(object):
             return True
         return False if floating_ip.get('fixed_ip_id') else True
 
-    @wrap_check_policy
     def migrate_instance_start(self, context, instance_uuid,
                                floating_addresses,
                                rxtx_factor=None, project_id=None,
@@ -780,7 +744,6 @@ class FloatingIP(object):
                                        floating_ip['address'],
                                        {'host': None})
 
-    @wrap_check_policy
     def migrate_instance_finish(self, context, instance_uuid,
                                 floating_addresses, host=None,
                                 rxtx_factor=None, project_id=None,
@@ -831,7 +794,6 @@ class FloatingIP(object):
                          'project': project}
         return this_domain
 
-    @wrap_check_policy
     def get_dns_domains(self, context):
         domains = []
 
@@ -854,17 +816,14 @@ class FloatingIP(object):
 
         return domains
 
-    @wrap_check_policy
     def add_dns_entry(self, context, address, name, dns_type, domain):
         self.floating_dns_manager.create_entry(name, address,
                                                dns_type, domain)
 
-    @wrap_check_policy
     def modify_dns_entry(self, context, address, name, domain):
         self.floating_dns_manager.modify_address(name, address,
                                                  domain)
 
-    @wrap_check_policy
     def delete_dns_entry(self, context, name, domain):
         self.floating_dns_manager.delete_entry(name, domain)
 
@@ -877,17 +836,14 @@ class FloatingIP(object):
             for name in names:
                 self.delete_dns_entry(context, name, domain['domain'])
 
-    @wrap_check_policy
     def get_dns_entries_by_address(self, context, address, domain):
         return self.floating_dns_manager.get_entries_by_address(address,
                                                                 domain)
 
-    @wrap_check_policy
     def get_dns_entries_by_name(self, context, name, domain):
         return self.floating_dns_manager.get_entries_by_name(name,
                                                              domain)
 
-    @wrap_check_policy
     def create_private_dns_domain(self, context, domain, av_zone):
         self.db.dnsdomain_register_for_zone(context, domain, av_zone)
         try:
@@ -897,7 +853,6 @@ class FloatingIP(object):
                        'changing zone to |%(av_zone)s|.'),
                      {'domain': domain, 'av_zone': av_zone})
 
-    @wrap_check_policy
     def create_public_dns_domain(self, context, domain, project):
         self.db.dnsdomain_register_for_project(context, domain, project)
         try:
@@ -907,7 +862,6 @@ class FloatingIP(object):
                        'changing project to |%(project)s|.'),
                      {'domain': domain, 'project': project})
 
-    @wrap_check_policy
     def delete_dns_domain(self, context, domain):
         self.db.dnsdomain_unregister(context, domain)
         self.floating_dns_manager.delete_domain(domain)
@@ -1066,7 +1020,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                floating ips MUST override this or use the Mixin
         return []
 
-    @wrap_check_policy
     def get_instance_uuids_by_ip_filter(self, context, filters):
         fixed_ip_filter = filters.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))
@@ -1136,7 +1089,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         return [network for network in networks if
                 not network['vlan']]
 
-    @wrap_check_policy
     def allocate_for_instance(self, context, **kwargs):
         """Handles allocating the various network resources for an instance.
 
@@ -1169,7 +1121,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         return self.get_instance_nw_info(context, instance_id, instance_uuid,
                                          rxtx_factor, host)
 
-    @wrap_check_policy
     def deallocate_for_instance(self, context, **kwargs):
         """Handles deallocating various network resources for an instance.
 
@@ -1205,7 +1156,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.db.virtual_interface_delete_by_instance(read_deleted_context,
                                                      instance['uuid'])
 
-    @wrap_check_policy
     def get_instance_nw_info(self, context, instance_id, instance_uuid,
                                             rxtx_factor, host, **kwargs):
         """Creates network info list for instance.
@@ -1388,7 +1338,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                          instance_uuid)
             raise exception.VirtualInterfaceMacAddressException()
 
-    @wrap_check_policy
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
         if uuidutils.is_uuid_like(network_id):
@@ -1401,7 +1350,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Return backdoor port for eventlet_backdoor."""
         return self.backdoor_port
 
-    @wrap_check_policy
     def remove_fixed_ip_from_instance(self, context, instance_id, host,
                                       address):
         """Removes a fixed ip from an instance from specified network."""
@@ -1776,7 +1724,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self._create_fixed_ips(context, network['id'], fixed_cidr)
         return networks
 
-    @wrap_check_policy
     def delete_network(self, context, fixed_range, uuid,
             require_disassociated=True):
 
@@ -1881,7 +1828,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Sets up network on this host."""
         raise NotImplementedError()
 
-    @wrap_check_policy
     def validate_networks(self, context, networks):
         """check if the networks exists and host
         is set to each network.
@@ -1920,7 +1866,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         return self.db.network_get_all_by_uuids(context, network_uuids,
                                                 project_only="allow_none")
 
-    @wrap_check_policy
     def get_vifs_by_instance(self, context, instance_id):
         """Returns the vifs associated with an instance."""
         instance = self.db.instance_get(context, instance_id)
@@ -1936,12 +1881,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         else:
             return fixed_ip['instance_uuid']
 
-    @wrap_check_policy
     def get_network(self, context, network_uuid):
         network = self.db.network_get_by_uuid(context.elevated(), network_uuid)
         return jsonutils.to_primitive(network)
 
-    @wrap_check_policy
     def get_all_networks(self, context):
         try:
             networks = self.db.network_get_all(context)
@@ -1949,18 +1892,15 @@ class NetworkManager(manager.SchedulerDependentManager):
             return []
         return [jsonutils.to_primitive(network) for network in networks]
 
-    @wrap_check_policy
     def disassociate_network(self, context, network_uuid):
         network = self.get_network(context, network_uuid)
         self.db.network_disassociate(context, network['id'])
 
-    @wrap_check_policy
     def get_fixed_ip(self, context, id):
         """Return a fixed ip."""
         fixed = self.db.fixed_ip_get(context, id)
         return jsonutils.to_primitive(fixed)
 
-    @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
         fixed = self.db.fixed_ip_get_by_address(context, address)
         return jsonutils.to_primitive(fixed)
@@ -2064,34 +2004,28 @@ class FlatManager(NetworkManager):
     # We were throwing an exception, but this was messing up horizon.
     # Timing makes it difficult to implement floating ips here, in Essex.
 
-    @wrap_check_policy
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict."""
         return None
 
-    @wrap_check_policy
     def get_floating_pools(self, context):
         """Returns list of floating pools."""
         # NOTE(maurosr) This method should be removed in future, replaced by
         # get_floating_ip_pools. See bug #1091668
         return {}
 
-    @wrap_check_policy
     def get_floating_ip_pools(self, context):
         """Returns list of floating ip pools."""
         return {}
 
-    @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
         """Returns a floating IP as a dict."""
         return None
 
-    @wrap_check_policy
     def get_floating_ips_by_project(self, context):
         """Returns the floating IPs allocated to a project."""
         return []
 
-    @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address."""
         return []
@@ -2248,7 +2182,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         self._setup_network_on_host(context, network)
         return address
 
-    @wrap_check_policy
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
         if network_uuid is not None:
@@ -2257,7 +2190,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             network_id = None
         self.db.network_associate(context, project_id, network_id, force=True)
 
-    @wrap_check_policy
     def associate(self, context, network_uuid, associations):
         """Associate or disassociate host or project to network."""
         network_id = self.get_network(context, network_uuid)['id']
