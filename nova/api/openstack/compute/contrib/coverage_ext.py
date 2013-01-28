@@ -23,7 +23,6 @@ import sys
 import telnetlib
 import tempfile
 
-import coverage
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -47,7 +46,6 @@ class CoverageController(object):
     def __init__(self):
         self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
         data_out = os.path.join(self.data_path, '.nova-coverage')
-        self.coverInst = coverage.coverage(data_file=data_out)
         self.compute_api = compute_api.API()
         self.network_api = network_api.API()
         self.conductor_api = conductor_api.API()
@@ -57,6 +55,12 @@ class CoverageController(object):
         self.cert_api = cert_api.CertAPI()
         self.services = []
         self.combine = False
+        try:
+            import coverage
+            self.coverInst = coverage.coverage(data_file=data_out)
+            self.has_coverage = True
+        except ImportError:
+            self.has_coverage = False
         super(CoverageController, self).__init__()
 
     def _find_services(self, req):
@@ -238,6 +242,9 @@ class CoverageController(object):
                 'report': self._report_coverage,
         }
         authorize(req.environ['nova.context'])
+        if not self.has_coverage:
+            msg = _("Python coverage module is not installed.")
+            raise exc.HTTPServiceUnavailable(explanation=msg)
         for action, data in body.iteritems():
             if action == 'stop':
                 return _actions[action](req)
