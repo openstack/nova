@@ -178,6 +178,7 @@ CONF = cfg.CONF
 CONF.register_opts(network_opts)
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
+CONF.import_opt('network_topic', 'nova.network.rpcapi')
 
 
 class RPCAllocateFixedIP(object):
@@ -250,7 +251,7 @@ class RPCAllocateFixedIP(object):
         if network['multi_host']:
             service = self.db.service_get_by_host_and_topic(context,
                                                             host,
-                                                            'network')
+                                                            CONF.network_topic)
             if not service or not self.servicegroup_api.service_is_up(service):
                 # NOTE(vish): deallocate the fixed ip locally but don't
                 #             teardown network devices
