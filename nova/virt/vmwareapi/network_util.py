@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 #
@@ -58,7 +59,11 @@ def get_network_with_the_name(session, network_name="vmnet0"):
             if props.name == network_name:
                 network_obj['type'] = 'DistributedVirtualPortgroup'
                 network_obj['dvpg'] = props.key
-                network_obj['dvsw'] = props.distributedVirtualSwitch.value
+                dvs_props = session._call_method(vim_util,
+                                "get_dynamic_property",
+                                props.distributedVirtualSwitch,
+                                "VmwareDistributedVirtualSwitch", "uuid")
+                network_obj['dvsw'] = dvs_props
         else:
             props = session._call_method(vim_util,
                         "get_dynamic_property", network,
@@ -102,11 +107,11 @@ def get_vswitch_for_vlan_interface(session, vlan_interface):
 
 def check_if_vlan_interface_exists(session, vlan_interface):
     """Checks if the vlan_inteface exists on the esx host."""
-    host_net_system_mor = session._call_method(vim_util, "get_objects",
-         "HostSystem", ["configManager.networkSystem"])[0].propSet[0].val
+    host_mor = session._call_method(vim_util, "get_objects",
+         "HostSystem")[0].obj
     physical_nics_ret = session._call_method(vim_util,
-                "get_dynamic_property", host_net_system_mor,
-                "HostNetworkSystem", "networkInfo.pnic")
+                "get_dynamic_property", host_mor,
+                "HostSystem", "config.network.pnic")
     # Meaning there are no physical nics on the host
     if not physical_nics_ret:
         return False

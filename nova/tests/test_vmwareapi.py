@@ -155,6 +155,12 @@ class VMwareAPIVMTestCase(test.TestCase):
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)
 
+    def test_list_interfaces(self):
+        self._create_vm()
+        interfaces = self.conn.list_interfaces(1)
+        self.assertEquals(len(interfaces), 1)
+        self.assertEquals(interfaces[0], 4000)
+
     def test_spawn(self):
         self._create_vm()
         info = self.conn.get_info({'name': 1})
