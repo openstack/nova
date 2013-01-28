@@ -20,6 +20,7 @@ The VMware API VM utility module to build SOAP object specs.
 """
 
 import copy
+from nova import exception
 from nova.virt.vmwareapi import vim_util
 
 
@@ -431,3 +432,31 @@ def get_vm_ref_from_name(session, vm_name):
         if vm.propSet[0].val == vm_name:
             return vm.obj
     return None
+
+
+def get_datastore_ref_and_name(session):
+    """Get the datastore list and choose the first local storage."""
+    data_stores = session._call_method(vim_util, "get_objects",
+                "Datastore", ["summary.type", "summary.name",
+                              "summary.capacity", "summary.freeSpace"])
+    for elem in data_stores:
+        ds_name = None
+        ds_type = None
+        ds_cap = None
+        ds_free = None
+        for prop in elem.propSet:
+            if prop.name == "summary.type":
+                ds_type = prop.val
+            elif prop.name == "summary.name":
+                ds_name = prop.val
+            elif prop.name == "summary.capacity":
+                ds_cap = prop.val
+            elif prop.name == "summary.freeSpace":
+                ds_free = prop.val
+        # Local storage identifier
+        if ds_type == "VMFS" or ds_type == "NFS":
+            data_store_name = ds_name
+            return elem.obj, data_store_name, ds_cap, ds_free
+
+    if data_store_name is None:
+        raise exception.DatastoreNotFound()
