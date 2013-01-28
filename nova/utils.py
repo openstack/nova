@@ -76,6 +76,9 @@ utils_opts = [
                default="/etc/nova/rootwrap.conf",
                help='Path to the rootwrap configuration file to use for '
                     'running commands as root'),
+    cfg.StrOpt('tempdir',
+               default=None,
+               help='Explicitly specify the temporary working directory'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
@@ -1147,6 +1150,7 @@ def temporary_chown(path, owner_uid=None):
 
 @contextlib.contextmanager
 def tempdir(**kwargs):
+    tempfile.tempdir = CONF.tempdir
     tmpdir = tempfile.mkdtemp(**kwargs)
     try:
         yield tmpdir
