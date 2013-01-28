@@ -18,25 +18,23 @@
 """
 Management class for host operations.
 """
-import ctypes
-import multiprocessing
 import os
 import platform
 
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.virt.hyperv import baseops
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import hostutils
+from nova.virt.hyperv import pathutils
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class HostOps(baseops.BaseOps):
+class HostOps(object):
     def __init__(self):
-        super(HostOps, self).__init__()
         self._stats = None
+        self._hostutils = hostutils.HostUtils()
+        self._pathutils = pathutils.PathUtils()
 
     def _get_cpu_info(self):
         """Get the CPU information.
@@ -44,94 +42,51 @@ class HostOps(baseops.BaseOps):
         of the central processor in the hypervisor.
         """
         cpu_info = dict()
-        processor = self._conn_cimv2.query(
-            "SELECT * FROM Win32_Processor WHERE ProcessorType = 3")
 
-        cpu_info['arch'] = constants.WMI_WIN32_PROCESSOR_ARCHITECTURE\
-            .get(processor[0].Architecture, 'Unknown')
-        cpu_info['model'] = processor[0].Name
-        cpu_info['vendor'] = processor[0].Manufacturer
+        processors = self._hostutils.get_cpus_info()
+
+        w32_arch_dict = constants.WMI_WIN32_PROCESSOR_ARCHITECTURE
+        cpu_info['arch'] = w32_arch_dict.get(processors[0]['Architecture'],
+                                             'Unknown')
+        cpu_info['model'] = processors[0]['Name']
+        cpu_info['vendor'] = processors[0]['Manufacturer']
 
         topology = dict()
-        topology['sockets'] = len(processor)
-        topology['cores'] = processor[0].NumberOfCores
-        topology['threads'] = processor[0].NumberOfLogicalProcessors\
-            / processor[0].NumberOfCores
+        topology['sockets'] = len(processors)
+        topology['cores'] = processors[0]['NumberOfCores']
+        topology['threads'] = (processors[0]['NumberOfLogicalProcessors'] /
+                               processors[0]['NumberOfCores'])
         cpu_info['topology'] = topology
 
         features = list()
         for fkey, fname in constants.PROCESSOR_FEATURE.items():
-            if ctypes.windll.kernel32.IsProcessorFeaturePresent(fkey):
+            if self._hostutils.is_cpu_feature_present(fkey):
                 features.append(fname)
         cpu_info['features'] = features
 
-        return jsonutils.dumps(cpu_info)
+        return cpu_info
 
-    def _get_vcpu_total(self):
-        """Get vcpu number of physical computer.
-        :returns: the number of cpu core.
-        """
-        # On certain platforms, this will raise a NotImplementedError.
-        try:
-            return multiprocessing.cpu_count()
-        except NotImplementedError:
-            LOG.warn(_("Cannot get the number of cpu, because this "
-                       "function is not implemented for this platform. "
-                       "This error can be safely ignored for now."))
-            return 0
-
-    def _get_memory_mb_total(self):
-        """Get the total memory size(MB) of physical computer.
-        :returns: the total amount of memory(MB).
-        """
-        total_kb = self._conn_cimv2.query(
-            "SELECT TotalVisibleMemorySize FROM win32_operatingsystem")[0]\
-            .TotalVisibleMemorySize
-        total_mb = long(total_kb) / 1024
-        return total_mb
+    def _get_memory_info(self):
+        (total_mem_kb, free_mem_kb) = self._hostutils.get_memory_info()
+        total_mem_mb = total_mem_kb / 1024
+        free_mem_mb = free_mem_kb / 1024
+        return (total_mem_mb, free_mem_mb, total_mem_mb - free_mem_mb)
 
     def _get_local_hdd_info_gb(self):
-        """Get the total and used size of the volume containing
-           CONF.instances_path expressed in GB.
-        :returns:
-            A tuple with the total and used space in GB.
-        """
-        normalized_path = os.path.normpath(CONF.instances_path)
-        drive, path = os.path.splitdrive(normalized_path)
-        hdd_info = self._conn_cimv2.query(
-            ("SELECT FreeSpace,Size FROM win32_logicaldisk WHERE DeviceID='%s'"
-            ) % drive)[0]
-        total_gb = long(hdd_info.Size) / (1024 ** 3)
-        free_gb = long(hdd_info.FreeSpace) / (1024 ** 3)
+        (drive, _) = os.path.splitdrive(self._pathutils.get_instances_path())
+        (size, free_space) = self._hostutils.get_volume_info(drive)
+
+        total_gb = size / (1024 ** 3)
+        free_gb = free_space / (1024 ** 3)
         used_gb = total_gb - free_gb
-        return total_gb, used_gb
-
-    def _get_vcpu_used(self):
-        """Get vcpu usage number of physical computer.
-        :returns: The total number of vcpu that currently used.
-        """
-        #TODO(jordanrinke) figure out a way to count assigned VCPUs
-        total_vcpu = 0
-        return total_vcpu
-
-    def _get_memory_mb_used(self):
-        """Get the free memory size(MB) of physical computer.
-        :returns: the total usage of memory(MB).
-        """
-        total_kb = self._conn_cimv2.query(
-            "SELECT FreePhysicalMemory FROM win32_operatingsystem")[0]\
-                .FreePhysicalMemory
-        total_mb = long(total_kb) / 1024
-
-        return total_mb
+        return (total_gb, free_gb, used_gb)
 
     def _get_hypervisor_version(self):
         """Get hypervisor version.
         :returns: hypervisor version (ex. 12003)
         """
-        version = self._conn_cimv2.Win32_OperatingSystem()[0]\
-            .Version.replace('.', '')
-        LOG.info(_('Windows version: %s ') % version)
+        version = self._hostutils.get_windows_version().replace('.', '')
+        LOG.debug(_('Windows version: %s ') % version)
         return version
 
     def get_available_resource(self):
@@ -143,36 +98,53 @@ class HostOps(baseops.BaseOps):
         :returns: dictionary describing resources
 
         """
-        LOG.info(_('get_available_resource called'))
+        LOG.debug(_('get_available_resource called'))
 
-        local_gb, used_gb = self._get_local_hdd_info_gb()
-        dic = {'vcpus': self._get_vcpu_total(),
-               'memory_mb': self._get_memory_mb_total(),
-               'local_gb': local_gb,
-               'vcpus_used': self._get_vcpu_used(),
-               'memory_mb_used': self._get_memory_mb_used(),
-               'local_gb_used': used_gb,
+        (total_mem_mb,
+         free_mem_mb,
+         used_mem_mb) = self._get_memory_info()
+
+        (total_hdd_gb,
+         free_hdd_gb,
+         used_hdd_gb) = self._get_local_hdd_info_gb()
+
+        cpu_info = self._get_cpu_info()
+        cpu_topology = cpu_info['topology']
+        vcpus = (cpu_topology['sockets'] *
+                 cpu_topology['cores'] *
+                 cpu_topology['threads'])
+
+        dic = {'vcpus': vcpus,
+               'memory_mb': total_mem_mb,
+               'memory_mb_used': used_mem_mb,
+               'local_gb': total_hdd_gb,
+               'local_gb_used': used_hdd_gb,
                'hypervisor_type': "hyperv",
                'hypervisor_version': self._get_hypervisor_version(),
                'hypervisor_hostname': platform.node(),
-               'cpu_info': self._get_cpu_info()}
+               'vcpus_used': 0,
+               'cpu_info': jsonutils.dumps(cpu_info)}
 
         return dic
 
     def _update_stats(self):
         LOG.debug(_("Updating host stats"))
 
+        (total_mem_mb, free_mem_mb, used_mem_mb) = self._get_memory_info()
+        (total_hdd_gb,
+         free_hdd_gb,
+         used_hdd_gb) = self._get_local_hdd_info_gb()
+
         data = {}
-        data["disk_total"], data["disk_used"] = self._get_local_hdd_info_gb()
-        data["disk_available"] = data["disk_total"] - data["disk_used"]
-        data["host_memory_total"] = self._get_memory_mb_total()
-        data["host_memory_overhead"] = self._get_memory_mb_used()
-        data["host_memory_free"] = \
-            data["host_memory_total"] - data["host_memory_overhead"]
-        data["host_memory_free_computed"] = data["host_memory_free"]
-        data["supported_instances"] = \
-            [('i686', 'hyperv', 'hvm'),
-             ('x86_64', 'hyperv', 'hvm')]
+        data["disk_total"] = total_hdd_gb
+        data["disk_used"] = used_hdd_gb
+        data["disk_available"] = free_hdd_gb
+        data["host_memory_total"] = total_mem_mb
+        data["host_memory_overhead"] = used_mem_mb
+        data["host_memory_free"] = free_mem_mb
+        data["host_memory_free_computed"] = free_mem_mb
+        data["supported_instances"] = [('i686', 'hyperv', 'hvm'),
+                                       ('x86_64', 'hyperv', 'hvm')]
         data["hypervisor_hostname"] = platform.node()
 
         self._stats = data

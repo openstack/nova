@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright 2012 Pedro Navarro Perez
+# Copyright 2013 Cloudbase Solutions Srl
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,16 +21,17 @@ Helper methods for operations related to the management of volumes,
 and storage repositories
 """
 
+import abc
 import sys
+
+if sys.platform == 'win32':
+    import _winreg
+    import wmi
 
 from nova import block_device
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import driver
-
-# Check needed for unit testing on Unix
-if sys.platform == 'win32':
-    import _winreg
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -38,25 +40,40 @@ CONF.import_opt('my_ip', 'nova.netconf')
 
 class BaseVolumeUtils(object):
 
+    def __init__(self):
+        if sys.platform == 'win32':
+            self._conn_wmi = wmi.WMI(moniker='//./root/wmi')
+
+    @abc.abstractmethod
+    def login_storage_target(self, target_lun, target_iqn, target_portal):
+        pass
+
+    @abc.abstractmethod
+    def logout_storage_target(self, target_iqn):
+        pass
+
+    @abc.abstractmethod
+    def execute_log_out(self, session_id):
+        pass
+
     def get_iscsi_initiator(self, cim_conn):
         """Get iscsi initiator name for this machine."""
 
         computer_system = cim_conn.Win32_ComputerSystem()[0]
         hostname = computer_system.name
-        keypath = \
-           r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\iSCSI\Discovery"
+        keypath = ("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\"
+                   "iSCSI\\Discovery")
         try:
             key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, keypath, 0,
-                _winreg.KEY_ALL_ACCESS)
+                                  _winreg.KEY_ALL_ACCESS)
             temp = _winreg.QueryValueEx(key, 'DefaultInitiatorName')
             initiator_name = str(temp[0])
             _winreg.CloseKey(key)
         except Exception:
             LOG.info(_("The ISCSI initiator name can't be found. "
-                "Choosing the default one"))
+                       "Choosing the default one"))
             computer_system = cim_conn.Win32_ComputerSystem()[0]
-            initiator_name = "iqn.1991-05.com.microsoft:" + \
-                hostname.lower()
+            initiator_name = "iqn.1991-05.com.microsoft:" + hostname.lower()
         return {
             'ip': CONF.my_ip,
             'initiator': initiator_name,
@@ -78,3 +95,33 @@ class BaseVolumeUtils(object):
 
         LOG.debug(_("block_device_list %s"), block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
+
+    def _get_drive_number_from_disk_path(self, disk_path):
+        # TODO(pnavarro) replace with regex
+        start_device_id = disk_path.find('"', disk_path.find('DeviceID'))
+        end_device_id = disk_path.find('"', start_device_id + 1)
+        device_id = disk_path[start_device_id + 1:end_device_id]
+        return device_id[device_id.find("\\") + 2:]
+
+    def get_session_id_from_mounted_disk(self, physical_drive_path):
+        drive_number = self._get_drive_number_from_disk_path(
+            physical_drive_path)
+        initiator_sessions = self._conn_wmi.query("SELECT * FROM "
+                                                  "MSiSCSIInitiator_Session"
+                                                  "Class")
+        for initiator_session in initiator_sessions:
+            devices = initiator_session.Devices
+            for device in devices:
+                device_number = str(device.DeviceNumber)
+                if device_number == drive_number:
+                    return initiator_session.SessionId
+
+    def get_device_number_for_target(self, target_iqn, target_lun):
+        initiator_session = self._conn_wmi.query("SELECT * FROM "
+                                                 "MSiSCSIInitiator_Session"
+                                                 "Class WHERE TargetName='%s'"
+                                                 % target_iqn)[0]
+        devices = initiator_session.Devices
+        for device in devices:
+            if device.ScsiLun == target_lun:
+                return device.DeviceNumber
