@@ -550,6 +550,10 @@ class Session(sqlalchemy.orm.session.Session):
     def flush(self, *args, **kwargs):
         return super(Session, self).flush(*args, **kwargs)
 
+    @wrap_db_error
+    def execute(self, *args, **kwargs):
+        return super(Session, self).execute(*args, **kwargs)
+
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy sessionmaker using the given engine."""
