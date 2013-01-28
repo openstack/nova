@@ -30,6 +30,7 @@ def _get_auth_token():
         httpclient = client.HTTPClient(
             username=CONF.quantum_admin_username,
             tenant_name=CONF.quantum_admin_tenant_name,
+            region_name=CONF.quantum_region_name,
             password=CONF.quantum_admin_password,
             auth_url=CONF.quantum_admin_auth_url,
             timeout=CONF.quantum_url_timeout,
