@@ -1087,21 +1087,42 @@ def temporary_mutation(obj, **kwargs):
         with temporary_mutation(context, read_deleted="yes"):
             do_something_that_needed_deleted_objects()
     """
+    def is_dict_like(thing):
+        return hasattr(thing, 'has_key')
+
+    def get(thing, attr, default):
+        if is_dict_like(thing):
+            return thing.get(attr, default)
+        else:
+            return getattr(thing, attr, default)
+
+    def set_value(thing, attr, val):
+        if is_dict_like(thing):
+            thing[attr] = val
+        else:
+            setattr(thing, attr, val)
+
+    def delete(thing, attr):
+        if is_dict_like(thing):
+            del thing[attr]
+        else:
+            delattr(thing, attr)
+
     NOT_PRESENT = object()
 
     old_values = {}
     for attr, new_value in kwargs.items():
-        old_values[attr] = getattr(obj, attr, NOT_PRESENT)
-        setattr(obj, attr, new_value)
+        old_values[attr] = get(obj, attr, NOT_PRESENT)
+        set_value(obj, attr, new_value)
 
     try:
         yield
     finally:
         for attr, old_value in old_values.items():
             if old_value is NOT_PRESENT:
-                del obj[attr]
+                delete(obj, attr)
             else:
-                setattr(obj, attr, old_value)
+                set_value(obj, attr, old_value)
 
 
 def generate_mac_address():

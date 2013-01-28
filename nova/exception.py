@@ -1120,3 +1120,7 @@ class CryptoCAFileNotFound(FileNotFound):
 
 class CryptoCRLFileNotFound(FileNotFound):
     message = _("The CRL file for %(project)s could not be found")
+
+
+class InstanceRecreateNotSupported(Invalid):
+    message = _('Instance recreate is not implemented by this virt driver.')
