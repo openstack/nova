@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack LLC.
 #
@@ -20,16 +21,19 @@ A connection to the VMware ESX platform.
 
 **Related Flags**
 
-:vmwareapi_host_ip:        IPAddress of VMware ESX server.
-:vmwareapi_host_username:  Username for connection to VMware ESX Server.
-:vmwareapi_host_password:  Password for connection to VMware ESX Server.
-:vmwareapi_task_poll_interval:  The interval (seconds) used for polling of
-                             remote tasks
-                             (default: 1.0).
-:vmwareapi_api_retry_count:  The API retry count in case of failure such as
-                             network failures (socket errors etc.)
-                             (default: 10).
-
+:vmwareapi_host_ip:         IP address of VMware ESX server.
+:vmwareapi_host_username:   Username for connection to VMware ESX Server.
+:vmwareapi_host_password:   Password for connection to VMware ESX Server.
+:vmwareapi_task_poll_interval: The interval (seconds) used for polling of
+                            remote tasks
+                            (default: 5.0).
+:vmwareapi_api_retry_count: The API retry count in case of failure such as
+                            network failures (socket errors etc.)
+                            (default: 10).
+:vnc_port:                  VNC starting port (default: 5900)
+:vnc_port_total:            Total number of VNC ports (default: 10000)
+:vnc_password:              VNC password
+:use_linked_clone:          Whether to use linked clone (default: True)
 """
 
 import time
@@ -78,6 +82,18 @@ vmwareapi_opts = [
                     'socket error, etc. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver.'),
+    cfg.IntOpt('vnc_port',
+               default=5900,
+               help='VNC starting port'),
+    cfg.IntOpt('vnc_port_total',
+               default=10000,
+               help='Total number of VNC ports'),
+    cfg.StrOpt('vnc_password',
+               default=None,
+               help='VNC password'),
+    cfg.BoolOpt('use_linked_clone',
+                default=True,
+                help='Whether to use linked clone'),
     ]
 
 CONF = cfg.CONF
@@ -116,7 +132,8 @@ class VMwareESXDriver(driver.ComputeDriver):
                                          host_username, host_password,
                                          api_retry_count, scheme=scheme)
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
-        self._vmops = vmops.VMwareVMOps(self._session)
+        self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
+                                        self._volumeops)
         self._host = host.Host(self._session)
         self._host_state = None
 
@@ -142,7 +159,8 @@ class VMwareESXDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
-        self._vmops.spawn(context, instance, image_meta, network_info)
+        self._vmops.spawn(context, instance, image_meta, network_info,
+                          block_device_info)
 
     def snapshot(self, context, instance, name, update_task_state):
         """Create snapshot from a running VM instance."""
@@ -174,6 +192,61 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Resume the suspended VM instance."""
         self._vmops.resume(instance)
 
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
+        """Rescue the specified instance."""
+        self._vmops.rescue(context, instance, network_info, image_meta)
+
+    def unrescue(self, instance, network_info):
+        """Unrescue the specified instance."""
+        self._vmops.unrescue(instance)
+
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        self._vmops.power_off(instance)
+
+    def power_on(self, instance):
+        """Power on the specified instance."""
+        self._vmops.power_on(instance)
+
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type, network_info,
+                                   block_device_info=None):
+        """
+        Transfers the disk of a running instance in multiple phases, turning
+        off the instance before the end.
+        """
+        return self._vmops.migrate_disk_and_power_off(context, instance,
+                                                      dest, instance_type)
+
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM."""
+        self._vmops.confirm_migration(migration, instance, network_info)
+
+    def finish_revert_migration(self, instance, network_info,
+                                block_device_info=None):
+        """Finish reverting a resize, powering back on the instance."""
+        self._vmops.finish_revert_migration(instance)
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, image_meta, resize_instance=False,
+                         block_device_info=None):
+        """Completes a resize, turning on the migrated instance."""
+        self._vmops.finish_migration(context, migration, instance, disk_info,
+                                     network_info, image_meta, resize_instance)
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
+        """Live migration of an instance to another host."""
+        self._vmops.live_migration(context, instance_ref, dest,
+                                   post_method, recover_method,
+                                   block_migration)
+
+    def poll_rebooting_instances(self, timeout, instances):
+        """Poll for rebooting instances."""
+        self._vmops.poll_rebooting_instances(timeout, instances)
+
     def get_info(self, instance):
         """Return info about the VM instance."""
         return self._vmops.get_info(instance)
@@ -185,6 +258,10 @@ class VMwareESXDriver(driver.ComputeDriver):
     def get_console_output(self, instance):
         """Return snapshot of console."""
         return self._vmops.get_console_output(instance)
+
+    def get_vnc_console(self, instance):
+        """Return link to instance's VNC console."""
+        return self._vmops.get_vnc_console(instance)
 
     def get_volume_connector(self, instance):
         """Return volume connector information."""

@@ -361,6 +361,27 @@ def delete_virtual_disk_spec(client_factory, device):
     return virtual_device_config
 
 
+def clone_vm_spec(client_factory, location,
+                  power_on=False, snapshot=None, template=False):
+    """Builds the VM clone spec."""
+    clone_spec = client_factory.create('ns0:VirtualMachineCloneSpec')
+    clone_spec.location = location
+    clone_spec.powerOn = power_on
+    clone_spec.snapshot = snapshot
+    clone_spec.template = template
+    return clone_spec
+
+
+def relocate_vm_spec(client_factory, datastore=None, host=None,
+                     disk_move_type="moveAllDiskBackingsAndAllowSharing"):
+    """Builds the VM relocation spec."""
+    rel_spec = client_factory.create('ns0:VirtualMachineRelocateSpec')
+    rel_spec.datastore = datastore
+    rel_spec.diskMoveType = disk_move_type
+    rel_spec.host = host
+    return rel_spec
+
+
 def get_dummy_vm_create_spec(client_factory, name, data_store_name):
     """Builds the dummy VM create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
@@ -422,6 +443,31 @@ def get_add_vswitch_port_group_spec(client_factory, vswitch_name,
 
     vswitch_port_group_spec.policy = policy
     return vswitch_port_group_spec
+
+
+def get_vnc_config_spec(client_factory, port, password):
+    """Builds the vnc config spec."""
+    virtual_machine_config_spec = client_factory.create(
+                                    'ns0:VirtualMachineConfigSpec')
+
+    opt_enabled = client_factory.create('ns0:OptionValue')
+    opt_enabled.key = "RemoteDisplay.vnc.enabled"
+    opt_enabled.value = "true"
+    opt_port = client_factory.create('ns0:OptionValue')
+    opt_port.key = "RemoteDisplay.vnc.port"
+    opt_port.value = port
+    opt_pass = client_factory.create('ns0:OptionValue')
+    opt_pass.key = "RemoteDisplay.vnc.password"
+    opt_pass.value = password
+    virtual_machine_config_spec.extraConfig = [opt_enabled, opt_port, opt_pass]
+    return virtual_machine_config_spec
+
+
+def search_datastore_spec(client_factory, file_name):
+    """Builds the datastore search spec."""
+    search_spec = client_factory.create('ns0:HostDatastoreBrowserSearchSpec')
+    search_spec.matchPattern = [file_name]
+    return search_spec
 
 
 def get_vm_ref_from_name(session, vm_name):
