@@ -228,8 +228,10 @@ from eventlet import db_pool
 from eventlet import greenthread
 try:
     import MySQLdb
+    from MySQLdb.constants import CLIENT as mysql_client_constants
 except ImportError:
     MySQLdb = None
+    mysql_client_constants = None
 from sqlalchemy.exc import DisconnectionError, OperationalError, IntegrityError
 import sqlalchemy.interfaces
 import sqlalchemy.orm
@@ -482,9 +484,21 @@ def create_engine(sql_connection):
                 'user': connection_dict.username,
                 'min_size': CONF.sql_min_pool_size,
                 'max_size': CONF.sql_max_pool_size,
-                'max_idle': CONF.sql_idle_timeout}
-        creator = db_pool.ConnectionPool(MySQLdb, **pool_args)
-        engine_args['creator'] = creator.create
+                'max_idle': CONF.sql_idle_timeout,
+                'client_flag': mysql_client_constants.FOUND_ROWS}
+
+        pool = db_pool.ConnectionPool(MySQLdb, **pool_args)
+
+        def creator():
+            conn = pool.create()
+            if isinstance(conn, tuple):
+                # NOTE(belliott) eventlet >= 0.10 returns a tuple
+                now, now, conn = conn
+
+            return conn
+
+        engine_args['creator'] = creator
+
     else:
         engine_args['pool_size'] = CONF.sql_max_pool_size
         if CONF.sql_max_overflow is not None:
