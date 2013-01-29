@@ -292,7 +292,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             # shouldn't be an issue for this case.
             'timestamp': '\d{4}-[0,1]\d-[0-3]\d[ ,T]'
                          '\d{2}:\d{2}:\d{2}'
-                         '(Z|(\+|-)\d{2}:\d{2}|\.\d{6})',
+                         '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)',
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]{1,4}',
@@ -381,7 +381,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-floating-ip-dns')
         do_not_approve_additions.append('os-fping')
         do_not_approve_additions.append('os-hypervisors')
-        do_not_approve_additions.append('os-instance_usage_audit_log')
         do_not_approve_additions.append('os-networks')
         do_not_approve_additions.append('os-services')
         do_not_approve_additions.append('os-volumes')
@@ -2688,3 +2687,29 @@ class FloatingIPPoolsSampleJsonTests(ApiSampleTestBase):
 
 class FloatingIPPoolsSampleXmlTests(FloatingIPPoolsSampleJsonTests):
     ctype = "xml"
+
+
+class InstanceUsageAuditLogJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "instance_usage_audit_log.Instance_usage_audit_log")
+
+    def test_show_instance_usage_audit_log(self):
+        response = self._do_get('os-instance_usage_audit_log/%s' %
+                                urllib.quote('2012-07-05 10:00:00'))
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('inst-usage-audit-log-show-get-resp',
+                                     subs, response)
+
+    def test_index_instance_usage_audit_log(self):
+        response = self._do_get('os-instance_usage_audit_log')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('inst-usage-audit-log-index-get-resp',
+                                     subs, response)
+
+
+class InstanceUsageAuditLogXmlTest(InstanceUsageAuditLogJsonTest):
+    ctype = 'xml'
