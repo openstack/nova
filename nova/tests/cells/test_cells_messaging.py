@@ -14,8 +14,6 @@
 """
 Tests For Cells Messaging module
 """
-import mox
-
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
 from nova import context

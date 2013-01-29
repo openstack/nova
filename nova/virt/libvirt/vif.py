@@ -28,7 +28,7 @@ from nova import utils
 
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
-from nova.virt import netutils
+
 LOG = logging.getLogger(__name__)
 
 libvirt_vif_opts = [

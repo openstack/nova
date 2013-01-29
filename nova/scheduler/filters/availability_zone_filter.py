@@ -14,7 +14,6 @@
 #    under the License.
 
 
-from nova import availability_zones
 from nova import db
 from nova.openstack.common import cfg
 from nova.scheduler import filters

@@ -16,7 +16,6 @@
 
 from nova import conductor
 from nova import context
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

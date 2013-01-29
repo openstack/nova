@@ -21,12 +21,10 @@
 
 import os
 
-import mox
 from testtools import matchers
 
 from nova import exception
 from nova.openstack.common import cfg
-from nova import test
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image

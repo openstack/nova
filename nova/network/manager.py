@@ -47,7 +47,6 @@ import datetime
 import itertools
 import math
 import re
-import socket
 import uuid
 
 from eventlet import greenpool

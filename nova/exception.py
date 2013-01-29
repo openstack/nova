@@ -25,7 +25,6 @@ SHOULD include dedicated exception logging.
 """
 
 import functools
-import itertools
 
 import webob.exc
 

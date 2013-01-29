@@ -17,7 +17,6 @@
 
 from nova import db
 from nova.openstack.common import cfg
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 availability_zone_opts = [

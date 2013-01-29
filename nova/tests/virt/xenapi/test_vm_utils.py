@@ -19,10 +19,8 @@
 import contextlib
 import fixtures
 import mox
-import uuid
 
 from nova import test
-from nova.tests.xenapi import stubs
 from nova import utils
 from nova.virt.xenapi import vm_utils
 

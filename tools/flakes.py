@@ -8,7 +8,7 @@ import __builtin__
 import os
 import sys
 
-from pyflakes.scripts.pyflakes import main
+from pyflakes.scripts import pyflakes
 
 if __name__ == "__main__":
     names = os.environ.get('PYFLAKES_BUILTINS', '_')
@@ -19,4 +19,4 @@ if __name__ == "__main__":
 
     del names, os, __builtin__
 
-    sys.exit(main())
+    sys.exit(pyflakes.main())
