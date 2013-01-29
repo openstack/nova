@@ -793,15 +793,16 @@ def floating_ip_fixed_ip_associate(context, floating_address,
         floating_ip_ref = _floating_ip_get_by_address(context,
                                                       floating_address,
                                                       session=session)
-        fixed_ip_ref = fixed_ip_get_by_address(context,
-                                               fixed_address,
-                                               session=session)
+        fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
+                         filter_by(address=fixed_address).\
+                         options(joinedload('network')).\
+                         first()
         if floating_ip_ref.fixed_ip_id == fixed_ip_ref["id"]:
             return None
         floating_ip_ref.fixed_ip_id = fixed_ip_ref["id"]
         floating_ip_ref.host = host
         floating_ip_ref.save(session=session)
-        return fixed_address
+        return fixed_ip_ref
 
 
 @require_context
@@ -834,15 +835,12 @@ def floating_ip_disassociate(context, address):
 
         fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
                             filter_by(id=floating_ip_ref['fixed_ip_id']).\
+                            options(joinedload('network')).\
                             first()
-        if fixed_ip_ref:
-            fixed_ip_address = fixed_ip_ref['address']
-        else:
-            fixed_ip_address = None
         floating_ip_ref.fixed_ip_id = None
         floating_ip_ref.host = None
         floating_ip_ref.save(session=session)
-    return fixed_ip_address
+    return fixed_ip_ref
 
 
 @require_context
@@ -1140,10 +1138,11 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 
 
 @require_context
-def fixed_ip_get(context, id):
-    result = model_query(context, models.FixedIp).\
-                     filter_by(id=id).\
-                     first()
+def fixed_ip_get(context, id, get_network=False):
+    query = model_query(context, models.FixedIp).filter_by(id=id)
+    if get_network:
+        query = query.options(joinedload('network'))
+    result = query.first()
     if not result:
         raise exception.FixedIpNotFound(id=id)
 

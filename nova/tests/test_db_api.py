@@ -253,11 +253,11 @@ class DbApiTestCase(test.TestCase):
         values = {'address': 'fixed'}
         fixed = db.fixed_ip_create(ctxt, values)
         res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
-        self.assertEqual(res, fixed)
+        self.assertEqual(res['address'], fixed)
         res = db.floating_ip_fixed_ip_associate(ctxt, floating, fixed, 'foo')
         self.assertEqual(res, None)
         res = db.floating_ip_disassociate(ctxt, floating)
-        self.assertEqual(res, fixed)
+        self.assertEqual(res['address'], fixed)
         res = db.floating_ip_disassociate(ctxt, floating)
         self.assertEqual(res, None)
 

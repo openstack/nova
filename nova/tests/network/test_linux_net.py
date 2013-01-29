@@ -461,14 +461,14 @@ class LinuxNetworkTestCase(test.TestCase):
                    'bridge_interface': iface}
         driver.plug(network, 'fakemac')
         expected = [
-            ('ebtables', '-D', 'INPUT', '-p', 'ARP', '-i', iface,
-             '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '-I', 'INPUT', '-p', 'ARP', '-i', iface,
-             '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '-D', 'OUTPUT', '-p', 'ARP', '-o', iface,
-             '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('ebtables', '-I', 'OUTPUT', '-p', 'ARP', '-o', iface,
-             '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-I', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-I', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
             ('iptables-save', '-c'),
             ('iptables-restore', '-c'),
             ('ip6tables-save', '-c'),
@@ -500,10 +500,10 @@ class LinuxNetworkTestCase(test.TestCase):
 
         driver.unplug(network)
         expected = [
-            ('ebtables', '-D', 'INPUT', '-p', 'ARP', '-i', iface,
-             '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '-D', 'OUTPUT', '-p', 'ARP', '-o', iface,
-             '--arp-ip-src', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'INPUT', '-p', 'ARP', '-i',
+             iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
+            ('ebtables', '-t', 'filter', '-D', 'OUTPUT', '-p', 'ARP', '-o',
+             iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
             ('iptables-save', '-c'),
             ('iptables-restore', '-c'),
             ('ip6tables-save', '-c'),
