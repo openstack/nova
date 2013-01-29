@@ -671,25 +671,35 @@ class ComputeManager(manager.SchedulerDependentManager):
                 extra_usage_info = {}
 
             self._start_building(context, instance)
+
             self._notify_about_instance_usage(
                     context, instance, "create.start",
                     extra_usage_info=extra_usage_info)
+
             network_info = None
             bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance)
+
             rt = self._get_resource_tracker(node)
             try:
                 limits = filter_properties.get('limits', {})
                 with rt.instance_claim(context, instance, limits):
                     macs = self.driver.macs_for_instance(instance)
+
                     network_info = self._allocate_network(context, instance,
                             requested_networks, macs)
-                    block_device_info = self._prep_block_device(context,
-                            instance, bdms)
+
+                    self._instance_update(
+                            context, instance['uuid'],
+                            vm_state=vm_states.BUILDING,
+                            task_state=task_states.BLOCK_DEVICE_MAPPING)
+
+                    block_device_info = self._prep_block_device(
+                            context, instance, bdms)
+
                     instance = self._spawn(context, instance, image_meta,
                                            network_info, block_device_info,
                                            injected_files, admin_password)
-
             except exception.InstanceNotFound:
                 # the instance got deleted during the spawn
                 try:
@@ -938,9 +948,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""
-        instance = self._instance_update(context, instance['uuid'],
-                vm_state=vm_states.BUILDING,
-                task_state=task_states.BLOCK_DEVICE_MAPPING)
         try:
             return self._setup_block_device_mapping(context, instance, bdms)
         except Exception:
@@ -1377,7 +1384,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     task_state=task_states.REBUILD_BLOCK_DEVICE_MAPPING,
                     expected_task_state=task_states.REBUILDING)
 
-            block_device_info = self._setup_block_device_mapping(
+            block_device_info = self._prep_block_device(
                     context, instance, bdms)
 
             instance['injected_files'] = injected_files
