@@ -308,9 +308,7 @@ class ComputeCellsAPI(compute_api.API):
         # specified flavor_id is valid and exists. We'll need to load
         # it again, but that should be safe.
 
-        old_instance_type_id = instance['instance_type_id']
-        old_instance_type = instance_types.get_instance_type(
-                old_instance_type_id)
+        old_instance_type = instance_types.extract_instance_type(instance)
 
         flavor_id = kwargs.get('flavor_id')
 

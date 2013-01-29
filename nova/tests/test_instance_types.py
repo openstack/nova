@@ -359,6 +359,59 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertTrue(instance["instance_type"])
 
 
+class InstanceTypeToolsTest(test.TestCase):
+    def _dict_to_metadata(self, data):
+        return [{'key': key, 'value': value} for key, value in data.items()]
+
+    def _test_extract_instance_type(self, prefix):
+        instance_type = instance_types.get_default_instance_type()
+
+        metadata = {}
+        instance_types.save_instance_type_info(metadata, instance_type,
+                                               prefix)
+        instance = {'system_metadata': self._dict_to_metadata(metadata)}
+        _instance_type = instance_types.extract_instance_type(instance, prefix)
+
+        props = instance_types.system_metadata_instance_type_props.keys()
+        for key in instance_type.keys():
+            if key not in props:
+                del instance_type[key]
+
+        self.assertEqual(instance_type, _instance_type)
+
+    def test_extract_instance_type(self):
+        self._test_extract_instance_type('')
+
+    def test_extract_instance_type_prefix(self):
+        self._test_extract_instance_type('foo_')
+
+    def test_save_instance_type_info(self):
+        instance_type = instance_types.get_default_instance_type()
+
+        example = {}
+        example_prefix = {}
+
+        for key in instance_types.system_metadata_instance_type_props.keys():
+            example['instance_type_%s' % key] = instance_type[key]
+            example_prefix['fooinstance_type_%s' % key] = instance_type[key]
+
+        metadata = {}
+        instance_types.save_instance_type_info(metadata, instance_type)
+        self.assertEqual(example, metadata)
+
+        metadata = {}
+        instance_types.save_instance_type_info(metadata, instance_type, 'foo')
+        self.assertEqual(example_prefix, metadata)
+
+    def test_delete_instance_type_info(self):
+        instance_type = instance_types.get_default_instance_type()
+        metadata = {}
+        instance_types.save_instance_type_info(metadata, instance_type)
+        instance_types.save_instance_type_info(metadata, instance_type, '_')
+        instance_types.delete_instance_type_info(metadata, '', '_')
+        self.assertEqual(metadata, {})
+
+
 class InstanceTypeFilteringTest(test.TestCase):
     """Test cases for the filter option available for instance_type_get_all."""
     def setUp(self):

@@ -1752,6 +1752,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
+            # NOTE(danms): delete stashed old/new instance_type information
+            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+            instance_types.delete_instance_type_info(sys_meta, 'old_', 'new_')
+            self._instance_update(context, instance['uuid'],
+                                  system_metadata=sys_meta)
+
             # NOTE(tr3buchet): tear down networks on source host
             self.network_api.setup_networks_on_host(context, instance,
                                migration['source_compute'], teardown=True)
@@ -1834,8 +1840,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
-            old_instance_type = migration['old_instance_type_id']
-            instance_type = instance_types.get_instance_type(old_instance_type)
+            instance_type = instance_types.extract_instance_type(instance,
+                                                                 prefix='old_')
+            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+            instance_types.save_instance_type_info(sys_meta, instance_type)
+            instance_types.delete_instance_type_info(sys_meta, 'new_', 'old_')
 
             instance = self._instance_update(context,
                                   instance['uuid'],
@@ -1845,7 +1854,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   ephemeral_gb=instance_type['ephemeral_gb'],
                                   instance_type_id=instance_type['id'],
                                   host=migration['source_compute'],
-                                  node=migration['source_node'])
+                                  node=migration['source_node'],
+                                  system_metadata=sys_meta)
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
@@ -1909,6 +1919,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._set_instance_error_state(context, instance['uuid'])
             msg = _('destination same as source!')
             raise exception.MigrationError(msg)
+
+        # NOTE(danms): Stash the new instance_type to avoid having to
+        # look it up in the database later
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        instance_types.save_instance_type_info(sys_meta, instance_type,
+                                                prefix='new_')
+        instance = self._instance_update(context, instance['uuid'],
+                                         system_metadata=sys_meta)
 
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker(node)
@@ -2070,8 +2088,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
         if old_instance_type_id != new_instance_type_id:
-            instance_type = instance_types.get_instance_type(
-                    new_instance_type_id)
+            instance_type = instance_types.extract_instance_type(instance,
+                                                                 prefix='new_')
+            old_instance_type = instance_types.extract_instance_type(instance)
+            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+            instance_types.save_instance_type_info(sys_meta,
+                                                    old_instance_type,
+                                                    prefix='old_')
+            instance_types.save_instance_type_info(sys_meta, instance_type)
+
             instance = self._instance_update(
                     context,
                     instance['uuid'],
@@ -2079,7 +2104,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     root_gb=instance_type['root_gb'],
-                    ephemeral_gb=instance_type['ephemeral_gb'])
+                    ephemeral_gb=instance_type['ephemeral_gb'],
+                    system_metadata=sys_meta)
+
             resize_instance = True
 
         # NOTE(tr3buchet): setup networks on destination host

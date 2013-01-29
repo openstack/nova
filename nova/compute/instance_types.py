@@ -44,6 +44,25 @@ LOG = logging.getLogger(__name__)
 INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
 
 
+def _int_or_none(val):
+    if val is not None:
+        return int(val)
+
+
+system_metadata_instance_type_props = {
+    'id': int,
+    'name': str,
+    'memory_mb': int,
+    'vcpus': int,
+    'root_gb': int,
+    'ephemeral_gb': int,
+    'flavorid': str,
+    'swap': int,
+    'rxtx_factor': float,
+    'vcpu_weight': _int_or_none,
+    }
+
+
 def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
            swap=None, rxtx_factor=None, is_public=True):
     """Creates instance types."""
@@ -210,3 +229,42 @@ def remove_instance_type_access(flavorid, projectid, ctxt=None):
         ctxt = context.get_admin_context()
 
     return db.instance_type_access_remove(ctxt, flavorid, projectid)
+
+
+def extract_instance_type(instance, prefix=''):
+    """Create an InstanceType-like object from instance's system_metadata
+    information."""
+
+    instance_type = {}
+    sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+    for key, type_fn in system_metadata_instance_type_props.items():
+        type_key = '%sinstance_type_%s' % (prefix, key)
+        instance_type[key] = type_fn(sys_meta[type_key])
+    return instance_type
+
+
+def save_instance_type_info(metadata, instance_type, prefix=''):
+    """Save properties from instance_type into instance's system_metadata,
+    in the format of:
+
+      [prefix]instance_type_[key]
+
+    This can be used to update system_metadata in place from a type, as well
+    as stash information about another instance_type for later use (such as
+    during resize)."""
+
+    for key in system_metadata_instance_type_props.keys():
+        to_key = '%sinstance_type_%s' % (prefix, key)
+        metadata[to_key] = instance_type[key]
+    return metadata
+
+
+def delete_instance_type_info(metadata, *prefixes):
+    """Delete instance_type information from instance's system_metadata
+    by prefix."""
+
+    for key in system_metadata_instance_type_props.keys():
+        for prefix in prefixes:
+            to_key = '%sinstance_type_%s' % (prefix, key)
+            del metadata[to_key]
+    return metadata
