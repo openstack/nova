@@ -911,6 +911,8 @@ class Controller(wsgi.Controller):
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.ImageNotActive as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.FlavorNotFound as error:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
