@@ -37,7 +37,8 @@ CONF.import_opt('host', 'nova.netconf')
 LOG = log.getLogger(__name__)
 
 
-def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
+def add_instance_fault_from_exc(context, conductor,
+                                instance, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
     code = 500
@@ -61,7 +62,7 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
         'details': unicode(details),
         'host': CONF.host
     }
-    db.instance_fault_create(context, values)
+    conductor.instance_fault_create(context, values)
 
 
 def get_device_name_for_instance(context, instance, bdms, device):
