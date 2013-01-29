@@ -2343,6 +2343,35 @@ class ComputeTestCase(BaseTestCase):
                                                   NotImplementedError('test'),
                                                   exc_info)
 
+    def test_add_instance_fault_with_remote_error(self):
+        exc_info = None
+        instance_uuid = str(utils.gen_uuid())
+
+        def fake_db_fault_create(ctxt, values):
+            self.assertTrue(values['details'].startswith('Remote error'))
+            self.assertTrue('raise rpc_common.RemoteError'
+                in values['details'])
+            del values['details']
+
+            expected = {
+                'code': 500,
+                'instance_uuid': instance_uuid,
+                'message': 'My Test Message'
+            }
+            self.assertEquals(expected, values)
+
+        try:
+            raise rpc_common.RemoteError('test', 'My Test Message')
+        except rpc_common.RemoteError as exc:
+            exc_info = sys.exc_info()
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        compute_utils.add_instance_fault_from_exc(ctxt, instance_uuid,
+            exc,
+            exc_info)
+
     def test_add_instance_fault_user_error(self):
         exc_info = None
         instance_uuid = str(utils.gen_uuid())
