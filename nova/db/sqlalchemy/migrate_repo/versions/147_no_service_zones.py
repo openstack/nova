@@ -37,9 +37,9 @@ def upgrade(migrate_engine):
         if rec['binary'] != 'nova-compute':
             continue
         # if zone doesn't exist create
-        result = aggregate_metadata.select().where(aggregate_metadata.c.key ==
-                'availability_zone' and
-            aggregate_metadata.c.key == rec['availability_zone']).execute()
+        result = aggregate_metadata.select().where(
+            aggregate_metadata.c.key == 'availability_zone').where(
+            aggregate_metadata.c.value == rec['availability_zone']).execute()
         result = [r for r in result]
         if len(result) > 0:
             agg_id = result[0].aggregate_id
