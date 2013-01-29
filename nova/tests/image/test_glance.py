@@ -339,7 +339,6 @@ class TestGlanceImageService(test.TestCase):
     def test_update(self):
         fixture = self._make_fixture(name='test image')
         image = self.service.create(self.context, fixture)
-        print image
         image_id = image['id']
         fixture['name'] = 'new image name'
         self.service.update(self.context, image_id, fixture)

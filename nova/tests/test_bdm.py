@@ -246,6 +246,5 @@ class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
 
         result = {}
         cloud._format_mappings(properties, result)
-        print result
         self.assertEqual(result['blockDeviceMapping'].sort(),
                          expected_result['blockDeviceMapping'].sort())

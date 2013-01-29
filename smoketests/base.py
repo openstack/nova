@@ -169,7 +169,6 @@ class SmokeTestCase(unittest.TestCase):
             cmd += ' --kernel true'
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
-            print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
         return True
 
@@ -178,7 +177,6 @@ class SmokeTestCase(unittest.TestCase):
         cmd += '%s -m %s/%s.manifest.xml' % (bucket_name, tempdir, image)
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
-            print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
         return True
 
@@ -186,7 +184,6 @@ class SmokeTestCase(unittest.TestCase):
         cmd = 'euca-delete-bundle --clear -b %s' % (bucket_name)
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
-            print '%s -> \n%s' % (cmd, output)
             raise Exception(output)
         return True
 

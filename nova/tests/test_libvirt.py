@@ -3833,7 +3833,6 @@ class IptablesFirewallTestCase(test.TestCase):
                 if '*filter' in lines:
                     self.out6_rules = lines
                 return '', ''
-            print cmd, kwargs
 
         network_model = _fake_network_info(self.stubs, 1, spectacular=True)
 

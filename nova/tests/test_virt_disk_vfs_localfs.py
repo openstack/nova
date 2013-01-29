@@ -104,7 +104,6 @@ def fake_execute(*args, **kwargs):
         else:
             path = args[1]
             append = False
-        print str(files)
         if not path in files:
             files[path] = {
                 "content": "Hello World",

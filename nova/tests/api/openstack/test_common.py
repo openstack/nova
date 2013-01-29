@@ -377,7 +377,6 @@ class MetadataXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -390,7 +389,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'metadata')
         metadata_dict = fixture['metadata']
@@ -409,7 +407,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'metadata')
         metadata_dict = fixture['metadata']
@@ -428,7 +425,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'metadata')
         metadata_dict = fixture['metadata']
@@ -447,7 +443,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         meta_dict = fixture['meta']
         (meta_key, meta_value) = meta_dict.items()[0]
@@ -463,7 +458,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'metadata')
         metadata_dict = fixture['metadata']
@@ -482,7 +476,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         meta_dict = fixture['meta']
         (meta_key, meta_value) = meta_dict.items()[0]
@@ -499,7 +492,6 @@ class MetadataXMLSerializationTest(test.TestCase):
             },
         }
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'metadata')
         metadata_dict = fixture['metadata']

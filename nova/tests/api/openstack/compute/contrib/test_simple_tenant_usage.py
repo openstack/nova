@@ -293,7 +293,6 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         tenant_usage = dict(tenant_usage=raw_usage)
         text = serializer.serialize(tenant_usage)
 
-        print text
         tree = etree.fromstring(text)
 
         self._verify_tenant_usage(raw_usage, tree)
@@ -378,7 +377,6 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         tenant_usages = dict(tenant_usages=raw_usages)
         text = serializer.serialize(tenant_usages)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('tenant_usages', tree.tag)

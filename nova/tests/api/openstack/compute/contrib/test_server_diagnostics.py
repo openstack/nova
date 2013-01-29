@@ -74,7 +74,6 @@ class TestServerDiagnosticsXMLSerializer(test.TestCase):
         exemplar = dict(diag1='foo', diag2='bar')
         text = serializer.serialize(exemplar)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('diagnostics', self._tag(tree))

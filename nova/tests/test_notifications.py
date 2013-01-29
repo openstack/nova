@@ -187,8 +187,6 @@ class NotificationsTestCase(test.TestCase):
         params = {"task_state": task_states.SPAWNING}
         (old_ref, new_ref) = db.instance_update_and_get_original(self.context,
                 self.instance['uuid'], params)
-        print old_ref["task_state"]
-        print new_ref["task_state"]
         notifications.send_update(self.context, old_ref, new_ref)
 
         self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
