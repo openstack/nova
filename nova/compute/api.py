@@ -508,6 +508,13 @@ class API(base.Base):
             availability_zone, forced_host = self._handle_availability_zone(
                     availability_zone)
 
+            system_metadata = {}
+            instance_type_props = ['id', 'name', 'memory_mb', 'vcpus',
+                                   'root_gb', 'ephemeral_gb', 'flavorid',
+                                   'swap', 'rxtx_factor', 'vcpu_weight']
+            for k in instance_type_props:
+                system_metadata["instance_type_%s" % k] = instance_type[k]
+
             base_options = {
                 'reservation_id': reservation_id,
                 'image_ref': image_href,
@@ -537,7 +544,8 @@ class API(base.Base):
                 'access_ip_v6': access_ip_v6,
                 'availability_zone': availability_zone,
                 'root_device_name': root_device_name,
-                'progress': 0}
+                'progress': 0,
+                'system_metadata': system_metadata}
 
             options_from_image = self._inherit_properties_from_image(
                     image, auto_disk_config)

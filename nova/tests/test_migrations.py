@@ -24,6 +24,7 @@ properly both upgrading and downgrading, and that no data loss occurs
 if possible.
 """
 
+import collections
 import commands
 import ConfigParser
 import os
@@ -452,3 +453,69 @@ class TestMigrations(test.TestCase):
         self.assertEqual("", volume.deleted)
         volume = volumes.select(volumes.c.id == "second").execute().first()
         self.assertEqual(volume.id, volume.deleted)
+
+    # migration 153, copy flavor information into system_metadata
+    def _prerun_153(self, engine):
+        fake_types = [
+            dict(id=10, name='type1', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="1", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True),
+            dict(id=11, name='type2', memory_mb=512, vcpus=1,
+                 root_gb=10, ephemeral_gb=5, flavorid="2", swap=0,
+                 rxtx_factor=1.5, vcpu_weight=2, disabled=False,
+                 is_public=True),
+            dict(id=12, name='type3', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="3", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=False),
+            dict(id=13, name='type4', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="4", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=True,
+                 is_public=True),
+            dict(id=14, name='type5', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="5", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=True,
+                 is_public=False),
+            ]
+
+        fake_instances = [
+            dict(uuid='m153-uuid1', instance_type_id=10),
+            dict(uuid='m153-uuid2', instance_type_id=11),
+            dict(uuid='m153-uuid3', instance_type_id=12),
+            dict(uuid='m153-uuid4', instance_type_id=13),
+            # NOTE(danms): no use of type5
+            ]
+
+        instances = get_table(engine, 'instances')
+        instance_types = get_table(engine, 'instance_types')
+        engine.execute(instance_types.insert(), fake_types)
+        engine.execute(instances.insert(), fake_instances)
+
+        return fake_types, fake_instances
+
+    def _check_153(self, engine, data):
+        fake_types, fake_instances = data
+        # NOTE(danms): Fetch all the tables and data from scratch after change
+        instances = get_table(engine, 'instances')
+        instance_types = get_table(engine, 'instance_types')
+        sys_meta = get_table(engine, 'instance_system_metadata')
+
+        # Collect all system metadata, indexed by instance_uuid
+        metadata = collections.defaultdict(dict)
+        for values in sys_meta.select().execute():
+            metadata[values['instance_uuid']][values['key']] = values['value']
+
+        # Taken from nova/compute/api.py
+        instance_type_props = ['id', 'name', 'memory_mb', 'vcpus',
+                               'root_gb', 'ephemeral_gb', 'flavorid',
+                               'swap', 'rxtx_factor', 'vcpu_weight']
+
+        for instance in fake_instances:
+            inst_sys_meta = metadata[instance['uuid']]
+            inst_type = fake_types[instance['instance_type_id'] - 10]
+            for prop in instance_type_props:
+                prop_name = 'instance_type_%s' % prop
+                self.assertIn(prop_name, inst_sys_meta)
+                self.assertEqual(str(inst_sys_meta[prop_name]),
+                                 str(inst_type[prop]))
