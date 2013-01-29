@@ -392,7 +392,6 @@ class IptablesManager(object):
             start = lines.index('*%s' % table_name) - 1
         except ValueError:
             # Couldn't find table_name
-            # For Unit Tests
             return (0, 0)
         end = lines[start:].index('COMMIT') + start + 2
         return (start, end)
