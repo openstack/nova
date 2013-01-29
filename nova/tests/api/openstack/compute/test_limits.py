@@ -874,7 +874,6 @@ class LimitsXMLSerializationTest(test.TestCase):
                    "absolute": {}}}
 
         output = serializer.serialize(fixture)
-        print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -905,7 +904,6 @@ class LimitsXMLSerializationTest(test.TestCase):
                                  "maxPersonalitySize": 10240}}}
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')
 
@@ -940,7 +938,6 @@ class LimitsXMLSerializationTest(test.TestCase):
                    "absolute": {}}}
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')
 

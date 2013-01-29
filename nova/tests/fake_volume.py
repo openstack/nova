@@ -136,7 +136,6 @@ class API(object):
 
     def create_with_kwargs(self, context, **kwargs):
         volume_id = kwargs.get('volume_id', None)
-        print volume_id
         v = fake_volume(kwargs['size'],
                         kwargs['name'],
                         kwargs['description'],
@@ -145,7 +144,6 @@ class API(object):
                         None,
                         None,
                         None)
-        print v.vol['id']
         if kwargs.get('status', None) is not None:
             v.vol['status'] = kwargs['status']
         if kwargs['host'] is not None:

@@ -4508,7 +4508,6 @@ class ServerXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -4586,7 +4585,6 @@ class ServerXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
@@ -4717,7 +4715,6 @@ class ServerXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
@@ -4814,7 +4811,6 @@ class ServerXMLSerializationTest(test.TestCase):
         ]}
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'servers_index')
         server_elems = root.findall('{0}server'.format(NS))
@@ -4878,7 +4874,6 @@ class ServerXMLSerializationTest(test.TestCase):
         ]}
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'servers_index')
         server_elems = root.findall('{0}server'.format(NS))
@@ -5165,7 +5160,6 @@ class ServerXMLSerializationTest(test.TestCase):
         }
 
         output = serializer.serialize(fixture)
-        print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 

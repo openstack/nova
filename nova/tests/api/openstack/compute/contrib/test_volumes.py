@@ -348,7 +348,6 @@ class VolumeSerializerTest(test.TestCase):
             device='/foo')
         text = serializer.serialize(dict(volumeAttachment=raw_attach))
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('volumeAttachment', tree.tag)
@@ -368,7 +367,6 @@ class VolumeSerializerTest(test.TestCase):
                 device='/foo2')]
         text = serializer.serialize(dict(volumeAttachments=raw_attaches))
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('volumeAttachments', tree.tag)
@@ -401,7 +399,6 @@ class VolumeSerializerTest(test.TestCase):
             )
         text = serializer.serialize(dict(volume=raw_volume))
 
-        print text
         tree = etree.fromstring(text)
 
         self._verify_volume(raw_volume, tree)
@@ -450,7 +447,6 @@ class VolumeSerializerTest(test.TestCase):
                 )]
         text = serializer.serialize(dict(volumes=raw_volumes))
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('volumes', tree.tag)

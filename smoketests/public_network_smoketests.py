@@ -97,7 +97,6 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
                                         self.data['ip_v6'], TEST_KEY)
                     conn.close()
                 except Exception as ex:
-                    print ex
                     time.sleep(1)
                 else:
                     break

@@ -91,7 +91,6 @@ class ServerVirtualInterfaceSerializerTest(test.TestCase):
         vifs = dict(virtual_interfaces=raw_vifs)
         text = self.serializer.serialize(vifs)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('virtual_interfaces', self._tag(tree))

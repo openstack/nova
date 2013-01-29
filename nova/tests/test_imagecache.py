@@ -331,7 +331,6 @@ class ImageCacheManagerTestCase(test.TestCase):
         base_file1 = os.path.join(base_dir, fingerprint)
         base_file2 = os.path.join(base_dir, fingerprint + '_sm')
         base_file3 = os.path.join(base_dir, fingerprint + '_10737418240')
-        print res
         self.assertTrue(res == [(base_file1, False, False),
                                 (base_file2, True, False),
                                 (base_file3, False, True)])

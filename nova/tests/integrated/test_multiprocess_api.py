@@ -63,7 +63,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                 try:
                     traceback.print_exc()
                 except BaseException:
-                    print "Couldn't print traceback"
+                    LOG.error("Couldn't print traceback")
                 status = 2
 
             # Really exit

@@ -1180,7 +1180,6 @@ class TestSecurityGroupXMLSerializer(test.TestCase):
         rule = dict(security_group_rule=raw_rule)
         text = self.rule_serializer.serialize(rule)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('security_group_rule', self._tag(tree))
@@ -1212,7 +1211,6 @@ class TestSecurityGroupXMLSerializer(test.TestCase):
         sg_group = dict(security_group=raw_group)
         text = self.default_serializer.serialize(sg_group)
 
-        print text
         tree = etree.fromstring(text)
 
         self._verify_security_group(raw_group, tree)
@@ -1265,7 +1263,6 @@ class TestSecurityGroupXMLSerializer(test.TestCase):
         sg_groups = dict(security_groups=groups)
         text = self.index_serializer.serialize(sg_groups)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('security_groups', self._tag(tree))

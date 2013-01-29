@@ -166,7 +166,6 @@ class QuotaXMLSerializerTest(test.TestCase):
                 cores=90))
         text = self.serializer.serialize(exemplar)
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('quota_set', tree.tag)

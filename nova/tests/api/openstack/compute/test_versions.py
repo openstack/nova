@@ -228,7 +228,6 @@ class VersionsTest(test.TestCase):
         self.assertEqual(res.content_type, "application/xml")
 
         root = etree.XML(res.body)
-        print res.body
         xmlutil.validate_schema(root, 'versions')
 
         self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
