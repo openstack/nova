@@ -1270,5 +1270,6 @@ def last_bytes(file_like_object, num):
 def metadata_to_dict(metadata):
     result = {}
     for item in metadata:
-        result[item['key']] = item['value']
+        if not item.get('deleted'):
+            result[item['key']] = item['value']
     return result
