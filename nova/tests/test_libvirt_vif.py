@@ -16,6 +16,8 @@
 
 from lxml import etree
 
+from nova import exception
+from nova.network import model as network_model
 from nova.openstack.common import cfg
 from nova import test
 from nova import utils
@@ -48,7 +50,8 @@ class LibvirtVifTestCase(test.TestCase):
         'ips': [{'ip': '101.168.1.9'}],
         'dhcp_server': '191.168.1.1',
         'vif_uuid': 'vif-xxx-yyy-zzz',
-        'vif_devname': 'tap-xxx-yyy-zzz'
+        'vif_devname': 'tap-xxx-yyy-zzz',
+        'vif_type': network_model.VIF_TYPE_BRIDGE,
     }
 
     net_ovs = {
@@ -73,6 +76,15 @@ class LibvirtVifTestCase(test.TestCase):
         'vif_uuid': 'vif-xxx-yyy-zzz',
         'vif_devname': 'tap-xxx-yyy-zzz',
         'ovs_interfaceid': 'aaa-bbb-ccc',
+    }
+
+    mapping_none = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'gateway_v6': net_bridge['gateway_v6'],
+        'ips': [{'ip': '101.168.1.9'}],
+        'dhcp_server': '191.168.1.1',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
     }
 
     instance = {
@@ -149,7 +161,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.flags(libvirt_use_virtio_for_bridges=False,
                    libvirt_type='kvm')
 
-        d = vif.LibvirtBridgeDriver()
+        d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge)
@@ -168,7 +180,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.flags(libvirt_use_virtio_for_bridges=True,
                    libvirt_type='kvm')
 
-        d = vif.LibvirtBridgeDriver()
+        d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge)
@@ -187,7 +199,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.flags(libvirt_use_virtio_for_bridges=True,
                    libvirt_type='qemu')
 
-        d = vif.LibvirtBridgeDriver()
+        d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge)
@@ -206,7 +218,7 @@ class LibvirtVifTestCase(test.TestCase):
         self.flags(libvirt_use_virtio_for_bridges=True,
                    libvirt_type='xen')
 
-        d = vif.LibvirtBridgeDriver()
+        d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge)
@@ -221,8 +233,15 @@ class LibvirtVifTestCase(test.TestCase):
         ret = node.findall("driver")
         self.assertEqual(len(ret), 0)
 
-    def test_bridge_driver(self):
-        d = vif.LibvirtBridgeDriver()
+    def test_generic_driver_none(self):
+        d = vif.LibvirtGenericVIFDriver()
+        self.assertRaises(exception.NovaException,
+                          self._get_instance_xml,
+                          d,
+                          self.net_bridge,
+                          self.mapping_none)
+
+    def _check_bridge_driver(self, d):
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge)
@@ -236,6 +255,14 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(br_name, self.net_bridge['bridge'])
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping_bridge['mac'])
+
+    def test_bridge_driver(self):
+        d = vif.LibvirtBridgeDriver()
+        self._check_bridge_driver(d)
+
+    def test_generic_driver_bridge(self):
+        d = vif.LibvirtGenericVIFDriver()
+        self._check_bridge_driver(d)
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtOpenVswitchDriver()

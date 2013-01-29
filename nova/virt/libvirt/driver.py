@@ -140,7 +140,7 @@ libvirt_opts = [
                     'raw, qcow2, vmdk, vdi). '
                     'Defaults to same as source image'),
     cfg.StrOpt('libvirt_vif_driver',
-               default='nova.virt.libvirt.vif.LibvirtBridgeDriver',
+               default='nova.virt.libvirt.vif.LibvirtGenericVIFDriver',
                help='The libvirt VIF driver to configure the VIFs.'),
     cfg.ListOpt('libvirt_volume_drivers',
                 default=[
