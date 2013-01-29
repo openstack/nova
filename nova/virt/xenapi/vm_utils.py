@@ -460,50 +460,66 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
     return vdi_ref
 
 
-def get_vdis_for_boot_from_vol(session, dev_params):
-    vdis = {}
-    sr_uuid, label, sr_params = volume_utils.parse_sr_info(dev_params)
+def get_vdi_uuid_for_volume(session, connection_data):
+    sr_uuid, label, sr_params = volume_utils.parse_sr_info(connection_data)
     sr_ref = volume_utils.find_sr_by_uuid(session, sr_uuid)
-    # Try introducing SR if it is not present
+
     if not sr_ref:
         sr_ref = volume_utils.introduce_sr(session, sr_uuid, label, sr_params)
 
     if sr_ref is None:
         raise exception.NovaException(_('SR not present and could not be '
                                         'introduced'))
+
+    vdi_uuid = None
+
+    if 'vdi_uuid' in connection_data:
+        session.call_xenapi("SR.scan", sr_ref)
+        vdi_uuid = connection_data['vdi_uuid']
     else:
-        if 'vdi_uuid' in dev_params:
-            session.call_xenapi("SR.scan", sr_ref)
-            vdis = {'root': dict(uuid=dev_params['vdi_uuid'],
-                    file=None, osvol=True)}
-        else:
-            try:
-                vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
-                vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-                vdis = {'root': dict(uuid=vdi_rec['uuid'],
-                                     file=None, osvol=True)}
-            except volume_utils.StorageError, exc:
-                LOG.exception(exc)
-                volume_utils.forget_sr(session, sr_uuid)
-    return vdis
+        try:
+            vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
+            vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
+            vdi_uuid = vdi_rec['uuid']
+        except volume_utils.StorageError, exc:
+            LOG.exception(exc)
+            volume_utils.forget_sr(session, sr_uuid)
+
+    return vdi_uuid
 
 
 def get_vdis_for_instance(context, session, instance, name_label, image,
                           image_type, block_device_info=None):
+    vdis = {}
+
     if block_device_info:
         LOG.debug(_("block device info: %s"), block_device_info)
-        rootdev = block_device_info['root_device_name']
-        if block_device.volume_in_mapping(rootdev, block_device_info,
-                                          strip=block_device.strip_prefix):
-            # call function to return the vdi in connection info of block
-            # device.
-            # make it a point to return from here.
-            bdm_root_dev = block_device_info['block_device_mapping'][0]
-            dev_params = bdm_root_dev['connection_info']['data']
-            LOG.debug(dev_params)
-            return get_vdis_for_boot_from_vol(session, dev_params)
-    return _create_image(context, session, instance, name_label, image,
-                        image_type)
+        root_device_name = block_device_info['root_device_name']
+
+        for bdm in block_device_info['block_device_mapping']:
+            if (block_device.strip_prefix(bdm['mount_device']) ==
+                block_device.strip_prefix(root_device_name)):
+                # If we're a root-device, record that fact so we don't download
+                # a root image via Glance
+                type_ = 'root'
+            else:
+                # Otherwise, use mount_device as `type_` so that we have easy
+                # access to it in _attach_disks to create the VBD
+                type_ = bdm['mount_device']
+
+            connection_data = bdm['connection_info']['data']
+            vdi_uuid = get_vdi_uuid_for_volume(session, connection_data)
+            if vdi_uuid:
+                vdis[type_] = dict(uuid=vdi_uuid, file=None, osvol=True)
+
+    # If we didn't get a root VDI from volumes, then use the Glance image as
+    # the root device
+    if 'root' not in vdis:
+        create_image_vdis = _create_image(
+                context, session, instance, name_label, image, image_type)
+        vdis.update(create_image_vdis)
+
+    return vdis
 
 
 @contextlib.contextmanager

@@ -1366,18 +1366,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                         block_device_mapping_get_all_by_instance(
                                 context, instance)
 
-            if recreate:
-                for bdm in self._get_volume_bdms(bdms):
-                    volume = self.volume_api.get(context, bdm['volume_id'])
+            # NOTE(sirp): this detach is necessary b/c we will reattach the
+            # volumes in _prep_block_devices below.
+            for bdm in self._get_volume_bdms(bdms):
+                volume = self.volume_api.get(context, bdm['volume_id'])
+                self.volume_api.detach(context, volume)
 
-                    # We can't run volume disconnect on source because
-                    # the host is down. Just marking volume as detached
-                    # in db, anyway the zombie instance going to be deleted
-                    # from source during init_host when host comes back
-                    self.volume_api.detach(context.elevated(), volume)
-            else:
+            if not recreate:
+                block_device_info = self._get_volume_block_device_info(
+                        self._get_volume_bdms(bdms))
                 self.driver.destroy(instance,
-                                    self._legacy_nw_info(network_info))
+                                    self._legacy_nw_info(network_info),
+                                    block_device_info=block_device_info)
 
             instance = self._instance_update(
                     context, instance['uuid'],
