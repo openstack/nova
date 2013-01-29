@@ -67,7 +67,7 @@ class VirtDiskTest(test.TestCase):
                                       "key was injected by Nova\nmysshkey\n",
                            'gid': 100,
                            'uid': 100,
-                           'mode': 0700})
+                           'mode': 0600})
 
         vfs.teardown()
 
@@ -101,7 +101,7 @@ class VirtDiskTest(test.TestCase):
                                       "key was injected by Nova\nmysshkey\n",
                            'gid': 100,
                            'uid': 100,
-                           'mode': 0700})
+                           'mode': 0600})
 
         vfs.teardown()
 

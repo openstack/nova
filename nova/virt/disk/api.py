@@ -443,6 +443,7 @@ def _inject_key_into_fs(key, fs):
     ])
 
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
+    fs.set_permissions(keyfile, 0600)
 
     _setup_selinux_for_keys(fs, sshdir)
 
