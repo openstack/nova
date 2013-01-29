@@ -205,17 +205,9 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
 
 class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
-    """Deprecated in favour of LibvirtGenericVIFDriver.
-       Retained in Grizzly for compatibility with Quantum
+    """Retained in Grizzly for compatibility with Quantum
        drivers which do not yet report 'vif_type' port binding.
-       To be removed in Hxxxx."""
-
-    def __init__(self):
-        LOG.deprecated(
-            _("LibvirtBridgeDriver is deprecated and "
-              "will be removed in the Hxxxx release. Please "
-              "update the 'libvirt_vif_driver' config parameter "
-              "to use the LibvirtGenericVIFDriver class instead"))
+       Will be deprecated in Havana, and removed in Ixxxx."""
 
     def get_config(self, instance, network, mapping):
         return self.get_config_bridge(instance, network, mapping)
