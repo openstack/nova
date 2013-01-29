@@ -410,10 +410,10 @@ class IptablesManager(object):
                                                 run_as_root=True,
                                                 attempts=5)
             all_lines = all_tables.split('\n')
-            for table in tables:
-                start, end = self._find_table(all_lines, table)
+            for table_name, table in tables.iteritems():
+                start, end = self._find_table(all_lines, table_name)
                 all_lines[start:end] = self._modify_rules(
-                        all_lines[start:end], tables[table], table_name=table)
+                        all_lines[start:end], table, table_name)
             self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
                          process_input='\n'.join(all_lines),
                          attempts=5)
@@ -431,8 +431,7 @@ class IptablesManager(object):
         end = lines[start:].index('COMMIT') + start + 2
         return (start, end)
 
-    def _modify_rules(self, current_lines, table, binary=None,
-                      table_name=None):
+    def _modify_rules(self, current_lines, table, table_name):
         unwrapped_chains = table.unwrapped_chains
         chains = table.chains
         remove_chains = table.remove_chains
