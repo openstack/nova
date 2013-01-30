@@ -144,7 +144,8 @@ class ResourceTracker(object):
 
             # Mark the resources in-use for the resize landing on this
             # compute host:
-            self._update_usage_from_migration(self.compute_node, migration_ref)
+            self._update_usage_from_migration(instance_ref, self.compute_node,
+                                              migration_ref)
             elevated = context.elevated()
             self._update(elevated, self.compute_node)
 
@@ -158,12 +159,7 @@ class ResourceTracker(object):
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
         """
-        # TODO(russellb): no-db-compute: Send the old instance type
-        # info that is needed via rpc so db access isn't required
-        # here.
-        old_instance_type_id = instance['instance_type_id']
-        old_instance_type = instance_types.get_instance_type(
-                old_instance_type_id)
+        old_instance_type = instance_types.extract_instance_type(instance)
 
         return self.conductor_api.migration_create(context, instance,
                 {'dest_compute': self.host,
@@ -379,7 +375,7 @@ class ResourceTracker(object):
         resources['running_vms'] = self.stats.num_instances
         resources['vcpus_used'] = self.stats.num_vcpus_used
 
-    def _update_usage_from_migration(self, resources, migration):
+    def _update_usage_from_migration(self, instance, resources, migration):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
@@ -392,7 +388,7 @@ class ResourceTracker(object):
                     migration['source_node'] == self.nodename)
         same_node = (incoming and outbound)
 
-        instance = self.tracked_instances.get(uuid, None)
+        record = self.tracked_instances.get(uuid, None)
         itype = None
 
         if same_node:
@@ -400,27 +396,25 @@ class ResourceTracker(object):
             # instance is *not* in:
             if (instance['instance_type_id'] ==
                 migration['old_instance_type_id']):
-
-                itype = migration['new_instance_type_id']
+                itype = instance_types.extract_instance_type(instance)
             else:
                 # instance record already has new flavor, hold space for a
                 # possible revert to the old instance type:
-                itype = migration['old_instance_type_id']
+                itype = instance_types.extract_instance_type(instance, 'old_')
 
-        elif incoming and not instance:
+        elif incoming and not record:
             # instance has not yet migrated here:
-            itype = migration['new_instance_type_id']
+            itype = instance_types.extract_instance_type(instance, 'new_')
 
-        elif outbound and not instance:
+        elif outbound and not record:
             # instance migrated, but record usage for a possible revert:
-            itype = migration['old_instance_type_id']
+            itype = instance_types.extract_instance_type(instance, 'old_')
 
         if itype:
-            instance_type = instance_types.get_instance_type(itype)
-            self.stats.update_stats_for_migration(instance_type)
-            self._update_usage(resources, instance_type)
+            self.stats.update_stats_for_migration(itype)
+            self._update_usage(resources, itype)
             resources['stats'] = self.stats
-            self.tracked_migrations[uuid] = (migration, instance_type)
+            self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, resources, migrations):
 
@@ -453,7 +447,8 @@ class ResourceTracker(object):
 
         for migration in filtered.values():
             try:
-                self._update_usage_from_migration(resources, migration)
+                self._update_usage_from_migration(instance, resources,
+                                                  migration)
             except exception.InstanceTypeNotFound:
                 LOG.warn(_("InstanceType could not be found, skipping "
                            "migration."), instance_uuid=uuid)

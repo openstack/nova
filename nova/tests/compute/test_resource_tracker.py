@@ -19,6 +19,7 @@
 
 import uuid
 
+from nova.compute import instance_types
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -152,7 +153,21 @@ class BaseTestCase(test.TestCase):
         }
         return service
 
+    def _fake_instance_system_metadata(self, instance_type, prefix=''):
+        sys_meta = []
+        for key in instance_types.system_metadata_instance_type_props.keys():
+            sys_meta.append({'key': '%sinstance_type_%s' % (prefix, key),
+                             'value': instance_type[key]})
+        return sys_meta
+
     def _fake_instance(self, *args, **kwargs):
+
+        # Default to an instance ready to resize to or from the same
+        # instance_type
+        itype = self._fake_instance_type_create()
+        sys_meta = (self._fake_instance_system_metadata(itype) +
+                    self._fake_instance_system_metadata(itype, 'new_') +
+                    self._fake_instance_system_metadata(itype, 'old_'))
 
         instance_uuid = str(uuid.uuid1())
         instance = {
@@ -169,6 +184,7 @@ class BaseTestCase(test.TestCase):
             'node': None,
             'instance_type_id': 1,
             'launched_on': None,
+            'system_metadata': sys_meta,
         }
         instance.update(kwargs)
 
@@ -183,6 +199,9 @@ class BaseTestCase(test.TestCase):
             'vcpus': FAKE_VIRT_VCPUS,
             'root_gb': FAKE_VIRT_LOCAL_GB / 2,
             'ephemeral_gb': FAKE_VIRT_LOCAL_GB / 2,
+            'swap': 0,
+            'rxtx_factor': 1.0,
+            'vcpu_weight': 1,
             'flavorid': 'fakeflavor'
         }
         instance_type.update(**kwargs)
@@ -714,11 +733,12 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         # make an instance of src_type:
         instance = self._fake_instance(memory_mb=1, root_gb=1, ephemeral_gb=0,
                 vcpus=1, instance_type_id=2)
-
+        instance['system_metadata'] = self._fake_instance_system_metadata(
+            dest_type)
         self.tracker.instance_claim(self.context, instance, self.limits)
 
         # resize to dest_type:
-        claim = self.tracker.resize_claim(self.context, self.instance,
+        claim = self.tracker.resize_claim(self.context, instance,
                 dest_type, self.limits)
 
         self._assert(3, 'memory_mb_used')
