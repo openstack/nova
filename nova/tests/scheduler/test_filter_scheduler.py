@@ -21,6 +21,7 @@ import mox
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
@@ -62,7 +63,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 uuid, {'vm_state': vm_states.ERROR, 'task_state':
                     None}).AndReturn(({}, {}))
         compute_utils.add_instance_fault_from_exc(fake_context,
-                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+                mox.IsA(conductor_api.LocalAPI), new_ref,
+                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(
                 fake_context, request_spec, None, None, None, None, {})
@@ -92,7 +94,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 uuid, {'vm_state': vm_states.ERROR, 'task_state':
                     None}).AndReturn(({}, {}))
         compute_utils.add_instance_fault_from_exc(fake_context,
-                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
+                mox.IsA(conductor_api.LocalAPI), new_ref,
+                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(
                 fake_context, request_spec, None, None, None, None, {})

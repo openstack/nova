@@ -26,6 +26,7 @@ import sys
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 import nova.context
 from nova import db
 from nova import exception
@@ -190,6 +191,7 @@ class SchedulerManager(manager.Manager):
                 notifications.send_update(context, old_ref, new_ref,
                         service="scheduler")
                 compute_utils.add_instance_fault_from_exc(context,
+                        conductor_api.LocalAPI(),
                         new_ref, ex, sys.exc_info())
 
             payload = dict(request_spec=request_spec,

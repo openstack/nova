@@ -26,10 +26,12 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.scheduler import driver
 from nova.scheduler import manager
@@ -187,7 +189,8 @@ class SchedulerManagerTestCase(test.TestCase):
                 fake_instance_uuid,
                 {"vm_state": vm_states.ERROR,
                  "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+        compute_utils.add_instance_fault_from_exc(self.context,
+                mox.IsA(conductor_api.LocalAPI), new_ref,
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.ReplayAll()
@@ -221,7 +224,8 @@ class SchedulerManagerTestCase(test.TestCase):
                 fake_instance_uuid,
                 {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
                         (inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+        compute_utils.add_instance_fault_from_exc(self.context,
+                mox.IsA(conductor_api.LocalAPI), new_ref,
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.ReplayAll()
@@ -258,13 +262,33 @@ class SchedulerManagerTestCase(test.TestCase):
                 fake_instance_uuid,
                 {"vm_state": vm_states.ERROR,
                  "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
+        compute_utils.add_instance_fault_from_exc(self.context,
+                mox.IsA(conductor_api.LocalAPI), new_ref,
                 mox.IsA(test.TestingException), mox.IgnoreArg())
 
         self.mox.ReplayAll()
 
         self.assertRaises(test.TestingException, self.manager.prep_resize,
                           **kwargs)
+
+    def test_set_vm_state_and_notify_adds_instance_fault(self):
+        request = {'instance_properties': {'uuid': 'fake-uuid'}}
+        updates = {'vm_state': 'foo'}
+        fake_inst = {'uuid': 'fake-uuid'}
+
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(db, 'instance_fault_create')
+        self.mox.StubOutWithMock(notifier, 'notify')
+        db.instance_update_and_get_original(self.context, 'fake-uuid',
+                                            updates).AndReturn((None,
+                                                                fake_inst))
+        db.instance_fault_create(self.context, mox.IgnoreArg())
+        notifier.notify(self.context, mox.IgnoreArg(), 'scheduler.foo',
+                        notifier.ERROR, mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.manager._set_vm_state_and_notify('foo', {'vm_state': 'foo'},
+                                              self.context, None, request)
 
 
 class SchedulerTestCase(test.TestCase):
@@ -619,6 +643,24 @@ class SchedulerTestCase(test.TestCase):
                 instance=instance, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
+
+    def test_handle_schedule_error_adds_instance_fault(self):
+        instance = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(db, 'instance_fault_create')
+        self.mox.StubOutWithMock(notifier, 'notify')
+        db.instance_update_and_get_original(self.context, instance['uuid'],
+                                            mox.IgnoreArg()).AndReturn(
+                                                (None, instance))
+        db.instance_fault_create(self.context, mox.IgnoreArg())
+        notifier.notify(self.context, mox.IgnoreArg(),
+                        'scheduler.run_instance',
+                        notifier.ERROR, mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        driver.handle_schedule_error(self.context,
+                                     exception.NoValidHost('test'),
+                                     instance['uuid'], {})
 
 
 class SchedulerDriverBaseTestCase(SchedulerTestCase):
