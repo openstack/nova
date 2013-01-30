@@ -33,14 +33,8 @@ from nova import volume
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'volumes')
 
-authorize_attach_index = extensions.extension_authorizer('compute',
-                                                    'volume_attachments:index')
-authorize_attach_show = extensions.extension_authorizer('compute',
-                                                    'volume_attachments:show')
-authorize_attach_create = extensions.extension_authorizer('compute',
-                                                'volume_attachments:create')
-authorize_attach_delete = extensions.extension_authorizer('compute',
-                                                'volume_attachments:delete')
+authorize_attach = extensions.extension_authorizer('compute',
+                                                   'volume_attachments')
 
 
 def _translate_volume_detail_view(context, vol):
@@ -339,7 +333,7 @@ class VolumeAttachmentController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
-        authorize_attach_index(context)
+        authorize_attach(context, action='index')
         return self._items(req, server_id,
                            entity_maker=_translate_attachment_summary_view)
 
@@ -348,7 +342,7 @@ class VolumeAttachmentController(wsgi.Controller):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
         authorize(context)
-        authorize_attach_show(context)
+        authorize_attach(context, action='show')
 
         volume_id = id
         try:
@@ -389,7 +383,7 @@ class VolumeAttachmentController(wsgi.Controller):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
         authorize(context)
-        authorize_attach_create(context)
+        authorize_attach(context, action='create')
 
         if not self.is_valid_body(body, 'volumeAttachment'):
             raise exc.HTTPUnprocessableEntity()
@@ -436,7 +430,7 @@ class VolumeAttachmentController(wsgi.Controller):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
         authorize(context)
-        authorize_attach_delete(context)
+        authorize_attach(context, action='delete')
 
         volume_id = id
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
