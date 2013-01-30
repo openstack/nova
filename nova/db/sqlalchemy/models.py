@@ -724,7 +724,7 @@ class FixedIp(BASE, NovaBase):
                            foreign_keys=network_id,
                            primaryjoin='and_('
                                 'FixedIp.network_id == Network.id,'
-                                'FixedIp.deleted == False)')
+                                'FixedIp.deleted == 0)')
 
 
 class FloatingIp(BASE, NovaBase):
