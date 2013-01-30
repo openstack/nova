@@ -18,10 +18,9 @@
 import webob
 
 from nova.api.openstack.compute.contrib import flavorextraspecs
-from nova.api.openstack import wsgi
+import nova.db
 from nova import test
 from nova.tests.api.openstack import fakes
-import nova.wsgi
 
 
 def return_create_flavor_extra_specs(context, flavor_id, extra_specs):
@@ -173,14 +172,6 @@ class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):
                     '<extra_specs><key1>value1</key1></extra_specs>')
         text = serializer.serialize(dict(extra_specs={"key1": "value1"}))
         self.assertEqual(text, expected)
-
-    def test_deserializer(self):
-        deserializer = wsgi.XMLDeserializer()
-        expected = dict(extra_specs={"key1": "value1"})
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<extra_specs><key1>value1</key1></extra_specs>')
-        result = deserializer.deserialize(intext)['body']
-        self.assertEqual(result, expected)
 
     def test_show_update_serializer(self):
         serializer = flavorextraspecs.ExtraSpecTemplate()
