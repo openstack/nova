@@ -22,7 +22,6 @@ import traceback
 
 from nova import block_device
 from nova.compute import instance_types
-from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
@@ -206,24 +205,27 @@ def get_nw_info_for_instance(instance):
     return network_model.NetworkInfo.hydrate(cached_nwinfo)
 
 
-def has_audit_been_run(context, host, timestamp=None):
+def has_audit_been_run(context, conductor, host, timestamp=None):
     begin, end = utils.last_completed_audit_period(before=timestamp)
-    task_log = db.task_log_get(context, "instance_usage_audit",
-                               begin, end, host)
+    task_log = conductor.task_log_get(context, "instance_usage_audit",
+                                      begin, end, host)
     if task_log:
         return True
     else:
         return False
 
 
-def start_instance_usage_audit(context, begin, end, host, num_instances):
-    db.task_log_begin_task(context, "instance_usage_audit", begin, end, host,
-                           num_instances, "Instance usage audit started...")
+def start_instance_usage_audit(context, conductor, begin, end, host,
+                               num_instances):
+    conductor.task_log_begin_task(context, "instance_usage_audit", begin,
+                                  end, host, num_instances,
+                                  "Instance usage audit started...")
 
 
-def finish_instance_usage_audit(context, begin, end, host, errors, message):
-    db.task_log_end_task(context, "instance_usage_audit", begin, end, host,
-                         errors, message)
+def finish_instance_usage_audit(context, conductor, begin, end, host, errors,
+                                message):
+    conductor.task_log_end_task(context, "instance_usage_audit", begin, end,
+                                host, errors, message)
 
 
 def usage_volume_info(vol_usage):

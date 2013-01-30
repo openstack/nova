@@ -3083,7 +3083,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _instance_usage_audit(self, context):
         if CONF.instance_usage_audit:
-            if not compute_utils.has_audit_been_run(context, self.host):
+            if not compute_utils.has_audit_been_run(context,
+                                                    self.conductor_api,
+                                                    self.host):
                 begin, end = utils.last_completed_audit_period()
                 capi = self.conductor_api
                 instances = capi.instance_get_active_by_window_joined(
@@ -3100,6 +3102,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                number_instances=num_instances))
                 start_time = time.time()
                 compute_utils.start_instance_usage_audit(context,
+                                              self.conductor_api,
                                               begin, end,
                                               self.host, num_instances)
                 for instance in instances:
@@ -3115,6 +3118,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       instance=instance)
                         errors += 1
                 compute_utils.finish_instance_usage_audit(context,
+                                              self.conductor_api,
                                               begin, end,
                                               self.host, errors,
                                               "Instance usage audit ran "
