@@ -2067,7 +2067,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=new_instance)
 
     def test_prep_resize_instance_migration_error_on_none_host(self):
-        """Ensure prep_resize raise a migration error if destination host is
+        """Ensure prep_resize raises a migration error if destination host is
         not defined
         """
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -2532,7 +2532,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_destroy(c, inst_uuid)
 
     def test_post_live_migration_no_shared_storage_working_correctly(self):
-        """Confirm post_live_migration() works as expected correctly
+        """Confirm post_live_migration() works correctly as expected
            for non shared storage migration.
         """
         # Create stubs
@@ -3431,7 +3431,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_destroy(c, inst_uuid)
 
     def test_rebuild_with_wrong_shared_storage(self):
-        """Confirm evacuate scenario updates host."""
+        """Confirm evacuate scenario does not update host."""
 
         # creating testdata
         c = self.context.elevated()
