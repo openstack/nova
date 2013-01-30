@@ -164,15 +164,6 @@ network_opts = [
     cfg.StrOpt('l3_lib',
                default='nova.network.l3.LinuxNetL3',
                help="Indicates underlying L3 management library"),
-    cfg.StrOpt('instance_dns_manager',
-               default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='full class name for the DNS Manager for instance IPs'),
-    cfg.StrOpt('instance_dns_domain',
-               default='',
-               help='full class name for the DNS Zone for instance IPs'),
-    cfg.StrOpt('floating_ip_dns_manager',
-               default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='full class name for the DNS Manager for floating IPs'),
     ]
 
 CONF = cfg.CONF

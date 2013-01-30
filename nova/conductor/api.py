@@ -14,14 +14,13 @@
 
 """Handles all requests to the conductor service."""
 
-import functools
-
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova import exception as exc
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
+from nova import utils
 
 conductor_opts = [
     cfg.BoolOpt('use_local',
@@ -43,25 +42,6 @@ CONF.register_opts(conductor_opts, conductor_group)
 LOG = logging.getLogger(__name__)
 
 
-class ExceptionHelper(object):
-    """Class to wrap another and translate the ClientExceptions raised by its
-    function calls to the actual ones"""
-
-    def __init__(self, target):
-        self._target = target
-
-    def __getattr__(self, name):
-        func = getattr(self._target, name)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except rpc_common.ClientException, e:
-                raise (e._exc_info[1], None, e._exc_info[2])
-        return wrapper
-
-
 class LocalAPI(object):
     """A local version of the conductor API that does database updates
     locally instead of via RPC"""
@@ -69,7 +49,7 @@ class LocalAPI(object):
     def __init__(self):
         # TODO(danms): This needs to be something more generic for
         # other/future users of this sort of functionality.
-        self._manager = ExceptionHelper(manager.ConductorManager())
+        self._manager = utils.ExceptionHelper(manager.ConductorManager())
 
     def wait_until_ready(self, context, *args, **kwargs):
         # nothing to wait for in the local case.

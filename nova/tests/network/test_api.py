@@ -26,8 +26,8 @@ from nova import context
 from nova import exception
 from nova import network
 from nova.network import api
+from nova.network import floating_ips
 from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common import rpc
 from nova import policy
 from nova import test
 
@@ -90,10 +90,11 @@ class ApiTestCase(test.TestCase):
 
         new_instance = {'uuid': 'new-uuid'}
 
-        def fake_rpc_call(context, topic, msg, timeout=None):
+        def fake_associate(*args, **kwargs):
             return orig_instance_uuid
 
-        self.stubs.Set(rpc, 'call', fake_rpc_call)
+        self.stubs.Set(floating_ips.FloatingIP, 'associate_floating_ip',
+                       fake_associate)
 
         def fake_instance_get_by_uuid(context, instance_uuid):
             return {'uuid': instance_uuid}
