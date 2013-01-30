@@ -25,7 +25,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.manager')
+CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
 
 
