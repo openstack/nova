@@ -38,26 +38,23 @@ CONF = cfg.CONF
 CONF.register_opts(volume_opts)
 
 
-class NfsVolumeDriver(volume.LibvirtVolumeDriver):
+class NfsVolumeDriver(volume.LibvirtBaseVolumeDriver):
     """Class implements libvirt part of volume driver for NFS."""
 
-    def __init__(self, *args, **kwargs):
-        """Create back-end to nfs and check connection."""
-        super(NfsVolumeDriver, self).__init__(*args, **kwargs)
+    def __init__(self, connection):
+        """Create back-end to nfs."""
+        super(NfsVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
 
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
+        conf = super(NfsVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
         path = self._ensure_mounted(connection_info['data']['export'])
         path = os.path.join(path, connection_info['data']['name'])
-        connection_info['data']['device_path'] = path
-        conf = super(NfsVolumeDriver, self).connect_volume(connection_info,
-                                                           mount_device)
         conf.source_type = 'file'
+        conf.source_path = path
         return conf
-
-    def disconnect_volume(self, connection_info, mount_device):
-        """Disconnect the volume."""
-        pass
 
     def _ensure_mounted(self, nfs_export):
         """
