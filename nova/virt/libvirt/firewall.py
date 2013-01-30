@@ -29,11 +29,7 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
-try:
-    import libvirt
-except ImportError:
-    LOG.warn(_("Libvirt module could not be loaded. NWFilterFirewall will "
-               "not work correctly."))
+libvirt = None
 
 
 class NWFilterFirewall(base_firewall.FirewallDriver):
@@ -47,6 +43,13 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def __init__(self, virtapi, get_connection, **kwargs):
         super(NWFilterFirewall, self).__init__(virtapi)
+        global libvirt
+        if libvirt is None:
+            try:
+                libvirt = __import__('libvirt')
+            except ImportError:
+                LOG.warn(_("Libvirt module could not be loaded. "
+                           "NWFilterFirewall will not work correctly."))
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
