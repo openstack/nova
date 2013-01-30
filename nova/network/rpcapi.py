@@ -27,6 +27,10 @@ rpcapi_opts = [
     cfg.StrOpt('network_topic',
                default='network',
                help='the topic network nodes listen on'),
+    cfg.BoolOpt('multi_host',
+                default=False,
+                help='Default value for multi_host in networks. Also, if set, '
+                     'some rpc network calls will be sent directly to host.'),
 ]
 
 CONF = cfg.CONF
@@ -153,15 +157,24 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def allocate_for_instance(self, ctxt, instance_id, instance_uuid,
                               project_id, host, rxtx_factor, vpn,
                               requested_networks, macs=None):
+        if CONF.multi_host:
+            topic = rpc.queue_get_for(ctxt, self.topic, host)
+        else:
+            topic = None
         return self.call(ctxt, self.make_msg('allocate_for_instance',
                 instance_id=instance_id, instance_uuid=instance_uuid,
                 project_id=project_id, host=host, rxtx_factor=rxtx_factor,
                 vpn=vpn, requested_networks=requested_networks, macs=macs),
-                version='1.8')
+                topic=topic, version='1.8')
 
     def deallocate_for_instance(self, ctxt, instance_id, project_id, host):
+        if CONF.multi_host:
+            topic = rpc.queue_get_for(ctxt, self.topic, host)
+        else:
+            topic = None
         return self.call(ctxt, self.make_msg('deallocate_for_instance',
-                instance_id=instance_id, project_id=project_id, host=host))
+                instance_id=instance_id, project_id=project_id, host=host),
+                topic=topic)
 
     def add_fixed_ip_to_instance(self, ctxt, instance_id, host, network_id):
         return self.call(ctxt, self.make_msg('add_fixed_ip_to_instance',
