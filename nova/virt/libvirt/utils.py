@@ -29,7 +29,15 @@ from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import images
 
+libvirt_opts = [
+    cfg.BoolOpt('libvirt_snapshot_compression',
+                default=False,
+                help='Compress snapshot images when possible. This '
+                     'currently applies exclusively to qcow2 images'),
+    ]
+
 CONF = cfg.CONF
+CONF.register_opts(libvirt_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
@@ -406,15 +414,18 @@ def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
     if dest_fmt == 'iso':
         dest_fmt = 'raw'
 
-    qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O',
-                    dest_fmt, '-s', snapshot_name, disk_path, out_path)
+    qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O', dest_fmt)
+
+    # Conditionally enable compression of snapshots.
+    if CONF.libvirt_snapshot_compression and dest_fmt == "qcow2":
+        qemu_img_cmd += ('-c',)
 
     # When snapshot name is omitted we do a basic convert, which
     # is used by live snapshots.
-    if snapshot_name is None:
-        qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O',
-                        dest_fmt, disk_path, out_path)
+    if snapshot_name is not None:
+        qemu_img_cmd += ('-s', snapshot_name)
 
+    qemu_img_cmd += (disk_path, out_path)
     execute(*qemu_img_cmd)
 
 
