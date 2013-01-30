@@ -29,35 +29,35 @@ from nova import utils
 
 def get_fake_instance_data(name, project_id, user_id):
     return {'name': name,
-              'id': 1,
-              'uuid': str(uuid.uuid4()),
-              'project_id': project_id,
-              'user_id': user_id,
-              'image_ref': "1",
-              'kernel_id': "1",
-              'ramdisk_id': "1",
-              'mac_address': "de:ad:be:ef:be:ef",
-              'instance_type':
-                {'name': 'm1.tiny',
-                'memory_mb': 512,
-                'vcpus': 1,
-                'root_gb': 0,
-                'flavorid': 1,
-                'rxtx_factor': 1}
-              }
+            'id': 1,
+            'uuid': str(uuid.uuid4()),
+            'project_id': project_id,
+            'user_id': user_id,
+            'image_ref': "1",
+            'kernel_id': "1",
+            'ramdisk_id': "1",
+            'mac_address': "de:ad:be:ef:be:ef",
+            'instance_type':
+            {'name': 'm1.tiny',
+             'memory_mb': 512,
+             'vcpus': 1,
+             'root_gb': 0,
+             'flavorid': 1,
+             'rxtx_factor': 1}
+            }
 
 
 def get_fake_image_data(project_id, user_id):
     return {'name': 'image1',
-              'id': 1,
-              'project_id': project_id,
-              'user_id': user_id,
-              'image_ref': "1",
-              'kernel_id': "1",
-              'ramdisk_id': "1",
-              'mac_address': "de:ad:be:ef:be:ef",
-              'instance_type': 'm1.tiny',
-              }
+            'id': 1,
+            'project_id': project_id,
+            'user_id': user_id,
+            'image_ref': "1",
+            'kernel_id': "1",
+            'ramdisk_id': "1",
+            'mac_address': "de:ad:be:ef:be:ef",
+            'instance_type': 'm1.tiny',
+            }
 
 
 def get_fake_volume_info_data(target_portal, volume_id):
@@ -72,25 +72,25 @@ def get_fake_volume_info_data(target_portal, volume_id):
             'auth_method': 'fake',
             'auth_method': 'fake',
         }
-}
+    }
 
 
 def get_fake_block_device_info(target_portal, volume_id):
-    return {
-            'block_device_mapping': [{'connection_info': {
-                'driver_volume_type': 'iscsi',
-                'data': {'target_lun': 1,
-                         'volume_id': volume_id,
-                         'target_iqn': 'iqn.2010-10.org.openstack:volume-' +
-                            volume_id,
-                         'target_portal': target_portal,
-                         'target_discovered': False}},
-                'mount_device': 'vda',
-                'delete_on_termination': False}],
+    return {'block_device_mapping': [{'connection_info': {
+                                      'driver_volume_type': 'iscsi',
+                                      'data': {'target_lun': 1,
+                                      'volume_id': volume_id,
+                                      'target_iqn':
+                                      'iqn.2010-10.org.openstack:volume-' +
+                                      volume_id,
+                                      'target_portal': target_portal,
+                                      'target_discovered': False}},
+                                     'mount_device': 'vda',
+                                     'delete_on_termination': False}],
             'root_device_name': None,
             'ephemerals': [],
             'swap': None
-    }
+            }
 
 
 def stub_out_db_instance_api(stubs):
@@ -99,11 +99,9 @@ def stub_out_db_instance_api(stubs):
     INSTANCE_TYPES = {
         'm1.tiny': dict(memory_mb=512, vcpus=1, root_gb=0, flavorid=1),
         'm1.small': dict(memory_mb=2048, vcpus=1, root_gb=20, flavorid=2),
-        'm1.medium':
-            dict(memory_mb=4096, vcpus=2, root_gb=40, flavorid=3),
+        'm1.medium': dict(memory_mb=4096, vcpus=2, root_gb=40, flavorid=3),
         'm1.large': dict(memory_mb=8192, vcpus=4, root_gb=80, flavorid=4),
-        'm1.xlarge':
-            dict(memory_mb=16384, vcpus=8, root_gb=160, flavorid=5)}
+        'm1.xlarge': dict(memory_mb=16384, vcpus=8, root_gb=160, flavorid=5)}
 
     class FakeModel(object):
         """Stubs out for model."""
@@ -152,7 +150,7 @@ def stub_out_db_instance_api(stubs):
             'vcpus': instance_type['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
             'root_gb': instance_type['root_gb'],
-            }
+        }
         return FakeModel(base_options)
 
     def fake_network_get_by_instance(context, instance_id):
@@ -181,4 +179,4 @@ def stub_out_db_instance_api(stubs):
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
     stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-        fake_block_device_mapping_get_all_by_instance)
+              fake_block_device_mapping_get_all_by_instance)

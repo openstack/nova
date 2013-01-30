@@ -15,17 +15,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import abc
-import sys
-import uuid
-
-# Check needed for unit testing on Unix
-if sys.platform == 'win32':
-    import wmi
-
 
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import vmutils
 
 
@@ -70,65 +65,17 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
 
     def __init__(self):
         self._vmutils = vmutils.VMUtils()
-        self._conn = wmi.WMI(moniker='//./root/virtualization')
-
-    def _find_external_network(self):
-        """Find the vswitch that is connected to the physical nic.
-           Assumes only one physical nic on the host
-        """
-        #If there are no physical nics connected to networks, return.
-        LOG.debug(_("Attempting to bind NIC to %s ")
-                  % CONF.vswitch_name)
-        if CONF.vswitch_name:
-            LOG.debug(_("Attempting to bind NIC to %s ")
-                      % CONF.vswitch_name)
-            bound = self._conn.Msvm_VirtualSwitch(
-                ElementName=CONF.vswitch_name)
-        else:
-            LOG.debug(_("No vSwitch specified, attaching to default"))
-            self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')
-        if len(bound) == 0:
-            return None
-        if CONF.vswitch_name:
-            return self._conn.Msvm_VirtualSwitch(
-                ElementName=CONF.vswitch_name)[0]\
-                .associators(wmi_result_class='Msvm_SwitchPort')[0]\
-                .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
-        else:
-            return self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')\
-                .associators(wmi_result_class='Msvm_SwitchPort')[0]\
-                .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
+        self._netutils = networkutils.NetworkUtils()
 
     def plug(self, instance, vif):
-        extswitch = self._find_external_network()
-        if extswitch is None:
-            raise vmutils.HyperVException(_('Cannot find vSwitch'))
+        vswitch_path = self._netutils.get_external_vswitch(
+            CONF.vswitch_name)
 
         vm_name = instance['name']
-
-        nic_data = self._conn.Msvm_SyntheticEthernetPortSettingData(
-            ElementName=vif['id'])[0]
-
-        switch_svc = self._conn.Msvm_VirtualSwitchManagementService()[0]
-        #Create a port on the vswitch.
-        (new_port, ret_val) = switch_svc.CreateSwitchPort(
-            Name=str(uuid.uuid4()),
-            FriendlyName=vm_name,
-            ScopeOfResidence="",
-            VirtualSwitch=extswitch.path_())
-        if ret_val != 0:
-            LOG.error(_('Failed creating a port on the external vswitch'))
-            raise vmutils.HyperVException(_('Failed creating port for %s') %
-                                          vm_name)
-        ext_path = extswitch.path_()
-        LOG.debug(_("Created switch port %(vm_name)s on switch %(ext_path)s")
-                  % locals())
-
-        vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
-        vm = vms[0]
-
-        nic_data.Connection = [new_port]
-        self._vmutils.modify_virt_resource(self._conn, nic_data, vm)
+        LOG.debug(_('Creating vswitch port for instance: %s') % vm_name)
+        vswitch_port = self._netutils.create_vswitch_port(vswitch_path,
+                                                          vm_name)
+        self._vmutils.set_nic_connection(vm_name, vif['id'], vswitch_port)
 
     def unplug(self, instance, vif):
         #TODO(alepilotti) Not implemented

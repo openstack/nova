@@ -16,24 +16,20 @@
 #    under the License.
 
 """
-Utility class for VM related operations.
+Utility class for VM related operations on Hyper-V.
 """
 
-import os
-import shutil
 import sys
 import time
 import uuid
+
+if sys.platform == 'win32':
+    import wmi
 
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
-from nova.virt import images
-
-# Check needed for unit testing on Unix
-if sys.platform == 'win32':
-    import wmi
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -45,19 +41,342 @@ class HyperVException(exception.NovaException):
 
 
 class VMUtils(object):
-    def lookup(self, conn, i):
-        vms = conn.Msvm_ComputerSystem(ElementName=i)
+
+    def __init__(self):
+        if sys.platform == 'win32':
+            self._conn = wmi.WMI(moniker='//./root/virtualization')
+            self._conn_cimv2 = wmi.WMI(moniker='//./root/cimv2')
+
+    def list_instances(self):
+        """Return the names of all the instances known to Hyper-V."""
+        vm_names = [v.ElementName
+                    for v in self._conn.Msvm_ComputerSystem(['ElementName'],
+                    Caption="Virtual Machine")]
+        return vm_names
+
+    def get_vm_summary_info(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        vmsettings = vm.associators(
+            wmi_association_class='Msvm_SettingsDefineState',
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        settings_paths = [v.path_() for v in vmsettings]
+        #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
+        (ret_val, summary_info) = vs_man_svc.GetSummaryInformation(
+            [constants.VM_SUMMARY_NUM_PROCS,
+             constants.VM_SUMMARY_ENABLED_STATE,
+             constants.VM_SUMMARY_MEMORY_USAGE,
+             constants.VM_SUMMARY_UPTIME],
+            settings_paths)
+        if ret_val:
+            raise HyperVException(_('Cannot get VM summary data for: %s')
+                                  % vm_name)
+
+        si = summary_info[0]
+        memory_usage = None
+        if si.MemoryUsage is not None:
+            memory_usage = long(si.MemoryUsage)
+        up_time = None
+        if si.UpTime is not None:
+            up_time = long(si.UpTime)
+
+        summary_info_dict = {'NumberOfProcessors': si.NumberOfProcessors,
+                             'EnabledState': si.EnabledState,
+                             'MemoryUsage': memory_usage,
+                             'UpTime': up_time}
+        return summary_info_dict
+
+    def _lookup_vm_check(self, vm_name):
+        vm = self._lookup_vm(vm_name)
+        if not vm:
+            raise HyperVException(_('VM not found: %s') % vm_name)
+        return vm
+
+    def _lookup_vm(self, vm_name):
+        vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
         n = len(vms)
         if n == 0:
             return None
         elif n > 1:
-            raise HyperVException(_('duplicate name found: %s') % i)
+            raise HyperVException(_('Duplicate VM name found: %s') % vm_name)
         else:
-            return vms[0].ElementName
+            return vms[0]
 
-    def check_job_status(self, jobpath):
-        """Poll WMI job state for completion."""
-        job_wmi_path = jobpath.replace('\\', '/')
+    def vm_exists(self, vm_name):
+        return self._lookup_vm(vm_name) is not None
+
+    def _get_vm_setting_data(self, vm):
+        vmsettings = vm.associators(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        # Avoid snapshots
+        return [s for s in vmsettings if s.SettingType == 3][0]
+
+    def _set_vm_memory(self, vm, vmsetting, memory_mb):
+        memsetting = vmsetting.associators(
+            wmi_result_class='Msvm_MemorySettingData')[0]
+        #No Dynamic Memory, so reservation, limit and quantity are identical.
+        mem = long(memory_mb)
+        memsetting.VirtualQuantity = mem
+        memsetting.Reservation = mem
+        memsetting.Limit = mem
+
+        self._modify_virt_resource(memsetting, vm.path_())
+
+    def _set_vm_vcpus(self, vm, vmsetting, vcpus_num, limit_cpu_features):
+        procsetting = vmsetting.associators(
+            wmi_result_class='Msvm_ProcessorSettingData')[0]
+        vcpus = long(vcpus_num)
+        procsetting.VirtualQuantity = vcpus
+        procsetting.Reservation = vcpus
+        procsetting.Limit = 100000  # static assignment to 100%
+        procsetting.LimitProcessorFeatures = limit_cpu_features
+
+        self._modify_virt_resource(procsetting, vm.path_())
+
+    def create_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features):
+        """Creates a VM."""
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+
+        vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
+        vs_gs_data.ElementName = vm_name
+
+        LOG.debug(_('Creating VM %s'), vm_name)
+        (job_path,
+         ret_val) = vs_man_svc.DefineVirtualSystem([], None,
+                                                   vs_gs_data.GetText_(1))[1:]
+        self.check_ret_val(ret_val, job_path)
+
+        vm = self._lookup_vm_check(vm_name)
+        vmsetting = self._get_vm_setting_data(vm)
+
+        LOG.debug(_('Setting memory for vm %s'), vm_name)
+        self._set_vm_memory(vm, vmsetting, memory_mb)
+
+        LOG.debug(_('Set vCPUs for vm %s'), vm_name)
+        self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
+
+    def get_vm_iscsi_controller(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+
+        vmsettings = vm.associators(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        rasds = vmsettings[0].associators(
+            wmi_result_class='MSVM_ResourceAllocationSettingData')
+        res = [r for r in rasds
+               if r.ResourceSubType ==
+               'Microsoft Synthetic SCSI Controller'][0]
+        return res.path_()
+
+    def _get_vm_ide_controller(self, vm, ctrller_addr):
+        vmsettings = vm.associators(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        rasds = vmsettings[0].associators(
+            wmi_result_class='MSVM_ResourceAllocationSettingData')
+        return [r for r in rasds
+                if r.ResourceSubType == 'Microsoft Emulated IDE Controller'
+                and r.Address == str(ctrller_addr)][0].path_()
+
+    def get_vm_ide_controller(self, vm_name, ctrller_addr):
+        vm = self._lookup_vm_check(vm_name)
+        return self._get_vm_ide_controller(vm, ctrller_addr)
+
+    def get_attached_disks_count(self, scsi_controller_path):
+        volumes = self._conn.query("SELECT * FROM "
+                                   "Msvm_ResourceAllocationSettingData "
+                                   "WHERE ResourceSubType LIKE "
+                                   "'Microsoft Physical Disk Drive' "
+                                   "AND Parent = '%s'" %
+                                   scsi_controller_path.replace("'", "''"))
+        return len(volumes)
+
+    def attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
+                         drive_type=constants.IDE_DISK):
+        """Create an IDE drive and attach it to the vm."""
+
+        vm = self._lookup_vm_check(vm_name)
+
+        ctrller_path = self._get_vm_ide_controller(vm, ctrller_addr)
+
+        if drive_type == constants.IDE_DISK:
+            res_sub_type = 'Microsoft Synthetic Disk Drive'
+        elif drive_type == constants.IDE_DVD:
+            res_sub_type = 'Microsoft Synthetic DVD Drive'
+
+        #Find the default disk drive object for the vm and clone it.
+        drivedflt = self._conn.query("SELECT * FROM "
+                                     "Msvm_ResourceAllocationSettingData "
+                                     "WHERE ResourceSubType LIKE "
+                                     "'%(res_sub_type)s' AND InstanceID LIKE "
+                                     "'%%Default%%'" % locals())[0]
+        drive = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
+                                    drivedflt)
+        #Set the IDE ctrller as parent.
+        drive.Parent = ctrller_path
+        drive.Address = drive_addr
+        #Add the cloned disk drive object to the vm.
+        new_resources = self._add_virt_resource(drive, vm.path_())
+        drive_path = new_resources[0]
+
+        if drive_type == constants.IDE_DISK:
+            res_sub_type = 'Microsoft Virtual Hard Disk'
+        elif drive_type == constants.IDE_DVD:
+            res_sub_type = 'Microsoft Virtual CD/DVD Disk'
+
+        #Find the default VHD disk object.
+        drivedefault = self._conn.query("SELECT * FROM "
+                                        "Msvm_ResourceAllocationSettingData "
+                                        "WHERE ResourceSubType LIKE "
+                                        "'%(res_sub_type)s' AND "
+                                        "InstanceID LIKE '%%Default%%'"
+                                        % locals())[0]
+
+        #Clone the default and point it to the image file.
+        res = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
+                                  drivedefault)
+        #Set the new drive as the parent.
+        res.Parent = drive_path
+        res.Connection = [path]
+
+        #Add the new vhd object as a virtual hard disk to the vm.
+        self._add_virt_resource(res, vm.path_())
+
+    def create_scsi_controller(self, vm_name):
+        """Create an iscsi controller ready to mount volumes."""
+
+        vm = self._lookup_vm_check(vm_name)
+        scsicontrldflt = self._conn.query("SELECT * FROM "
+                                          "Msvm_ResourceAllocationSettingData "
+                                          "WHERE ResourceSubType = 'Microsoft "
+                                          "Synthetic SCSI Controller' AND "
+                                          "InstanceID LIKE '%Default%'")[0]
+        if scsicontrldflt is None:
+            raise HyperVException(_('Controller not found'))
+        scsicontrl = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
+                                         scsicontrldflt)
+        scsicontrl.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
+        scsiresource = self._add_virt_resource(scsicontrl, vm.path_())
+
+    def attach_volume_to_controller(self, vm_name, controller_path, address,
+                                    mounted_disk_path):
+        """Attach a volume to a controller."""
+
+        vm = self._lookup_vm_check(vm_name)
+
+        diskdflt = self._conn.query("SELECT * FROM "
+                                    "Msvm_ResourceAllocationSettingData "
+                                    "WHERE ResourceSubType LIKE "
+                                    "'Microsoft Physical Disk Drive' "
+                                    "AND InstanceID LIKE '%Default%'")[0]
+        diskdrive = self._clone_wmi_obj('Msvm_ResourceAllocationSettingData',
+                                        diskdflt)
+        diskdrive.Address = address
+        diskdrive.Parent = controller_path
+        diskdrive.HostResource = [mounted_disk_path]
+        self._add_virt_resource(diskdrive, vm.path_())
+
+    def set_nic_connection(self, vm_name, nic_name, vswitch_port):
+        nic_data = self._get_nic_data_by_name(nic_name)
+        nic_data.Connection = [vswitch_port]
+
+        vm = self._lookup_vm_check(vm_name)
+        self._modify_virt_resource(nic_data, vm.path_())
+
+    def _get_nic_data_by_name(self, name):
+        return self._conn.Msvm_SyntheticEthernetPortSettingData(
+            ElementName=name)[0]
+
+    def create_nic(self, vm_name, nic_name, mac_address):
+        """Create a (synthetic) nic and attach it to the vm."""
+        #Create a new nic
+        syntheticnics_data = self._conn.Msvm_SyntheticEthernetPortSettingData()
+        default_nic_data = [n for n in syntheticnics_data
+                            if n.InstanceID.rfind('Default') > 0]
+        new_nic_data = self._clone_wmi_obj(
+            'Msvm_SyntheticEthernetPortSettingData', default_nic_data[0])
+
+        #Configure the nic
+        new_nic_data.ElementName = nic_name
+        new_nic_data.Address = mac_address.replace(':', '')
+        new_nic_data.StaticMacAddress = 'True'
+        new_nic_data.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
+
+        #Add the new nic to the vm
+        vm = self._lookup_vm_check(vm_name)
+
+        self._add_virt_resource(new_nic_data, vm.path_())
+
+    def set_vm_state(self, vm_name, req_state):
+        """Set the desired state of the VM."""
+
+        vm = self._lookup_vm_check(vm_name)
+        (job_path, ret_val) = vm.RequestStateChange(req_state)
+        #Invalid state for current operation (32775) typically means that
+        #the VM is already in the state requested
+        self.check_ret_val(ret_val, job_path, [0, 32775])
+        LOG.debug(_("Successfully changed vm state of %(vm_name)s"
+                    " to %(req_state)s") % locals())
+
+    def destroy_vm(self, vm_name, destroy_disks=True):
+        """Destroy the VM. Also destroy the associated VHD disk files."""
+
+        vm = self._lookup_vm_check(vm_name)
+
+        #Stop the VM first.
+        self.set_vm_state(vm_name, constants.HYPERV_VM_STATE_DISABLED)
+
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        vmsettings = vm.associators(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        rasds = vmsettings[0].associators(
+            wmi_result_class='MSVM_ResourceAllocationSettingData')
+        disk_resources = [r for r in rasds
+                          if r.ResourceSubType ==
+                          'Microsoft Virtual Hard Disk']
+        volume_resources = [r for r in rasds
+                            if r.ResourceSubType ==
+                            'Microsoft Physical Disk Drive']
+
+        #Collect volumes information before destroying the VM.
+        volumes_drives_list = []
+        for volume_resource in volume_resources:
+            drive_path = volume_resource.HostResource[0]
+            #Appending the Msvm_Disk path
+            volumes_drives_list.append(drive_path)
+
+        #Collect disk file information before destroying the VM.
+        disk_files = []
+        for disk_resource in disk_resources:
+            disk_files.extend([c for c in disk_resource.Connection])
+
+        #Remove the VM. Does not destroy disks.
+        (job_path, ret_val) = vs_man_svc.DestroyVirtualSystem(vm.path_())
+        self.check_ret_val(ret_val, job_path)
+
+        if destroy_disks:
+            #Delete associated vhd disk files.
+            for disk in disk_files:
+                LOG.debug(_("Deleting disk file: %(disk)s") % locals())
+                self._delete_file(disk)
+
+        return volumes_drives_list
+
+    def _delete_file(self, path):
+        f = self._conn_cimv2.query("Select * from CIM_DataFile where "
+                                   "Name = '%s'" % path.replace("'", "''"))[0]
+        f.Delete()
+
+    def check_ret_val(self, ret_val, job_path, success_values=[0]):
+        if ret_val == constants.WMI_JOB_STATUS_STARTED:
+            self._wait_for_job(job_path)
+        elif ret_val not in success_values:
+            raise HyperVException(_('Operation failed with return value: %s')
+                                  % ret_val)
+
+    def _wait_for_job(self, job_path):
+        """Poll WMI job state and wait for completion."""
+
+        job_wmi_path = job_path.replace('\\', '/')
         job = wmi.WMI(moniker=job_wmi_path)
 
         while job.JobState == constants.WMI_JOB_STATE_RUNNING:
@@ -69,54 +388,30 @@ class VMUtils(object):
                 err_sum_desc = job.ErrorSummaryDescription
                 err_desc = job.ErrorDescription
                 err_code = job.ErrorCode
-                LOG.debug(_("WMI job failed with status %(job_state)d. "
-                    "Error details: %(err_sum_desc)s - %(err_desc)s - "
-                    "Error code: %(err_code)d") % locals())
+                raise HyperVException(_("WMI job failed with status "
+                                        "%(job_state)d. Error details: "
+                                        "%(err_sum_desc)s - %(err_desc)s - "
+                                        "Error code: %(err_code)d")
+                                      % locals())
             else:
                 (error, ret_val) = job.GetError()
                 if not ret_val and error:
-                    LOG.debug(_("WMI job failed with status %(job_state)d. "
-                        "Error details: %(error)s") % locals())
+                    raise HyperVException(_("WMI job failed with status "
+                                            "%(job_state)d. Error details: "
+                                            "%(error)s") % locals())
                 else:
-                    LOG.debug(_("WMI job failed with status %(job_state)d. "
-                        "No error description available") % locals())
-            return False
+                    raise HyperVException(_("WMI job failed with status "
+                                            "%(job_state)d. No error "
+                                            "description available")
+                                          % locals())
         desc = job.Description
         elap = job.ElapsedTime
         LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s")
-                % locals())
-        return True
+                  % locals())
 
-    def get_instance_path(self, instance_name):
-        instance_path = os.path.join(CONF.instances_path, instance_name)
-        if not os.path.exists(instance_path):
-                LOG.debug(_('Creating folder %s '), instance_path)
-                os.makedirs(instance_path)
-        return instance_path
-
-    def get_vhd_path(self, instance_name):
-        instance_path = self.get_instance_path(instance_name)
-        return os.path.join(instance_path, instance_name + ".vhd")
-
-    def get_base_vhd_path(self, image_name):
-        base_dir = os.path.join(CONF.instances_path, '_base')
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-        return os.path.join(base_dir, image_name + ".vhd")
-
-    def make_export_path(self, instance_name):
-        export_folder = os.path.join(CONF.instances_path, "export",
-                instance_name)
-        if os.path.isdir(export_folder):
-            LOG.debug(_('Removing existing folder %s '), export_folder)
-            shutil.rmtree(export_folder)
-        LOG.debug(_('Creating folder %s '), export_folder)
-        os.makedirs(export_folder)
-        return export_folder
-
-    def clone_wmi_obj(self, conn, wmi_class, wmi_obj):
+    def _clone_wmi_obj(self, wmi_class, wmi_obj):
         """Clone a WMI object."""
-        cl = conn.__getattr__(wmi_class)  # get the class
+        cl = getattr(self._conn, wmi_class)  # get the class
         newinst = cl.new()
         #Copy the properties from the original.
         for prop in wmi_obj._properties:
@@ -125,51 +420,78 @@ class VMUtils(object):
                 strguid.append(str(uuid.uuid4()))
                 newinst.Properties_.Item(prop).Value = strguid
             else:
-                newinst.Properties_.Item(prop).Value = \
-                    wmi_obj.Properties_.Item(prop).Value
+                prop_value = wmi_obj.Properties_.Item(prop).Value
+                newinst.Properties_.Item(prop).Value = prop_value
+
         return newinst
 
-    def add_virt_resource(self, conn, res_setting_data, target_vm):
+    def _add_virt_resource(self, res_setting_data, vm_path):
         """Adds a new resource to the VM."""
-        vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
-        (job, new_resources, ret_val) = vs_man_svc.\
-                    AddVirtualSystemResources([res_setting_data.GetText_(1)],
-                                                target_vm.path_())
-        success = True
-        if ret_val == constants.WMI_JOB_STATUS_STARTED:
-            success = self.check_job_status(job)
-        else:
-            success = (ret_val == 0)
-        if success:
-            return new_resources
-        else:
-            return None
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        res_xml = [res_setting_data.GetText_(1)]
+        (job_path,
+         new_resources,
+         ret_val) = vs_man_svc.AddVirtualSystemResources(res_xml, vm_path)
+        self.check_ret_val(ret_val, job_path)
+        return new_resources
 
-    def modify_virt_resource(self, conn, res_setting_data, target_vm):
+    def _modify_virt_resource(self, res_setting_data, vm_path):
         """Updates a VM resource."""
-        vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
-        (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        (job_path, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
             ResourceSettingData=[res_setting_data.GetText_(1)],
-            ComputerSystem=target_vm.path_())
-        if ret_val == constants.WMI_JOB_STATUS_STARTED:
-            success = self.check_job_status(job)
-        else:
-            success = (ret_val == 0)
-        return success
+            ComputerSystem=vm_path)
+        self.check_ret_val(ret_val, job_path)
 
-    def remove_virt_resource(self, conn, res_setting_data, target_vm):
+    def _remove_virt_resource(self, res_setting_data, vm_path):
         """Removes a VM resource."""
-        vs_man_svc = conn.Msvm_VirtualSystemManagementService()[0]
-        (job, ret_val) = vs_man_svc.\
-                    RemoveVirtualSystemResources([res_setting_data.path_()],
-                                                target_vm.path_())
-        success = True
-        if ret_val == constants.WMI_JOB_STATUS_STARTED:
-            success = self.check_job_status(job)
-        else:
-            success = (ret_val == 0)
-        return success
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+        res_path = [res_setting_data.path_()]
+        (job_path, ret_val) = vs_man_svc.RemoveVirtualSystemResources(res_path,
+                                                                      vm_path)
+        self.check_ret_val(ret_val, job_path)
 
-    def fetch_image(self, target, context, image_id, user, project,
-        *args, **kwargs):
-        images.fetch(context, image_id, target, user, project)
+    def take_vm_snapshot(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+
+        (job_path, ret_val,
+         snp_setting_data) = vs_man_svc.CreateVirtualSystemSnapshot(vm.path_())
+        self.check_ret_val(ret_val, job_path)
+
+        job_wmi_path = job_path.replace('\\', '/')
+        job = wmi.WMI(moniker=job_wmi_path)
+        snp_setting_data = job.associators(
+            wmi_result_class='Msvm_VirtualSystemSettingData')[0]
+        return snp_setting_data.path_()
+
+    def remove_vm_snapshot(self, snapshot_path):
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
+
+        (job_path, ret_val) = vs_man_svc.RemoveVirtualSystemSnapshot(
+            snapshot_path)
+        self.check_ret_val(ret_val, job_path)
+
+    def detach_vm_disk(self, vm_name, disk_path):
+        vm = self._lookup_vm_check(vm_name)
+        physical_disk = self._get_mounted_disk_resource_from_path(
+            disk_path)
+        self._remove_virt_resource(physical_disk, vm.path_())
+
+    def _get_mounted_disk_resource_from_path(self, disk_path):
+        physical_disks = self._conn.query("SELECT * FROM "
+                                          "Msvm_ResourceAllocationSettingData"
+                                          " WHERE ResourceSubType = "
+                                          "'Microsoft Physical Disk Drive'")
+        for physical_disk in physical_disks:
+            if physical_disk.HostResource:
+                if physical_disk.HostResource[0].lower() == disk_path.lower():
+                    return physical_disk
+
+    def get_mounted_disk_by_drive_number(self, device_number):
+        mounted_disks = self._conn.query("SELECT * FROM Msvm_DiskDrive "
+                                         "WHERE DriveNumber=" +
+                                         str(device_number))
+        if len(mounted_disks):
+            return mounted_disks[0].path_()
