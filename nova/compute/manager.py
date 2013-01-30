@@ -879,8 +879,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # TODO(jk0): Should size be required in the image service?
             return image_meta
 
-        instance_type_id = instance['instance_type_id']
-        instance_type = instance_types.get_instance_type(instance_type_id)
+        instance_type = instance_types.extract_instance_type(instance)
         allowed_size_gb = instance_type['root_gb']
 
         # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
