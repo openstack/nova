@@ -715,35 +715,6 @@ def _find_cached_image(session, image_id, sr_ref):
     return cached_images.get(image_id)
 
 
-def upload_image(context, session, instance, vdi_uuids, image_id):
-    """Requests that the Glance plugin bundle the specified VDIs and
-    push them into Glance using the specified human-friendly name.
-    """
-    # NOTE(sirp): Currently we only support uploading images as VHD, there
-    # is no RAW equivalent (yet)
-    LOG.debug(_("Asking xapi to upload %(vdi_uuids)s as"
-                " ID %(image_id)s"), locals(), instance=instance)
-
-    glance_api_servers = glance.get_api_servers()
-    glance_host, glance_port, glance_use_ssl = glance_api_servers.next()
-
-    properties = {
-        'auto_disk_config': instance['auto_disk_config'],
-        'os_type': instance['os_type'] or CONF.default_os_type,
-    }
-
-    params = {'vdi_uuids': vdi_uuids,
-              'image_id': image_id,
-              'glance_host': glance_host,
-              'glance_port': glance_port,
-              'glance_use_ssl': glance_use_ssl,
-              'sr_path': get_sr_path(session),
-              'auth_token': getattr(context, 'auth_token', None),
-              'properties': properties}
-
-    session.call_plugin_serialized('glance', 'upload_vhd', **params)
-
-
 def resize_disk(session, instance, vdi_ref, instance_type):
     # Copy VDI over to something we can resize
     # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write

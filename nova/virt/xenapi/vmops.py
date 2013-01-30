@@ -59,7 +59,10 @@ xenapi_vmops_opts = [
                     'to go to running state'),
     cfg.StrOpt('xenapi_vif_driver',
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-               help='The XenAPI VIF driver using XenServer Network APIs.')
+               help='The XenAPI VIF driver using XenServer Network APIs.'),
+    cfg.StrOpt('xenapi_image_upload_handler',
+                default='nova.virt.xenapi.imageupload.glance.GlanceStore',
+                help='Object Store Driver used to handle image uploads.'),
     ]
 
 CONF = cfg.CONF
@@ -160,6 +163,11 @@ class VMOps(object):
         vif_impl = importutils.import_class(CONF.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
+
+        msg = _("Importing image upload handler: %s")
+        LOG.debug(msg % CONF.xenapi_image_upload_handler)
+        self.image_upload_handler = importutils.import_object(
+                                CONF.xenapi_image_upload_handler)
 
     @property
     def agent_enabled(self):
@@ -661,9 +669,11 @@ class VMOps(object):
            coalesce together, so, we must wait for this coalescing to occur to
            get a stable representation of the data on disk.
 
-        3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
-           that will bundle the VHDs together and then push the bundle into
-           Glance.
+        3. Push-to-data-store: Once coalesced, we call a plugin on the
+           XenServer that will bundle the VHDs together and then push the
+           bundle. Depending on the configured value of
+           'xenapi_image_upload_handler', image data may be pushed to
+           Glance or the specified data store.
 
         """
         vm_ref = self._get_vm_opaque_ref(instance)
@@ -674,8 +684,11 @@ class VMOps(object):
                 update_task_state) as vdi_uuids:
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
-            vm_utils.upload_image(
-                    context, self._session, instance, vdi_uuids, image_id)
+            self.image_upload_handler.upload_image(context,
+                                                   self._session,
+                                                   instance,
+                                                   vdi_uuids,
+                                                   image_id)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
