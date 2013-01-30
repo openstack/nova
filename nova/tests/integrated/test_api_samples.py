@@ -377,7 +377,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
-        do_not_approve_additions.append('os-flavor-extra-specs')
         do_not_approve_additions.append('os-floating-ip-dns')
         do_not_approve_additions.append('os-fping')
         do_not_approve_additions.append('os-hypervisors')
@@ -2712,4 +2711,59 @@ class InstanceUsageAuditLogJsonTest(ApiSampleTestBase):
 
 
 class InstanceUsageAuditLogXmlTest(InstanceUsageAuditLogJsonTest):
+    ctype = "xml"
+
+
+class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.flavorextraspecs."
+                      "Flavorextraspecs")
+
+    def _flavor_extra_specs_create(self):
+        subs = {'value1': 'value1',
+                'value2': 'value2'
+        }
+        response = self._do_post('flavors/1/os-extra_specs',
+                                 'flavor-extra-specs-create-req', subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-extra-specs-create-resp',
+                                     subs, response)
+
+    def test_flavor_extra_specs_get(self):
+        subs = {'value1': 'value1'}
+        self._flavor_extra_specs_create()
+        response = self._do_get('flavors/1/os-extra_specs/key1')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-extra-specs-get-resp',
+                                     subs, response)
+
+    def test_flavor_extra_specs_list(self):
+        subs = {'value1': 'value1',
+                'value2': 'value2'
+        }
+        self._flavor_extra_specs_create()
+        response = self._do_get('flavors/1/os-extra_specs')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-extra-specs-list-resp',
+                                     subs, response)
+
+    def test_flavor_extra_specs_create(self):
+        return self._flavor_extra_specs_create()
+
+    def test_flavor_extra_specs_update(self):
+        subs = {'value1': 'new_value1'}
+        self._flavor_extra_specs_create()
+        response = self._do_put('flavors/1/os-extra_specs/key1',
+                                'flavor-extra-specs-update-req', subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-extra-specs-update-resp',
+                                     subs, response)
+
+    def test_flavor_extra_specs_delete(self):
+        self._flavor_extra_specs_create()
+        response = self._do_delete('flavors/1/os-extra_specs/key1')
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.read(), '')
+
+
+class FlavorExtraSpecsSampleXmlTests(FlavorExtraSpecsSampleJsonTests):
     ctype = 'xml'
