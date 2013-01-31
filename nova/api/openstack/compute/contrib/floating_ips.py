@@ -109,33 +109,14 @@ class FloatingIPController(object):
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
-    def _get_fixed_ip(self, context, fixed_ip_id):
-        if fixed_ip_id is None:
-            return None
-        try:
-            return self.network_api.get_fixed_ip(context, fixed_ip_id)
-        except exception.FixedIpNotFound:
-            return None
-
-    def _get_instance(self, context, instance_id):
-        return self.compute_api.get(context, instance_id)
-
-    def _set_metadata(self, context, floating_ip):
-        # When Quantum v2 API is used, 'fixed_ip' and 'instance' are
-        # already set. In this case we don't need to update the fields.
-
-        if 'fixed_ip' not in floating_ip:
-            fixed_ip_id = floating_ip['fixed_ip_id']
-            floating_ip['fixed_ip'] = self._get_fixed_ip(context,
-                                                         fixed_ip_id)
+    def _normalize_ip(self, floating_ip):
+        # NOTE(vish): translate expects instance to be in the floating_ip
+        #             dict but it is returned in the fixed_ip dict by
+        #             nova-network
+        fixed_ip = floating_ip.get('fixed_ip')
         if 'instance' not in floating_ip:
-            instance_uuid = None
-            if floating_ip['fixed_ip']:
-                instance_uuid = floating_ip['fixed_ip']['instance_uuid']
-
-            if instance_uuid:
-                floating_ip['instance'] = self._get_instance(context,
-                                                             instance_uuid)
+            if fixed_ip:
+                floating_ip['instance'] = fixed_ip['instance']
             else:
                 floating_ip['instance'] = None
 
@@ -151,7 +132,7 @@ class FloatingIPController(object):
             msg = _("Floating ip not found for id %s") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        self._set_metadata(context, floating_ip)
+        self._normalize_ip(floating_ip)
 
         return _translate_floating_ip_view(floating_ip)
 
@@ -164,7 +145,7 @@ class FloatingIPController(object):
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
         for floating_ip in floating_ips:
-            self._set_metadata(context, floating_ip)
+            self._normalize_ip(floating_ip)
 
         return _translate_floating_ips_view(floating_ips)
 

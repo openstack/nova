@@ -36,12 +36,6 @@ from nova.tests import fake_network
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
-def network_api_get_fixed_ip(self, context, id):
-    if id is None:
-        return None
-    return {'address': '10.0.0.1', 'id': id, 'instance_uuid': 1}
-
-
 def network_api_get_floating_ip(self, context, id):
     return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
             'fixed_ip_id': None}
@@ -56,11 +50,12 @@ def network_api_get_floating_ips_by_project(self, context):
     return [{'id': 1,
              'address': '10.10.10.10',
              'pool': 'nova',
-             'fixed_ip_id': 20},
+             'fixed_ip': {'address': '10.0.0.1',
+                          'instance': {'uuid': FAKE_UUID}}},
             {'id': 2,
              'pool': 'nova', 'interface': 'eth0',
              'address': '10.10.10.11',
-             'fixed_ip_id': None}]
+             'fixed_ip': None}]
 
 
 def compute_api_get(self, context, instance_id):
@@ -131,8 +126,6 @@ class FloatingIpTest(test.TestCase):
 
     def setUp(self):
         super(FloatingIpTest, self).setUp()
-        self.stubs.Set(network.api.API, "get_fixed_ip",
-                       network_api_get_fixed_ip)
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_floating_ip",
@@ -173,8 +166,9 @@ class FloatingIpTest(test.TestCase):
         floating_ip_address = self.floating_ip
         floating_ip = db.floating_ip_get_by_address(self.context,
                                                     floating_ip_address)
-        floating_ip['fixed_ip'] = None
-        floating_ip['instance'] = None
+        # NOTE(vish): network_get uses the id not the address
+        floating_ip = db.floating_ip_get(self.context, floating_ip['id'])
+        self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
         self.assertTrue('floating_ip' in view)
         self.assertTrue(view['floating_ip']['id'])
@@ -185,6 +179,7 @@ class FloatingIpTest(test.TestCase):
     def test_translate_floating_ip_view_dict(self):
         floating_ip = {'id': 0, 'address': '10.0.0.10', 'pool': 'nova',
                        'fixed_ip': None}
+        self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
         self.assertTrue('floating_ip' in view)
 
@@ -245,19 +240,17 @@ class FloatingIpTest(test.TestCase):
     def test_show_associated_floating_ip(self):
         def get_floating_ip(self, context, id):
             return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
-                    'fixed_ip_id': 11}
-
-        def get_fixed_ip(self, context, id):
-            return {'address': '10.0.0.1', 'instance_uuid': 1}
+                    'fixed_ip': {'address': '10.0.0.1',
+                                 'instance': {'uuid': FAKE_UUID}}}
 
         self.stubs.Set(network.api.API, "get_floating_ip", get_floating_ip)
-        self.stubs.Set(network.api.API, "get_fixed_ip", get_fixed_ip)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
         res_dict = self.controller.show(req, 1)
 
         self.assertEqual(res_dict['floating_ip']['id'], 1)
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
+        self.assertEqual(res_dict['floating_ip']['fixed_ip'], '10.0.0.1')
         self.assertEqual(res_dict['floating_ip']['instance_id'], FAKE_UUID)
 
     def test_recreation_of_floating_ip(self):
