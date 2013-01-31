@@ -565,15 +565,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_instance_nw_info(self, context, instance):
         """Get a list of dictionaries of network data of an instance."""
-        # Get the network info from network API, but don't let it
-        # update the cache, as that will hit the DB.  We'll update
-        # the cache ourselves via the conductor.
         network_info = self.network_api.get_instance_nw_info(context,
-                instance, update_cache=False)
-        cache = {'network_info': network_info.json()}
-        self.conductor_api.instance_info_cache_update(context,
-                                                      instance,
-                                                      cache)
+                instance, conductor_api=self.conductor_api)
         return network_info
 
     def _legacy_nw_info(self, network_info):
@@ -935,7 +928,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
                                 requested_networks=requested_networks,
-                                macs=macs)
+                                macs=macs, conductor_api=self.conductor_api)
         except Exception:
             LOG.exception(_('Instance failed network setup'),
                           instance=instance)
@@ -2189,9 +2182,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "create_ip.start")
 
-        self.network_api.add_fixed_ip_to_instance(context,
-                                                  instance,
-                                                  network_id)
+        self.network_api.add_fixed_ip_to_instance(context, instance,
+                network_id, conductor_api=self.conductor_api)
 
         network_info = self._inject_network_info(context, instance=instance)
         self.reset_network(context, instance)
@@ -2210,9 +2202,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "delete_ip.start")
 
-        self.network_api.remove_fixed_ip_from_instance(context,
-                                                       instance,
-                                                       address)
+        self.network_api.remove_fixed_ip_from_instance(context, instance,
+                address, conductor_api=self.conductor_api)
 
         network_info = self._inject_network_info(context,
                                                  instance=instance)
