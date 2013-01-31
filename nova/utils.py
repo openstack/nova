@@ -628,7 +628,7 @@ class DynamicLoopingCall(LoopingCallBase):
                     if not self._running:
                         break
 
-                    if not periodic_interval_max is None:
+                    if periodic_interval_max is not None:
                         idle = min(idle, periodic_interval_max)
                     LOG.debug(_('Periodic task processor sleeping for %.02f '
                                 'seconds'), idle)

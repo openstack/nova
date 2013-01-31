@@ -70,7 +70,7 @@ class Client(object):
 
     def add(self, key, value, time=0, min_compress_len=0):
         """Sets the value for a key if it doesn't exist."""
-        if not self.get(key) is None:
+        if self.get(key) is not None:
             return False
         return self.set(key, value, time, min_compress_len)
 
