@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
+import socket
 import urllib
 
 import webob
@@ -206,32 +207,40 @@ class FloatingIPDNSEntryController(object):
         context = req.environ['nova.context']
         authorize(context)
         domain = _unquote_domain(domain_id)
-        name = id
 
-        entries = self.network_api.get_dns_entries_by_name(context,
-                                                           name, domain)
-        entry = _create_dns_entry(entries[0], name, domain)
+        floating_ip = None
+        # Check whether id is a valid ipv4/ipv6 address.
+        try:
+            socket.inet_pton(socket.AF_INET, id)
+            floating_ip = id
+        except socket.error:
+            try:
+                socket.inet_pton(socket.AF_INET6, id)
+                floating_ip = id
+            except socket.error:
+                pass
+
+        if floating_ip:
+            entries = self.network_api.get_dns_entries_by_address(context,
+                                                                  floating_ip,
+                                                                  domain)
+        else:
+            entries = self.network_api.get_dns_entries_by_name(context, id,
+                                                               domain)
+
+        if not entries:
+            explanation = _("DNS entries not found.")
+            raise webob.exc.HTTPNotFound(explanation=explanation)
+
+        if floating_ip:
+            entrylist = [_create_dns_entry(floating_ip, entry, domain)
+                         for entry in entries]
+            dns_entries = _translate_dns_entries_view(entrylist)
+            return wsgi.ResponseObject(dns_entries,
+                                       xml=FloatingIPDNSsTemplate)
+
+        entry = _create_dns_entry(entries[0], id, domain)
         return _translate_dns_entry_view(entry)
-
-    @wsgi.serializers(xml=FloatingIPDNSsTemplate)
-    def index(self, req, domain_id):
-        """Return a list of dns entries for the specified domain and ip."""
-        context = req.environ['nova.context']
-        authorize(context)
-        params = req.GET
-        floating_ip = params.get('ip')
-        domain = _unquote_domain(domain_id)
-
-        if not floating_ip:
-            raise webob.exc.HTTPUnprocessableEntity()
-
-        entries = self.network_api.get_dns_entries_by_address(context,
-                                                              floating_ip,
-                                                              domain)
-        entrylist = [_create_dns_entry(floating_ip, entry, domain)
-                     for entry in entries]
-
-        return _translate_dns_entries_view(entrylist)
 
     @wsgi.serializers(xml=FloatingIPDNSTemplate)
     def update(self, req, domain_id, id, body):
