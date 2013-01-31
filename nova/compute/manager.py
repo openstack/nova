@@ -27,6 +27,7 @@ terminating it.
 
 """
 
+import base64
 import contextlib
 import functools
 import socket
@@ -1069,6 +1070,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             filter_properties = {}
         if injected_files is None:
             injected_files = []
+        else:
+            injected_files = [(path, base64.b64decode(contents))
+                              for path, contents in injected_files]
 
         @lockutils.synchronized(instance['uuid'], 'nova-')
         def do_run_instance():

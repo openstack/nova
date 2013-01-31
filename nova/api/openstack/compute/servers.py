@@ -605,8 +605,7 @@ class Controller(wsgi.Controller):
             except TypeError:
                 expl = _('Bad personality format')
                 raise exc.HTTPBadRequest(explanation=expl)
-            contents = self._decode_base64(contents)
-            if contents is None:
+            if self._decode_base64(contents) is None:
                 expl = _('Personality content for %s cannot be decoded') % path
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))

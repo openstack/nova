@@ -16,6 +16,7 @@
 #    under the License.
 
 import time
+import zlib
 
 from nova.openstack.common.log import logging
 from nova.tests import fake_network
@@ -437,3 +438,43 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self._delete_server(created_server_id)
         for server_id in server_map.iterkeys():
             self._delete_server(server_id)
+
+    def test_create_server_with_injected_files(self):
+        # Creates a server with injected_files.
+        fake_network.set_stub_network_methods(self.stubs)
+        personality = []
+
+        # Inject a text file
+        data = 'Hello, World!'
+        personality.append({
+            'path': '/helloworld.txt',
+            'contents': data.encode('base64'),
+        })
+
+        # Inject a binary file
+        data = zlib.compress('Hello, World!')
+        personality.append({
+            'path': '/helloworld.zip',
+            'contents': data.encode('base64'),
+        })
+
+        # Create server
+        server = self._build_minimal_create_server_request()
+        server['personality'] = personality
+
+        post = {'server': server}
+
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+
+        found_server = self._wait_for_state_change(found_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cleanup
+        self._delete_server(created_server_id)
