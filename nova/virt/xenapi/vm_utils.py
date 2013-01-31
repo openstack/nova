@@ -1560,7 +1560,7 @@ def _find_iso_sr(session):
         if not sr_rec['content_type'] == 'iso':
             LOG.debug(_("ISO: not iso content"))
             continue
-        if not 'i18n-key' in sr_rec['other_config']:
+        if 'i18n-key' not in sr_rec['other_config']:
             LOG.debug(_("ISO: iso content_type, no 'i18n-key' key"))
             continue
         if not sr_rec['other_config']['i18n-key'] == 'local-storage-iso':

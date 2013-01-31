@@ -71,7 +71,7 @@ def get_availability_zones(context):
     available_zones = []
     for zone in [service['availability_zone'] for service
                  in enabled_services]:
-        if not zone in available_zones:
+        if zone not in available_zones:
             available_zones.append(zone)
 
     not_available_zones = []

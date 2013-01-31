@@ -106,7 +106,7 @@ class AggregateController(object):
             raise exc.HTTPBadRequest
 
         for key in updates.keys():
-            if not key in ["name", "availability_zone"]:
+            if key not in ["name", "availability_zone"]:
                 raise exc.HTTPBadRequest
 
         try:

@@ -89,7 +89,7 @@ def reset():
 
 
 def reset_table(table):
-    if not table in _CLASSES:
+    if table not in _CLASSES:
         return
     _db_content[table] = {}
 
@@ -417,7 +417,7 @@ class SessionBase(object):
 
     def VBD_add_to_other_config(self, _1, vbd_ref, key, value):
         db_ref = _db_content['VBD'][vbd_ref]
-        if not 'other_config' in db_ref:
+        if 'other_config' not in db_ref:
             db_ref['other_config'] = {}
         if key in db_ref['other_config']:
             raise Failure(['MAP_DUPLICATE_KEY', 'VBD', 'other_config',
@@ -426,7 +426,7 @@ class SessionBase(object):
 
     def VBD_get_other_config(self, _1, vbd_ref):
         db_ref = _db_content['VBD'][vbd_ref]
-        if not 'other_config' in db_ref:
+        if 'other_config' not in db_ref:
             return {}
         return db_ref['other_config']
 
@@ -497,14 +497,14 @@ class SessionBase(object):
 
     def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
         db_ref = _db_content['VM'][vm_ref]
-        if not 'xenstore_data' in db_ref:
+        if 'xenstore_data' not in db_ref:
             return
         if key in db_ref['xenstore_data']:
             del db_ref['xenstore_data'][key]
 
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
-        if not 'xenstore_data' in db_ref:
+        if 'xenstore_data' not in db_ref:
             db_ref['xenstore_data'] = {}
         db_ref['xenstore_data'][key] = value
 
@@ -513,14 +513,14 @@ class SessionBase(object):
 
     def VDI_remove_from_other_config(self, _1, vdi_ref, key):
         db_ref = _db_content['VDI'][vdi_ref]
-        if not 'other_config' in db_ref:
+        if 'other_config' not in db_ref:
             return
         if key in db_ref['other_config']:
             del db_ref['other_config'][key]
 
     def VDI_add_to_other_config(self, _1, vdi_ref, key, value):
         db_ref = _db_content['VDI'][vdi_ref]
-        if not 'other_config' in db_ref:
+        if 'other_config' not in db_ref:
             db_ref['other_config'] = {}
         if key in db_ref['other_config']:
             raise Failure(['MAP_DUPLICATE_KEY', 'VDI', 'other_config',

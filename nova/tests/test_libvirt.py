@@ -3848,7 +3848,7 @@ class IptablesFirewallTestCase(test.TestCase):
         in_rules = filter(lambda l: not l.startswith('#'),
                           self.in_rules)
         for rule in in_rules:
-            if not 'nova' in rule:
+            if 'nova' not in rule:
                 self.assertTrue(rule in self.out_rules,
                                 'Rule went missing: %s' % rule)
 

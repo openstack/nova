@@ -84,7 +84,7 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context)
         self._check_body(body)
-        if not id in body:
+        if id not in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
         if len(body) > 1:

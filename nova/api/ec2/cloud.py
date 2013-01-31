@@ -280,7 +280,7 @@ class CloudController(object):
         host_services = {}
         for service in enabled_services:
             zone_hosts.setdefault(service['availability_zone'], [])
-            if not service['host'] in zone_hosts[service['availability_zone']]:
+            if service['host'] not in zone_hosts[service['availability_zone']]:
                 zone_hosts[service['availability_zone']].append(
                     service['host'])
 
@@ -527,7 +527,7 @@ class CloudController(object):
 
     def _rule_args_to_dict(self, context, kwargs):
         rules = []
-        if not 'groups' in kwargs and not 'ip_ranges' in kwargs:
+        if 'groups' not in kwargs and 'ip_ranges' not in kwargs:
             rule = self._rule_dict_last_step(context, **kwargs)
             if rule:
                 rules.append(rule)
@@ -1545,11 +1545,11 @@ class CloudController(object):
         if attribute != 'launchPermission':
             raise exception.EC2APIError(_('attribute not supported: %s')
                                      % attribute)
-        if not 'user_group' in kwargs:
+        if 'user_group' not in kwargs:
             raise exception.EC2APIError(_('user or group not specified'))
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
             raise exception.EC2APIError(_('only group "all" is supported'))
-        if not operation_type in ['add', 'remove']:
+        if operation_type not in ['add', 'remove']:
             msg = _('operation_type must be add or remove')
             raise exception.EC2APIError(msg)
         LOG.audit(_("Updating image %s publicity"), image_id, context=context)

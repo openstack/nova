@@ -58,7 +58,7 @@ def generate_new_element(items, prefix, numeric=False):
             candidate = prefix + generate_random_numeric(8)
         else:
             candidate = prefix + generate_random_alphanumeric(8)
-        if not candidate in items:
+        if candidate not in items:
             return candidate
         LOG.debug("Random collision on %s" % candidate)
 

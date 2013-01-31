@@ -80,13 +80,13 @@ class FloatingIPBulkController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not 'floating_ips_bulk_create' in body:
+        if 'floating_ips_bulk_create' not in body:
             raise webob.exc.HTTPUnprocessableEntity()
         params = body['floating_ips_bulk_create']
 
         LOG.debug(params)
 
-        if not 'ip_range' in params:
+        if 'ip_range' not in params:
             raise webob.exc.HTTPUnprocessableEntity()
         ip_range = params['ip_range']
 

@@ -76,7 +76,7 @@ class Controller(object):
             expl = _('Incorrect request body format')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        if not id in meta:
+        if id not in meta:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
         if len(meta) > 1:
@@ -105,7 +105,7 @@ class Controller(object):
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
-        if not id in image['properties']:
+        if id not in image['properties']:
             msg = _("Invalid metadata key")
             raise exc.HTTPNotFound(explanation=msg)
         image['properties'].pop(id)

@@ -595,7 +595,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def _check_vdis(self, start_list, end_list):
         for vdi_ref in end_list:
-            if not vdi_ref in start_list:
+            if vdi_ref not in start_list:
                 vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
                 # If the cache is turned on then the base disk will be
                 # there even after the cleanup
@@ -1949,7 +1949,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         in_rules = filter(lambda l: not l.startswith('#'),
                           self._in_rules)
         for rule in in_rules:
-            if not 'nova' in rule:
+            if 'nova' not in rule:
                 self.assertTrue(rule in self._out_rules,
                                 'Rule went missing: %s' % rule)
 

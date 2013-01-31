@@ -50,7 +50,7 @@ class GuestFS(object):
         self.mounts.append((options, device, mntpoint))
 
     def mkdir_p(self, path):
-        if not path in self.files:
+        if path not in self.files:
             self.files[path] = {
                 "isdir": True,
                 "gid": 100,
@@ -59,7 +59,7 @@ class GuestFS(object):
                 }
 
     def read_file(self, path):
-        if not path in self.files:
+        if path not in self.files:
             self.files[path] = {
                 "isdir": False,
                 "content": "Hello World",
@@ -71,7 +71,7 @@ class GuestFS(object):
         return self.files[path]["content"]
 
     def write(self, path, content):
-        if not path in self.files:
+        if path not in self.files:
             self.files[path] = {
                 "isdir": False,
                 "content": "Hello World",
@@ -83,7 +83,7 @@ class GuestFS(object):
         self.files[path]["content"] = content
 
     def write_append(self, path, content):
-        if not path in self.files:
+        if path not in self.files:
             self.files[path] = {
                 "isdir": False,
                 "content": "Hello World",
@@ -95,13 +95,13 @@ class GuestFS(object):
         self.files[path]["content"] = self.files[path]["content"] + content
 
     def stat(self, path):
-        if not path in self.files:
+        if path not in self.files:
             raise RuntimeError("No such file: " + path)
 
         return self.files[path]["mode"]
 
     def chown(self, uid, gid, path):
-        if not path in self.files:
+        if path not in self.files:
             raise RuntimeError("No such file: " + path)
 
         if uid != -1:
@@ -110,7 +110,7 @@ class GuestFS(object):
             self.files[path]["gid"] = gid
 
     def chmod(self, mode, path):
-        if not path in self.files:
+        if path not in self.files:
             raise RuntimeError("No such file: " + path)
 
         self.files[path]["mode"] = mode

@@ -269,7 +269,7 @@ class ComputeAttestationCache(object):
 
     def get_host_attestation(self, host):
         """Check host's trust level."""
-        if not host in self.compute_nodes:
+        if host not in self.compute_nodes:
             self._init_cache_entry(host)
         if not self._cache_valid(host):
             self._update_cache()
