@@ -464,7 +464,7 @@ class ImageCacheManager(object):
             # _verify_checksum returns True if the checksum is ok, and None if
             # there is no checksum file
             checksum_result = self._verify_checksum(img_id, base_file)
-            if not checksum_result is None:
+            if checksum_result is not None:
                 image_bad = not checksum_result
 
             # Give other threads a chance to run

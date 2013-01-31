@@ -399,12 +399,12 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
             server = stub_instance(id=i + 1, uuid=uuid,
                     **kwargs)
             servers_list.append(server)
-            if not marker is None and uuid == marker:
+            if marker is not None and uuid == marker:
                 found_marker = True
                 servers_list = []
-        if not marker is None and not found_marker:
+        if marker is not None and not found_marker:
             raise exc.MarkerNotFound(marker=marker)
-        if not limit is None:
+        if limit is not None:
             servers_list = servers_list[:limit]
         return servers_list
     return _return_servers

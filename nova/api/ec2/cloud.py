@@ -407,7 +407,7 @@ class CloudController(object):
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = self.keypair_api.get_key_pairs(context, context.user_id)
-        if not key_name is None:
+        if key_name is not None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
         #If looking for non existent key pair
