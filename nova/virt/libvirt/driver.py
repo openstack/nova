@@ -673,7 +673,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def volume_driver_method(self, method_name, connection_info,
                              *args, **kwargs):
         driver_type = connection_info.get('driver_volume_type')
-        if not driver_type in self.volume_drivers:
+        if driver_type not in self.volume_drivers:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
         driver = self.volume_drivers[driver_type]
         method = getattr(driver, method_name)

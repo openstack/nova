@@ -46,7 +46,7 @@ def fake_execute(*args, **kwargs):
     elif args[0] == "chown":
         owner = args[1]
         path = args[2]
-        if not path in files:
+        if path not in files:
             raise Exception("No such file: " + path)
 
         sep = owner.find(':')
@@ -72,7 +72,7 @@ def fake_execute(*args, **kwargs):
     elif args[0] == "chgrp":
         group = args[1]
         path = args[2]
-        if not path in files:
+        if path not in files:
             raise Exception("No such file: " + path)
 
         if group == "users":
@@ -83,13 +83,13 @@ def fake_execute(*args, **kwargs):
     elif args[0] == "chmod":
         mode = args[1]
         path = args[2]
-        if not path in files:
+        if path not in files:
             raise Exception("No such file: " + path)
 
         files[path]["mode"] = int(mode, 8)
     elif args[0] == "cat":
         path = args[1]
-        if not path in files:
+        if path not in files:
             files[path] = {
                 "content": "Hello World",
                 "gid": 100,
@@ -104,7 +104,7 @@ def fake_execute(*args, **kwargs):
         else:
             path = args[1]
             append = False
-        if not path in files:
+        if path not in files:
             files[path] = {
                 "content": "Hello World",
                 "gid": 100,

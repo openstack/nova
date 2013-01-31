@@ -155,7 +155,7 @@ class TestOpenStackClient(object):
         LOG.debug(_("%(relative_uri)s => code %(http_status)s") % locals())
 
         if check_response_status:
-            if not http_status in check_response_status:
+            if http_status not in check_response_status:
                 if http_status == 404:
                     raise OpenStackApiNotFoundException(response=response)
                 elif http_status == 401:

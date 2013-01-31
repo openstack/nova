@@ -621,7 +621,7 @@ class WSGIService(object):
 
         """
         fl = '%s_manager' % self.name
-        if not fl in CONF:
+        if fl not in CONF:
             return None
 
         manager_class_name = CONF.get(fl, None)

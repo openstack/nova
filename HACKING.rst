@@ -29,6 +29,18 @@ General
     mylist = Foo().list() # OKAY, does not shadow built-in
 
 
+- Use the "not in" operator for collection membership evaluation. Example::
+
+    if not X in Y:  # BAD, hard to understand
+        pass
+
+    if X not in Y:  # OKAY, intuitive
+        pass
+
+    if not (X in Y or X is Z):  # OKAY, still better than all those 'not's
+        pass
+
+
 Imports
 -------
 - Do not import objects, only modules (*)

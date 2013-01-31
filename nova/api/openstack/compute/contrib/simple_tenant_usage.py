@@ -159,7 +159,7 @@ class SimpleTenantUsageController(object):
 
             info['uptime'] = delta.days * 24 * 3600 + delta.seconds
 
-            if not info['tenant_id'] in rval:
+            if info['tenant_id'] not in rval:
                 summary = {}
                 summary['tenant_id'] = info['tenant_id']
                 if detailed:

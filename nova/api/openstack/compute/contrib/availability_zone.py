@@ -110,7 +110,7 @@ class AvailabilityZoneController(wsgi.Controller):
         host_services = {}
         for service in enabled_services:
             zone_hosts.setdefault(service['availability_zone'], [])
-            if not service['host'] in zone_hosts[service['availability_zone']]:
+            if service['host'] not in zone_hosts[service['availability_zone']]:
                 zone_hosts[service['availability_zone']].append(
                     service['host'])
 

@@ -751,7 +751,7 @@ class Controller(wsgi.Controller):
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
 
-        if not 'name' in server_dict:
+        if 'name' not in server_dict:
             msg = _("Server name is not defined")
             raise exc.HTTPBadRequest(explanation=msg)
 

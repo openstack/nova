@@ -102,7 +102,7 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
-        if not ('parent_resource' in kwargs):
+        if 'parent_resource' not in kwargs:
             kwargs['path_prefix'] = '{project_id}/'
         else:
             parent_resource = kwargs['parent_resource']

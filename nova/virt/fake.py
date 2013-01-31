@@ -125,7 +125,7 @@ class FakeDriver(driver.ComputeDriver):
         self.instances[name] = fake_instance
 
     def snapshot(self, context, instance, name, update_task_state):
-        if not instance['name'] in self.instances:
+        if instance['name'] not in self.instances:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])
         update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
@@ -209,7 +209,7 @@ class FakeDriver(driver.ComputeDriver):
     def attach_volume(self, connection_info, instance, mountpoint):
         """Attach the disk to the instance at mountpoint using info."""
         instance_name = instance['name']
-        if not instance_name in self._mounts:
+        if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = connection_info
         return True

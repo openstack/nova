@@ -305,7 +305,7 @@ class ImageCacheManager(object):
                         backing_path = os.path.join(CONF.instances_path,
                                                     CONF.base_dir_name,
                                                     backing_file)
-                        if not backing_path in inuse_images:
+                        if backing_path not in inuse_images:
                             inuse_images.append(backing_path)
 
                         if backing_path in self.unexplained_images:
@@ -555,7 +555,7 @@ class ImageCacheManager(object):
         # Elements remaining in unexplained_images might be in use
         inuse_backing_images = self._list_backing_images()
         for backing_path in inuse_backing_images:
-            if not backing_path in self.active_base_files:
+            if backing_path not in self.active_base_files:
                 self.active_base_files.append(backing_path)
 
         # Anything left is an unknown base image

@@ -391,7 +391,7 @@ class BaseTrackerTestCase(BaseTestCase):
         if tracker is None:
             tracker = self.tracker
 
-        if not field in tracker.compute_node:
+        if field not in tracker.compute_node:
             raise test.TestingException(
                 "'%(field)s' not in compute node." % locals())
         x = tracker.compute_node[field]
