@@ -191,7 +191,7 @@ class VMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)
         vm_ref = vm_utils.lookup(self._session, name_label)
-        return self._destroy(instance, vm_ref, network_info)
+        return self._destroy(instance, vm_ref, network_info=network_info)
 
     def _attach_mapped_block_devices(self, instance, block_device_info):
         # We are attaching these volumes before start (no hotplugging)
@@ -302,7 +302,7 @@ class VMOps(object):
         def create_disks_step(undo_mgr, disk_image_type, image_meta):
             vdis = self._create_disks(context, instance, name_label,
                                       disk_image_type, image_meta,
-                                      block_device_info)
+                                      block_device_info=block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()
@@ -346,7 +346,7 @@ class VMOps(object):
                     vdis, disk_image_type, kernel_file, ramdisk_file)
 
             def undo_create_vm():
-                self._destroy(instance, vm_ref, network_info)
+                self._destroy(instance, vm_ref, network_info=network_info)
 
             undo_mgr.undo_with(undo_create_vm)
             return vm_ref
@@ -1011,7 +1011,7 @@ class VMOps(object):
 
         raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
 
-    def _detach_vm_vols(self, instance, vm_ref, block_device_info=None):
+    def _detach_vm_vols(self, instance, vm_ref):
         """Detach any external nova/cinder volumes and purge the SRs.
            This differs from a normal detach in that the VM has been
            shutdown, so there is no need for unplugging VBDs. They do
@@ -1033,7 +1033,7 @@ class VMOps(object):
                     LOG.exception(exc)
                     raise
 
-    def _destroy_vdis(self, instance, vm_ref, block_device_info=None):
+    def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM."""
         LOG.debug(_("Destroying VDIs"), instance=instance)
 
@@ -1115,12 +1115,14 @@ class VMOps(object):
         if rescue_vm_ref:
             self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
-        return self._destroy(instance, vm_ref, network_info,
-                             block_device_info=block_device_info,
+        # NOTE(sirp): `block_device_info` is not used, information about which
+        # volumes should be detached is determined by the
+        # VBD.other_config['osvol'] attribute
+        return self._destroy(instance, vm_ref, network_info=network_info,
                              destroy_disks=destroy_disks)
 
     def _destroy(self, instance, vm_ref, network_info=None,
-                 block_device_info=None, destroy_disks=True):
+                 destroy_disks=True):
         """Destroys VM instance by performing:
 
             1. A shutdown
@@ -1136,10 +1138,9 @@ class VMOps(object):
 
         vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
-        # Destroy VDIs (if necessary)
         if destroy_disks:
-            self._detach_vm_vols(instance, vm_ref, block_device_info)
-            self._destroy_vdis(instance, vm_ref, block_device_info)
+            self._detach_vm_vols(instance, vm_ref)
+            self._destroy_vdis(instance, vm_ref)
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
         vm_utils.destroy_vm(self._session, instance, vm_ref)
