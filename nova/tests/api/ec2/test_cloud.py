@@ -824,6 +824,19 @@ class CloudTestCase(test.TestCase):
                           self.cloud.describe_instances, self.context,
                           instance_id=[instance_id])
 
+    def test_describe_instances_with_filters(self):
+        # Makes sure describe_instances works and filters results.
+        filters = {'filter': [{'name': 'test',
+                               'value': ['a', 'b']},
+                              {'name': 'another_test',
+                               'value': 'a string'}]}
+
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': []})
+
     def test_describe_instances_sorting(self):
         # Makes sure describe_instances works and is sorted as expected.
         self.flags(use_ipv6=True)
