@@ -5612,6 +5612,88 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
 
+    def test_detach_volume(self):
+        # Ensure volume can be detached from instance
+
+        called = {}
+        instance = self._create_fake_instance()
+
+        def fake_check_detach(*args, **kwargs):
+            called['fake_check_detach'] = True
+
+        def fake_begin_detaching(*args, **kwargs):
+            called['fake_begin_detaching'] = True
+
+        def fake_volume_get(self, context, volume_id):
+            called['fake_volume_get'] = True
+            return {'id': volume_id, 'attach_status': 'in-use',
+                    'instance_uuid': instance['uuid']}
+
+        def fake_rpc_detach_volume(self, context, **kwargs):
+            called['fake_rpc_detach_volume'] = True
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_detach', fake_check_detach)
+        self.stubs.Set(cinder.API, 'begin_detaching', fake_begin_detaching)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'detach_volume',
+                       fake_rpc_detach_volume)
+
+        self.compute_api.detach_volume(self.context, 1)
+        self.assertTrue(called.get('fake_volume_get'))
+        self.assertTrue(called.get('fake_check_detach'))
+        self.assertTrue(called.get('fake_begin_detaching'))
+        self.assertTrue(called.get('fake_rpc_detach_volume'))
+
+    def test_detach_invalid_volume(self):
+        # Ensure exception is raised while detaching an un-attached volume
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id, 'attach_status': 'detached'}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.assertRaises(exception.InvalidVolume,
+                          self.compute_api.detach_volume, self.context, 1)
+
+    def test_detach_volume_libvirt_is_down(self):
+        # Ensure rollback during detach if libvirt goes down
+
+        called = {}
+        instance = self._create_fake_instance()
+
+        def fake_get_instance_volume_bdm(*args, **kwargs):
+            return {'device_name': '/dev/vdb', 'volume_id': 1,
+                    'connection_info': '{"test": "test"}'}
+
+        def fake_libvirt_driver_instance_exists(*args, **kwargs):
+            called['fake_libvirt_driver_instance_exists'] = True
+            return False
+
+        def fake_libvirt_driver_detach_volume_fails(*args, **kwargs):
+            called['fake_libvirt_driver_detach_volume_fails'] = True
+            raise AttributeError
+
+        def fake_roll_detaching(*args, **kwargs):
+            called['fake_roll_detaching'] = True
+
+        def fake_volume_get(self, context, volume_id):
+            called['fake_volume_get'] = True
+            return {'id': volume_id, 'attach_status': 'in-use'}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'roll_detaching', fake_roll_detaching)
+        self.stubs.Set(self.compute, "_get_instance_volume_bdm",
+                       fake_get_instance_volume_bdm)
+        self.stubs.Set(self.compute.driver, "instance_exists",
+                       fake_libvirt_driver_instance_exists)
+        self.stubs.Set(self.compute.driver, "detach_volume",
+                       fake_libvirt_driver_detach_volume_fails)
+
+        self.assertRaises(AttributeError, self.compute.detach_volume,
+                          self.context, 1, instance)
+        self.assertTrue(called.get('fake_libvirt_driver_instance_exists'))
+        self.assertTrue(called.get('fake_volume_get'))
+        self.assertTrue(called.get('fake_roll_detaching'))
+
     def test_terminate_with_volumes(self):
         # Make sure that volumes get detached during instance termination.
         admin = context.get_admin_context()

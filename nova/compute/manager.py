@@ -2544,15 +2544,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Detach volume %(volume_id)s from mountpoint %(mp)s'),
                   locals(), context=context, instance=instance)
 
-        if not self.driver.instance_exists(instance['name']):
-            LOG.warn(_('Detaching volume from unknown instance'),
-                     context=context, instance=instance)
         connection_info = jsonutils.loads(bdm['connection_info'])
         # NOTE(vish): We currently don't use the serial when disconnecting,
         #             but added for completeness in case we ever do.
         if connection_info and 'serial' not in connection_info:
             connection_info['serial'] = volume_id
         try:
+            if not self.driver.instance_exists(instance['name']):
+                LOG.warn(_('Detaching volume from unknown instance'),
+                         context=context, instance=instance)
             self.driver.detach_volume(connection_info,
                                       instance,
                                       mp)
