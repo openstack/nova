@@ -641,12 +641,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                          'delete_on_termination': bdm['delete_on_termination']}
                 block_device_mapping.append(bdmap)
 
-        return {
+        block_device_info = {
             'root_device_name': instance['root_device_name'],
             'swap': swap,
             'ephemerals': ephemerals,
             'block_device_mapping': block_device_mapping
         }
+
+        return block_device_info
 
     def _run_instance(self, context, request_spec,
                       filter_properties, requested_networks, injected_files,
@@ -655,7 +657,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         try:
-            self._check_instance_not_already_created(context, instance)
+            self._check_instance_exists(context, instance)
             image_meta = self._check_image_size(context, instance)
 
             if node is None:
@@ -839,11 +841,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              **update_info)
         return instance
 
-    def _check_instance_not_already_created(self, context, instance):
+    def _check_instance_exists(self, context, instance):
         """Ensure an instance with the same name is not already present."""
         if self.driver.instance_exists(instance['name']):
-            _msg = _("Instance has already been created")
-            raise exception.Invalid(_msg)
+            raise exception.InstanceExists(name=instance['name'])
 
     def _check_image_size(self, context, instance):
         """Ensure image is smaller than the maximum size allowed by the
@@ -1287,6 +1288,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         :param orig_sys_metadata: instance system metadata from pre-rebuild
+        :param bdms: block-device-mappings to use for rebuild
         :param recreate: True if instance should be recreated with same disk
         :param on_shared_storage: True if instance files on shared storage
         """
@@ -1298,39 +1300,28 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance=instance)
 
             if recreate:
-
                 if not self.driver.capabilities["supports_recreate"]:
-                    # if driver doesn't support recreate return with failure
-                    _msg = _('instance recreate is not implemented '
-                             'by this driver.')
+                    raise exception.InstanceRecreateNotSupported
 
-                    LOG.warn(_msg, instance=instance)
-                    self._instance_update(context,
-                                          instance['uuid'],
-                                          task_state=None,
-                                          expected_task_state=task_states.
-                                          REBUILDING)
-                    raise exception.Invalid(_msg)
+                self._check_instance_exists(context, instance)
 
-                self._check_instance_not_already_created(context, instance)
-
-                # to cover case when admin expects that instance files are on
+                # To cover case when admin expects that instance files are on
                 # shared storage, but not accessible and vice versa
                 if on_shared_storage != self.driver.instance_on_disk(instance):
-                    _msg = _("Invalid state of instance files on "
-                             "shared storage")
-                    raise exception.Invalid(_msg)
+                    raise exception.InvalidSharedStorage(
+                            _("Invalid state of instance files on shared"
+                              " storage"))
 
                 if on_shared_storage:
-                    LOG.info(_('disk on shared storage,'
-                             'recreating using existing disk'))
+                    LOG.info(_('disk on shared storage, recreating using'
+                               ' existing disk'))
                 else:
                     image_ref = orig_image_ref = instance['image_ref']
-                    LOG.info(_("disk not on shared storage"
-                               "rebuilding from: '%s'") % str(image_ref))
+                    LOG.info(_("disk not on shared storagerebuilding from:"
+                               " '%s'") % str(image_ref))
 
-                instance = self._instance_update(context, instance['uuid'],
-                                                 host=self.host)
+                instance = self._instance_update(
+                        context, instance['uuid'], host=self.host)
 
             if image_ref:
                 image_meta = _get_image_meta(context, image_ref)
@@ -1351,15 +1342,25 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(context, instance,
                     "rebuild.start", extra_usage_info=extra_usage_info)
 
-            current_power_state = self._get_power_state(context, instance)
-            instance = self._instance_update(context, instance['uuid'],
-                    power_state=current_power_state,
+            instance = self._instance_update(
+                    context, instance['uuid'],
+                    power_state=self._get_power_state(context, instance),
                     task_state=task_states.REBUILDING,
                     expected_task_state=task_states.REBUILDING)
 
             if recreate:
-                # Detaching volumes.
-                for bdm in self._get_instance_volume_bdms(context, instance):
+                self.network_api.setup_networks_on_host(
+                        context, instance, self.host)
+
+            network_info = self._get_instance_nw_info(context, instance)
+
+            if bdms is None:
+                bdms = self.conductor_api.\
+                        block_device_mapping_get_all_by_instance(
+                                context, instance)
+
+            if recreate:
+                for bdm in self._get_volume_bdms(bdms):
                     volume = self.volume_api.get(context, bdm['volume_id'])
 
                     # We can't run volume disconnect on source because
@@ -1367,48 +1368,38 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # in db, anyway the zombie instance going to be deleted
                     # from source during init_host when host comes back
                     self.volume_api.detach(context.elevated(), volume)
-
-                self.network_api.setup_networks_on_host(context,
-                                                        instance, self.host)
             else:
-                network_info = self._get_instance_nw_info(context, instance)
                 self.driver.destroy(instance,
                                     self._legacy_nw_info(network_info))
 
-            instance = self._instance_update(context, instance['uuid'],
+            instance = self._instance_update(
+                    context, instance['uuid'],
                     task_state=task_states.REBUILD_BLOCK_DEVICE_MAPPING,
                     expected_task_state=task_states.REBUILDING)
 
+            block_device_info = self._setup_block_device_mapping(
+                    context, instance, bdms)
+
             instance['injected_files'] = injected_files
-            network_info = self._get_instance_nw_info(context, instance)
-            if bdms is None:
-                capi = self.conductor_api
-                bdms = capi.block_device_mapping_get_all_by_instance(
-                    context, instance)
-            device_info = self._setup_block_device_mapping(context, instance,
-                                                           bdms)
 
-            expected_task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
-            instance = self._instance_update(context, instance['uuid'],
+            instance = self._instance_update(
+                    context, instance['uuid'],
                     task_state=task_states.REBUILD_SPAWNING,
-                    expected_task_state=expected_task_state)
-
-            admin_password = new_pass
+                    expected_task_state=
+                        task_states.REBUILD_BLOCK_DEVICE_MAPPING)
 
             self.driver.spawn(context, instance, image_meta,
-                              [], admin_password,
-                              self._legacy_nw_info(network_info),
-                              device_info)
+                              [], new_pass,
+                              network_info=self._legacy_nw_info(network_info),
+                              block_device_info=block_device_info)
 
-            current_power_state = self._get_power_state(context, instance)
-            instance = self._instance_update(context,
-                                             instance['uuid'],
-                                             power_state=current_power_state,
-                                             vm_state=vm_states.ACTIVE,
-                                             task_state=None,
-                                             expected_task_state=task_states.
-                                                 REBUILD_SPAWNING,
-                                             launched_at=timeutils.utcnow())
+            instance = self._instance_update(
+                    context, instance['uuid'],
+                    power_state=self._get_power_state(context, instance),
+                    vm_state=vm_states.ACTIVE,
+                    task_state=None,
+                    expected_task_state=task_states.REBUILD_SPAWNING,
+                    launched_at=timeutils.utcnow())
 
             LOG.info(_("bringing vm to original state: '%s'") % orig_vm_state)
             if orig_vm_state == vm_states.STOPPED:
