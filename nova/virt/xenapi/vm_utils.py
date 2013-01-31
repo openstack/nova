@@ -47,7 +47,6 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
-from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import volume_utils
 
@@ -489,29 +488,13 @@ def get_vdis_for_boot_from_vol(session, dev_params):
     return vdis
 
 
-def _volume_in_mapping(mount_device, block_device_info):
-    block_device_list = [block_device.strip_prefix(vol['mount_device'])
-                         for vol in
-                         driver.block_device_info_get_mapping(
-                         block_device_info)]
-    swap = driver.block_device_info_get_swap(block_device_info)
-    if driver.swap_is_usable(swap):
-        swap_dev = swap['device_name']
-        block_device_list.append(block_device.strip_prefix(swap_dev))
-    block_device_list += [block_device.strip_prefix(ephemeral['device_name'])
-                          for ephemeral in
-                          driver.block_device_info_get_ephemerals(
-                          block_device_info)]
-    LOG.debug(_("block_device_list %s"), block_device_list)
-    return block_device.strip_prefix(mount_device) in block_device_list
-
-
 def get_vdis_for_instance(context, session, instance, name_label, image,
                           image_type, block_device_info=None):
     if block_device_info:
         LOG.debug(_("block device info: %s"), block_device_info)
         rootdev = block_device_info['root_device_name']
-        if _volume_in_mapping(rootdev, block_device_info):
+        if block_device.volume_in_mapping(rootdev, block_device_info,
+                                          strip=block_device.strip_prefix):
             # call function to return the vdi in connection info of block
             # device.
             # make it a point to return from here.

@@ -1432,8 +1432,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if size == 0 or suffix == '.rescue':
             size = None
 
-        if not self._volume_in_mapping(self.default_root_device,
-                                       block_device_info):
+        if not block_device.volume_in_mapping(
+                self.default_root_device, block_device_info):
             image('disk').cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
                                 filename=root_fname,
@@ -1448,7 +1448,7 @@ class LibvirtDriver(driver.ComputeDriver):
             os_type_with_default = 'default'
 
         ephemeral_gb = instance['ephemeral_gb']
-        if ephemeral_gb and not self._volume_in_mapping(
+        if ephemeral_gb and not block_device.volume_in_mapping(
                 self.default_second_device, block_device_info):
             swap_device = self.default_third_device
             fn = functools.partial(self._create_ephemeral,
@@ -1480,7 +1480,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if driver.swap_is_usable(swap):
             swap_mb = swap['swap_size']
         elif (inst_type['swap'] > 0 and
-              not self._volume_in_mapping(swap_device, block_device_info)):
+              not block_device.volume_in_mapping(
+                  swap_device, block_device_info)):
             swap_mb = inst_type['swap']
 
         if swap_mb > 0:
@@ -1556,24 +1557,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
-
-    @staticmethod
-    def _volume_in_mapping(mount_device, block_device_info):
-        block_device_list = [block_device.strip_dev(vol['mount_device'])
-                             for vol in
-                             driver.block_device_info_get_mapping(
-                                 block_device_info)]
-        swap = driver.block_device_info_get_swap(block_device_info)
-        if driver.swap_is_usable(swap):
-            block_device_list.append(
-                block_device.strip_dev(swap['device_name']))
-        block_device_list += [block_device.strip_dev(ephemeral['device_name'])
-                              for ephemeral in
-                              driver.block_device_info_get_ephemerals(
-                                  block_device_info)]
-
-        LOG.debug(_("block_device_list %s"), block_device_list)
-        return block_device.strip_dev(mount_device) in block_device_list
 
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
@@ -1708,8 +1691,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                    self.default_second_device)
                 devices.append(diskos)
             else:
-                ebs_root = self._volume_in_mapping(self.default_root_device,
-                                                   block_device_info)
+                ebs_root = block_device.volume_in_mapping(
+                        self.default_root_device, block_device_info)
 
                 if not ebs_root:
                     if root_device_type == "cdrom":
@@ -1723,8 +1706,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     devices.append(diskos)
 
                 ephemeral_device = None
-                if not (self._volume_in_mapping(self.default_second_device,
-                                                block_device_info) or
+                if not (block_device.volume_in_mapping(
+                    self.default_second_device, block_device_info) or
                         0 in [eph['num'] for eph in
                               driver.block_device_info_get_ephemerals(
                             block_device_info)]):
@@ -1758,8 +1741,8 @@ class LibvirtDriver(driver.ComputeDriver):
                             swap['device_name']))
                     devices.append(diskswap)
                 elif (inst_type['swap'] > 0 and
-                      not self._volume_in_mapping(swap_device,
-                                                  block_device_info)):
+                      not block_device.volume_in_mapping(
+                          swap_device, block_device_info)):
                     diskswap = disk_info('disk.swap', swap_device)
                     devices.append(diskswap)
                     self.virtapi.instance_update(
