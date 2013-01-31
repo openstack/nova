@@ -17,6 +17,7 @@
 import __builtin__
 import datetime
 import hashlib
+import importlib
 import os
 import os.path
 import StringIO
@@ -26,9 +27,12 @@ import mox
 
 import nova
 from nova import exception
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
+
+CONF = cfg.CONF
 
 
 class ByteConversionTest(test.TestCase):
@@ -507,6 +511,29 @@ class MonkeyPatchTestCase(test.TestCase):
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
         self.assertFalse(package_b + 'ExampleClassB.example_method_add'
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
+
+
+class MonkeyPatchDefaultTestCase(test.TestCase):
+    """Unit test for default monkey_patch_modules value."""
+
+    def setUp(self):
+        super(MonkeyPatchDefaultTestCase, self).setUp()
+        self.flags(
+            monkey_patch=True)
+
+    def test_monkey_patch_default_mod(self):
+        # monkey_patch_modules is defined to be
+        #    <module_to_patch>:<decorator_to_patch_with>
+        #  Here we check that both parts of the default values are
+        # valid
+        for module in CONF.monkey_patch_modules:
+            m = module.split(':', 1)
+            # Check we can import the module to be patched
+            importlib.import_module(m[0])
+            # check the decorator is valid
+            decorator_name = m[1].rsplit('.', 1)
+            decorator_module = importlib.import_module(decorator_name[0])
+            getattr(decorator_module, decorator_name[1])
 
 
 class AuditPeriodTest(test.TestCase):
