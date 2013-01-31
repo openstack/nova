@@ -149,23 +149,20 @@ def match_device(device):
     return match.groups()
 
 
-def volume_in_mapping(mount_device, block_device_info, strip=strip_dev):
-    # FIXME(sirp): xen uses strip_prefix to be mountpoint agnostic. There is
-    # probably a better way to handle this so that strip_dev can be used
-    # exclusively.
-    block_device_list = [strip(vol['mount_device'])
+def volume_in_mapping(mount_device, block_device_info):
+    block_device_list = [strip_dev(vol['mount_device'])
                          for vol in
                          driver.block_device_info_get_mapping(
                          block_device_info)]
 
     swap = driver.block_device_info_get_swap(block_device_info)
     if driver.swap_is_usable(swap):
-        block_device_list.append(strip(swap['device_name']))
+        block_device_list.append(strip_dev(swap['device_name']))
 
-    block_device_list += [strip(ephemeral['device_name'])
+    block_device_list += [strip_dev(ephemeral['device_name'])
                           for ephemeral in
                           driver.block_device_info_get_ephemerals(
                           block_device_info)]
 
     LOG.debug(_("block_device_list %s"), block_device_list)
-    return strip(mount_device) in block_device_list
+    return strip_dev(mount_device) in block_device_list

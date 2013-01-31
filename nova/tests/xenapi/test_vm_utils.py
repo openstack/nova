@@ -14,7 +14,7 @@ XENSM_TYPE = 'xensm'
 ISCSI_TYPE = 'iscsi'
 
 
-def get_fake_dev_params(sr_type):
+def get_fake_connection_data(sr_type):
     fakes = {XENSM_TYPE: {'sr_uuid': 'falseSR',
                           'name_label': 'fake_storage',
                           'name_description': 'test purposes',
@@ -73,16 +73,16 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
 
         self.assertEquals([], result)
 
-    def test_get_vdis_for_boot_from_vol_with_sr_uuid(self):
-        dev_params = get_fake_dev_params(XENSM_TYPE)
+    def test_get_vdi_uuid_for_volume_with_sr_uuid(self):
+        connection_data = get_fake_connection_data(XENSM_TYPE)
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
-        result = vm_utils.get_vdis_for_boot_from_vol(driver._session,
-                                                     dev_params)
-        self.assertEquals(result['root']['uuid'], 'falseVDI')
+        vdi_uuid = vm_utils.get_vdi_uuid_for_volume(
+                driver._session, connection_data)
+        self.assertEquals(vdi_uuid, 'falseVDI')
 
-    def test_get_vdis_for_boot_from_vol_failure(self):
+    def test_get_vdi_uuid_for_volume_failure(self):
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
@@ -90,19 +90,19 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
             return None
 
         self.stubs.Set(volume_utils, 'introduce_sr', bad_introduce_sr)
-        dev_params = get_fake_dev_params(XENSM_TYPE)
+        connection_data = get_fake_connection_data(XENSM_TYPE)
         self.assertRaises(exception.NovaException,
-                          vm_utils.get_vdis_for_boot_from_vol,
-                          driver._session, dev_params)
+                          vm_utils.get_vdi_uuid_for_volume,
+                          driver._session, connection_data)
 
-    def test_get_vdis_for_boot_from_iscsi_vol_missing_sr_uuid(self):
-        dev_params = get_fake_dev_params(ISCSI_TYPE)
+    def test_get_vdi_uuid_for_volume_from_iscsi_vol_missing_sr_uuid(self):
+        connection_data = get_fake_connection_data(ISCSI_TYPE)
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
 
-        result = vm_utils.get_vdis_for_boot_from_vol(driver._session,
-                                                     dev_params)
-        self.assertNotEquals(result['root']['uuid'], None)
+        vdi_uuid = vm_utils.get_vdi_uuid_for_volume(
+                driver._session, connection_data)
+        self.assertNotEquals(vdi_uuid, None)
 
 
 class VMRefOrRaiseVMFoundTestCase(test.TestCase):

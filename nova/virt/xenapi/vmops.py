@@ -26,6 +26,7 @@ import time
 from eventlet import greenthread
 import netaddr
 
+from nova import block_device
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
@@ -511,8 +512,9 @@ class VMOps(object):
         ctx = nova_context.get_admin_context()
         instance_type = instance['instance_type']
 
-        # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
+        # Attach (required) root disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
+            # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
             LOG.debug(_("Detected ISO image type, creating blank VM "
                         "for install"), instance=instance)
 
@@ -539,6 +541,19 @@ class VMOps(object):
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
                                 DEVICE_ROOT, bootable=True,
                                 osvol=root_vdi.get('osvol'))
+
+        # Attach (optional) additional block-devices
+        for type_, vdi_info in vdis.items():
+            # Additional block-devices for boot use their device-name as the
+            # type.
+            if not type_.startswith('/dev'):
+                continue
+
+            # Convert device name to userdevice number, e.g. /dev/xvdb -> 1
+            userdevice = ord(block_device.strip_prefix(type_)) - ord('a')
+            vm_utils.create_vbd(self._session, vm_ref, vdi_info['ref'],
+                                userdevice, bootable=False,
+                                osvol=vdi_info.get('osvol'))
 
         # Attach (optional) swap disk
         swap_mb = instance_type['swap']
