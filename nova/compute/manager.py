@@ -2438,16 +2438,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         def do_reserve():
             bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance)
-            result = compute_utils.get_device_name_for_instance(context,
-                                                                instance,
-                                                                bdms,
-                                                                device)
+
+            device_name = compute_utils.get_device_name_for_instance(
+                    context, instance, bdms, device)
+
             # NOTE(vish): create bdm here to avoid race condition
             values = {'instance_uuid': instance['uuid'],
                       'volume_id': volume_id or 'reserved',
-                      'device_name': result}
+                      'device_name': device_name}
+
             self.conductor_api.block_device_mapping_create(context, values)
-            return result
+
+            return device_name
+
         return do_reserve()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

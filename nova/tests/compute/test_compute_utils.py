@@ -71,10 +71,8 @@ class ComputeValidateDeviceTestCase(test.TestCase):
     def _validate_device(self, device=None):
         bdms = db.block_device_mapping_get_all_by_instance(
             self.context, self.instance['uuid'])
-        return compute_utils.get_device_name_for_instance(self.context,
-                                                          self.instance,
-                                                          bdms,
-                                                          device)
+        return compute_utils.get_device_name_for_instance(
+                self.context, self.instance, bdms, device)
 
     @staticmethod
     def _fake_bdm(device):
@@ -148,8 +146,9 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                           self._validate_device, '/baddata/vdc')
 
     def test_device_in_use(self):
-        self.assertRaises(exception.DevicePathInUse,
-                          self._validate_device, '/dev/vdb')
+        exc = self.assertRaises(exception.DevicePathInUse,
+                          self._validate_device, '/dev/vda')
+        self.assertIn('/dev/vda', str(exc))
 
     def test_swap(self):
         self.instance['default_swap_device'] = "/dev/vdc"
