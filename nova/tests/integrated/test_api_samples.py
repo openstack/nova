@@ -35,7 +35,6 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import api as network_api
-from nova.network import manager as network_manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -1512,7 +1511,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBase):
                     'vpn_public_port': 22}
 
         self.stubs.Set(pipelib.CloudPipe, 'get_encoded_zip', get_user_data)
-        self.stubs.Set(network_manager.NetworkManager, "get_network",
+        self.stubs.Set(network_api.API, "get",
                        network_api_get)
 
     def generalize_subs(self, subs, vanilla_regexes):

@@ -674,6 +674,8 @@ class FloatingIP(object):
     @rpc_common.client_exceptions(exception.FloatingIpNotFound)
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi.
         return dict(self.db.floating_ip_get(context, id).iteritems())
 
     def get_floating_pools(self, context):
@@ -684,22 +686,30 @@ class FloatingIP(object):
 
     def get_floating_ip_pools(self, context):
         """Returns list of floating ip pools."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi.
         pools = self.db.floating_ip_get_pools(context)
         return [dict(pool.iteritems()) for pool in pools]
 
     def get_floating_ip_by_address(self, context, address):
         """Returns a floating IP as a dict."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi.
         return dict(self.db.floating_ip_get_by_address(context,
                                                        address).iteritems())
 
     def get_floating_ips_by_project(self, context):
         """Returns the floating IPs allocated to a project."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi.
         ips = self.db.floating_ip_get_all_by_project(context,
                                                      context.project_id)
         return [dict(ip.iteritems()) for ip in ips]
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi.
         floating_ips = self.db.floating_ip_get_by_fixed_address(context,
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
@@ -1873,6 +1883,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def get_vifs_by_instance(self, context, instance_id):
         """Returns the vifs associated with an instance."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         instance = self.db.instance_get(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance['uuid'])
@@ -1880,6 +1892,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def get_instance_id_by_floating_address(self, context, address):
         """Returns the instance id a floating ip's fixed ip is allocated to."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
         if fixed_ip is None:
             return None
@@ -1887,10 +1901,14 @@ class NetworkManager(manager.SchedulerDependentManager):
             return fixed_ip['instance_uuid']
 
     def get_network(self, context, network_uuid):
+        # NOTE(vish): used locally
+
         network = self.db.network_get_by_uuid(context.elevated(), network_uuid)
         return jsonutils.to_primitive(network)
 
     def get_all_networks(self, context):
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         try:
             networks = self.db.network_get_all(context)
         except exception.NoNetworksFound:
@@ -1898,20 +1916,28 @@ class NetworkManager(manager.SchedulerDependentManager):
         return [jsonutils.to_primitive(network) for network in networks]
 
     def disassociate_network(self, context, network_uuid):
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         network = self.get_network(context, network_uuid)
         self.db.network_disassociate(context, network['id'])
 
     def get_fixed_ip(self, context, id):
         """Return a fixed ip."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         fixed = self.db.fixed_ip_get(context, id)
         return jsonutils.to_primitive(fixed)
 
     def get_fixed_ip_by_address(self, context, address):
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         fixed = self.db.fixed_ip_get_by_address(context, address)
         return jsonutils.to_primitive(fixed)
 
     def get_vif_by_mac_address(self, context, mac_address):
         """Returns the vifs record for the mac_address."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
 
@@ -2011,6 +2037,8 @@ class FlatManager(NetworkManager):
 
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return None
 
     def get_floating_pools(self, context):
@@ -2021,18 +2049,26 @@ class FlatManager(NetworkManager):
 
     def get_floating_ip_pools(self, context):
         """Returns list of floating ip pools."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return {}
 
     def get_floating_ip_by_address(self, context, address):
         """Returns a floating IP as a dict."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return None
 
     def get_floating_ips_by_project(self, context):
         """Returns the floating IPs allocated to a project."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return []
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         return []
 
     def migrate_instance_start(self, context, instance_uuid,
@@ -2197,6 +2233,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def associate(self, context, network_uuid, associations):
         """Associate or disassociate host or project to network."""
+        # NOTE(vish): This is no longer used but can't be removed until
+        #             we major version the network_rpcapi to 2.0.
         network_id = self.get_network(context, network_uuid)['id']
         if 'host' in associations:
             host = associations['host']
