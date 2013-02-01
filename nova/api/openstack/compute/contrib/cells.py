@@ -16,7 +16,6 @@
 #    under the License.
 
 """The cells extension."""
-from xml.dom import minidom
 from xml.parsers import expat
 
 from webob import exc
@@ -32,6 +31,7 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class CellDeserializer(wsgi.XMLDeserializer):
     def default(self, string):
         """Deserialize an xml-formatted cell create request."""
         try:
-            node = minidom.parseString(string)
+            node = utils.safe_minidom_parse_string(string)
         except expat.ExpatError:
             msg = _("cannot understand XML")
             raise exception.MalformedRequestBody(reason=msg)
