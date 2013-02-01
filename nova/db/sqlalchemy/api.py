@@ -890,6 +890,11 @@ def floating_ip_get_by_address(context, address):
 
 @require_context
 def _floating_ip_get_by_address(context, address, session=None):
+
+    # if address string is empty explicitly set it to None
+    if not address:
+        address = None
+
     result = model_query(context, models.FloatingIp, session=session).\
                 filter_by(address=address).\
                 first()
