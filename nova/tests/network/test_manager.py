@@ -24,6 +24,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import ipv6
+from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
@@ -1577,7 +1578,7 @@ class BackdoorPortTestCase(test.TestCase):
         self.assertEqual(port, self.manager.backdoor_port)
 
 
-class TestFloatingIPManager(network_manager.FloatingIP,
+class TestFloatingIPManager(floating_ips.FloatingIP,
         network_manager.NetworkManager):
     """Dummy manager that implements FloatingIP."""
 
@@ -1667,8 +1668,8 @@ class FloatingIPTestCase(test.TestCase):
                        'fixed_ip_get',
                        lambda _x, _y: fixed_ip)
 
-        self.stubs.Set(self.network,
-                       '_get_network_by_id',
+        self.stubs.Set(self.network.db,
+                       'network_get',
                        lambda _x, _y: network)
 
         self.stubs.Set(self.network.db,
@@ -1725,8 +1726,8 @@ class FloatingIPTestCase(test.TestCase):
                        'fixed_ip_get_by_address',
                        lambda _x, _y: fixed_ip)
 
-        self.stubs.Set(self.network,
-                       '_get_network_by_id',
+        self.stubs.Set(self.network.db,
+                       'network_get',
                        lambda _x, _y: network)
 
         self.stubs.Set(self.network.db,

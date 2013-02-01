@@ -59,7 +59,7 @@ quantum_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(quantum_opts)
-CONF.import_opt('default_floating_pool', 'nova.network.manager')
+CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 LOG = logging.getLogger(__name__)
 
 NET_EXTERNAL = 'router:external'
