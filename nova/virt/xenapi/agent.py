@@ -188,7 +188,7 @@ class XenAPIBasedAgent(object):
         if resp['returncode'] != 'D0':
             msg = _('Failed to exchange keys: %(resp)r') % locals()
             LOG.error(msg, instance=self.instance)
-            raise Exception(msg)
+            raise NotImplementedError(msg)
 
         # Some old versions of the Windows agent have a trailing \\r\\n
         # (ie CRLF escaped) for some reason. Strip that off.
@@ -208,7 +208,7 @@ class XenAPIBasedAgent(object):
         if resp['returncode'] != '0':
             msg = _('Failed to update password: %(resp)r') % locals()
             LOG.error(msg, instance=self.instance)
-            raise Exception(msg)
+            raise NotImplementedError(msg)
 
         sshkey = self.instance.get('key_data')
         if sshkey:

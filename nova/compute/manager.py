@@ -1582,68 +1582,57 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
 
         context = context.elevated()
-
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password()
 
-        max_tries = 10
+        current_power_state = self._get_power_state(context, instance)
+        expected_state = power_state.RUNNING
 
-        for i in xrange(max_tries):
-            current_power_state = self._get_power_state(context, instance)
-            expected_state = power_state.RUNNING
-
-            if current_power_state != expected_state:
-                self._instance_update(context, instance['uuid'],
+        if current_power_state != expected_state:
+            self._instance_update(context, instance['uuid'],
+                                  task_state=None,
+                                  expected_task_state=task_states.
+                                  UPDATING_PASSWORD)
+            _msg = _('Failed to set admin password. Instance %s is not'
+                     ' running') % instance["uuid"]
+            raise exception.InstancePasswordSetFailed(
+                instance=instance['uuid'], reason=_msg)
+        else:
+            try:
+                self.driver.set_admin_password(instance, new_pass)
+                LOG.audit(_("Root password set"), instance=instance)
+                self._instance_update(context,
+                                      instance['uuid'],
                                       task_state=None,
                                       expected_task_state=task_states.
-                                          UPDATING_PASSWORD)
-                _msg = _('Failed to set admin password. Instance %s is not'
-                         ' running') % instance["uuid"]
+                                      UPDATING_PASSWORD)
+            except NotImplementedError:
+                _msg = _('set_admin_password is not implemented '
+                         'by this driver or guest instance.')
+                LOG.warn(_msg, instance=instance)
+                self._instance_update(context,
+                                      instance['uuid'],
+                                      task_state=None,
+                                      expected_task_state=task_states.
+                                      UPDATING_PASSWORD)
+                raise NotImplementedError(_msg)
+            except exception.UnexpectedTaskStateError:
+                # interrupted by another (most likely delete) task
+                # do not retry
+                raise
+            except Exception, e:
+                # Catch all here because this could be anything.
+                LOG.exception(_('set_admin_password failed: %s') % e,
+                              instance=instance)
+                self._set_instance_error_state(context,
+                                               instance['uuid'])
+                # We create a new exception here so that we won't
+                # potentially reveal password information to the
+                # API caller.  The real exception is logged above
+                _msg = _('error setting admin password')
                 raise exception.InstancePasswordSetFailed(
-                        instance=instance['uuid'], reason=_msg)
-            else:
-                try:
-                    self.driver.set_admin_password(instance, new_pass)
-                    LOG.audit(_("Root password set"), instance=instance)
-                    self._instance_update(context,
-                                          instance['uuid'],
-                                          task_state=None,
-                                          expected_task_state=task_states.
-                                              UPDATING_PASSWORD)
-                    break
-                except NotImplementedError:
-                    # NOTE(dprince): if the driver doesn't implement
-                    # set_admin_password we break to avoid a loop
-                    _msg = _('set_admin_password is not implemented '
-                             'by this driver.')
-                    LOG.warn(_msg, instance=instance)
-                    self._instance_update(context,
-                                          instance['uuid'],
-                                          task_state=None,
-                                          expected_task_state=task_states.
-                                              UPDATING_PASSWORD)
-                    raise exception.InstancePasswordSetFailed(
-                            instance=instance['uuid'], reason=_msg)
-                except exception.UnexpectedTaskStateError:
-                    # interrupted by another (most likely delete) task
-                    # do not retry
-                    raise
-                except Exception, e:
-                    # Catch all here because this could be anything.
-                    LOG.exception(_('set_admin_password failed: %s') % e,
-                                  instance=instance)
-                    if i == max_tries - 1:
-                        self._set_instance_error_state(context,
-                                                       instance['uuid'])
-                        # We create a new exception here so that we won't
-                        # potentially reveal password information to the
-                        # API caller.  The real exception is logged above
-                        _msg = _('error setting admin password')
-                        raise exception.InstancePasswordSetFailed(
-                                instance=instance['uuid'], reason=_msg)
-                    time.sleep(1)
-                    continue
+                    instance=instance['uuid'], reason=_msg)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
