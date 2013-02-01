@@ -43,6 +43,7 @@ logging.disable('LOG')
 #N6xx calling methods
 #N7xx localization
 #N8xx git commit messages
+#N9xx other
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
@@ -492,6 +493,23 @@ def nova_localization_strings(logical_line, tokens):
         yield e.args
 
 #TODO(jogo) Dict and list objects
+
+
+def nova_not_in(logical_line):
+    r"""Check localization in line.
+
+    Okay: if x not in y
+    Okay: if not (X in Y or X is Z)
+    Okay: if not (X in Y)
+    N901: if not X in Y
+    N901: if not X.B in Y
+    """
+    split_line = logical_line.split()
+    if (len(split_line) == 5 and split_line[0] == 'if' and
+            split_line[1] == 'not' and split_line[3] == 'in' and not
+            split_line[2].startswith('(')):
+                yield (logical_line.find('not'), "N901: Use the 'not in' "
+                        "operator for collection membership evaluation")
 
 current_file = ""
 
