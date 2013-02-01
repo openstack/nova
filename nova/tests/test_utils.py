@@ -476,6 +476,11 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertFalse(utils.is_valid_boolstr('maybe'))
         self.assertFalse(utils.is_valid_boolstr('only on tuesdays'))
 
+    def test_is_valid_ipv4(self):
+        self.assertTrue(utils.is_valid_ipv4('127.0.0.1'))
+        self.assertFalse(utils.is_valid_ipv4('::1'))
+        self.assertFalse(utils.is_valid_ipv4('bacon'))
+
 
 class MonkeyPatchTestCase(test.TestCase):
     """Unit test for utils.monkey_patch()."""
