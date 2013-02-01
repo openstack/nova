@@ -50,6 +50,9 @@ volume_opts = [
                default=None,
                help='Mount options passed to the nfs client. See section '
                     'of the nfs man page for details'),
+    cfg.StrOpt('num_aoe_discover_tries',
+               default=3,
+               help='number of times to rediscover AoE target to find volume')
     ]
 
 CONF = cfg.CONF
@@ -315,3 +318,68 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
             return utils.execute('stat', path, run_as_root=True)
         except exception.ProcessExecutionError:
             return False
+
+
+class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
+    """Driver to attach AoE volumes to libvirt."""
+    def __init__(self, connection):
+        super(LibvirtAOEVolumeDriver,
+              self).__init__(connection, is_block_dev=True)
+
+    def _aoe_discover(self):
+        """Call aoe-discover (aoe-tools) AoE Discover."""
+        (out, err) = utils.execute('aoe-discover',
+                                   run_as_root=True, check_exit_code=0)
+        return (out, err)
+
+    def _aoe_revalidate(self, aoedev):
+        """Revalidate the LUN Geometry (When an AoE ID is reused)."""
+        (out, err) = utils.execute('aoe-revalidate', aoedev,
+                                   run_as_root=True, check_exit_code=0)
+        return (out, err)
+
+    def connect_volume(self, connection_info, mount_device):
+        shelf = connection_info['data']['target_shelf']
+        lun = connection_info['data']['target_lun']
+        aoedev = 'e%s.%s' % (shelf, lun)
+        aoedevpath = '/dev/etherd/%s' % (aoedev)
+
+        if os.path.exists(aoedevpath):
+            # NOTE(jbr_): If aoedevpath already exists, revalidate the LUN.
+            self._aoe_revalidate(aoedev)
+        else:
+            # NOTE(jbr_): If aoedevpath does not exist, do a discover.
+            self._aoe_discover()
+
+        #NOTE(jbr_): Device path is not always present immediately
+        def _wait_for_device_discovery(aoedevpath, mount_device):
+            tries = self.tries
+            if os.path.exists(aoedevpath):
+                raise utils.LoopingCallDone()
+
+            if self.tries >= CONF.num_aoe_discover_tries:
+                raise exception.NovaException(_("AoE device not found at %s") %
+                                                (aoedevpath))
+            LOG.warn(_("AoE volume not yet found at: %(aoedevpath)s. "
+                       "Try number: %(tries)s") %
+                     locals())
+
+            self._aoe_discover()
+            self.tries = self.tries + 1
+
+        self.tries = 0
+        timer = utils.FixedIntervalLoopingCall(_wait_for_device_discovery,
+                                               aoedevpath, mount_device)
+        timer.start(interval=2).wait()
+
+        tries = self.tries
+        if tries != 0:
+            LOG.debug(_("Found AoE device %(aoedevpath)s "
+                        "(after %(tries)s rediscover)") %
+                      locals())
+
+        conf = super(LibvirtAOEVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+        conf.source_type = "block"
+        conf.source_path = aoedevpath
+        return conf
