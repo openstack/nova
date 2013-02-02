@@ -153,7 +153,7 @@ class XMLDeserializer(TextDeserializer):
         plurals = set(self.metadata.get('plurals', {}))
 
         try:
-            node = minidom.parseString(datastring).childNodes[0]
+            node = utils.safe_minidom_parse_string(datastring).childNodes[0]
             return {node.nodeName: self._from_xml_node(node, plurals)}
         except expat.ExpatError:
             msg = _("cannot understand XML")
@@ -195,11 +195,11 @@ class XMLDeserializer(TextDeserializer):
 
     def extract_text(self, node):
         """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
+        ret_val = ""
+        for child in node.childNodes:
             if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""
+                ret_val += child.nodeValue
+        return ret_val
 
     def find_attribute_or_element(self, parent, name):
         """Get an attribute value; fallback to an element if not found"""
@@ -550,7 +550,7 @@ def action_peek_json(body):
 def action_peek_xml(body):
     """Determine action to invoke."""
 
-    dom = minidom.parseString(body)
+    dom = utils.safe_minidom_parse_string(body)
     action_node = dom.childNodes[0]
 
     return action_node.tagName

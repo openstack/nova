@@ -17,7 +17,6 @@
 import base64
 import os
 import socket
-from xml.dom import minidom
 
 from webob import exc
 import webob
@@ -240,7 +239,7 @@ class ActionDeserializer(CommonDeserializer):
     """
 
     def default(self, string):
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         action_node = dom.childNodes[0]
         action_name = action_node.tagName
 
@@ -336,7 +335,7 @@ class CreateDeserializer(CommonDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         server = self._extract_server(dom)
         return {'body': {'server': server}}
 

@@ -17,7 +17,6 @@
 """The security groups extension."""
 
 import urllib
-from xml.dom import minidom
 
 from webob import exc
 import webob
@@ -112,7 +111,7 @@ class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
     def default(self, string):
         """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         security_group = {}
         sg_node = self.find_first_child_named(dom,
                                                'security_group')
@@ -133,7 +132,7 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         security_group_rule = self._extract_security_group_rule(dom)
         return {'body': {'security_group_rule': security_group_rule}}
 

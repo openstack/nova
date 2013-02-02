@@ -718,6 +718,39 @@ class DeprecationTest(test.TestCase):
         result = utils.service_is_up(service)
         self.assertFalse(result)
 
+    def test_safe_parse_xml(self):
+
+        normal_body = ("""
+                 <?xml version="1.0" ?><foo>
+                    <bar>
+                        <v1>hey</v1>
+                        <v2>there</v2>
+                    </bar>
+                </foo>""").strip()
+
+        def killer_body():
+            return (("""<!DOCTYPE x [
+                    <!ENTITY a "%(a)s">
+                    <!ENTITY b "%(b)s">
+                    <!ENTITY c "%(c)s">]>
+                <foo>
+                    <bar>
+                        <v1>%(d)s</v1>
+                    </bar>
+                </foo>""") % {
+                'a': 'A' * 10,
+                'b': '&a;' * 10,
+                'c': '&b;' * 10,
+                'd': '&c;' * 9999,
+            }).strip()
+
+        dom = utils.safe_minidom_parse_string(normal_body)
+        self.assertEqual(normal_body, str(dom.toxml()))
+
+        self.assertRaises(ValueError,
+                          utils.safe_minidom_parse_string,
+                          killer_body())
+
     def test_xhtml_escape(self):
         self.assertEqual('&quot;foo&quot;', utils.xhtml_escape('"foo"'))
         self.assertEqual('&apos;foo&apos;', utils.xhtml_escape("'foo'"))
