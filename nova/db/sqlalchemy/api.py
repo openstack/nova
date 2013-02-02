@@ -2212,7 +2212,9 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           models.VirtualInterface.address,
                           models.Instance.hostname,
                           models.Instance.updated_at,
-                          models.Instance.created_at).\
+                          models.Instance.created_at,
+                          models.FixedIp.allocated,
+                          models.FixedIp.leased).\
                           filter(models.FixedIp.deleted == 0).\
                           filter(models.FixedIp.network_id == network_id).\
                           filter(models.FixedIp.allocated == True).\
@@ -2234,6 +2236,8 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
         cleaned['instance_hostname'] = datum[5]
         cleaned['instance_updated'] = datum[6]
         cleaned['instance_created'] = datum[7]
+        cleaned['allocated'] = datum[8]
+        cleaned['leased'] = datum[9]
         data.append(cleaned)
     return data
 
