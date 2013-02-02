@@ -13,7 +13,6 @@
 #   under the License.
 
 import webob
-from xml.dom import minidom
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -22,6 +21,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
+from nova import utils
 from nova import volume
 
 
@@ -54,7 +54,7 @@ class VolumeToImageSerializer(xmlutil.TemplateBuilder):
 class VolumeToImageDeserializer(wsgi.XMLDeserializer):
     """Deserializer to handle xml-formatted requests"""
     def default(self, string):
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         action_node = dom.childNodes[0]
         action_name = action_node.tagName
 

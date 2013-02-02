@@ -21,7 +21,6 @@ import socket
 
 import webob
 from webob import exc
-from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import ips
@@ -297,7 +296,7 @@ class ActionDeserializer(CommonDeserializer):
     """
 
     def default(self, string):
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         action_node = dom.childNodes[0]
         action_name = action_node.tagName
 
@@ -404,7 +403,7 @@ class CreateDeserializer(CommonDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted server create request."""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         server = self._extract_server(dom)
         return {'body': {'server': server}}
 

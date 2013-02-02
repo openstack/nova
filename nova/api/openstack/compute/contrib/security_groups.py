@@ -16,8 +16,6 @@
 
 """The security groups extension."""
 
-from xml.dom import minidom
-
 import webob
 from webob import exc
 
@@ -30,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -110,7 +109,7 @@ class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
     """
     def default(self, string):
         """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         security_group = {}
         sg_node = self.find_first_child_named(dom,
                                                'security_group')
@@ -131,7 +130,7 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
+        dom = utils.safe_minidom_parse_string(string)
         security_group_rule = self._extract_security_group_rule(dom)
         return {'body': {'security_group_rule': security_group_rule}}
 
