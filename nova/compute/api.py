@@ -91,7 +91,6 @@ compute_opts = [
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-CONF.import_opt('consoleauth_topic', 'nova.consoleauth')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 MAX_USERDATA_SIZE = 65535
@@ -902,9 +901,9 @@ class API(base.Base):
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall."""
 
-        host_names = [x['host'] for (x, idx)
-                      in self.db.service_get_all_compute_sorted(context)]
-        for host_name in host_names:
+        for service in self.db.service_get_all_by_topic(context,
+                                                        CONF.compute_topic):
+            host_name = service['host']
             self.compute_rpcapi.refresh_provider_fw_rules(context, host_name)
 
     def update_state(self, context, instance, new_state):

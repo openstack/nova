@@ -397,45 +397,6 @@ def service_get_by_compute_host(context, host):
 
 
 @require_admin_context
-def _service_get_all_topic_subquery(context, session, topic, subq, label):
-    sort_value = getattr(subq.c, label)
-    return model_query(context, models.Service,
-                       func.coalesce(sort_value, 0),
-                       session=session, read_deleted="no").\
-                filter_by(topic=topic).\
-                filter_by(disabled=False).\
-                outerjoin((subq, models.Service.host == subq.c.host)).\
-                order_by(sort_value).\
-                all()
-
-
-@require_admin_context
-def service_get_all_compute_sorted(context):
-    session = get_session()
-    with session.begin():
-        # NOTE(vish): The intended query is below
-        #             SELECT services.*, COALESCE(inst_cores.instance_cores,
-        #                                         0)
-        #             FROM services LEFT OUTER JOIN
-        #             (SELECT host, SUM(instances.vcpus) AS instance_cores
-        #              FROM instances GROUP BY host) AS inst_cores
-        #             ON services.host = inst_cores.host
-        topic = CONF.compute_topic
-        label = 'instance_cores'
-        subq = model_query(context, models.Instance.host,
-                           func.sum(models.Instance.vcpus).label(label),
-                           base_model=models.Instance, session=session,
-                           read_deleted="no").\
-                       group_by(models.Instance.host).\
-                       subquery()
-        return _service_get_all_topic_subquery(context,
-                                               session,
-                                               topic,
-                                               subq,
-                                               label)
-
-
-@require_admin_context
 def service_get_by_args(context, host, binary):
     result = model_query(context, models.Service).\
                      filter_by(host=host).\
