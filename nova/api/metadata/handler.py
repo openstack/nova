@@ -142,7 +142,7 @@ class MetadataRequestHandler(wsgi.Application):
     def _handle_instance_id_request(self, req):
         instance_id = req.headers.get('X-Instance-ID')
         signature = req.headers.get('X-Instance-ID-Signature')
-        remote_address = req.remote_addr
+        remote_address = req.headers.get('X-Forwarded-For')
 
         # Ensure that only one header was passed
 
