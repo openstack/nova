@@ -70,6 +70,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.35 - Added instance_get_active_by_window_joined
     1.36 - Added instance_fault_create
     1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
+    1.38 - Added service name to instance_update
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -84,12 +85,15 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('ping', arg=arg_p)
         return self.call(context, msg, version='1.22', timeout=timeout)
 
-    def instance_update(self, context, instance_uuid, updates):
+    def instance_update(self, context, instance_uuid, updates,
+                        service=None):
         updates_p = jsonutils.to_primitive(updates)
         return self.call(context,
                          self.make_msg('instance_update',
                                        instance_uuid=instance_uuid,
-                                       updates=updates_p))
+                                       updates=updates_p,
+                                       service=service),
+                         version='1.38')
 
     def instance_get(self, context, instance_id):
         msg = self.make_msg('instance_get',

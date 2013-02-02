@@ -43,7 +43,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.37'
+    RPC_API_VERSION = '1.38'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -56,7 +56,8 @@ class ConductorManager(manager.SchedulerDependentManager):
                                   exception.InvalidUUID,
                                   exception.InstanceNotFound,
                                   exception.UnexpectedTaskStateError)
-    def instance_update(self, context, instance_uuid, updates):
+    def instance_update(self, context, instance_uuid,
+                        updates, service=None):
         for key, value in updates.iteritems():
             if key not in allowed_updates:
                 LOG.error(_("Instance update attempted for "
@@ -67,7 +68,7 @@ class ConductorManager(manager.SchedulerDependentManager):
 
         old_ref, instance_ref = self.db.instance_update_and_get_original(
             context, instance_uuid, updates)
-        notifications.send_update(context, old_ref, instance_ref)
+        notifications.send_update(context, old_ref, instance_ref, service)
         return jsonutils.to_primitive(instance_ref)
 
     @rpc_common.client_exceptions(exception.InstanceNotFound)

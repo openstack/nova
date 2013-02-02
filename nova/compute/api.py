@@ -185,7 +185,7 @@ class API(base.Base):
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
                 context, instance_uuid, kwargs)
-        notifications.send_update(context, old_ref, instance_ref)
+        notifications.send_update(context, old_ref, instance_ref, 'api')
 
         return instance_ref
 
