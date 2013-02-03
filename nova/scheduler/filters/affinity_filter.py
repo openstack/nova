@@ -18,7 +18,10 @@
 import netaddr
 
 from nova.compute import api as compute
+from nova.openstack.common import log as logging
 from nova.scheduler import filters
+
+LOG = logging.getLogger(__name__)
 
 
 class AffinityFilter(filters.BaseHostFilter):
@@ -79,4 +82,21 @@ class SimpleCIDRAffinityFilter(AffinityFilter):
             return netaddr.IPAddress(host_ip) in affinity_net
 
         # We don't have an affinity host address.
+        return True
+
+
+class GroupAntiAffinityFilter(AffinityFilter):
+    """Schedule the instance on a different host from a set of group
+    instances.
+    """
+
+    def host_passes(self, host_state, filter_properties):
+        group_hosts = filter_properties.get('group_hosts') or []
+        LOG.debug(_("Group affinity: %(host)s in %(configured)s"),
+                    {'host': host_state.host,
+                     'configured': group_hosts})
+        if group_hosts:
+            return not host_state.host in group_hosts
+
+        # No groups configured
         return True

@@ -133,8 +133,17 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
+        # Update the metadata if necessary
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
+        group = scheduler_hints.get('group', None)
+        values = None
+        if group:
+            values = request_spec['instance_properties']['system_metadata']
+            values.update({'group': group})
+            values = {'system_metadata': values}
+
         updated_instance = driver.instance_update_db(context,
-                instance_uuid)
+                instance_uuid, extra_values=values)
 
         self._post_select_populate_filter_properties(filter_properties,
                 weighed_host.obj)
@@ -248,6 +257,18 @@ class FilterScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
 
+        # Get the group
+        update_group_hosts = False
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
+        group = scheduler_hints.get('group', None)
+        if group:
+            group_hosts = self.group_hosts(elevated, group)
+            update_group_hosts = True
+            if 'group_hosts' not in filter_properties:
+                filter_properties.update({'group_hosts': []})
+            configured_hosts = filter_properties['group_hosts']
+            filter_properties['group_hosts'] = configured_hosts + group_hosts
+
         config_options = self._get_configuration_options()
 
         # check retry policy.  Rather ugly use of instance_uuids[0]...
@@ -299,6 +320,9 @@ class FilterScheduler(driver.Scheduler):
             # Now consume the resources so the filter/weights
             # will change for the next instance.
             best_host.obj.consume_from_instance(instance_properties)
+            if update_group_hosts is True:
+                filter_properties['group_hosts'].append(best_host.obj.host)
+
         return selected_hosts
 
     def _assert_compute_node_has_enough_memory(self, context,
