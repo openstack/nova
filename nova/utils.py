@@ -881,19 +881,12 @@ def is_valid_boolstr(val):
 
 
 def is_valid_ipv4(address):
-    """valid the address strictly as per format xxx.xxx.xxx.xxx.
-    where xxx is a value between 0 and 255.
-    """
-    parts = address.split(".")
-    if len(parts) != 4:
+    """Verify that address represents a valid IPv4 address."""
+    try:
+        addr = netaddr.IPAddress(address)
+        return addr.version == 4
+    except Exception:
         return False
-    for item in parts:
-        try:
-            if not 0 <= int(item) <= 255:
-                return False
-        except ValueError:
-            return False
-    return True
 
 
 def is_valid_cidr(address):
