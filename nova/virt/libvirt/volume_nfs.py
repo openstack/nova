@@ -17,7 +17,7 @@
 
 """Volume driver for using NFS as volumes storage. Nova compute part."""
 
-import ctypes
+import hashlib
 import os
 
 from nova import exception
@@ -82,7 +82,7 @@ class NfsVolumeDriver(volume.LibvirtBaseVolumeDriver):
     @staticmethod
     def get_hash_str(base_str):
         """returns string that represents hash of base_str (in hex format)."""
-        return str(ctypes.c_uint64(hash(base_str)).value)
+        return hashlib.md5(base_str).hexdigest()
 
     @staticmethod
     def _path_exists(path):
