@@ -876,11 +876,8 @@ def is_int_like(val):
 
 def is_valid_boolstr(val):
     """Check if the provided string is a valid bool string or not."""
-    val = str(val).lower()
-    return val == 'true' or val == 'false' or \
-           val == 'yes' or val == 'no' or \
-           val == 'y' or val == 'n' or \
-           val == '1' or val == '0'
+    boolstrs = ('true', 'false', 'yes', 'no', 'y', 'n', '1', '0')
+    return str(val).lower() in boolstrs
 
 
 def is_valid_ipv4(address):
