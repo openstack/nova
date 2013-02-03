@@ -1811,9 +1811,10 @@ def instance_update_and_get_original(context, instance_uuid, values):
 # NOTE(danms): This updates the instance's metadata list in-place and in
 # the database to avoid stale data and refresh issues. It assumes the
 # delete=True behavior of instance_metadata_update(...)
-def _instance_metadata_update_in_place(context, instance, metadata, session):
+def _instance_metadata_update_in_place(context, instance, metadata_type, model,
+                                       metadata, session):
     to_delete = []
-    for keyvalue in instance['metadata']:
+    for keyvalue in instance[metadata_type]:
         key = keyvalue['key']
         if key in metadata:
             keyvalue['value'] = metadata.pop(key)
@@ -1821,15 +1822,14 @@ def _instance_metadata_update_in_place(context, instance, metadata, session):
             to_delete.append(keyvalue)
 
     for condemned in to_delete:
-        instance['metadata'].remove(condemned)
         condemned.soft_delete(session=session)
 
     for key, value in metadata.iteritems():
-        newitem = models.InstanceMetadata()
+        newitem = model()
         newitem.update({'key': key, 'value': value,
                         'instance_uuid': instance['uuid']})
         session.add(newitem)
-        instance['metadata'].append(newitem)
+        instance[metadata_type].append(newitem)
 
 
 def _instance_update(context, instance_uuid, values, copy_old_instance=False):
@@ -1877,14 +1877,18 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
         metadata = values.get('metadata')
         if metadata is not None:
             _instance_metadata_update_in_place(context, instance_ref,
+                                               'metadata',
+                                               models.InstanceMetadata,
                                                values.pop('metadata'),
                                                session)
 
         system_metadata = values.get('system_metadata')
         if system_metadata is not None:
-            instance_system_metadata_update(
-                 context, instance_ref['uuid'], values.pop('system_metadata'),
-                 delete=True, session=session)
+            _instance_metadata_update_in_place(context, instance_ref,
+                                               'system_metadata',
+                                               models.InstanceSystemMetadata,
+                                               values.pop('system_metadata'),
+                                               session)
 
         instance_ref.update(values)
         instance_ref.save(session=session)

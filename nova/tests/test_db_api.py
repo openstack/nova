@@ -29,6 +29,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import matchers
+from nova import utils
 
 
 CONF = cfg.CONF
@@ -466,6 +467,34 @@ class DbApiTestCase(test.TestCase):
                     {})
         self.assertEquals(spec, old_ref['extra_specs'])
         self.assertEquals(spec, new_ref['extra_specs'])
+
+    def _test_instance_update_updates_metadata(self, metadata_type):
+        ctxt = context.get_admin_context()
+
+        instance = db.instance_create(ctxt, {})
+
+        def set_and_check(meta):
+            inst = db.instance_update(ctxt, instance['uuid'],
+                               {metadata_type: dict(meta)})
+            _meta = utils.metadata_to_dict(inst[metadata_type])
+            self.assertEqual(meta, _meta)
+
+        meta = {'speed': '88', 'units': 'MPH'}
+        set_and_check(meta)
+
+        meta['gigawatts'] = '1.21'
+        set_and_check(meta)
+
+        del meta['gigawatts']
+        set_and_check(meta)
+
+    def test_instance_update_updates_system_metadata(self):
+        # Ensure that system_metadata is updated during instance_update
+        self._test_instance_update_updates_metadata('system_metadata')
+
+    def test_instance_update_updates_metadata(self):
+        # Ensure that metadata is updated during instance_update
+        self._test_instance_update_updates_metadata('metadata')
 
     def test_instance_fault_create(self):
         # Ensure we can create an instance fault.
