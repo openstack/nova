@@ -48,6 +48,7 @@ from nova import test
 from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
 from nova.tests.api.openstack.compute.contrib import test_services
+from nova.tests.api.openstack import fakes
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
@@ -381,7 +382,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # NOT be allowed to grow, and should shrink to zero (and be
         # removed) soon.
         do_not_approve_additions = []
-        do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-hypervisors')
@@ -3172,4 +3172,41 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBase):
 
 
 class InstanceActionsSampleXmlTest(InstanceActionsSampleJsonTest):
+        ctype = 'xml'
+
+
+class ConfigDriveSampleJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.config_drive."
+                      "Config_drive")
+
+    def setUp(self):
+        super(ConfigDriveSampleJsonTest, self).setUp()
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fake.stub_out_image_service(self.stubs)
+
+    def test_config_drive_show(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        # config drive can be an uuid or empty value
+        subs['cdrive'] = '(%s)?' % subs['uuid']
+        return self._verify_response('server-config-drive-get-resp', subs,
+                                     response)
+
+    def test_config_drive_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        # config drive can be an uuid or empty value
+        subs['cdrive'] = '(%s)?' % subs['uuid']
+        return self._verify_response('servers-config-drive-details-resp',
+                                     subs, response)
+
+
+class ConfigDriveSampleXmlTest(ConfigDriveSampleJsonTest):
     ctype = 'xml'
