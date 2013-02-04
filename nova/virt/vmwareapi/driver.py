@@ -70,7 +70,8 @@ vmwareapi_opts = [
                default=None,
                help='Password for connection to VMware ESX host. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver.',
+               secret=True),
     cfg.FloatOpt('vmwareapi_task_poll_interval',
                  default=5.0,
                  help='The interval used for polling of remote tasks. '
@@ -90,7 +91,8 @@ vmwareapi_opts = [
                help='Total number of VNC ports'),
     cfg.StrOpt('vnc_password',
                default=None,
-               help='VNC password'),
+               help='VNC password',
+               secret=True),
     cfg.BoolOpt('use_linked_clone',
                 default=True,
                 help='Whether to use linked clone'),

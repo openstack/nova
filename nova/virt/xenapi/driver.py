@@ -71,7 +71,8 @@ xenapi_opts = [
     cfg.StrOpt('xenapi_connection_password',
                default=None,
                help='Password for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
+                    'Used only if compute_driver=xenapi.XenAPIDriver',
+               secret=True),
     cfg.IntOpt('xenapi_connection_concurrent',
                default=5,
                help='Maximum number of concurrent XenAPI connections. '
