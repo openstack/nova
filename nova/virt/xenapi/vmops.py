@@ -1026,28 +1026,6 @@ class VMOps(object):
 
         raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
 
-    def _detach_vm_vols(self, instance, vm_ref):
-        """Detach any external nova/cinder volumes and purge the SRs.
-           This differs from a normal detach in that the VM has been
-           shutdown, so there is no need for unplugging VBDs. They do
-           need to be destroyed, so that the SR can be forgotten.
-        """
-        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
-        for vbd_ref in vbd_refs:
-            other_config = self._session.call_xenapi("VBD.get_other_config",
-                                                   vbd_ref)
-            if other_config.get('osvol'):
-                # this is a nova/cinder volume
-                try:
-                    sr_ref = volume_utils.find_sr_from_vbd(self._session,
-                                                           vbd_ref)
-                    vm_utils.destroy_vbd(self._session, vbd_ref)
-                    # Forget SR only if not in use
-                    volume_utils.purge_sr(self._session, sr_ref)
-                except Exception as exc:
-                    LOG.exception(exc)
-                    raise
-
     def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM."""
         LOG.debug(_("Destroying VDIs"), instance=instance)
@@ -1154,7 +1132,7 @@ class VMOps(object):
         vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
         if destroy_disks:
-            self._detach_vm_vols(instance, vm_ref)
+            self._volumeops.detach_all(vm_ref)
             self._destroy_vdis(instance, vm_ref)
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
