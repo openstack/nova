@@ -495,7 +495,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self._get_networks_for_instance(admin_context,
                                         instance_id, project_id,
                                         requested_networks=requested_networks)
-        LOG.debug(_('networks retrieved for instance: |%(networks)s|'),
+        networks_list = [self._get_network_dict(network)
+                                 for network in networks]
+        LOG.debug(_('networks retrieved for instance: |%(networks_list)s|'),
                   locals(), context=context, instance_uuid=instance_uuid)
         self._allocate_mac_addresses(context, instance_uuid, networks)
         self._allocate_fixed_ips(admin_context, instance_id,

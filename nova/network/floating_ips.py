@@ -92,8 +92,6 @@ class FloatingIP(object):
         instance_uuid = kwargs.get('instance_uuid')
         project_id = kwargs.get('project_id')
         requested_networks = kwargs.get('requested_networks')
-        LOG.debug(_("floating IP allocation for instance |%s|"),
-                  instance_uuid=instance_uuid, context=context)
         # call the next inherited class's allocate_for_instance()
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
@@ -103,6 +101,9 @@ class FloatingIP(object):
             # allocate a floating ip
             floating_address = self.allocate_floating_ip(context, project_id,
                 True)
+            LOG.debug(_("floating IP allocation for instance "
+                        "|%(floating_address)s|") % locals(),
+                        instance_uuid=instance_uuid, context=context)
             # set auto_assigned column to true for the floating ip
             self.db.floating_ip_set_auto_assigned(context, floating_address)
 
