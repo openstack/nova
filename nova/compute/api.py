@@ -2320,6 +2320,39 @@ class API(base.Base):
         self.scheduler_rpcapi.live_migration(context, block_migration,
                 disk_over_commit, instance, host_name)
 
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
+                          task_state=[None])
+    def evacuate(self, context, instance, host, on_shared_storage,
+                 admin_password=None):
+        """Running evacuate to target host.
+
+        Checking vm compute host state, if the host not in expected_state,
+        raising an exception.
+        """
+        LOG.debug(_('vm evacuation scheduled'))
+        host = instance['host']
+        service = self.db.service_get_by_compute_host(context, host)
+        if self.servicegroup_api.service_is_up(service):
+            msg = (_('Instance compute service state on %(host)s '
+                     'expected to be down, but it was up.'
+                     ) % locals())
+            LOG.error(msg)
+            raise exception.ComputeServiceUnavailable(msg)
+
+        instance = self.update(context, instance, expected_task_state=None,
+                               task_state=task_states.REBUILDING)
+        return self.compute_rpcapi.rebuild_instance(context,
+                                        instance=instance,
+                                        new_pass=admin_password,
+                                        injected_files=None,
+                                        image_ref=None,
+                                        orig_image_ref=None,
+                                        orig_sys_metadata=None,
+                                        bdms=None,
+                                        recreate=True,
+                                        on_shared_storage=on_shared_storage,
+                                        host=host)
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""
