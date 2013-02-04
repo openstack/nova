@@ -28,16 +28,23 @@ General
 
     mylist = Foo().list() # OKAY, does not shadow built-in
 
+- Use the "is not" operator when testing for unequal identities. Example::
 
-- Use the "not in" operator for collection membership evaluation. Example::
+    if not X is Y:  # BAD, intended behavior is ambiguous
+        pass
 
-    if not X in Y:  # BAD, hard to understand
+    if X is not Y:  # OKAY, intuitive
+        pass
+
+- Use the "not in" operator for evaluating membership in a collection. Example::
+
+    if not X in Y:  # BAD, intended behavior is ambiguous
         pass
 
     if X not in Y:  # OKAY, intuitive
         pass
 
-    if not (X in Y or X is Z):  # OKAY, still better than all those 'not's
+    if not (X in Y or X in Z):  # OKAY, still better than all those 'not's
         pass
 
 
