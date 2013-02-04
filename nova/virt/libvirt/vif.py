@@ -85,6 +85,9 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
     def get_bridge_name(self, network):
         return network['bridge']
 
+    def get_ovs_interfaceid(self, mapping):
+        return mapping['ovs_interfaceid']
+
     def get_config_bridge(self, instance, network, mapping):
         """Get VIF configurations for bridge type."""
         conf = super(LibvirtGenericVIFDriver,
@@ -116,6 +119,21 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_ovs_ethernet(self, instance, network, mapping):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance,
+                                      network,
+                                      mapping)
+
+        dev = self.get_vif_devname(mapping)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        return conf
+
+    def get_config_ovs(self, instance, network, mapping):
+        return self.get_config_ovs_ethernet(instance, network,
+                                            mapping)
+
     def get_config(self, instance, network, mapping):
         vif_type = mapping.get('vif_type')
 
@@ -130,6 +148,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         if vif_type == network_model.VIF_TYPE_BRIDGE:
             return self.get_config_bridge(instance, network, mapping)
+        elif vif_type == network_model.VIF_TYPE_OVS:
+            return self.get_config_ovs(instance, network, mapping)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -160,6 +180,21 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                         self.get_bridge_name(network),
                                         iface)
 
+    def plug_ovs_ethernet(self, instance, vif):
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
+        network, mapping = vif
+        iface_id = self.get_ovs_interfaceid(mapping)
+        dev = self.get_vif_devname(mapping)
+        linux_net.create_tap_dev(dev)
+        linux_net.create_ovs_vif_port(self.get_bridge_name(network),
+                                      dev, iface_id, mapping['mac'],
+                                      instance['uuid'])
+
+    def plug_ovs(self, instance, vif):
+        self.plug_ovs_ethernet(instance, vif)
+
     def plug(self, instance, vif):
         network, mapping = vif
         vif_type = mapping.get('vif_type')
@@ -175,6 +210,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         if vif_type == network_model.VIF_TYPE_BRIDGE:
             self.plug_bridge(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_OVS:
+            self.plug_ovs(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -183,6 +220,21 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         """No manual unplugging required."""
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
+
+    def unplug_ovs_ethernet(self, instance, vif):
+        """Unplug the VIF by deleting the port from the bridge."""
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
+        try:
+            network, mapping = vif
+            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
+                                          self.get_vif_devname(mapping))
+        except exception.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
+    def unplug_ovs(self, instance, vif):
+        return self.unplug_ovs_ethernet(instance, vif)
 
     def unplug(self, instance, vif):
         network, mapping = vif
@@ -199,6 +251,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         if vif_type == network_model.VIF_TYPE_BRIDGE:
             self.unplug_bridge(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_OVS:
+            self.unplug_ovs(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -219,12 +273,10 @@ class LibvirtBridgeDriver(LibvirtGenericVIFDriver):
         self.unplug_bridge(instance, vif)
 
 
-class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
-    """VIF driver for Open vSwitch that uses libivrt type='ethernet'
-
-    Used for libvirt versions that do not support
-    OVS virtual port XML (0.9.10 or earlier).
-    """
+class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
+    """Retained in Grizzly for compatibility with Quantum
+       drivers which do not yet report 'vif_type' port binding.
+       Will be deprecated in Havana, and removed in Ixxxx."""
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -233,34 +285,13 @@ class LibvirtOpenVswitchDriver(LibvirtBaseVIFDriver):
         return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
 
     def get_config(self, instance, network, mapping):
-        dev = self.get_vif_devname(mapping)
-
-        conf = super(LibvirtOpenVswitchDriver,
-                     self).get_config(instance,
-                                      network,
-                                      mapping)
-
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
-
-        return conf
+        return self.get_config_ovs_ethernet(instance, network, mapping)
 
     def plug(self, instance, vif):
-        network, mapping = vif
-        iface_id = self.get_ovs_interfaceid(mapping)
-        dev = self.get_vif_devname(mapping)
-        linux_net.create_tap_dev(dev)
-        linux_net.create_ovs_vif_port(self.get_bridge_name(network),
-                                      dev, iface_id, mapping['mac'],
-                                      instance['uuid'])
+        self.plug_ovs_ethernet(instance, vif)
 
     def unplug(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
-        try:
-            network, mapping = vif
-            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
-                                          self.get_vif_devname(mapping))
-        except exception.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+        self.unplug_ovs_ethernet(instance, vif)
 
 
 class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver):
