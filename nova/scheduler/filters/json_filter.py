@@ -32,7 +32,7 @@ class JsonFilter(filters.BaseHostFilter):
         if len(args) < 2:
             return False
         if op is operator.contains:
-            bad = not args[0] in args[1:]
+            bad = args[0] not in args[1:]
         else:
             bad = [arg for arg in args[1:]
                     if not op(args[0], arg)]
