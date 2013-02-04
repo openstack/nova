@@ -101,9 +101,9 @@ class LinuxNetL3(L3Driver):
 
     def add_floating_ip(self, floating_ip, fixed_ip, l3_interface_id,
                         network=None):
-        linux_net.bind_floating_ip(floating_ip, l3_interface_id)
         linux_net.ensure_floating_forward(floating_ip, fixed_ip,
                                           l3_interface_id, network)
+        linux_net.bind_floating_ip(floating_ip, l3_interface_id)
 
     def remove_floating_ip(self, floating_ip, fixed_ip, l3_interface_id,
                            network=None):

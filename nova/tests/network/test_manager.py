@@ -726,7 +726,7 @@ class VlanNetworkTestCase(test.TestCase):
                        'floating_ip_fixed_ip_associate',
                        fake1)
         self.stubs.Set(self.network.db, 'floating_ip_disassociate', fake1)
-        self.stubs.Set(self.network.driver, 'bind_floating_ip', fake8)
+        self.stubs.Set(self.network.driver, 'ensure_floating_forward', fake8)
         self.assertRaises(exception.NoFloatingIpInterface,
                           self.network._associate_floating_ip,
                           ctxt,
@@ -775,6 +775,42 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.associate_floating_ip(ctxt, mox.IgnoreArg(),
                                                  mox.IgnoreArg())
         self.assertTrue(self.local)
+
+    def test_add_floating_ip_nat_before_bind(self):
+        # Tried to verify order with documented mox record/verify
+        # functionality, but it doesn't seem to work since I can't make it
+        # fail.  I'm using stubs and a flag for now, but if this mox feature
+        # can be made to work, it would be a better way to test this.
+        #
+        # self.mox.StubOutWithMock(self.network.driver,
+        #                          'ensure_floating_forward')
+        # self.mox.StubOutWithMock(self.network.driver, 'bind_floating_ip')
+        #
+        # self.network.driver.ensure_floating_forward(mox.IgnoreArg(),
+        #                                             mox.IgnoreArg(),
+        #                                             mox.IgnoreArg(),
+        #                                             mox.IgnoreArg())
+        # self.network.driver.bind_floating_ip(mox.IgnoreArg(),
+        #                                      mox.IgnoreArg())
+        # self.mox.ReplayAll()
+
+        nat_called = [False]
+
+        def fake_nat(*args, **kwargs):
+            nat_called[0] = True
+
+        def fake_bind(*args, **kwargs):
+            self.assertTrue(nat_called[0])
+
+        self.stubs.Set(self.network.driver,
+                       'ensure_floating_forward',
+                       fake_nat)
+        self.stubs.Set(self.network.driver, 'bind_floating_ip', fake_bind)
+
+        self.network.l3driver.add_floating_ip('fakefloat',
+                                              'fakefixed',
+                                              'fakeiface',
+                                              'fakenet')
 
     def test_floating_ip_init_host(self):
 
