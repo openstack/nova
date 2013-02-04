@@ -724,7 +724,14 @@ class FixedIp(BASE, NovaBase):
                            foreign_keys=network_id,
                            primaryjoin='and_('
                                 'FixedIp.network_id == Network.id,'
-                                'FixedIp.deleted == 0)')
+                                'FixedIp.deleted == 0,'
+                                'Network.deleted == 0)')
+    instance = relationship(Instance,
+                            foreign_keys=instance_uuid,
+                            primaryjoin='and_('
+                                'FixedIp.instance_uuid == Instance.uuid,'
+                                'FixedIp.deleted == 0,'
+                                'Instance.deleted == 0)')
 
 
 class FloatingIp(BASE, NovaBase):
@@ -738,6 +745,13 @@ class FloatingIp(BASE, NovaBase):
     auto_assigned = Column(Boolean, default=False, nullable=False)
     pool = Column(String(255))
     interface = Column(String(255))
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_('
+                                'FloatingIp.fixed_ip_id == FixedIp.id,'
+                                'FloatingIp.deleted == 0,'
+                                'FixedIp.deleted == 0)')
 
 
 class DNSDomain(BASE, NovaBase):
