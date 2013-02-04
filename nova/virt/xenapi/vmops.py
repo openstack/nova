@@ -176,7 +176,8 @@ class VMOps(object):
 
     def _get_agent(self, instance, vm_ref):
         if self.agent_enabled:
-            return xapi_agent.XenAPIBasedAgent(self._session, instance, vm_ref)
+            return xapi_agent.XenAPIBasedAgent(self._session, self._virtapi,
+                                               instance, vm_ref)
         raise exception.NovaException(_("Error: Agent is disabled"))
 
     def list_instances(self):

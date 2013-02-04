@@ -40,11 +40,12 @@ class ServerPasswordTest(test.TestCase):
         def fake_extract_password(instance):
             return self.password
 
-        def fake_set_password(context, instance_uuid, password):
+        def fake_convert_password(context, password):
             self.password = password
+            return {}
 
         self.stubs.Set(password, 'extract_password', fake_extract_password)
-        self.stubs.Set(password, 'set_password', fake_set_password)
+        self.stubs.Set(password, 'convert_password', fake_convert_password)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
