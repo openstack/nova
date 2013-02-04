@@ -44,6 +44,20 @@ class LibvirtVifTestCase(test.TestCase):
              'id': 'network-id-xxx-yyy-zzz'
     }
 
+    net_bridge_quantum = {
+             'cidr': '101.168.1.0/24',
+             'cidr_v6': '101:1db9::/64',
+             'gateway_v6': '101:1db9::1',
+             'netmask_v6': '64',
+             'netmask': '255.255.255.0',
+             'bridge_interface': 'eth0',
+             'vlan': 99,
+             'gateway': '101.168.1.1',
+             'broadcast': '101.168.1.255',
+             'dns1': '8.8.8.8',
+             'id': 'network-id-xxx-yyy-zzz'
+    }
+
     mapping_bridge = {
         'mac': 'ca:fe:de:ad:be:ef',
         'gateway_v6': net_bridge['gateway_v6'],
@@ -52,6 +66,15 @@ class LibvirtVifTestCase(test.TestCase):
         'vif_uuid': 'vif-xxx-yyy-zzz',
         'vif_devname': 'tap-xxx-yyy-zzz',
         'vif_type': network_model.VIF_TYPE_BRIDGE,
+    }
+
+    mapping_bridge_quantum = {
+        'mac': 'ca:fe:de:ad:be:ef',
+        'gateway_v6': net_bridge['gateway_v6'],
+        'ips': [{'ip': '101.168.1.9'}],
+        'dhcp_server': '191.168.1.1',
+        'vif_uuid': 'vif-xxx-yyy-zzz',
+        'vif_devname': 'tap-xxx-yyy-zzz',
     }
 
     net_ovs = {
@@ -241,10 +264,8 @@ class LibvirtVifTestCase(test.TestCase):
                           self.net_bridge,
                           self.mapping_none)
 
-    def _check_bridge_driver(self, d):
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
+    def _check_bridge_driver(self, d, net, mapping, br_want):
+        xml = self._get_instance_xml(d, net, mapping)
 
         doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
@@ -252,17 +273,32 @@ class LibvirtVifTestCase(test.TestCase):
         node = ret[0]
         self.assertEqual(node.get("type"), "bridge")
         br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, self.net_bridge['bridge'])
+        self.assertEqual(br_name, br_want)
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping_bridge['mac'])
 
     def test_bridge_driver(self):
         d = vif.LibvirtBridgeDriver()
-        self._check_bridge_driver(d)
+        self._check_bridge_driver(d,
+                                  self.net_bridge,
+                                  self.mapping_bridge,
+                                  self.net_bridge['bridge'])
 
     def test_generic_driver_bridge(self):
         d = vif.LibvirtGenericVIFDriver()
-        self._check_bridge_driver(d)
+        self._check_bridge_driver(d,
+                                  self.net_bridge,
+                                  self.mapping_bridge,
+                                  self.net_bridge['bridge'])
+
+    def test_quantum_bridge_driver(self):
+        br_want = 'brq' + self.net_bridge_quantum['id']
+        br_want = br_want[:network_model.NIC_NAME_LEN]
+        d = vif.QuantumLinuxBridgeVIFDriver()
+        self._check_bridge_driver(d,
+                                  self.net_bridge_quantum,
+                                  self.mapping_bridge_quantum,
+                                  br_want)
 
     def test_ovs_ethernet_driver(self):
         d = vif.LibvirtOpenVswitchDriver()
@@ -309,24 +345,6 @@ class LibvirtVifTestCase(test.TestCase):
                 iface_id_found = True
 
         self.assertTrue(iface_id_found)
-
-    def test_quantum_bridge_ethernet_driver(self):
-        d = vif.QuantumLinuxBridgeVIFDriver()
-        xml = self._get_instance_xml(d,
-                                     self.net_bridge,
-                                     self.mapping_bridge)
-
-        doc = etree.fromstring(xml)
-        ret = doc.findall('./devices/interface')
-        self.assertEqual(len(ret), 1)
-        node = ret[0]
-        self.assertEqual(node.get("type"), "bridge")
-        dev_name = node.find("target").get("dev")
-        self.assertTrue(dev_name.startswith("tap"))
-        mac = node.find("mac").get("address")
-        self.assertEqual(mac, self.mapping_ovs['mac'])
-        br_name = node.find("source").get("bridge")
-        self.assertEqual(br_name, "br0")
 
     def test_quantum_hybrid_driver(self):
         d = vif.LibvirtHybridOVSBridgeDriver()
