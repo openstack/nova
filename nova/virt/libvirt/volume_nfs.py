@@ -33,6 +33,10 @@ volume_opts = [
     cfg.StrOpt('nfs_mount_point_base',
                default=paths.state_path_def('mnt'),
                help='Base dir where nfs expected to be mounted on compute'),
+    cfg.StrOpt('nfs_mount_options',
+               default=None,
+               help='Mount options passed to the nfs client. See section '
+                    'of the nfs man page for details'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(volume_opts)
@@ -70,9 +74,14 @@ class NfsVolumeDriver(volume.LibvirtBaseVolumeDriver):
         if not self._path_exists(mount_path):
             utils.execute('mkdir', '-p', mount_path)
 
+        # Construct the NFS mount command.
+        nfs_cmd = ['mount', '-t', 'nfs']
+        if CONF.nfs_mount_options is not None:
+            nfs_cmd.extend(['-o', CONF.nfs_mount_options])
+        nfs_cmd.extend([nfs_share, mount_path])
+
         try:
-            utils.execute('mount', '-t', 'nfs', nfs_share, mount_path,
-                          run_as_root=True)
+            utils.execute(*nfs_cmd, run_as_root=True)
         except exception.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
                 LOG.warn(_("%s is already mounted"), nfs_share)
