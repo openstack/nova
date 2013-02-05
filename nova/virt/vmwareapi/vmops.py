@@ -73,12 +73,17 @@ RESIZE_TOTAL_STEPS = 4
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
-    def __init__(self, session, virtapi, volumeops):
+    def __init__(self, session, virtapi, volumeops, cluster_name=None):
         """Initializer."""
         self.compute_api = compute.API()
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
+        if not cluster_name:
+            self._cluster = None
+        else:
+            self._cluster = vm_util.get_cluster_ref_from_name(
+                                        self._session, cluster_name)
         self._instance_path_base = VMWARE_PREFIX + CONF.base_dir_name
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
@@ -133,7 +138,7 @@ class VMwareVMOps(object):
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
-        ds = vm_util.get_datastore_ref_and_name(self._session)
+        ds = vm_util.get_datastore_ref_and_name(self._session, self._cluster)
         data_store_ref = ds[0]
         data_store_name = ds[1]
 
@@ -157,11 +162,12 @@ class VMwareVMOps(object):
         (vmdk_file_size_in_kb, os_type, adapter_type,
          disk_type) = _get_image_properties()
 
-        vm_folder_ref, res_pool_ref = self._get_vmfolder_and_res_pool_refs()
+        vm_folder_ref = self._get_vmfolder_ref()
+        res_pool_ref = self._get_res_pool_ref()
 
         def _check_if_network_bridge_exists(network_name):
             network_ref = network_util.get_network_with_the_name(
-                          self._session, network_name)
+                          self._session, network_name, self._cluster)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=network_name)
             return network_ref
@@ -176,7 +182,8 @@ class VMwareVMOps(object):
                                CONF.vmware.integration_bridge
                 if mapping.get('should_create_vlan'):
                     network_ref = vmwarevif.ensure_vlan_bridge(
-                        self._session, network)
+                                                        self._session, network,
+                                                        self._cluster)
                 else:
                     network_ref = _check_if_network_bridge_exists(network_name)
                 vif_infos.append({'network_name': network_name,
@@ -486,7 +493,7 @@ class VMwareVMOps(object):
                                     vm_ref,
                                     "VirtualMachine",
                                     "datastore")
-            if not ds_ref_ret:
+            if ds_ref_ret is None:
                 raise exception.DatastoreNotFound()
             ds_ref = ds_ref_ret.ManagedObjectReference[0]
             ds_browser = vim_util.get_dynamic_property(
@@ -649,8 +656,7 @@ class VMwareVMOps(object):
                 LOG.debug(_("Destroyed the VM"), instance=instance)
             except Exception, excep:
                 LOG.warn(_("In vmwareapi:vmops:delete, got this exception"
-                           " while destroying the VM: %s") % str(excep),
-                         instance=instance)
+                           " while destroying the VM: %s") % str(excep))
 
             if network_info:
                 self.unplug_vifs(instance, network_info)
@@ -702,8 +708,7 @@ class VMwareVMOps(object):
                 LOG.debug(_("Unregistered the VM"), instance=instance)
             except Exception, excep:
                 LOG.warn(_("In vmwareapi:vmops:destroy, got this exception"
-                           " while un-registering the VM: %s") % str(excep),
-                         instance=instance)
+                           " while un-registering the VM: %s") % str(excep))
 
             if network_info:
                 self.unplug_vifs(instance, network_info)
@@ -735,8 +740,7 @@ class VMwareVMOps(object):
                     LOG.warn(_("In vmwareapi:vmops:destroy, "
                                  "got this exception while deleting"
                                  " the VM contents from the disk: %s")
-                                 % str(excep),
-                             instance=instance)
+                                 % str(excep))
         except Exception, exc:
             LOG.exception(exc, instance=instance)
 
@@ -936,11 +940,12 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # Get the clone vm spec
-        ds_ref = vm_util.get_datastore_ref_and_name(self._session)[0]
+        ds_ref = vm_util.get_datastore_ref_and_name(
+                            self._session, None, dest)[0]
         client_factory = self._session._get_vim().client.factory
         rel_spec = vm_util.relocate_vm_spec(client_factory, ds_ref, host_ref)
         clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
-        vm_folder_ref, res_pool_ref = self._get_vmfolder_and_res_pool_refs()
+        vm_folder_ref = self._get_vmfolder_ref()
 
         # 3. Clone VM on ESX host
         LOG.debug(_("Cloning VM to host %s") % dest, instance=instance)
@@ -1203,18 +1208,27 @@ class VMwareVMOps(object):
                 return host.obj
         return None
 
-    def _get_vmfolder_and_res_pool_refs(self):
+    def _get_vmfolder_ref(self):
         """Get the Vm folder ref from the datacenter."""
         dc_objs = self._session._call_method(vim_util, "get_objects",
-                                "Datacenter", ["vmFolder"])
+                                             "Datacenter", ["vmFolder"])
         # There is only one default datacenter in a standalone ESX host
         vm_folder_ref = dc_objs[0].propSet[0].val
+        return vm_folder_ref
 
+    def _get_res_pool_ref(self):
         # Get the resource pool. Taking the first resource pool coming our
         # way. Assuming that is the default resource pool.
-        res_pool_ref = self._session._call_method(vim_util, "get_objects",
-                                "ResourcePool")[0].obj
-        return vm_folder_ref, res_pool_ref
+        if self._cluster is None:
+            res_pool_ref = self._session._call_method(vim_util, "get_objects",
+                                                      "ResourcePool")[0].obj
+        else:
+            res_pool_ref = self._session._call_method(vim_util,
+                                                      "get_dynamic_property",
+                                                      self._cluster,
+                                                      "ClusterComputeResource",
+                                                      "resourcePool")
+        return res_pool_ref
 
     def _path_exists(self, ds_browser, ds_path):
         """Check if the path exists on the datastore."""
@@ -1269,9 +1283,11 @@ class VMwareVMOps(object):
         DataStore.
         """
         LOG.debug(_("Creating directory with path %s") % ds_path)
+        dc_ref = self._get_datacenter_ref_and_name()[0]
         self._session._call_method(self._session._get_vim(), "MakeDirectory",
                     self._session._get_vim().get_service_content().fileManager,
-                    name=ds_path, createParentDirectories=False)
+                    name=ds_path, datacenter=dc_ref,
+                    createParentDirectories=False)
         LOG.debug(_("Created directory with path %s") % ds_path)
 
     def _check_if_folder_file_exists(self, ds_ref, ds_name,

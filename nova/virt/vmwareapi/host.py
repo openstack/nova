@@ -138,3 +138,68 @@ class HostState(object):
 
         self._stats = data
         return data
+
+
+class VCState(object):
+    """Manages information about the VC host this compute
+    node is running on.
+    """
+    def __init__(self, session, host_name, cluster):
+        super(VCState, self).__init__()
+        self._session = session
+        self._host_name = host_name
+        self._cluster = cluster
+        self._stats = {}
+        self.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+        True, run the update first.
+        """
+        if refresh:
+            self.update_status()
+        return self._stats
+
+    def update_status(self):
+        """Update the current state of the host.
+        """
+        host_mor = vm_util.get_host_ref(self._session, self._cluster)
+        if host_mor is None:
+            return
+
+        summary = self._session._call_method(vim_util,
+                                             "get_dynamic_property",
+                                             host_mor,
+                                             "HostSystem",
+                                             "summary")
+
+        if summary is None:
+            return
+
+        try:
+            ds = vm_util.get_datastore_ref_and_name(self._session,
+                                                    self._cluster)
+        except exception.DatastoreNotFound:
+            ds = (None, None, 0, 0)
+
+        data = {}
+        data["vcpus"] = summary.hardware.numCpuThreads
+        data["cpu_info"] =\
+        {"vendor": summary.hardware.vendor,
+         "model": summary.hardware.cpuModel,
+         "topology": {"cores": summary.hardware.numCpuCores,
+                      "sockets": summary.hardware.numCpuPkgs,
+                      "threads": summary.hardware.numCpuThreads}
+        }
+        data["disk_total"] = ds[2] / (1024 * 1024)
+        data["disk_available"] = ds[3] / (1024 * 1024)
+        data["disk_used"] = data["disk_total"] - data["disk_available"]
+        data["host_memory_total"] = summary.hardware.memorySize / (1024 * 1024)
+        data["host_memory_free"] = data["host_memory_total"] -\
+                                   summary.quickStats.overallMemoryUsage
+        data["hypervisor_type"] = summary.config.product.name
+        data["hypervisor_version"] = summary.config.product.version
+        data["hypervisor_hostname"] = self._host_name
+
+        self._stats = data
+        return data

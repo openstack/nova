@@ -21,3 +21,4 @@
 from nova.virt.vmwareapi import driver
 
 VMwareESXDriver = driver.VMwareESXDriver
+VMwareVCDriver = driver.VMwareVCDriver

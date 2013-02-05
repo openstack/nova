@@ -35,8 +35,13 @@ class VMwareVolumeOps(object):
     Management class for Volume-related tasks
     """
 
-    def __init__(self, session):
+    def __init__(self, session, cluster_name=None):
         self._session = session
+        if not cluster_name:
+            self._cluster = None
+        else:
+            self._cluster = vm_util.get_cluster_ref_from_name(
+                                        self._session, cluster_name)
 
     def attach_disk_to_vm(self, vm_ref, instance_name,
                           adapter_type, disk_type, vmdk_path=None,
@@ -88,14 +93,16 @@ class VMwareVolumeOps(object):
         target_iqn = data['target_iqn']
         LOG.debug(_("Discovering iSCSI target %(target_iqn)s from "
                     "%(target_portal)s.") % locals())
-        device_name, uuid = volume_util.find_st(self._session, data)
+        device_name, uuid = volume_util.find_st(self._session, data,
+                                                self._cluster)
         if device_name:
             LOG.debug(_("Storage target found. No need to discover"))
             return (device_name, uuid)
         # Rescan iSCSI HBA
-        volume_util.rescan_iscsi_hba(self._session)
+        volume_util.rescan_iscsi_hba(self._session, self._cluster)
         # Find iSCSI Target again
-        device_name, uuid = volume_util.find_st(self._session, data)
+        device_name, uuid = volume_util.find_st(self._session, data,
+                                                self._cluster)
         if device_name:
             LOG.debug(_("Discovered iSCSI target %(target_iqn)s from "
                         "%(target_portal)s.") % locals())
@@ -106,7 +113,7 @@ class VMwareVolumeOps(object):
 
     def get_volume_connector(self, instance):
         """Return volume connector information."""
-        iqn = volume_util.get_host_iqn(self._session)
+        iqn = volume_util.get_host_iqn(self._session, self._cluster)
         return {
             'ip': CONF.vmwareapi_host_ip,
             'initiator': iqn,
@@ -167,7 +174,8 @@ class VMwareVolumeOps(object):
         data = connection_info['data']
 
         # Discover iSCSI Target
-        device_name, uuid = volume_util.find_st(self._session, data)
+        device_name, uuid = volume_util.find_st(self._session, data,
+                                                self._cluster)
         if device_name is None:
             raise volume_util.StorageError(_("Unable to find iSCSI Target"))
 

@@ -21,9 +21,10 @@ A connection to the VMware ESX platform.
 
 **Related Flags**
 
-:vmwareapi_host_ip:         IP address of VMware ESX server.
-:vmwareapi_host_username:   Username for connection to VMware ESX Server.
-:vmwareapi_host_password:   Password for connection to VMware ESX Server.
+:vmwareapi_host_ip:         IP address or Name of VMware ESX/VC server.
+:vmwareapi_host_username:   Username for connection to VMware ESX/VC Server.
+:vmwareapi_host_password:   Password for connection to VMware ESX/VC Server.
+:vmwareapi_cluster_name:    Name of a VMware Cluster ComputeResource.
 :vmwareapi_task_poll_interval: The interval (seconds) used for polling of
                             remote tasks
                             (default: 5.0).
@@ -50,6 +51,7 @@ from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
+from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
 
@@ -59,30 +61,37 @@ LOG = logging.getLogger(__name__)
 vmwareapi_opts = [
     cfg.StrOpt('vmwareapi_host_ip',
                default=None,
-               help='URL for connection to VMware ESX host. Required if '
-                    'compute_driver is vmwareapi.VMwareESXDriver.'),
+               help='URL for connection to VMware ESX/VC host. Required if '
+                    'compute_driver is vmwareapi.VMwareESXDriver or '
+                    'vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('vmwareapi_host_username',
                default=None,
-               help='Username for connection to VMware ESX host. '
+               help='Username for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('vmwareapi_host_password',
                default=None,
-               help='Password for connection to VMware ESX host. '
+               help='Password for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver.',
+                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.',
                secret=True),
+    cfg.StrOpt('vmwareapi_cluster_name',
+               default=None,
+               help='Name of a VMware Cluster ComputeResource. '
+                    'Used only if compute_driver is '
+                    'vmwareapi.VMwareVCDriver.'),
     cfg.FloatOpt('vmwareapi_task_poll_interval',
                  default=5.0,
                  help='The interval used for polling of remote tasks. '
                        'Used only if compute_driver is '
-                       'vmwareapi.VMwareESXDriver.'),
+                       'vmwareapi.VMwareESXDriver or '
+                       'vmwareapi.VMwareVCDriver.'),
     cfg.IntOpt('vmwareapi_api_retry_count',
                default=10,
                help='The number of times we retry on failures, e.g., '
                     'socket error, etc. '
                     'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver.'),
+                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.IntOpt('vnc_port',
                default=5900,
                help='VNC starting port'),
@@ -128,14 +137,17 @@ class VMwareESXDriver(driver.ComputeDriver):
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
                               "and vmwareapi_host_password to use"
-                              "compute_driver=vmwareapi.VMwareESXDriver"))
+                              "compute_driver=vmwareapi.VMwareESXDriver or "
+                              "vmwareapi.VMwareVCDriver"))
 
         self._session = VMwareAPISession(self._host_ip,
                                          host_username, host_password,
                                          api_retry_count, scheme=scheme)
-        self._volumeops = volumeops.VMwareVolumeOps(self._session)
+        self._cluster_name = CONF.vmwareapi_cluster_name
+        self._volumeops = volumeops.VMwareVolumeOps(self._session,
+                                                    self._cluster_name)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
-                                        self._volumeops)
+                                        self._volumeops, self._cluster_name)
         self._host = host.Host(self._session)
         self._host_state = None
 
@@ -210,40 +222,6 @@ class VMwareESXDriver(driver.ComputeDriver):
     def power_on(self, instance):
         """Power on the specified instance."""
         self._vmops.power_on(instance)
-
-    def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
-                                   block_device_info=None):
-        """
-        Transfers the disk of a running instance in multiple phases, turning
-        off the instance before the end.
-        """
-        return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, instance_type)
-
-    def confirm_migration(self, migration, instance, network_info):
-        """Confirms a resize, destroying the source VM."""
-        self._vmops.confirm_migration(migration, instance, network_info)
-
-    def finish_revert_migration(self, instance, network_info,
-                                block_device_info=None):
-        """Finish reverting a resize, powering back on the instance."""
-        self._vmops.finish_revert_migration(instance)
-
-    def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance=False,
-                         block_device_info=None):
-        """Completes a resize, turning on the migrated instance."""
-        self._vmops.finish_migration(context, migration, instance, disk_info,
-                                     network_info, image_meta, resize_instance)
-
-    def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method, block_migration=False,
-                       migrate_data=None):
-        """Live migration of an instance to another host."""
-        self._vmops.live_migration(context, instance_ref, dest,
-                                   post_method, recover_method,
-                                   block_migration)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
@@ -361,6 +339,64 @@ class VMwareESXDriver(driver.ComputeDriver):
         instance.
         """
         return self._vmops.list_interfaces(instance_name)
+
+
+class VMwareVCDriver(VMwareESXDriver):
+    """The ESX host connection object."""
+
+    def __init__(self, virtapi, read_only=False, scheme="https"):
+        super(VMwareVCDriver, self).__init__(virtapi)
+        if not self._cluster_name:
+            self._cluster = None
+        else:
+            self._cluster = vm_util.get_cluster_ref_from_name(
+                self._session, self._cluster_name)
+            if self._cluster is None:
+                raise exception.NotFound(_("VMware Cluster %s is not found")
+                                           % self._cluster_name)
+        self._vc_state = None
+
+    @property
+    def host_state(self):
+        if not self._vc_state:
+            self._vc_state = host.VCState(self._session,
+                                          self._host_ip,
+                                          self._cluster)
+        return self._vc_state
+
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type, network_info,
+                                   block_device_info=None):
+        """
+        Transfers the disk of a running instance in multiple phases, turning
+        off the instance before the end.
+        """
+        return self._vmops.migrate_disk_and_power_off(context, instance,
+                                                      dest, instance_type)
+
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM."""
+        self._vmops.confirm_migration(migration, instance, network_info)
+
+    def finish_revert_migration(self, instance, network_info,
+                                block_device_info=None):
+        """Finish reverting a resize, powering back on the instance."""
+        self._vmops.finish_revert_migration(instance)
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, image_meta, resize_instance=False,
+                         block_device_info=None):
+        """Completes a resize, turning on the migrated instance."""
+        self._vmops.finish_migration(context, migration, instance, disk_info,
+                                     network_info, image_meta, resize_instance)
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
+        """Live migration of an instance to another host."""
+        self._vmops.live_migration(context, instance_ref, dest,
+                                   post_method, recover_method,
+                                   block_migration)
 
 
 class VMwareAPISession(object):
