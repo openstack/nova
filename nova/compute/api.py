@@ -131,6 +131,15 @@ def check_instance_state(vm_state=None, task_state=(None,)):
     return outer
 
 
+def check_instance_host(function):
+    @functools.wraps(function)
+    def wrapped(self, context, instance, *args, **kwargs):
+        if not instance['host']:
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        return function(self, context, instance, *args, **kwargs)
+    return wrapped
+
+
 def check_instance_lock(function):
     @functools.wraps(function)
     def inner(self, context, instance, *args, **kwargs):
@@ -1213,6 +1222,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_host
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
                                     vm_states.ERROR, vm_states.STOPPED],
                           task_state=[None])
@@ -1231,6 +1241,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_host
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
@@ -2135,11 +2146,9 @@ class API(base.Base):
                 file_contents=file_contents)
 
     @wrap_check_policy
+    @check_instance_host
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
-
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)
 
@@ -2149,20 +2158,17 @@ class API(base.Base):
 
         return {'url': connect_info['access_url']}
 
+    @check_instance_host
     def get_vnc_connect_info(self, context, instance, console_type):
         """Used in a child cell to get console info."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)
         return connect_info
 
     @wrap_check_policy
+    @check_instance_host
     def get_spice_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
-
         connect_info = self.compute_rpcapi.get_spice_console(context,
                 instance=instance, console_type=console_type)
 
@@ -2172,15 +2178,15 @@ class API(base.Base):
 
         return {'url': connect_info['access_url']}
 
+    @check_instance_host
     def get_spice_connect_info(self, context, instance, console_type):
         """Used in a child cell to get console info."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
         connect_info = self.compute_rpcapi.get_spice_console(context,
                 instance=instance, console_type=console_type)
         return connect_info
 
     @wrap_check_policy
+    @check_instance_host
     def get_console_output(self, context, instance, tail_length=None):
         """Get console output for an instance."""
         return self.compute_rpcapi.get_console_output(context,
