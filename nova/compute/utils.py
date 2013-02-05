@@ -116,49 +116,59 @@ def get_device_name_for_instance(context, instance, bdms, device):
     appropriate format.
     """
     req_prefix = None
-    req_letters = None
+    req_letter = None
+
     if device:
         try:
-            req_prefix, req_letters = block_device.match_device(device)
+            req_prefix, req_letter = block_device.match_device(device)
         except (TypeError, AttributeError, ValueError):
             raise exception.InvalidDevicePath(path=device)
+
     mappings = block_device.instance_block_mapping(instance, bdms)
+
     try:
         prefix = block_device.match_device(mappings['root'])[0]
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=mappings['root'])
+
     # NOTE(vish): remove this when xenapi is setting default_root_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         prefix = '/dev/xvd'
+
     if req_prefix != prefix:
         LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s") % locals())
-    letters_list = []
-    for _name, device in mappings.iteritems():
-        letter = block_device.strip_prefix(device)
+
+    used_letters = set()
+    for device_path in mappings.itervalues():
+        letter = block_device.strip_prefix(device_path)
         # NOTE(vish): delete numbers in case we have something like
         #             /dev/sda1
         letter = re.sub("\d+", "", letter)
-        letters_list.append(letter)
-    used_letters = set(letters_list)
+        used_letters.add(letter)
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
+
         if instance_type['ephemeral_gb']:
-            used_letters.update('b')
+            used_letters.add('b')
+
         if instance_type['swap']:
-            used_letters.update('c')
+            used_letters.add('c')
 
-    if not req_letters:
-        req_letters = _get_unused_letters(used_letters)
-    if req_letters in used_letters:
+    if not req_letter:
+        req_letter = _get_unused_letter(used_letters)
+
+    if req_letter in used_letters:
         raise exception.DevicePathInUse(path=device)
-    return prefix + req_letters
+
+    device_name = prefix + req_letter
+    return device_name
 
 
-def _get_unused_letters(used_letters):
+def _get_unused_letter(used_letters):
     doubles = [first + second for second in string.ascii_lowercase
                for first in string.ascii_lowercase]
     all_letters = set(list(string.ascii_lowercase) + doubles)
