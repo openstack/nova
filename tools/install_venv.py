@@ -22,6 +22,9 @@
 import os
 import sys
 
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.insert(0, parentdir)
+
 import install_venv_common as install_venv
 
 
