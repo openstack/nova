@@ -24,9 +24,15 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 
 from __future__ import absolute_import
 
+import base64
 import hashlib
 import os
+import re
 import string
+import struct
+
+from pyasn1.codec.der import encoder as der_encoder
+from pyasn1.type import univ
 
 from nova import context
 from nova import db
@@ -181,23 +187,75 @@ def decrypt_text(project_id, text):
         raise exception.DecryptionFailure(reason=exc.stderr)
 
 
+_RSA_OID = univ.ObjectIdentifier('1.2.840.113549.1.1.1')
+
+
+def _to_sequence(*vals):
+    seq = univ.Sequence()
+    for i in range(len(vals)):
+        seq.setComponentByPosition(i, vals[i])
+    return seq
+
+
+def convert_from_sshrsa_to_pkcs8(pubkey):
+    """Convert a ssh public key to openssl format
+       Equivalent to the ssh-keygen's -m option
+    """
+    # get the second field from the public key file.
+    try:
+        keydata = base64.b64decode(pubkey.split(None)[1])
+    except IndexError:
+        msg = _("Unable to find the key")
+        raise exception.EncryptionFailure(reason=msg)
+
+    # decode the parts of the key
+    parts = []
+    while keydata:
+        dlen = struct.unpack('>I', keydata[:4])[0]
+        data = keydata[4:dlen + 4]
+        keydata = keydata[4 + dlen:]
+        parts.append(data)
+
+    # Use asn to build the openssl key structure
+    #
+    #  SEQUENCE(2 elem)
+    #    +- SEQUENCE(2 elem)
+    #    |    +- OBJECT IDENTIFIER (1.2.840.113549.1.1.1)
+    #    |    +- NULL
+    #    +- BIT STRING(1 elem)
+    #         +- SEQUENCE(2 elem)
+    #              +- INTEGER(2048 bit)
+    #              +- INTEGER 65537
+
+    # Build the sequence for the bit string
+    n_val = eval(
+        '0x' + ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[2]]))
+    e_val = eval(
+        '0x' + ''.join(['%02X' % struct.unpack('B', x)[0] for x in parts[1]]))
+    pkinfo = _to_sequence(univ.Integer(n_val), univ.Integer(e_val))
+
+    # Convert the sequence into a bit string
+    pklong = long(der_encoder.encode(pkinfo).encode('hex'), 16)
+    pkbitstring = univ.BitString("'00%s'B" % bin(pklong)[2:])
+
+    # Build the key data structure
+    oid = _to_sequence(_RSA_OID, univ.Null())
+    pkcs1_seq = _to_sequence(oid, pkbitstring)
+    pkcs8 = base64.encodestring(der_encoder.encode(pkcs1_seq))
+
+    # Remove the embedded new line and format the key, each line
+    # should be 64 characters long
+    return ('-----BEGIN PUBLIC KEY-----\n%s\n-----END PUBLIC KEY-----\n' %
+            re.sub("(.{64})", "\\1\n", pkcs8.replace('\n', ''), re.DOTALL))
+
+
 def ssh_encrypt_text(ssh_public_key, text):
     """Encrypt text with an ssh public key.
-
-    Requires recent ssh-keygen binary in addition to openssl binary.
     """
     with utils.tempdir() as tmpdir:
-        sshkey = os.path.abspath(os.path.join(tmpdir, 'ssh.key'))
-        with open(sshkey, 'w') as f:
-            f.write(ssh_public_key)
         sslkey = os.path.abspath(os.path.join(tmpdir, 'ssl.key'))
         try:
-            # NOTE(vish): -P is to skip prompt on bad keys
-            out, _err = utils.execute('ssh-keygen',
-                                      '-P', '',
-                                      '-e',
-                                      '-f', sshkey,
-                                      '-m', 'PKCS8')
+            out = convert_from_sshrsa_to_pkcs8(ssh_public_key)
             with open(sslkey, 'w') as f:
                 f.write(out)
             enc, _err = utils.execute('openssl',
