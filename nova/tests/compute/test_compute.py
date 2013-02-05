@@ -5933,6 +5933,107 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_evacuate(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], None)
+
+        def fake_service_is_up(*args, **kwargs):
+            return False
+
+        self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
+                fake_service_is_up)
+        self.compute_api.evacuate(self.context.elevated(),
+                                  instance,
+                                  host='fake_dest_host',
+                                  on_shared_storage=True,
+                                  admin_password=None)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.REBUILDING)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_fail_evacuate_from_non_existing_host(self):
+        inst = {}
+        inst['vm_state'] = vm_states.ACTIVE
+        inst['image_ref'] = FAKE_IMAGE_REF
+        inst['reservation_id'] = 'r-fakeres'
+        inst['launch_time'] = '10'
+        inst['user_id'] = self.user_id
+        inst['project_id'] = self.project_id
+        inst['host'] = 'fake_host'
+        inst['node'] = NODENAME
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        inst['instance_type_id'] = type_id
+        inst['ami_launch_index'] = 0
+        inst['memory_mb'] = 0
+        inst['vcpus'] = 0
+        inst['root_gb'] = 0
+        inst['ephemeral_gb'] = 0
+        inst['architecture'] = 'x86_64'
+        inst['os_type'] = 'Linux'
+
+        instance = jsonutils.to_primitive(db.instance_create(self.context,
+                                                             inst))
+        instance_uuid = instance['uuid']
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], None)
+
+        self.assertRaises(exception.ComputeHostNotFound,
+                self.compute_api.evacuate, self.context.elevated(), instance,
+                host='fake_dest_host', on_shared_storage=True,
+                admin_password=None)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_fail_evacuate_from_running_host(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], None)
+
+        def fake_service_is_up(*args, **kwargs):
+            return True
+
+        self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
+                fake_service_is_up)
+
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                self.compute_api.evacuate, self.context.elevated(), instance,
+                host='fake_dest_host', on_shared_storage=True,
+                admin_password=None)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_fail_evacuate_instance_in_wrong_state(self):
+        instances = [
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.BUILDING})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.PAUSED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.SUSPENDED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.RESCUED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.RESIZED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.SOFT_DELETED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.DELETED})),
+            jsonutils.to_primitive(self._create_fake_instance(
+                                    {'vm_state': vm_states.ERROR}))
+        ]
+
+        for instance in instances:
+            self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.evacuate, self.context, instance,
+                host='fake_dest_host', on_shared_storage=True,
+                admin_password=None)
+            db.instance_destroy(self.context, instance['uuid'])
+
 
 def fake_rpc_method(context, topic, msg, do_cast=True):
     pass

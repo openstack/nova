@@ -168,6 +168,9 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.skipTest("This test is failing due to TypeError: "
                       "detach_volume() takes exactly 3 arguments (4 given).")
 
+    def test_evacuate(self):
+        self.skipTest("Test is incompatible with cells.")
+
 
 class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):
     def setUp(self):

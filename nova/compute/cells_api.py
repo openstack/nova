@@ -278,6 +278,13 @@ class ComputeCellsAPI(compute_api.API):
                 **kwargs)
         self._cast_to_cells(context, instance, 'rebuild', *args, **kwargs)
 
+    @validate_cell
+    def evacuate(self, context, instance, *args, **kwargs):
+        """Evacuate the given instance with the provided attributes."""
+        super(ComputeCellsAPI, self).evacuate(context, instance, *args,
+                **kwargs)
+        self._cast_to_cells(context, instance, 'evacuate', *args, **kwargs)
+
     @check_instance_state(vm_state=[vm_states.RESIZED])
     @validate_cell
     def revert_resize(self, context, instance):
