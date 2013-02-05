@@ -322,8 +322,8 @@ class ComputeCellsAPI(compute_api.API):
         if not flavor_id:
             new_instance_type = old_instance_type
         else:
-            new_instance_type = instance_types.get_instance_type_by_flavor_id(
-                    flavor_id)
+            new_instance_type = instance_types.extract_instance_type(instance,
+                                                                     'new_')
 
         # NOTE(johannes): Later, when the resize is confirmed or reverted,
         # the superclass implementations of those methods will need access
