@@ -3473,6 +3473,26 @@ class ComputeTestCase(BaseTestCase):
         result = self.compute._get_instances_on_driver(fake_context)
         self.assertEqual(driver_instances, result)
 
+    def test_instance_usage_audit(self):
+        instances = [{'uuid': 'foo'}]
+        self.flags(instance_usage_audit=True)
+        self.stubs.Set(compute_utils, 'has_audit_been_run',
+                       lambda *a, **k: False)
+        self.stubs.Set(self.compute.conductor_api,
+                       'instance_get_active_by_window_joined',
+                       lambda *a, **k: instances)
+        self.stubs.Set(compute_utils, 'start_instance_usage_audit',
+                       lambda *a, **k: None)
+        self.stubs.Set(compute_utils, 'finish_instance_usage_audit',
+                       lambda *a, **k: None)
+
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'notify_usage_exists')
+        self.compute.conductor_api.notify_usage_exists(
+            self.context, instances[0], ignore_missing_network_data=False)
+        self.mox.ReplayAll()
+        self.compute._instance_usage_audit(self.context)
+
 
 class ComputeAPITestCase(BaseTestCase):
 
