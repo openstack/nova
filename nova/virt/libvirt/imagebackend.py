@@ -120,12 +120,12 @@ class Image(object):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
 
-        if not os.path.exists(self.path):
-            base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
-            if not os.path.exists(base_dir):
-                fileutils.ensure_tree(base_dir)
-            base = os.path.join(base_dir, filename)
+        base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
+        if not os.path.exists(base_dir):
+            fileutils.ensure_tree(base_dir)
+        base = os.path.join(base_dir, filename)
 
+        if not os.path.exists(self.path) or not os.path.exists(base):
             self.create_image(call_if_not_exists, base, size,
                               *args, **kwargs)
 
@@ -160,8 +160,9 @@ class Raw(Image):
             prepare_template(target=self.path, *args, **kwargs)
         else:
             prepare_template(target=base, *args, **kwargs)
-            with utils.remove_path_on_error(self.path):
-                copy_raw_image(base, self.path, size)
+            if not os.path.exists(self.path):
+                with utils.remove_path_on_error(self.path):
+                    copy_raw_image(base, self.path, size)
 
     def snapshot(self, name):
         return snapshots.RawSnapshot(self.path, name)
@@ -183,9 +184,11 @@ class Qcow2(Image):
             if size:
                 disk.extend(target, size)
 
-        prepare_template(target=base, *args, **kwargs)
-        with utils.remove_path_on_error(self.path):
-            copy_qcow2_image(base, self.path, size)
+        if not os.path.exists(base):
+            prepare_template(target=base, *args, **kwargs)
+        if not os.path.exists(self.path):
+            with utils.remove_path_on_error(self.path):
+                copy_qcow2_image(base, self.path, size)
 
     def snapshot(self, name):
         return snapshots.Qcow2Snapshot(self.path, name)

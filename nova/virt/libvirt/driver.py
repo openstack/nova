@@ -955,7 +955,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.extract_snapshot(disk_delta, 'qcow2', None,
                                        out_path, image_format)
 
-    def reboot(self, instance, network_info, reboot_type='SOFT',
+    def reboot(self, context, instance, network_info, reboot_type='SOFT',
                block_device_info=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
@@ -967,7 +967,8 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance, network_info, block_device_info)
+        return self._hard_reboot(context, instance, network_info,
+                                 block_device_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -1013,7 +1014,8 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, network_info, block_device_info=None):
+    def _hard_reboot(self, context, instance, network_info,
+                     block_device_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         Performs a Libvirt reset (if supported) on the domain.
@@ -1033,6 +1035,13 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
+
+        # NOTE (rmk): Re-populate any missing backing files.
+        disk_info_json = self.get_instance_disk_info(instance['name'], xml)
+        self._create_images_and_backing(context, instance, disk_info_json)
+
+        # Initialize all the necessary networking, block devices and
+        # start the instance.
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
 
@@ -1101,7 +1110,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Instance is not up and could be in an unknown state.
         # Be as absolute as possible about getting it back into
         # a known and running state.
-        self._hard_reboot(instance, network_info, block_device_info)
+        self._hard_reboot(context, instance, network_info, block_device_info)
 
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
@@ -2832,8 +2841,17 @@ class LibvirtDriver(driver.ComputeDriver):
                     greenthread.sleep(1)
 
     def pre_block_migration(self, ctxt, instance, disk_info_json):
-        """Preparation block migration.
+        """Preparation for block migration."""
+        # NOTE (rmk): When preparing for a block migration, the instance dir
+        #             should not exist on the destination hypervisor.
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        if os.path.exists(instance_dir):
+            raise exception.DestinationDiskExists(path=instance_dir)
+        os.mkdir(instance_dir)
+        self._create_images_and_backing(ctxt, instance, disk_info_json)
 
+    def _create_images_and_backing(self, ctxt, instance, disk_info_json):
+        """
         :params ctxt: security context
         :params instance:
             nova.db.sqlalchemy.models.Instance object
@@ -2843,19 +2861,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         disk_info = jsonutils.loads(disk_info_json)
-
-        # make instance directory
         instance_dir = libvirt_utils.get_instance_path(instance)
-        if os.path.exists(instance_dir):
-            raise exception.DestinationDiskExists(path=instance_dir)
-        os.mkdir(instance_dir)
 
         for info in disk_info:
             base = os.path.basename(info['path'])
             # Get image type and create empty disk image, and
             # create backing file in case of qcow2.
             instance_disk = os.path.join(instance_dir, base)
-            if not info['backing_file']:
+            if not info['backing_file'] and not os.path.exists(instance_disk):
                 libvirt_utils.create_image(info['type'], instance_disk,
                                            info['disk_size'])
             else:
@@ -2908,10 +2921,9 @@ class LibvirtDriver(driver.ComputeDriver):
             dom = self._lookup_by_name(instance_ref["name"])
             self._conn.defineXML(dom.XMLDesc(0))
 
-    def get_instance_disk_info(self, instance_name):
+    def get_instance_disk_info(self, instance_name, xml=None):
         """Preparation block migration.
 
-        :params ctxt: security context
         :params instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
@@ -2924,18 +2936,22 @@ class LibvirtDriver(driver.ComputeDriver):
                   'disk_size':'83886080'},...]"
 
         """
-        disk_info = []
+        # NOTE (rmk): Passing the domain XML into this function is optional.
+        #             When it is not passed, we attempt to extract it from
+        #             the pre-existing definition.
+        if xml is None:
+            try:
+                virt_dom = self._lookup_by_name(instance_name)
+                xml = virt_dom.XMLDesc(0)
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                msg = _("Error from libvirt while getting description of "
+                        "%(instance_name)s: [Error Code %(error_code)s] "
+                        "%(ex)s") % locals()
+                LOG.warn(msg)
+                raise exception.InstanceNotFound(instance_id=instance_name)
 
-        virt_dom = self._lookup_by_name(instance_name)
-        try:
-            xml = virt_dom.XMLDesc(0)
-        except libvirt.libvirtError as ex:
-            error_code = ex.get_error_code()
-            msg = _("Error from libvirt while getting description of "
-                    "%(instance_name)s: [Error Code %(error_code)s] "
-                    "%(ex)s") % locals()
-            LOG.warn(msg)
-            raise exception.InstanceNotFound(instance_id=instance_name)
+        disk_info = []
         doc = etree.fromstring(xml)
         disk_nodes = doc.findall('.//devices/disk')
         path_nodes = doc.findall('.//devices/disk/source')

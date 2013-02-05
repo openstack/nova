@@ -954,12 +954,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_reboot_hard(self):
         instance = self._create_instance()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        conn.reboot(instance, None, "HARD")
+        conn.reboot(self.context, instance, None, "HARD")
 
     def test_reboot_soft(self):
         instance = self._create_instance()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        conn.reboot(instance, None, "SOFT")
+        conn.reboot(self.context, instance, None, "SOFT")
 
     def test_reboot_halted(self):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
@@ -967,7 +967,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = self._create_instance(spawn=False)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         xenapi_fake.create_vm(instance['name'], 'Halted')
-        conn.reboot(instance, None, "SOFT")
+        conn.reboot(self.context, instance, None, "SOFT")
         vm_ref = vm_utils.lookup(session, instance['name'])
         vm = xenapi_fake.get_record('VM', vm_ref)
         self.assertEquals(vm['power_state'], 'Running')
@@ -976,8 +976,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         instance = self._create_instance(spawn=False)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         xenapi_fake.create_vm(instance['name'], 'Unknown')
-        self.assertRaises(xenapi_fake.Failure, conn.reboot, instance,
-                None, "SOFT")
+        self.assertRaises(xenapi_fake.Failure, conn.reboot, self.context,
+                          instance, None, "SOFT")
 
     def _test_maintenance_mode(self, find_host, find_aggregate):
         real_call_xenapi = self.conn._session.call_xenapi

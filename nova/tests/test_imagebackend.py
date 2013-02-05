@@ -55,8 +55,8 @@ class _ImageTestCase(object):
 
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
+        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
@@ -72,7 +72,9 @@ class _ImageTestCase(object):
 
     def test_cache_image_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(True)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -82,8 +84,8 @@ class _ImageTestCase(object):
 
     def test_cache_base_dir_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
+        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
@@ -98,8 +100,8 @@ class _ImageTestCase(object):
 
     def test_cache_template_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
+        os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
         fn = self.mox.CreateMockAnything()
         self.mox.ReplayAll()
@@ -195,7 +197,6 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
     def test_create_image_with_size(self):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(os.path, 'exists')
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
         imagebackend.disk.extend(self.PATH, self.SIZE)

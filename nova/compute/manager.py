@@ -1479,7 +1479,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context, instance=instance)
 
         try:
-            self.driver.reboot(instance, self._legacy_nw_info(network_info),
+            self.driver.reboot(context, instance,
+                               self._legacy_nw_info(network_info),
                                reboot_type, block_device_info)
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),

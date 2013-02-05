@@ -271,7 +271,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 LOG.warning(_("Failed to update state record for "
                               "baremetal node %s") % instance['uuid'])
 
-    def reboot(self, instance, network_info, reboot_type,
+    def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         ctx = nova_context.get_admin_context()

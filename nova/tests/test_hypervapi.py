@@ -486,7 +486,8 @@ class HyperVAPITestCase(test.TestCase):
                                      constants.HYPERV_VM_STATE_REBOOT)
 
         self._mox.ReplayAll()
-        self._conn.reboot(self._instance_data, network_info, None)
+        self._conn.reboot(self._context, self._instance_data, network_info,
+                          None)
         self._mox.VerifyAll()
 
     def test_destroy(self):

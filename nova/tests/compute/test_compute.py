@@ -1126,8 +1126,9 @@ class ComputeTestCase(BaseTestCase):
         # this is called with the wrong args, so we have to hack
         # around it.
         reboot_call_info = {}
-        expected_call_info = {'args': (updated_instance1, expected_nw_info,
-                                       reboot_type, fake_block_dev_info),
+        expected_call_info = {'args': (econtext, updated_instance1,
+                                       expected_nw_info, reboot_type,
+                                       fake_block_dev_info),
                               'kwargs': {}}
 
         def fake_reboot(*args, **kwargs):
