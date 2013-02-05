@@ -304,11 +304,13 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return self.call(context, msg, version='1.36')
 
     def action_event_start(self, context, values):
-        msg = self.make_msg('action_event_start', values=values)
+        values_p = jsonutils.to_primitive(values)
+        msg = self.make_msg('action_event_start', values=values_p)
         return self.call(context, msg, version='1.25')
 
     def action_event_finish(self, context, values):
-        msg = self.make_msg('action_event_finish', values=values)
+        values_p = jsonutils.to_primitive(values)
+        msg = self.make_msg('action_event_finish', values=values_p)
         return self.call(context, msg, version='1.25')
 
     def instance_info_cache_update(self, context, instance, values):

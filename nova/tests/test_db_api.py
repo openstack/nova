@@ -750,6 +750,34 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(start_time, events[0]['start_time'])
         self.assertEqual(finish_time, events[0]['finish_time'])
 
+    def test_instance_action_and_event_start_string_time(self):
+        """Create an instance action and event with a string start_time."""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        start_time_str = timeutils.strtime(start_time)
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid,
+                         'request_id': ctxt.request_id,
+                         'user_id': ctxt.user_id,
+                         'project_id': ctxt.project_id,
+                         'start_time': start_time_str}
+        action = db.action_start(ctxt, action_values)
+
+        event_values = {'event': 'schedule',
+                        'instance_uuid': uuid,
+                        'request_id': ctxt.request_id,
+                        'start_time': start_time_str}
+        db.action_event_start(ctxt, event_values)
+
+        # Retrieve the event to ensure it was successfully added
+        events = db.action_events_get(ctxt, action['id'])
+        self.assertEqual(1, len(events))
+        self.assertEqual('schedule', events[0]['event'])
+        # db api still returns models with datetime, not str, values
+        self.assertEqual(start_time, events[0]['start_time'])
+
     def test_instance_action_event_get_by_id(self):
         """Get a specific instance action event."""
         ctxt1 = context.get_admin_context()

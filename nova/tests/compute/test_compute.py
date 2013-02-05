@@ -38,6 +38,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import manager as conductor_manager
 from nova import context
 from nova import db
 from nova import exception
@@ -59,6 +60,7 @@ from nova import quota
 from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
+from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
@@ -143,6 +145,7 @@ class BaseTestCase(test.TestCase):
         fake_rpcapi = FakeSchedulerAPI()
         self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
         fake_network.set_stub_network_methods(self.stubs)
+        fake_instance_actions.stub_out_action_events(self.stubs)
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             self.assertTrue(ctxt.is_admin)
@@ -286,6 +289,64 @@ class ComputeTestCase(BaseTestCase):
                           self.compute, self.context, inst_uuid)
 
         self.assertFalse(called['fault_added'])
+
+    def test_wrap_instance_event(self):
+        inst = {"uuid": "fake_uuid"}
+
+        called = {'started': False,
+                  'finished': False}
+
+        def did_it_update_start(self2, context, values):
+            called['started'] = True
+
+        def did_it_update_finish(self2, context, values):
+            called['finished'] = True
+
+        self.stubs.Set(conductor_manager.ConductorManager,
+                       'action_event_start', did_it_update_start)
+
+        self.stubs.Set(conductor_manager.ConductorManager,
+                       'action_event_finish', did_it_update_finish)
+
+        @compute_manager.wrap_instance_event
+        def fake_event(self, context, instance):
+            pass
+
+        fake_event(self.compute, self.context, instance=inst)
+
+        self.assertTrue(called['started'])
+        self.assertTrue(called['finished'])
+
+    def test_wrap_instance_event_log_exception(self):
+        inst = {"uuid": "fake_uuid"}
+
+        called = {'started': False,
+                  'finished': False,
+                  'message': ''}
+
+        def did_it_update_start(self2, context, values):
+            called['started'] = True
+
+        def did_it_update_finish(self2, context, values):
+            called['finished'] = True
+            called['message'] = values['message']
+
+        self.stubs.Set(conductor_manager.ConductorManager,
+                       'action_event_start', did_it_update_start)
+
+        self.stubs.Set(conductor_manager.ConductorManager,
+                       'action_event_finish', did_it_update_finish)
+
+        @compute_manager.wrap_instance_event
+        def fake_event(self2, context, instance):
+            raise exception.NovaException()
+
+        self.assertRaises(exception.NovaException, fake_event,
+                          self.compute, self.context, instance=inst)
+
+        self.assertTrue(called['started'])
+        self.assertTrue(called['finished'])
+        self.assertEqual('An unknown exception occurred.', called['message'])
 
     def test_create_instance_with_img_ref_associates_config_drive(self):
         # Make sure create associates a config drive.

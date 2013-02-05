@@ -32,6 +32,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
+from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 import nova.tests.image.fake
 
@@ -236,6 +237,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(nova.tests.image.fake._FakeImageService,
                        'show', fake_show)
         fake_network.set_stub_network_methods(self.stubs)
+        fake_instance_actions.stub_out_action_events(self.stubs)
 
     def _create_instance(self, params={}):
         """Create a test instance."""

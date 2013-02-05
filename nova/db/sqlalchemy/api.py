@@ -4566,6 +4566,7 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 
 
 def action_start(context, values):
+    convert_datetimes(values, 'start_time')
     action_ref = models.InstanceAction()
     action_ref.update(values)
     action_ref.save()
@@ -4573,6 +4574,7 @@ def action_start(context, values):
 
 
 def action_finish(context, values):
+    convert_datetimes(values, 'start_time', 'finish_time')
     session = get_session()
     with session.begin():
         action_ref = model_query(context, models.InstanceAction,
@@ -4620,6 +4622,7 @@ def _action_get_by_request_id(context, instance_uuid, request_id,
 
 def action_event_start(context, values):
     """Start an event on an instance action."""
+    convert_datetimes(values, 'start_time')
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
@@ -4640,6 +4643,7 @@ def action_event_start(context, values):
 
 def action_event_finish(context, values):
     """Finish an event on an instance action."""
+    convert_datetimes(values, 'start_time', 'finish_time')
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],

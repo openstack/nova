@@ -37,6 +37,7 @@ from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
+from nova.tests import fake_instance_actions
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
 
@@ -57,6 +58,7 @@ class SchedulerManagerTestCase(test.TestCase):
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
+        fake_instance_actions.stub_out_action_events(self.stubs)
 
     def test_1_correct_init(self):
         # Correct scheduler driver
@@ -179,8 +181,8 @@ class SchedulerManagerTestCase(test.TestCase):
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
-        request_spec = {'instance_properties':
-                {'uuid': fake_instance_uuid}}
+        request_spec = {'instance_properties': inst,
+                        'instance_uuids': [fake_instance_uuid]}
 
         self.manager.driver.schedule_run_instance(self.context,
                 request_spec, None, None, None, None, {}).AndRaise(
@@ -199,6 +201,7 @@ class SchedulerManagerTestCase(test.TestCase):
 
     def test_prep_resize_no_valid_host_back_in_active_state(self):
         fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid}
         inst = {"vm_state": "", "task_state": ""}
 
         self._mox_schedule_method_helper('schedule_prep_resize')
@@ -214,7 +217,7 @@ class SchedulerManagerTestCase(test.TestCase):
                 'image': 'fake_image',
                 'request_spec': request_spec,
                 'filter_properties': 'fake_props',
-                'instance': 'fake_instance',
+                'instance': fake_instance,
                 'instance_type': 'fake_type',
                 'reservations': list('fake_res'),
         }
@@ -233,6 +236,7 @@ class SchedulerManagerTestCase(test.TestCase):
 
     def test_prep_resize_exception_host_in_error_state_and_raise(self):
         fake_instance_uuid = 'fake-instance-id'
+        fake_instance = {'uuid': fake_instance_uuid}
 
         self._mox_schedule_method_helper('schedule_prep_resize')
 
@@ -246,7 +250,7 @@ class SchedulerManagerTestCase(test.TestCase):
                 'image': 'fake_image',
                 'request_spec': request_spec,
                 'filter_properties': 'fake_props',
-                'instance': 'fake_instance',
+                'instance': fake_instance,
                 'instance_type': 'fake_type',
                 'reservations': list('fake_res'),
         }

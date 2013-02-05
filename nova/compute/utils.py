@@ -28,6 +28,7 @@ from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
+from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import driver
 
@@ -62,6 +63,46 @@ def add_instance_fault_from_exc(context, conductor,
         'host': CONF.host
     }
     conductor.instance_fault_create(context, values)
+
+
+def pack_action_start(context, instance_uuid, action_name):
+    values = {'action': action_name,
+              'instance_uuid': instance_uuid,
+              'request_id': context.request_id,
+              'user_id': context.user_id,
+              'start_time': context.timestamp}
+    return values
+
+
+def pack_action_finish(context, instance_uuid):
+    values = {'instance_uuid': instance_uuid,
+              'request_id': context.request_id,
+              'finish_time': timeutils.utcnow()}
+    return values
+
+
+def pack_action_event_start(context, instance_uuid, event_name):
+    values = {'event': event_name,
+              'instance_uuid': instance_uuid,
+              'request_id': context.request_id,
+              'start_time': timeutils.utcnow()}
+    return values
+
+
+def pack_action_event_finish(context, instance_uuid, event_name, exc_val=None,
+                             exc_tb=None):
+    values = {'event': event_name,
+              'instance_uuid': instance_uuid,
+              'request_id': context.request_id,
+              'finish_time': timeutils.utcnow()}
+    if exc_tb is None:
+        values['result'] = 'Success'
+    else:
+        values['result'] = 'Error'
+        values['message'] = str(exc_val)
+        values['traceback'] = ''.join(traceback.format_tb(exc_tb))
+
+    return values
 
 
 def get_device_name_for_instance(context, instance, bdms, device):
@@ -249,3 +290,28 @@ def usage_volume_info(vol_usage):
                 vol_usage['curr_write_bytes'])
 
     return usage_info
+
+
+class EventReporter(object):
+    """Context manager to report instance action events."""
+
+    def __init__(self, context, conductor, event_name, *instance_uuids):
+        self.context = context
+        self.conductor = conductor
+        self.event_name = event_name
+        self.instance_uuids = instance_uuids
+
+    def __enter__(self):
+        for uuid in self.instance_uuids:
+            event = pack_action_event_start(self.context, uuid,
+                                            self.event_name)
+            self.conductor.action_event_start(self.context, event)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for uuid in self.instance_uuids:
+            event = pack_action_event_finish(self.context, uuid,
+                                             self.event_name, exc_val, exc_tb)
+            self.conductor.action_event_finish(self.context, event)
+        return False
