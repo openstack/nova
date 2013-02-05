@@ -1,14 +1,7 @@
 {
     "server": {
-        "OS-DCF:diskConfig": "AUTO",
         "OS-EXT-AZ:availability_zone": null,
         "OS-EXT-AZ:host_availability_zone": "nova",
-        "OS-EXT-SRV-ATTR:host": "9373c31dbfe6422d9a9997c5f42a8789",
-        "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
-        "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-        "OS-EXT-STS:power_state": 1,
-        "OS-EXT-STS:task_state": null,
-        "OS-EXT-STS:vm_state": "active",
         "accessIPv4": "",
         "accessIPv6": "",
         "addresses": {
@@ -19,8 +12,7 @@
                 }
             ]
         },
-        "config_drive": "",
-        "created": "2013-01-30T14:03:57Z",
+        "created": "2013-01-30T13:38:47Z",
         "flavor": {
             "id": "1",
             "links": [
@@ -30,8 +22,8 @@
                 }
             ]
         },
-        "hostId": "fc3a98f0b240ff341eb60ce8c0ae7412970d218381c5a827cfd398ee",
-        "id": "61608b15-33ea-412f-b9eb-78c6a347ec7b",
+        "hostId": "d38ea49a033b0efaf80c165de63f4805c886dfb94dc0fe731227eccb",
+        "id": "fb7babfd-e1a1-4add-90e6-3558180983c7",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -41,14 +33,13 @@
                 }
             ]
         },
-        "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/servers/61608b15-33ea-412f-b9eb-78c6a347ec7b",
+                "href": "http://openstack.example.com/v2/openstack/servers/fb7babfd-e1a1-4add-90e6-3558180983c7",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/servers/61608b15-33ea-412f-b9eb-78c6a347ec7b",
+                "href": "http://openstack.example.com/openstack/servers/fb7babfd-e1a1-4add-90e6-3558180983c7",
                 "rel": "bookmark"
             }
         ],
@@ -57,14 +48,9 @@
         },
         "name": "new-server-test",
         "progress": 0,
-        "security_groups": [
-            {
-                "name": "default"
-            }
-        ],
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "2013-01-30T14:04:01Z",
+        "updated": "2013-01-30T13:38:49Z",
         "user_id": "fake"
     }
 }

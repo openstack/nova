@@ -17,6 +17,14 @@
             "updated": "2011-09-27T00:00:00+00:00"
         },
         {
+            "alias": "OS-EXT-AZ",
+            "description": "Extended Server Attributes support.",
+            "links": [],
+            "name": "ExtendedAvailabilityZone",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2",
+            "updated": "2013-01-30T00:00:00+00:00"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "Extended Server Attributes support.",
             "links": [],
