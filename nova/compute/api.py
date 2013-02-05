@@ -513,12 +513,8 @@ class API(base.Base):
             availability_zone, forced_host = self._handle_availability_zone(
                     availability_zone)
 
-            system_metadata = {}
-            instance_type_props = ['id', 'name', 'memory_mb', 'vcpus',
-                                   'root_gb', 'ephemeral_gb', 'flavorid',
-                                   'swap', 'rxtx_factor', 'vcpu_weight']
-            for k in instance_type_props:
-                system_metadata["instance_type_%s" % k] = instance_type[k]
+            system_metadata = instance_types.save_instance_type_info(
+                dict(), instance_type)
 
             base_options = {
                 'reservation_id': reservation_id,

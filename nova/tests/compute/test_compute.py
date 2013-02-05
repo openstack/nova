@@ -176,6 +176,13 @@ class BaseTestCase(test.TestCase):
         if not params:
             params = {}
 
+        def make_fake_sys_meta():
+            sys_meta = {}
+            inst_type = instance_types.get_instance_type_by_name(type_name)
+            for key in instance_types.system_metadata_instance_type_props:
+                sys_meta['instance_type_%s' % key] = inst_type[key]
+            return sys_meta
+
         inst = {}
         inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = FAKE_IMAGE_REF
@@ -194,6 +201,7 @@ class BaseTestCase(test.TestCase):
         inst['ephemeral_gb'] = 0
         inst['architecture'] = 'x86_64'
         inst['os_type'] = 'Linux'
+        inst['system_metadata'] = make_fake_sys_meta()
         inst.update(params)
         _create_service_entries(self.context.elevated(),
                 {'fake_zone': [inst['host']]})
@@ -1903,6 +1911,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(), instance['uuid'], 'pre-migrating')
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 disk_info={}, image={}, instance=instance,
@@ -1932,6 +1941,7 @@ class ComputeTestCase(BaseTestCase):
 
         db.instance_update(self.context, instance["uuid"],
                            {"task_state": task_states.RESIZE_MIGRATED})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertRaises(test.TestingException, self.compute.finish_resize,
                           self.context,
                           migration=jsonutils.to_primitive(migration_ref),
@@ -2035,6 +2045,8 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
+        new_instance = db.instance_get_by_uuid(self.context,
+                                               new_instance['uuid'])
         self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 disk_info={}, image={}, instance=new_instance)
@@ -2220,7 +2232,8 @@ class ComputeTestCase(BaseTestCase):
         def fake_finish_revert_migration_driver(*args, **kwargs):
             # Confirm the instance uses the old type in finish_revert_resize
             inst = args[0]
-            self.assertEqual(inst['instance_type']['flavorid'], '1')
+            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            self.assertEqual(sys_meta['instance_type_flavorid'], '1')
 
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.driver, 'finish_revert_migration',
@@ -2254,6 +2267,8 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(),
                 inst_ref['uuid'], 'pre-migrating')
 
+        # NOTE(danms): make sure to refresh our inst_ref after prep_resize
+        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         instance = jsonutils.to_primitive(inst_ref)
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESIZE_PREP})
@@ -2287,6 +2302,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(network_api.API, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
+        rpcinst = db.instance_get_by_uuid(self.context, rpcinst['uuid'])
         self.compute.finish_revert_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),
                 instance=rpcinst, reservations=reservations)

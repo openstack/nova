@@ -69,6 +69,25 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        lambda context, instance: self.data)
 
+    def _update_instance_type(self, instance_type_info):
+        self.instance_type = {
+            'id': 1,
+            'name': 'foo',
+            'memory_mb': 128,
+            'vcpus': 1,
+            'root_gb': 10,
+            'ephemeral_gb': 10,
+            'flavorid': 1,
+            'swap': 0,
+            'rxtx_factor': 1.0,
+            'vcpu_weight': 1,
+            }
+        self.instance_type.update(instance_type_info)
+        self.instance['system_metadata'] = [{'key': 'instance_type_%s' % key,
+                                             'value': value}
+                                            for key, value in
+                                            self.instance_type.items()]
+
     def _validate_device(self, device=None):
         bdms = db.block_device_mapping_get_all_by_instance(
             self.context, self.instance['uuid'])
@@ -163,40 +182,40 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.assertEqual(device, '/dev/vdc')
 
     def test_ephemeral_xenapi(self):
-        self.instance_type = {
-            'ephemeral_gb': 10,
-            'swap': 0,
-        }
+        self._update_instance_type({
+                'ephemeral_gb': 10,
+                'swap': 0,
+                })
         self.stubs.Set(instance_types, 'get_instance_type',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdc')
 
     def test_swap_xenapi(self):
-        self.instance_type = {
-            'ephemeral_gb': 0,
-            'swap': 10,
-        }
+        self._update_instance_type({
+                'ephemeral_gb': 0,
+                'swap': 10,
+                })
         self.stubs.Set(instance_types, 'get_instance_type',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
 
     def test_swap_and_ephemeral_xenapi(self):
-        self.instance_type = {
-            'ephemeral_gb': 10,
-            'swap': 10,
-        }
+        self._update_instance_type({
+                'ephemeral_gb': 10,
+                'swap': 10,
+                })
         self.stubs.Set(instance_types, 'get_instance_type',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
 
     def test_swap_and_one_attachment_xenapi(self):
-        self.instance_type = {
-            'ephemeral_gb': 0,
-            'swap': 10,
-        }
+        self._update_instance_type({
+                'ephemeral_gb': 0,
+                'swap': 10,
+                })
         self.stubs.Set(instance_types, 'get_instance_type',
                        lambda instance_type_id, ctxt=None: self.instance_type)
         device = self._validate_device()

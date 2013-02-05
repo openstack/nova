@@ -34,6 +34,7 @@ allowed_updates = ['task_state', 'vm_state', 'expected_task_state',
                    'instance_type_id', 'root_device_name', 'launched_on',
                    'progress', 'vm_mode', 'default_ephemeral_device',
                    'default_swap_device', 'root_device_name',
+                   'system_metadata',
                    ]
 
 # Fields that we want to convert back into a datetime object.
