@@ -63,7 +63,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.scheduler import rpcapi as scheduler_rpcapi
-from nova import version
 
 
 periodic_opts = [
@@ -268,15 +267,6 @@ class Manager(base.Base):
         Child classes should override this method.
         """
         pass
-
-    def service_version(self, context):
-        return version.version_string()
-
-    def service_config(self, context):
-        config = {}
-        for key in CONF:
-            config[key] = CONF.get(key, None)
-        return config
 
 
 class SchedulerDependentManager(Manager):
