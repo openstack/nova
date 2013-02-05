@@ -328,10 +328,13 @@ class HostManager(object):
             name_to_cls_map = dict([(x.host, x) for x in hosts])
             if ignore_hosts:
                 _strip_ignore_hosts(name_to_cls_map, ignore_hosts)
+                if not name_to_cls_map:
+                    return []
             if force_hosts:
                 _match_forced_hosts(name_to_cls_map, force_hosts)
-            if not name_to_cls_map:
-                return []
+                # NOTE(vish): Skip filters on forced hosts.
+                if name_to_cls_map:
+                    return name_to_cls_map.values()
             hosts = name_to_cls_map.itervalues()
 
         return self.filter_handler.get_filtered_objects(filter_classes,
