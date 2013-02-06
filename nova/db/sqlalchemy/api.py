@@ -1702,7 +1702,8 @@ def _instance_get_all_query(context, project_only=False):
                    options(joinedload('info_cache')).\
                    options(joinedload('security_groups')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type'))
+                   options(joinedload('instance_type')).\
+                   options(joinedload('system_metadata'))
 
 
 @require_admin_context
