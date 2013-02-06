@@ -124,11 +124,12 @@ class HostController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
-        filters = {}
+        filters = {'disabled': False}
         zone = req.GET.get('zone', None)
         if zone:
             filters['availability_zone'] = zone
-        services = self.api.service_get_all(context, filters=filters)
+        services = self.api.service_get_all(context, filters=filters,
+                                            set_zones=True)
         hosts = []
         for service in services:
             hosts.append({'host_name': service['host'],

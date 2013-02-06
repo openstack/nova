@@ -2417,16 +2417,12 @@ class HostAPI(base.Base):
 
     def set_host_enabled(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances."""
-        # NOTE(comstud): No instance_uuid argument to this compute manager
-        # call
         self._assert_host_exists(context, host_name)
         return self.rpcapi.set_host_enabled(context, enabled=enabled,
                 host=host_name)
 
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
-        # NOTE(comstud): No instance_uuid argument to this compute manager
-        # call
         self._assert_host_exists(context, host_name)
         return self.rpcapi.get_host_uptime(context, host=host_name)
 
@@ -2443,7 +2439,7 @@ class HostAPI(base.Base):
         return self.rpcapi.host_maintenance_mode(context,
                 host_param=host_name, mode=mode, host=host_name)
 
-    def service_get_all(self, context, filters=None):
+    def service_get_all(self, context, filters=None, set_zones=False):
         """Returns a list of services, optionally filtering the results.
 
         If specified, 'filters' should be a dictionary containing services
@@ -2452,9 +2448,11 @@ class HostAPI(base.Base):
         """
         if filters is None:
             filters = {}
-        services = self.db.service_get_all(context, False)
-        services = availability_zones.set_availability_zones(context,
-                                                             services)
+        disabled = filters.pop('disabled', None)
+        services = self.db.service_get_all(context, disabled=disabled)
+        if set_zones or 'availability_zone' in filters:
+            services = availability_zones.set_availability_zones(context,
+                                                                 services)
         ret_services = []
         for service in services:
             for key, val in filters.iteritems():

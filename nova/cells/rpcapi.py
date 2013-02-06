@@ -41,6 +41,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
 
         1.0 - Initial version.
         1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
+        1.2 - Adds service_get_all(), service_get_by_compute_host(),
+              and proxy_rpc_to_compute_manager()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -155,3 +157,31 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                              updated_since=updated_since,
                                              deleted=deleted),
                          version='1.1')
+
+    def service_get_all(self, ctxt, filters=None):
+        """Ask all cells for their list of services."""
+        return self.call(ctxt,
+                         self.make_msg('service_get_all',
+                                       filters=filters),
+                         version='1.2')
+
+    def service_get_by_compute_host(self, ctxt, host_name):
+        """Get the service entry for a host in a particular cell.  The
+        cell name should be encoded within the host_name.
+        """
+        return self.call(ctxt, self.make_msg('service_get_by_compute_host',
+                                             host_name=host_name),
+                         version='1.2')
+
+    def proxy_rpc_to_manager(self, ctxt, rpc_message, topic, call=False,
+                             timeout=None):
+        """Proxy RPC to a compute manager.  The host in the topic
+        should be encoded with the target cell name.
+        """
+        return self.call(ctxt, self.make_msg('proxy_rpc_to_manager',
+                                             topic=topic,
+                                             rpc_message=rpc_message,
+                                             call=call,
+                                             timeout=timeout),
+                         timeout=timeout,
+                         version='1.2')

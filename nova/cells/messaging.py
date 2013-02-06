@@ -37,6 +37,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -60,7 +61,7 @@ LOG = logging.getLogger(__name__)
 
 # Separator used between cell names for the 'full cell name' and routing
 # path.
-_PATH_CELL_SEP = '!'
+_PATH_CELL_SEP = cells_utils._PATH_CELL_SEP
 
 
 def _reverse_path(path):
@@ -678,6 +679,22 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """
         self.msg_runner.tell_parents_our_capacities(message.ctxt)
 
+    def service_get_by_compute_host(self, message, host_name):
+        """Return the service entry for a compute host."""
+        service = self.db.service_get_by_compute_host(message.ctxt,
+                                                      host_name)
+        return jsonutils.to_primitive(service)
+
+    def proxy_rpc_to_manager(self, message, host_name, rpc_message,
+                             topic, timeout):
+        """Proxy RPC to the given compute topic."""
+        # Check that the host exists.
+        self.db.service_get_by_compute_host(message.ctxt, host_name)
+        if message.need_response:
+            return rpc.call(message.ctxt, topic, rpc_message,
+                    timeout=timeout)
+        rpc.cast(message.ctxt, topic, rpc_message)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -799,6 +816,21 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                 deleted=deleted)
         for instance in instances:
             self._sync_instance(message.ctxt, instance)
+
+    def service_get_all(self, message, filters):
+        if filters is None:
+            filters = {}
+        disabled = filters.pop('disabled', None)
+        services = self.db.service_get_all(message.ctxt, disabled=disabled)
+        ret_services = []
+        for service in services:
+            service = jsonutils.to_primitive(service)
+            for key, val in filters.iteritems():
+                if service[key] != val:
+                    break
+            else:
+                ret_services.append(service)
+        return ret_services
 
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
@@ -1037,6 +1069,33 @@ class MessageRunner(object):
                                     method_kwargs, 'down',
                                     run_locally=False)
         message.process()
+
+    def service_get_all(self, ctxt, filters=None):
+        method_kwargs = dict(filters=filters)
+        message = _BroadcastMessage(self, ctxt, 'service_get_all',
+                                    method_kwargs, 'down',
+                                    run_locally=True, need_response=True)
+        return message.process()
+
+    def service_get_by_compute_host(self, ctxt, cell_name, host_name):
+        method_kwargs = dict(host_name=host_name)
+        message = _TargetedMessage(self, ctxt,
+                                  'service_get_by_compute_host',
+                                  method_kwargs, 'down', cell_name,
+                                  need_response=True)
+        return message.process()
+
+    def proxy_rpc_to_manager(self, ctxt, cell_name, host_name, topic,
+                             rpc_message, call, timeout):
+        method_kwargs = {'host_name': host_name,
+                         'topic': topic,
+                         'rpc_message': rpc_message,
+                         'timeout': timeout}
+        message = _TargetedMessage(self, ctxt,
+                                   'proxy_rpc_to_manager',
+                                   method_kwargs, 'down', cell_name,
+                                   need_response=call)
+        return message.process()
 
     @staticmethod
     def get_message_types():
