@@ -61,7 +61,6 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
-from nova.virt.libvirt import volume_nfs
 
 
 try:
@@ -412,7 +411,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         mnt_base = '/mnt'
         self.flags(nfs_mount_point_base=mnt_base)
 
-        libvirt_driver = volume_nfs.NfsVolumeDriver(self.fake_conn)
+        libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/nfs/share1'
         name = 'volume-00001'
         export_mnt_base = os.path.join(mnt_base,
