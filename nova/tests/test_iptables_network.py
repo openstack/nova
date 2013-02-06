@@ -30,32 +30,34 @@ class IptablesManagerTestCase(test.TestCase):
                      ':INPUT ACCEPT [2223527:305688874]',
                      ':FORWARD ACCEPT [0:0]',
                      ':OUTPUT ACCEPT [2172501:140856656]',
-                     ':nova-compute-FORWARD - [0:0]',
-                     ':nova-compute-INPUT - [0:0]',
-                     ':nova-compute-local - [0:0]',
-                     ':nova-compute-OUTPUT - [0:0]',
+                     ':iptables-top-rule - [0:0]',
+                     ':iptables-bottom-rule - [0:0]',
+                     ':%s-FORWARD - [0:0]' % (binary_name),
+                     ':%s-INPUT - [0:0]' % (binary_name),
+                     ':%s-local - [0:0]' % (binary_name),
+                     ':%s-OUTPUT - [0:0]' % (binary_name),
                      ':nova-filter-top - [0:0]',
-                     '[0:0] -A FORWARD -j nova-filter-top ',
-                     '[0:0] -A OUTPUT -j nova-filter-top ',
-                     '[0:0] -A nova-filter-top -j nova-compute-local ',
-                     '[0:0] -A INPUT -j nova-compute-INPUT ',
-                     '[0:0] -A OUTPUT -j nova-compute-OUTPUT ',
-                     '[0:0] -A FORWARD -j nova-compute-FORWARD ',
+                     '[0:0] -A FORWARD -j nova-filter-top',
+                     '[0:0] -A OUTPUT -j nova-filter-top',
+                     '[0:0] -A nova-filter-top -j %s-local' % (binary_name),
+                     '[0:0] -A INPUT -j %s-INPUT' % (binary_name),
+                     '[0:0] -A OUTPUT -j %s-OUTPUT' % (binary_name),
+                     '[0:0] -A FORWARD -j %s-FORWARD' % (binary_name),
                      '[0:0] -A INPUT -i virbr0 -p udp -m udp --dport 53 '
-                     '-j ACCEPT ',
+                     '-j ACCEPT',
                      '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 53 '
-                     '-j ACCEPT ',
+                     '-j ACCEPT',
                      '[0:0] -A INPUT -i virbr0 -p udp -m udp --dport 67 '
-                     '-j ACCEPT ',
+                     '-j ACCEPT',
                      '[0:0] -A INPUT -i virbr0 -p tcp -m tcp --dport 67 '
-                     '-j ACCEPT ',
+                     '-j ACCEPT',
                      '[0:0] -A FORWARD -s 192.168.122.0/24 -i virbr0 '
-                     '-j ACCEPT ',
-                     '[0:0] -A FORWARD -i virbr0 -o virbr0 -j ACCEPT ',
+                     '-j ACCEPT',
+                     '[0:0] -A FORWARD -i virbr0 -o virbr0 -j ACCEPT',
                      '[0:0] -A FORWARD -o virbr0 -j REJECT --reject-with '
-                     'icmp-port-unreachable ',
+                     'icmp-port-unreachable',
                      '[0:0] -A FORWARD -i virbr0 -j REJECT --reject-with '
-                     'icmp-port-unreachable ',
+                     'icmp-port-unreachable',
                      'COMMIT',
                      '# Completed on Fri Feb 18 15:17:05 2011']
 
@@ -65,19 +67,20 @@ class IptablesManagerTestCase(test.TestCase):
                   ':INPUT ACCEPT [2447:225266]',
                   ':OUTPUT ACCEPT [63491:4191863]',
                   ':POSTROUTING ACCEPT [63112:4108641]',
-                  ':nova-compute-OUTPUT - [0:0]',
-                  ':nova-compute-floating-ip-snat - [0:0]',
-                  ':nova-compute-SNATTING - [0:0]',
-                  ':nova-compute-PREROUTING - [0:0]',
-                  ':nova-compute-POSTROUTING - [0:0]',
+                  ':%s-OUTPUT - [0:0]' % (binary_name),
+                  ':%s-float-snat - [0:0]' % (binary_name),
+                  ':%s-snat - [0:0]' % (binary_name),
+                  ':%s-PREROUTING - [0:0]' % (binary_name),
+                  ':%s-POSTROUTING - [0:0]' % (binary_name),
                   ':nova-postrouting-bottom - [0:0]',
-                  '[0:0] -A PREROUTING -j nova-compute-PREROUTING ',
-                  '[0:0] -A OUTPUT -j nova-compute-OUTPUT ',
-                  '[0:0] -A POSTROUTING -j nova-compute-POSTROUTING ',
-                  '[0:0] -A POSTROUTING -j nova-postrouting-bottom ',
-                  '[0:0] -A nova-postrouting-bottom -j nova-compute-SNATTING ',
-                  '[0:0] -A nova-compute-SNATTING '
-                  '-j nova-compute-floating-ip-snat ',
+                  '[0:0] -A PREROUTING -j %s-PREROUTING' % (binary_name),
+                  '[0:0] -A OUTPUT -j %s-OUTPUT' % (binary_name),
+                  '[0:0] -A POSTROUTING -j %s-POSTROUTING' % (binary_name),
+                  '[0:0] -A POSTROUTING -j nova-postrouting-bottom',
+                  '[0:0] -A nova-postrouting-bottom '
+                  '-j %s-SNATTING' % (binary_name),
+                  '[0:0] -A %s-SNATTING '
+                  '-j %s-floating-ip-snat' % (binary_name, binary_name),
                   'COMMIT',
                   '# Completed on Fri Feb 18 15:17:05 2011']
 
@@ -105,13 +108,13 @@ class IptablesManagerTestCase(test.TestCase):
         new_lines = self.manager._modify_rules(current_lines,
                                                self.manager.ipv4['nat'])
 
-        for line in [':nova-compute-OUTPUT - [0:0]',
-                     ':nova-compute-floating-ip-snat - [0:0]',
-                     ':nova-compute-SNATTING - [0:0]',
-                     ':nova-compute-PREROUTING - [0:0]',
-                     ':nova-compute-POSTROUTING - [0:0]']:
-            self.assertTrue(line in new_lines, "One of nova-compute's chains "
-                                               "went missing.")
+        for line in [':%s-OUTPUT - [0:0]' % (self.binary_name),
+                     ':%s-float-snat - [0:0]' % (self.binary_name),
+                     ':%s-snat - [0:0]' % (self.binary_name),
+                     ':%s-PREROUTING - [0:0]' % (self.binary_name),
+                     ':%s-POSTROUTING - [0:0]' % (self.binary_name)]:
+            self.assertTrue(line in new_lines, "One of our chains went"
+                                               " missing.")
 
         seen_lines = set()
         for line in new_lines:
@@ -140,12 +143,12 @@ class IptablesManagerTestCase(test.TestCase):
         new_lines = self.manager._modify_rules(current_lines,
                                                self.manager.ipv4['filter'])
 
-        for line in [':nova-compute-FORWARD - [0:0]',
-                     ':nova-compute-INPUT - [0:0]',
-                     ':nova-compute-local - [0:0]',
-                     ':nova-compute-OUTPUT - [0:0]']:
-            self.assertTrue(line in new_lines, "One of nova-compute's chains"
-                                               " went missing.")
+        for line in [':%s-FORWARD - [0:0]' % (self.binary_name),
+                     ':%s-INPUT - [0:0]' % (self.binary_name),
+                     ':%s-local - [0:0]' % (self.binary_name),
+                     ':%s-OUTPUT - [0:0]' % (self.binary_name)]:
+            self.assertTrue(line in new_lines, "One of our chains went"
+                                               " missing.")
 
         seen_lines = set()
         for line in new_lines:
@@ -189,3 +192,32 @@ class IptablesManagerTestCase(test.TestCase):
                         "COMMIT" == new_lines[-2] and
                         "#Completed by nova" == new_lines[-1],
                         "iptables rules not generated in the correct order")
+
+    def test_iptables_top_order(self):
+        # Test iptables_top_regex
+        current_lines = list(self.sample_filter)
+        current_lines[12:12] = ['[0:0] -A FORWARD -j iptables-top-rule']
+        self.flags(iptables_top_regex='-j iptables-top-rule')
+        new_lines = self.manager._modify_rules(current_lines,
+                                               self.manager.ipv4['filter'])
+        self.assertEqual(current_lines, new_lines)
+
+    def test_iptables_bottom_order(self):
+        # Test iptables_bottom_regex
+        current_lines = list(self.sample_filter)
+        current_lines[26:26] = ['[0:0] -A FORWARD -j iptables-bottom-rule']
+        self.flags(iptables_bottom_regex='-j iptables-bottom-rule')
+        new_lines = self.manager._modify_rules(current_lines,
+                                               self.manager.ipv4['filter'])
+        self.assertEqual(current_lines, new_lines)
+
+    def test_iptables_preserve_order(self):
+        # Test both iptables_top_regex and iptables_bottom_regex
+        current_lines = list(self.sample_filter)
+        current_lines[12:12] = ['[0:0] -A FORWARD -j iptables-top-rule']
+        current_lines[27:27] = ['[0:0] -A FORWARD -j iptables-bottom-rule']
+        self.flags(iptables_top_regex='-j iptables-top-rule')
+        self.flags(iptables_bottom_regex='-j iptables-bottom-rule')
+        new_lines = self.manager._modify_rules(current_lines,
+                                               self.manager.ipv4['filter'])
+        self.assertEqual(current_lines, new_lines)
