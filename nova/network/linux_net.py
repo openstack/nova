@@ -61,9 +61,14 @@ linux_net_opts = [
     cfg.IntOpt('dhcp_lease_time',
                default=120,
                help='Lifetime of a DHCP lease in seconds'),
-    cfg.StrOpt('dns_server',
-               default=None,
-               help='if set, uses specific dns server for dnsmasq'),
+    cfg.MultiStrOpt('dns_server',
+                    default=[],
+                    help='if set, uses specific dns server for dnsmasq. Can'
+                         'be specified multiple times.'),
+    cfg.BoolOpt('use_network_dns_servers',
+                default=False,
+                help='if set, uses the dns1 and dns2 from the network ref.'
+                     'as dns servers.'),
     cfg.ListOpt('dmz_cidr',
                default=[],
                help='A list of dmz range that should be accepted'),
@@ -961,11 +966,21 @@ def restart_dhcp(context, dev, network_ref):
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % CONF.dhcpbridge,
            '--leasefile-ro']
-    if network_ref['multi_host'] and not CONF.dns_server:
-        cmd += ['--no-hosts', '--addn-hosts=%s' % _dhcp_file(dev, 'hosts')]
-    if CONF.dns_server:
-        cmd += ['-h', '-R', '--server=%s' % CONF.dns_server]
 
+    dns_servers = set(CONF.dns_server)
+    if CONF.use_network_dns_servers:
+        if network_ref.get('dns1'):
+            dns_servers.add(network_ref.get('dns1'))
+        if network_ref.get('dns2'):
+            dns_servers.add(network_ref.get('dns2'))
+    if network_ref['multi_host'] or dns_servers:
+        cmd.append('--no-hosts')
+    if network_ref['multi_host']:
+        '--addn-hosts=%s' % _dhcp_file(dev, 'hosts')
+    if dns_servers:
+        cmd.append('--no-resolv')
+    for dns_server in dns_servers:
+        cmd.append('--server=%s' % dns_server)
     if CONF.use_single_default_gateway:
         cmd += ['--dhcp-optsfile=%s' % _dhcp_file(dev, 'opts')]
 
