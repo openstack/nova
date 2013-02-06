@@ -1740,6 +1740,11 @@ class ServersControllerCreateTest(test.TestCase):
             """
             return self.instance_cache_by_id[instance_id]
 
+        def instance_update(context, uuid, values):
+            instance = self.instance_cache_by_uuid[uuid]
+            instance.update(values)
+            return instance
+
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry."""
             if (topic == CONF.scheduler_topic and
@@ -1779,6 +1784,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(db, 'instance_system_metadata_update',
                 fake_method)
         self.stubs.Set(db, 'instance_get', instance_get)
+        self.stubs.Set(db, 'instance_update', instance_update)
         self.stubs.Set(rpc, 'cast', fake_method)
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(db, 'instance_update_and_get_original',

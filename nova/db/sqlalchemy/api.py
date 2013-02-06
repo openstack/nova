@@ -1851,8 +1851,9 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
                 raise exception.UnexpectedTaskStateError(actual=actual_state,
                                                          expected=expected)
 
+        instance_hostname = instance_ref['hostname'] or ''
         if ("hostname" in values and
-            values["hostname"].lower() != instance_ref["hostname"].lower()):
+                values["hostname"].lower() != instance_hostname.lower()):
                 _validate_unique_server_name(context,
                                              session,
                                              values['hostname'])
