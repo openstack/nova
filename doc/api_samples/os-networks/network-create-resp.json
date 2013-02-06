@@ -1,0 +1,32 @@
+{
+    "network": {
+        "bridge": null,
+        "bridge_interface": null,
+        "broadcast": "10.20.105.255",
+        "cidr": "10.20.105.0/24",
+        "cidr_v6": null,
+        "created_at": null,
+        "deleted": null,
+        "deleted_at": null,
+        "dhcp_start": "10.20.105.2",
+        "dns1": null,
+        "dns2": null,
+        "gateway": "10.20.105.1",
+        "gateway_v6": null,
+        "host": null,
+        "id": "668687f9-d724-4976-a6f4-a6fd3ad83da3",
+        "injected": null,
+        "label": "new net 111",
+        "multi_host": null,
+        "netmask": "255.255.255.0",
+        "netmask_v6": null,
+        "priority": null,
+        "project_id": null,
+        "rxtx_base": null,
+        "updated_at": null,
+        "vlan": null,
+        "vpn_private_address": null,
+        "vpn_public_address": null,
+        "vpn_public_port": null
+    }
+}
