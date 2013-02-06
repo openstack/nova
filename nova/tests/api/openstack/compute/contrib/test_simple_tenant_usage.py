@@ -65,7 +65,8 @@ def get_fake_db_instance(start, end, instance_id, tenant_id):
             'terminated_at': end}
 
 
-def fake_instance_get_active_by_window(self, context, begin, end, project_id):
+def fake_instance_get_active_by_window_joined(self, context, begin, end,
+        project_id):
             return [get_fake_db_instance(START,
                                          STOP,
                                          x,
@@ -79,7 +80,7 @@ class SimpleTenantUsageTest(test.TestCase):
         self.stubs.Set(api.API, "get_instance_type",
                        fake_instance_type_get)
         self.stubs.Set(api.API, "get_active_by_window",
-                       fake_instance_get_active_by_window)
+                       fake_instance_get_active_by_window_joined)
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'faketenant_0',
                                                     is_admin=True)

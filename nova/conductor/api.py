@@ -113,11 +113,6 @@ class LocalAPI(object):
         return self._manager.instance_get_all_hung_in_rebooting(context,
                                                                 timeout)
 
-    def instance_get_active_by_window(self, context, begin, end=None,
-                                       project_id=None, host=None):
-        return self._manager.instance_get_active_by_window(
-            context, begin, end, project_id, host)
-
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):
         return self._manager.instance_get_active_by_window_joined(
@@ -403,11 +398,6 @@ class API(object):
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         return self.conductor_rpcapi.instance_get_all_hung_in_rebooting(
             context, timeout)
-
-    def instance_get_active_by_window(self, context, begin, end=None,
-                                      project_id=None, host=None):
-        return self.conductor_rpcapi.instance_get_active_by_window(
-            context, begin, end, project_id, host)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):

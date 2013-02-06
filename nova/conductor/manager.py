@@ -239,6 +239,7 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def instance_get_active_by_window(self, context, begin, end=None,
                                       project_id=None, host=None):
+        # Unused, but cannot remove until major RPC version bump
         result = self.db.instance_get_active_by_window(context, begin, end,
                                                        project_id, host)
         return jsonutils.to_primitive(result)

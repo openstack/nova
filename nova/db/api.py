@@ -606,17 +606,6 @@ def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                             marker=marker)
 
 
-def instance_get_active_by_window(context, begin, end=None, project_id=None,
-                                  host=None):
-    """Get instances active during a certain time window.
-
-    Specifying a project_id will filter for a certain project.
-    Specifying a host will filter for instances on a given compute host.
-    """
-    return IMPL.instance_get_active_by_window(context, begin, end,
-                                              project_id, host)
-
-
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None):
     """Get instances and joins active during a certain time window.

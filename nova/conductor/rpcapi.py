@@ -74,6 +74,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.39 - Added notify_usage_exists
     1.40 - Added security_groups_trigger_handler and
                  security_groups_trigger_members_refresh
+           Remove instance_get_active_by_window
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -242,13 +243,6 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def instance_get_all_hung_in_rebooting(self, context, timeout):
         msg = self.make_msg('instance_get_all_hung_in_rebooting',
                             timeout=timeout)
-        return self.call(context, msg, version='1.15')
-
-    def instance_get_active_by_window(self, context, begin, end=None,
-                                      project_id=None, host=None):
-        msg = self.make_msg('instance_get_active_by_window',
-                            begin=begin, end=end, project_id=project_id,
-                            host=host)
         return self.call(context, msg, version='1.15')
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
