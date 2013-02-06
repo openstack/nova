@@ -1172,26 +1172,6 @@ def tempdir(**kwargs):
             LOG.error(_('Could not remove tmpdir: %s'), str(e))
 
 
-def strcmp_const_time(s1, s2):
-    """Constant-time string comparison.
-
-    :params s1: the first string
-    :params s2: the second string
-
-    :return: True if the strings are equal.
-
-    This function takes two strings and compares them.  It is intended to be
-    used when doing a comparison for authentication purposes to help guard
-    against timing attacks.
-    """
-    if len(s1) != len(s2):
-        return False
-    result = 0
-    for (a, b) in zip(s1, s2):
-        result |= ord(a) ^ ord(b)
-    return result == 0
-
-
 def walk_class_hierarchy(clazz, encountered=None):
     """Walk class hierarchy, yielding most derived classes first."""
     if not encountered:
