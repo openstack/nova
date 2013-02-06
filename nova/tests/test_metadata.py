@@ -549,6 +549,7 @@ class MetadataPasswordTestCase(test.TestCase):
         self.instance = copy.copy(INSTANCES[0])
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
+        self.flags(use_local=True, group='conductor')
 
     def test_get_password(self):
         request = webob.Request.blank('')
@@ -566,8 +567,16 @@ class MetadataPasswordTestCase(test.TestCase):
         request = webob.Request.blank('')
         request.method = 'POST'
         request.body = val
-        self.stubs.Set(db, 'instance_system_metadata_update',
-                       lambda *a, **kw: None)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       lambda *a, **kw: {'system_metadata': []})
+
+        def fake_instance_update(context, uuid, updates):
+            self.assertIn('system_metadata', updates)
+            self.assertIn('password_0', updates['system_metadata'])
+            return self.instance, self.instance
+
+        self.stubs.Set(db, 'instance_update_and_get_original',
+                       fake_instance_update)
         password.handle_password(request, self.mdinst)
 
     def test_set_password(self):

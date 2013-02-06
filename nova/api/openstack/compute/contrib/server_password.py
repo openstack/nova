@@ -24,6 +24,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import db
 from nova import exception
 
 
@@ -62,7 +63,9 @@ class ServerPasswordController(object):
         context = req.environ['nova.context']
         authorize(context)
         instance = self._get_instance(context, server_id)
-        password.set_password(context, instance['uuid'], None)
+        meta = password.convert_password(context, None)
+        db.instance_system_metadata_update(context, instance['uuid'],
+                                           meta, False)
 
 
 class Server_password(extensions.ExtensionDescriptor):

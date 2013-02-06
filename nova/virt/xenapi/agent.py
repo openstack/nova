@@ -123,8 +123,9 @@ def _get_agent_version(session, instance, vm_ref):
 
 
 class XenAPIBasedAgent(object):
-    def __init__(self, session, instance, vm_ref):
+    def __init__(self, session, virtapi, instance, vm_ref):
         self.session = session
+        self.virtapi = virtapi
         self.instance = instance
         self.vm_ref = vm_ref
 
@@ -212,9 +213,13 @@ class XenAPIBasedAgent(object):
 
         sshkey = self.instance.get('key_data')
         if sshkey:
+            ctxt = context.get_admin_context()
             enc = crypto.ssh_encrypt_text(sshkey, new_pass)
-            password.set_password(context.get_admin_context(),
-                                  self.instance['uuid'], base64.b64encode(enc))
+            sys_meta = utils.metadata_to_dict(self.instance['system_metadata'])
+            sys_meta.update(password.convert_password(ctxt,
+                                                      base64.b64encode(enc)))
+            self.virtapi.instance_update(ctxt, self.instance['uuid'],
+                                         {'system_metadata': sys_meta})
 
         return resp['message']
 
