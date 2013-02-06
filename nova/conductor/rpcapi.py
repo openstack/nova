@@ -71,6 +71,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.36 - Added instance_fault_create
     1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
     1.38 - Added service name to instance_update
+    1.39 - Added notify_usage_exists
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -361,3 +362,16 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                             begin=begin, end=end, host=host, errors=errors,
                             message=message)
         return self.call(context, msg, version='1.37')
+
+    def notify_usage_exists(self, context, instance, current_period=False,
+                            ignore_missing_network_data=True,
+                            system_metadata=None, extra_usage_info=None):
+        instance_p = jsonutils.to_primitive(instance)
+        system_metadata_p = jsonutils.to_primitive(system_metadata)
+        extra_usage_info_p = jsonutils.to_primitive(extra_usage_info)
+        msg = self.make_msg('notify_usage_exists', instance=instance_p,
+                  current_period=current_period,
+                  ignore_missing_network_data=ignore_missing_network_data,
+                  system_metadata=system_metadata_p,
+                  extra_usage_info=extra_usage_info_p)
+        return self.call(context, msg, version='1.39')

@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+from nova.compute import utils as compute_utils
 from nova import exception
 from nova import manager
 from nova import notifications
@@ -44,7 +45,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.38'
+    RPC_API_VERSION = '1.39'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -343,3 +344,10 @@ class ConductorManager(manager.SchedulerDependentManager):
         result = self.db.task_log_end_task(context.elevated(), task_name,
                                            begin, end, host, errors, message)
         return jsonutils.to_primitive(result)
+
+    def notify_usage_exists(self, context, instance, current_period=False,
+                            ignore_missing_network_data=True,
+                            system_metadata=None, extra_usage_info=None):
+        compute_utils.notify_usage_exists(context, instance, current_period,
+                                          ignore_missing_network_data,
+                                          system_metadata, extra_usage_info)

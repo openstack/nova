@@ -1362,7 +1362,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # to point to the new one... we have to override it.
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
-            compute_utils.notify_usage_exists(context, instance,
+            self.conductor_api.notify_usage_exists(context, instance,
                     current_period=True, system_metadata=orig_sys_metadata,
                     extra_usage_info=extra_usage_info)
 
@@ -1826,7 +1826,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
-        compute_utils.notify_usage_exists(
+        self.conductor_api.notify_usage_exists(
                 context, instance, current_period=True)
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
@@ -1994,7 +1994,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
-            compute_utils.notify_usage_exists(
+            self.conductor_api.notify_usage_exists(
                     context, instance, current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
@@ -3158,7 +3158,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               self.host, num_instances)
                 for instance in instances:
                     try:
-                        compute_utils.notify_usage_exists(
+                        self.conductor_api.notify_usage_exists(
                             context, instance,
                             ignore_missing_network_data=False)
                         successes += 1

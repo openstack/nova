@@ -17,6 +17,7 @@
 import mox
 
 from nova.compute import instance_types
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
 from nova.conductor import api as conductor_api
@@ -26,6 +27,7 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
+from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
@@ -462,6 +464,36 @@ class _BaseTestCase(object):
         result = self.conductor.task_log_end_task(
             self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
         self.assertEqual(result, 'result')
+
+    def test_notify_usage_exists(self):
+        info = {
+            'audit_period_beginning': 'start',
+            'audit_period_ending': 'end',
+            'bandwidth': 'bw_usage',
+            'image_meta': {},
+            'extra': 'info',
+            }
+        instance = {
+            'system_metadata': [],
+            }
+
+        self.mox.StubOutWithMock(notifications, 'audit_period_bounds')
+        self.mox.StubOutWithMock(notifications, 'bandwidth_usage')
+        self.mox.StubOutWithMock(compute_utils, 'notify_about_instance_usage')
+
+        notifications.audit_period_bounds(False).AndReturn(('start', 'end'))
+        notifications.bandwidth_usage(instance, 'start', True).AndReturn(
+            'bw_usage')
+        compute_utils.notify_about_instance_usage(self.context, instance,
+                                                  'exists',
+                                                  system_metadata={},
+                                                  extra_usage_info=info)
+
+        self.mox.ReplayAll()
+
+        self.conductor.notify_usage_exists(self.context, instance,
+                                           system_metadata={},
+                                           extra_usage_info=dict(extra='info'))
 
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):

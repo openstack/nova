@@ -313,6 +313,13 @@ class LocalAPI(object):
                                                begin, end, host,
                                                errors, message)
 
+    def notify_usage_exists(self, context, instance, current_period=False,
+                            ignore_missing_network_data=True,
+                            system_metadata=None, extra_usage_info=None):
+        return self._manager.notify_usage_exists(
+            context, instance, current_period, ignore_missing_network_data,
+            system_metadata, extra_usage_info)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -603,3 +610,10 @@ class API(object):
         return self.conductor_rpcapi.task_log_end_task(context, task_name,
                                                        begin, end, host,
                                                        errors, message)
+
+    def notify_usage_exists(self, context, instance, current_period=False,
+                            ignore_missing_network_data=True,
+                            system_metadata=None, extra_usage_info=None):
+        return self.conductor_rpcapi.notify_usage_exists(
+            context, instance, current_period, ignore_missing_network_data,
+            system_metadata, extra_usage_info)
