@@ -297,7 +297,7 @@ class LocalAPI(object):
     def service_update(self, context, service, values):
         return self._manager.service_update(context, service, values)
 
-    def task_log_get(self, context, task_name, begin, end, host, state):
+    def task_log_get(self, context, task_name, begin, end, host, state=None):
         return self._manager.task_log_get(context, task_name, begin, end,
                                           host, state)
 
@@ -595,7 +595,7 @@ class API(object):
     def service_update(self, context, service, values):
         return self.conductor_rpcapi.service_update(context, service, values)
 
-    def task_log_get(self, context, task_name, begin, end, host, state):
+    def task_log_get(self, context, task_name, begin, end, host, state=None):
         return self.conductor_rpcapi.task_log_get(context, task_name, begin,
                                                   end, host, state)
 
