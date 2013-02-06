@@ -2928,13 +2928,14 @@ class SecurityGroupAPI(base.Base):
             security_groups.add(security_group)
 
         # ..then we find the instances that are members of these groups..
-        instances = set()
+        instances = {}
         for security_group in security_groups:
             for instance in security_group['instances']:
-                instances.add(instance)
+                if instance['uuid'] not in instances:
+                    instances[instance['uuid']] = instance
 
         # ..then we send a request to refresh the rules for each instance.
-        for instance in instances:
+        for instance in instances.values():
             if instance['host']:
                 self.security_group_rpcapi.refresh_instance_security_rules(
                         context, instance['host'], instance)
