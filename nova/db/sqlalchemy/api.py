@@ -1536,8 +1536,8 @@ def _build_instance_get(context, session=None):
 @require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups',
-                           'metadata', 'instance_type']
+        columns_to_join = ['info_cache', 'security_groups', 'metadata',
+                           'instance_type', 'system_metadata']
     query = model_query(context, models.Instance)
     for column in columns_to_join:
         query = query.options(joinedload(column))
@@ -1764,6 +1764,7 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
                      datetime.timedelta(seconds=reboot_window))
 
     return model_query(context, models.Instance).\
+            options(joinedload('system_metadata')).\
             filter(models.Instance.updated_at <= reboot_window).\
             filter_by(task_state=task_states.REBOOTING).all()
 
