@@ -320,6 +320,14 @@ class LocalAPI(object):
             context, instance, current_period, ignore_missing_network_data,
             system_metadata, extra_usage_info)
 
+    def security_groups_trigger_handler(self, context, event, *args):
+        return self._manager.security_groups_trigger_handler(context,
+                                                             event, args)
+
+    def security_groups_trigger_members_refresh(self, context, group_ids):
+        return self._manager.security_groups_trigger_members_refresh(context,
+                                                                     group_ids)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -617,3 +625,12 @@ class API(object):
         return self.conductor_rpcapi.notify_usage_exists(
             context, instance, current_period, ignore_missing_network_data,
             system_metadata, extra_usage_info)
+
+    def security_groups_trigger_handler(self, context, event, *args):
+        return self.conductor_rpcapi.security_groups_trigger_handler(context,
+                                                                     event,
+                                                                     args)
+
+    def security_groups_trigger_members_refresh(self, context, group_ids):
+        return self.conductor_rpcapi.security_groups_trigger_members_refresh(
+            context, group_ids)
