@@ -28,7 +28,7 @@ os.sys.path.insert(0, parentdir)
 import install_venv_common as install_venv
 
 
-def print_help():
+def print_help(venv, root):
     help = """
     Nova development environment setup is complete.
 
@@ -38,21 +38,27 @@ def print_help():
     To activate the Nova virtualenv for the extent of your current shell
     session you can run:
 
-    $ source .venv/bin/activate
+    $ source %s/bin/activate
 
     Or, if you prefer, you can run commands in the virtualenv on a case by case
     basis by running:
 
-    $ tools/with_venv.sh <your command>
+    $ %s/tools/with_venv.sh <your command>
 
     Also, make test will automatically use the virtualenv.
     """
-    print help
+    print help % (venv, root)
 
 
 def main(argv):
     root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+    if os.environ.get('tools_path'):
+        root = os.environ['tools_path']
     venv = os.path.join(root, '.venv')
+    if os.environ.get('venv'):
+        venv = os.environ['venv']
+
     pip_requires = os.path.join(root, 'tools', 'pip-requires')
     test_requires = os.path.join(root, 'tools', 'test-requires')
     py_version = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
@@ -65,7 +71,7 @@ def main(argv):
     install.create_virtualenv(no_site_packages=options.no_site_packages)
     install.install_dependencies()
     install.post_process()
-    print_help()
+    print_help(venv, root)
 
 if __name__ == '__main__':
     main(sys.argv)
