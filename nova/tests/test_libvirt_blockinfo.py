@@ -18,6 +18,7 @@
 from nova import block_device
 from nova import context
 from nova import db
+from nova import exception
 from nova import test
 import nova.tests.image.fake
 from nova.virt.libvirt import blockinfo
@@ -394,3 +395,33 @@ class LibvirtBlockInfoTest(test.TestCase):
             'root': {'bus': 'virtio', 'dev': 'vdf', 'type': 'disk'}
             }
         self.assertEqual(mapping, expect)
+
+    def test_get_disk_bus(self):
+        bus = blockinfo.get_disk_bus_for_device_type('kvm')
+        self.assertEqual(bus, 'virtio')
+
+        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                                                     device_type='cdrom')
+        self.assertEqual(bus, 'ide')
+
+        image_meta = {'properties': {'disk_bus': 'scsi'}}
+        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                                                     image_meta)
+        self.assertEqual(bus, 'scsi')
+
+        image_meta = {'properties': {'disk_bus': 'usb',
+                                     'cdrom_bus': 'scsi'}}
+        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                                                     image_meta,
+                                                     device_type='cdrom')
+        self.assertEqual(bus, 'scsi')
+
+        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                                                     image_meta)
+        self.assertEqual(bus, 'usb')
+
+        image_meta = {'properties': {'disk_bus': 'xen'}}
+        self.assertRaises(exception.NovaException,
+                          blockinfo.get_disk_bus_for_device_type,
+                          'kvm',
+                          image_meta)
