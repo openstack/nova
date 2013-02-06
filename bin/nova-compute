@@ -31,6 +31,7 @@ else:
 
 import os
 import sys
+import traceback
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -42,6 +43,8 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 
 from nova import config
+import nova.db.api
+from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
@@ -49,11 +52,31 @@ from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
+CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
+LOG = logging.getLogger('nova.compute')
+
+
+def block_db_access():
+    class NoDB(object):
+        def __getattr__(self, attr):
+            return self
+
+        def __call__(self, *args, **kwargs):
+            stacktrace = "".join(traceback.format_stack())
+            LOG.error('No db access allowed in nova-compute: %s' % stacktrace)
+            raise exception.DBError('No db access allowed in nova-compute')
+
+    nova.db.api.IMPL = NoDB()
+
 
 if __name__ == '__main__':
     config.parse_args(sys.argv)
     logging.setup('nova')
     utils.monkey_patch()
+
+    if not CONF.conductor.use_local:
+        block_db_access()
+
     server = service.Service.create(binary='nova-compute',
                                     topic=CONF.compute_topic,
                                     db_allowed=False)
