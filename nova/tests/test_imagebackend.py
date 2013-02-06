@@ -19,16 +19,16 @@ import fixtures
 import os
 
 from nova.openstack.common import cfg
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 
 
 class _ImageTestCase(object):
-    INSTANCES_PATH = '/fake'
+    INSTANCES_PATH = '/instances_path'
 
     def mock_create_image(self, image):
         def create_image(fn, base, size, *args, **kwargs):
@@ -39,14 +39,19 @@ class _ImageTestCase(object):
         super(_ImageTestCase, self).setUp()
         self.flags(disable_process_locking=True,
                    instances_path=self.INSTANCES_PATH)
-        self.INSTANCE = {'name': 'instance'}
+        self.INSTANCE = {'name': 'instance',
+                         'uuid': uuidutils.generate_uuid()}
         self.NAME = 'fake.vm'
         self.TEMPLATE = 'template'
 
+        self.OLD_STYLE_INSTANCE_PATH = \
+            fake_libvirt_utils.get_instance_path(self.INSTANCE, forceold=True)
         self.PATH = os.path.join(
-            libvirt_utils.get_instance_path(self.INSTANCE), self.NAME)
-        self.TEMPLATE_DIR = os.path.join(CONF.instances_path,
-                                         '_base')
+            fake_libvirt_utils.get_instance_path(self.INSTANCE), self.NAME)
+
+        # TODO(mikal): rename template_dir to base_dir and template_path
+        # to cached_image_path. This will be less confusing.
+        self.TEMPLATE_DIR = os.path.join(CONF.instances_path, '_base')
         self.TEMPLATE_PATH = os.path.join(self.TEMPLATE_DIR, 'template')
 
         self.useFixture(fixtures.MonkeyPatch(
@@ -55,6 +60,8 @@ class _ImageTestCase(object):
 
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
         os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
@@ -72,6 +79,8 @@ class _ImageTestCase(object):
 
     def test_cache_image_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
@@ -84,6 +93,8 @@ class _ImageTestCase(object):
 
     def test_cache_base_dir_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
@@ -100,6 +111,8 @@ class _ImageTestCase(object):
 
     def test_cache_template_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
@@ -197,6 +210,11 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
     def test_create_image_with_size(self):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        os.path.exists(self.PATH).AndReturn(False)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
         imagebackend.disk.extend(self.PATH, self.SIZE)
@@ -218,6 +236,7 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
         super(LvmTestCase, self).setUp()
         self.flags(libvirt_images_volume_group=self.VG)
         self.LV = '%s_%s' % (self.INSTANCE['name'], self.NAME)
+        self.OLD_STYLE_INSTANCE_PATH = None
         self.PATH = os.path.join('/dev', self.VG, self.LV)
 
         self.disk = imagebackend.disk
@@ -344,7 +363,8 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
 
 
 class BackendTestCase(test.TestCase):
-    INSTANCE = {'name': 'fake-instance'}
+    INSTANCE = {'name': 'fake-instance',
+                'uuid': uuidutils.generate_uuid()}
     NAME = 'fake-name.suffix'
 
     def get_image(self, use_cow, image_type):

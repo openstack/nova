@@ -220,7 +220,7 @@ class ImageCacheManager(object):
 
         self.used_images = {}
         self.image_popularity = {}
-        self.instance_names = {}
+        self.instance_names = set()
 
         self.active_base_files = []
         self.corrupt_base_files = []
@@ -263,7 +263,11 @@ class ImageCacheManager(object):
         self.instance_names = set()
 
         for instance in all_instances:
+            # NOTE(mikal): "instance name" here means "the name of a directory
+            # which might contain an instance" and therefore needs to include
+            # historical permutations as well as the current one.
             self.instance_names.add(instance['name'])
+            self.instance_names.add(instance['uuid'])
 
             resize_states = [task_states.RESIZE_PREP,
                              task_states.RESIZE_MIGRATING,
@@ -272,6 +276,7 @@ class ImageCacheManager(object):
             if instance['task_state'] in resize_states or \
                 instance['vm_state'] == vm_states.RESIZED:
                 self.instance_names.add(instance['name'] + '_resize')
+                self.instance_names.add(instance['uuid'] + '_resize')
 
             image_ref_str = str(instance['image_ref'])
             local, remote, insts = self.used_images.get(image_ref_str,

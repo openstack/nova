@@ -518,17 +518,19 @@ def fetch_image(context, target, image_id, user_id, project_id):
     images.fetch_to_raw(context, image_id, target, user_id, project_id)
 
 
-def get_instance_path(instance):
+def get_instance_path(instance, forceold=False):
     """Determine the correct path for instance storage.
 
-    This used to be calculated all over the place. This method centralizes
-    this into one location, which will make it easier to change the
-    algorithm used to name instance storage directories.
+    This method determines the directory name for instance storage, while
+    handling the fact that we changed the naming style to something more
+    unique in the grizzly release.
 
     :param instance: the instance we want a path for
+    :param forceold: force the use of the pre-grizzly format
 
     :returns: a path to store information about that instance
     """
-    # TODO(mikal): we should use UUID instead of name, as name isn't
-    # nessesarily unique
-    return os.path.join(CONF.instances_path, instance['name'])
+    pre_grizzly_name = os.path.join(CONF.instances_path, instance['name'])
+    if forceold or os.path.exists(pre_grizzly_name):
+        return pre_grizzly_name
+    return os.path.join(CONF.instances_path, instance['uuid'])

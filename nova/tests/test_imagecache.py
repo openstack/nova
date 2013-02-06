@@ -47,10 +47,10 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def setUp(self):
         super(ImageCacheManagerTestCase, self).setUp()
-        self.stock_instance_names = {'instance-00000001': '123',
-                                     'instance-00000002': '456',
-                                     'instance-00000003': '789',
-                                     'banana-42-hamster': '444'}
+        self.stock_instance_names = set(['instance-00000001',
+                                         'instance-00000002',
+                                         'instance-00000003',
+                                         'banana-42-hamster'])
 
     def test_read_stored_checksum_missing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
@@ -181,6 +181,9 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertTrue(image_cache_manager.used_images['2'] ==
                         (1, 1, ['inst-2', 'inst-3']))
 
+        self.assertTrue('inst-1' in image_cache_manager.instance_names)
+        self.assertTrue('123' in image_cache_manager.instance_names)
+
         self.assertEqual(len(image_cache_manager.image_popularity), 2)
         self.assertEqual(image_cache_manager.image_popularity['1'], 1)
         self.assertEqual(image_cache_manager.image_popularity['2'], 2)
@@ -200,7 +203,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertTrue(image_cache_manager.used_images['1'] ==
                         (1, 0, ['inst-1']))
         self.assertTrue(image_cache_manager.instance_names ==
-                        set(['inst-1', 'inst-1_resize']))
+                        set(['inst-1', '123', 'inst-1_resize', '123_resize']))
 
         self.assertEqual(len(image_cache_manager.image_popularity), 1)
         self.assertEqual(image_cache_manager.image_popularity['1'], 1)
