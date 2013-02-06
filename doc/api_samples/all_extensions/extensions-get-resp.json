@@ -385,6 +385,14 @@
             "updated": "2011-08-18T00:00:00+00:00"
         },
         {
+            "alias": "os-security-group-default-rules",
+            "description": "Default rules for security group support.",
+            "links": [],
+            "name": "SecurityGroupDefaultRules",
+            "namespace": "http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1",
+            "updated": "2013-02-05T00:00:00+00:00"
+        },
+        {
             "alias": "os-security-groups",
             "description": "Security group support.",
             "links": [],

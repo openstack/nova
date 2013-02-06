@@ -732,6 +732,10 @@ class SecurityGroupNotExistsForInstance(Invalid):
                 " the instance %(instance_id)s")
 
 
+class SecurityGroupDefaultRuleNotFound(Invalid):
+    message = _("Security group default rule (%rule_id)s not found.")
+
+
 class MigrationNotFound(NotFound):
     message = _("Migration %(migration_id)s could not be found.")
 

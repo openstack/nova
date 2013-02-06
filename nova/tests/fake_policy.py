@@ -156,6 +156,7 @@ policy_data = """
     "compute_extension:quotas:update": "",
     "compute_extension:quota_classes": "",
     "compute_extension:rescue": "",
+    "compute_extension:security_group_default_rules": "",
     "compute_extension:security_groups": "",
     "compute_extension:server_diagnostics": "",
     "compute_extension:server_password": "",

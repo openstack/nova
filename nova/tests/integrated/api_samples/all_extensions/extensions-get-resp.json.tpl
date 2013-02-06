@@ -393,6 +393,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-security-group-default-rules",
+            "description": "%(text)s",
+            "links": [],
+            "name": "SecurityGroupDefaultRules",
+            "namespace": "http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-security-groups",
             "description": "%(text)s",
             "links": [],

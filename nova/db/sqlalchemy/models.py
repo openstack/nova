@@ -541,6 +541,15 @@ class SecurityGroupIngressRule(BASE, NovaBase):
         'SecurityGroupIngressRule.deleted == 0)')
 
 
+class SecurityGroupIngressDefaultRule(BASE, NovaBase):
+    __tablename__ = 'security_group_default_rules'
+    id = Column(Integer, primary_key=True)
+    protocol = Column(String(5))  # "tcp", "udp" or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(types.CIDR())
+
+
 class ProviderFirewallRule(BASE, NovaBase):
     """Represents a rule in a security group."""
     __tablename__ = 'provider_fw_rules'

@@ -147,6 +147,9 @@
   <extension alias="os-rescue" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-security-group-default-rules" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1" name="SecurityGroupDefaultRules">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-security-groups" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/securitygroups/api/v1.1" name="SecurityGroups">
     <description>%(text)s</description>
   </extension>
