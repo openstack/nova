@@ -263,16 +263,9 @@ class Scheduler(object):
 
         """
         # Getting total available memory of host
-        avail = self._get_compute_info(context, dest)['memory_mb']
-
-        # Getting total used memory and disk of host
-        # It should be sum of memories that are assigned as max value,
-        # because overcommitting is risky.
-        instance_refs = db.instance_get_all_by_host(context, dest)
-        used = sum([i['memory_mb'] for i in instance_refs])
+        avail = self._get_compute_info(context, dest)['free_ram_mb']
 
         mem_inst = instance_ref['memory_mb']
-        avail = avail - used
         if not mem_inst or avail <= mem_inst:
             instance_uuid = instance_ref['uuid']
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
