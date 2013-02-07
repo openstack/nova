@@ -218,6 +218,11 @@ class Mount(object):
         """Call the unmnt, unmap and unget operations."""
         if self.mounted:
             self.unmnt_dev()
+
+    def do_teardown(self):
+        """Call the umnt, unmap, and unget operations."""
+        if self.mounted:
+            self.unmnt_dev()
         if self.mapped:
             self.unmap_dev()
         if self.linked:

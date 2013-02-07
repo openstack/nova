@@ -2033,8 +2033,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # namespace and so there is no need to keep the container rootfs
         # mounted in the host namespace
         if CONF.libvirt_type == 'lxc':
+            state = self.get_info(instance)['state']
             container_dir = os.path.join(inst_path, 'rootfs')
-            disk.teardown_container(container_dir=container_dir)
+            if state == power_state.RUNNING:
+                disk.clean_lxc_namespace(container_dir=container_dir)
+            else:
+                disk.teardown_container(container_dir=container_dir)
 
         return domain
 

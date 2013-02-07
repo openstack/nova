@@ -258,10 +258,16 @@ class _DiskImage(object):
         return bool(self._mounter)
 
     def umount(self):
-        """Unmount a disk image from the file system."""
+        """Umount a mount point from the filesystem."""
+        if self._mounter:
+            self._mounter.do_umount()
+            self._mounter = None
+
+    def teardown(self):
+        """Remove a disk image from the file system."""
         try:
             if self._mounter:
-                self._mounter.do_umount()
+                self._mounter.do_teardown()
                 self._mounter = None
         finally:
             if self._mkdir:
@@ -336,9 +342,22 @@ def teardown_container(container_dir):
     """
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
+        img.teardown()
+    except Exception, exn:
+        LOG.exception(_('Failed to teardown ntainer filesystem: %s'), exn)
+
+
+def clean_lxc_namespace(container_dir):
+    """Clean up the container namespace rootfs mounting one spawned.
+
+    It will umount the mounted names that is mounted
+    but leave the linked deivces alone.
+    """
+    try:
+        img = _DiskImage(image=None, mount_dir=container_dir)
         img.umount()
     except Exception, exn:
-        LOG.exception(_('Failed to unmount container filesystem: %s'), exn)
+        LOG.exception(_('Failed to umount container filesystem: %s'), exn)
 
 
 def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
