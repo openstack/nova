@@ -42,6 +42,7 @@ from nova.openstack.common.log import logging
 from nova.openstack.common import timeutils
 import nova.quota
 from nova.scheduler import driver
+from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
@@ -2880,4 +2881,37 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
 
 
 class ExtendedAvailabilityZoneXmlTests(ExtendedAvailabilityZoneJsonTests):
+    ctype = 'xml'
+
+
+class EvacuateJsonTest(ServersSampleBase):
+
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".evacuate.Evacuate")
+
+    def test_server_evacuate(self):
+        uuid = self._post_server()
+
+        req_subs = {
+            'host': 'TargetHost',
+            "adminPass": "MySecretPass",
+            "onSharedStorage": 'False'
+        }
+
+        def fake_service_is_up(self, service):
+            """Simulate validation of instance host is down."""
+            return False
+
+        self.stubs.Set(service_group_api.API, 'service_is_up',
+                       fake_service_is_up)
+
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-evacuate-req', req_subs)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('server-evacuate-resp', subs,
+                                     response)
+
+
+class EvacuateXmlTest(EvacuateJsonTest):
     ctype = 'xml'

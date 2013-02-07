@@ -185,6 +185,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-evacuate",
+            "description": "%(text)s",
+            "links": [],
+            "name": "Evacuate",
+            "namespace": "http://docs.openstack.org/compute/ext/evacuate/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-fixed-ips",
             "description": "Fixed IPs support.",
             "links": [],
