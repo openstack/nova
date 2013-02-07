@@ -62,6 +62,7 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
@@ -274,7 +275,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.7'
+    RPC_API_VERSION = '1.8'
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -490,6 +491,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         rxtx_factor = kwargs['rxtx_factor']
         requested_networks = kwargs.get('requested_networks')
         vpn = kwargs['vpn']
+        macs = kwargs['macs']
         admin_context = context.elevated()
         LOG.debug(_("network allocations"), instance_uuid=instance_uuid,
                   context=context)
@@ -500,7 +502,17 @@ class NetworkManager(manager.SchedulerDependentManager):
                                  for network in networks]
         LOG.debug(_('networks retrieved for instance: |%(networks_list)s|'),
                   locals(), context=context, instance_uuid=instance_uuid)
-        self._allocate_mac_addresses(context, instance_uuid, networks)
+
+        try:
+            self._allocate_mac_addresses(context, instance_uuid, networks,
+                                         macs)
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                # If we fail to allocate any one mac address, clean up all
+                # allocated VIFs
+                self.db.virtual_interface_delete_by_instance(context,
+                                                             instance_uuid)
+
         self._allocate_fixed_ips(admin_context, instance_id,
                                  host, networks, vpn=vpn,
                                  requested_networks=requested_networks)
@@ -708,25 +720,43 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         return subnets
 
-    def _allocate_mac_addresses(self, context, instance_uuid, networks):
+    def _allocate_mac_addresses(self, context, instance_uuid, networks, macs):
         """Generates mac addresses and creates vif rows in db for them."""
-        for network in networks:
-            self.add_virtual_interface(context, instance_uuid, network['id'])
+        # make a copy we can mutate
+        if macs is not None:
+            available_macs = set(macs)
 
-    def add_virtual_interface(self, context, instance_uuid, network_id):
-        vif = {'address': utils.generate_mac_address(),
+        for network in networks:
+            if macs is None:
+                self._add_virtual_interface(context, instance_uuid,
+                                           network['id'])
+            else:
+                try:
+                    mac = available_macs.pop()
+                except KeyError:
+                    raise exception.VirtualInterfaceCreateException()
+                self._add_virtual_interface(context, instance_uuid,
+                                           network['id'], mac)
+
+    def _add_virtual_interface(self, context, instance_uuid, network_id,
+                              mac=None):
+        vif = {'address': mac,
                'instance_uuid': instance_uuid,
                'network_id': network_id,
                'uuid': str(uuid.uuid4())}
-        # try FLAG times to create a vif record with a unique mac_address
-        for i in xrange(CONF.create_unique_mac_address_attempts):
+
+        if mac is None:
+            vif['address'] = utils.generate_mac_address()
+            attempts = CONF.create_unique_mac_address_attempts
+        else:
+            attempts = 1
+
+        for i in range(attempts):
             try:
                 return self.db.virtual_interface_create(context, vif)
             except exception.VirtualInterfaceCreateException:
                 vif['address'] = utils.generate_mac_address()
         else:
-            self.db.virtual_interface_delete_by_instance(context,
-                                                         instance_uuid)
             raise exception.VirtualInterfaceMacAddressException()
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):

@@ -1585,9 +1585,8 @@ class TestFloatingIPManager(floating_ips.FloatingIP,
 
 
 class AllocateTestCase(test.TestCase):
-    def test_allocate_for_instance(self):
-        address = "10.10.10.10"
-        self.flags(auto_assign_floating_ip=True)
+    def setUp(self):
+        super(AllocateTestCase, self).setUp()
         self.conductor = self.start_service(
             'conductor', manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
@@ -1598,6 +1597,10 @@ class AllocateTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
+
+    def test_allocate_for_instance(self):
+        address = "10.10.10.10"
+        self.flags(auto_assign_floating_ip=True)
 
         db.floating_ip_create(self.context,
                               {'address': address,
@@ -1613,7 +1616,7 @@ class AllocateTestCase(test.TestCase):
         nw_info = self.network.allocate_for_instance(self.context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
             host=inst['host'], vpn=None, rxtx_factor=3,
-            project_id=project_id)
+            project_id=project_id, macs=None)
         self.assertEquals(1, len(nw_info))
         fixed_ip = nw_info.fixed_ips()[0]['address']
         self.assertTrue(utils.is_valid_ipv4(fixed_ip))
@@ -1622,6 +1625,44 @@ class AllocateTestCase(test.TestCase):
                                              fixed_ips=fixed_ip,
                                              host=self.network.host,
                                              project_id=project_id)
+
+    def test_allocate_for_instance_with_mac(self):
+        available_macs = set(['ca:fe:de:ad:be:ef'])
+        inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'display_name': HOST,
+                                                 'instance_type_id': 1})
+        networks = db.network_get_all(self.context)
+        for network in networks:
+            db.network_update(self.context, network['id'],
+                              {'host': self.network.host})
+        project_id = self.context.project_id
+        nw_info = self.network.allocate_for_instance(self.context,
+            instance_id=inst['id'], instance_uuid=inst['uuid'],
+            host=inst['host'], vpn=None, rxtx_factor=3,
+            project_id=project_id, macs=available_macs)
+        assigned_macs = [vif['address'] for vif in nw_info]
+        self.assertEquals(1, len(assigned_macs))
+        self.assertEquals(available_macs.pop(), assigned_macs[0])
+        self.network.deallocate_for_instance(self.context,
+                                             instance_id=inst['id'],
+                                             host=self.network.host,
+                                             project_id=project_id)
+
+    def test_allocate_for_instance_not_enough_macs(self):
+        available_macs = set()
+        inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'display_name': HOST,
+                                                 'instance_type_id': 1})
+        networks = db.network_get_all(self.context)
+        for network in networks:
+            db.network_update(self.context, network['id'],
+                              {'host': self.network.host})
+        project_id = self.context.project_id
+        self.assertRaises(exception.VirtualInterfaceCreateException,
+                          self.network.allocate_for_instance, self.context,
+                          instance_id=inst['id'], instance_uuid=inst['uuid'],
+                          host=inst['host'], vpn=None, rxtx_factor=3,
+                          project_id=project_id, macs=available_macs)
 
 
 class FloatingIPTestCase(test.TestCase):
@@ -2052,7 +2093,7 @@ class FloatingIPTestCase(test.TestCase):
 
         # Attempt to add another and make sure that both MACs are consumed
         # by the retry loop
-        self.network.add_virtual_interface(ctxt, 'fake_uuid', 'fake_net')
+        self.network._add_virtual_interface(ctxt, 'fake_uuid', 'fake_net')
         self.assertEqual(macs, [])
 
     def test_deallocate_client_exceptions(self):

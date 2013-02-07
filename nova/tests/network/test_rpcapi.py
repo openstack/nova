@@ -161,7 +161,8 @@ class NetworkRpcAPITestCase(test.TestCase):
         self._test_network_api('allocate_for_instance', rpc_method='call',
                 instance_id='fake_id', instance_uuid='fake_uuid',
                 project_id='fake_id', host='fake_host',
-                rxtx_factor='fake_factor', vpn=False, requested_networks={})
+                rxtx_factor='fake_factor', vpn=False, requested_networks={},
+                macs=set(), version="1.8")
 
     def test_deallocate_for_instance(self):
         self._test_network_api('deallocate_for_instance', rpc_method='call',
