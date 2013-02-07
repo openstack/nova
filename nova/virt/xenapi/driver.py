@@ -452,8 +452,8 @@ class XenAPIDriver(driver.ComputeDriver):
         :param dest_check_data: result of check_can_live_migrate_destination
                                 includes the block_migration flag
         """
-        self._vmops.check_can_live_migrate_source(ctxt, instance_ref,
-                                                  dest_check_data)
+        return self._vmops.check_can_live_migrate_source(ctxt, instance_ref,
+                                                         dest_check_data)
 
     def get_instance_disk_info(self, instance_name):
         """Used by libvirt for live migration. We rely on xenapi
