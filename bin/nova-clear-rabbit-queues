@@ -23,11 +23,9 @@
 
 """
 
-import datetime
 import gettext
 import os
 import sys
-import time
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -41,8 +39,6 @@ gettext.install('nova', unicode=1)
 
 
 from nova import config
-from nova import context
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
