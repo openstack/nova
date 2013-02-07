@@ -176,20 +176,20 @@ class VMwareVMOps(object):
             vif_infos = []
             if network_info is None:
                 return vif_infos
-            for (network, mapping) in network_info:
-                mac_address = mapping['mac']
-                network_name = network['bridge'] or \
+            for vif in network_info:
+                mac_address = vif['address']
+                network_name = vif['network']['bridge'] or \
                                CONF.vmware.integration_bridge
-                if mapping.get('should_create_vlan'):
+                if vif['network'].get_meta('should_create_vlan', False):
                     network_ref = vmwarevif.ensure_vlan_bridge(
-                                                        self._session, network,
+                                                        self._session, vif,
                                                         self._cluster)
                 else:
                     network_ref = _check_if_network_bridge_exists(network_name)
                 vif_infos.append({'network_name': network_name,
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
-                                  'iface_id': mapping.get('id'),
+                                  'iface_id': vif.get_meta('iface_id'),
                                  })
             return vif_infos
 
@@ -1127,6 +1127,33 @@ class VMwareVMOps(object):
 
         return port
 
+    @staticmethod
+    def _get_machine_id_str(network_info):
+        machine_id_str = ''
+        for vif in network_info:
+            # TODO(vish): add support for dns2
+            # TODO(sateesh): add support for injection of ipv6 configuration
+            network = vif['network']
+            ip_v4 = netmask_v4 = gateway_v4 = broadcast_v4 = dns = None
+            subnets_v4 = [s for s in network['subnets'] if s['version'] == 4]
+            if len(subnets_v4[0]['ips']) > 0:
+                ip_v4 = subnets_v4[0]['ips'][0]
+            if len(subnets_v4[0]['dns']) > 0:
+                dns = subnets_v4[0]['dns'][0]['address']
+
+            netmask_v4 = str(subnets_v4[0].as_netaddr().netmask)
+            gateway_v4 = subnets_v4[0]['gateway']['address']
+            broadcast_v4 = str(subnets_v4[0].as_netaddr().broadcast)
+
+            interface_str = ";".join([vif['address'],
+                                      ip_v4 and ip_v4['address'] or '',
+                                      netmask_v4 or '',
+                                      gateway_v4 or '',
+                                      broadcast_v4 or '',
+                                      dns or ''])
+            machine_id_str = machine_id_str + interface_str + '#'
+        return machine_id_str
+
     def _set_machine_id(self, client_factory, instance, network_info):
         """
         Set the machine id of the VM for guest tools to pick up and reconfigure
@@ -1136,40 +1163,17 @@ class VMwareVMOps(object):
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
-        machine_id_str = ''
-        for (network, info) in network_info:
-            # TODO(vish): add support for dns2
-            # TODO(sateesh): add support for injection of ipv6 configuration
-            ip_v4 = ip_v6 = None
-            if 'ips' in info and len(info['ips']) > 0:
-                ip_v4 = info['ips'][0]
-            if 'ip6s' in info and len(info['ip6s']) > 0:
-                ip_v6 = info['ip6s'][0]
-            if len(info['dns']) > 0:
-                dns = info['dns'][0]
-            else:
-                dns = ''
-
-            interface_str = ";".join([info['mac'],
-                                      ip_v4 and ip_v4['ip'] or '',
-                                      ip_v4 and ip_v4['netmask'] or '',
-                                      info['gateway'],
-                                      info['broadcast'],
-                                      dns])
-            machine_id_str = machine_id_str + interface_str + '#'
-
         machine_id_change_spec = vm_util.get_machine_id_change_spec(
-                                 client_factory, machine_id_str)
+                                 client_factory,
+                                 self._get_machine_id_str(network_info))
 
-        LOG.debug(_("Reconfiguring VM instance to set the machine id "
-                  "with ip - %(ip_addr)s") % {'ip_addr': ip_v4['ip']},
+        LOG.debug(_("Reconfiguring VM instance to set the machine id"),
                   instance=instance)
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=machine_id_change_spec)
         self._session._wait_for_task(instance['uuid'], reconfig_task)
-        LOG.debug(_("Reconfigured VM instance to set the machine id "
-                  "with ip - %(ip_addr)s") % {'ip_addr': ip_v4['ip']},
+        LOG.debug(_("Reconfigured VM instance to set the machine id"),
                   instance=instance)
 
     def _set_vnc_config(self, client_factory, instance, port, password):
