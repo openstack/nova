@@ -50,14 +50,16 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
+notify_decorator = 'nova.openstack.common.notifier.api.notify_decorator'
+
 monkey_patch_opts = [
     cfg.BoolOpt('monkey_patch',
                 default=False,
                 help='Whether to log monkey patching'),
     cfg.ListOpt('monkey_patch_modules',
                 default=[
-                  'nova.api.ec2.cloud:nova.notifier.api.notify_decorator',
-                  'nova.compute.api:nova.notifier.api.notify_decorator'
+                  'nova.api.ec2.cloud:%s' % (notify_decorator),
+                  'nova.compute.api:%s' % (notify_decorator)
                   ],
                 help='List of modules/decorators to monkey patch'),
 ]
@@ -920,10 +922,11 @@ def monkey_patch():
     You can set decorators for each modules
     using CONF.monkey_patch_modules.
     The format is "Module path:Decorator function".
-    Example: 'nova.api.ec2.cloud:nova.notifier.api.notify_decorator'
+    Example:
+      'nova.api.ec2.cloud:nova.openstack.common.notifier.api.notify_decorator'
 
     Parameters of the decorator is as follows.
-    (See nova.notifier.api.notify_decorator)
+    (See nova.openstack.common.notifier.api.notify_decorator)
 
     name - name of the function
     function - object of the function
