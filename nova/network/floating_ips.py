@@ -43,6 +43,7 @@ floating_opts = [
 CONF = cfg.CONF
 CONF.register_opts(floating_opts)
 CONF.import_opt('public_interface', 'nova.network.linux_net')
+CONF.import_opt('network_topic', 'nova.network.rpcapi')
 
 
 class FloatingIP(object):
@@ -395,7 +396,7 @@ class FloatingIP(object):
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip['instance_uuid'])
             service = self.db.service_get_by_host_and_topic(
-                    context.elevated(), instance['host'], 'network')
+                    context.elevated(), instance['host'], CONF.network_topic)
             if service and self.servicegroup_api.service_is_up(service):
                 host = instance['host']
             else:
