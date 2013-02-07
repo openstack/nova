@@ -72,6 +72,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
     1.38 - Added service name to instance_update
     1.39 - Added notify_usage_exists
+    1.40 - Added security_groups_trigger_handler and
+                 security_groups_trigger_members_refresh
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -375,3 +377,14 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                   system_metadata=system_metadata_p,
                   extra_usage_info=extra_usage_info_p)
         return self.call(context, msg, version='1.39')
+
+    def security_groups_trigger_handler(self, context, event, args):
+        args_p = jsonutils.to_primitive(args)
+        msg = self.make_msg('security_groups_trigger_handler', event=event,
+                            args=args_p)
+        return self.call(context, msg, version='1.40')
+
+    def security_groups_trigger_members_refresh(self, context, group_ids):
+        msg = self.make_msg('security_groups_trigger_members_refresh',
+                            group_ids=group_ids)
+        return self.call(context, msg, version='1.40')

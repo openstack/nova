@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova import manager
@@ -45,11 +46,12 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.39'
+    RPC_API_VERSION = '1.40'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
+        self.security_group_api = compute_api.SecurityGroupAPI()
 
     def ping(self, context, arg):
         return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
@@ -351,3 +353,9 @@ class ConductorManager(manager.SchedulerDependentManager):
         compute_utils.notify_usage_exists(context, instance, current_period,
                                           ignore_missing_network_data,
                                           system_metadata, extra_usage_info)
+
+    def security_groups_trigger_handler(self, context, event, args):
+        self.security_group_api.trigger_handler(event, context, *args)
+
+    def security_groups_trigger_members_refresh(self, context, group_ids):
+        self.security_group_api.trigger_members_refresh(context, group_ids)

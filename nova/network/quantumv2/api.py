@@ -16,7 +16,7 @@
 #
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-from nova.compute import api as compute_api
+from nova import conductor
 from nova.db import base
 from nova import exception
 from nova.network import api as network_api
@@ -72,7 +72,7 @@ update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 class API(base.Base):
     """API for interacting with the quantum 2.x API."""
 
-    security_group_api = compute_api.SecurityGroupAPI()
+    conductor_api = conductor.API()
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
@@ -364,27 +364,25 @@ class API(base.Base):
                                                     instance_ref):
         admin_context = context.elevated()
         for group in instance_ref['security_groups']:
-            self.security_group_api.trigger_handler(
-                'instance_add_security_group', context, instance_ref,
-                 group['name'])
+            self.conductor_api.security_groups_trigger_handler(context,
+                'instance_add_security_group', instance_ref, group['name'])
 
     def trigger_instance_remove_security_group_refresh(self, context,
                                                        instance_ref):
         admin_context = context.elevated()
         for group in instance_ref['security_groups']:
-            self.security_group_api.trigger_handler(
-                'instance_remove_security_group', context, instance_ref,
-                 group['name'])
+            self.conductor_api.security_groups_trigger_handler(context,
+                'instance_remove_security_group', instance_ref, group['name'])
 
     def trigger_security_group_members_refresh(self, context, instance_ref):
 
         admin_context = context.elevated()
         group_ids = [group['id'] for group in instance_ref['security_groups']]
 
-        self.security_group_api.trigger_members_refresh(admin_context,
-                                                        group_ids)
-        self.security_group_api.trigger_handler('security_group_members',
-                                                admin_context, group_ids)
+        self.conductor_api.security_groups_trigger_members_refresh(
+            admin_context, group_ids)
+        self.conductor_api.security_groups_trigger_handler(admin_context,
+            'security_group_members', group_ids)
 
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):

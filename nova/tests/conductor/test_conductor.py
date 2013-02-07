@@ -495,12 +495,22 @@ class _BaseTestCase(object):
                                            system_metadata={},
                                            extra_usage_info=dict(extra='info'))
 
+    def test_security_groups_trigger_members_refresh(self):
+        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
+                                 'trigger_members_refresh')
+        self.conductor_manager.security_group_api.trigger_members_refresh(
+            self.context, [1, 2, 3])
+        self.mox.ReplayAll()
+        self.conductor.security_groups_trigger_members_refresh(self.context,
+                                                               [1, 2, 3])
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
     def setUp(self):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
+        self.conductor_manager = self.conductor
         self.stub_out_client_exceptions()
 
     def test_block_device_mapping_update_or_create(self):
@@ -613,6 +623,16 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            ('host', 'binary'),
                            dict(host='host', binary='binary'))
 
+    def test_security_groups_trigger_handler(self):
+        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
+                                 'trigger_handler')
+        self.conductor_manager.security_group_api.trigger_handler('event',
+                                                                  self.context,
+                                                                  'args')
+        self.mox.ReplayAll()
+        self.conductor.security_groups_trigger_handler(self.context,
+                                                       'event', ['args'])
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
@@ -620,6 +640,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         super(ConductorRPCAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
+        self.conductor_manager = self.conductor_service.manager
         self.conductor = conductor_rpcapi.ConductorAPI()
 
     def test_block_device_mapping_update_or_create(self):
@@ -709,6 +730,16 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                            dict(topic='compute', host='host'),
                            db_result_listified=True)
 
+    def test_security_groups_trigger_handler(self):
+        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
+                                 'trigger_handler')
+        self.conductor_manager.security_group_api.trigger_handler('event',
+                                                                  self.context,
+                                                                  'arg')
+        self.mox.ReplayAll()
+        self.conductor.security_groups_trigger_handler(self.context,
+                                                       'event', ['arg'])
+
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor API Tests."""
@@ -717,6 +748,7 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor_service = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
         self.conductor = conductor_api.API()
+        self.conductor_manager = self.conductor_service.manager
         self.db = None
 
     def _do_update(self, instance_uuid, **updates):
@@ -858,12 +890,23 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.assertEqual(timeouts.count(10), 10)
         self.assertTrue(None in timeouts)
 
+    def test_security_groups_trigger_handler(self):
+        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
+                                 'trigger_handler')
+        self.conductor_manager.security_group_api.trigger_handler('event',
+                                                                  self.context,
+                                                                  'arg')
+        self.mox.ReplayAll()
+        self.conductor.security_groups_trigger_handler(self.context,
+                                                       'event', 'arg')
+
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):
     """Conductor LocalAPI Tests."""
     def setUp(self):
         super(ConductorLocalAPITestCase, self).setUp()
         self.conductor = conductor_api.LocalAPI()
+        self.conductor_manager = self.conductor._manager._target
         self.db = db
         self.stub_out_client_exceptions()
 
