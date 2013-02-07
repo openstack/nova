@@ -452,6 +452,10 @@ class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
         return network.get('bridge') or def_bridge
 
     def get_config(self, instance, network, mapping):
+        # In order for libvirt to make use of the bridge name then it has
+        # to ensure that the bridge exists
+        if 'should_create_bridge' not in mapping:
+            mapping['should_create_bridge'] = True
         return self.get_config_bridge(instance, network, mapping)
 
     def plug(self, instance, vif):

@@ -666,6 +666,8 @@ class API(base.Base):
 
             bridge = None
             ovs_interfaceid = None
+            # Network model metadata
+            should_create_bridge = None
             vif_type = port.get('binding:vif_type')
             # TODO(berrange) Quantum should pass the bridge name
             # in another binding metadata field
@@ -674,6 +676,7 @@ class API(base.Base):
                 ovs_interfaceid = port['id']
             elif vif_type == network_model.VIF_TYPE_BRIDGE:
                 bridge = "brq" + port['network_id']
+                should_create_bridge = True
 
             if bridge is not None:
                 bridge = bridge[:network_model.NIC_NAME_LEN]
@@ -689,6 +692,8 @@ class API(base.Base):
                 tenant_id=net['tenant_id']
             )
             network['subnets'] = subnets
+            if should_create_bridge is not None:
+                network['should_create_bridge'] = should_create_bridge
             nw_info.append(network_model.VIF(
                 id=port['id'],
                 address=port['mac_address'],
