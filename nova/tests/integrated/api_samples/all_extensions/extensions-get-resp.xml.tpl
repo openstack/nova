@@ -9,6 +9,9 @@
   <extension alias="OS-EXT-AZ" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" name="ExtendedAvailabilityZone">
     <description>%(text)s</description>
   </extension>
+  <extension alias="OS-EXT-IPS" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" name="ExtendedIps">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="OS-EXT-SRV-ATTR" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedServerAttributes">
     <description>%(text)s</description>
   </extension>

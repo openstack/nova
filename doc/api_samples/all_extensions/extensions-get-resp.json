@@ -25,6 +25,14 @@
             "updated": "2013-01-30T00:00:00+00:00"
         },
         {
+            "alias": "OS-EXT-IPS",
+            "description": "Adds type parameter to the ip list.",
+            "links": [],
+            "name": "ExtendedIps",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_ips/api/v1.1",
+            "updated": "2013-01-06T00:00:00+00:00"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "Extended Server Attributes support.",
             "links": [],
@@ -90,11 +98,11 @@
         },
         {
             "alias": "os-availability-zone",
-            "description": "Add availability_zone to the Create Server v1.1 API.",
+            "description": "1. Add availability_zone to the Create Server v1.1 API.\n       2. Add availability zones describing.\n    ",
             "links": [],
             "name": "AvailabilityZone",
             "namespace": "http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1",
-            "updated": "2012-08-09T00:00:00+00:00"
+            "updated": "2012-12-21T00:00:00+00:00"
         },
         {
             "alias": "os-baremetal-nodes",
@@ -202,7 +210,7 @@
         },
         {
             "alias": "os-flavor-access",
-            "description": "Flavor access supprt.",
+            "description": "Flavor access support.",
             "links": [],
             "name": "FlavorAccess",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_access/api/v2",
@@ -337,14 +345,6 @@
             "updated": "2011-12-23T00:00:00+00:00"
         },
         {
-            "alias": "os-tenant-networks",
-            "description": "Tenant-based Network Management Extension.",
-            "links": [],
-            "name": "OSTenantNetworks",
-            "namespace": "http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2",
-            "updated": "2011-12-23T00:00:00+00:00"
-        },
-        {
             "alias": "os-networks-associate",
             "description": "Network association support.",
             "links": [],
@@ -394,7 +394,7 @@
         },
         {
             "alias": "os-server-password",
-            "description": "Server password support",
+            "description": "Server password support.",
             "links": [],
             "name": "ServerPassword",
             "namespace": "http://docs.openstack.org/compute/ext/server-password/api/v2",
@@ -423,6 +423,14 @@
             "name": "SimpleTenantUsage",
             "namespace": "http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1",
             "updated": "2011-08-19T00:00:00+00:00"
+        },
+        {
+            "alias": "os-tenant-networks",
+            "description": "Tenant-based Network Management Extension.",
+            "links": [],
+            "name": "OSTenantNetworks",
+            "namespace": "http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2",
+            "updated": "2012-03-07T09:46:43-05:00"
         },
         {
             "alias": "os-used-limits",
