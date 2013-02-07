@@ -167,7 +167,7 @@ def cast(conf, context, topic, msg):
         pass
 
 
-def notify(conf, context, topic, msg):
+def notify(conf, context, topic, msg, envelope):
     check_serialize(msg)
 
 

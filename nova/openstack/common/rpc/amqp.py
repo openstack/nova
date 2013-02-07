@@ -368,7 +368,7 @@ def multicall(conf, context, topic, msg, timeout, connection_pool):
     conn = ConnectionContext(conf, connection_pool)
     wait_msg = MulticallWaiter(conf, conn, timeout)
     conn.declare_direct_consumer(msg_id, wait_msg)
-    conn.topic_send(topic, rpc_common.serialize_msg(msg))
+    conn.topic_send(topic, rpc_common.serialize_msg(msg), timeout)
     return wait_msg
 
 
