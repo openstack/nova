@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.2'
+    RPC_API_VERSION = '1.3'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -260,3 +260,38 @@ class CellsManager(manager.Manager):
         response = self.msg_runner.proxy_rpc_to_manager(ctxt, cell_name,
                 host_name, topic, rpc_message, call, timeout)
         return response.value_or_raise()
+
+    def task_log_get_all(self, ctxt, task_name, period_beginning,
+                         period_ending, host=None, state=None):
+        """Get task logs from the DB from all cells or a particular
+        cell.
+
+        If 'host' is not None, host will be of the format 'cell!name@host',
+        with '@host' being optional.  The query will be directed to the
+        appropriate cell and return all task logs, or task logs matching
+        the host if specified.
+
+        'state' also may be None.  If it's not, filter by the state as well.
+        """
+        if host is None:
+            cell_name = None
+        else:
+            result = cells_utils.split_cell_and_item(host)
+            cell_name = result[0]
+            if len(result) > 1:
+                host = result[1]
+            else:
+                host = None
+        responses = self.msg_runner.task_log_get_all(ctxt, cell_name,
+                task_name, period_beginning, period_ending,
+                host=host, state=state)
+        # 1 response per cell.  Each response is a list of task log
+        # entries.
+        ret_task_logs = []
+        for response in responses:
+            task_logs = response.value_or_raise()
+            for task_log in task_logs:
+                cells_utils.add_cell_to_task_log(task_log,
+                                                 response.cell_name)
+                ret_task_logs.append(task_log)
+        return ret_task_logs

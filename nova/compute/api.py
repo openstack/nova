@@ -2471,6 +2471,17 @@ class HostAPI(base.Base):
         """Return all instances on the given host."""
         return self.db.instance_get_all_by_host(context, host_name)
 
+    def task_log_get_all(self, context, task_name, period_beginning,
+                         period_ending, host=None, state=None):
+        """Return the task logs within a given range, optionally
+        filtering by host and/or state.
+        """
+        return self.db.task_log_get_all(context, task_name,
+                                        period_beginning,
+                                        period_ending,
+                                        host=host,
+                                        state=state)
+
 
 class AggregateAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host aggregates."""
