@@ -82,11 +82,12 @@ class HostManagerTestCase(test.TestCase):
         self.host_manager._choose_host_filters(specified_filters).AndReturn(
                 [FakeFilterClass1])
 
-    def _verify_result(self, info, result):
+    def _verify_result(self, info, result, filters=True):
         for x in info['got_fprops']:
             self.assertEqual(x, info['expected_fprops'])
-        self.assertEqual(set(info['expected_objs']), set(info['got_objs']))
-        self.assertEqual(set(result), set(info['got_objs']))
+        if filters:
+            self.assertEqual(set(info['expected_objs']), set(info['got_objs']))
+        self.assertEqual(set(info['expected_objs']), set(result))
 
     def test_get_filtered_hosts(self):
         fake_properties = {'moo': 1, 'cow': 2}
@@ -143,7 +144,7 @@ class HostManagerTestCase(test.TestCase):
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self._verify_result(info, result)
+        self._verify_result(info, result, False)
 
     def test_get_filtered_hosts_with_no_matching_force_hosts(self):
         fake_properties = {'force_hosts': ['fake_host5', 'fake_host6']}
@@ -156,7 +157,7 @@ class HostManagerTestCase(test.TestCase):
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self._verify_result(info, result)
+        self._verify_result(info, result, False)
 
     def test_get_filtered_hosts_with_ignore_and_force(self):
         # Ensure ignore_hosts processed before force_hosts in host filters.
@@ -172,7 +173,7 @@ class HostManagerTestCase(test.TestCase):
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
-        self._verify_result(info, result)
+        self._verify_result(info, result, False)
 
     def test_update_service_capabilities(self):
         service_states = self.host_manager.service_states
