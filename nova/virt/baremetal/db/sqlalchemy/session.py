@@ -19,8 +19,8 @@
 
 """Session Handling for SQLAlchemy backend."""
 
-from nova.db.sqlalchemy import session as nova_session
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import session as nova_session
 from nova import paths
 
 opts = [
@@ -38,10 +38,12 @@ CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 
-CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
+CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
 
 _ENGINE = None
 _MAKER = None
+
+DBError = nova_session.DBError
 
 
 def get_session(autocommit=True, expire_on_commit=False):

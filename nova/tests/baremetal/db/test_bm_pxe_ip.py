@@ -18,6 +18,7 @@ Bare-metal DB testcase for BareMetalPxeIp
 """
 
 from nova import exception
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.tests.baremetal.db import base
 from nova.tests.baremetal.db import utils
 from nova.virt.baremetal import db
@@ -50,14 +51,14 @@ class BareMetalPxeIpTestCase(base.BMDBTestCase):
         # address duplicates
         i = utils.new_bm_pxe_ip(address='10.1.1.1',
                                 server_address='10.1.1.201')
-        self.assertRaises(exception.DBError,
+        self.assertRaises(db_session.DBError,
                           db.bm_pxe_ip_create_direct,
                           self.context, i)
 
         # server_address duplicates
         i = utils.new_bm_pxe_ip(address='10.1.1.3',
                                 server_address='10.1.1.101')
-        self.assertRaises(exception.DBError,
+        self.assertRaises(db_session.DBError,
                           db.bm_pxe_ip_create_direct,
                           self.context, i)
 

@@ -25,6 +25,7 @@ from testtools import matchers
 
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
@@ -521,7 +522,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
                 AndRaise(exception.NovaException)
         bm_utils.unlink_without_raise(pxe_path)
         self.driver._collect_mac_addresses(self.context, self.node).\
-                AndRaise(exception.DBError)
+                AndRaise(db_session.DBError)
         bm_utils.rmtree_without_raise(
                 os.path.join(CONF.baremetal.tftp_root, 'fake-uuid'))
         self.mox.ReplayAll()

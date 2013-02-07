@@ -26,9 +26,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
 
-from nova.db.sqlalchemy.session import get_session
 from nova.db.sqlalchemy import types
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import models
 from nova.openstack.common import timeutils
 
 
@@ -36,74 +36,8 @@ CONF = cfg.CONF
 BASE = declarative_base()
 
 
-class NovaBase(object):
-    """Base class for Nova Models."""
-    __table_initialized__ = False
-    created_at = Column(DateTime, default=timeutils.utcnow)
-    updated_at = Column(DateTime, onupdate=timeutils.utcnow)
-    deleted_at = Column(DateTime)
-    deleted = Column(Integer, default=0)
-    metadata = None
-
-    def save(self, session=None):
-        """Save this object."""
-        if not session:
-            session = get_session()
-        # NOTE(boris-42): This part of code should be look like:
-        #                       sesssion.add(self)
-        #                       session.flush()
-        #                 But there is a bug in sqlalchemy and eventlet that
-        #                 raises NoneType exception if there is no running
-        #                 transaction and rollback is called. As long as
-        #                 sqlalchemy has this bug we have to create transaction
-        #                 explicity.
-        with session.begin(subtransactions=True):
-            session.add(self)
-            session.flush()
-
-    def soft_delete(self, session=None):
-        """Mark this object as deleted."""
-        self.deleted = self.id
-        self.deleted_at = timeutils.utcnow()
-        self.save(session=session)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __iter__(self):
-        columns = dict(object_mapper(self).columns).keys()
-        # NOTE(russellb): Allow models to specify other keys that can be looked
-        # up, beyond the actual db columns.  An example would be the 'name'
-        # property for an Instance.
-        if hasattr(self, '_extra_keys'):
-            columns.extend(self._extra_keys())
-        self._i = iter(columns)
-        return self
-
-    def next(self):
-        n = self._i.next()
-        return n, getattr(self, n)
-
-    def update(self, values):
-        """Make the model object behave like a dict."""
-        for k, v in values.iteritems():
-            setattr(self, k, v)
-
-    def iteritems(self):
-        """Make the model object behave like a dict.
-
-        Includes attributes from joins."""
-        local = dict(self)
-        joined = dict([(k, v) for k, v in self.__dict__.iteritems()
-                      if not k[0] == '_'])
-        local.update(joined)
-        return local.iteritems()
+class NovaBase(models.SoftDeleteMixin, models.ModelBase):
+    pass
 
 
 class Service(BASE, NovaBase):

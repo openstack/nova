@@ -35,14 +35,14 @@ from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql import func
 
 from nova import block_device
-from nova.common import sqlalchemyutils
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy.session import get_session
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -58,9 +58,12 @@ db_opts = [
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
+CONF.import_opt('sql_connection',
+                'nova.openstack.common.db.sqlalchemy.session')
 
 LOG = logging.getLogger(__name__)
+
+get_session = db_session.get_session
 
 
 def is_user_context(context):
@@ -1251,7 +1254,7 @@ def virtual_interface_create(context, values):
         vif_ref = models.VirtualInterface()
         vif_ref.update(values)
         vif_ref.save()
-    except exception.DBError:
+    except db_session.DBError:
         raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
@@ -3535,7 +3538,7 @@ def instance_type_create(context, values):
             instance_type_ref.update(values)
             instance_type_ref.save(session=session)
         except Exception, e:
-            raise exception.DBError(e)
+            raise db_session.DBError(e)
         return _dict_with_extra_specs(instance_type_ref)
 
 
@@ -4238,7 +4241,7 @@ def s3_image_create(context, image_uuid):
         s3_image_ref.update({'uuid': image_uuid})
         s3_image_ref.save()
     except Exception, e:
-        raise exception.DBError(e)
+        raise db_session.DBError(e)
 
     return s3_image_ref
 

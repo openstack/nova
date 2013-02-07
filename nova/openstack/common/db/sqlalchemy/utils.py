@@ -22,11 +22,15 @@
 
 import sqlalchemy
 
-from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
+
+
+class InvalidSortKey(Exception):
+    message = _("Sort key supplied was not valid.")
 
 
 # copy from glance/db/sqlalchemy/api.py
@@ -89,7 +93,7 @@ def paginate_query(query, model, limit, sort_keys, marker=None,
         try:
             sort_key_attr = getattr(model, current_sort_key)
         except AttributeError:
-            raise exception.InvalidSortKey()
+            raise InvalidSortKey()
         query = query.order_by(sort_dir_func(sort_key_attr))
 
     # Add pagination

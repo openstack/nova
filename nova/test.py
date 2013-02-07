@@ -37,9 +37,9 @@ import testtools
 from nova import context
 from nova import db
 from nova.db import migration
-from nova.db.sqlalchemy import session
 from nova.network import manager as network_manager
 from nova.openstack.common import cfg
+from nova.openstack.common.db.sqlalchemy import session
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import paths
@@ -56,8 +56,9 @@ test_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(test_opts)
-CONF.import_opt('sql_connection', 'nova.db.sqlalchemy.session')
-CONF.import_opt('sqlite_db', 'nova.db.sqlalchemy.session')
+CONF.import_opt('sql_connection',
+                'nova.openstack.common.db.sqlalchemy.session')
+CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
 CONF.set_override('use_stderr', False)
 
 logging.setup('nova')
