@@ -101,14 +101,15 @@ def enforce(context, action, target, do_raise=True):
     return policy.check(action, target, credentials, **extra)
 
 
-def check_is_admin(roles):
+def check_is_admin(context):
     """Whether or not roles contains 'admin' role according to policy setting.
 
     """
     init()
 
-    target = {}
-    credentials = {'roles': roles}
+    #the target is user-self
+    credentials = context.to_dict()
+    target = credentials
 
     return policy.check('context_is_admin', target, credentials)
 
