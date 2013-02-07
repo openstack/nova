@@ -86,11 +86,11 @@ linux_net_opts = [
                 default=False,
                 help='Use single default gateway. Only first nic of vm will '
                      'get default gateway from dhcp server'),
-    cfg.ListOpt('forward_bridge_interface',
-               default=['all'],
-               help='An interface that bridges can forward to. If this is '
-                    'set to all then all traffic will be forwarded. Can be '
-                    'specified multiple times.'),
+    cfg.MultiStrOpt('forward_bridge_interface',
+                    default=['all'],
+                    help='An interface that bridges can forward to. If this '
+                         'is set to all then all traffic will be forwarded. '
+                         'Can be specified multiple times.'),
     cfg.StrOpt('metadata_host',
                default='$my_ip',
                help='the ip for the metadata api server'),
