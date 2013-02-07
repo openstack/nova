@@ -3,8 +3,7 @@
         {
             "updated": "%(timestamp)s",
             "created": "%(timestamp)s",
-            "OS-EXT-AZ:availability_zone": null,
-            "OS-EXT-AZ:host_availability_zone": "nova",
+            "OS-EXT-AZ:availability_zone": "nova",
             "accessIPv4": "",
             "accessIPv6": "",
             "addresses": {
