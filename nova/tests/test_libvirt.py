@@ -2330,7 +2330,7 @@ class LibvirtConnTestCase(test.TestCase):
                                           migrate_data)
             self.assertEqual(ret, None)
             self.assertTrue(os.path.exists('%s/%s/' %
-                           (tmpdir, inst_ref.name)))
+                           (tmpdir, inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
 
     def test_pre_block_migration_works_correctly(self):
