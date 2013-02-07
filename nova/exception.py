@@ -1110,3 +1110,8 @@ class CryptoCRLFileNotFound(FileNotFound):
 
 class InstanceRecreateNotSupported(Invalid):
     message = _('Instance recreate is not implemented by this virt driver.')
+
+
+class ServiceGroupUnavailable(NovaException):
+    message = _("The service from servicegroup driver %(driver) is "
+                "temporarily unavailable.")
