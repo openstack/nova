@@ -1175,7 +1175,7 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
                      ".extended_server_attributes" + \
                      ".Extended_server_attributes"
 
-    def test_extended_server_attrs_get(self):
+    def test_show(self):
         uuid = self._post_server()
 
         response = self._do_get('servers/%s' % uuid)
@@ -1184,10 +1184,10 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
-        return self._verify_response('extended-server-attrs-get',
+        return self._verify_response('server-get-resp',
                                      subs, response)
 
-    def test_extended_server_attrs_list(self):
+    def test_detail(self):
         uuid = self._post_server()
 
         response = self._do_get('servers/detail')
@@ -1196,7 +1196,7 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
-        return self._verify_response('extended-server-attrs-list',
+        return self._verify_response('servers-detail-resp',
                                      subs, response)
 
 
@@ -2220,15 +2220,15 @@ class QuotasSampleXmlTests(QuotasSampleJsonTests):
 
 class ExtendedStatusSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
-                                     ".extended_status.Extended_status")
+                      ".extended_status.Extended_status")
 
     def test_show(self):
         uuid = self._post_server()
-        response = self._do_get('servers')
+        response = self._do_get('servers/%s' % uuid)
         self.assertEqual(response.status, 200)
         subs = self._get_regexes()
-        subs['id'] = uuid
-        return self._verify_response('servers-list-resp', subs, response)
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('server-get-resp', subs, response)
 
     def test_detail(self):
         uuid = self._post_server()
@@ -2862,7 +2862,7 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
                                 ".extended_availability_zone"
                                 ".Extended_availability_zone")
 
-    def test_get(self):
+    def test_show(self):
         uuid = self._post_server()
         response = self._do_get('servers/%s' % uuid)
         self.assertEqual(response.status, 200)
