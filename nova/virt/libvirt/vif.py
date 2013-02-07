@@ -47,8 +47,25 @@ CONF.register_opts(libvirt_vif_opts)
 CONF.import_opt('libvirt_type', 'nova.virt.libvirt.driver')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
+# Since libvirt 0.9.11, <interface type='bridge'>
+# supports OpenVSwitch natively.
+LIBVIRT_OVS_VPORT_VERSION = 9011
+
 
 class LibvirtBaseVIFDriver(object):
+
+    def __init__(self, get_connection):
+        self.get_connection = get_connection
+        self.libvirt_version = None
+
+    def has_libvirt_version(self, want):
+        if self.libvirt_version is None:
+            conn = self.get_connection()
+            self.libvirt_version = conn.getLibVersion()
+
+        if self.libvirt_version >= want:
+            return True
+        return False
 
     def get_vif_devname(self, mapping):
         if 'vif_devname' in mapping:
@@ -130,9 +147,26 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_ovs_bridge(self, instance, network, mapping):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance,
+                                      network,
+                                      mapping)
+
+        designer.set_vif_host_backend_ovs_config(
+            conf, self.get_bridge_name(network),
+            self.get_ovs_interfaceid(mapping),
+            self.get_vif_devname(mapping))
+
+        return conf
+
     def get_config_ovs(self, instance, network, mapping):
-        return self.get_config_ovs_ethernet(instance, network,
-                                            mapping)
+        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+            return self.get_config_ovs_bridge(instance, network,
+                                              mapping)
+        else:
+            return self.get_config_ovs_ethernet(instance, network,
+                                                mapping)
 
     def get_config(self, instance, network, mapping):
         vif_type = mapping.get('vif_type')
@@ -192,8 +226,16 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                       dev, iface_id, mapping['mac'],
                                       instance['uuid'])
 
+    def plug_ovs_bridge(self, instance, vif):
+        """No manual plugging required."""
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
     def plug_ovs(self, instance, vif):
-        self.plug_ovs_ethernet(instance, vif)
+        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+            self.plug_ovs_bridge(instance, vif)
+        else:
+            self.plug_ovs_ethernet(instance, vif)
 
     def plug(self, instance, vif):
         network, mapping = vif
@@ -233,8 +275,16 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         except exception.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
+    def unplug_ovs_bridge(self, instance, vif):
+        """No manual unplugging required."""
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
     def unplug_ovs(self, instance, vif):
-        return self.unplug_ovs_ethernet(instance, vif)
+        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+            self.unplug_ovs_bridge(instance, vif)
+        else:
+            self.unplug_ovs_ethernet(instance, vif)
 
     def unplug(self, instance, vif):
         network, mapping = vif
@@ -371,9 +421,10 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver):
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
 
-class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
-    """VIF driver for Open vSwitch that uses integrated libvirt
-       OVS virtual port XML (introduced in libvirt 0.9.11)."""
+class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
+    """Retained in Grizzly for compatibility with Quantum
+       drivers which do not yet report 'vif_type' port binding.
+       Will be deprecated in Havana, and removed in Ixxxx."""
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -382,25 +433,13 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtBaseVIFDriver):
         return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
 
     def get_config(self, instance, network, mapping):
-        """Pass data required to create OVS virtual port element."""
-        conf = super(LibvirtOpenVswitchVirtualPortDriver,
-                     self).get_config(instance,
-                                      network,
-                                      mapping)
-
-        designer.set_vif_host_backend_ovs_config(
-            conf, self.get_bridge_name(network),
-            self.get_ovs_interfaceid(mapping),
-            self.get_vif_devname(mapping))
-
-        return conf
+        return self.get_config_ovs_bridge(instance, network, mapping)
 
     def plug(self, instance, vif):
-        pass
+        return self.plug_ovs_bridge(instance, vif)
 
     def unplug(self, instance, vif):
-        """No action needed.  Libvirt takes care of cleanup."""
-        pass
+        return self.unplug_ovs_bridge(instance, vif)
 
 
 class QuantumLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):

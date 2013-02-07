@@ -285,7 +285,9 @@ class LibvirtDriver(driver.ComputeDriver):
             DEFAULT_FIREWALL_DRIVER,
             self.virtapi,
             get_connection=self._get_connection)
-        self.vif_driver = importutils.import_object(CONF.libvirt_vif_driver)
+
+        vif_class = importutils.import_class(CONF.libvirt_vif_driver)
+        self.vif_driver = vif_class(self._get_connection)
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt_volume_drivers, self)
@@ -1880,7 +1882,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for (network, mapping) in network_info:
             self.vif_driver.plug(instance, (network, mapping))
             cfg = self.vif_driver.get_config(instance,
-                                                     network, mapping)
+                                             network, mapping)
             guest.add_device(cfg)
 
         if CONF.libvirt_type == "qemu" or CONF.libvirt_type == "kvm":
