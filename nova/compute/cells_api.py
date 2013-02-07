@@ -649,3 +649,19 @@ class HostAPI(compute_api.HostAPI):
                                                   ending,
                                                   host=host,
                                                   state=state)
+
+    def compute_node_get(self, context, compute_id):
+        """Get a compute node from a particular cell by its integer ID.
+        compute_id should be in the format of 'path!to!cell@ID'.
+        """
+        return self.cells_rpcapi.compute_node_get(context, compute_id)
+
+    def compute_node_get_all(self, context):
+        return self.cells_rpcapi.compute_node_get_all(context)
+
+    def compute_node_search_by_hypervisor(self, context, hypervisor_match):
+        return self.cells_rpcapi.compute_node_get_all(context,
+                hypervisor_match=hypervisor_match)
+
+    def compute_node_statistics(self, context):
+        return self.cells_rpcapi.compute_node_stats(context)

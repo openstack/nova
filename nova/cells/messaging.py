@@ -711,6 +711,12 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                     timeout=timeout)
         rpc.cast(message.ctxt, topic, rpc_message)
 
+    def compute_node_get(self, message, compute_id):
+        """Get compute node by ID."""
+        compute_node = self.db.compute_node_get(message.ctxt,
+                                                compute_id)
+        return jsonutils.to_primitive(compute_node)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -847,6 +853,19 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             else:
                 ret_services.append(service)
         return ret_services
+
+    def compute_node_get_all(self, message, hypervisor_match):
+        """Return compute nodes in this cell."""
+        if hypervisor_match is not None:
+            nodes = self.db.compute_node_search_by_hypervisor(message.ctxt,
+                    hypervisor_match)
+        else:
+            nodes = self.db.compute_node_get_all(message.ctxt)
+        return jsonutils.to_primitive(nodes)
+
+    def compute_node_stats(self, message):
+        """Return compute node stats from this cell."""
+        return self.db.compute_node_statistics(message.ctxt)
 
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
@@ -1138,6 +1157,30 @@ class MessageRunner(object):
         message = _BroadcastMessage(self, ctxt, 'task_log_get_all',
                                     method_kwargs, 'down',
                                     run_locally=True, need_response=True)
+        return message.process()
+
+    def compute_node_get_all(self, ctxt, hypervisor_match=None):
+        """Return list of compute nodes in all child cells."""
+        method_kwargs = dict(hypervisor_match=hypervisor_match)
+        message = _BroadcastMessage(self, ctxt, 'compute_node_get_all',
+                                    method_kwargs, 'down',
+                                    run_locally=True, need_response=True)
+        return message.process()
+
+    def compute_node_stats(self, ctxt):
+        """Return compute node stats from all child cells."""
+        method_kwargs = dict()
+        message = _BroadcastMessage(self, ctxt, 'compute_node_stats',
+                                    method_kwargs, 'down',
+                                    run_locally=True, need_response=True)
+        return message.process()
+
+    def compute_node_get(self, ctxt, cell_name, compute_id):
+        """Return compute node entry from a specific cell by ID."""
+        method_kwargs = dict(compute_id=compute_id)
+        message = _TargetedMessage(self, ctxt, 'compute_node_get',
+                                    method_kwargs, 'down',
+                                    cell_name, need_response=True)
         return message.process()
 
     @staticmethod

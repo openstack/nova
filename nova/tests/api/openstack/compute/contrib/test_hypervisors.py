@@ -267,7 +267,7 @@ class HypervisorsTest(test.TestCase):
         def fake_get_host_uptime(context, hyp):
             raise exc.HTTPNotImplemented()
 
-        self.stubs.Set(self.controller.api, 'get_host_uptime',
+        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
                        fake_get_host_uptime)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
@@ -278,7 +278,7 @@ class HypervisorsTest(test.TestCase):
         def fake_get_host_uptime(context, hyp):
             return "fake uptime"
 
-        self.stubs.Set(self.controller.api, 'get_host_uptime',
+        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
                        fake_get_host_uptime)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')

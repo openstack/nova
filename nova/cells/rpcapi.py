@@ -44,6 +44,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.2 - Adds service_get_all(), service_get_by_compute_host(),
               and proxy_rpc_to_compute_manager()
         1.3 - Adds task_log_get_all()
+        1.4 - Adds compute_node_get(), compute_node_get_all(), and
+              compute_node_stats()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -196,3 +198,23 @@ class CellsAPI(rpc_proxy.RpcProxy):
                                    period_ending=period_ending,
                                    host=host, state=state),
                          version='1.3')
+
+    def compute_node_get(self, ctxt, compute_id):
+        """Get a compute node by ID in a specific cell."""
+        return self.call(ctxt, self.make_msg('compute_node_get',
+                                             compute_id=compute_id),
+                         version='1.4')
+
+    def compute_node_get_all(self, ctxt, hypervisor_match=None):
+        """Return list of compute nodes in all cells, optionally
+        filtering by hypervisor host.
+        """
+        return self.call(ctxt,
+                         self.make_msg('compute_node_get_all',
+                                       hypervisor_match=hypervisor_match),
+                         version='1.4')
+
+    def compute_node_stats(self, ctxt):
+        """Return compute node stats from all cells."""
+        return self.call(ctxt, self.make_msg('compute_node_stats'),
+                         version='1.4')

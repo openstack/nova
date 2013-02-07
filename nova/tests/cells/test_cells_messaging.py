@@ -811,6 +811,19 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         result = response[0].value_or_raise()
         self.assertEqual(['fake_result'], result)
 
+    def test_compute_node_get(self):
+        compute_id = 'fake-id'
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'compute_node_get')
+        self.tgt_db_inst.compute_node_get(self.ctxt,
+                compute_id).AndReturn('fake_result')
+
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.compute_node_get(self.ctxt,
+                self.tgt_cell_name, compute_id)
+        result = response.value_or_raise()
+        self.assertEqual('fake_result', result)
+
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
@@ -1134,6 +1147,89 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         responses = self.src_msg_runner.task_log_get_all(ctxt, None,
                 task_name, begin, end, host=host, state=state)
+        response_values = [(resp.cell_name, resp.value_or_raise())
+                           for resp in responses]
+        expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),
+                    ('api-cell!child-cell2', [3]),
+                    ('api-cell', [1, 2])]
+        self.assertEqual(expected, response_values)
+
+    def test_compute_node_get_all(self):
+        # Reset this, as this is a broadcast down.
+        self._setup_attrs(up=False)
+
+        ctxt = self.ctxt.elevated()
+
+        self.mox.StubOutWithMock(self.src_db_inst, 'compute_node_get_all')
+        self.mox.StubOutWithMock(self.mid_db_inst, 'compute_node_get_all')
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'compute_node_get_all')
+
+        self.src_db_inst.compute_node_get_all(ctxt).AndReturn([1, 2])
+        self.mid_db_inst.compute_node_get_all(ctxt).AndReturn([3])
+        self.tgt_db_inst.compute_node_get_all(ctxt).AndReturn([4, 5])
+
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.compute_node_get_all(ctxt)
+        response_values = [(resp.cell_name, resp.value_or_raise())
+                           for resp in responses]
+        expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),
+                    ('api-cell!child-cell2', [3]),
+                    ('api-cell', [1, 2])]
+        self.assertEqual(expected, response_values)
+
+    def test_compute_node_get_all_with_hyp_match(self):
+        # Reset this, as this is a broadcast down.
+        self._setup_attrs(up=False)
+        hypervisor_match = 'meow'
+
+        ctxt = self.ctxt.elevated()
+
+        self.mox.StubOutWithMock(self.src_db_inst,
+                                 'compute_node_search_by_hypervisor')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                                 'compute_node_search_by_hypervisor')
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                                 'compute_node_search_by_hypervisor')
+
+        self.src_db_inst.compute_node_search_by_hypervisor(ctxt,
+                hypervisor_match).AndReturn([1, 2])
+        self.mid_db_inst.compute_node_search_by_hypervisor(ctxt,
+                hypervisor_match).AndReturn([3])
+        self.tgt_db_inst.compute_node_search_by_hypervisor(ctxt,
+                hypervisor_match).AndReturn([4, 5])
+
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.compute_node_get_all(ctxt,
+                hypervisor_match=hypervisor_match)
+        response_values = [(resp.cell_name, resp.value_or_raise())
+                           for resp in responses]
+        expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),
+                    ('api-cell!child-cell2', [3]),
+                    ('api-cell', [1, 2])]
+        self.assertEqual(expected, response_values)
+
+    def test_compute_node_stats(self):
+        # Reset this, as this is a broadcast down.
+        self._setup_attrs(up=False)
+
+        ctxt = self.ctxt.elevated()
+
+        self.mox.StubOutWithMock(self.src_db_inst,
+                                 'compute_node_statistics')
+        self.mox.StubOutWithMock(self.mid_db_inst,
+                                 'compute_node_statistics')
+        self.mox.StubOutWithMock(self.tgt_db_inst,
+                                 'compute_node_statistics')
+
+        self.src_db_inst.compute_node_statistics(ctxt).AndReturn([1, 2])
+        self.mid_db_inst.compute_node_statistics(ctxt).AndReturn([3])
+        self.tgt_db_inst.compute_node_statistics(ctxt).AndReturn([4, 5])
+
+        self.mox.ReplayAll()
+
+        responses = self.src_msg_runner.compute_node_stats(ctxt)
         response_values = [(resp.cell_name, resp.value_or_raise())
                            for resp in responses]
         expected = [('api-cell!child-cell2!grandchild-cell1', [4, 5]),
