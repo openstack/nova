@@ -1501,28 +1501,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                          size=size,
                                          swap_mb=swap_mb)
 
-        # target partition for file injection
-        target_partition = None
-        if not instance['kernel_id']:
-            target_partition = CONF.libvirt_inject_partition
-            if target_partition == 0:
-                target_partition = None
-        if CONF.libvirt_type == 'lxc':
-            target_partition = None
-
-        if CONF.libvirt_inject_key and instance['key_data']:
-            key = str(instance['key_data'])
-        else:
-            key = None
-
-        # File injection
-        metadata = instance.get('metadata')
-
-        if not CONF.libvirt_inject_password:
-            admin_pass = None
-
-        net = netutils.get_injected_network_template(network_info)
-
         # Config drive
         if configdrive.required_by(instance):
             LOG.info(_('Using config drive'), instance=instance)
@@ -1544,26 +1522,48 @@ class LibvirtDriver(driver.ComputeDriver):
                               e, instance=instance)
                     raise
 
-        elif any((key, net, metadata, admin_pass, files)):
-            # If we're not using config_drive, inject into root fs
-            injection_path = image('disk').path
-            img_id = instance['image_ref']
+        # File injection
+        else:
+            target_partition = None
+            if not instance['kernel_id']:
+                target_partition = CONF.libvirt_inject_partition
+                if target_partition == 0:
+                    target_partition = None
+            if CONF.libvirt_type == 'lxc':
+                target_partition = None
 
-            for inject in ('key', 'net', 'metadata', 'admin_pass', 'files'):
-                if locals()[inject]:
-                    LOG.info(_('Injecting %(inject)s into image'
-                               ' %(img_id)s'), locals(), instance=instance)
-            try:
-                disk.inject_data(injection_path,
-                                 key, net, metadata, admin_pass, files,
-                                 partition=target_partition,
-                                 use_cow=CONF.use_cow_images,
-                                 mandatory=('files',))
-            except Exception as e:
-                LOG.error(_('Error injecting data into image '
-                            '%(img_id)s (%(e)s)') % locals(),
-                            instance=instance)
-                raise
+            if CONF.libvirt_inject_key and instance['key_data']:
+                key = str(instance['key_data'])
+            else:
+                key = None
+
+            net = netutils.get_injected_network_template(network_info)
+
+            metadata = instance.get('metadata')
+
+            if not CONF.libvirt_inject_password:
+                admin_pass = None
+
+            if any((key, net, metadata, admin_pass, files)):
+                # If we're not using config_drive, inject into root fs
+                injection_path = image('disk').path
+                img_id = instance['image_ref']
+
+                for inj in ('key', 'net', 'metadata', 'admin_pass', 'files'):
+                    if locals()[inj]:
+                        LOG.info(_('Injecting %(inj)s into image '
+                                   '%(img_id)s'), locals(), instance=instance)
+                try:
+                    disk.inject_data(injection_path,
+                                     key, net, metadata, admin_pass, files,
+                                     partition=target_partition,
+                                     use_cow=CONF.use_cow_images,
+                                     mandatory=('files',))
+                except Exception as e:
+                    LOG.error(_('Error injecting data into image '
+                                '%(img_id)s (%(e)s)') % locals(),
+                              instance=instance)
+                    raise
 
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
