@@ -28,6 +28,10 @@ CONF = cfg.CONF
 
 
 class NetworkRpcAPITestCase(test.TestCase):
+    def setUp(self):
+        super(NetworkRpcAPITestCase, self).setUp()
+        self.flags(multi_host=True)
+
     def _test_network_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = network_rpcapi.NetworkAPI()
@@ -45,13 +49,18 @@ class NetworkRpcAPITestCase(test.TestCase):
             '_rpc_allocate_fixed_ip', 'deallocate_fixed_ip', 'update_dns',
             '_associate_floating_ip', '_disassociate_floating_ip',
             'lease_fixed_ip', 'release_fixed_ip', 'migrate_instance_start',
-            'migrate_instance_finish', 'get_backdoor_port'
+            'migrate_instance_finish', 'get_backdoor_port',
+            'allocate_for_instance', 'deallocate_for_instance',
         ]
         if method in targeted_methods and 'host' in kwargs:
-            if method != 'deallocate_fixed_ip':
+            if method not in ['allocate_for_instance',
+                              'deallocate_for_instance',
+                              'deallocate_fixed_ip']:
                 del expected_msg['args']['host']
             host = kwargs['host']
-            expected_topic = rpc.queue_get_for(ctxt, CONF.network_topic, host)
+            if CONF.multi_host:
+                expected_topic = rpc.queue_get_for(ctxt, CONF.network_topic,
+                                                   host)
         expected_msg['version'] = expected_version
 
         self.fake_args = None
@@ -145,6 +154,16 @@ class NetworkRpcAPITestCase(test.TestCase):
                 project_id='fake_id', pool='fake_pool', auto_assigned=False)
 
     def test_deallocate_floating_ip(self):
+        self._test_network_api('deallocate_floating_ip', rpc_method='call',
+                address='addr', affect_auto_assigned=True)
+
+    def test_allocate_floating_ip_no_multi(self):
+        self.flags(multi_host=False)
+        self._test_network_api('allocate_floating_ip', rpc_method='call',
+                project_id='fake_id', pool='fake_pool', auto_assigned=False)
+
+    def test_deallocate_floating_ip_no_multi(self):
+        self.flags(multi_host=False)
         self._test_network_api('deallocate_floating_ip', rpc_method='call',
                 address='addr', affect_auto_assigned=True)
 
