@@ -18,6 +18,9 @@ import platform
 
 import nova.context
 import nova.db
+
+from nova.compute import instance_types
+from nova import exception
 from nova.image import glance
 from nova.network import minidns
 from nova.network import model as network_model
@@ -52,25 +55,35 @@ def get_test_instance_type(context=None):
                           'root_gb': 40,
                           'ephemeral_gb': 80,
                           'swap': 1024}
-
-    instance_type_ref = nova.db.instance_type_create(context,
-            test_instance_type)
+    try:
+        instance_type_ref = nova.db.instance_type_create(context,
+                                                         test_instance_type)
+    except exception.InstanceTypeExists:
+        instance_type_ref = nova.db.instance_type_get_by_name(context,
+                                                              'kinda.big')
     return instance_type_ref
 
 
-def get_test_instance(context=None):
+def get_test_instance(context=None, instance_type=None):
     if not context:
         context = get_test_admin_context()
 
-    test_instance = {'memory_kb': '1024000',
+    if not instance_type:
+        instance_type = get_test_instance_type(context)
+
+    metadata = {}
+    instance_types.save_instance_type_info(metadata, instance_type, '')
+
+    test_instance = {'memory_kb': '2048000',
                      'basepath': '/some/path',
                      'bridge_name': 'br100',
-                     'vcpus': 2,
-                     'root_gb': 10,
+                     'vcpus': 4,
+                     'root_gb': 40,
                      'project_id': 'fake',
                      'bridge': 'br101',
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
-                     'instance_type_id': '5'}  # m1.small
+                     'instance_type_id': '5',
+                     'system_metadata': metadata}
 
     instance_ref = nova.db.instance_create(context, test_instance)
     return instance_ref

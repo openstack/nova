@@ -167,11 +167,9 @@ def get_pxe_config_file_path(instance):
 
 
 def get_partition_sizes(instance):
-    type_id = instance['instance_type_id']
-    root_mb = instance['root_gb'] * 1024
-
-    # NOTE(deva): is there a way to get swap_mb directly from instance?
-    swap_mb = instance_types.get_instance_type(type_id)['swap']
+    instance_type = instance_types.extract_instance_type(instance)
+    root_mb = instance_type['root_gb'] * 1024
+    swap_mb = instance_type['swap']
 
     # NOTE(deva): For simpler code paths on the deployment side,
     #             we always create a swap partition. If the flavor

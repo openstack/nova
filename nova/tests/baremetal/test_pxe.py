@@ -69,7 +69,7 @@ class BareMetalPXETestCase(bm_db_base.BMDBTestCase):
         self.node_info = bm_db_utils.new_bm_node(
                 id=123,
                 service_host='test_host',
-                cpus=2,
+                cpus=4,
                 memory_mb=2048,
                 prov_mac_address='11:11:11:11:11:11',
             )
@@ -221,19 +221,20 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 pxe.get_deploy_ari_id(self.instance), 'bbbb')
 
     def test_get_partition_sizes(self):
-        # m1.tiny: 10GB root, 0GB swap
-        self.instance['instance_type_id'] = 1
-        sizes = pxe.get_partition_sizes(self.instance)
-        self.assertEqual(sizes[0], 10240)
-        self.assertEqual(sizes[1], 1)
-
-        # kinda.big: 40GB root, 1GB swap
-        ref = utils.get_test_instance_type()
-        self.instance['instance_type_id'] = ref['id']
-        self.instance['root_gb'] = ref['root_gb']
+        # default "kinda.big" instance
         sizes = pxe.get_partition_sizes(self.instance)
         self.assertEqual(sizes[0], 40960)
         self.assertEqual(sizes[1], 1024)
+
+    def test_swap_not_zero(self):
+        # override swap to 0
+        instance_type = utils.get_test_instance_type(self.context)
+        instance_type['swap'] = 0
+        self.instance = utils.get_test_instance(self.context, instance_type)
+
+        sizes = pxe.get_partition_sizes(self.instance)
+        self.assertEqual(sizes[0], 40960)
+        self.assertEqual(sizes[1], 1)
 
     def test_get_tftp_image_info(self):
         # Raises an exception when options are neither specified
