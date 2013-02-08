@@ -84,7 +84,7 @@ class _FakeDriverBackendTestCase(object):
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.snapshots.libvirt_utils',
+            'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.firewall.libvirt',

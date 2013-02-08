@@ -827,7 +827,8 @@ class LibvirtDriver(driver.ComputeDriver):
         #            can be validated.
         if self.has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
                                 MIN_QEMU_LIVESNAPSHOT_VERSION,
-                                REQ_HYPERVISOR_LIVESNAPSHOT):
+                                REQ_HYPERVISOR_LIVESNAPSHOT) \
+                and not source_format == "lvm":
             live_snapshot = True
         else:
             live_snapshot = False
@@ -843,15 +844,17 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING or state == power_state.PAUSED:
                 virt_dom.managedSave(0)
 
+        snapshot_backend = self.image_backend.snapshot(disk_path,
+                snapshot_name,
+                image_type=source_format)
+
         if live_snapshot:
             LOG.info(_("Beginning live snapshot process"),
                      instance=instance)
         else:
             LOG.info(_("Beginning cold snapshot process"),
                      instance=instance)
-            snapshot = self.image_backend.snapshot(disk_path, snapshot_name,
-                                                   image_type=source_format)
-            snapshot.create()
+            snapshot_backend.snapshot_create()
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
         snapshot_directory = CONF.libvirt_snapshots_directory
@@ -866,10 +869,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     self._live_snapshot(virt_dom, disk_path, out_path,
                                         image_format)
                 else:
-                    snapshot.extract(out_path, image_format)
+                    snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
                 if not live_snapshot:
-                    snapshot.delete()
+                    snapshot_backend.snapshot_delete()
                 # NOTE(dkang): because previous managedSave is not called
                 #              for LXC, _create_domain must not be called.
                 if CONF.libvirt_type != 'lxc' and not live_snapshot:
