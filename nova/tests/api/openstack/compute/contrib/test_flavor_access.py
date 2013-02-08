@@ -252,35 +252,21 @@ class FlavorAccessTest(test.TestCase):
 
 
 class FlavorAccessSerializerTest(test.TestCase):
-    def test_xml_declaration(self):
-        access_list = [{'flavor_id': '2', 'tenant_id': 'proj2'}]
-        serializer = flavor_access.FlavorAccessTemplate()
-        output = serializer.serialize(access_list)
-        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
-        self.assertTrue(has_dec)
-
     def test_serializer_empty(self):
-        access_list = []
-
         serializer = flavor_access.FlavorAccessTemplate()
-        text = serializer.serialize(access_list)
+        text = serializer.serialize(dict(flavor_access=[]))
         tree = etree.fromstring(text)
         self.assertEqual(len(tree), 0)
 
     def test_serializer(self):
+        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
+                    '<flavor_access>'
+                    '<access tenant_id="proj2" flavor_id="2"/>'
+                    '<access tenant_id="proj3" flavor_id="2"/>'
+                    '</flavor_access>')
         access_list = [{'flavor_id': '2', 'tenant_id': 'proj2'},
                        {'flavor_id': '2', 'tenant_id': 'proj3'}]
 
         serializer = flavor_access.FlavorAccessTemplate()
-        text = serializer.serialize(access_list)
-        tree = etree.fromstring(text)
-
-        self.assertEqual('flavor_access', tree.tag)
-        self.assertEqual(len(access_list), len(tree))
-
-        for i in range(len(access_list)):
-            self.assertEqual('access', tree[i].tag)
-            self.assertEqual(access_list[i]['flavor_id'],
-                             tree[i].get('flavor_id'))
-            self.assertEqual(access_list[i]['tenant_id'],
-                             tree[i].get('tenant_id'))
+        text = serializer.serialize(dict(flavor_access=access_list))
+        self.assertEqual(text, expected)
