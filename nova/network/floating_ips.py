@@ -18,14 +18,18 @@
 #    under the License.
 
 from nova import context
+from nova.db import base
 from nova import exception
+from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
+from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
+from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
 
@@ -38,6 +42,15 @@ floating_opts = [
     cfg.BoolOpt('auto_assign_floating_ip',
                 default=False,
                 help='Autoassigning floating ip to VM'),
+    cfg.StrOpt('floating_ip_dns_manager',
+               default='nova.network.noop_dns_driver.NoopDNSDriver',
+               help='full class name for the DNS Manager for floating IPs'),
+    cfg.StrOpt('instance_dns_manager',
+               default='nova.network.noop_dns_driver.NoopDNSDriver',
+               help='full class name for the DNS Manager for instance IPs'),
+    cfg.StrOpt('instance_dns_domain',
+               default='',
+               help='full class name for the DNS Zone for instance IPs'),
 ]
 
 CONF = cfg.CONF
@@ -662,3 +675,17 @@ class FloatingIP(object):
 
     def _get_project_for_domain(self, context, domain):
         return self.db.dnsdomain_project(context, domain)
+
+
+class LocalManager(base.Base, FloatingIP):
+    def __init__(self):
+        super(LocalManager, self).__init__()
+        # NOTE(vish): setting the host to none ensures that the actual
+        #             l3driver commands for l3 are done via rpc.
+        self.host = None
+        self.servicegroup_api = servicegroup.API()
+        self.network_rpcapi = network_rpcapi.NetworkAPI()
+        self.floating_dns_manager = importutils.import_object(
+                CONF.floating_ip_dns_manager)
+        self.instance_dns_manager = importutils.import_object(
+                CONF.instance_dns_manager)

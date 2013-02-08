@@ -48,6 +48,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 
 notify_decorator = 'nova.openstack.common.notifier.api.notify_decorator'
@@ -1321,3 +1322,22 @@ def getcallargs(function, *args, **kwargs):
                 keyed_args[argname] = value
 
     return keyed_args
+
+
+class ExceptionHelper(object):
+    """Class to wrap another and translate the ClientExceptions raised by its
+    function calls to the actual ones"""
+
+    def __init__(self, target):
+        self._target = target
+
+    def __getattr__(self, name):
+        func = getattr(self._target, name)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except rpc_common.ClientException, e:
+                raise (e._exc_info[1], None, e._exc_info[2])
+        return wrapper

@@ -27,7 +27,6 @@ from nova import db
 from nova import exception
 from nova import network
 from nova.openstack.common import jsonutils
-from nova.openstack.common import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
@@ -275,12 +274,11 @@ class FloatingIpTest(test.TestCase):
         self.assertIn(self.floating_ip, ip_list)
         self.assertNotIn(self.floating_ip_2, ip_list)
 
-# test floating ip allocate/release(deallocate)
     def test_floating_ip_allocate_no_free_ips(self):
-        def fake_call(*args, **kwargs):
+        def fake_allocate(*args, **kwargs):
             raise exception.NoMoreFloatingIps()
 
-        self.stubs.Set(rpc, "call", fake_call)
+        self.stubs.Set(network.api.API, "allocate_floating_ip", fake_allocate)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
         self.assertRaises(exception.NoMoreFloatingIps,
@@ -316,9 +314,12 @@ class FloatingIpTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
         self.controller.delete(req, 1)
 
-# test floating ip add/remove -> associate/disassociate
-
     def test_floating_ip_associate(self):
+        def fake_associate_floating_ip(*args, **kwargs):
+            pass
+
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_associate_floating_ip)
         body = dict(addFloatingIp=dict(address=self.floating_ip))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
