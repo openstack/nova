@@ -218,6 +218,21 @@ class SimpleTenantUsageTest(test.TestCase):
         finally:
             policy.reset()
 
+    def test_get_tenants_usage_with_bad_start_date(self):
+        future = NOW + datetime.timedelta(hours=HOURS)
+        tenant_id = 0
+        req = webob.Request.blank(
+                  '/v2/faketenant_0/os-simple-tenant-usage/'
+                  'faketenant_%s?start=%s&end=%s' %
+                  (tenant_id, future.isoformat(), NOW.isoformat()))
+        req.method = "GET"
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.user_context,
+                               init_only=('os-simple-tenant-usage',)))
+        self.assertEqual(res.status_int, 400)
+
 
 class SimpleTenantUsageSerializerTest(test.TestCase):
     def _verify_server_usage(self, raw_usage, tree):
