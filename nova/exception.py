@@ -1120,3 +1120,13 @@ class ServiceGroupUnavailable(NovaException):
 class DBNotAllowed(NovaException):
     message = _('%(binary)s attempted direct database access which is '
                 'not allowed by policy')
+
+
+class UnsupportedVirtType(Invalid):
+    message = _("Virtualization type '%(virt)s' is not supported by "
+                "this compute driver")
+
+
+class UnsupportedHardware(Invalid):
+    message = _("Requested hardware '%(model)s' is not supported by "
+                "the '%(virt)s' virt driver")

@@ -171,7 +171,7 @@ class LibvirtVifTestCase(test.TestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
-    def _get_instance_xml(self, driver, net, mapping):
+    def _get_instance_xml(self, driver, net, mapping, image_meta=None):
         conf = vconfig.LibvirtConfigGuest()
         conf.virt_type = "qemu"
         conf.name = "fake-name"
@@ -179,7 +179,7 @@ class LibvirtVifTestCase(test.TestCase):
         conf.memory = 100 * 1024
         conf.vcpus = 4
 
-        nic = driver.get_config(self.instance, net, mapping)
+        nic = driver.get_config(self.instance, net, mapping, image_meta)
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -268,6 +268,46 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(model, "virtio")
         ret = node.findall("driver")
         self.assertEqual(len(ret), 0)
+
+    def test_model_kvm_custom(self):
+        self.flags(libvirt_use_virtio_for_bridges=True,
+                   libvirt_type='kvm')
+
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        image_meta = {'properties': {'vif_model': 'e1000'}}
+        xml = self._get_instance_xml(d,
+                                     self.net_bridge,
+                                     self.mapping_bridge,
+                                     image_meta)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+
+        model = node.find("model").get("type")
+        self.assertEqual(model, "e1000")
+        ret = node.findall("driver")
+        self.assertEqual(len(ret), 0)
+
+    def test_model_kvm_bogus(self):
+        self.flags(libvirt_use_virtio_for_bridges=True,
+                   libvirt_type='kvm')
+
+        def get_connection():
+            return fakelibvirt.Connection("qemu:///session",
+                                          False)
+        d = vif.LibvirtGenericVIFDriver(get_connection)
+        image_meta = {'properties': {'vif_model': 'acme'}}
+        self.assertRaises(exception.UnsupportedHardware,
+                          self._get_instance_xml,
+                          d,
+                          self.net_bridge,
+                          self.mapping_bridge,
+                          image_meta)
 
     def test_model_qemu(self):
         self.flags(libvirt_use_virtio_for_bridges=True,
