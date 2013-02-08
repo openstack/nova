@@ -446,6 +446,15 @@ class _BaseTestCase(object):
                                              'end', 'host', 'state')
         self.assertEqual(result, 'result')
 
+    def test_task_log_get_with_no_state(self):
+        self.mox.StubOutWithMock(db, 'task_log_get')
+        db.task_log_get(self.context, 'task', 'begin', 'end',
+                        'host', None).AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.task_log_get(self.context, 'task', 'begin',
+                                             'end', 'host')
+        self.assertEqual(result, 'result')
+
     def test_task_log_begin_task(self):
         self.mox.StubOutWithMock(db, 'task_log_begin_task')
         db.task_log_begin_task(self.context.elevated(), 'task', 'begin',
