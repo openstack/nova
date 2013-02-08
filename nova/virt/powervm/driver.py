@@ -101,7 +101,7 @@ class PowerVMDriver(driver.ComputeDriver):
         """Destroy (shutdown and delete) the specified instance."""
         self._powervm.destroy(instance['name'], destroy_disks)
 
-    def reboot(self, instance, network_info, reboot_type,
+    def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None):
         """Reboot the specified instance.
 

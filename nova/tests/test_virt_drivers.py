@@ -104,6 +104,13 @@ class _FakeDriverBackendTestCase(object):
         def fake_make_drive(_self, _path):
             pass
 
+        def fake_get_instance_disk_info(_self, instance, xml=None):
+            return '[]'
+
+        self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
+                       'get_instance_disk_info',
+                       fake_get_instance_disk_info)
+
         self.stubs.Set(nova.virt.libvirt.driver.disk,
                        'extend', fake_extend)
 
@@ -227,7 +234,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_reboot(self):
         reboot_type = "SOFT"
         instance_ref, network_info = self._get_running_instance()
-        self.connection.reboot(instance_ref, network_info, reboot_type)
+        self.connection.reboot(self.ctxt, instance_ref, network_info,
+                               reboot_type)
 
     @catch_notimplementederror
     def test_get_host_ip_addr(self):

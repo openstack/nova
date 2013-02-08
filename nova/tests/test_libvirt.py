@@ -4206,7 +4206,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.counter = 0
 
-        def fake_get_instance_disk_info(instance):
+        def fake_get_instance_disk_info(instance, xml=None):
             return '[]'
 
         def fake_destroy(instance):
@@ -4251,7 +4251,7 @@ class LibvirtDriverTestCase(test.TestCase):
                       'disk_size':'83886080'}]
         disk_info_text = jsonutils.dumps(disk_info)
 
-        def fake_get_instance_disk_info(instance):
+        def fake_get_instance_disk_info(instance, xml=None):
             return disk_info_text
 
         def fake_destroy(instance):

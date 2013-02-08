@@ -199,14 +199,16 @@ class VMwareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         reboot_type = "SOFT"
-        self.conn.reboot(self.instance, self.network_info, reboot_type)
+        self.conn.reboot(self.context, self.instance, self.network_info,
+                         reboot_type)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_reboot_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.reboot,
-                          self.instance, self.network_info, 'SOFT')
+                          self.context, self.instance, self.network_info,
+                          'SOFT')
 
     def test_reboot_not_poweredon(self):
         self._create_vm()
@@ -216,7 +218,8 @@ class VMwareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,
-                          self.instance, self.network_info, 'SOFT')
+                          self.context, self.instance, self.network_info,
+                          'SOFT')
 
     def test_suspend(self):
         self._create_vm()
