@@ -201,6 +201,9 @@
 # a list of APIs to enable by default (list value)
 #enabled_apis=ec2,osapi_compute,metadata
 
+# a list of APIs with enabled SSL (list value)
+#enabled_ssl_apis=
+
 # IP address for EC2 API to listen (string value)
 #ec2_listen=0.0.0.0
 
@@ -268,7 +271,7 @@
 #monkey_patch=false
 
 # List of modules/decorators to monkey patch (list value)
-#monkey_patch_modules=nova.api.ec2.cloud:nova.notifier.api.notify_decorator,nova.compute.api:nova.notifier.api.notify_decorator
+#monkey_patch_modules=nova.api.ec2.cloud:nova.openstack.common.notifier.api.notify_decorator,nova.compute.api:nova.openstack.common.notifier.api.notify_decorator
 
 # Length of generated instance admin passwords (integer value)
 #password_length=12
@@ -284,6 +287,10 @@
 # commands as root (string value)
 #rootwrap_config=/etc/nova/rootwrap.conf
 
+# Explicitly specify the temporary working directory (string
+# value)
+#tempdir=<None>
+
 
 #
 # Options defined in nova.wsgi
@@ -298,6 +305,20 @@
 # into it: client_ip, date_time, request_line, status_code,
 # body_length, wall_seconds. (string value)
 #wsgi_log_format=%(client_ip)s "%(request_line)s" status: %(status_code)s len: %(body_length)s time: %(wall_seconds).7f
+
+# CA certificate file to use to verify connecting clients
+# (string value)
+#ssl_ca_file=<None>
+
+# SSL certificate of API server (string value)
+#ssl_cert_file=<None>
+
+# SSL private key of API server (string value)
+#ssl_key_file=<None>
+
+# Sets the value of TCP_KEEPIDLE in seconds for each server
+# socket. Not supported on OS X. (integer value)
+#tcp_keepidle=600
 
 
 #
@@ -795,57 +816,6 @@
 
 
 #
-# Options defined in nova.db.sqlalchemy.session
-#
-
-# The SQLAlchemy connection string used to connect to the
-# database (string value)
-#sql_connection=sqlite:///$state_path/$sqlite_db
-
-# the filename to use with sqlite (string value)
-#sqlite_db=nova.sqlite
-
-# timeout before idle sql connections are reaped (integer
-# value)
-#sql_idle_timeout=3600
-
-# If passed, use synchronous mode for sqlite (boolean value)
-#sqlite_synchronous=true
-
-# Minimum number of SQL connections to keep open in a pool
-# (integer value)
-#sql_min_pool_size=1
-
-# Maximum number of SQL connections to keep open in a pool
-# (integer value)
-#sql_max_pool_size=5
-
-# maximum db connection retries during startup. (setting -1
-# implies an infinite retry count) (integer value)
-#sql_max_retries=10
-
-# interval between retries of opening a sql connection
-# (integer value)
-#sql_retry_interval=10
-
-# If set, use this value for max_overflow with sqlalchemy
-# (integer value)
-#sql_max_overflow=<None>
-
-# Verbosity of SQL debugging information. 0=None,
-# 100=Everything (integer value)
-#sql_connection_debug=0
-
-# Add python stack traces to SQL as comment strings (boolean
-# value)
-#sql_connection_trace=false
-
-# enable the use of eventlet's db_pool for MySQL (boolean
-# value)
-#sql_dbpool_enable=false
-
-
-#
 # Options defined in nova.image.glance
 #
 
@@ -871,6 +841,11 @@
 # Number retries when downloading an image from glance
 # (integer value)
 #glance_num_retries=0
+
+# A list of url scheme that can be downloaded directly via the
+# direct_url.  Currently supported schemes: [file]. (list
+# value)
+#allowed_direct_url_schemes=
 
 
 #
@@ -925,6 +900,29 @@
 
 # Driver to use for network creation (string value)
 #network_driver=nova.network.linux_net
+
+
+#
+# Options defined in nova.network.floating_ips
+#
+
+# Default pool for floating ips (string value)
+#default_floating_pool=nova
+
+# Autoassigning floating ip to VM (boolean value)
+#auto_assign_floating_ip=false
+
+# full class name for the DNS Manager for floating IPs (string
+# value)
+#floating_ip_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
+
+# full class name for the DNS Manager for instance IPs (string
+# value)
+#instance_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
+
+# full class name for the DNS Zone for instance IPs (string
+# value)
+#instance_dns_domain=
 
 
 #
@@ -1020,6 +1018,11 @@
 # default gateway from dhcp server (boolean value)
 #use_single_default_gateway=false
 
+# An interface that bridges can forward to. If this is set to
+# all then all traffic will be forwarded. Can be specified
+# multiple times. (multi valued)
+#forward_bridge_interface=all
+
 # the ip for the metadata api server (string value)
 #metadata_host=$my_ip
 
@@ -1060,17 +1063,8 @@
 # First Vpn port for private networks (integer value)
 #vpn_start=1000
 
-# Default value for multi_host in networks (boolean value)
-#multi_host=false
-
 # Number of addresses in each private subnet (integer value)
 #network_size=256
-
-# Floating IP address block (string value)
-#floating_range=4.4.4.0/24
-
-# Default pool for floating ips (string value)
-#default_floating_pool=nova
 
 # Fixed IP address block (string value)
 #fixed_range=10.0.0.0/8
@@ -1094,9 +1088,6 @@
 # Number of attempts to create unique mac address (integer
 # value)
 #create_unique_mac_address_attempts=5
-
-# Autoassigning floating ip to VM (boolean value)
-#auto_assign_floating_ip=false
 
 # If passed, use fake network devices and addresses (boolean
 # value)
@@ -1134,18 +1125,6 @@
 # Indicates underlying L3 management library (string value)
 #l3_lib=nova.network.l3.LinuxNetL3
 
-# full class name for the DNS Manager for instance IPs (string
-# value)
-#instance_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
-
-# full class name for the DNS Zone for instance IPs (string
-# value)
-#instance_dns_domain=
-
-# full class name for the DNS Manager for floating IPs (string
-# value)
-#floating_ip_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
-
 
 #
 # Options defined in nova.network.quantumv2.api
@@ -1170,6 +1149,10 @@
 # (string value)
 #quantum_admin_tenant_name=<None>
 
+# region name for connecting to quantum in admin context
+# (string value)
+#quantum_region_name=<None>
+
 # auth url for connecting to quantum in admin context (string
 # value)
 #quantum_admin_auth_url=http://localhost:5000/v2.0
@@ -1190,6 +1173,11 @@
 # the topic network nodes listen on (string value)
 #network_topic=network
 
+# Default value for multi_host in networks. Also, if set, some
+# rpc network calls will be sent directly to host. (boolean
+# value)
+#multi_host=false
+
 
 #
 # Options defined in nova.objectstore.s3server
@@ -1203,6 +1191,57 @@
 
 # port for s3 api to listen (integer value)
 #s3_listen_port=3333
+
+
+#
+# Options defined in nova.openstack.common.db.sqlalchemy.session
+#
+
+# The SQLAlchemy connection string used to connect to the
+# database (string value)
+#sql_connection=sqlite:////home/markmc/git/openstack/nova/nova/openstack/common/db/$sqlite_db
+
+# the filename to use with sqlite (string value)
+#sqlite_db=nova.sqlite
+
+# timeout before idle sql connections are reaped (integer
+# value)
+#sql_idle_timeout=3600
+
+# If passed, use synchronous mode for sqlite (boolean value)
+#sqlite_synchronous=true
+
+# Minimum number of SQL connections to keep open in a pool
+# (integer value)
+#sql_min_pool_size=1
+
+# Maximum number of SQL connections to keep open in a pool
+# (integer value)
+#sql_max_pool_size=5
+
+# maximum db connection retries during startup. (setting -1
+# implies an infinite retry count) (integer value)
+#sql_max_retries=10
+
+# interval between retries of opening a sql connection
+# (integer value)
+#sql_retry_interval=10
+
+# If set, use this value for max_overflow with sqlalchemy
+# (integer value)
+#sql_max_overflow=<None>
+
+# Verbosity of SQL debugging information. 0=None,
+# 100=Everything (integer value)
+#sql_connection_debug=0
+
+# Add python stack traces to SQL as comment strings (boolean
+# value)
+#sql_connection_trace=false
+
+# enable the use of eventlet's db_pool for MySQL (boolean
+# value)
+#sql_dbpool_enable=false
 
 
 #
@@ -1655,14 +1694,6 @@
 
 
 #
-# Options defined in nova.virt.baremetal.db.api
-#
-
-# The backend to use for db (string value)
-#baremetal_db_backend=sqlalchemy
-
-
-#
 # Options defined in nova.virt.configdrive
 #
 
@@ -1774,7 +1805,7 @@
 # value)
 #hyperv_attaching_volume_retry_count=10
 
-# The seconds to wait between a volume attachment attempt
+# The seconds to wait between an volume attachment attempt
 # (integer value)
 #hyperv_wait_between_attach_retry=5
 
@@ -1846,10 +1877,10 @@
 #snapshot_image_format=<None>
 
 # The libvirt VIF driver to configure the VIFs. (string value)
-#libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtBridgeDriver
+#libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtGenericVIFDriver
 
 # Libvirt handlers for remote volumes. (list value)
-#libvirt_volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume_nfs.NfsVolumeDriver
+#libvirt_volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver
 
 # Override the default disk prefix for the devices attached to
 # a server, which is dependent on libvirt_type. (valid options
@@ -1938,6 +1969,15 @@
 
 
 #
+# Options defined in nova.virt.libvirt.utils
+#
+
+# Compress snapshot images when possible. This currently
+# applies exclusively to qcow2 images (boolean value)
+#libvirt_snapshot_compression=false
+
+
+#
 # Options defined in nova.virt.libvirt.vif
 #
 
@@ -1966,14 +2006,13 @@
 # (string value)
 #rbd_secret_uuid=<None>
 
-
-#
-# Options defined in nova.virt.libvirt.volume_nfs
-#
-
-# Base dir where nfs expected to be mounted on compute (string
-# value)
+# Dir where the nfs volume is mounted on the compute node
+# (string value)
 #nfs_mount_point_base=$state_path/mnt
+
+# Mount options passed to the nfs client. See section of the
+# nfs man page for details (string value)
+#nfs_mount_options=<None>
 
 
 #
@@ -2003,27 +2042,47 @@
 # Options defined in nova.virt.vmwareapi.driver
 #
 
-# URL for connection to VMware ESX host.Required if
-# compute_driver is vmwareapi.VMwareESXDriver. (string value)
+# URL for connection to VMware ESX/VC host. Required if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
 #vmwareapi_host_ip=<None>
 
-# Username for connection to VMware ESX host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver. (string value)
+# Username for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
 #vmwareapi_host_username=<None>
 
-# Password for connection to VMware ESX host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver. (string value)
+# Password for connection to VMware ESX/VC host. Used only if
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (string value)
 #vmwareapi_host_password=<None>
 
+# Name of a VMware Cluster ComputeResource. Used only if
+# compute_driver is vmwareapi.VMwareVCDriver. (string value)
+#vmwareapi_cluster_name=<None>
+
 # The interval used for polling of remote tasks. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver. (floating point
-# value)
+# compute_driver is vmwareapi.VMwareESXDriver or
+# vmwareapi.VMwareVCDriver. (floating point value)
 #vmwareapi_task_poll_interval=5.0
 
 # The number of times we retry on failures, e.g., socket
 # error, etc. Used only if compute_driver is
-# vmwareapi.VMwareESXDriver. (integer value)
+# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
+# (integer value)
 #vmwareapi_api_retry_count=10
+
+# VNC starting port (integer value)
+#vnc_port=5900
+
+# Total number of VNC ports (integer value)
+#vnc_port_total=10000
+
+# VNC password (string value)
+#vnc_password=<None>
+
+# Whether to use linked clone (boolean value)
+#use_linked_clone=true
 
 
 #
@@ -2234,6 +2293,10 @@
 # value)
 #xenapi_vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
 
+# Object Store Driver used to handle image uploads. (string
+# value)
+#xenapi_image_upload_handler=nova.virt.xenapi.imageupload.glance.GlanceStore
+
 
 #
 # Options defined in nova.vnc
@@ -2413,6 +2476,14 @@
 [baremetal]
 
 #
+# Options defined in nova.virt.baremetal.db.api
+#
+
+# The backend to use for bare-metal database (string value)
+#db_backend=sqlalchemy
+
+
+#
 # Options defined in nova.virt.baremetal.db.sqlalchemy.session
 #
 
@@ -2542,6 +2613,19 @@
 # attestation authorization blob - must change (string value)
 #attestation_auth_blob=<None>
 
+# Attestation status cache valid period length (integer value)
+#attestation_auth_timeout=60
+
+
+[vmware]
+
+#
+# Options defined in nova.virt.vmwareapi.vmops
+#
+
+# Name of Integration Bridge (string value)
+#integration_bridge=br-int
+
 
 [spice]
 
@@ -2571,4 +2655,4 @@
 #keymap=en-us
 
 
-# Total option count: 525
+# Total option count: 543
