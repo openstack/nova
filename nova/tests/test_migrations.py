@@ -47,6 +47,7 @@ import datetime
 import os
 import sqlalchemy
 import urlparse
+import uuid
 
 from migrate.versioning import repository
 
@@ -439,6 +440,24 @@ class TestMigrations(BaseMigrationTestCase):
         self.assertEqual(bw['last_ctr_out'], None)
 
         self.assertEqual(data[0]['mac'], bw['mac'])
+
+    # migration 141, update migrations instance uuid
+    def _prerun_141(self, engine):
+        data = {
+            'instance_uuid': str(uuid.uuid4())
+            }
+        migrations = get_table(engine, 'migrations')
+        engine.execute(migrations.insert(), data)
+        result = migrations.insert().values(data).execute()
+        data['id'] = result.inserted_primary_key[0]
+        return data
+
+    def _check_141(self, engine, data):
+        migrations = get_table(engine, 'migrations')
+        row = migrations.select(
+            migrations.c.id == data['id']).execute().first()
+        # Check that change to String(36) went alright
+        self.assertEqual(data['instance_uuid'], row['instance_uuid'])
 
     # migration 146, availability zone transition
     def _prerun_146(self, engine):
