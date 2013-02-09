@@ -8,9 +8,9 @@ document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.
 </script>
 <script type="text/javascript">
 try {
-var pageTracker = _gat._getTracker("UA-17511903-3");
-pageTracker._setDomainName("none");
-pageTracker._setAllowLinker(true);
+//Tracking docs.openstack.org/developer/nova only
+var pageTracker = _gat._getTracker("UA-17511903-1");
+pageTracker._setCookiePath("/developer/nova");
 pageTracker._trackPageview();
 } catch(err) {}</script>
 {% endblock %}
