@@ -1115,3 +1115,8 @@ class InstanceRecreateNotSupported(Invalid):
 class ServiceGroupUnavailable(NovaException):
     message = _("The service from servicegroup driver %(driver) is "
                 "temporarily unavailable.")
+
+
+class DBNotAllowed(NovaException):
+    message = _('%(binary)s attempted direct database access which is '
+                'not allowed by policy')
