@@ -1840,8 +1840,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
-            self.network_api.migrate_instance_start(context, instance,
-                                                    migration)
+            self.conductor_api.network_migrate_instance_start(context,
+                                                              instance,
+                                                              migration)
 
             network_info = self._get_instance_nw_info(context, instance)
             block_device_info = self._get_instance_volume_block_device_info(
@@ -1920,8 +1921,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance['uuid'], launched_at=timeutils.utcnow(),
                     expected_task_state=task_states.RESIZE_REVERTING)
 
-            self.network_api.migrate_instance_finish(context, instance,
-                                                     migration)
+            self.conductor_api.network_migrate_instance_finish(context,
+                                                               instance,
+                                                               migration)
 
             instance = self._instance_update(context, instance['uuid'],
                     vm_state=vm_states.ACTIVE, task_state=None)
@@ -1934,15 +1936,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._quota_commit(context, reservations)
 
-    @staticmethod
-    def _quota_commit(context, reservations):
+    def _quota_commit(self, context, reservations):
         if reservations:
-            QUOTAS.commit(context, reservations)
+            self.conductor_api.quota_commit(context, reservations)
 
-    @staticmethod
-    def _quota_rollback(context, reservations):
+    def _quota_rollback(self, context, reservations):
         if reservations:
-            QUOTAS.rollback(context, reservations)
+            self.conductor_api.quota_rollback(context, reservations)
 
     def _prep_resize(self, context, image, instance, instance_type,
             reservations, request_spec, filter_properties, node):
@@ -2096,8 +2096,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._terminate_volume_connections(context, instance)
 
-            self.network_api.migrate_instance_start(context, instance,
-                                                    migration)
+            self.conductor_api.network_migrate_instance_start(context,
+                                                              instance,
+                                                              migration)
 
             migration = self.conductor_api.migration_update(context,
                     migration, 'post-migrating')
@@ -2156,8 +2157,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.setup_networks_on_host(context, instance,
                                                 migration['dest_compute'])
 
-        self.network_api.migrate_instance_finish(context, instance,
-                                                 migration)
+        self.conductor_api.network_migrate_instance_finish(context,
+                                                           instance,
+                                                           migration)
 
         network_info = self._get_instance_nw_info(context, instance)
 
@@ -2864,7 +2866,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }
-        self.network_api.migrate_instance_start(ctxt, instance_ref, migration)
+        self.conductor_api.network_migrate_instance_start(ctxt,
+                                                          instance_ref,
+                                                          migration)
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
@@ -2919,7 +2923,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                          self.host)
         migration = {'source_compute': instance['host'],
                      'dest_compute': self.host, }
-        self.network_api.migrate_instance_finish(context, instance, migration)
+        self.conductor_api.network_migrate_instance_finish(context,
+                                                           instance,
+                                                           migration)
 
         network_info = self._get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_volume_block_device_info(

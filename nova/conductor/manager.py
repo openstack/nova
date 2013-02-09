@@ -18,12 +18,13 @@ from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova import manager
+from nova import network
 from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
-
+from nova import quota
 
 LOG = logging.getLogger(__name__)
 
@@ -46,12 +47,23 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.40'
+    RPC_API_VERSION = '1.41'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
         self.security_group_api = compute_api.SecurityGroupAPI()
+        self._network_api = None
+        self.quotas = quota.QUOTAS
+
+    @property
+    def network_api(self):
+        # NOTE(danms): We need to instantiate our network_api on first use
+        # to avoid the circular dependency that exists between our init
+        # and network_api's
+        if self._network_api is None:
+            self._network_api = network.API()
+        return self._network_api
 
     def ping(self, context, arg):
         return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
@@ -360,3 +372,15 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def security_groups_trigger_members_refresh(self, context, group_ids):
         self.security_group_api.trigger_members_refresh(context, group_ids)
+
+    def network_migrate_instance_start(self, context, instance, migration):
+        self.network_api.migrate_instance_start(context, instance, migration)
+
+    def network_migrate_instance_finish(self, context, instance, migration):
+        self.network_api.migrate_instance_finish(context, instance, migration)
+
+    def quota_commit(self, context, reservations):
+        quota.QUOTAS.commit(context, reservations)
+
+    def quota_rollback(self, context, reservations):
+        quota.QUOTAS.rollback(context, reservations)

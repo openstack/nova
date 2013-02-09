@@ -303,6 +303,22 @@ class LocalAPI(object):
         return self._manager.security_groups_trigger_members_refresh(context,
                                                                      group_ids)
 
+    def network_migrate_instance_start(self, context, instance, migration):
+        return self._manager.network_migrate_instance_start(context,
+                                                            instance,
+                                                            migration)
+
+    def network_migrate_instance_finish(self, context, instance, migration):
+        return self._manager.network_migrate_instance_finish(context,
+                                                             instance,
+                                                             migration)
+
+    def quota_commit(self, context, reservations):
+        return self._manager.quota_commit(context, reservations)
+
+    def quota_rollback(self, context, reservations):
+        return self._manager.quota_rollback(context, reservations)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -604,3 +620,19 @@ class API(object):
     def security_groups_trigger_members_refresh(self, context, group_ids):
         return self.conductor_rpcapi.security_groups_trigger_members_refresh(
             context, group_ids)
+
+    def network_migrate_instance_start(self, context, instance, migration):
+        return self.conductor_rpcapi.network_migrate_instance_start(context,
+                                                                    instance,
+                                                                    migration)
+
+    def network_migrate_instance_finish(self, context, instance, migration):
+        return self.conductor_rpcapi.network_migrate_instance_finish(context,
+                                                                     instance,
+                                                                     migration)
+
+    def quota_commit(self, context, reservations):
+        return self.conductor_rpcapi.quota_commit(context, reservations)
+
+    def quota_rollback(self, context, reservations):
+        return self.conductor_rpcapi.quota_rollback(context, reservations)
