@@ -289,7 +289,7 @@ def deserialize_remote_exception(conf, data):
 
     # NOTE(ameade): We DO NOT want to allow just any module to be imported, in
     # order to prevent arbitrary code execution.
-    if not module in conf.allowed_rpc_exception_modules:
+    if module not in conf.allowed_rpc_exception_modules:
         return RemoteError(name, failure.get('message'), trace)
 
     try:
