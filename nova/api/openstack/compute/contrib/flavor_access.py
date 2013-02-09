@@ -39,7 +39,7 @@ def make_flavor_access(elem):
     elem.set('tenant_id')
 
 
-class FlavorextradatumTemplate(xmlutil.TemplateBuilder):
+class FlavorTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('flavor', selector='flavor')
         make_flavor(root)
@@ -48,7 +48,7 @@ class FlavorextradatumTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
 
 
-class FlavorextradataTemplate(xmlutil.TemplateBuilder):
+class FlavorsTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('flavors')
         elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
@@ -60,11 +60,7 @@ class FlavorextradataTemplate(xmlutil.TemplateBuilder):
 
 class FlavorAccessTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        def wrapped(obj, do_raise=False):
-            # wrap bare list in dict
-            return dict(flavor_access=obj)
-
-        root = xmlutil.TemplateElement('flavor_access', selector=wrapped)
+        root = xmlutil.TemplateElement('flavor_access')
         elem = xmlutil.SubTemplateElement(root, 'access',
                                           selector='flavor_access')
         make_flavor_access(elem)
@@ -138,7 +134,7 @@ class FlavorActionController(wsgi.Controller):
         context = req.environ['nova.context']
         if authorize(context):
             # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorextradatumTemplate())
+            resp_obj.attach(xml=FlavorTemplate())
             db_flavor = req.get_db_flavor(id)
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
@@ -148,7 +144,7 @@ class FlavorActionController(wsgi.Controller):
         context = req.environ['nova.context']
         if authorize(context):
             # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorextradataTemplate())
+            resp_obj.attach(xml=FlavorsTemplate())
 
             flavors = list(resp_obj.obj['flavors'])
             for flavor_rval in flavors:
@@ -160,7 +156,7 @@ class FlavorActionController(wsgi.Controller):
         context = req.environ['nova.context']
         if authorize(context):
             # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorextradatumTemplate())
+            resp_obj.attach(xml=FlavorTemplate())
 
             db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
 
