@@ -116,8 +116,8 @@ libvirt_opts = [
     cfg.IntOpt('libvirt_inject_partition',
                 default=1,
                 help='The partition to inject to : '
-                     '-1 => inspect (libguestfs only), 0 => not partitioned, '
-                     '>0 => partition number'),
+                     '-2 => disable, -1 => inspect (libguestfs only), '
+                     '0 => not partitioned, >0 => partition number'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
@@ -1534,7 +1534,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     raise
 
         # File injection
-        else:
+        elif CONF.libvirt_inject_partition != -2:
             target_partition = None
             if not instance['kernel_id']:
                 target_partition = CONF.libvirt_inject_partition
