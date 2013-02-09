@@ -21,33 +21,31 @@ Setting Up a Development Environment
 This page describes how to setup a working Python development
 environment that can be used in developing nova on Ubuntu, Fedora or
 Mac OS X. These instructions assume you're already familiar with
-git. Refer to GettingTheCode_ for additional information.
-
-.. _GettingTheCode: http://wiki.openstack.org/GettingTheCode
+git.
 
 Following these instructions will allow you to run the nova unit
 tests. If you want to be able to run nova (i.e., launch VM instances),
 you will also need to install libvirt and at least one of the
 `supported hypervisors`_. Running nova is currently only supported on
-Linux, although you can run the unit tests on Mac OS X. See
-:doc:`../quickstart` for how to get a working version of OpenStack
-Compute running as quickly as possible.
+Linux, although you can run the unit tests on Mac OS X.
 
 .. _supported hypervisors: http://wiki.openstack.org/HypervisorSupportMatrix
 
 Virtual environments
 --------------------
 
-Nova development uses `virtualenv <http://pypi.python.org/pypi/virtualenv>`__ to track and manage Python
-dependencies while in development and testing. This allows you to
-install all of the Python package dependencies in a virtual
-environment or "virtualenv" (a special subdirectory of your nova
-directory), instead of installing the packages at the system level.
+Nova development uses a set of shell scripts in DevStack. Virtual
+enviroments with venv are also available with the source code.
 
-.. note::
+The easiest way to build a fully functional development environment is
+with DevStack. Create a machine (such as a VM or Vagrant box) running a
+distribution supported by DevStack and install DevStack there. For
+example, there is a Vagrant script for DevStack at https://github.com/jogo/DevstackUp.
 
-   Virtualenv is useful for running the unit tests, but is not
-   typically used for full integration testing or production usage.
+ .. note::
+
+    If you prefer not to use devstack, you can still check out source code on your local
+    machine and develop from there.
 
 Linux Systems
 -------------
@@ -146,11 +144,10 @@ basis by running::
 Contributing Your Work
 ----------------------
 
-Once your work is complete you may wish to contribute it to the project.  Add
-your name and email address to the ``Authors`` file, and also to the ``.mailmap``
-file if you use multiple email addresses. Your contributions can not be merged
-into trunk unless you are listed in the Authors file. Nova uses the Gerrit
-code review system. For information on how to submit your branch to Gerrit,
-see GerritWorkflow_.
+Once your work is complete you may wish to contribute it to the project. 
+Refer to HowToContribute_ for information.
+Nova uses the Gerrit code review system. For information on how to submit
+your branch to Gerrit, see GerritWorkflow_.
 
 .. _GerritWorkflow: http://wiki.openstack.org/GerritWorkflow
+.. _HowToContribute: http://wiki.openstack.org/HowToContribute
