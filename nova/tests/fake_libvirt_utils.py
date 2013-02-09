@@ -144,3 +144,7 @@ def fetch_image(context, target, image_id, user_id, project_id):
 def get_instance_path(instance):
     # TODO(mikal): we should really just call the real one here
     return os.path.join(CONF.instances_path, instance['name'])
+
+
+def pick_disk_driver_name(is_block_dev=False):
+    return "qemu"
