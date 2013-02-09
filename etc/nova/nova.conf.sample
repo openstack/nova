@@ -1689,7 +1689,8 @@
 # Options defined in nova.servicegroup.api
 #
 
-# The driver for servicegroup service. (string value)
+# The driver for servicegroup service (valid options are: db,
+# zk, mc) (string value)
 #servicegroup_driver=db
 
 
