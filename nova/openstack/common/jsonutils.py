@@ -34,6 +34,7 @@ This module provides a few things:
 
 
 import datetime
+import functools
 import inspect
 import itertools
 import json
@@ -42,7 +43,8 @@ import xmlrpclib
 from nova.openstack.common import timeutils
 
 
-def to_primitive(value, convert_instances=False, level=0):
+def to_primitive(value, convert_instances=False, convert_datetime=True,
+                 level=0):
     """Convert a complex object into primitives.
 
     Handy for JSON serialization. We can optionally handle instances,
@@ -84,6 +86,10 @@ def to_primitive(value, convert_instances=False, level=0):
     # The try block may not be necessary after the class check above,
     # but just in case ...
     try:
+        recursive = functools.partial(to_primitive,
+                                      convert_instances=convert_instances,
+                                      convert_datetime=convert_datetime,
+                                      level=level)
         # It's not clear why xmlrpclib created their own DateTime type, but
         # for our purposes, make it a datetime type which is explicitly
         # handled
@@ -91,36 +97,22 @@ def to_primitive(value, convert_instances=False, level=0):
             value = datetime.datetime(*tuple(value.timetuple())[:6])
 
         if isinstance(value, (list, tuple)):
-            o = []
-            for v in value:
-                o.append(to_primitive(v, convert_instances=convert_instances,
-                                      level=level))
-            return o
+            return [recursive(v) for v in value]
         elif isinstance(value, dict):
-            o = {}
-            for k, v in value.iteritems():
-                o[k] = to_primitive(v, convert_instances=convert_instances,
-                                    level=level)
-            return o
-        elif isinstance(value, datetime.datetime):
+            return dict((k, recursive(v)) for k, v in value.iteritems())
+        elif convert_datetime and isinstance(value, datetime.datetime):
             return timeutils.strtime(value)
         elif hasattr(value, 'iteritems'):
-            return to_primitive(dict(value.iteritems()),
-                                convert_instances=convert_instances,
-                                level=level + 1)
+            return recursive(dict(value.iteritems()), level=level + 1)
         elif hasattr(value, '__iter__'):
-            return to_primitive(list(value),
-                                convert_instances=convert_instances,
-                                level=level)
+            return recursive(list(value))
         elif convert_instances and hasattr(value, '__dict__'):
             # Likely an instance of something. Watch for cycles.
             # Ignore class member vars.
-            return to_primitive(value.__dict__,
-                                convert_instances=convert_instances,
-                                level=level + 1)
+            return recursive(value.__dict__, level=level + 1)
         else:
             return value
-    except TypeError, e:
+    except TypeError:
         # Class objects are tricky since they may define something like
         # __iter__ defined but it isn't callable as list().
         return unicode(value)
