@@ -335,6 +335,10 @@ class InstanceTerminationFailure(Invalid):
     message = _("Failed to terminate instance") + ": %(reason)s"
 
 
+class InstanceDeployFailure(Invalid):
+    message = _("Failed to deploy instance") + ": %(reason)s"
+
+
 class ServiceUnavailable(Invalid):
     message = _("Service is unavailable at this time.")
 

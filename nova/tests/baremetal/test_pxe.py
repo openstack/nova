@@ -32,6 +32,7 @@ from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
+from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import pxe
 from nova.virt.baremetal import utils as bm_utils
@@ -536,3 +537,33 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.driver.deactivate_bootloader(
             self.context, self.node, self.instance)
         self.mox.VerifyAll()
+
+    def test_activate_node(self):
+        self._create_node()
+        self.instance['uuid'] = 'fake-uuid'
+        self.flags(pxe_deploy_timeout=1, group='baremetal')
+
+        db.bm_node_update(self.context, 1,
+                {'task_state': baremetal_states.DEPLOYING,
+                 'instance_uuid': 'fake-uuid'})
+
+        # test timeout
+        self.assertRaises(exception.InstanceDeployFailure,
+                self.driver.activate_node,
+                self.context, self.node, self.instance)
+
+        # test DEPLOYDONE
+        db.bm_node_update(self.context, 1,
+                {'task_state': baremetal_states.DEPLOYDONE})
+        self.driver.activate_node(self.context, self.node, self.instance)
+
+        # test no deploy -- state is just ACTIVE
+        db.bm_node_update(self.context, 1,
+                {'task_state': baremetal_states.ACTIVE})
+        self.driver.activate_node(self.context, self.node, self.instance)
+
+        # test node gone
+        db.bm_node_destroy(self.context, 1)
+        self.assertRaises(exception.InstanceDeployFailure,
+                self.driver.activate_node,
+                self.context, self.node, self.instance)
