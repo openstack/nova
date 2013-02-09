@@ -433,6 +433,29 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(type(cfg.devices[7]),
                           vconfig.LibvirtConfigGuestGraphics)
 
+    def test_get_guest_config_bug_1118829(self):
+        self.flags(libvirt_type='uml')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = {'disk_bus': 'virtio',
+                     'cdrom_bus': 'ide',
+                     'mapping': {u'vda': {'bus': 'virtio',
+                                          'type': 'disk',
+                                          'dev': u'vda'},
+                                 'root': {'bus': 'virtio',
+                                          'type': 'disk',
+                                          'dev': 'vda'}}}
+
+        # NOTE(jdg): For this specific test leave this blank
+        # This will exercise the failed code path still,
+        # and won't require fakes and stubs of the iscsi discovery
+        block_device_info = {}
+        cfg = conn.get_guest_config(instance_ref, [], None, disk_info,
+                                    None, block_device_info)
+        instance_ref = db.instance_get(self.context, instance_ref['id'])
+        self.assertEquals(instance_ref['root_device_name'], '/dev/vda')
+
     def test_get_guest_config_with_root_device_name(self):
         self.flags(libvirt_type='uml')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

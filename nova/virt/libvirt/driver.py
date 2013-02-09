@@ -1798,7 +1798,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             self.virtapi.instance_update(
                 nova_context.get_admin_context(), instance['uuid'],
-                {'root_device_name': '/dev/' + disk_mapping['disk']['dev']})
+                {'root_device_name': root_device_name})
 
         guest.os_type = vm_mode.get_from_instance(instance)
 
