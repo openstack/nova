@@ -26,6 +26,7 @@ from oslo.config import cfg
 from nova.compute import power_state
 from nova import context as nova_context
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import paths
@@ -202,6 +203,36 @@ class BareMetalDriver(driver.ComputeDriver):
                     % instance['uuid'])
         return node_id
 
+    def _attach_block_devices(self, instance, block_device_info):
+        block_device_mapping = driver.\
+                block_device_info_get_mapping(block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            self.attach_volume(
+                    connection_info, instance['name'], mountpoint)
+
+    def _detach_block_devices(self, instance, block_device_info):
+        block_device_mapping = driver.\
+                block_device_info_get_mapping(block_device_info)
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            mountpoint = vol['mount_device']
+            self.detach_volume(
+                    connection_info, instance['name'], mountpoint)
+
+    def _start_firewall(self, instance, network_info):
+        self.firewall_driver.setup_basic_filtering(
+                instance, network_info)
+        self.firewall_driver.prepare_instance_filter(
+                instance, network_info)
+        self.firewall_driver.apply_instance_filter(
+                instance, network_info)
+
+    def _stop_firewall(self, instance, network_info):
+        self.firewall_driver.unfilter_instance(
+                instance, network_info)
+
     def macs_for_instance(self, instance):
         context = nova_context.get_admin_context()
         node_id = self._require_node(instance)
@@ -219,55 +250,42 @@ class BareMetalDriver(driver.ComputeDriver):
                     {'instance_uuid': instance['uuid'],
                      'task_state': baremetal_states.BUILDING})
 
-        pm = get_power_manager(node=node, instance=instance)
-
         try:
             self._plug_vifs(instance, network_info, context=context)
+            self._attach_block_devices(instance, block_device_info)
+            self._start_firewall(instance, network_info)
 
-            self.firewall_driver.setup_basic_filtering(
-                    instance, network_info)
-            self.firewall_driver.prepare_instance_filter(
-                    instance, network_info)
-            self.firewall_driver.apply_instance_filter(
-                    instance, network_info)
+            self.driver.cache_images(
+                            context, node, instance,
+                            admin_password=admin_password,
+                            image_meta=image_meta,
+                            injected_files=injected_files,
+                            network_info=network_info,
+                        )
+            self.driver.activate_bootloader(context, node, instance)
+            self.power_on(instance, node)
+            self.driver.activate_node(context, node, instance)
+            _update_state(context, node, instance, baremetal_states.ACTIVE)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_("Error deploying instance %(instance)s "
+                            "on baremetal node %(node)s.") %
+                            {'instance': instance['uuid'], 'node': node['id']})
 
-            block_device_mapping = driver.\
-                    block_device_info_get_mapping(block_device_info)
-            for vol in block_device_mapping:
-                connection_info = vol['connection_info']
-                mountpoint = vol['mount_device']
-                self.attach_volume(
-                        connection_info, instance['name'], mountpoint)
+                # Do not set instance=None yet. This prevents another
+                # spawn() while we are cleaning up.
+                _update_state(context, node, instance, baremetal_states.ERROR)
 
-            try:
-                image_info = self.driver.cache_images(
-                                context, node, instance,
-                                admin_password=admin_password,
-                                image_meta=image_meta,
-                                injected_files=injected_files,
-                                network_info=network_info,
-                            )
-                try:
-                    self.driver.activate_bootloader(context, node, instance)
-                    pm.activate_node()
-                    pm.start_console()
-                    if pm.state != baremetal_states.ACTIVE:
-                        raise exception.NovaException(_(
-                            "Baremetal power manager failed to start node "
-                            "for instance %r") % instance['uuid'])
-                    self.driver.activate_node(context, node, instance)
-                    _update_state(context, node, instance,
-                                    baremetal_states.ACTIVE)
-                except Exception, e:
-                    self.driver.deactivate_bootloader(context, node, instance)
-                    raise e
-            except Exception, e:
+                self.driver.deactivate_node(context, node, instance)
+                self.power_off(instance, node)
+                self.driver.deactivate_bootloader(context, node, instance)
                 self.driver.destroy_images(context, node, instance)
-                raise e
-        except Exception, e:
-            # TODO(deva): do network and volume cleanup here
-            _update_state(context, node, instance, baremetal_states.ERROR)
-            raise e
+
+                self._detach_block_devices(instance, block_device_info)
+                self._stop_firewall(instance, network_info)
+                self._unplug_vifs(instance, network_info)
+
+                _update_state(context, node, None, baremetal_states.DELETED)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None):
@@ -275,61 +293,67 @@ class BareMetalDriver(driver.ComputeDriver):
         ctx = nova_context.get_admin_context()
         pm = get_power_manager(node=node, instance=instance)
         state = pm.reboot_node()
+        if pm.state != baremetal_states.ACTIVE:
+            raise exception.InstanceRebootFailure(_(
+                "Baremetal power manager failed to restart node "
+                "for instance %r") % instance['uuid'])
         _update_state(ctx, node, instance, state)
 
     def destroy(self, instance, network_info, block_device_info=None):
-        ctx = nova_context.get_admin_context()
+        context = nova_context.get_admin_context()
 
         try:
             node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         except exception.InstanceNotFound:
-            # TODO(deva): refactor so that dangling files can be cleaned
-            #             up even after a failed boot or delete
-            LOG.warning(_("Delete called on non-existing instance %s")
+            LOG.warning(_("Destroy called on non-existing instance %s")
                     % instance['uuid'])
             return
 
-        self.driver.deactivate_node(ctx, node, instance)
+        try:
+            self.driver.deactivate_node(context, node, instance)
+            self.power_off(instance, node)
+            self.driver.deactivate_bootloader(context, node, instance)
+            self.driver.destroy_images(context, node, instance)
 
-        pm = get_power_manager(node=node, instance=instance)
+            self._detach_block_devices(instance, block_device_info)
+            self._stop_firewall(instance, network_info)
+            self._unplug_vifs(instance, network_info)
 
-        pm.stop_console()
+            _update_state(context, node, None, baremetal_states.DELETED)
+        except Exception, e:
+            with excutils.save_and_reraise_exception():
+                try:
+                    LOG.error(_("Error from baremetal driver "
+                                "during destroy: %s") % e)
+                    _update_state(context, node, instance,
+                                  baremetal_states.ERROR)
+                except Exception:
+                    LOG.error(_("Error while recording destroy failure in "
+                                "baremetal database: %s") % e)
 
-        ## power off the node
-        state = pm.deactivate_node()
-
-        ## cleanup volumes
-        # NOTE(vish): we disconnect from volumes regardless
-        block_device_mapping = driver.block_device_info_get_mapping(
-            block_device_info)
-        for vol in block_device_mapping:
-            connection_info = vol['connection_info']
-            mountpoint = vol['mount_device']
-            self.detach_volume(connection_info, instance['name'], mountpoint)
-
-        self.driver.deactivate_bootloader(ctx, node, instance)
-
-        self.driver.destroy_images(ctx, node, instance)
-
-        # stop firewall
-        self.firewall_driver.unfilter_instance(instance,
-                                                network_info=network_info)
-
-        self._unplug_vifs(instance, network_info)
-
-        _update_state(ctx, node, None, state)
-
-    def power_off(self, instance):
+    def power_off(self, instance, node=None):
         """Power off the specified instance."""
-        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        if not node:
+            node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node=node, instance=instance)
         pm.deactivate_node()
+        if pm.state != baremetal_states.DELETED:
+            raise exception.InstancePowerOffFailure(_(
+                "Baremetal power manager failed to stop node "
+                "for instance %r") % instance['uuid'])
+        pm.stop_console()
 
-    def power_on(self, instance):
+    def power_on(self, instance, node=None):
         """Power on the specified instance."""
-        node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
+        if not node:
+            node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node=node, instance=instance)
         pm.activate_node()
+        if pm.state != baremetal_states.ACTIVE:
+            raise exception.InstancePowerOnFailure(_(
+                "Baremetal power manager failed to start node "
+                "for instance %r") % instance['uuid'])
+        pm.start_console()
 
     def get_volume_connector(self, instance):
         return self.volume_driver.get_volume_connector(instance)
