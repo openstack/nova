@@ -52,9 +52,13 @@ def set_availability_zones(context, services):
     return services
 
 
-def get_host_availability_zone(context, host):
-    metadata = db.aggregate_metadata_get_by_host(
-        context, host, key='availability_zone')
+def get_host_availability_zone(context, host, conductor_api=None):
+    if conductor_api:
+        metadata = conductor_api.aggregate_metadata_get_by_host(
+            context, host, key='availability_zone')
+    else:
+        metadata = db.aggregate_metadata_get_by_host(
+            context, host, key='availability_zone')
     if 'availability_zone' in metadata:
         return list(metadata['availability_zone'])[0]
     else:

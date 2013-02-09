@@ -154,6 +154,12 @@ class LocalAPI(object):
                                                        aggregate,
                                                        key)
 
+    def aggregate_metadata_get_by_host(self, context, host,
+                                       key='availability_zone'):
+        return self._manager.aggregate_metadata_get_by_host(context,
+                                                            host,
+                                                            key)
+
     def bw_usage_get(self, context, uuid, start_period, mac):
         return self._manager.bw_usage_update(context, uuid, mac, start_period)
 
@@ -319,6 +325,9 @@ class LocalAPI(object):
     def quota_rollback(self, context, reservations):
         return self._manager.quota_rollback(context, reservations)
 
+    def get_ec2_ids(self, context, instance):
+        return self._manager.get_ec2_ids(context, instance)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -462,6 +471,12 @@ class API(object):
         return self.conductor_rpcapi.aggregate_metadata_delete(context,
                                                                aggregate,
                                                                key)
+
+    def aggregate_metadata_get_by_host(self, context, host,
+                                       key='availability_zone'):
+        return self.conductor_rpcapi.aggregate_metadata_get_by_host(context,
+                                                                    host,
+                                                                    key)
 
     def bw_usage_get(self, context, uuid, start_period, mac):
         return self.conductor_rpcapi.bw_usage_update(context, uuid, mac,
@@ -636,3 +651,6 @@ class API(object):
 
     def quota_rollback(self, context, reservations):
         return self.conductor_rpcapi.quota_rollback(context, reservations)
+
+    def get_ec2_ids(self, context, instance):
+        return self.conductor_rpcapi.get_ec2_ids(context, instance)

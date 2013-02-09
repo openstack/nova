@@ -115,10 +115,10 @@ def get_ip_info_for_instance(context, instance):
     return get_ip_info_for_instance_from_nw_info(nw_info)
 
 
-def get_availability_zone_by_host(services, host):
+def get_availability_zone_by_host(services, host, conductor_api=None):
     if len(services) > 0:
         return availability_zones.get_host_availability_zone(
-            context.get_admin_context(), host)
+            context.get_admin_context(), host, conductor_api)
     return 'unknown zone'
 
 

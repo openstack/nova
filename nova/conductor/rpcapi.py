@@ -78,6 +78,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.41 - Added fixed_ip_get_by_instance, network_get,
                  instance_floating_address_get_all, quota_commit,
                  quota_rollback
+    1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -175,6 +176,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('aggregate_metadata_delete', aggregate=aggregate_p,
                             key=key)
         return self.call(context, msg, version='1.7')
+
+    def aggregate_metadata_get_by_host(self, context, host, key):
+        msg = self.make_msg('aggregate_metadata_get_by_host', host=host,
+                            key=key)
+        return self.call(context, msg, version='1.42')
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in=None, bw_out=None,
@@ -409,3 +415,8 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         reservations_p = jsonutils.to_primitive(reservations)
         msg = self.make_msg('quota_rollback', reservations=reservations_p)
         return self.call(context, msg, version='1.41')
+
+    def get_ec2_ids(self, context, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('get_ec2_ids', instance=instance_p)
+        return self.call(context, msg, version='1.42')
