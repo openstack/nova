@@ -1,0 +1,1 @@
+<adminPass>%(password)s</adminPass>

@@ -1,0 +1,7 @@
+{
+    "evacuate": {
+        "host": "TargetHost",
+        "adminPass": "MySecretPass",
+        "onSharedStorage": "True"
+    }
+}
