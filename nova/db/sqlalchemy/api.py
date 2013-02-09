@@ -1656,25 +1656,6 @@ def regex_filter(query, model, filters):
     return query
 
 
-@require_context
-def instance_get_active_by_window(context, begin, end=None,
-                                  project_id=None, host=None):
-    """Return instances that were active during window."""
-    session = get_session()
-    query = session.query(models.Instance)
-
-    query = query.filter(or_(models.Instance.terminated_at == None,
-                             models.Instance.terminated_at > begin))
-    if end:
-        query = query.filter(models.Instance.launched_at < end)
-    if project_id:
-        query = query.filter_by(project_id=project_id)
-    if host:
-        query = query.filter_by(host=host)
-
-    return query.all()
-
-
 @require_admin_context
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None):

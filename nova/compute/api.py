@@ -1250,8 +1250,8 @@ class API(base.Base):
     # search_opts in get_all
     def get_active_by_window(self, context, begin, end=None, project_id=None):
         """Get instances that were continuously active over a window."""
-        return self.db.instance_get_active_by_window(context, begin, end,
-                                                     project_id)
+        return self.db.instance_get_active_by_window_joined(context, begin,
+                                                     end, project_id)
 
     #NOTE(bcwaldon): this doesn't really belong in this class
     def get_instance_type(self, context, instance_type_id):
