@@ -2776,7 +2776,7 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(task_states.POWERING_OFF, instances[0]['task_state'])
+        self.assertEqual(instances[0]['task_state'], None)
 
     def test_add_instance_fault(self):
         instance = self._create_fake_instance()

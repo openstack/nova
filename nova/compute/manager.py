@@ -3371,7 +3371,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_instance = self.driver.get_info(db_instance)
                 vm_power_state = vm_instance['state']
             except exception.InstanceNotFound:
-                vm_power_state = power_state.SHUTDOWN
+                vm_power_state = power_state.NOSTATE
             # Note(maoy): the above get_info call might take a long time,
             # for example, because of a broken libvirt driver.
             # We re-query the DB to get the latest instance info to minimize
@@ -3457,6 +3457,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # the VM state will go back to running after the external
                     # instrumentation is done. See bug 1097806 for details.
                     LOG.warn(_("Instance is paused unexpectedly. Ignore."),
+                             instance=db_instance)
+                elif vm_power_state == power_state.NOSTATE:
+                    # Occasionally, depending on the status of the hypervisor,
+                    # which could be restarting for example, an instance may
+                    # not be found.  Therefore just log the condidtion.
+                    LOG.warn(_("Instance is unexpectedly not found. Ignore."),
                              instance=db_instance)
             elif vm_state == vm_states.STOPPED:
                 if vm_power_state not in (power_state.NOSTATE,
