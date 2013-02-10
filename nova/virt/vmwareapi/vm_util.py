@@ -73,6 +73,25 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     device_config_spec = vif_spec_list
 
     config_spec.deviceChange = device_config_spec
+
+    # add vm-uuid and iface-id.x values for Quantum
+    extra_config = []
+    opt = client_factory.create('ns0:OptionValue')
+    opt.key = "nvp.vm-uuid"
+    opt.value = instance['uuid']
+    extra_config.append(opt)
+
+    i = 0
+    for vif_info in vif_infos:
+        if vif_info['iface_id']:
+            opt = client_factory.create('ns0:OptionValue')
+            opt.key = "nvp.iface-id.%d" % i
+            opt.value = vif_info['iface_id']
+            extra_config.append(opt)
+            i += 1
+
+    config_spec.extraConfig = extra_config
+
     return config_spec
 
 
