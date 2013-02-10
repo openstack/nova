@@ -43,6 +43,10 @@ __imagebackend_opts = [
             default=False,
             help='Create sparse logical volumes (with virtualsize)'
                  ' if this flag is set to True.'),
+    cfg.IntOpt('libvirt_lvm_snapshot_size',
+               default='1000',
+               help='The amount of storage (in megabytes) to allocate for LVM'
+                    ' snapshot copy-on-write blocks.'),
         ]
 
 CONF = cfg.CONF
@@ -239,6 +243,11 @@ class Lvm(Image):
 
         self.sparse = CONF.libvirt_sparse_logical_volumes
 
+        if snapshot_name:
+            self.snapshot_name = snapshot_name
+            self.snapshot_path = os.path.join('/dev', self.vg,
+                                              self.snapshot_name)
+
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
                                 lock_path=self.lock_path)
@@ -272,6 +281,21 @@ class Lvm(Image):
         except Exception:
             with excutils.save_and_reraise_exception():
                 libvirt_utils.remove_logical_volumes(path)
+
+    def snapshot_create(self):
+        size = CONF.libvirt_lvm_snapshot_size
+        cmd = ('lvcreate', '-L', size, '-s', '--name', self.snapshot_name,
+               self.path)
+        libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
+
+    def snapshot_extract(self, target, out_format):
+        images.convert_image(self.snapshot_path, target, out_format,
+                             run_as_root=True)
+
+    def snapshot_delete(self):
+        # NOTE (rmk): Snapshot volumes are automatically zeroed by LVM
+        cmd = ('lvremove', '-f', self.snapshot_path)
+        libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
 
 
 class Backend(object):
