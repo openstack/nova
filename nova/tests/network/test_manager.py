@@ -186,6 +186,8 @@ class FlatNetworkTestCase(test.TestCase):
                      'vif_uuid':
                         '00000000-0000-0000-0000-00000000000000%02d' % nid,
                      'ovs_interfaceid': None,
+                     'qbh_params': None,
+                     'qbg_params': None,
                      'should_create_vlan': False,
                      'should_create_bridge': False}
             self.assertThat(info, matchers.DictMatches(check))
