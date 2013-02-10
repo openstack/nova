@@ -34,7 +34,8 @@ def _get_auth_token():
             password=CONF.quantum_admin_password,
             auth_url=CONF.quantum_admin_auth_url,
             timeout=CONF.quantum_url_timeout,
-            auth_strategy=CONF.quantum_auth_strategy)
+            auth_strategy=CONF.quantum_auth_strategy,
+            insecure=CONF.quantum_api_insecure)
         httpclient.authenticate()
     except Exception:
         with excutils.save_and_reraise_exception():
@@ -48,6 +49,7 @@ def _get_client(token=None):
     params = {
         'endpoint_url': CONF.quantum_url,
         'timeout': CONF.quantum_url_timeout,
+        'insecure': CONF.quantum_api_insecure,
     }
     if token:
         params['token'] = token

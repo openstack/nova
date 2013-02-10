@@ -96,7 +96,8 @@ class TestQuantumClient(test.TestCase):
         client.Client.__init__(
             endpoint_url=CONF.quantum_url,
             token=my_context.auth_token,
-            timeout=CONF.quantum_url_timeout).AndReturn(None)
+            timeout=CONF.quantum_url_timeout,
+            insecure=False).AndReturn(None)
         self.mox.ReplayAll()
         quantumv2.get_client(my_context)
 
@@ -117,7 +118,8 @@ class TestQuantumClient(test.TestCase):
         client.Client.__init__(
             endpoint_url=CONF.quantum_url,
             auth_strategy=None,
-            timeout=CONF.quantum_url_timeout).AndReturn(None)
+            timeout=CONF.quantum_url_timeout,
+            insecure=False).AndReturn(None)
         self.mox.ReplayAll()
         quantumv2.get_client(my_context)
 
