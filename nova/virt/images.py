@@ -184,10 +184,10 @@ def qemu_img_info(path):
     return QemuImgInfo(out)
 
 
-def convert_image(source, dest, out_format):
+def convert_image(source, dest, out_format, run_as_root=False):
     """Convert image to other format."""
     cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
-    utils.execute(*cmd)
+    utils.execute(*cmd, run_as_root=run_as_root)
 
 
 def fetch(context, image_href, path, _user_id, _project_id):
