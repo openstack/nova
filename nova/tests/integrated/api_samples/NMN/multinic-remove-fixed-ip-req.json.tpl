@@ -1,0 +1,5 @@
+{
+    "removeFixedIp":{
+        "address": "%(ip)s"
+        }
+}
