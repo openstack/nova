@@ -62,13 +62,13 @@ class FlavorExtraSpecsController(object):
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='index')
         return self._get_extra_specs(context, flavor_id)
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='create')
         self._check_body(body)
         specs = body.get('extra_specs')
         try:
@@ -82,7 +82,7 @@ class FlavorExtraSpecsController(object):
     @wsgi.serializers(xml=ExtraSpecTemplate)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='update')
         self._check_body(body)
         if id not in body:
             expl = _('Request body and URI mismatch')
@@ -102,7 +102,7 @@ class FlavorExtraSpecsController(object):
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='show')
         specs = self._get_extra_specs(context, flavor_id)
         if id in specs['extra_specs']:
             return {id: specs['extra_specs'][id]}
@@ -112,7 +112,7 @@ class FlavorExtraSpecsController(object):
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='delete')
         db.instance_type_extra_specs_delete(context, flavor_id, id)
 
 
