@@ -150,6 +150,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         row = db.bm_node_get(self.context, node['node']['id'])
         self.assertEqual(row['task_state'], baremetal_states.ACTIVE)
         self.assertEqual(row['instance_uuid'], node['instance']['uuid'])
+        self.assertEqual(row['instance_name'], node['instance']['hostname'])
 
     def test_macs_for_instance(self):
         node = self._create_node()
@@ -162,6 +163,12 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.driver.spawn(**node['spawn_params'])
 
         expected = set([nic['address'] for nic in node['nic_info']])
+        self.assertEqual(
+            expected, self.driver.macs_for_instance(node['instance']))
+
+    def test_macs_for_instance(self):
+        node = self._create_node()
+        expected = set(['01:23:45:67:89:01', '01:23:45:67:89:02'])
         self.assertEqual(
             expected, self.driver.macs_for_instance(node['instance']))
 
@@ -236,6 +243,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         row = db.bm_node_get(self.context, node['node']['id'])
         self.assertEqual(row['task_state'], baremetal_states.DELETED)
         self.assertEqual(row['instance_uuid'], None)
+        self.assertEqual(row['instance_name'], None)
 
     def test_destroy_fails(self):
         node = self._create_node()
@@ -308,3 +316,42 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(2, len(self.driver.get_available_nodes()))
         self.assertEqual([node1['node']['uuid'], node2['node']['uuid']],
                          self.driver.get_available_nodes())
+
+    def test_list_instances(self):
+        self.assertEqual([], self.driver.list_instances())
+
+        node1 = self._create_node()
+        self.assertEqual([], self.driver.list_instances())
+
+        node_info = bm_db_utils.new_bm_node(
+                        id=456,
+                        service_host='test_host',
+                        cpus=2,
+                        memory_mb=2048,
+                    )
+        nic_info = [
+                {'address': 'cc:cc:cc', 'datapath_id': '0x1',
+                    'port_no': 1},
+                {'address': 'dd:dd:dd', 'datapath_id': '0x2',
+                    'port_no': 2},
+            ]
+        node2 = self._create_node(node_info=node_info, nic_info=nic_info)
+        self.assertEqual([], self.driver.list_instances())
+
+        node1['instance']['hostname'] = 'test-host-1'
+        node2['instance']['hostname'] = 'test-host-2'
+
+        self.driver.spawn(**node1['spawn_params'])
+        self.assertEqual(['test-host-1'],
+                self.driver.list_instances())
+
+        self.driver.spawn(**node2['spawn_params'])
+        self.assertEqual(['test-host-1', 'test-host-2'],
+                self.driver.list_instances())
+
+        self.driver.destroy(**node1['destroy_params'])
+        self.assertEqual(['test-host-2'],
+                self.driver.list_instances())
+
+        self.driver.destroy(**node2['destroy_params'])
+        self.assertEqual([], self.driver.list_instances())
