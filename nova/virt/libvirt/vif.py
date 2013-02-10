@@ -19,6 +19,8 @@
 
 """VIF drivers for libvirt."""
 
+import copy
+
 from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
@@ -105,6 +107,21 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
     def get_ovs_interfaceid(self, mapping):
         return mapping['ovs_interfaceid']
 
+    def get_br_name(self, iface_id):
+        return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
+
+    def get_veth_pair_names(self, iface_id):
+        return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
+
+    def get_firewall_required(self):
+        # TODO(berrange): Extend this to use information from VIF model
+        # which can indicate whether the network provider (eg Quantum)
+        # has already applied firewall filtering itself.
+        if CONF.firewall_driver != "nova.virt.firewall.NoopFirewallDriver":
+            return True
+        return False
+
     def get_config_bridge(self, instance, network, mapping):
         """Get VIF configurations for bridge type."""
         conf = super(LibvirtGenericVIFDriver,
@@ -130,9 +147,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             if CONF.use_ipv6:
                 ipv6_cidr = network['cidr_v6']
 
-        designer.set_vif_host_backend_filter_config(
-            conf, name, primary_addr, dhcp_server,
-            ra_server, ipv4_cidr, ipv6_cidr)
+        if self.get_firewall_required():
+            designer.set_vif_host_backend_filter_config(
+                conf, name, primary_addr, dhcp_server,
+                ra_server, ipv4_cidr, ipv6_cidr)
 
         return conf
 
@@ -160,8 +178,18 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_ovs_hybrid(self, instance, network, mapping):
+        newnet = copy.deepcopy(network)
+        newnet['bridge'] = self.get_br_name(mapping['vif_uuid'])
+        return self.get_config_bridge(instance,
+                                      newnet,
+                                      mapping)
+
     def get_config_ovs(self, instance, network, mapping):
-        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+        if self.get_firewall_required():
+            return self.get_config_ovs_hybrid(instance, network,
+                                              mapping)
+        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
             return self.get_config_ovs_bridge(instance, network,
                                               mapping)
         else:
@@ -231,8 +259,37 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
 
+    def plug_ovs_hybrid(self, instance, vif):
+        """Plug using hybrid strategy
+
+        Create a per-VIF linux bridge, then link that bridge to the OVS
+        integration bridge via a veth device, setting up the other end
+        of the veth device just like a normal OVS port.  Then boot the
+        VIF on the linux bridge using standard libvirt mechanisms.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+
+        network, mapping = vif
+        iface_id = self.get_ovs_interfaceid(mapping)
+        br_name = self.get_br_name(mapping['vif_uuid'])
+        v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
+
+        if not linux_net.device_exists(br_name):
+            utils.execute('brctl', 'addbr', br_name, run_as_root=True)
+
+        if not linux_net.device_exists(v2_name):
+            linux_net._create_veth_pair(v1_name, v2_name)
+            utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
+            utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
+            linux_net.create_ovs_vif_port(self.get_bridge_name(network),
+                                          v2_name, iface_id, mapping['mac'],
+                                          instance['uuid'])
+
     def plug_ovs(self, instance, vif):
-        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+        if self.get_firewall_required():
+            self.plug_ovs_hybrid(instance, vif)
+        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
             self.plug_ovs_bridge(instance, vif)
         else:
             self.plug_ovs_ethernet(instance, vif)
@@ -280,8 +337,34 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
 
+    def unplug_ovs_hybrid(self, instance, vif):
+        """UnPlug using hybrid strategy
+
+        Unhook port from OVS, unhook port from bridge, delete
+        bridge, and delete both veth devices.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+
+        try:
+            network, mapping = vif
+            br_name = self.get_br_name(mapping['vif_uuid'])
+            v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
+
+            utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
+            utils.execute('ip', 'link', 'set', br_name, 'down',
+                          run_as_root=True)
+            utils.execute('brctl', 'delbr', br_name, run_as_root=True)
+
+            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
+                                          v2_name)
+        except exception.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
     def unplug_ovs(self, instance, vif):
-        if self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+        if self.get_firewall_required():
+            self.unplug_ovs_hybrid(instance, vif)
+        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
             self.unplug_ovs_bridge(instance, vif)
         else:
             self.unplug_ovs_ethernet(instance, vif)
@@ -344,21 +427,10 @@ class LibvirtOpenVswitchDriver(LibvirtGenericVIFDriver):
         self.unplug_ovs_ethernet(instance, vif)
 
 
-class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver):
-    """VIF driver that uses OVS + Linux Bridge for iptables compatibility.
-
-    Enables the use of OVS-based Quantum plugins while at the same
-    time using iptables-based filtering, which requires that vifs be
-    plugged into a linux bridge, not OVS.  IPtables filtering is useful for
-    in particular for Nova security groups.
-    """
-
-    def get_br_name(self, iface_id):
-        return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
-
-    def get_veth_pair_names(self, iface_id):
-        return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
-                ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
+class LibvirtHybridOVSBridgeDriver(LibvirtGenericVIFDriver):
+    """Retained in Grizzly for compatibility with Quantum
+       drivers which do not yet report 'vif_type' port binding.
+       Will be deprecated in Havana, and removed in Ixxxx."""
 
     def get_bridge_name(self, network):
         return network.get('bridge') or CONF.libvirt_ovs_bridge
@@ -367,58 +439,13 @@ class LibvirtHybridOVSBridgeDriver(LibvirtBridgeDriver):
         return mapping.get('ovs_interfaceid') or mapping['vif_uuid']
 
     def get_config(self, instance, network, mapping):
-        br_name = self.get_br_name(mapping['vif_uuid'])
-        network['bridge'] = br_name
-        return super(LibvirtHybridOVSBridgeDriver,
-                     self).get_config(instance,
-                                      network,
-                                      mapping)
+        return self.get_config_ovs_hybrid(instance, network, mapping)
 
     def plug(self, instance, vif):
-        """Plug using hybrid strategy
-
-        Create a per-VIF linux bridge, then link that bridge to the OVS
-        integration bridge via a veth device, setting up the other end
-        of the veth device just like a normal OVS port.  Then boot the
-        VIF on the linux bridge using standard libvirt mechanisms
-        """
-
-        network, mapping = vif
-        iface_id = self.get_ovs_interfaceid(mapping)
-        br_name = self.get_br_name(mapping['vif_uuid'])
-        v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
-
-        if not linux_net.device_exists(br_name):
-            utils.execute('brctl', 'addbr', br_name, run_as_root=True)
-
-        if not linux_net.device_exists(v2_name):
-            linux_net._create_veth_pair(v1_name, v2_name)
-            utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
-            utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-            linux_net.create_ovs_vif_port(self.get_bridge_name(network),
-                                          v2_name, iface_id, mapping['mac'],
-                                          instance['uuid'])
+        return self.plug_ovs_hybrid(instance, vif)
 
     def unplug(self, instance, vif):
-        """UnPlug using hybrid strategy
-
-        Unhook port from OVS, unhook port from bridge, delete
-        bridge, and delete both veth devices.
-        """
-        try:
-            network, mapping = vif
-            br_name = self.get_br_name(mapping['vif_uuid'])
-            v1_name, v2_name = self.get_veth_pair_names(mapping['vif_uuid'])
-
-            utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
-            utils.execute('ip', 'link', 'set', br_name, 'down',
-                          run_as_root=True)
-            utils.execute('brctl', 'delbr', br_name, run_as_root=True)
-
-            linux_net.delete_ovs_vif_port(self.get_bridge_name(network),
-                                          v2_name)
-        except exception.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+        return self.unplug_ovs_hybrid(instance, vif)
 
 
 class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
