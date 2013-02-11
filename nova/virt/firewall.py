@@ -19,6 +19,7 @@
 
 from oslo.config import cfg
 
+from nova import conductor
 from nova import context
 from nova import network
 from nova.network import linux_net
@@ -398,9 +399,11 @@ class IptablesFirewallDriver(FirewallDriver):
                         #                 and should be the only one making
                         #                 making rpc calls.
                         nw_api = network.API()
+                        capi = conductor.API()
                         for instance in rule['grantee_group']['instances']:
                             nw_info = nw_api.get_instance_nw_info(ctxt,
-                                                                  instance)
+                                                                  instance,
+                                                                  capi)
 
                             ips = [ip['address']
                                 for ip in nw_info.fixed_ips()
