@@ -25,6 +25,7 @@ import StringIO
 import tempfile
 
 import mox
+import netaddr
 
 import nova
 from nova import exception
@@ -480,6 +481,29 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertTrue(utils.is_valid_ipv4('127.0.0.1'))
         self.assertFalse(utils.is_valid_ipv4('::1'))
         self.assertFalse(utils.is_valid_ipv4('bacon'))
+
+    def test_is_valid_ipv6(self):
+        self.assertTrue(utils.is_valid_ipv6("::1"))
+        self.assertTrue(utils.is_valid_ipv6(
+                            "abcd:ef01:2345:6789:abcd:ef01:192.168.254.254"))
+        self.assertTrue(utils.is_valid_ipv6(
+                                    "0000:0000:0000:0000:0000:0000:0000:0001"))
+        self.assertFalse(utils.is_valid_ipv6("foo"))
+        self.assertFalse(utils.is_valid_ipv6("127.0.0.1"))
+
+    def test_get_shortened_ipv6(self):
+        self.assertEquals("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
+                          utils.get_shortened_ipv6(
+                            "abcd:ef01:2345:6789:abcd:ef01:192.168.254.254"))
+        self.assertEquals("::1", utils.get_shortened_ipv6(
+                                    "0000:0000:0000:0000:0000:0000:0000:0001"))
+        self.assertEquals("caca::caca:0:babe:201:102",
+                          utils.get_shortened_ipv6(
+                                    "caca:0000:0000:caca:0000:babe:0201:0102"))
+        self.assertRaises(netaddr.AddrFormatError, utils.get_shortened_ipv6,
+                          "127.0.0.1")
+        self.assertRaises(netaddr.AddrFormatError, utils.get_shortened_ipv6,
+                          "failure")
 
 
 class MonkeyPatchTestCase(test.TestCase):
