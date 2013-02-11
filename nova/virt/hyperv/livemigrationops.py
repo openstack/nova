@@ -18,15 +18,14 @@
 """
 Management class for live migration VM operations.
 """
-import os
-
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vmutils
-from nova.virt import images
+from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -34,12 +33,13 @@ CONF.import_opt('use_cow_images', 'nova.virt.driver')
 
 
 class LiveMigrationOps(object):
-    def __init__(self, volumeops):
+    def __init__(self):
 
         self._pathutils = pathutils.PathUtils()
         self._vmutils = vmutils.VMUtils()
         self._livemigrutils = livemigrationutils.LiveMigrationUtils()
-        self._volumeops = volumeops
+        self._volumeops = volumeops.VolumeOps()
+        self._imagecache = imagecache.ImageCache()
 
     def live_migration(self, context, instance_ref, dest, post_method,
                        recover_method, block_migration=False,
@@ -65,15 +65,10 @@ class LiveMigrationOps(object):
         self._livemigrutils.check_live_migration_config()
 
         if CONF.use_cow_images:
-            ebs_root = self._volumeops.volume_in_mapping(
-                self._volumeops.get_default_root_device(),
+            ebs_root = self._volumeops.ebs_root_in_block_devices(
                 block_device_info)
             if not ebs_root:
-                base_vhd_path = self._pathutils.get_base_vhd_path(
-                    instance["image_ref"])
-                if not os.path.exists(base_vhd_path):
-                    images.fetch(context, instance["image_ref"], base_vhd_path,
-                                 instance["user_id"], instance["project_id"])
+                self._imagecache.get_cached_image(context, instance)
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration):

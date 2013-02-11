@@ -23,7 +23,18 @@ from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
+hyperv_opts = [
+    cfg.StrOpt('instances_path_share',
+               default="",
+               help='The name of a Windows share name mapped to the '
+                    '"instances_path" dir and used by the resize feature '
+                    'to copy files to the target host. If left blank, an '
+                    'administrative share will be used, looking for the same '
+                    '"instances_path" used locally'),
+]
+
 CONF = cfg.CONF
+CONF.register_opts(hyperv_opts, 'HYPERV')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 
@@ -33,35 +44,79 @@ class PathUtils(object):
         import __builtin__
         return __builtin__.open(path, mode)
 
-    def get_instances_path(self):
-        return os.path.normpath(CONF.instances_path)
+    def exists(self, path):
+        return os.path.exists(path)
 
-    def get_instance_path(self, instance_name):
-        instance_path = os.path.join(self.get_instances_path(), instance_name)
-        if not os.path.exists(instance_path):
-            LOG.debug(_('Creating folder %s '), instance_path)
-            os.makedirs(instance_path)
-        return instance_path
+    def makedirs(self, path):
+        os.makedirs(path)
+
+    def remove(self, path):
+        os.remove(path)
+
+    def rename(self, src, dest):
+        os.rename(src, dest)
+
+    def copyfile(self, src, dest):
+        shutil.copyfile(src, dest)
+
+    def copy(self, src, dest):
+        shutil.copy(src, dest)
+
+    def rmtree(self, path):
+        shutil.rmtree(path)
+
+    def get_instances_dir(self, remote_server=None):
+        local_instance_path = os.path.normpath(CONF.instances_path)
+
+        if remote_server:
+            if CONF.HYPERV.instances_path_share:
+                path = CONF.HYPERV.instances_path_share
+            else:
+                # Use an administrative share
+                path = local_instance_path.replace(':', '$')
+            return '\\\\%(remote_server)s\\%(path)s' % locals()
+        else:
+            return local_instance_path
+
+    def _check_create_dir(self, path):
+        if not self.exists(path):
+            LOG.debug(_('Creating directory: %s') % path)
+            self.makedirs(path)
+
+    def _check_remove_dir(self, path):
+        if self.exists(path):
+            LOG.debug(_('Removing directory: %s') % path)
+            self.rmtree(path)
+
+    def _get_instances_sub_dir(self, dir_name, remote_server=None,
+                               create_dir=True, remove_dir=False):
+        instances_path = self.get_instances_dir(remote_server)
+        path = os.path.join(instances_path, dir_name)
+        if remove_dir:
+            self._check_remove_dir(path)
+        if create_dir:
+            self._check_create_dir(path)
+        return path
+
+    def get_instance_migr_revert_dir(self, instance_name, create_dir=False,
+                                     remove_dir=False):
+        dir_name = '%s_revert' % instance_name
+        return self._get_instances_sub_dir(dir_name, None, create_dir,
+                                           remove_dir)
+
+    def get_instance_dir(self, instance_name, remote_server=None,
+                         create_dir=True, remove_dir=False):
+        return self._get_instances_sub_dir(instance_name, remote_server,
+                                           create_dir, remove_dir)
 
     def get_vhd_path(self, instance_name):
-        instance_path = self.get_instance_path(instance_name)
-        return os.path.join(instance_path, instance_name + ".vhd")
+        instance_path = self.get_instance_dir(instance_name)
+        return os.path.join(instance_path, 'root.vhd')
 
-    def get_base_vhd_path(self, image_name):
-        base_dir = os.path.join(self.get_instances_path(), '_base')
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-        return os.path.join(base_dir, image_name + ".vhd")
+    def get_base_vhd_dir(self):
+        return self._get_instances_sub_dir('_base')
 
-    def make_export_path(self, instance_name):
-        export_folder = os.path.join(self.get_instances_path(), "export",
-                                     instance_name)
-        if os.path.isdir(export_folder):
-            LOG.debug(_('Removing existing folder %s '), export_folder)
-            shutil.rmtree(export_folder)
-        LOG.debug(_('Creating folder %s '), export_folder)
-        os.makedirs(export_folder)
-        return export_folder
-
-    def vhd_exists(self, path):
-        return os.path.exists(path)
+    def get_export_dir(self, instance_name):
+        dir_name = os.path.join('export', instance_name)
+        return self._get_instances_sub_dir(dir_name, create_dir=True,
+                                           remove_dir=True)

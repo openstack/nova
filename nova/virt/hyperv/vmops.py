@@ -24,16 +24,18 @@ import os
 from nova.api.metadata import base as instance_metadata
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import hostutils
+from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils
-from nova.virt import images
+from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
 
@@ -69,11 +71,13 @@ class VMOps(object):
         'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
     }
 
-    def __init__(self, volumeops):
+    def __init__(self):
+        self._hostutils = hostutils.HostUtils()
         self._vmutils = vmutils.VMUtils()
         self._vhdutils = vhdutils.VHDUtils()
         self._pathutils = pathutils.PathUtils()
-        self._volumeops = volumeops
+        self._volumeops = volumeops.VolumeOps()
+        self._imagecache = imagecache.ImageCache()
         self._vif_driver = None
         self._load_vif_driver_class()
 
@@ -106,70 +110,76 @@ class VMOps(object):
                 'num_cpu': info['NumberOfProcessors'],
                 'cpu_time': info['UpTime']}
 
+    def _create_boot_vhd(self, context, instance):
+        base_vhd_path = self._imagecache.get_cached_image(context, instance)
+        boot_vhd_path = self._pathutils.get_vhd_path(instance['name'])
+
+        if CONF.use_cow_images:
+            LOG.debug(_("Creating differencing VHD. Parent: "
+                        "%(base_vhd_path)s, Target: %(boot_vhd_path)s")
+                      % locals())
+            self._vhdutils.create_differencing_vhd(boot_vhd_path,
+                                                   base_vhd_path)
+        else:
+            self._pathutils.copyfile(base_vhd_path, boot_vhd_path)
+        return boot_vhd_path
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
         """Create a new VM and start it."""
+        LOG.info(_("Spawning new instance"), instance=instance)
 
         instance_name = instance['name']
         if self._vmutils.vm_exists(instance_name):
             raise exception.InstanceExists(name=instance_name)
 
-        ebs_root = self._volumeops.volume_in_mapping(
-            self._volumeops.get_default_root_device(),
-            block_device_info)
-
-        #If is not a boot from volume spawn
-        if not (ebs_root):
-            #Fetch the file, assume it is a VHD file.
-            vhdfile = self._pathutils.get_vhd_path(instance_name)
-            try:
-                self._cache_image(fn=self._fetch_image,
-                                  context=context,
-                                  target=vhdfile,
-                                  fname=instance['image_ref'],
-                                  image_id=instance['image_ref'],
-                                  user=instance['user_id'],
-                                  project=instance['project_id'],
-                                  cow=CONF.use_cow_images)
-            except Exception as exn:
-                LOG.exception(_('cache image failed: %s'), exn)
-                raise
+        if self._volumeops.ebs_root_in_block_devices(block_device_info):
+            boot_vhd_path = None
+        else:
+            boot_vhd_path = self._create_boot_vhd(context, instance)
 
         try:
-            self._vmutils.create_vm(instance_name,
-                                    instance['memory_mb'],
-                                    instance['vcpus'],
-                                    CONF.limit_cpu_features)
-
-            if not ebs_root:
-                self._vmutils.attach_ide_drive(instance_name,
-                                               vhdfile,
-                                               0,
-                                               0,
-                                               constants.IDE_DISK)
-            else:
-                self._volumeops.attach_boot_volume(block_device_info,
-                                                   instance_name)
-
-            self._vmutils.create_scsi_controller(instance_name)
-
-            for vif in network_info:
-                LOG.debug(_('Creating nic for instance: %s'), instance_name)
-                self._vmutils.create_nic(instance_name,
-                                         vif['id'],
-                                         vif['address'])
-                self._vif_driver.plug(instance, vif)
+            self.create_instance(instance, network_info, block_device_info,
+                                 boot_vhd_path)
 
             if configdrive.required_by(instance):
                 self._create_config_drive(instance, injected_files,
                                           admin_password)
 
-            self._set_vm_state(instance_name,
-                               constants.HYPERV_VM_STATE_ENABLED)
+            self.power_on(instance)
         except Exception as ex:
             LOG.exception(ex)
             self.destroy(instance)
             raise vmutils.HyperVException(_('Spawn instance failed'))
+
+    def create_instance(self, instance, network_info,
+                        block_device_info, boot_vhd_path):
+        instance_name = instance['name']
+
+        self._vmutils.create_vm(instance_name,
+                                instance['memory_mb'],
+                                instance['vcpus'],
+                                CONF.limit_cpu_features)
+
+        if boot_vhd_path:
+            self._vmutils.attach_ide_drive(instance_name,
+                                           boot_vhd_path,
+                                           0,
+                                           0,
+                                           constants.IDE_DISK)
+
+        self._vmutils.create_scsi_controller(instance_name)
+
+        self._volumeops.attach_volumes(block_device_info,
+                                       instance_name,
+                                       boot_vhd_path is None)
+
+        for vif in network_info:
+            LOG.debug(_('Creating nic for instance: %s'), instance_name)
+            self._vmutils.create_nic(instance_name,
+                                     vif['id'],
+                                     vif['address'])
+            self._vif_driver.plug(instance, vif)
 
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
@@ -186,7 +196,7 @@ class VMOps(object):
                                                      content=injected_files,
                                                      extra_md=extra_md)
 
-        instance_path = self._pathutils.get_instance_path(
+        instance_path = self._pathutils.get_instance_dir(
             instance['name'])
         configdrive_path_iso = os.path.join(instance_path, 'configdrive.iso')
         LOG.info(_('Creating config drive at %(path)s'),
@@ -196,9 +206,9 @@ class VMOps(object):
             try:
                 cdb.make_drive(configdrive_path_iso)
             except exception.ProcessExecutionError, e:
-                LOG.error(_('Creating config drive failed with error: %s'),
-                          e, instance=instance)
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_('Creating config drive failed with error: %s'),
+                              e, instance=instance)
 
         if not CONF.config_drive_cdrom:
             drive_type = constants.IDE_DISK
@@ -213,7 +223,7 @@ class VMOps(object):
                           configdrive_path_iso,
                           configdrive_path,
                           attempts=1)
-            os.remove(configdrive_path_iso)
+            self._pathutils.remove(configdrive_path_iso)
         else:
             drive_type = constants.IDE_DVD
             configdrive_path = configdrive_path_iso
@@ -221,19 +231,35 @@ class VMOps(object):
         self._vmutils.attach_ide_drive(instance['name'], configdrive_path,
                                        1, 0, drive_type)
 
+    def _disconnect_volumes(self, volume_drives):
+        for volume_drive in volume_drives:
+            self._volumeops.disconnect_volume(volume_drive)
+
+    def _delete_disk_files(self, instance_name):
+        self._pathutils.get_instance_dir(instance_name,
+                                          create_dir=False,
+                                          remove_dir=True)
+
     def destroy(self, instance, network_info=None, cleanup=True,
                 destroy_disks=True):
         instance_name = instance['name']
-        LOG.debug(_("Got request to destroy instance: %s"), instance_name)
+        LOG.info(_("Got request to destroy instance: %s"), instance_name)
         try:
             if self._vmutils.vm_exists(instance_name):
-                volumes_drives_list = self._vmutils.destroy_vm(instance_name,
-                                                               destroy_disks)
-                #Disconnect volumes
-                for volume_drive in volumes_drives_list:
-                    self._volumeops.disconnect_volume(volume_drive)
+
+                #Stop the VM first.
+                self.power_off(instance)
+
+                storage = self._vmutils.get_vm_storage_paths(instance_name)
+                (disk_files, volume_drives) = storage
+
+                self._vmutils.destroy_vm(instance_name)
+                self._disconnect_volumes(volume_drives)
             else:
                 LOG.debug(_("Instance not found: %s"), instance_name)
+
+            if destroy_disks:
+                self._delete_disk_files(instance_name)
         except Exception as ex:
             LOG.exception(ex)
             raise vmutils.HyperVException(_('Failed to destroy instance: %s') %
@@ -292,45 +318,3 @@ class VMOps(object):
             msg = _("Failed to change vm state of %(vm_name)s"
                     " to %(req_state)s") % locals()
             raise vmutils.HyperVException(msg)
-
-    def _fetch_image(self, target, context, image_id, user, project,
-                     *args, **kwargs):
-        images.fetch(context, image_id, target, user, project)
-
-    def _cache_image(self, fn, target, fname, cow=False, size=None,
-                     *args, **kwargs):
-        """Wrapper for a method that creates and caches an image.
-
-        This wrapper will save the image into a common store and create a
-        copy for use by the hypervisor.
-
-        The underlying method should specify a kwarg of target representing
-        where the image will be saved.
-
-        fname is used as the filename of the base image.  The filename needs
-        to be unique to a given image.
-
-        If cow is True, it will make a CoW image instead of a copy.
-        """
-        @lockutils.synchronized(fname, 'nova-')
-        def call_if_not_exists(path, fn, *args, **kwargs):
-            if not os.path.exists(path):
-                fn(target=path, *args, **kwargs)
-
-        if not self._pathutils.vhd_exists(target):
-            LOG.debug(_("Use CoW image: %s"), cow)
-            if cow:
-                parent_path = self._pathutils.get_base_vhd_path(fname)
-                call_if_not_exists(parent_path, fn, *args, **kwargs)
-
-                LOG.debug(_("Creating differencing VHD. Parent: "
-                            "%(parent_path)s, Target: %(target)s") % locals())
-                try:
-                    self._vhdutils.create_differencing_vhd(target, parent_path)
-                except Exception as ex:
-                    LOG.exception(ex)
-                    raise vmutils.HyperVException(
-                        _('Failed to create a differencing disk from '
-                          '%(parent_path)s to %(target)s') % locals())
-            else:
-                call_if_not_exists(target, fn, *args, **kwargs)

@@ -16,6 +16,7 @@
 #    under the License.
 
 import ctypes
+import socket
 import sys
 
 if sys.platform == 'win32':
@@ -72,3 +73,9 @@ class HostUtils(object):
 
     def get_windows_version(self):
         return self._conn_cimv2.Win32_OperatingSystem()[0].Version
+
+    def get_local_ips(self):
+        addr_info = socket.getaddrinfo(socket.gethostname(), None, 0, 0, 0)
+        # Returns IPv4 and IPv6 addresses, ordered by protocol family
+        addr_info.sort()
+        return [a[4][0] for a in addr_info]

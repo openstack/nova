@@ -23,24 +23,50 @@ class PathUtils(object):
     def open(self, path, mode):
         return io.BytesIO(b'fake content')
 
-    def get_instances_path(self):
-        return 'C:\\FakePath\\'
+    def exists(self, path):
+        return False
 
-    def get_instance_path(self, instance_name):
-        return os.path.join(self.get_instances_path(), instance_name)
+    def makedirs(self, path):
+        pass
+
+    def remove(self, path):
+        pass
+
+    def rename(self, src, dest):
+        pass
+
+    def copyfile(self, src, dest):
+        pass
+
+    def copy(self, src, dest):
+        pass
+
+    def rmtree(self, path):
+        pass
+
+    def get_instances_dir(self, remote_server=None):
+        return 'C:\\FakeInstancesPath\\'
+
+    def get_instance_migr_revert_dir(self, instance_name, create_dir=False,
+                                     remove_dir=False):
+        return os.path.join(self.get_instances_dir(), instance_name, '_revert')
+
+    def get_instance_dir(self, instance_name, remote_server=None,
+                         create_dir=True, remove_dir=False):
+        return os.path.join(self.get_instances_dir(remote_server),
+                            instance_name)
 
     def get_vhd_path(self, instance_name):
-        instance_path = self.get_instance_path(instance_name)
-        return os.path.join(instance_path, instance_name + ".vhd")
+        instance_path = self.get_instance_dir(instance_name)
+        return os.path.join(instance_path, 'root.vhd')
 
-    def get_base_vhd_path(self, image_name):
-        base_dir = os.path.join(self.get_instances_path(), '_base')
-        return os.path.join(base_dir, image_name + ".vhd")
+    def get_base_vhd_dir(self):
+        return os.path.join(self.get_instances_dir(), '_base')
 
-    def make_export_path(self, instance_name):
-        export_folder = os.path.join(self.get_instances_path(), "export",
-                                     instance_name)
-        return export_folder
+    def get_export_dir(self, instance_name):
+        export_dir = os.path.join(self.get_instances_dir(), 'export',
+                                  instance_name)
+        return export_dir
 
     def vhd_exists(self, path):
         return False

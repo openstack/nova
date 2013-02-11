@@ -80,6 +80,7 @@ class HyperVAPITestCase(test.TestCase):
         self._instance_ide_disks = []
         self._instance_ide_dvds = []
         self._instance_volume_disks = []
+        self._test_vm_name = None
 
         self._setup_stubs()
 
@@ -116,6 +117,14 @@ class HyperVAPITestCase(test.TestCase):
 
         self.stubs.Set(pathutils, 'PathUtils', fake.PathUtils)
         self._mox.StubOutWithMock(fake.PathUtils, 'open')
+        self._mox.StubOutWithMock(fake.PathUtils, 'copyfile')
+        self._mox.StubOutWithMock(fake.PathUtils, 'rmtree')
+        self._mox.StubOutWithMock(fake.PathUtils, 'copy')
+        self._mox.StubOutWithMock(fake.PathUtils, 'remove')
+        self._mox.StubOutWithMock(fake.PathUtils, 'rename')
+        self._mox.StubOutWithMock(fake.PathUtils, 'makedirs')
+        self._mox.StubOutWithMock(fake.PathUtils,
+                                  'get_instance_migr_revert_dir')
 
         self._mox.StubOutWithMock(vmutils.VMUtils, 'vm_exists')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'create_vm')
@@ -137,11 +146,13 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'get_mounted_disk_by_drive_number')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'detach_vm_disk')
+        self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_storage_paths')
 
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_differencing_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'reconnect_parent_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'merge_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_parent_path')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_info')
 
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_cpus_info')
         self._mox.StubOutWithMock(hostutils.HostUtils,
@@ -149,6 +160,7 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_memory_info')
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_volume_info')
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_windows_version')
+        self._mox.StubOutWithMock(hostutils.HostUtils, 'get_local_ips')
 
         self._mox.StubOutWithMock(networkutils.NetworkUtils,
                                   'get_external_vswitch')
@@ -180,11 +192,6 @@ class HyperVAPITestCase(test.TestCase):
                                   'logout_storage_target')
         self._mox.StubOutWithMock(volumeutilsv2.VolumeUtilsV2,
                                   'execute_log_out')
-
-        self._mox.StubOutWithMock(shutil, 'copyfile')
-        self._mox.StubOutWithMock(shutil, 'rmtree')
-
-        self._mox.StubOutWithMock(os, 'remove')
 
         self._mox.StubOutClassWithMocks(instance_metadata, 'InstanceMetadata')
         self._mox.StubOutWithMock(instance_metadata.InstanceMetadata,
@@ -332,7 +339,7 @@ class HyperVAPITestCase(test.TestCase):
                           mox.IsA(str),
                           mox.IsA(str),
                           attempts=1)
-            os.remove(mox.IsA(str))
+            fake.PathUtils.remove(mox.IsA(str))
 
         m = vmutils.VMUtils.attach_ide_drive(mox.IsA(str),
                                              mox.IsA(str),
@@ -490,15 +497,22 @@ class HyperVAPITestCase(test.TestCase):
                           None)
         self._mox.VerifyAll()
 
-    def test_destroy(self):
-        self._instance_data = self._get_instance_data()
-
+    def _setup_destroy_mocks(self):
         m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
         m.AndReturn(True)
 
-        m = vmutils.VMUtils.destroy_vm(mox.Func(self._check_instance_name),
-                                       True)
-        m.AndReturn([])
+        func = mox.Func(self._check_instance_name)
+        vmutils.VMUtils.set_vm_state(func, constants.HYPERV_VM_STATE_DISABLED)
+
+        m = vmutils.VMUtils.get_vm_storage_paths(func)
+        m.AndReturn(([], []))
+
+        vmutils.VMUtils.destroy_vm(func)
+
+    def test_destroy(self):
+        self._instance_data = self._get_instance_data()
+
+        self._setup_destroy_mocks()
 
         self._mox.ReplayAll()
         self._conn.destroy(self._instance_data)
@@ -562,7 +576,9 @@ class HyperVAPITestCase(test.TestCase):
         if cow:
             m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
                                                                   None)
-            m.AndReturn([])
+            m.AndReturn(False)
+
+            vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
 
         self._mox.ReplayAll()
         self._conn.pre_live_migration(self._context, instance_data,
@@ -617,7 +633,7 @@ class HyperVAPITestCase(test.TestCase):
         def copy_dest_disk_path(src, dest):
             self._fake_dest_disk_path = dest
 
-        m = shutil.copyfile(mox.IsA(str), mox.IsA(str))
+        m = fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
         m.WithSideEffects(copy_dest_disk_path)
 
         self._fake_dest_base_disk_path = None
@@ -625,7 +641,7 @@ class HyperVAPITestCase(test.TestCase):
         def copy_dest_base_disk_path(src, dest):
             self._fake_dest_base_disk_path = dest
 
-        m = shutil.copyfile(fake_parent_vhd_path, mox.IsA(str))
+        m = fake.PathUtils.copyfile(fake_parent_vhd_path, mox.IsA(str))
         m.WithSideEffects(copy_dest_base_disk_path)
 
         def check_dest_disk_path(path):
@@ -647,7 +663,7 @@ class HyperVAPITestCase(test.TestCase):
         func = mox.Func(check_snapshot_path)
         vmutils.VMUtils.remove_vm_snapshot(func)
 
-        shutil.rmtree(mox.IsA(str))
+        fake.PathUtils.rmtree(mox.IsA(str))
 
         m = fake.PathUtils.open(func2, 'rb')
         m.AndReturn(io.BytesIO(b'fake content'))
@@ -702,65 +718,70 @@ class HyperVAPITestCase(test.TestCase):
                          mounted_disk_path):
         self._instance_volume_disks.append(mounted_disk_path)
 
-    def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
-                                    with_exception=False,
-                                    block_device_info=None):
-        self._test_vm_name = None
+    def _check_img_path(self, image_path):
+        return image_path == self._fetched_image
 
-        def set_vm_name(vm_name):
-            self._test_vm_name = vm_name
-
-        def check_vm_name(vm_name):
-            return vm_name == self._test_vm_name
-
-        m = vmutils.VMUtils.vm_exists(mox.IsA(str))
-        m.WithSideEffects(set_vm_name).AndReturn(False)
-
-        if not block_device_info:
-            m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
-                                                                  None)
-            m.AndReturn([])
-        else:
-            m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(
-                mox.IsA(str), block_device_info)
-            m.AndReturn(True)
-
-        if cow:
-            def check_path(parent_path):
-                return parent_path == self._fetched_image
-
-            vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
-                                                      mox.Func(check_path))
-
-        vmutils.VMUtils.create_vm(mox.Func(check_vm_name), mox.IsA(int),
+    def _setup_create_instance_mocks(self, setup_vif_mocks_func=None,
+                                     boot_from_volume=False):
+        vmutils.VMUtils.create_vm(mox.Func(self._check_vm_name), mox.IsA(int),
                                   mox.IsA(int), mox.IsA(bool))
 
-        if not block_device_info:
-            m = vmutils.VMUtils.attach_ide_drive(mox.Func(check_vm_name),
+        if not boot_from_volume:
+            m = vmutils.VMUtils.attach_ide_drive(mox.Func(self._check_vm_name),
                                                  mox.IsA(str),
                                                  mox.IsA(int),
                                                  mox.IsA(int),
                                                  mox.IsA(str))
             m.WithSideEffects(self._add_ide_disk).InAnyOrder()
 
-        m = vmutils.VMUtils.create_scsi_controller(mox.Func(check_vm_name))
+        func = mox.Func(self._check_vm_name)
+        m = vmutils.VMUtils.create_scsi_controller(func)
         m.InAnyOrder()
 
-        vmutils.VMUtils.create_nic(mox.Func(check_vm_name), mox.IsA(str),
+        vmutils.VMUtils.create_nic(mox.Func(self._check_vm_name), mox.IsA(str),
                                    mox.IsA(str)).InAnyOrder()
 
         if setup_vif_mocks_func:
             setup_vif_mocks_func()
 
+    def _set_vm_name(self, vm_name):
+        self._test_vm_name = vm_name
+
+    def _check_vm_name(self, vm_name):
+        return vm_name == self._test_vm_name
+
+    def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
+                                    with_exception=False,
+                                    block_device_info=None,
+                                    boot_from_volume=False):
+        m = vmutils.VMUtils.vm_exists(mox.IsA(str))
+        m.WithSideEffects(self._set_vm_name).AndReturn(False)
+
+        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(
+            mox.IsA(str), block_device_info)
+        m.AndReturn(boot_from_volume)
+
+        if not boot_from_volume:
+            vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
+
+            if cow:
+                vhdutils.VHDUtils.create_differencing_vhd(
+                    mox.IsA(str), mox.Func(self._check_img_path))
+            else:
+                fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+
+        self._setup_create_instance_mocks(setup_vif_mocks_func,
+                                          boot_from_volume)
+
         # TODO(alexpilotti) Based on where the exception is thrown
         # some of the above mock calls need to be skipped
         if with_exception:
-            m = vmutils.VMUtils.vm_exists(mox.Func(check_vm_name))
+            m = vmutils.VMUtils.vm_exists(mox.Func(self._check_vm_name))
             m.AndReturn(True)
 
-            vmutils.VMUtils.destroy_vm(mox.Func(check_vm_name), True)
+            vmutils.VMUtils.destroy_vm(mox.Func(self._check_vm_name))
         else:
-            vmutils.VMUtils.set_vm_state(mox.Func(check_vm_name),
+            vmutils.VMUtils.set_vm_state(mox.Func(self._check_vm_name),
                                          constants.HYPERV_VM_STATE_ENABLED)
 
     def _test_spawn_instance(self, cow=True,
@@ -772,14 +793,14 @@ class HyperVAPITestCase(test.TestCase):
                                          with_exception)
 
         self._mox.ReplayAll()
-        self._spawn_instance(cow, )
+        self._spawn_instance(cow)
         self._mox.VerifyAll()
 
         self.assertEquals(len(self._instance_ide_disks), expected_ide_disks)
         self.assertEquals(len(self._instance_ide_dvds), expected_ide_dvds)
 
-        if not cow:
-            self.assertEquals(self._fetched_image, self._instance_ide_disks[0])
+        vhd_path = pathutils.PathUtils().get_vhd_path(self._test_vm_name)
+        self.assertEquals(vhd_path, self._instance_ide_disks[0])
 
     def test_attach_volume(self):
         instance_data = self._get_instance_data()
@@ -897,10 +918,165 @@ class HyperVAPITestCase(test.TestCase):
         m.WithSideEffects(self._add_volume_disk)
 
         self._setup_spawn_instance_mocks(cow=False,
-                                         block_device_info=block_device_info)
+                                         block_device_info=block_device_info,
+                                         boot_from_volume=True)
 
         self._mox.ReplayAll()
         self._spawn_instance(False, block_device_info)
         self._mox.VerifyAll()
 
         self.assertEquals(len(self._instance_volume_disks), 1)
+
+    def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
+                                                     with_exception=False):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+        network_info = fake_network.fake_get_instance_nw_info(
+            self.stubs, spectacular=True)
+
+        fake_local_ip = '10.0.0.1'
+        if same_host:
+            fake_dest_ip = fake_local_ip
+        else:
+            fake_dest_ip = '10.0.0.2'
+
+        fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
+        fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
+                            instance['name'])
+
+        func = mox.Func(self._check_instance_name)
+        vmutils.VMUtils.set_vm_state(func, constants.HYPERV_VM_STATE_DISABLED)
+
+        m = vmutils.VMUtils.get_vm_storage_paths(func)
+        m.AndReturn(([fake_root_vhd_path], []))
+
+        m = hostutils.HostUtils.get_local_ips()
+        m.AndReturn([fake_local_ip])
+
+        m = pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'],
+                                                             remove_dir=True)
+        m.AndReturn(fake_revert_path)
+
+        if same_host:
+            fake.PathUtils.makedirs(mox.IsA(str))
+
+        m = fake.PathUtils.copy(fake_root_vhd_path, mox.IsA(str))
+        if with_exception:
+            m.AndRaise(shutil.Error('Simulated copy error'))
+        else:
+            fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+            if same_host:
+                fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+
+            self._setup_destroy_mocks()
+
+        return (instance, fake_dest_ip, network_info)
+
+    def test_migrate_disk_and_power_off(self):
+        (instance,
+         fake_dest_ip,
+         network_info) = self._setup_test_migrate_disk_and_power_off_mocks()
+
+        self._mox.ReplayAll()
+        self._conn.migrate_disk_and_power_off(self._context, instance,
+                                              fake_dest_ip, None,
+                                              network_info)
+        self._mox.VerifyAll()
+
+    def test_migrate_disk_and_power_off_same_host(self):
+        args = self._setup_test_migrate_disk_and_power_off_mocks(
+            same_host=True)
+        (instance, fake_dest_ip, network_info) = args
+
+        self._mox.ReplayAll()
+        self._conn.migrate_disk_and_power_off(self._context, instance,
+                                              fake_dest_ip, None,
+                                              network_info)
+        self._mox.VerifyAll()
+
+    def test_migrate_disk_and_power_off_exception(self):
+        args = self._setup_test_migrate_disk_and_power_off_mocks(
+            with_exception=True)
+        (instance, fake_dest_ip, network_info) = args
+
+        self._mox.ReplayAll()
+        self.assertRaises(shutil.Error, self._conn.migrate_disk_and_power_off,
+                          self._context, instance, fake_dest_ip, None,
+                          network_info)
+        self._mox.VerifyAll()
+
+    def test_finish_migration(self):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+        network_info = fake_network.fake_get_instance_nw_info(
+            self.stubs, spectacular=True)
+
+        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
+                                                              None)
+        m.AndReturn(False)
+
+        self._mox.StubOutWithMock(fake.PathUtils, 'exists')
+        m = fake.PathUtils.exists(mox.IsA(str))
+        m.AndReturn(True)
+
+        fake_parent_vhd_path = (os.path.join('FakeParentPath', '%s.vhd' %
+                                instance["image_ref"]))
+
+        m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
+        m.AndReturn({'ParentPath': fake_parent_vhd_path,
+                     'MaxInternalSize': 1})
+
+        m = fake.PathUtils.exists(mox.IsA(str))
+        m.AndReturn(True)
+
+        vhdutils.VHDUtils.reconnect_parent_vhd(mox.IsA(str), mox.IsA(str))
+
+        self._set_vm_name(instance['name'])
+        self._setup_create_instance_mocks(None, False)
+
+        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                     constants.HYPERV_VM_STATE_ENABLED)
+
+        self._mox.ReplayAll()
+        self._conn.finish_migration(self._context, None, instance, "",
+                                    network_info, None, False, None)
+        self._mox.VerifyAll()
+
+    def test_confirm_migration(self):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+        network_info = fake_network.fake_get_instance_nw_info(
+            self.stubs, spectacular=True)
+
+        pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'],
+                                                         remove_dir=True)
+        self._mox.ReplayAll()
+        self._conn.confirm_migration(None, instance, network_info)
+        self._mox.VerifyAll()
+
+    def test_finish_revert_migration(self):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+        network_info = fake_network.fake_get_instance_nw_info(
+            self.stubs, spectacular=True)
+
+        fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
+                            instance['name'])
+
+        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
+                                                              None)
+        m.AndReturn(False)
+
+        m = pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'])
+        m.AndReturn(fake_revert_path)
+        fake.PathUtils.rename(fake_revert_path, mox.IsA(str))
+
+        self._set_vm_name(instance['name'])
+        self._setup_create_instance_mocks(None, False)
+
+        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
+                                     constants.HYPERV_VM_STATE_ENABLED)
+
+        self._mox.ReplayAll()
+        self._conn.finish_revert_migration(instance, network_info, None)
+        self._mox.VerifyAll()

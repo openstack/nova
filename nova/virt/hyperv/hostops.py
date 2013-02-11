@@ -21,12 +21,15 @@ Management class for host operations.
 import os
 import platform
 
+from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import pathutils
 
+CONF = cfg.CONF
+CONF.import_opt('my_ip', 'nova.netconf')
 LOG = logging.getLogger(__name__)
 
 
@@ -73,7 +76,7 @@ class HostOps(object):
         return (total_mem_mb, free_mem_mb, total_mem_mb - free_mem_mb)
 
     def _get_local_hdd_info_gb(self):
-        (drive, _) = os.path.splitdrive(self._pathutils.get_instances_path())
+        drive = os.path.splitdrive(self._pathutils.get_instances_dir())[0]
         (size, free_space) = self._hostutils.get_volume_info(drive)
 
         total_gb = size / (1024 ** 3)
@@ -152,7 +155,7 @@ class HostOps(object):
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
            True, run the update first."""
-        LOG.info(_("get_host_stats called"))
+        LOG.debug(_("get_host_stats called"))
 
         if refresh or not self._stats:
             self._update_stats()
@@ -161,3 +164,11 @@ class HostOps(object):
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
         pass
+
+    def get_host_ip_addr(self):
+        host_ip = CONF.my_ip
+        if not host_ip:
+            # Return the first available address
+            host_ip = self._hostutils.get_local_ips()[0]
+        LOG.debug(_("Host IP address is: %s"), host_ip)
+        return host_ip
