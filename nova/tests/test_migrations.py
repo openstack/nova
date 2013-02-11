@@ -385,14 +385,13 @@ class TestMigrations(test.TestCase):
     def _prerun_146(self, engine):
         data = {
             'availability_zone': 'custom_az',
-            'aggregate_name': 1,
             'name': 'name',
             }
 
         aggregates = get_table(engine, 'aggregates')
         result = aggregates.insert().values(data).execute()
         # NOTE(sdague) it's important you don't insert keys by value in
-        # postgresql, because it's autoincrement counter won't get updated
+        # postgresql, because its autoincrement counter won't get updated
         data['id'] = result.inserted_primary_key[0]
         return data
 
