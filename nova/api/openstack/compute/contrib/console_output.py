@@ -67,7 +67,7 @@ class ConsoleOutputController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(_('Unable to get console'))
 
         # XML output is not correctly escaped, so remove invalid characters
-        remove_re = re.compile('[\x00-\x08\x0B-\x0C\x0E-\x1F]')
+        remove_re = re.compile('[\x00-\x08\x0B-\x0C\x0E-\x1F-\x0D]')
         output = remove_re.sub('', output)
 
         return {'output': output}
