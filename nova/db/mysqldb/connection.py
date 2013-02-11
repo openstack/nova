@@ -136,6 +136,21 @@ class _Connection(object):
                     pass
                 self.conn = None
 
+    def insert(self, table, value_map):
+        columns = ''
+        value_str = ''
+        values = []
+        for column, value in value_map.iteritems():
+            if not columns:
+                columns += column
+                value_str += '%s'
+            else:
+                columns += ', ' + column
+                value_str += ', %s'
+            values.append(value)
+        sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, columns, value_str)
+        return self.execute(sql, args=values)
+
 
 class ConnectionPool(object):
     def __init__(self):
