@@ -43,6 +43,7 @@ class BaseVolumeUtils(object):
     def __init__(self):
         if sys.platform == 'win32':
             self._conn_wmi = wmi.WMI(moniker='//./root/wmi')
+            self._conn_cimv2 = wmi.WMI(moniker='//./root/cimv2')
 
     @abc.abstractmethod
     def login_storage_target(self, target_lun, target_iqn, target_portal):
@@ -56,10 +57,10 @@ class BaseVolumeUtils(object):
     def execute_log_out(self, session_id):
         pass
 
-    def get_iscsi_initiator(self, cim_conn):
+    def get_iscsi_initiator(self):
         """Get iscsi initiator name for this machine."""
 
-        computer_system = cim_conn.Win32_ComputerSystem()[0]
+        computer_system = self._conn_cimv2.Win32_ComputerSystem()[0]
         hostname = computer_system.name
         keypath = ("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\"
                    "iSCSI\\Discovery")
@@ -72,7 +73,7 @@ class BaseVolumeUtils(object):
         except Exception:
             LOG.info(_("The ISCSI initiator name can't be found. "
                        "Choosing the default one"))
-            computer_system = cim_conn.Win32_ComputerSystem()[0]
+            computer_system = self._conn_cimv2.Win32_ComputerSystem()[0]
             initiator_name = "iqn.1991-05.com.microsoft:" + hostname.lower()
         return {
             'ip': CONF.my_ip,
