@@ -93,7 +93,7 @@ function run_tests {
   testrargs=`echo "$testrargs" | sed -e's/^\s*\(.*\)\s*$/\1/'`
   TESTRTESTS="$TESTRTESTS --testr-args='--subunit $testropts $testrargs'"
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  bash -c "${wrapper} $TESTRTESTS | subunit2pyunit"
+  bash -c "${wrapper} $TESTRTESTS | ${wrapper} subunit2pyunit"
   RESULT=$?
   set -e
 
