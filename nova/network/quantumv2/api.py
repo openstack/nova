@@ -16,7 +16,10 @@
 #
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+import time
+
 from nova import conductor
+from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import api as network_api
@@ -59,6 +62,10 @@ quantum_opts = [
     cfg.StrOpt('quantum_ovs_bridge',
                default='br-int',
                help='Name of Integration Bridge used by Open vSwitch'),
+    cfg.IntOpt('quantum_extension_sync_interval',
+                default=600,
+                help='Number of seconds before querying quantum for'
+                     ' extensions'),
     ]
 
 CONF = cfg.CONF
@@ -76,6 +83,11 @@ class API(base.Base):
     """API for interacting with the quantum 2.x API."""
 
     conductor_api = conductor.API()
+
+    def __init__(self):
+        super(API, self).__init__()
+        self.last_quantum_extension_sync = None
+        self.extensions = {}
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
@@ -188,6 +200,9 @@ class API(base.Base):
                                 instance=instance['display_name'])
                         mac_address = available_macs.pop()
                         port_req_body['port']['mac_address'] = mac_address
+
+                    self._populate_quantum_extension_values(instance,
+                                                            port_req_body)
                     created_port_ids.append(
                         quantum.create_port(port_req_body)['port']['id'])
             except Exception:
@@ -213,6 +228,23 @@ class API(base.Base):
 
         return self.get_instance_nw_info(context, instance, networks=nets,
                 conductor_api=kwargs.get('conductor_api'))
+
+    def _refresh_quantum_extensions_cache(self):
+        if (not self.last_quantum_extension_sync or
+            ((time.time() - self.last_quantum_extension_sync)
+             >= CONF.quantum_extension_sync_interval)):
+            quantum = quantumv2.get_client(context.get_admin_context())
+            extensions_list = quantum.list_extensions()['extensions']
+            self.last_quantum_extension_sync = time.time()
+            self.extensions.clear()
+            self.extensions = dict((ext['name'], ext)
+                                   for ext in extensions_list)
+
+    def _populate_quantum_extension_values(self, instance, port_req_body):
+        self._refresh_quantum_extensions_cache()
+        if 'nvp-qos' in self.extensions:
+            rxtx_factor = instance['instance_type'].get('rxtx_factor')
+            port_req_body['port']['rxtx_factor'] = rxtx_factor
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""

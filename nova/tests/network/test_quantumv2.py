@@ -354,9 +354,28 @@ class TestQuantumv2(test.TestCase):
         self.assertEquals('my_mac%s' % id_suffix, nw_inf[0]['address'])
         self.assertEquals(0, len(nw_inf[0]['network']['subnets']))
 
+    def test_refresh_quantum_extensions_cache(self):
+        api = quantumapi.API()
+        self.moxed_client.list_extensions().AndReturn(
+            {'extensions': [{'name': 'nvp-qos'}]})
+        self.mox.ReplayAll()
+        api._refresh_quantum_extensions_cache()
+        self.assertEquals({'nvp-qos': {'name': 'nvp-qos'}}, api.extensions)
+
+    def test_populate_quantum_extension_values_rxtx_factor(self):
+        api = quantumapi.API()
+        self.moxed_client.list_extensions().AndReturn(
+            {'extensions': [{'name': 'nvp-qos'}]})
+        self.mox.ReplayAll()
+        instance = {'instance_type': {'rxtx_factor': 1}}
+        port_req_body = {'port': {}}
+        api._populate_quantum_extension_values(instance, port_req_body)
+        self.assertEquals(port_req_body['port']['rxtx_factor'], 1)
+
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
         api = quantumapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
+        self.mox.StubOutWithMock(api, '_populate_quantum_extension_values')
         # Net idx is 1-based for compatibility with existing unit tests
         nets = self.nets[net_idx - 1]
         ports = {}
@@ -428,6 +447,9 @@ class TestQuantumv2(test.TestCase):
                 if macs:
                     port_req_body['port']['mac_address'] = macs.pop()
                 res_port = {'port': {'id': 'fake'}}
+                api._populate_quantum_extension_values(
+                     self.instance, port_req_body).AndReturn(None)
+
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn(res_port)
 
@@ -547,6 +569,7 @@ class TestQuantumv2(test.TestCase):
         In this case, the code should delete the first created port.
         """
         api = quantumapi.API()
+        self.mox.StubOutWithMock(api, '_populate_quantum_extension_values')
         self.moxed_client.list_networks(
             tenant_id=self.instance['project_id'],
             shared=False).AndReturn(
@@ -565,6 +588,9 @@ class TestQuantumv2(test.TestCase):
                 },
             }
             port = {'id': 'portid_' + network['id']}
+
+            api._populate_quantum_extension_values(
+                self.instance, port_req_body).AndReturn(None)
             if index == 0:
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn({'port': port})
