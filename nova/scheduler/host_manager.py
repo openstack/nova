@@ -369,6 +369,7 @@ class HostManager(object):
 
         # Get resource usage across the available compute nodes:
         compute_nodes = db.compute_node_get_all(context)
+        seen_nodes = set()
         for compute in compute_nodes:
             service = compute['service']
             if not service:
@@ -388,5 +389,14 @@ class HostManager(object):
                         service=dict(service.iteritems()))
                 self.host_state_map[state_key] = host_state
             host_state.update_from_compute_node(compute)
+            seen_nodes.add(state_key)
+
+        # remove compute nodes from host_state_map if they are not active
+        dead_nodes = set(self.host_state_map.keys()) - seen_nodes
+        for state_key in dead_nodes:
+            host, node = state_key
+            LOG.info(_("Removing dead compute node %(host)s:%(node)s "
+                       "from scheduler") % locals())
+            del self.host_state_map[state_key]
 
         return self.host_state_map.itervalues()

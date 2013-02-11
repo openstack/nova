@@ -45,10 +45,7 @@ class HostManagerTestCase(test.TestCase):
         self.host_manager = host_manager.HostManager()
         self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
                 'fake-node') for x in xrange(1, 5)]
-
-    def tearDown(self):
-        timeutils.clear_time_override()
-        super(HostManagerTestCase, self).tearDown()
+        self.addCleanup(timeutils.clear_time_override)
 
     def test_choose_host_filters_not_found(self):
         self.flags(scheduler_default_filters='FakeFilterClass3')
@@ -266,6 +263,64 @@ class HostManagerTestCase(test.TestCase):
         # 8191GB
         self.assertEqual(host_states_map[('host4', 'node4')].free_disk_mb,
                          8388608)
+
+
+class HostManagerChangedNodesTestCase(test.TestCase):
+    """Test case for HostManager class."""
+
+    def setUp(self):
+        super(HostManagerChangedNodesTestCase, self).setUp()
+        self.host_manager = host_manager.HostManager()
+        self.fake_hosts = [
+              host_manager.HostState('host1', 'node1'),
+              host_manager.HostState('host2', 'node2'),
+              host_manager.HostState('host3', 'node3'),
+              host_manager.HostState('host4', 'node4')
+            ]
+        self.addCleanup(timeutils.clear_time_override)
+
+    def test_get_all_host_states(self):
+        context = 'fake_context'
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        self.mox.ReplayAll()
+
+        self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 4)
+
+    def test_get_all_host_states_after_delete_one(self):
+        context = 'fake_context'
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        # all nodes active for first call
+        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        # remove node4 for second call
+        running_nodes = [n for n in fakes.COMPUTE_NODES
+                         if n.get('hypervisor_hostname') != 'node4']
+        db.compute_node_get_all(context).AndReturn(running_nodes)
+        self.mox.ReplayAll()
+
+        self.host_manager.get_all_host_states(context)
+        self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 3)
+
+    def test_get_all_host_states_after_delete_all(self):
+        context = 'fake_context'
+
+        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        # all nodes active for first call
+        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        # remove all nodes for second call
+        db.compute_node_get_all(context).AndReturn([])
+        self.mox.ReplayAll()
+
+        self.host_manager.get_all_host_states(context)
+        self.host_manager.get_all_host_states(context)
+        host_states_map = self.host_manager.host_state_map
+        self.assertEqual(len(host_states_map), 0)
 
 
 class HostStateTestCase(test.TestCase):
