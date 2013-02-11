@@ -6,17 +6,23 @@ function usage {
   echo "Usage: $0 [OPTION]..."
   echo "Run Nova's test suite(s)"
   echo ""
-  echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
-  echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
-  echo "  -s, --no-site-packages   Isolate the virtualenv from the global Python environment"
-  echo "  -r, --recreate-db        Recreate the test database (deprecated, as this is now the default)."
-  echo "  -n, --no-recreate-db     Don't recreate the test database."
-  echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
-  echo "  -p, --pep8               Just run PEP8 and HACKING compliance check"
-  echo "  -P, --no-pep8            Don't run static code checks"
-  echo "  -c, --coverage           Generate coverage report"
-  echo "  -h, --help               Print this usage message"
-  echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
+  echo "  -V, --virtual-env           Always use virtualenv.  Install automatically if not present"
+  echo "  -N, --no-virtual-env        Don't use virtualenv.  Run tests in local environment"
+  echo "  -s, --no-site-packages      Isolate the virtualenv from the global Python environment"
+  echo "  -r, --recreate-db           Recreate the test database (deprecated, as this is now the default)."
+  echo "  -n, --no-recreate-db        Don't recreate the test database."
+  echo "  -f, --force                 Force a clean re-build of the virtual environment. Useful when dependencies have been added."
+  echo "  -p, --pep8                  Just run PEP8 and HACKING compliance check"
+  echo "  -P, --no-pep8               Don't run static code checks"
+  echo "  -c, --coverage              Generate coverage report"
+  echo "  -h, --help                  Print this usage message"
+  echo "  --hide-elapsed              Don't print the elapsed time for each test along with slow test list"
+  echo "  --virtual-env-path <path>   Location of the virtualenv directory"
+  echo "                               Default: \$(pwd)"
+  echo "  --virtual-env-name <name>   Name of the virtualenv directory"
+  echo "                               Default: .venv"
+  echo "  --tools-path <dir>          Location of the tools directory"
+  echo "                               Default: \$(pwd)"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
   echo "      If no virtualenv is found, the script will ask if you would like to create one.  If you "
@@ -24,24 +30,43 @@ function usage {
   exit
 }
 
-function process_option {
-  case "$1" in
-    -h|--help) usage;;
-    -V|--virtual-env) always_venv=1; never_venv=0;;
-    -N|--no-virtual-env) always_venv=0; never_venv=1;;
-    -s|--no-site-packages) no_site_packages=1;;
-    -r|--recreate-db) recreate_db=1;;
-    -n|--no-recreate-db) recreate_db=0;;
-    -f|--force) force=1;;
-    -p|--pep8) just_pep8=1;;
-    -P|--no-pep8) no_pep8=1;;
-    -c|--coverage) coverage=1;;
-    -*) testropts="$testropts $1";;
-    *) testrargs="$testrargs $1"
-  esac
+function process_options {
+  i=1
+  while [ $i -le $# ]; do
+    FOO=${!i}
+    case "${!i}" in
+      -h|--help) usage;;
+      -V|--virtual-env) always_venv=1; never_venv=0;;
+      -N|--no-virtual-env) always_venv=0; never_venv=1;;
+      -s|--no-site-packages) no_site_packages=1;;
+      -r|--recreate-db) recreate_db=1;;
+      -n|--no-recreate-db) recreate_db=0;;
+      -f|--force) force=1;;
+      -p|--pep8) just_pep8=1;;
+      -P|--no-pep8) no_pep8=1;;
+      -c|--coverage) coverage=1;;
+      --virtual-env-path)
+        (( i++ ))
+        venv_path=${!i}
+        ;;
+      --virtual-env-name)
+        (( i++ ))
+        venv_dir=${!i}
+        ;;
+      --tools-path)
+        (( i++ ))
+        tools_path=${!i}
+        ;;
+      -*) testropts="$testropts $1";;
+      *) testrargs="$testrargs $1"
+    esac
+    (( i++ ))
+  done
 }
 
-venv=.venv
+tool_path=${tools_path:-$(pwd)}
+venv_path=${venv_path:-$(pwd)}
+venv_dir=${venv_name:-.venv}
 with_venv=tools/with_venv.sh
 always_venv=0
 never_venv=0
@@ -60,9 +85,13 @@ LANG=en_US.UTF-8
 LANGUAGE=en_US:en
 LC_ALL=C
 
-for arg in "$@"; do
-  process_option $arg
-done
+process_options $@
+# Make our paths available to other scripts we call
+export venv_path
+export venv_dir
+export venv_name
+export tools_dir
+export venv=${venv_path}/${venv_dir}
 
 if [ $no_site_packages -eq 1 ]; then
   installvenvopts="--no-site-packages"
