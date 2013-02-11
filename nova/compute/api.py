@@ -1260,17 +1260,6 @@ class API(base.Base):
         else:
             raise Exception(_('Image type not recognized %s') % image_type)
 
-        # change instance state and notify
-        old_vm_state = instance["vm_state"]
-        old_task_state = instance["task_state"]
-
-        self.db.instance_test_and_set(
-                context, instance_uuid, 'task_state', [None], task_state)
-
-        notifications.send_update_with_states(context, instance, old_vm_state,
-                instance["vm_state"], old_task_state, instance["task_state"],
-                service="api", verify_states=True)
-
         properties = {
             'instance_uuid': instance_uuid,
             'user_id': str(context.user_id),
@@ -1301,6 +1290,18 @@ class API(base.Base):
         sent_meta['properties'] = properties
 
         recv_meta = self.image_service.create(context, sent_meta)
+
+        # change instance state and notify
+        old_vm_state = instance["vm_state"]
+        old_task_state = instance["task_state"]
+
+        self.db.instance_test_and_set(
+                context, instance_uuid, 'task_state', [None], task_state)
+
+        notifications.send_update_with_states(context, instance, old_vm_state,
+                instance["vm_state"], old_task_state, instance["task_state"],
+                service="api", verify_states=True)
+
         self.compute_rpcapi.snapshot_instance(context, instance=instance,
                 image_id=recv_meta['id'], image_type=image_type,
                 backup_type=backup_type, rotation=rotation)
