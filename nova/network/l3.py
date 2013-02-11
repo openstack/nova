@@ -125,8 +125,8 @@ class LinuxNetL3(L3Driver):
 
 class NullL3(L3Driver):
     """The L3 driver that doesn't do anything.  This class can be used when
-       nova-network shuld not manipulate L3 forwarding at all (e.g., in a Flat
-       or FlatDHCP scenario"""
+       nova-network should not manipulate L3 forwarding at all (e.g., in a Flat
+       or FlatDHCP scenario)."""
     def __init__(self):
         pass
 
