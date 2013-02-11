@@ -2244,7 +2244,7 @@ class API(base.Base):
             context, device=device, instance=instance, volume_id=volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
-            self.volume_api.check_attach(context, volume)
+            self.volume_api.check_attach(context, volume, instance=instance)
             self.volume_api.reserve_volume(context, volume)
             self.compute_rpcapi.attach_volume(context, instance=instance,
                     volume_id=volume_id, mountpoint=device)

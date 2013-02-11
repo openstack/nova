@@ -645,7 +645,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             if bdm['volume_id'] is not None:
                 volume = self.volume_api.get(context, bdm['volume_id'])
-                self.volume_api.check_attach(context, volume)
+                self.volume_api.check_attach(context, volume,
+                                                      instance=instance)
                 cinfo = self._attach_volume_boot(context,
                                                  instance,
                                                  volume,
