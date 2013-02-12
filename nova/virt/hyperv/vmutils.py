@@ -135,6 +135,12 @@ class VMUtils(object):
 
         self._modify_virt_resource(procsetting, vm.path_())
 
+    def update_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features):
+        vm = self._lookup_vm_check(vm_name)
+        vmsetting = self._get_vm_setting_data(vm)
+        self._set_vm_memory(vm, vmsetting, memory_mb)
+        self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
+
     def create_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features):
         """Creates a VM."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
@@ -318,13 +324,8 @@ class VMUtils(object):
         LOG.debug(_("Successfully changed vm state of %(vm_name)s"
                     " to %(req_state)s") % locals())
 
-    def destroy_vm(self, vm_name, destroy_disks=True):
-        """Destroy the VM. Also destroy the associated VHD disk files."""
-
+    def get_vm_storage_paths(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
-
-        #Stop the VM first.
-        self.set_vm_state(vm_name, constants.HYPERV_VM_STATE_DISABLED)
 
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = vm.associators(
@@ -338,34 +339,24 @@ class VMUtils(object):
                             if r.ResourceSubType ==
                             'Microsoft Physical Disk Drive']
 
-        #Collect volumes information before destroying the VM.
-        volumes_drives_list = []
+        volume_drives = []
         for volume_resource in volume_resources:
             drive_path = volume_resource.HostResource[0]
-            #Appending the Msvm_Disk path
-            volumes_drives_list.append(drive_path)
+            volume_drives.append(drive_path)
 
-        #Collect disk file information before destroying the VM.
         disk_files = []
         for disk_resource in disk_resources:
             disk_files.extend([c for c in disk_resource.Connection])
 
+        return (disk_files, volume_drives)
+
+    def destroy_vm(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+
+        vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         #Remove the VM. Does not destroy disks.
         (job_path, ret_val) = vs_man_svc.DestroyVirtualSystem(vm.path_())
         self.check_ret_val(ret_val, job_path)
-
-        if destroy_disks:
-            #Delete associated vhd disk files.
-            for disk in disk_files:
-                LOG.debug(_("Deleting disk file: %(disk)s") % locals())
-                self._delete_file(disk)
-
-        return volumes_drives_list
-
-    def _delete_file(self, path):
-        f = self._conn_cimv2.query("Select * from CIM_DataFile where "
-                                   "Name = '%s'" % path.replace("'", "''"))[0]
-        f.Delete()
 
     def check_ret_val(self, ret_val, job_path, success_values=[0]):
         if ret_val == constants.WMI_JOB_STATUS_STARTED:

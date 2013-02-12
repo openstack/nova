@@ -23,6 +23,7 @@ from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import hostops
 from nova.virt.hyperv import livemigrationops
+from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import snapshotops
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
@@ -36,10 +37,10 @@ class HyperVDriver(driver.ComputeDriver):
 
         self._hostops = hostops.HostOps()
         self._volumeops = volumeops.VolumeOps()
-        self._vmops = vmops.VMOps(self._volumeops)
+        self._vmops = vmops.VMOps()
         self._snapshotops = snapshotops.SnapshotOps()
-        self._livemigrationops = livemigrationops.LiveMigrationOps(
-            self._volumeops)
+        self._livemigrationops = livemigrationops.LiveMigrationOps()
+        self._migrationops = migrationops.MigrationOps()
 
     def init_host(self, host):
         pass
@@ -146,7 +147,7 @@ class HyperVDriver(driver.ComputeDriver):
         LOG.debug(_("plug_vifs called"), instance=instance)
 
     def unplug_vifs(self, instance, network_info):
-        LOG.debug(_("plug_vifs called"), instance=instance)
+        LOG.debug(_("unplug_vifs called"), instance=instance)
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         LOG.debug(_("ensure_filtering_rules_for_instance called"),
@@ -155,17 +156,33 @@ class HyperVDriver(driver.ComputeDriver):
     def unfilter_instance(self, instance, network_info):
         LOG.debug(_("unfilter_instance called"), instance=instance)
 
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type, network_info,
+                                   block_device_info=None):
+        return self._migrationops.migrate_disk_and_power_off(context,
+                                                             instance, dest,
+                                                             instance_type,
+                                                             network_info,
+                                                             block_device_info)
+
     def confirm_migration(self, migration, instance, network_info):
-        LOG.debug(_("confirm_migration called"), instance=instance)
+        self._migrationops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None):
-        LOG.debug(_("finish_revert_migration called"), instance=instance)
+        self._migrationops.finish_revert_migration(instance, network_info,
+                                                   block_device_info)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None):
-        LOG.debug(_("finish_migration called"), instance=instance)
+        self._migrationops.finish_migration(context, migration, instance,
+                                            disk_info, network_info,
+                                            image_meta, resize_instance,
+                                            block_device_info)
+
+    def get_host_ip_addr(self):
+        return self._hostops.get_host_ip_addr()
 
     def get_console_output(self, instance):
         LOG.debug(_("get_console_output called"), instance=instance)

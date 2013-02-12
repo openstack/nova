@@ -19,7 +19,6 @@
 Management class for VM snapshot operations.
 """
 import os
-import shutil
 
 from nova.compute import task_states
 from nova.image import glance
@@ -57,7 +56,7 @@ class SnapshotOps(object):
         snapshot_path = self._vmutils.take_vm_snapshot(instance_name)
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
-        export_folder = None
+        export_dir = None
 
         try:
             src_vhd_path = self._pathutils.get_vhd_path(instance_name)
@@ -66,23 +65,24 @@ class SnapshotOps(object):
             src_base_disk_path = self._vhdutils.get_vhd_parent_path(
                 src_vhd_path)
 
-            export_folder = self._pathutils.make_export_path(instance_name)
+            export_dir = self._pathutils.get_export_dir(instance_name)
 
-            dest_vhd_path = os.path.join(export_folder, os.path.basename(
+            dest_vhd_path = os.path.join(export_dir, os.path.basename(
                 src_vhd_path))
             LOG.debug(_('Copying VHD %(src_vhd_path)s to %(dest_vhd_path)s'),
                       locals())
-            shutil.copyfile(src_vhd_path, dest_vhd_path)
+            self._pathutils.copyfile(src_vhd_path, dest_vhd_path)
 
             image_vhd_path = None
             if not src_base_disk_path:
                 image_vhd_path = dest_vhd_path
             else:
                 basename = os.path.basename(src_base_disk_path)
-                dest_base_disk_path = os.path.join(export_folder, basename)
+                dest_base_disk_path = os.path.join(export_dir, basename)
                 LOG.debug(_('Copying base disk %(src_vhd_path)s to '
                             '%(dest_base_disk_path)s'), locals())
-                shutil.copyfile(src_base_disk_path, dest_base_disk_path)
+                self._pathutils.copyfile(src_base_disk_path,
+                                         dest_base_disk_path)
 
                 LOG.debug(_("Reconnecting copied base VHD "
                             "%(dest_base_disk_path)s and diff "
@@ -111,6 +111,6 @@ class SnapshotOps(object):
                 LOG.exception(ex)
                 LOG.warning(_('Failed to remove snapshot for VM %s')
                             % instance_name)
-            if export_folder:
-                LOG.debug(_('Removing folder %s '), export_folder)
-                shutil.rmtree(export_folder)
+            if export_dir:
+                LOG.debug(_('Removing directory: %s'), export_dir)
+                self._pathutils.rmtree(export_dir)

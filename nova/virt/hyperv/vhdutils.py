@@ -55,7 +55,17 @@ class VHDUtils(object):
             DestinationPath=dest_vhd_path)
         self._vmutils.check_ret_val(ret_val, job_path)
 
+    def resize_vhd(self, vhd_path, new_max_size):
+        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+
+        (job_path, ret_val) = image_man_svc.ExpandVirtualHardDisk(
+            Path=vhd_path, MaxInternalSize=new_max_size)
+        self._vmutils.check_ret_val(ret_val, job_path)
+
     def get_vhd_parent_path(self, vhd_path):
+        return self.get_vhd_info(vhd_path).get("ParentPath")
+
+    def get_vhd_info(self, vhd_path):
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
 
         (vhd_info,
@@ -63,10 +73,19 @@ class VHDUtils(object):
          ret_val) = image_man_svc.GetVirtualHardDiskInfo(vhd_path)
         self._vmutils.check_ret_val(ret_val, job_path)
 
-        base_disk_path = None
+        vhd_info_dict = {}
+
         et = ElementTree.fromstring(vhd_info)
         for item in et.findall("PROPERTY"):
-            if item.attrib["NAME"] == "ParentPath":
-                base_disk_path = item.find("VALUE").text
-                break
-        return base_disk_path
+            name = item.attrib["NAME"]
+            value_text = item.find("VALUE").text
+            if name == "ParentPath":
+                vhd_info_dict[name] = value_text
+            elif name in ["FileSize", "MaxInternalSize"]:
+                vhd_info_dict[name] = long(value_text)
+            elif name in ["InSavedState", "InUse"]:
+                vhd_info_dict[name] = bool(value_text)
+            elif name == "Type":
+                vhd_info_dict[name] = int(value_text)
+
+        return vhd_info_dict

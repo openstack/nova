@@ -41,7 +41,7 @@ class LiveMigrationUtils(object):
                        % host)
             elif ex.com_error.hresult == -2147023174:
                 msg = (_('Target live migration host "%s" is unreachable')
-                        % host)
+                       % host)
             else:
                 msg = _('Live migration failed: %s') % ex.message
             raise vmutils.HyperVException(msg)
