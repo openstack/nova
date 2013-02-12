@@ -216,6 +216,14 @@ class ContextAdapter(logging.LoggerAdapter):
         self.logger = logger
         self.project = project_name
         self.version = version_string
+        from nova.openstack.common import tpool
+        self.safe_lock = tpool.TpoolSafeLock()
+        self._orig_log = self.logger._log
+        self.logger._log = self._safe_log
+
+    def _safe_log(self, *args, **kwargs):
+        with self.safe_lock:
+            self._orig_log(*args, **kwargs)
 
     def audit(self, msg, *args, **kwargs):
         self.log(logging.AUDIT, msg, *args, **kwargs)
