@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 from nova import test
 from nova.tests.xenapi import stubs
 from nova.virt.xenapi import volumeops
@@ -125,31 +127,33 @@ class VolumeAttachTestCase(test.TestCase):
         vm_ref = 'vm_ref'
         dev_number = 1
 
-        called = {'xenapi': False}
+        called = collections.defaultdict(bool)
 
-        def fake_call_xenapi(self, *args, **kwargs):
-            # Only used for VBD.plug in this code path.
-            called['xenapi'] = True
-            raise Exception()
+        def fake_call_xenapi(self, method, *args, **kwargs):
+            called[method] = True
 
         self.stubs.Set(ops._session, 'call_xenapi', fake_call_xenapi)
 
         self.mox.StubOutWithMock(volumeops.volume_utils, 'parse_sr_info')
-        self.mox.StubOutWithMock(
-            volumeops.volume_utils, 'introduce_sr_unless_present')
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'introduce_vdi')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'create_vbd')
-
         volumeops.volume_utils.parse_sr_info(
             connection_data, sr_label).AndReturn(
                 tuple([sr_uuid, sr_label, sr_params]))
 
-        volumeops.volume_utils.introduce_sr_unless_present(
+        self.mox.StubOutWithMock(
+            volumeops.volume_utils, 'find_sr_by_uuid')
+        volumeops.volume_utils.find_sr_by_uuid(session, sr_uuid).AndReturn(
+                None)
+
+        self.mox.StubOutWithMock(
+            volumeops.volume_utils, 'introduce_sr')
+        volumeops.volume_utils.introduce_sr(
             session, sr_uuid, sr_label, sr_params).AndReturn(sr_ref)
 
+        self.mox.StubOutWithMock(volumeops.volume_utils, 'introduce_vdi')
         volumeops.volume_utils.introduce_vdi(
-            session, sr_ref, vdi_uuid, None).AndReturn(vdi_ref)
+            session, sr_ref, vdi_uuid=vdi_uuid).AndReturn(vdi_ref)
 
+        self.mox.StubOutWithMock(volumeops.vm_utils, 'create_vbd')
         volumeops.vm_utils.create_vbd(
             session, vm_ref, vdi_ref, dev_number,
             bootable=False, osvol=True).AndReturn(vbd_ref)
@@ -157,6 +161,6 @@ class VolumeAttachTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         ops._connect_volume(connection_data, dev_number, instance_name,
-                           vm_ref, hotplug=False)
+                            vm_ref, hotplug=False)
 
-        self.assertEquals(False, called['xenapi'])
+        self.assertEquals(False, called['VBD.plug'])
