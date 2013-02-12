@@ -30,6 +30,7 @@ from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'security_groups')
@@ -331,6 +332,12 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
             raise exc.HTTPBadRequest(explanation=msg)
 
         values['parent_group_id'] = security_group.id
+
+        if 'cidr' in values:
+            net, prefixlen = netutils.get_net_and_prefixlen(values['cidr'])
+            if net != '0.0.0.0' and prefixlen == '0':
+                msg = _("Bad prefix for network in cidr %s") % values['cidr']
+                raise exc.HTTPBadRequest(explanation=msg)
 
         if self.security_group_api.rule_exists(security_group, values):
             msg = _('This rule already exists in group %s') % parent_group_id

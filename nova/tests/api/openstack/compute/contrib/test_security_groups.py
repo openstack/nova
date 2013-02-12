@@ -1011,6 +1011,38 @@ class TestSecurityGroupRules(test.TestCase):
                           self.controller.create,
                           req, {'security_group_rule': rule})
 
+    def test_create_rule_cidr_allow_all(self):
+        rule = security_group_rule_template(cidr='0.0.0.0/0')
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        res_dict = self.controller.create(req, {'security_group_rule': rule})
+
+        security_group_rule = res_dict['security_group_rule']
+        self.assertNotEquals(security_group_rule['id'], 0)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.parent_security_group['id'])
+        self.assertEquals(security_group_rule['ip_range']['cidr'],
+                          "0.0.0.0/0")
+
+    def test_create_rule_cidr_allow_some(self):
+        rule = security_group_rule_template(cidr='15.0.0.0/8')
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        res_dict = self.controller.create(req, {'security_group_rule': rule})
+
+        security_group_rule = res_dict['security_group_rule']
+        self.assertNotEquals(security_group_rule['id'], 0)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.parent_security_group['id'])
+        self.assertEquals(security_group_rule['ip_range']['cidr'],
+                          "15.0.0.0/8")
+
+    def test_create_rule_cidr_bad_netmask(self):
+        rule = security_group_rule_template(cidr='15.0.0.0/0')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
 
 class TestSecurityGroupRulesXMLDeserializer(test.TestCase):
 
