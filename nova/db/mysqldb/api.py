@@ -26,6 +26,7 @@ from eventlet import tpool
 from nova.db import utils as dbutils
 from nova.db.mysqldb import connection
 from nova.db.sqlalchemy import api as sqlalchemy_api
+from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -106,7 +107,24 @@ class API(object):
             conn.insert('bw_usage_cache', values)
 
     def _instance_get_by_uuid(self, context, uuid, conn):
-        # TODO full impl of the read_deleted feature
+
+        # TODO right now the select query is just a full sql stmt below,
+        # but we could opt to build a select() function that is more of a
+        # one-size fits all.
+        """
+        joins = (
+            {'type': 'LEFT OUTER JOIN',
+             'table': 'instance_info_caches',
+             'on': 'instance_info_caches.instance_uuid = instances.uuid'},
+            {'type': 'LEFT OUTER JOIN',
+             'table': 'instance_metadata',
+             'on': instance_metadata.instance_uuid = %(uuid)s and
+        )
+        conn.select('instance', joins)
+        raise
+        """
+
+        # TODO impl read_deleted fully
         read_deleted = context.read_deleted == 'yes'
 
         # TODO project_only
@@ -117,17 +135,20 @@ class API(object):
                 instance_info_caches.instance_uuid = instances.uuid
             LEFT OUTER JOIN instance_metadata on
                 instance_metadata.instance_uuid = %(uuid)s and
-                instance_metadata.deleted = %(deleted)s
+                instance_metadata.deleted = 0
             LEFT OUTER JOIN instance_system_metadata on
                 instance_system_metadata.instance_uuid = %(uuid)s and
-                instance_system_metadata.deleted = %(deleted)s
+                instance_system_metadata.deleted = 0
             LEFT OUTER JOIN instance_types on
                 instances.instance_type_id = instance_types.id
-            WHERE instances.uuid = %(uuid)s
-              AND instances.deleted = %(deleted)s"""
+            WHERE instances.uuid = %(uuid)s"""
+        if not read_deleted:
+            sql += " AND instances.deleted = 0"
 
-        args = {'uuid': uuid,
-                'deleted': read_deleted}
+        args = {'uuid': uuid}
+
+        LOG.debug(sql)
+        LOG.debug(args)
         cursor = conn.cursor()
         cursor.execute(sql, args)
 
@@ -137,6 +158,31 @@ class API(object):
             raise exception.InstanceNotFound(instance_id=uuid)
 
         return self._make_sqlalchemy_like_dict(row)
+
+    @_tpool_enabled
+    @dbutils.require_context
+    def instance_destroy(self, context, instance_uuid, constraint=None):
+        with self.pool.get() as conn:
+            if uuidutils.is_uuid_like(instance_uuid):
+                instance_ref = self._instance_get_by_uuid(context,
+                        instance_uuid, conn)
+            else:
+                raise exception.InvalidUUID(instance_uuid)
+
+            if constraint:
+                # TODO
+                raise NotImplementedError(_("Constraints not implemented"))
+
+            where = (('uuid', '=', instance_uuid),)
+            conn.soft_delete('instances', where)
+
+            where = (('instance_uuid', '=', instance_uuid),)
+            conn.soft_delete('security_group_instance_association', where)
+            conn.soft_delete('instance_info_caches', where)
+
+            instance = self._instance_get_by_uuid(context, instance_uuid, conn)
+
+        return instance
 
     def _instance_update(self, context, instance_uuid, values,
                          copy_old_instance=False):
@@ -160,13 +206,22 @@ class API(object):
 
             # TODO update inst type
 
+
             where = (('uuid', '=', instance_uuid),)
-            conn.update("instances", values, where)                    
+            rowcount = conn.update("instances", values, where)
+            if rowcount != 1:
+                raise exception.InstanceNotFound(instance_id=instance_uuid)
 
             # get updated record
             new_instance_ref = self._instance_get_by_uuid(context,
                     instance_uuid, conn)
             return instance_ref, new_instance_ref
+
+    @_tpool_enabled
+    @dbutils.require_context
+    def instance_update(self, context, instance_uuid, values):
+        instance_ref = self._instance_update(context, instance_uuid, values)[1]
+        return instance_ref
 
     def _make_sqlalchemy_like_dict(self, row):
         """Make a SQLAlchemy-like dictionary, where each join gets namespaced as
@@ -189,9 +244,3 @@ class API(object):
     def _pretty_print_result(self, result):
         import pprint
         pprint.pprint(result, indent=4)
-
-    @_tpool_enabled
-    @dbutils.require_context
-    def instance_update(self, context, instance_uuid, values):
-        instance_ref = self._instance_update(context, instance_uuid, values)[1]
-        return instance_ref

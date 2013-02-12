@@ -25,6 +25,7 @@ from MySQLdb import cursors
 
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 
 MySQLdb.threadsafety = 1
 CONF = cfg.CONF
@@ -151,6 +152,54 @@ class _Connection(object):
         sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, columns, value_str)
         return self.execute(sql, args=values)
 
+    # TODO HMMM, do we want a big gnarly select() function or just write
+    # fully-formed queries in mysqldb/api.py?
+    """
+    def select(self, table, joins=None, where=None):
+        join_str = ''
+        where_str = ''
+
+        for join in joins:
+            type_ = join.get('type', 'LEFT OUTER JOIN')
+            table = join['table']
+            on = join['on']  # TODO could be prettier?
+            join_str += ' %s %s on\n' % (type_, table)
+            join_str += '  %s\n' % on
+
+        print join_str
+
+        if where:
+            for column, operator, value in where:
+                if where_str:
+                    where_str += ' AND '
+                where_str += '%s %s ' % (column, operator)
+                where_str += '%s'
+
+        sql = "SELECT * from %s" % table
+        if where_str:
+            sql += " WHERE %s" % where_str
+        print sql
+        raise  # TODO needs fixin'
+    """
+
+    def soft_delete(self, table, where):
+        where_str = ''
+        args = []
+        for column, operator, value in where:
+            if where_str:
+                where_str += ' AND '
+            where_str += '%s %s ' % (column, operator)
+            where_str += '%s'
+            args.append(value)
+
+        sql = ("UPDATE %s SET deleted=id, updated_at=updated_at, "
+               "deleted_at='%s' WHERE %s" % (table, timeutils.utcnow(),
+                     where_str))
+        LOG.debug(sql)
+        LOG.debug(args)
+        rowcount = self.execute(sql, args=args)
+        return rowcount 
+
     def update(self, table, value_map, where):
         update_str = ''
         values = []
@@ -165,13 +214,17 @@ class _Connection(object):
         for column, operator, value in where:
             if where_str:
                 where_str += ' AND'
-            where_str += '%s%s' % (column, operator)
+            where_str += '%s %s ' % (column, operator)
             where_str += '%s'
             values.append(value)
     
         sql = ("UPDATE %(table)s SET %(update_str)s WHERE %(where_str)s"
                 % locals())
-        self.execute(sql, args=values)
+        LOG.debug(sql)
+        LOG.debug(values)
+        rowcount = self.execute(sql, args=values)
+
+        return rowcount
 
 
 class ConnectionPool(object):
