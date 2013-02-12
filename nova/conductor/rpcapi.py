@@ -75,6 +75,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     1.40 - Added security_groups_trigger_handler and
                  security_groups_trigger_members_refresh
            Remove instance_get_active_by_window
+    1.41 - Added fixed_ip_get_by_instance, network_get,
+                 instance_floating_address_get_all, quota_commit,
+                 quota_rollback
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -382,3 +385,27 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('security_groups_trigger_members_refresh',
                             group_ids=group_ids)
         return self.call(context, msg, version='1.40')
+
+    def network_migrate_instance_start(self, context, instance, migration):
+        instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
+        msg = self.make_msg('network_migrate_instance_start',
+                            instance=instance_p, migration=migration_p)
+        return self.call(context, msg, version='1.41')
+
+    def network_migrate_instance_finish(self, context, instance, migration):
+        instance_p = jsonutils.to_primitive(instance)
+        migration_p = jsonutils.to_primitive(migration)
+        msg = self.make_msg('network_migrate_instance_finish',
+                            instance=instance_p, migration=migration_p)
+        return self.call(context, msg, version='1.41')
+
+    def quota_commit(self, context, reservations):
+        reservations_p = jsonutils.to_primitive(reservations)
+        msg = self.make_msg('quota_commit', reservations=reservations_p)
+        return self.call(context, msg, version='1.41')
+
+    def quota_rollback(self, context, reservations):
+        reservations_p = jsonutils.to_primitive(reservations)
+        msg = self.make_msg('quota_rollback', reservations=reservations_p)
+        return self.call(context, msg, version='1.41')

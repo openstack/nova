@@ -31,6 +31,7 @@ from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
+from nova import quota
 from nova import test
 
 
@@ -502,6 +503,39 @@ class _BaseTestCase(object):
         self.mox.ReplayAll()
         self.conductor.security_groups_trigger_members_refresh(self.context,
                                                                [1, 2, 3])
+
+    def test_network_migrate_instance_start(self):
+        self.mox.StubOutWithMock(self.conductor_manager.network_api,
+                                 'migrate_instance_start')
+        self.conductor_manager.network_api.migrate_instance_start(self.context,
+                                                                  'instance',
+                                                                  'migration')
+        self.mox.ReplayAll()
+        self.conductor.network_migrate_instance_start(self.context,
+                                                      'instance',
+                                                      'migration')
+
+    def test_network_migrate_instance_finish(self):
+        self.mox.StubOutWithMock(self.conductor_manager.network_api,
+                                 'migrate_instance_finish')
+        self.conductor_manager.network_api.migrate_instance_finish(
+            self.context, 'instance', 'migration')
+        self.mox.ReplayAll()
+        self.conductor.network_migrate_instance_finish(self.context,
+                                                       'instance',
+                                                       'migration')
+
+    def test_quota_commit(self):
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        quota.QUOTAS.commit(self.context, 'reservations')
+        self.mox.ReplayAll()
+        self.conductor.quota_commit(self.context, 'reservations')
+
+    def test_quota_commit(self):
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
+        quota.QUOTAS.rollback(self.context, 'reservations')
+        self.mox.ReplayAll()
+        self.conductor.quota_rollback(self.context, 'reservations')
 
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
