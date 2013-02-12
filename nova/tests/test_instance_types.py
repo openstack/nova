@@ -142,6 +142,17 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(exception.InvalidInput, instance_types.create,
                 name, 256, 1, 120, 100, flavorid)
 
+    def test_instance_type_create_with_long_flavor_name(self):
+        # Flavor name with 255 characters or less is valid.
+        name = 'a' * 255
+        inst_type = instance_types.create(name, 64, 1, 120, flavorid=11)
+        self.assertEqual(inst_type['name'], name)
+
+        # Flavor name which is more than 255 characters will cause error.
+        name = 'a' * 256
+        self.assertRaises(exception.InvalidInput, instance_types.create,
+                          name, 64, 1, 120, flavorid=11)
+
     def test_add_instance_type_access(self):
         user_id = 'fake'
         project_id = 'fake'

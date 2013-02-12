@@ -563,18 +563,11 @@ class Controller(wsgi.Controller):
         return instance
 
     def _check_string_length(self, value, name, max_length=None):
-        if not isinstance(value, basestring):
-            msg = _("%s is not a string or unicode") % name
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if not value.strip():
-            msg = _("%s is an empty string") % name
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        if max_length and len(value) > max_length:
-            msg = _("%(name)s can be at most %(max_length)s "
-                    "characters.") % locals()
-            raise exc.HTTPBadRequest(explanation=msg)
+        try:
+            utils.check_string_length(value, name, min_length=1,
+                                      max_length=max_length)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=str(e))
 
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)

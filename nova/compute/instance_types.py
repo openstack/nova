@@ -86,6 +86,9 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
         'rxtx_factor': rxtx_factor,
     }
 
+    # ensure name do not exceed 255 characters
+    utils.check_string_length(name, 'name', min_length=1, max_length=255)
+
     # ensure name does not contain any special characters
     invalid_name = INVALID_NAME_REGEX.search(name)
     if invalid_name:

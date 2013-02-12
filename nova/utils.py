@@ -1341,3 +1341,25 @@ class ExceptionHelper(object):
             except rpc_common.ClientException, e:
                 raise (e._exc_info[1], None, e._exc_info[2])
         return wrapper
+
+
+def check_string_length(value, name, min_length=0, max_length=None):
+    """Check the length of specified string
+    :param value: the value of the string
+    :param name: the name of the string
+    :param min_length: the min_length of the string
+    :param max_length: the max_length of the string
+    """
+    if not isinstance(value, basestring):
+        msg = _("%s is not a string or unicode") % name
+        raise exception.InvalidInput(message=msg)
+
+    if  len(value) < min_length:
+        msg = _("%(name)s has less than %(min_length)s "
+                    "characters.") % locals()
+        raise exception.InvalidInput(message=msg)
+
+    if max_length and len(value) > max_length:
+        msg = _("%(name)s has more than %(max_length)s "
+                    "characters.") % locals()
+        raise exception.InvalidInput(message=msg)
