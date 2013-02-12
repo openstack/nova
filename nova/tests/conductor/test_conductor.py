@@ -580,6 +580,12 @@ class _BaseTestCase(object):
         result = self.conductor.get_ec2_ids(self.context, inst)
         self.assertEqual(result, expected)
 
+    def test_compute_stop(self):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api, 'stop')
+        self.conductor_manager.compute_api.stop(self.context, 'instance', True)
+        self.mox.ReplayAll()
+        self.conductor.compute_stop(self.context, 'instance')
+
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
