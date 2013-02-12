@@ -17,12 +17,17 @@ import webob
 
 from nova.api.openstack.compute.contrib import server_start_stop
 from nova.compute import api as compute_api
+from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
 
 
 def fake_compute_api_get(self, context, instance_id):
     return {'id': 1, 'uuid': instance_id}
+
+
+def fake_start_stop_not_ready(self, context, instance):
+    raise exception.InstanceNotReady(instance_id=instance["uuid"])
 
 
 class ServerStartStopTest(test.TestCase):
@@ -41,6 +46,14 @@ class ServerStartStopTest(test.TestCase):
         body = dict(start="")
         self.controller._start_server(req, 'test_inst', body)
 
+    def test_start_not_ready(self):
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._start_server, req, 'test_inst', body)
+
     def test_stop(self):
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.mox.StubOutWithMock(compute_api.API, 'stop')
@@ -50,6 +63,14 @@ class ServerStartStopTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         self.controller._stop_server(req, 'test_inst', body)
+
+    def test_stop_not_ready(self):
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._stop_server, req, 'test_inst', body)
 
     def test_start_with_bogus_id(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')

@@ -3804,6 +3804,15 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_start_no_host(self):
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.start,
+                          self.context, instance)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_stop(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
@@ -3816,6 +3825,15 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+
+        db.instance_destroy(self.context, instance['uuid'])
+
+    def test_stop_no_host(self):
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.stop,
+                          self.context, instance)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -5656,6 +5674,15 @@ class ComputeAPITestCase(BaseTestCase):
         output = self.compute_api.get_console_output(self.context,
                 fake_instance, tail_length=fake_tail_length)
         self.assertEqual(output, fake_console_output)
+
+    def test_console_output_no_host(self):
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_console_output,
+                          self.context, instance)
+
+        db.instance_destroy(self.context, instance['uuid'])
 
     def test_attach_volume(self):
         # Ensure instance can be soft rebooted.

@@ -35,6 +35,10 @@ def fake_get_console_output(self, _context, _instance, tail_length):
     return '\n'.join(fixture)
 
 
+def fake_get_console_output_not_ready(self, _context, _instance, tail_length):
+    raise exception.InstanceNotReady(instance_id=_instance["uuid"])
+
+
 def fake_get(self, context, instance_uuid):
     return {'uuid': instance_uuid}
 
@@ -133,3 +137,15 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+
+    def test_get_console_output_not_ready(self):
+        self.stubs.Set(compute_api.API, 'get_console_output',
+                       fake_get_console_output_not_ready)
+        body = {'os-getConsoleOutput': {'length': 3}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 409)
