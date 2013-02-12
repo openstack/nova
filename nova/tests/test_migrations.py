@@ -118,8 +118,8 @@ def get_table(engine, name):
     return sqlalchemy.Table(name, metadata, autoload=True)
 
 
-class TestMigrations(test.TestCase):
-    """Test sqlalchemy-migrate migrations."""
+class BaseMigrationTestCase(test.TestCase):
+    """Base class fort testing migrations and migration utils."""
 
     DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
                                        'test_migrations.conf')
@@ -132,18 +132,18 @@ class TestMigrations(test.TestCase):
                                 os.path.abspath(os.path.dirname(MIGRATE_FILE)))
 
     def setUp(self):
-        super(TestMigrations, self).setUp()
+        super(BaseMigrationTestCase, self).setUp()
 
         self.snake_walk = False
         self.test_databases = {}
 
         # Load test databases from the config file. Only do this
         # once. No need to re-run this on each test...
-        LOG.debug('config_path is %s' % TestMigrations.CONFIG_FILE_PATH)
-        if os.path.exists(TestMigrations.CONFIG_FILE_PATH):
+        LOG.debug('config_path is %s' % BaseMigrationTestCase.CONFIG_FILE_PATH)
+        if os.path.exists(BaseMigrationTestCase.CONFIG_FILE_PATH):
             cp = ConfigParser.RawConfigParser()
             try:
-                cp.read(TestMigrations.CONFIG_FILE_PATH)
+                cp.read(BaseMigrationTestCase.CONFIG_FILE_PATH)
                 defaults = cp.defaults()
                 for key, value in defaults.items():
                     self.test_databases[key] = value
@@ -167,7 +167,7 @@ class TestMigrations(test.TestCase):
         # and recreate it, which ensures that we have no side-effects
         # from the tests
         self._reset_databases()
-        super(TestMigrations, self).tearDown()
+        super(BaseMigrationTestCase, self).tearDown()
 
     def _reset_databases(self):
         def execute_cmd(cmd=None):
@@ -233,6 +233,10 @@ class TestMigrations(test.TestCase):
                 execute_cmd(createtable)
                 os.unsetenv('PGPASSWORD')
                 os.unsetenv('PGUSER')
+
+
+class TestMigrations(BaseMigrationTestCase):
+    """Test sqlalchemy-migrate migrations."""
 
     def test_walk_versions(self):
         """
