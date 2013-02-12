@@ -65,9 +65,6 @@ class RequestContext(object):
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
-        self.is_admin = is_admin
-        if self.is_admin is None:
-            self.is_admin = policy.check_is_admin(self.roles)
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
@@ -90,7 +87,9 @@ class RequestContext(object):
         self.quota_class = quota_class
         self.user_name = user_name
         self.project_name = project_name
-
+        self.is_admin = is_admin
+        if self.is_admin is None:
+            self.is_admin = policy.check_is_admin(self)
         if overwrite or not hasattr(local.store, 'context'):
             self.update_store()
 
