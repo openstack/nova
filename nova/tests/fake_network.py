@@ -372,7 +372,7 @@ def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
                                          floating_ips_per_fixed_ip=0,
                                          spectacular=False):
 
-    def get_instance_nw_info(self, context, instance):
+    def get_instance_nw_info(self, context, instance, conductor_api=None):
         return fake_get_instance_nw_info(stubs, num_networks=num_networks,
                         ips_per_vif=ips_per_vif,
                         floating_ips_per_fixed_ip=floating_ips_per_fixed_ip,
