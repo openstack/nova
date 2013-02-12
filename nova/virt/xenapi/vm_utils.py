@@ -483,7 +483,7 @@ def get_vdi_uuid_for_volume(session, connection_data):
             vdi_uuid = vdi_rec['uuid']
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
-            volume_utils.forget_sr(session, sr_uuid)
+            volume_utils.forget_sr(session, sr_ref)
 
     return vdi_uuid
 

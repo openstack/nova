@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright (c) 2013 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -22,7 +23,6 @@ and storage repositories
 import re
 import string
 
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
@@ -38,94 +38,50 @@ class StorageError(Exception):
         super(StorageError, self).__init__(message)
 
 
-def create_sr(session, label, params):
-    LOG.debug(_("creating sr within volume_utils"))
-    type = params['sr_type']
-    del params['sr_type']
-    LOG.debug(_('type is = %s') % type)
-    if 'name_description' in params:
-        desc = params['name_description']
-        LOG.debug(_('name = %s') % desc)
-        del params['name_description']
-    else:
-        desc = ''
+def _handle_sr_params(params):
     if 'id' in params:
         del params['id']
-    LOG.debug(params)
 
-    try:
-        sr_ref = session.call_xenapi("SR.create",
-                    session.get_xenapi_host(),
-                    params,
-                    '0', label, desc, type, '', False, {})
-        LOG.debug(_('Created %(label)s as %(sr_ref)s.') % locals())
-        return sr_ref
+    sr_type = params.pop('sr_type', 'iscsi')
+    sr_desc = params.pop('name_description', '')
+    return sr_type, sr_desc
 
-    except session.XenAPI.Failure, exc:
-        LOG.exception(exc)
-        raise StorageError(_('Unable to create Storage Repository'))
+
+def create_sr(session, label, params):
+    LOG.debug(_('Creating SR %(label)s') % locals())
+    sr_type, sr_desc = _handle_sr_params(params)
+    sr_ref = session.call_xenapi("SR.create",
+                session.get_xenapi_host(),
+                params,
+                '0', label, sr_desc, sr_type, '', False, {})
+    return sr_ref
 
 
 def introduce_sr(session, sr_uuid, label, params):
-    LOG.debug(_("introducing sr within volume_utils"))
-    # If the sr_type is missing, we assume we are
-    # using the default iscsi back-end
-    type = params.pop('sr_type', 'iscsi')
-    LOG.debug(_('type is = %s') % type)
-    if 'name_description' in params:
-        desc = params['name_description']
-        LOG.debug(_('name = %s') % desc)
-        del params['name_description']
-    else:
-        desc = ''
-    if 'id' in params:
-        del params['id']
-    LOG.debug(params)
+    LOG.debug(_('Introducing SR %(label)s') % locals())
 
-    try:
-        sr_ref = session.call_xenapi("SR.introduce",
-                                      sr_uuid,
-                                      label,
-                                      desc,
-                                      type,
-                                      '',
-                                      False,
-                                      params,)
-        LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
+    sr_type, sr_desc = _handle_sr_params(params)
 
-        #Create pbd
-        LOG.debug(_('Creating pbd for SR'))
-        pbd_ref = create_pbd(session, sr_ref, params)
-        LOG.debug(_('Plugging SR'))
-        #Plug pbd
-        session.call_xenapi("PBD.plug", pbd_ref)
-        session.call_xenapi("SR.scan", sr_ref)
-        return sr_ref
+    sr_ref = session.call_xenapi('SR.introduce', sr_uuid, label, sr_desc,
+            sr_type, '', False, params)
 
-    except session.XenAPI.Failure, exc:
-        LOG.exception(exc)
-        raise StorageError(_('Unable to introduce Storage Repository'))
+    LOG.debug(_('Creating PBD for SR'))
+    pbd_ref = create_pbd(session, sr_ref, params)
+
+    LOG.debug(_('Plugging SR'))
+    session.call_xenapi("PBD.plug", pbd_ref)
+
+    session.call_xenapi("SR.scan", sr_ref)
+    return sr_ref
 
 
-def forget_sr(session, sr_uuid):
+def forget_sr(session, sr_ref):
     """
     Forgets the storage repository without destroying the VDIs within
     """
-    try:
-        sr_ref = session.call_xenapi("SR.get_by_uuid", sr_uuid)
-    except session.XenAPI.Failure, exc:
-        LOG.exception(exc)
-        raise StorageError(_('Unable to get SR using uuid'))
-
-    LOG.debug(_('Forgetting SR %s...') % sr_ref)
-
-    try:
-        unplug_pbds(session, sr_ref)
-        sr_ref = session.call_xenapi("SR.forget", sr_ref)
-
-    except session.XenAPI.Failure, exc:
-        LOG.exception(exc)
-        raise StorageError(_('Unable to forget Storage Repository'))
+    LOG.debug(_('Forgetting SR...'))
+    unplug_pbds(session, sr_ref)
+    session.call_xenapi("SR.forget", sr_ref)
 
 
 def find_sr_by_uuid(session, sr_uuid):
@@ -136,35 +92,6 @@ def find_sr_by_uuid(session, sr_uuid):
         if sr_rec['uuid'] == sr_uuid:
             return sr_ref
     return None
-
-
-def create_iscsi_storage(session, info, label, description):
-    """
-    Create an iSCSI storage repository that will be used to mount
-    the volume for the specified instance
-    """
-    sr_ref = session.call_xenapi("SR.get_by_name_label", label)
-    if len(sr_ref) == 0:
-        LOG.debug(_('Introducing %s...'), label)
-        record = {}
-        if 'chapuser' in info and 'chappassword' in info:
-            record = {'target': info['targetHost'],
-                      'port': info['targetPort'],
-                      'targetIQN': info['targetIQN'],
-                      'chapuser': info['chapuser'],
-                      'chappassword': info['chappassword']}
-        else:
-            record = {'target': info['targetHost'],
-                      'port': info['targetPort'],
-                      'targetIQN': info['targetIQN']}
-        try:
-            LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
-            return sr_ref
-        except session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            raise StorageError(_('Unable to create Storage Repository'))
-    else:
-        return sr_ref[0]
 
 
 def find_sr_from_vbd(session, vbd_ref):
@@ -188,18 +115,19 @@ def create_pbd(session, sr_ref, params):
 
 
 def unplug_pbds(session, sr_ref):
-    pbds = []
     try:
         pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
     except session.XenAPI.Failure, exc:
         LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
-                ' for %(sr_ref)s') % locals())
+                   ' for %(sr_ref)s') % locals())
+        return
+
     for pbd in pbds:
         try:
             session.call_xenapi("PBD.unplug", pbd)
         except session.XenAPI.Failure, exc:
             LOG.warn(_('Ignoring exception %(exc)s when unplugging'
-                    ' PBD %(pbd)s') % locals())
+                       ' PBD %(pbd)s') % locals())
 
 
 def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
@@ -257,24 +185,15 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
 
 
 def purge_sr(session, sr_ref):
-    try:
-        sr_rec = session.call_xenapi("SR.get_record", sr_ref)
-        vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
-    except StorageError, ex:
-        LOG.exception(ex)
-        raise StorageError(_('Error finding vdis in SR %s') % sr_ref)
-
+    # Make sure no VBDs are referencing the SR VDIs
+    vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
     for vdi_ref in vdi_refs:
-        try:
-            vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
-        except StorageError, ex:
-            LOG.exception(ex)
-            raise StorageError(_('Unable to find vbd for vdi %s') %
-                               vdi_ref)
-        if len(vbd_refs) > 0:
+        vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
+        if vbd_refs:
+            LOG.warn(_('Cannot purge SR with referenced VDIs'))
             return
 
-    forget_sr(session, sr_rec['uuid'])
+    forget_sr(session, sr_ref)
 
 
 def get_device_number(mountpoint):
@@ -382,28 +301,3 @@ def _get_target_port(iscsi_string):
         return iscsi_string[iscsi_string.find(':') + 1:]
     elif iscsi_string is None or CONF.target_port:
         return CONF.target_port
-
-
-def introduce_sr_unless_present(session, sr_uuid, label, params):
-    LOG.debug(_("Introducing SR %s") % label)
-    sr_ref = find_sr_by_uuid(session, sr_uuid)
-    if sr_ref:
-        LOG.debug(_('SR found in xapi database. No need to introduce'))
-        return sr_ref
-    sr_ref = introduce_sr(session, sr_uuid, label, params)
-
-    if sr_ref is None:
-        raise exception.NovaException(_('Could not introduce SR'))
-    return sr_ref
-
-
-def forget_sr_if_present(session, sr_uuid):
-    sr_ref = find_sr_by_uuid(session, sr_uuid)
-    if sr_ref is None:
-        LOG.debug(_('SR %s not found in the xapi database') % sr_uuid)
-        return
-    try:
-        forget_sr(session, sr_uuid)
-    except StorageError, exc:
-        LOG.exception(exc)
-        raise exception.NovaException(_('Could not forget SR'))

@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright (c) 2013 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -59,59 +60,42 @@ class VolumeOps(object):
                 ' instance %(instance_name)s') % locals())
 
     def _connect_volume(self, connection_data, dev_number, instance_name,
-                       vm_ref, hotplug=True):
+                        vm_ref, hotplug=True):
+        sr_uuid, sr_label, sr_params = volume_utils.parse_sr_info(
+                connection_data, 'Disk-for:%s' % instance_name)
 
-        description = 'Disk-for:%s' % instance_name
-        uuid, label, sr_params = volume_utils.parse_sr_info(connection_data,
-                                                            description)
-
-        # Introduce SR
-        try:
-            sr_ref = volume_utils.introduce_sr_unless_present(
-                self._session, uuid, label, sr_params)
-            LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            raise volume_utils.StorageError(
-                                _('Unable to introduce Storage Repository'))
-
-        vdi_uuid = None
-        target_lun = None
-        if 'vdi_uuid' in connection_data:
-            vdi_uuid = connection_data['vdi_uuid']
-        elif 'target_lun' in connection_data:
-            target_lun = connection_data['target_lun']
-        else:
-            vdi_uuid = None
-
-        # Introduce VDI  and attach VBD to VM
-        try:
-            vdi_ref = volume_utils.introduce_vdi(self._session, sr_ref,
-                                                 vdi_uuid, target_lun)
-        except volume_utils.StorageError, exc:
-            LOG.exception(exc)
-            volume_utils.forget_sr_if_present(self._session, uuid)
-            raise Exception(_('Unable to create VDI on SR %(sr_ref)s for'
-                    ' instance %(instance_name)s') % locals())
+        # Introduce SR if not already present
+        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
+        if not sr_ref:
+            sr_ref = volume_utils.introduce_sr(
+                    self._session, sr_uuid, sr_label, sr_params)
 
         try:
+            # Introduce VDI
+            if 'vdi_uuid' in connection_data:
+                vdi_ref = volume_utils.introduce_vdi(
+                        self._session, sr_ref,
+                        vdi_uuid=connection_data['vdi_uuid'])
+            elif 'target_lun' in connection_data:
+                vdi_ref = volume_utils.introduce_vdi(
+                        self._session, sr_ref,
+                        target_lun=connection_data['target_lun'])
+            else:
+                # NOTE(sirp): This will introduce the first VDI in the SR
+                vdi_ref = volume_utils.introduce_vdi(self._session, sr_ref)
+
+            # Attach
             vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
                                           dev_number, bootable=False,
                                           osvol=True)
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            volume_utils.forget_sr_if_present(self._session, uuid)
-            raise Exception(_('Unable to use SR %(sr_ref)s for'
-                              ' instance %(instance_name)s') % locals())
 
-        if hotplug:
-            try:
+            if hotplug:
                 self._session.call_xenapi("VBD.plug", vbd_ref)
-            except self._session.XenAPI.Failure, exc:
-                LOG.exception(exc)
-                volume_utils.forget_sr_if_present(self._session, uuid)
-                raise Exception(_('Unable to attach volume to instance %s')
-                                % instance_name)
+        except Exception:
+            # NOTE(sirp): Forgetting the SR will have the effect of cleaning up
+            # the VDI and VBD records, so no need to handle that explicitly.
+            volume_utils.forget_sr(self._session, sr_ref)
+            raise
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance."""
@@ -121,8 +105,15 @@ class VolumeOps(object):
         device_number = volume_utils.get_device_number(mountpoint)
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
 
-        vbd_ref = vm_utils.find_vbd_by_number(
-                self._session, vm_ref, device_number)
+        try:
+            vbd_ref = vm_utils.find_vbd_by_number(
+                    self._session, vm_ref, device_number)
+        except volume_utils.StorageError:
+            # NOTE(sirp): If we don't find the VBD then it must have been
+            # detached previously.
+            LOG.warn(_('Skipping detach because VBD for %(instance_name)s was'
+                       ' not found') % locals())
+            return
 
         # Unplug VBD if we're NOT shutdown
         unplug = not vm_utils._is_vm_shutdown(self._session, vm_ref)
