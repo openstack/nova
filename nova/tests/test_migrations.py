@@ -45,10 +45,10 @@ import commands
 import ConfigParser
 import datetime
 import os
+import sqlalchemy
 import urlparse
 
 from migrate.versioning import repository
-import sqlalchemy
 
 import nova.db.migration as migration
 import nova.db.sqlalchemy.migrate_repo
@@ -528,6 +528,32 @@ class TestMigrations(BaseMigrationTestCase):
 
         for row in result:
             self.assertIn(row['cidr'], iplist)
+
+    # migration 151 - changes period_beginning and period_ending to DateTime
+    def _prerun_151(self, engine):
+        task_log = get_table(engine, 'task_log')
+        data = {
+            'task_name': 'The name of the task',
+            'state': 'The state of the task',
+            'host': 'compute-host1',
+            'period_beginning': str(datetime.datetime(2013, 02, 11)),
+            'period_ending': str(datetime.datetime(2013, 02, 12)),
+            'message': 'The task_log message',
+            }
+        result = task_log.insert().values(data).execute()
+        data['id'] = result.inserted_primary_key[0]
+        return data
+
+    def _check_151(self, engine, data):
+        task_log = get_table(engine, 'task_log')
+        row = task_log.select(task_log.c.id == data['id']).execute().first()
+        self.assertTrue(isinstance(row['period_beginning'],
+            datetime.datetime))
+        self.assertTrue(isinstance(row['period_ending'],
+            datetime.datetime))
+        self.assertEqual(
+            data['period_beginning'], str(row['period_beginning']))
+        self.assertEqual(data['period_ending'], str(row['period_ending']))
 
     # migration 152 - convert deleted from boolean to int
     def _prerun_152(self, engine):
