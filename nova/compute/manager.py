@@ -69,6 +69,7 @@ from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
+from nova.virt import event as virtevent
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova import volume
@@ -499,6 +500,40 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warning(_('Hypervisor driver does not support '
                               'firewall rules'), instance=instance)
 
+    def handle_lifecycle_event(self, event):
+        LOG.error(_("Lifecycle event %(state)d on VM %(uuid)s") %
+                  {'state': event.get_transition(),
+                   'uuid': event.get_instance_uuid()})
+        context = nova.context.get_admin_context()
+        instance = self.conductor_api.instance_get_by_uuid(
+            context, event.get_instance_uuid())
+        vm_power_state = None
+        if event.get_transition() == virtevent.EVENT_LIFECYCLE_STOPPED:
+            vm_power_state = power_state.SHUTDOWN
+        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_STARTED:
+            vm_power_state = power_state.RUNNING
+        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_PAUSED:
+            vm_power_state = power_state.PAUSED
+        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_RESUMED:
+            vm_power_state = power_state.RUNNING
+        else:
+            LOG.warning(_("Unexpected power state %d") %
+                        event.get_transition())
+
+        if vm_power_state is not None:
+            self._sync_instance_power_state(context,
+                                            instance,
+                                            vm_power_state)
+
+    def handle_events(self, event):
+        if isinstance(event, virtevent.LifecycleEvent):
+            self.handle_lifecycle_event(event)
+        else:
+            LOG.debug(_("Ignoring event %s") % event)
+
+    def init_virt_events(self):
+        self.driver.register_event_listener(self.handle_events)
+
     def init_host(self):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
@@ -508,6 +543,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()
+
+        self.init_virt_events()
 
         try:
             # checking that instance was not already evacuated to other host
