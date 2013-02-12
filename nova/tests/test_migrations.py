@@ -43,6 +43,7 @@ postgres=# create database openstack_citest with owner openstack_citest;
 import collections
 import commands
 import ConfigParser
+import datetime
 import os
 import urlparse
 
@@ -53,6 +54,7 @@ import nova.db.migration as migration
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy.migration import versioning_api as migration_api
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova import test
 
 
@@ -380,6 +382,59 @@ class TestMigrations(test.TestCase):
             LOG.error("Failed to migrate to version %s on engine %s" %
                       (version, engine))
             raise
+
+    def _prerun_134(self, engine):
+        now = timeutils.utcnow()
+        data = [{
+            'id': 1,
+            'uuid': '1d739808-d7ec-4944-b252-f8363e119755',
+            'mac': '00:00:00:00:00:01',
+            'start_period': now,
+            'last_refreshed': now + datetime.timedelta(seconds=10),
+            'bw_in': 100000,
+            'bw_out': 200000,
+            }, {
+            'id': 2,
+            'uuid': '1d739808-d7ec-4944-b252-f8363e119756',
+            'mac': '2a:f2:48:31:c1:60',
+            'start_period': now,
+            'last_refreshed': now + datetime.timedelta(seconds=20),
+            'bw_in': 1000000000,
+            'bw_out': 200000000,
+            }, {
+            'id': 3,
+            # This is intended to be the same as above.
+            'uuid': '1d739808-d7ec-4944-b252-f8363e119756',
+            'mac': '00:00:00:00:00:02',
+            'start_period': now,
+            'last_refreshed': now + datetime.timedelta(seconds=30),
+            'bw_in': 0,
+            'bw_out': 0,
+            }]
+
+        bw_usage_cache = get_table(engine, 'bw_usage_cache')
+        engine.execute(bw_usage_cache.insert(), data)
+        return data
+
+    def _check_134(self, engine, data):
+        bw_usage_cache = get_table(engine, 'bw_usage_cache')
+
+        # Checks if both columns have been successfuly created.
+        self.assertIn('last_ctr_in', bw_usage_cache.c)
+        self.assertIn('last_ctr_out', bw_usage_cache.c)
+
+        # Checks if all rows have been inserted.
+        bw_items = bw_usage_cache.select().execute().fetchall()
+        self.assertEqual(len(bw_items), 3)
+
+        bw = bw_usage_cache.select(
+            bw_usage_cache.c.id == 1).execute().first()
+
+        # New columns have 'NULL' as default value.
+        self.assertEqual(bw['last_ctr_in'], None)
+        self.assertEqual(bw['last_ctr_out'], None)
+
+        self.assertEqual(data[0]['mac'], bw['mac'])
 
     # migration 146, availability zone transition
     def _prerun_146(self, engine):
