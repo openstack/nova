@@ -60,6 +60,7 @@ class VMwareAPIVMTestCase(test.TestCase):
                                'bridge_interface': None,
                                'injected': True},
                           {'broadcast': '192.168.0.255',
+                           'id': 'foo',
                            'dns': ['192.168.0.1'],
                            'gateway': '192.168.0.1',
                            'gateway_v6': 'dead:beef::1',
