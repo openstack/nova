@@ -82,13 +82,16 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
                     'scheduler.run_instance', notifier.ERROR, payload)
 
 
-def instance_update_db(context, instance_uuid):
+def instance_update_db(context, instance_uuid, extra_values=None):
     '''Clear the host and node - set the scheduled_at field of an Instance.
 
     :returns: An Instance with the updated fields set properly.
     '''
     now = timeutils.utcnow()
     values = {'host': None, 'node': None, 'scheduled_at': now}
+    if extra_values:
+        values.update(extra_values)
+
     return db.instance_update(context, instance_uuid, values)
 
 
@@ -131,6 +134,16 @@ class Scheduler(object):
         return [service['host']
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
+
+    def group_hosts(self, context, group):
+        """Return the list of hosts that have VM's from the group."""
+
+        # The system_metadata 'group' will be filtered
+        members = db.instance_get_all_by_filters(context,
+                {'deleted': False, 'group': group})
+        return [member['host']
+                for member in members
+                if member.get('host') is not None]
 
     def schedule_prep_resize(self, context, image, request_spec,
                              filter_properties, instance, instance_type,
