@@ -28,6 +28,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import event as virtevent
 
 driver_opts = [
     cfg.StrOpt('compute_driver',
@@ -125,6 +126,7 @@ class ComputeDriver(object):
 
     def __init__(self, virtapi):
         self.virtapi = virtapi
+        self._compute_event_callback = None
 
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
@@ -849,6 +851,38 @@ class ComputeDriver(object):
             of access to instance shared disk files
         """
         return False
+
+    def register_event_listener(self, callback):
+        """Register a callback to receive events.
+
+        Register a callback to receive asynchronous event
+        notifications from hypervisors. The callback will
+        be invoked with a single parameter, which will be
+        an instance of the nova.virt.event.Event class."""
+
+        self._compute_event_callback = callback
+
+    def emit_event(self, event):
+        """Dispatches an event to the compute manager.
+
+        Invokes the event callback registered by the
+        compute manager to dispatch the event. This
+        must only be invoked from a green thread."""
+
+        if not self._compute_event_callback:
+            LOG.debug("Discarding event %s" % str(event))
+            return
+
+        if not isinstance(event, virtevent.Event):
+            raise ValueError(
+                _("Event must be an instance of nova.virt.event.Event"))
+
+        try:
+            LOG.debug("Emitting event %s" % str(event))
+            self._compute_event_callback(event)
+        except Exception, ex:
+            LOG.error(_("Exception dispatching event %(event)s: %(ex)s")
+                        % locals())
 
 
 def load_compute_driver(virtapi, compute_driver=None):
