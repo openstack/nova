@@ -19,6 +19,7 @@
 import gc
 import pprint
 import sys
+import threading
 import traceback
 
 import eventlet
@@ -52,12 +53,23 @@ def _print_greenthreads():
         print
 
 
+def _print_threads():
+    id_name_map = dict([(th.ident, th.name)
+                        for th in threading.enumerate()])
+    for i, (thread_id, stack) in enumerate(sys._current_frames().items()):
+        name = id_name_map.get(thread_id, str(thread_id))
+        print i, name
+        traceback.print_stack(stack)
+        print
+
+
 def initialize_if_enabled():
     backdoor_locals = {
         'exit': _dont_use_this,      # So we don't exit the entire process
         'quit': _dont_use_this,      # So we don't exit the entire process
         'fo': _find_objects,
         'pgt': _print_greenthreads,
+        'pt': _print_threads,
     }
 
     if CONF.backdoor_port is None:
