@@ -3355,9 +3355,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         number of virtual machines known by the database, we proceed in a lazy
         loop, one database record at a time, checking if the hypervisor has the
         same power state as is in the database.
-
-        If the instance is not found on the hypervisor, but is in the database,
-        then a stop() API will be called on the instance.
         """
         db_instances = self.conductor_api.instance_get_all_by_host(context,
                                                                    self.host)
@@ -3382,118 +3379,131 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_power_state = power_state.NOSTATE
             # Note(maoy): the above get_info call might take a long time,
             # for example, because of a broken libvirt driver.
-            # We re-query the DB to get the latest instance info to minimize
-            # (not eliminate) race condition.
-            u = self.conductor_api.instance_get_by_uuid(context,
-                                                        db_instance['uuid'])
-            db_power_state = u["power_state"]
-            vm_state = u['vm_state']
-            if self.host != u['host']:
-                # on the sending end of nova-compute _sync_power_state
-                # may have yielded to the greenthread performing a live
-                # migration; this in turn has changed the resident-host
-                # for the VM; However, the instance is still active, it
-                # is just in the process of migrating to another host.
-                # This implies that the compute source must relinquish
-                # control to the compute destination.
-                LOG.info(_("During the sync_power process the "
-                           "instance has moved from "
-                           "host %(src)s to host %(dst)s") %
-                           {'src': self.host,
-                            'dst': u['host']},
+            self._sync_instance_power_state(context,
+                                            db_instance,
+                                            vm_power_state)
+
+    def _sync_instance_power_state(self, context, db_instance, vm_power_state):
+        """Align instance power state between the database and hypervisor.
+
+        If the instance is not found on the hypervisor, but is in the database,
+        then a stop() API will be called on the instance."""
+
+        # We re-query the DB to get the latest instance info to minimize
+        # (not eliminate) race condition.
+        u = self.conductor_api.instance_get_by_uuid(context,
+                                                    db_instance['uuid'])
+        db_power_state = u["power_state"]
+        vm_state = u['vm_state']
+
+        if self.host != u['host']:
+            # on the sending end of nova-compute _sync_power_state
+            # may have yielded to the greenthread performing a live
+            # migration; this in turn has changed the resident-host
+            # for the VM; However, the instance is still active, it
+            # is just in the process of migrating to another host.
+            # This implies that the compute source must relinquish
+            # control to the compute destination.
+            LOG.info(_("During the sync_power process the "
+                       "instance has moved from "
+                       "host %(src)s to host %(dst)s") %
+                       {'src': self.host,
+                        'dst': u['host']},
+                     instance=db_instance)
+            return
+        elif u['task_state'] is not None:
+            # on the receiving end of nova-compute, it could happen
+            # that the DB instance already report the new resident
+            # but the actual VM has not showed up on the hypervisor
+            # yet. In this case, let's allow the loop to continue
+            # and run the state sync in a later round
+            LOG.info(_("During sync_power_state the instance has a "
+                       "pending task. Skip."), instance=db_instance)
+            return
+
+        if vm_power_state != db_power_state:
+            # power_state is always updated from hypervisor to db
+            self._instance_update(context,
+                                  db_instance['uuid'],
+                                  power_state=vm_power_state)
+            db_power_state = vm_power_state
+
+        # Note(maoy): Now resolve the discrepancy between vm_state and
+        # vm_power_state. We go through all possible vm_states.
+        if vm_state in (vm_states.BUILDING,
+                        vm_states.RESCUED,
+                        vm_states.RESIZED,
+                        vm_states.SUSPENDED,
+                        vm_states.PAUSED,
+                        vm_states.ERROR):
+            # TODO(maoy): we ignore these vm_state for now.
+            pass
+        elif vm_state == vm_states.ACTIVE:
+            # The only rational power state should be RUNNING
+            if vm_power_state in (power_state.SHUTDOWN,
+                                  power_state.CRASHED):
+                LOG.warn(_("Instance shutdown by itself. Calling "
+                           "the stop API."), instance=db_instance)
+                try:
+                    # Note(maoy): here we call the API instead of
+                    # brutally updating the vm_state in the database
+                    # to allow all the hooks and checks to be performed.
+                    self.conductor_api.compute_stop(context, db_instance)
+                except Exception:
+                    # Note(maoy): there is no need to propagate the error
+                    # because the same power_state will be retrieved next
+                    # time and retried.
+                    # For example, there might be another task scheduled.
+                    LOG.exception(_("error during stop() in "
+                                    "sync_power_state."),
+                                  instance=db_instance)
+            elif vm_power_state == power_state.SUSPENDED:
+                LOG.warn(_("Instance is suspended unexpectedly. Calling "
+                           "the stop API."), instance=db_instance)
+                try:
+                    self.conductor_api.compute_stop(context, db_instance)
+                except Exception:
+                    LOG.exception(_("error during stop() in "
+                                    "sync_power_state."),
+                                  instance=db_instance)
+            elif vm_power_state == power_state.PAUSED:
+                # Note(maoy): a VM may get into the paused state not only
+                # because the user request via API calls, but also
+                # due to (temporary) external instrumentations.
+                # Before the virt layer can reliably report the reason,
+                # we simply ignore the state discrepancy. In many cases,
+                # the VM state will go back to running after the external
+                # instrumentation is done. See bug 1097806 for details.
+                LOG.warn(_("Instance is paused unexpectedly. Ignore."),
                          instance=db_instance)
-                continue
-            elif u['task_state'] is not None:
-                # on the receiving end of nova-compute, it could happen
-                # that the DB instance already report the new resident
-                # but the actual VM has not showed up on the hypervisor
-                # yet. In this case, let's allow the loop to continue
-                # and run the state sync in a later round
-                LOG.info(_("During sync_power_state the instance has a "
-                           "pending task. Skip."), instance=db_instance)
-                continue
-            if vm_power_state != db_power_state:
-                # power_state is always updated from hypervisor to db
-                self._instance_update(context,
-                                      db_instance['uuid'],
-                                      power_state=vm_power_state)
-                db_power_state = vm_power_state
-            # Note(maoy): Now resolve the discrepancy between vm_state and
-            # vm_power_state. We go through all possible vm_states.
-            if vm_state in (vm_states.BUILDING,
-                            vm_states.RESCUED,
-                            vm_states.RESIZED,
-                            vm_states.SUSPENDED,
-                            vm_states.PAUSED,
-                            vm_states.ERROR):
-                # TODO(maoy): we ignore these vm_state for now.
-                pass
-            elif vm_state == vm_states.ACTIVE:
-                # The only rational power state should be RUNNING
-                if vm_power_state in (power_state.SHUTDOWN,
+            elif vm_power_state == power_state.NOSTATE:
+                # Occasionally, depending on the status of the hypervisor,
+                # which could be restarting for example, an instance may
+                # not be found.  Therefore just log the condidtion.
+                LOG.warn(_("Instance is unexpectedly not found. Ignore."),
+                         instance=db_instance)
+        elif vm_state == vm_states.STOPPED:
+            if vm_power_state not in (power_state.NOSTATE,
+                                      power_state.SHUTDOWN,
                                       power_state.CRASHED):
-                    LOG.warn(_("Instance shutdown by itself. Calling "
-                               "the stop API."), instance=db_instance)
-                    try:
-                        # Note(maoy): here we call the API instead of
-                        # brutally updating the vm_state in the database
-                        # to allow all the hooks and checks to be performed.
-                        self.conductor_api.compute_stop(context, db_instance)
-                    except Exception:
-                        # Note(maoy): there is no need to propagate the error
-                        # because the same power_state will be retrieved next
-                        # time and retried.
-                        # For example, there might be another task scheduled.
-                        LOG.exception(_("error during stop() in "
-                                        "sync_power_state."),
-                                      instance=db_instance)
-                elif vm_power_state == power_state.SUSPENDED:
-                    LOG.warn(_("Instance is suspended unexpectedly. Calling "
-                               "the stop API."), instance=db_instance)
-                    try:
-                        self.conductor_api.compute_stop(context, db_instance)
-                    except Exception:
-                        LOG.exception(_("error during stop() in "
-                                        "sync_power_state."),
-                                      instance=db_instance)
-                elif vm_power_state == power_state.PAUSED:
-                    # Note(maoy): a VM may get into the paused state not only
-                    # because the user request via API calls, but also
-                    # due to (temporary) external instrumentations.
-                    # Before the virt layer can reliably report the reason,
-                    # we simply ignore the state discrepancy. In many cases,
-                    # the VM state will go back to running after the external
-                    # instrumentation is done. See bug 1097806 for details.
-                    LOG.warn(_("Instance is paused unexpectedly. Ignore."),
-                             instance=db_instance)
-                elif vm_power_state == power_state.NOSTATE:
-                    # Occasionally, depending on the status of the hypervisor,
-                    # which could be restarting for example, an instance may
-                    # not be found.  Therefore just log the condidtion.
-                    LOG.warn(_("Instance is unexpectedly not found. Ignore."),
-                             instance=db_instance)
-            elif vm_state == vm_states.STOPPED:
-                if vm_power_state not in (power_state.NOSTATE,
-                                          power_state.SHUTDOWN,
-                                          power_state.CRASHED):
-                    LOG.warn(_("Instance is not stopped. Calling "
-                               "the stop API."), instance=db_instance)
-                    try:
-                        # Note(maoy): this assumes that the stop API is
-                        # idempotent.
-                        self.conductor_api.compute_stop(context, db_instance)
-                    except Exception:
-                        LOG.exception(_("error during stop() in "
-                                        "sync_power_state."),
-                                      instance=db_instance)
-            elif vm_state in (vm_states.SOFT_DELETED,
-                              vm_states.DELETED):
-                if vm_power_state not in (power_state.NOSTATE,
-                                          power_state.SHUTDOWN):
-                    # Note(maoy): this should be taken care of periodically in
-                    # _cleanup_running_deleted_instances().
-                    LOG.warn(_("Instance is not (soft-)deleted."),
-                             instance=db_instance)
+                LOG.warn(_("Instance is not stopped. Calling "
+                           "the stop API."), instance=db_instance)
+                try:
+                    # Note(maoy): this assumes that the stop API is
+                    # idempotent.
+                    self.conductor_api.compute_stop(context, db_instance)
+                except Exception:
+                    LOG.exception(_("error during stop() in "
+                                    "sync_power_state."),
+                                  instance=db_instance)
+        elif vm_state in (vm_states.SOFT_DELETED,
+                          vm_states.DELETED):
+            if vm_power_state not in (power_state.NOSTATE,
+                                      power_state.SHUTDOWN):
+                # Note(maoy): this should be taken care of periodically in
+                # _cleanup_running_deleted_instances().
+                LOG.warn(_("Instance is not (soft-)deleted."),
+                         instance=db_instance)
 
     @manager.periodic_task
     def _reclaim_queued_deletes(self, context):
