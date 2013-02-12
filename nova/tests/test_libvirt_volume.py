@@ -364,3 +364,31 @@ class LibvirtVolumeTestCase(test.TestCase):
             ('stat', export_mnt_base),
             ('mount', '-t', 'nfs', export_string, export_mnt_base)]
         self.assertEqual(self.executes, expected_commands)
+
+    def aoe_connection(self, shelf, lun):
+        return {
+                'driver_volume_type': 'aoe',
+                'data': {
+                    'target_shelf': shelf,
+                    'target_lun': lun,
+                }
+        }
+
+    def test_libvirt_aoe_driver(self):
+        # NOTE(jbr_) exists is to make driver assume connecting worked
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        libvirt_driver = volume.LibvirtAOEVolumeDriver(self.fake_conn)
+        shelf = '100'
+        lun = '1'
+        connection_info = self.aoe_connection(shelf, lun)
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        aoedevpath = '/dev/etherd/e%s.%s' % (shelf, lun)
+        self.assertEqual(tree.get('type'), 'block')
+        self.assertEqual(tree.find('./source').get('dev'), aoedevpath)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
