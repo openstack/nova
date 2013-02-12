@@ -52,6 +52,7 @@ from nova import utils
 from nova import version
 from nova.virt.disk import api as disk
 from nova.virt import driver
+from nova.virt import event as virtevent
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import images
@@ -99,7 +100,8 @@ class FakeVirDomainSnapshot(object):
 
 class FakeVirtDomain(object):
 
-    def __init__(self, fake_xml=None):
+    def __init__(self, fake_xml=None, uuidstr=None):
+        self.uuidstr = uuidstr
         if fake_xml:
             self._fake_dom_xml = fake_xml
         else:
@@ -130,6 +132,9 @@ class FakeVirtDomain(object):
 
     def XMLDesc(self, *args):
         return self._fake_dom_xml
+
+    def UUIDString(self):
+        return self.uuidstr
 
 
 class CacheConcurrencyTestCase(test.TestCase):
@@ -3339,6 +3344,83 @@ class LibvirtConnTestCase(test.TestCase):
                 ('i686', 'kvm', 'hvm')]
         got = conn.get_instance_capabilities()
         self.assertEqual(want, got)
+
+    def test_event_dispatch(self):
+        # Validate that the libvirt self-pipe for forwarding
+        # events between threads is working sanely
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        got_events = []
+
+        def handler(event):
+            got_events.append(event)
+
+        conn.register_event_listener(handler)
+
+        conn._init_events_pipe()
+
+        event1 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STARTED)
+        event2 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_PAUSED)
+        conn._queue_event(event1)
+        conn._queue_event(event2)
+        conn._dispatch_events()
+
+        want_events = [event1, event2]
+        self.assertEqual(want_events, got_events)
+
+        event3 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_RESUMED)
+        event4 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STOPPED)
+
+        conn._queue_event(event3)
+        conn._queue_event(event4)
+        conn._dispatch_events()
+
+        want_events = [event1, event2, event3, event4]
+        self.assertEqual(want_events, got_events)
+
+    def test_event_lifecycle(self):
+        # Validate that libvirt events are correctly translated
+        # to Nova events
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        got_events = []
+
+        def handler(event):
+            got_events.append(event)
+
+        conn.register_event_listener(handler)
+        conn._init_events_pipe()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                  <devices>
+                    <disk type='file'>
+                      <source file='filename'/>
+                    </disk>
+                  </devices>
+                </domain>
+            """
+        dom = FakeVirtDomain(fake_dom_xml,
+                             "cef19ce0-0ca2-11df-855d-b19fbce37686")
+
+        conn._event_lifecycle_callback(conn._conn,
+                                       dom,
+                                       libvirt.VIR_DOMAIN_EVENT_STOPPED,
+                                       0,
+                                       conn)
+        conn._dispatch_events()
+        self.assertEqual(len(got_events), 1)
+        self.assertEqual(type(got_events[0]), virtevent.LifecycleEvent)
+        self.assertEqual(got_events[0].uuid,
+                         "cef19ce0-0ca2-11df-855d-b19fbce37686")
+        self.assertEqual(got_events[0].transition,
+                         virtevent.EVENT_LIFECYCLE_STOPPED)
 
 
 class HostStateTestCase(test.TestCase):

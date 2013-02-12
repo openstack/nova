@@ -70,6 +70,17 @@ VIR_DOMAIN_CRASHED = 6
 
 VIR_DOMAIN_XML_SECURE = 1
 
+VIR_DOMAIN_EVENT_ID_LIFECYCLE = 0
+
+VIR_DOMAIN_EVENT_DEFINED = 0
+VIR_DOMAIN_EVENT_UNDEFINED = 1
+VIR_DOMAIN_EVENT_STARTED = 2
+VIR_DOMAIN_EVENT_SUSPENDED = 3
+VIR_DOMAIN_EVENT_RESUMED = 4
+VIR_DOMAIN_EVENT_STOPPED = 5
+VIR_DOMAIN_EVENT_SHUTDOWN = 6
+VIR_DOMAIN_EVENT_PMSUSPENDED = 7
+
 VIR_DOMAIN_UNDEFINE_MANAGED_SAVE = 1
 
 VIR_DOMAIN_AFFECT_CURRENT = 0
@@ -506,6 +517,7 @@ class Connection(object):
         self._running_vms = {}
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nwfilters = {}
+        self._event_callbacks = {}
         self.fakeLibVersion = version
         self.fakeVersion = version
 
@@ -517,6 +529,7 @@ class Connection(object):
 
     def _mark_running(self, dom):
         self._running_vms[self._id_counter] = dom
+        self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STARTED, 0)
         self._id_counter += 1
 
     def _mark_not_running(self, dom):
@@ -528,10 +541,13 @@ class Connection(object):
         for (k, v) in self._running_vms.iteritems():
             if v == dom:
                 del self._running_vms[k]
+                self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STOPPED, 0)
                 return
 
     def _undefine(self, dom):
         del self._vms[dom.name()]
+        if not dom._transient:
+            self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_UNDEFINED, 0)
 
     def getInfo(self):
         return [node_arch,
@@ -563,14 +579,25 @@ class Connection(object):
                            'name "%s"' % name,
                            VIR_ERR_NO_DOMAIN, VIR_FROM_QEMU)
 
+    def _emit_lifecycle(self, dom, event, detail):
+        if VIR_DOMAIN_EVENT_ID_LIFECYCLE not in self._event_callbacks:
+            return
+
+        cbinfo = self._event_callbacks[VIR_DOMAIN_EVENT_ID_LIFECYCLE]
+        callback = cbinfo[0]
+        opaque = cbinfo[1]
+        callback(self, dom, event, detail, opaque)
+
     def defineXML(self, xml):
         dom = Domain(connection=self, running=False, transient=False, xml=xml)
         self._vms[dom.name()] = dom
+        self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_DEFINED, 0)
         return dom
 
     def createXML(self, xml, flags):
         dom = Domain(connection=self, running=True, transient=True, xml=xml)
         self._vms[dom.name()] = dom
+        self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STARTED, 0)
         return dom
 
     def getType(self):
@@ -585,6 +612,9 @@ class Connection(object):
 
     def getHostname(self):
         return 'compute1'
+
+    def domainEventRegisterAny(self, dom, eventid, callback, opaque):
+        self._event_callbacks[eventid] = [callback, opaque]
 
     def getCapabilities(self):
         return '''<capabilities>
@@ -873,6 +903,14 @@ def openAuth(uri, auth, flags):
             _("Expected a function in 'auth[1]' parameter"))
 
     return Connection(uri, readonly=False)
+
+
+def virEventRunDefaultImpl():
+    time.sleep(1)
+
+
+def virEventRegisterDefaultImpl():
+    pass
 
 
 virDomain = Domain
