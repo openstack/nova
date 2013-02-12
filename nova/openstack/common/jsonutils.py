@@ -38,13 +38,17 @@ import functools
 import inspect
 import itertools
 import json
+import logging
 import xmlrpclib
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
+
+LOG = logging.getLogger(__name__)
 
 
 def to_primitive(value, convert_instances=False, convert_datetime=True,
-                 level=0):
+                 level=0, max_depth=3):
     """Convert a complex object into primitives.
 
     Handy for JSON serialization. We can optionally handle instances,
@@ -80,7 +84,9 @@ def to_primitive(value, convert_instances=False, convert_datetime=True,
     if getattr(value, '__module__', None) == 'mox':
         return 'mock'
 
-    if level > 3:
+    if level > max_depth:
+        LOG.error(_('Max serialization depth exceeded on object: %d %s'),
+                  level, value)
         return '?'
 
     # The try block may not be necessary after the class check above,
@@ -89,7 +95,8 @@ def to_primitive(value, convert_instances=False, convert_datetime=True,
         recursive = functools.partial(to_primitive,
                                       convert_instances=convert_instances,
                                       convert_datetime=convert_datetime,
-                                      level=level)
+                                      level=level,
+                                      max_depth=max_depth)
         # It's not clear why xmlrpclib created their own DateTime type, but
         # for our purposes, make it a datetime type which is explicitly
         # handled
