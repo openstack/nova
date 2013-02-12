@@ -260,19 +260,20 @@ class API(base.Base):
         data = quantumv2.get_client(context).list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
-            fixed_ips = p['fixed_ips']
             for subnet in ipam_subnets:
-                fixed_ip = {'subnet_id': subnet['id']}
-                fixed_ips.append(fixed_ip)
-            port_req_body = {'port': {'fixed_ips': fixed_ips}}
-            try:
-                quantumv2.get_client(context).update_port(p['id'],
-                                                          port_req_body)
-            except Exception as ex:
-                msg = _("Unable to update port %(portid)s with"
-                        " failure: %(exception)s")
-                LOG.debug(msg, {'portid': p['id'], 'exception': ex})
-            return
+                fixed_ips = [{'subnet_id': subnet['id']}]
+                port_req_body = {'port': {'fixed_ips': fixed_ips}}
+                try:
+                    quantumv2.get_client(context).update_port(p['id'],
+                                                              port_req_body)
+                    return
+                except Exception as ex:
+                    msg = _("Unable to update port %(portid)s on subnet "
+                            "%(subnet_id)s with failure: %(exception)s")
+                    LOG.debug(msg, {'portid': p['id'],
+                                    'subnet_id': subnet['id'],
+                                    'exception': ex})
+
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance['uuid'])
 
