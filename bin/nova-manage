@@ -87,6 +87,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova import servicegroup
 from nova import utils
 from nova import version
 
@@ -624,6 +625,7 @@ class ServiceCommands(object):
         """
         Show a list of all running services. Filter by host & service name.
         """
+        servicegroup_api = servicegroup.API()
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
@@ -641,8 +643,7 @@ class ServiceCommands(object):
                     _('State'),
                     _('Updated_At'))
         for svc in services:
-            delta = now - (svc['updated_at'] or svc['created_at'])
-            alive = abs(utils.total_seconds(delta)) <= CONF.service_down_time
+            alive = servicegroup_api.service_is_up(svc)
             art = (alive and ":-)") or "XXX"
             active = 'enabled'
             if svc['disabled']:
