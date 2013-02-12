@@ -448,6 +448,9 @@ class TestSecurityGroups(test.TestCase):
                           req, '1')
 
     def test_associate_by_non_existing_security_group_name(self):
+        self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.assertEquals(return_server(None, '1'),
+                          nova.db.instance_get(None, '1'))
         body = dict(addSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -537,6 +540,9 @@ class TestSecurityGroups(test.TestCase):
         self.manager._addSecurityGroup(req, '1', body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
+        self.stubs.Set(nova.db, 'instance_get', return_server)
+        self.assertEquals(return_server(None, '1'),
+                          nova.db.instance_get(None, '1'))
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
