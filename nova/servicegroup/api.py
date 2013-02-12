@@ -40,7 +40,8 @@ class API(object):
 
     _driver = None
     _driver_name_class_mapping = {
-        'db': 'nova.servicegroup.drivers.db.DbDriver'
+        'db': 'nova.servicegroup.drivers.db.DbDriver',
+        'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver'
     }
 
     @lockutils.synchronized('nova.servicegroup.api.new', 'nova-')
