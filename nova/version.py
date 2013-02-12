@@ -14,14 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.openstack.common import version as common_version
+
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"
 NOVA_PACKAGE = None  # OS distro package version suffix
-NOVA_VERSION = ['2013', '1', None]
-YEAR, COUNT, REVISION = NOVA_VERSION
-FINAL = False   # This becomes true at Release Candidate time
 
 loaded = False
+version_info = common_version.VersionInfo('nova')
+version_string = version_info.version_string
 
 
 def _load_config():
@@ -81,19 +82,8 @@ def package_string():
     return NOVA_PACKAGE
 
 
-def canonical_version_string():
-    return '.'.join(filter(None, NOVA_VERSION))
-
-
-def version_string():
-    if FINAL:
-        return canonical_version_string()
-    else:
-        return '%s-dev' % (canonical_version_string(),)
-
-
 def version_string_with_package():
     if package_string() is None:
-        return canonical_version_string()
+        return version_info.version_string()
     else:
-        return "%s-%s" % (canonical_version_string(), package_string())
+        return "%s-%s" % (version_info.version_string(), package_string())

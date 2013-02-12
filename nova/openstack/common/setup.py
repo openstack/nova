@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack LLC.
+# Copyright 2012-2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,7 +20,7 @@
 Utilities with minimum-depends for use in setup.py
 """
 
-import datetime
+import email
 import os
 import re
 import subprocess
@@ -33,11 +34,12 @@ def parse_mailmap(mailmap='.mailmap'):
     if os.path.exists(mailmap):
         with open(mailmap, 'r') as fp:
             for l in fp:
-                l = l.strip()
-                if not l.startswith('#') and ' ' in l:
-                    canonical_email, alias = [x for x in l.split(' ')
-                                              if x.startswith('<')]
-                    mapping[alias] = canonical_email
+                try:
+                    canonical_email, alias = re.match(
+                        r'[^#]*?(<.+>).*(<.+>).*', l).groups()
+                except AttributeError:
+                    continue
+                mapping[alias] = canonical_email
     return mapping
 
 
@@ -45,8 +47,8 @@ def canonicalize_emails(changelog, mapping):
     """Takes in a string and an email alias mapping and replaces all
        instances of the aliases in the string with their real email.
     """
-    for alias, email in mapping.iteritems():
-        changelog = changelog.replace(alias, email)
+    for alias, email_address in mapping.iteritems():
+        changelog = changelog.replace(alias, email_address)
     return changelog
 
 
@@ -106,80 +108,23 @@ def parse_dependency_links(requirements_files=['requirements.txt',
     return dependency_links
 
 
-def write_requirements():
-    venv = os.environ.get('VIRTUAL_ENV', None)
-    if venv is not None:
-        with open("requirements.txt", "w") as req_file:
-            output = subprocess.Popen(["pip", "-E", venv, "freeze", "-l"],
-                                      stdout=subprocess.PIPE)
-            requirements = output.communicate()[0].strip()
-            req_file.write(requirements)
-
-
-def _run_shell_command(cmd):
+def _run_shell_command(cmd, throw_on_error=False):
     if os.name == 'nt':
         output = subprocess.Popen(["cmd.exe", "/C", cmd],
-                                  stdout=subprocess.PIPE)
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
     else:
         output = subprocess.Popen(["/bin/sh", "-c", cmd],
-                                  stdout=subprocess.PIPE)
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+    if output.returncode and throw_on_error:
+        raise Exception("%s returned %d" % cmd, output.returncode)
     out = output.communicate()
     if len(out) == 0:
         return None
     if len(out[0].strip()) == 0:
         return None
     return out[0].strip()
-
-
-def _get_git_next_version_suffix(branch_name):
-    datestamp = datetime.datetime.now().strftime('%Y%m%d')
-    if branch_name == 'milestone-proposed':
-        revno_prefix = "r"
-    else:
-        revno_prefix = ""
-    _run_shell_command("git fetch origin +refs/meta/*:refs/remotes/meta/*")
-    milestone_cmd = "git show meta/openstack/release:%s" % branch_name
-    milestonever = _run_shell_command(milestone_cmd)
-    if milestonever:
-        first_half = "%s~%s" % (milestonever, datestamp)
-    else:
-        first_half = datestamp
-
-    post_version = _get_git_post_version()
-    # post version should look like:
-    # 0.1.1.4.gcc9e28a
-    # where the bit after the last . is the short sha, and the bit between
-    # the last and second to last is the revno count
-    (revno, sha) = post_version.split(".")[-2:]
-    second_half = "%s%s.%s" % (revno_prefix, revno, sha)
-    return ".".join((first_half, second_half))
-
-
-def _get_git_current_tag():
-    return _run_shell_command("git tag --contains HEAD")
-
-
-def _get_git_tag_info():
-    return _run_shell_command("git describe --tags")
-
-
-def _get_git_post_version():
-    current_tag = _get_git_current_tag()
-    if current_tag is not None:
-        return current_tag
-    else:
-        tag_info = _get_git_tag_info()
-        if tag_info is None:
-            base_version = "0.0"
-            cmd = "git --no-pager log --oneline"
-            out = _run_shell_command(cmd)
-            revno = len(out.split("\n"))
-            sha = _run_shell_command("git describe --always")
-        else:
-            tag_infos = tag_info.split("-")
-            base_version = "-".join(tag_infos[:-2])
-            (revno, sha) = tag_infos[-2:]
-        return "%s.%s.%s" % (base_version, revno, sha)
 
 
 def write_git_changelog():
@@ -227,26 +172,6 @@ _rst_template = """%(heading)s
 """
 
 
-def read_versioninfo(project):
-    """Read the versioninfo file. If it doesn't exist, we're in a github
-       zipball, and there's really no way to know what version we really
-       are, but that should be ok, because the utility of that should be
-       just about nil if this code path is in use in the first place."""
-    versioninfo_path = os.path.join(project, 'versioninfo')
-    if os.path.exists(versioninfo_path):
-        with open(versioninfo_path, 'r') as vinfo:
-            version = vinfo.read().strip()
-    else:
-        version = "0.0.0"
-    return version
-
-
-def write_versioninfo(project, version):
-    """Write a simple file containing the version of the package."""
-    with open(os.path.join(project, 'versioninfo'), 'w') as fil:
-        fil.write("%s\n" % version)
-
-
 def get_cmdclass():
     """Return dict of commands to run from setup.py."""
 
@@ -276,6 +201,9 @@ def get_cmdclass():
         from sphinx.setup_command import BuildDoc
 
         class LocalBuildDoc(BuildDoc):
+
+            builders = ['html', 'man']
+
             def generate_autoindex(self):
                 print "**Autodocumenting from %s" % os.path.abspath(os.curdir)
                 modules = {}
@@ -311,56 +239,97 @@ def get_cmdclass():
                 if not os.getenv('SPHINX_DEBUG'):
                     self.generate_autoindex()
 
-                for builder in ['html', 'man']:
+                for builder in self.builders:
                     self.builder = builder
                     self.finalize_options()
                     self.project = self.distribution.get_name()
                     self.version = self.distribution.get_version()
                     self.release = self.distribution.get_version()
                     BuildDoc.run(self)
+
+        class LocalBuildLatex(LocalBuildDoc):
+            builders = ['latex']
+
         cmdclass['build_sphinx'] = LocalBuildDoc
+        cmdclass['build_sphinx_latex'] = LocalBuildLatex
     except ImportError:
         pass
 
     return cmdclass
 
 
-def get_git_branchname():
-    for branch in _run_shell_command("git branch --color=never").split("\n"):
-        if branch.startswith('*'):
-            _branch_name = branch.split()[1].strip()
-    if _branch_name == "(no":
-        _branch_name = "no-branch"
-    return _branch_name
+def _get_revno():
+    """Return the number of commits since the most recent tag.
+
+    We use git-describe to find this out, but if there are no
+    tags then we fall back to counting commits since the beginning
+    of time.
+    """
+    describe = _run_shell_command("git describe --always")
+    if "-" in describe:
+        return describe.rsplit("-", 2)[-2]
+
+    # no tags found
+    revlist = _run_shell_command("git rev-list --abbrev-commit HEAD")
+    return len(revlist.splitlines())
 
 
-def get_pre_version(projectname, base_version):
-    """Return a version which is leading up to a version that will
-       be released in the future."""
-    if os.path.isdir('.git'):
-        current_tag = _get_git_current_tag()
-        if current_tag is not None:
-            version = current_tag
-        else:
-            branch_name = os.getenv('BRANCHNAME',
-                                    os.getenv('GERRIT_REFNAME',
-                                              get_git_branchname()))
-            version_suffix = _get_git_next_version_suffix(branch_name)
-            version = "%s~%s" % (base_version, version_suffix)
-        write_versioninfo(projectname, version)
-        return version
-    else:
-        version = read_versioninfo(projectname)
-    return version
-
-
-def get_post_version(projectname):
+def get_version_from_git(pre_version):
     """Return a version which is equal to the tag that's on the current
     revision if there is one, or tag plus number of additional revisions
     if the current revision has no tag."""
 
     if os.path.isdir('.git'):
-        version = _get_git_post_version()
-        write_versioninfo(projectname, version)
+        if pre_version:
+            try:
+                return _run_shell_command(
+                    "git describe --exact-match",
+                    throw_on_error=True).replace('-', '.')
+            except Exception:
+                sha = _run_shell_command("git log -n1 --pretty=format:%h")
+                return "%s.a%s.g%s" % (pre_version, _get_revno(), sha)
+        else:
+            return _run_shell_command(
+                "git describe --always").replace('-', '.')
+    return None
+
+
+def get_version_from_pkg_info(package_name):
+    """Get the version from PKG-INFO file if we can."""
+    try:
+        pkg_info_file = open('PKG-INFO', 'r')
+    except (IOError, OSError):
+        return None
+    try:
+        pkg_info = email.message_from_file(pkg_info_file)
+    except email.MessageError:
+        return None
+    # Check to make sure we're in our own dir
+    if pkg_info.get('Name', None) != package_name:
+        return None
+    return pkg_info.get('Version', None)
+
+
+def get_version(package_name, pre_version=None):
+    """Get the version of the project. First, try getting it from PKG-INFO, if
+    it exists. If it does, that means we're in a distribution tarball or that
+    install has happened. Otherwise, if there is no PKG-INFO file, pull the
+    version from git.
+
+    We do not support setup.py version sanity in git archive tarballs, nor do
+    we support packagers directly sucking our git repo into theirs. We expect
+    that a source tarball be made from our git repo - or that if someone wants
+    to make a source tarball from a fork of our repo with additional tags in it
+    that they understand and desire the results of doing that.
+    """
+    version = os.environ.get("OSLO_PACKAGE_VERSION", None)
+    if version:
         return version
-    return read_versioninfo(projectname)
+    version = get_version_from_pkg_info(package_name)
+    if version:
+        return version
+    version = get_version_from_git(pre_version)
+    if version:
+        return version
+    raise Exception("Versioning for this project requires either an sdist"
+                    " tarball, or access to an upstream git repository.")

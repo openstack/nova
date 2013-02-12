@@ -24,38 +24,14 @@ from nova import version
 
 class VersionTestCase(test.TestCase):
     """Test cases for Versions code."""
-    def setUp(self):
-        """setup test with unchanging values."""
-        super(VersionTestCase, self).setUp()
-        self.version = version
-        self.version.FINAL = False
-        self.version.NOVA_VERSION = ['2012', '10']
-        self.version.YEAR, self.version.COUNT = self.version.NOVA_VERSION
-        self.version.version_info = {'branch_nick': u'LOCALBRANCH',
-                                    'revision_id': 'LOCALREVISION',
-                                    'revno': 0}
-        self.version.NOVA_PACKAGE = "g9ec3421"
-
-    def test_version_string_is_good(self):
-        # Ensure version string works.
-        self.assertEqual("2012.10-dev", self.version.version_string())
-
-    def test_canonical_version_string_is_good(self):
-        # Ensure canonical version works.
-        self.assertEqual("2012.10", self.version.canonical_version_string())
-
-    def test_final_version_strings_are_identical(self):
-        # Ensure final version strings match only at release.
-        self.assertNotEqual(self.version.canonical_version_string(),
-                        self.version.version_string())
-        self.version.FINAL = True
-        self.assertEqual(self.version.canonical_version_string(),
-                        self.version.version_string())
 
     def test_version_string_with_package_is_good(self):
-        # Ensure uninstalled code get version string.
-        self.assertEqual("2012.10-g9ec3421",
-                        self.version.version_string_with_package())
+        """Ensure uninstalled code get version string."""
+
+        self.stubs.Set(version.version_info, 'version', '5.5.5.5')
+        self.stubs.Set(version, 'NOVA_PACKAGE', 'g9ec3421')
+        self.assertEqual("5.5.5.5-g9ec3421",
+                         version.version_string_with_package())
 
     def test_release_file(self):
         version.loaded = False
