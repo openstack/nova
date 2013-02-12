@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<domain_entry>
+  <domain>domain1.example.org</domain>
+  <scope>public</scope>
+  <project>project1</project>
+</domain_entry>

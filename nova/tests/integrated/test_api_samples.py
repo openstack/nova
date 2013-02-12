@@ -380,7 +380,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         do_not_approve_additions.append('os-config-drive')
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-flavor-access')
-        do_not_approve_additions.append('os-floating-ip-dns')
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-services')
         do_not_approve_additions.append('os-volumes')
@@ -2937,4 +2936,90 @@ class EvacuateJsonTest(ServersSampleBase):
 
 
 class EvacuateXmlTest(EvacuateJsonTest):
+    ctype = 'xml'
+
+
+class FloatingIpDNSJsonTest(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.floating_ip_dns."
+                      "Floating_ip_dns")
+
+    domain = 'domain1.example.org'
+    name = 'instance1'
+    scope = 'public'
+    project = 'project1'
+    dns_type = 'A'
+    ip = '192.168.1.1'
+
+    def _create_or_update(self):
+        subs = {'domain': self.domain,
+                'project': self.project,
+                'scope': self.scope}
+        response = self._do_put('os-floating-ip-dns/%s' % self.domain,
+                                'floating-ip-dns-create-or-update-req', subs)
+        self.assertEqual(response.status, 200)
+        self._verify_response('floating-ip-dns-create-or-update-resp', subs,
+                              response)
+
+    def _create_or_update_entry(self):
+        subs = {'ip': self.ip, 'dns_type': self.dns_type}
+        response = self._do_put('os-floating-ip-dns/%s/entries/%s'
+                                % (self.domain, self.name),
+                                'floating-ip-dns-create-or-update-entry-req',
+                                subs)
+        self.assertEqual(response.status, 200)
+        subs.update({'name': self.name, 'domain': self.domain})
+        self._verify_response('floating-ip-dns-create-or-update-entry-resp',
+                              subs, response)
+
+    def test_floating_ip_dns_list(self):
+        self._create_or_update()
+        response = self._do_get('os-floating-ip-dns')
+        self.assertEqual(response.status, 200)
+        subs = {'domain': self.domain,
+                'project': self.project,
+                'scope': self.scope}
+        return self._verify_response('floating-ip-dns-list-resp', subs,
+                                     response)
+
+    def test_floating_ip_dns_create_or_update(self):
+        self._create_or_update()
+
+    def test_floating_ip_dns_delete(self):
+        self._create_or_update()
+        response = self._do_delete('os-floating-ip-dns/%s' % self.domain)
+        self.assertEqual(response.status, 202)
+
+    def test_floating_ip_dns_create_or_update_entry(self):
+        self._create_or_update_entry()
+
+    def test_floating_ip_dns_entry_get(self):
+        self._create_or_update_entry()
+        response = self._do_get('os-floating-ip-dns/%s/entries/%s'
+                                % (self.domain, self.name))
+        self.assertEqual(response.status, 200)
+        subs = {'domain': self.domain,
+                'ip': self.ip,
+                'name': self.name}
+        return self._verify_response('floating-ip-dns-entry-get-resp', subs,
+                                     response)
+
+    def test_floating_ip_dns_entry_delete(self):
+        self._create_or_update_entry()
+        response = self._do_delete('os-floating-ip-dns/%s/entries/%s'
+                                   % (self.domain, self.name))
+        self.assertEqual(response.status, 202)
+
+    def test_floating_ip_dns_entry_list(self):
+        self._create_or_update_entry()
+        response = self._do_get('os-floating-ip-dns/%s/entries/%s'
+                                % (self.domain, self.ip))
+        self.assertEqual(response.status, 200)
+        subs = {'domain': self.domain,
+                'ip': self.ip,
+                'name': self.name}
+        return self._verify_response('floating-ip-dns-entry-list-resp', subs,
+                                     response)
+
+
+class FloatingIpDNSXmlTest(FloatingIpDNSJsonTest):
     ctype = 'xml'
