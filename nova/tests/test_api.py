@@ -22,12 +22,13 @@ import random
 import StringIO
 
 import boto
+import boto.connection
 from boto.ec2 import regioninfo
 from boto import exception as boto_exc
 # newer versions of boto use their own wrapper on top of httplib.HTTPResponse
-try:
-    import boto.connection as httplib
-except ImportError:
+if hasattr(boto.connection, 'HTTPResponse'):
+    httplib = boto.connection
+else:
     import httplib
 import fixtures
 import webob
