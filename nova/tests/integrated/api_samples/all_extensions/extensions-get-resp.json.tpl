@@ -97,6 +97,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-attach-interfaces",
+            "description": "Attach interface support.",
+            "links": [],
+            "name": "AttachInterfaces",
+            "namespace": "http://docs.openstack.org/compute/ext/interfaces/api/v1.1",
+            "updated": "2012-07-22T00:00:00+00:00"
+        },
+        {
             "alias": "os-availability-zone",
             "description": "%(text)s",
             "links": [],

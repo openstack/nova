@@ -2285,6 +2285,20 @@ class API(base.Base):
         self._detach_volume(context, instance, volume_id)
 
     @wrap_check_policy
+    def attach_interface(self, context, instance, network_id, port_id,
+                         requested_ip):
+        """Use hotplug to add an network adapter to an instance."""
+        return self.compute_rpcapi.attach_interface(context,
+            instance=instance, network_id=network_id, port_id=port_id,
+            requested_ip=requested_ip)
+
+    @wrap_check_policy
+    def detach_interface(self, context, instance, port_id):
+        """Detach an network adapter from an instance."""
+        self.compute_rpcapi.detach_interface(context, instance=instance,
+            port_id=port_id)
+
+    @wrap_check_policy
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
         rv = self.db.instance_metadata_get(context, instance['uuid'])

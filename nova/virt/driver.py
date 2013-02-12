@@ -302,6 +302,14 @@ class ComputeDriver(object):
         """Detach the disk attached to the instance."""
         raise NotImplementedError()
 
+    def attach_interface(self, instance, image_meta, network_info):
+        """Attach an interface to the instance."""
+        raise NotImplementedError()
+
+    def detach_interface(self, instance, network_info):
+        """Detach an interface from the instance."""
+        raise NotImplementedError()
+
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
                                    block_device_info=None):

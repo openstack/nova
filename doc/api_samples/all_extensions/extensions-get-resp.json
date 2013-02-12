@@ -97,6 +97,14 @@
             "updated": "2012-01-12T00:00:00+00:00"
         },
         {
+            "alias": "os-attach-interfaces",
+            "description": "Attach interface support.",
+            "links": [],
+            "name": "AttachInterfaces",
+            "namespace": "http://docs.openstack.org/compute/ext/interfaces/api/v1.1",
+            "updated": "2012-07-22T00:00:00+00:00"
+        },
+        {
             "alias": "os-availability-zone",
             "description": "1. Add availability_zone to the Create Server v1.1 API.\n       2. Add availability zones describing.\n    ",
             "links": [],
@@ -194,11 +202,11 @@
         },
         {
             "alias": "os-evacuate",
-            "description": "Enables server evacuation",
+            "description": "Enables server evacuation.",
             "links": [],
             "name": "Evacuate",
             "namespace": "http://docs.openstack.org/compute/ext/evacuate/api/v2",
-            "updated": "2012-12-05T00:00:00+00:00"
+            "updated": "2013-01-06T00:00:00+00:00"
         },
         {
             "alias": "os-fixed-ips",

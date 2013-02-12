@@ -230,11 +230,10 @@ class TestQuantumv2(test.TestCase):
                                'router_id': 'router_id1'}
 
     def tearDown(self):
-        try:
-            self.mox.UnsetStubs()
-            self.mox.VerifyAll()
-        finally:
-            CONF.reset()
+        self.addCleanup(CONF.reset)
+        self.addCleanup(self.mox.VerifyAll)
+        self.addCleanup(self.mox.UnsetStubs)
+        self.addCleanup(self.stubs.UnsetAll)
         super(TestQuantumv2, self).tearDown()
 
     def _verify_nw_info(self, nw_inf, index=0):
@@ -614,7 +613,9 @@ class TestQuantumv2(test.TestCase):
                 {'ports': port_data})
         for port in port_data:
             self.moxed_client.delete_port(port['id'])
+
         self.mox.ReplayAll()
+
         api = quantumapi.API()
         api.deallocate_for_instance(self.context, self.instance)
 
@@ -625,6 +626,56 @@ class TestQuantumv2(test.TestCase):
     def test_deallocate_for_instance_2(self):
         # Test to deallocate in two ports env.
         self._deallocate_for_instance(2)
+
+    def _test_deallocate_port_for_instance(self, number):
+        port_data = number == 1 and self.port_data1 or self.port_data2
+        self.moxed_client.delete_port(port_data[0]['id'])
+
+        nets = [port_data[0]['network_id']]
+        quantumv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+        self.moxed_client.list_ports(
+            tenant_id=self.instance['project_id'],
+            device_id=self.instance['uuid']).AndReturn(
+                {'ports': port_data[1:]})
+        quantumv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            self.moxed_client)
+        self.moxed_client.list_networks(
+            tenant_id=self.instance['project_id'],
+            shared=False).AndReturn(
+                {'networks': [self.nets2[1]]})
+        self.moxed_client.list_networks(shared=True).AndReturn(
+            {'networks': []})
+        for port in port_data[1:]:
+            self.moxed_client.list_subnets(id=['my_subid2']).AndReturn({})
+
+        self.mox.ReplayAll()
+
+        api = quantumapi.API()
+        nwinfo = api.deallocate_port_for_instance(self.context, self.instance,
+                                                  port_data[0]['id'])
+        self.assertEqual(len(nwinfo), len(port_data[1:]))
+        if len(port_data) > 1:
+            self.assertEqual(nwinfo[0]['network']['id'], 'my_netid2')
+
+    def test_deallocate_port_for_instance_1(self):
+        # Test to deallocate the first and only port
+        self._test_deallocate_port_for_instance(1)
+
+    def test_deallocate_port_for_instance_2(self):
+        # Test to deallocate the first port of two
+        self._test_deallocate_port_for_instance(2)
+
+    def test_list_ports(self):
+        search_opts = {'parm': 'value'}
+        self.moxed_client.list_ports(**search_opts)
+        self.mox.ReplayAll()
+        quantumapi.API().list_ports(self.context, **search_opts)
+
+    def test_show_port(self):
+        self.moxed_client.show_port('foo')
+        self.mox.ReplayAll()
+        quantumapi.API().show_port(self.context, 'foo')
 
     def test_validate_networks(self):
         requested_networks = [('my_netid1', 'test', None),

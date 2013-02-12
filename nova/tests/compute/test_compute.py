@@ -62,6 +62,7 @@ from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
+from nova.tests import fake_network_cache_model
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova import utils
@@ -5827,6 +5828,41 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance)
 
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_attach_interface(self):
+        instance = {
+            'image_ref': 'foo',
+            }
+        self.mox.StubOutWithMock(compute_manager, '_get_image_meta')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'allocate_port_for_instance')
+        nwinfo = network_model.NetworkInfo()
+        nwinfo.append(fake_network_cache_model.new_vif())
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+        self.compute.network_api.allocate_port_for_instance(
+            self.context, instance, port_id, network_id, req_ip,
+            self.compute.conductor_api).AndReturn(nwinfo)
+        compute_manager._get_image_meta(self.context, instance['image_ref'])
+        self.mox.ReplayAll()
+        network, mapping = self.compute.attach_interface(self.context,
+                                                         instance,
+                                                         network_id,
+                                                         port_id,
+                                                         req_ip)
+        self.assertEqual(network['id'], network_id)
+        return nwinfo, port_id
+
+    def test_detach_interface(self):
+        nwinfo, port_id = self.test_attach_interface()
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+                       lambda *a, **k: nwinfo)
+        self.stubs.Set(self.compute.network_api,
+                       'deallocate_port_for_instance',
+                       lambda a, b, c, d: [])
+        self.compute.detach_interface(self.context, {}, port_id)
+        self.assertEqual(self.compute.driver._interfaces, {})
 
     def test_attach_volume(self):
         # Ensure instance can be soft rebooted.

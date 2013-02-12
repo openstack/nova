@@ -33,6 +33,9 @@
   <extension alias="os-aggregates" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/aggregates/api/v1.1" name="Aggregates">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-attach-interfaces" updated="2012-07-22T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/interfaces/api/v1.1" name="AttachInterfaces">
+    <description>Attach interface support.</description>
+  </extension>
   <extension alias="os-availability-zone" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1" name="AvailabilityZone">
     <description>%(text)s</description>
   </extension>

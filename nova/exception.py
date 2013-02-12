@@ -496,6 +496,10 @@ class NetworkNotFound(NotFound):
     message = _("Network %(network_id)s could not be found.")
 
 
+class PortNotFound(NotFound):
+    message = _("Port id %(port_id)s could not be found.")
+
+
 class NetworkNotFoundForBridge(NetworkNotFound):
     message = _("Network could not be found for bridge %(bridge)s")
 
@@ -527,10 +531,6 @@ class DatastoreNotFound(NotFound):
 
 class PortInUse(NovaException):
     message = _("Port %(port_id)s is still in use.")
-
-
-class PortNotFound(NotFound):
-    message = _("Port %(port_id)s could not be found.")
 
 
 class PortNotUsable(NovaException):
@@ -1074,6 +1074,14 @@ class ConfigDriveMountFailed(NovaException):
 class ConfigDriveUnknownFormat(NovaException):
     message = _("Unknown config drive format %(format)s. Select one of "
                 "iso9660 or vfat.")
+
+
+class InterfaceAttachFailed(Invalid):
+    message = _("Failed to attach network adapter device to %(instance)s")
+
+
+class InterfaceDetachFailed(Invalid):
+    message = _("Failed to detach network adapter device from  %(instance)s")
 
 
 class InstanceUserDataTooLarge(NovaException):

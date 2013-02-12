@@ -102,6 +102,7 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_hostname': 'fake-mini',
           }
         self._mounts = {}
+        self._interfaces = {}
 
     def init_host(self, host):
         return
@@ -221,6 +222,19 @@ class FakeDriver(driver.ComputeDriver):
         except KeyError:
             pass
         return True
+
+    def attach_interface(self, instance, image_meta, network_info):
+        for (network, mapping) in network_info:
+            if mapping['vif_uuid'] in self._interfaces:
+                raise exception.InterfaceAttachFailed('duplicate')
+            self._interfaces[mapping['vif_uuid']] = mapping
+
+    def detach_interface(self, instance, network_info):
+        for (network, mapping) in network_info:
+            try:
+                del self._interfaces[mapping['vif_uuid']]
+            except KeyError:
+                raise exception.InterfaceDetachFailed('not attached')
 
     def get_info(self, instance):
         if instance['name'] not in self.instances:
