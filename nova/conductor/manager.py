@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -47,7 +48,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.41'
+    RPC_API_VERSION = '1.42'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -174,6 +175,11 @@ class ConductorManager(manager.SchedulerDependentManager):
     def aggregate_metadata_delete(self, context, aggregate, key):
         self.db.aggregate_metadata_delete(context.elevated(),
                                           aggregate['id'], key)
+
+    def aggregate_metadata_get_by_host(self, context, host,
+                                       key='availability_zone'):
+        result = self.db.aggregate_metadata_get_by_host(context, host, key)
+        return jsonutils.to_primitive(result)
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in=None, bw_out=None,
@@ -384,3 +390,19 @@ class ConductorManager(manager.SchedulerDependentManager):
 
     def quota_rollback(self, context, reservations):
         quota.QUOTAS.rollback(context, reservations)
+
+    def get_ec2_ids(self, context, instance):
+        ec2_ids = {}
+
+        ec2_ids['instance-id'] = ec2utils.id_to_ec2_inst_id(instance['uuid'])
+        ec2_ids['ami-id'] = ec2utils.glance_id_to_ec2_id(context,
+                                                         instance['image_ref'])
+        for image_type in ['kernel', 'ramdisk']:
+            if '%s_id' % image_type in instance:
+                image_id = instance['%s_id' % image_type]
+                ec2_image_type = ec2utils.image_type(image_type)
+                ec2_id = ec2utils.glance_id_to_ec2_id(context, image_id,
+                                                      ec2_image_type)
+                ec2_ids['%s-id' % image_type] = ec2_id
+
+        return ec2_ids

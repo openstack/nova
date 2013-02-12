@@ -16,6 +16,7 @@
 
 import mox
 
+from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -240,6 +241,15 @@ class _BaseTestCase(object):
         result = self.conductor.aggregate_metadata_delete(self.context,
                                                        aggregate,
                                                        'fake')
+
+    def test_aggregate_metadata_get_by_host(self):
+        self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')
+        db.aggregate_metadata_get_by_host(self.context, 'host',
+                                          'key').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.aggregate_metadata_get_by_host(self.context,
+                                                               'host', 'key')
+        self.assertEqual(result, 'result')
 
     def test_bw_usage_update(self):
         self.mox.StubOutWithMock(db, 'bw_usage_update')
@@ -536,6 +546,39 @@ class _BaseTestCase(object):
         quota.QUOTAS.rollback(self.context, 'reservations')
         self.mox.ReplayAll()
         self.conductor.quota_rollback(self.context, 'reservations')
+
+    def test_get_ec2_ids(self):
+        expected = {
+            'instance-id': 'ec2-inst-id',
+            'ami-id': 'ec2-ami-id',
+            'kernel-id': 'ami-kernel-ec2-kernelid',
+            'ramdisk-id': 'ami-ramdisk-ec2-ramdiskid',
+            }
+        inst = {
+            'uuid': 'fake-uuid',
+            'kernel_id': 'ec2-kernelid',
+            'ramdisk_id': 'ec2-ramdiskid',
+            'image_ref': 'fake-image',
+            }
+        self.mox.StubOutWithMock(ec2utils, 'id_to_ec2_inst_id')
+        self.mox.StubOutWithMock(ec2utils, 'glance_id_to_ec2_id')
+        self.mox.StubOutWithMock(ec2utils, 'image_type')
+
+        ec2utils.id_to_ec2_inst_id(inst['uuid']).AndReturn(
+            expected['instance-id'])
+        ec2utils.glance_id_to_ec2_id(self.context,
+                                     inst['image_ref']).AndReturn(
+            expected['ami-id'])
+        for image_type in ['kernel', 'ramdisk']:
+            image_id = inst['%s_id' % image_type]
+            ec2utils.image_type(image_type).AndReturn('ami-' + image_type)
+            ec2utils.glance_id_to_ec2_id(self.context, image_id,
+                                         'ami-' + image_type).AndReturn(
+                'ami-%s-ec2-%sid' % (image_type, image_type))
+
+        self.mox.ReplayAll()
+        result = self.conductor.get_ec2_ids(self.context, inst)
+        self.assertEqual(result, expected)
 
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):

@@ -26,8 +26,8 @@ import posixpath
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
 from nova import block_device
+from nova import conductor
 from nova import context
-from nova import db
 from nova import network
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
@@ -83,7 +83,8 @@ class InvalidMetadataPath(Exception):
 class InstanceMetadata():
     """Instance metadata."""
 
-    def __init__(self, instance, address=None, content=[], extra_md=None):
+    def __init__(self, instance, address=None, content=[], extra_md=None,
+                 conductor_api=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -95,39 +96,32 @@ class InstanceMetadata():
         self.instance = instance
         self.extra_md = extra_md
 
+        if conductor_api:
+            self.conductor_api = conductor_api
+        else:
+            self.conductor_api = conductor.API()
+
         ctxt = context.get_admin_context()
 
-        services = db.service_get_all_by_host(ctxt.elevated(),
-                instance['host'])
+        capi = self.conductor_api
+        services = capi.service_get_all_by_host(ctxt.elevated(),
+                                                instance['host'])
         self.availability_zone = ec2utils.get_availability_zone_by_host(
-                services, instance['host'])
+                services, instance['host'], capi)
 
         self.ip_info = ec2utils.get_ip_info_for_instance(ctxt, instance)
 
-        self.security_groups = db.security_group_get_by_instance(ctxt,
-                                                            instance['id'])
+        self.security_groups = capi.security_group_get_by_instance(ctxt,
+                                                              instance)
 
-        self.mappings = _format_instance_mapping(ctxt, instance)
+        self.mappings = _format_instance_mapping(capi, ctxt, instance)
 
         if instance.get('user_data', None) is not None:
             self.userdata_raw = base64.b64decode(instance['user_data'])
         else:
             self.userdata_raw = None
 
-        self.ec2_ids = {}
-
-        self.ec2_ids['instance-id'] = ec2utils.id_to_ec2_inst_id(
-            instance['uuid'])
-        self.ec2_ids['ami-id'] = ec2utils.glance_id_to_ec2_id(ctxt,
-            instance['image_ref'])
-
-        for image_type in ['kernel', 'ramdisk']:
-            if self.instance.get('%s_id' % image_type):
-                image_id = self.instance['%s_id' % image_type]
-                ec2_image_type = ec2utils.image_type(image_type)
-                ec2_id = ec2utils.glance_id_to_ec2_id(ctxt, image_id,
-                                                      ec2_image_type)
-                self.ec2_ids['%s-id' % image_type] = ec2_id
+        self.ec2_ids = capi.get_ec2_ids(ctxt, instance)
 
         self.address = address
 
@@ -404,23 +398,26 @@ class InstanceMetadata():
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 
-def get_metadata_by_address(address):
+def get_metadata_by_address(conductor_api, address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
 
-    return get_metadata_by_instance_id(fixed_ip['instance_uuid'],
+    return get_metadata_by_instance_id(conductor_api,
+                                       fixed_ip['instance_uuid'],
                                        address,
                                        ctxt)
 
 
-def get_metadata_by_instance_id(instance_id, address, ctxt=None):
+def get_metadata_by_instance_id(conductor_api, instance_id, address,
+                                ctxt=None):
     ctxt = ctxt or context.get_admin_context()
-    instance = db.instance_get_by_uuid(ctxt, instance_id)
+    instance = conductor_api.instance_get_by_uuid(ctxt, instance_id)
     return InstanceMetadata(instance, address)
 
 
-def _format_instance_mapping(ctxt, instance):
-    bdms = db.block_device_mapping_get_all_by_instance(ctxt, instance['uuid'])
+def _format_instance_mapping(conductor_api, ctxt, instance):
+    bdms = conductor_api.block_device_mapping_get_all_by_instance(
+               ctxt, instance)
     return block_device.instance_block_mapping(instance, bdms)
 
 
