@@ -25,17 +25,19 @@ from nova import db
 from nova.openstack.common.db.sqlalchemy import session
 
 
-# Just to get CONF values
-from nova.db.mysqldb import connection
-from nova.db.mysqldb import api
-
 CONF = cfg.CONF
+CONF.import_opt('use_tpool', 'nova.db.mysqldb.api', group='mysqldb')
+CONF.import_opt('username', 'nova.db.mysqldb.connection', group='mysqldb')
+CONF.import_opt('password', 'nova.db.mysqldb.connection', group='mysqldb')
+CONF.import_opt('hostname', 'nova.db.mysqldb.connection', group='mysqldb')
+CONF.import_opt('database', 'nova.db.mysqldb.connection', group='mysqldb')
+CONF.import_opt('port', 'nova.db.mysqldb.connection', group='mysqldb')
 
 # hack a config file arg onto argv
 sys.argv.insert(1, "--config-file=/etc/nova/nova.conf")
 config.parse_args(sys.argv)
 
-CONF.sql_max_pool_size = 40
+CONF.sql_max_pool_size = 50
 CONF.sql_max_overflow = 100
 CONF.backdoor_port = 0
 #CONF.sql_connection_debug = 100
@@ -52,8 +54,8 @@ CONF.set_override('username', connection_dict.username, group='mysqldb')
 CONF.set_override('hostname', connection_dict.host, group='mysqldb')
 if connection_dict.port is not None:
     CONF.set_override('port', connection_dict.port, group='mysqldb')
-CONF.set_override('use_tpool', True, group='mysqldb')
-CONF.db_backend='mysqldb'
+CONF.set_override('use_tpool', False, group='mysqldb')
+CONF.set_override('db_backend', 'mysqldb')
 
 eventlet_backdoor.initialize_if_enabled()
 
@@ -82,6 +84,9 @@ start_time = datetime.datetime.utcnow()
 
 import random
 random.seed()
+
+# Populate the cache
+db.IMPL._get_bw_usage()
 
 def bw_updater():
     for x in xrange(2000):

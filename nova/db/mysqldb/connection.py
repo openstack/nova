@@ -152,6 +152,21 @@ class _Connection(object):
         sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, columns, value_str)
         return self.execute(sql, args=values)
 
+    def _where(self, where):
+        where_str = ''
+        args = []
+        for column, operator, value in where:
+            if where_str:
+                where_str += ' AND '
+            where_str += '%s %s ' % (column, operator)
+            if isinstance(value, (list, tuple)):
+                where_str += '(%s)' % ','.join(['%s' for x in value])
+                args.extend(list(value))
+            else:
+                where_str += '%s'
+                args.append(value)
+        return where_str, args
+
     # TODO HMMM, do we want a big gnarly select() function or just write
     # fully-formed queries in mysqldb/api.py?
     """
@@ -168,62 +183,47 @@ class _Connection(object):
 
         print join_str
 
-        if where:
-            for column, operator, value in where:
-                if where_str:
-                    where_str += ' AND '
-                where_str += '%s %s ' % (column, operator)
-                where_str += '%s'
-
         sql = "SELECT * from %s" % table
-        if where_str:
-            sql += " WHERE %s" % where_str
-        print sql
+        args = None
+
+        if where:
+            where_str, where_args = self._where(where)
+            sql += ' WHERE ' + where_str
+            args = where_args
+
+        print sql, args
         raise  # TODO needs fixin'
     """
 
     def soft_delete(self, table, where):
-        where_str = ''
-        args = []
-        for column, operator, value in where:
-            if where_str:
-                where_str += ' AND '
-            where_str += '%s %s ' % (column, operator)
-            where_str += '%s'
-            args.append(value)
+        where_str, where_args = self._where(where)
 
         sql = ("UPDATE %s SET deleted=id, updated_at=updated_at, "
                "deleted_at='%s' WHERE %s" % (table, timeutils.utcnow(),
                      where_str))
         LOG.debug(sql)
-        LOG.debug(args)
-        rowcount = self.execute(sql, args=args)
+        LOG.debug(where_args)
+        rowcount = self.execute(sql, args=where_args)
         return rowcount 
 
     def update(self, table, value_map, where):
         update_str = ''
-        values = []
-        where_str = ''
+        args = []
 
         for column, value in value_map.iteritems():
             if update_str:
                 update_str += ', '
             update_str += column + '=%s'
-            values.append(value)
+            args.append(value)
 
-        for column, operator, value in where:
-            if where_str:
-                where_str += ' AND'
-            where_str += '%s %s ' % (column, operator)
-            where_str += '%s'
-            values.append(value)
+        where_str, where_args = self._where(where)
+        args.extend(where_args)
     
         sql = ("UPDATE %(table)s SET %(update_str)s WHERE %(where_str)s"
                 % locals())
         LOG.debug(sql)
-        LOG.debug(values)
-        rowcount = self.execute(sql, args=values)
-
+        LOG.debug(args)
+        rowcount = self.execute(sql, args=args)
         return rowcount
 
 

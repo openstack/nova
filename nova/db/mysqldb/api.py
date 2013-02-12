@@ -61,6 +61,34 @@ def _datestr(dt):
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
+class Constraint(object):
+    def __init__(self, conditions):
+        self.conditions = conditions
+
+    def get_where(self):
+        where = []
+        for key, condition in self.conditions.iteritems():
+            where.extend(condition.clauses(key))
+        return where
+
+
+class EqualityCondition(object):
+    def __init__(self, values):
+        self.values = values
+
+    def clauses(self, field):
+        return [(field, 'IN', self.values)]
+
+
+class InequalityCondition(object):
+
+    def __init__(self, values):
+        self.values = values
+
+    def clauses(self, field):
+        return [(field, 'NOT IN', self.values)]
+
+
 class API(object):
     def __init__(self):
         self.pool = connection.ConnectionPool()
@@ -68,6 +96,18 @@ class API(object):
     def __getattr__(self, key):
         # forward unimplemented method to sqlalchemy backend:
         return getattr(sqlalchemy_api, key)
+
+    @staticmethod
+    def constraint(**conditions):
+        return Constraint(conditions)
+
+    @staticmethod
+    def equal_any(*values):
+        return EqualityCondition(values)
+
+    @staticmethod
+    def not_equal(*values):
+        return InequalityCondition(values)
 
     @_tpool_enabled
     @dbutils.require_context
@@ -168,21 +208,18 @@ class API(object):
                         instance_uuid, conn)
             else:
                 raise exception.InvalidUUID(instance_uuid)
-
             if constraint:
-                # TODO
-                raise NotImplementedError(_("Constraints not implemented"))
-
-            where = (('uuid', '=', instance_uuid),)
-            conn.soft_delete('instances', where)
-
+                where = constraint.get_where()
+            else:
+                where = []
+            where.append(('uuid', '=', instance_uuid))
+            result = conn.soft_delete('instances', where)
+            if result == 0:
+                raise exception.ConstraintNotMet()
             where = (('instance_uuid', '=', instance_uuid),)
             conn.soft_delete('security_group_instance_association', where)
             conn.soft_delete('instance_info_caches', where)
-
-            instance = self._instance_get_by_uuid(context, instance_uuid, conn)
-
-        return instance
+        return instance_ref
 
     def _instance_update(self, context, instance_uuid, values,
                          copy_old_instance=False):
