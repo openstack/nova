@@ -189,6 +189,16 @@ class TestQuantumv2(test.TestCase):
                              'gateway_ip': '10.0.1.1',
                              'dns_nameservers': ['8.8.1.1', '8.8.1.2']}]
         self.subnet_data2 = []
+        self.subnet_data_n = [{'id': 'my_subid1',
+                               'cidr': '10.0.1.0/24',
+                               'network_id': 'my_netid1',
+                               'gateway_ip': '10.0.1.1',
+                               'dns_nameservers': ['8.8.1.1', '8.8.1.2']},
+                              {'id': 'my_subid2',
+                               'cidr': '20.0.1.0/24',
+                              'network_id': 'my_netid2',
+                              'gateway_ip': '20.0.1.1',
+                              'dns_nameservers': ['8.8.1.1', '8.8.1.2']}]
         self.subnet_data2.append({'id': 'my_subid2',
                                   'cidr': '10.0.2.0/24',
                                   'network_id': 'my_netid2',
@@ -1010,7 +1020,7 @@ class TestQuantumv2(test.TestCase):
         network_id = 'my_netid1'
         search_opts = {'network_id': network_id}
         self.moxed_client.list_subnets(
-            **search_opts).AndReturn({'subnets': self.subnet_data1})
+            **search_opts).AndReturn({'subnets': self.subnet_data_n})
 
         zone = 'compute:%s' % self.instance['availability_zone']
         search_opts = {'device_id': self.instance['uuid'],
