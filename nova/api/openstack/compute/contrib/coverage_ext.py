@@ -109,14 +109,13 @@ class CoverageController(object):
         return ports
 
     def _start_coverage_telnet(self, tn, service):
+        data_file = os.path.join(self.data_path,
+                                '.nova-coverage.%s' % str(service))
         tn.write('import sys\n')
         tn.write('from coverage import coverage\n')
-        if self.combine:
-            data_file = os.path.join(self.data_path,
-                                    '.nova-coverage.%s' % str(service))
-            tn.write("coverInst = coverage(data_file='%s')\n)" % data_file)
-        else:
-            tn.write('coverInst = coverage()\n')
+        tn.write("coverInst = coverage(data_file='%s') "
+                 "if 'coverInst' not in locals() "
+                 "else coverInst\n" % data_file)
         tn.write('coverInst.skipModules = sys.modules.keys()\n')
         tn.write("coverInst.start()\n")
         tn.write("print 'finished'\n")
