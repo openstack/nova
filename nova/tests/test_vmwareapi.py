@@ -28,6 +28,7 @@ from nova import exception
 from nova import test
 import nova.tests.image.fake
 from nova.tests import matchers
+from nova.tests import utils
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
@@ -54,25 +55,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn = driver.VMwareESXDriver(None, False)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
-        self.network_info = [({'bridge': 'fa0',
-                               'id': 0,
-                               'vlan': None,
-                               'bridge_interface': None,
-                               'injected': True},
-                          {'broadcast': '192.168.0.255',
-                           'id': 'foo',
-                           'dns': ['192.168.0.1'],
-                           'gateway': '192.168.0.1',
-                           'gateway_v6': 'dead:beef::1',
-                           'ip6s': [{'enabled': '1',
-                                     'ip': 'dead:beef::dcad:beff:feef:0',
-                                           'netmask': '64'}],
-                           'ips': [{'enabled': '1',
-                                    'ip': '192.168.0.100',
-                                    'netmask': '255.255.255.0'}],
-                           'label': 'fake',
-                           'mac': 'DE:AD:BE:EF:00:00',
-                           'rxtx_cap': 3})]
+        self.network_info = utils.get_test_network_info(legacy_model=False)
 
         self.image = {
             'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',

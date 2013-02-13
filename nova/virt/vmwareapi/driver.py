@@ -164,7 +164,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         pass
 
     def legacy_nwinfo(self):
-        return True
+        return False
 
     def list_instances(self):
         """List VM instances."""

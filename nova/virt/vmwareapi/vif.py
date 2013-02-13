@@ -36,10 +36,10 @@ vmwareapi_vif_opts = [
 CONF.register_opts(vmwareapi_vif_opts)
 
 
-def ensure_vlan_bridge(self, session, network, cluster=None):
+def ensure_vlan_bridge(self, session, vif, cluster=None):
     """Create a vlan and bridge unless they already exist."""
-    vlan_num = network['vlan']
-    bridge = network['bridge']
+    vlan_num = vif['network'].get_meta('vlan')
+    bridge = vif['network']['bridge']
     vlan_interface = CONF.vmwareapi_vlan_interface
 
     # Check if the vlan_interface physical network adapter exists on the
