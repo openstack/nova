@@ -20,6 +20,8 @@ MySQLdb models
 """
 import sys
 
+from nova.openstack.common import importutils
+
 _CUR_SCHEMA = {}
 _OUR_MODULE = sys.modules[__name__]
 _MODEL_MAP = {}
@@ -64,11 +66,7 @@ class Models(object):
     pass
 
 
-class SomeMixInClass(object):
-    pass
-
-
-def _create_models(schema, mixin_cls):
+def _create_models(schema):
     tbl_to_base_model = _table_to_base_model_mapping()
     version = schema['version']
     models_obj = type('Models', (object, ), {})
@@ -79,15 +77,26 @@ def _create_models(schema, mixin_cls):
         model_name = base_model.__model__
         vers_model_name = '%s_v%s' % (base_model.__model__, str(version))
         vers_model = type(vers_model_name, (base_model, ), {})
+        mixin_cls = _mixin_cls(model_name)
         model = type(model_name, (vers_model, mixin_cls),
                 {'__repo_version__': version,
                  'columns': table_info['columns']})
         setattr(models_obj, model_name, model)
     setattr(_OUR_MODULE, 'Models', models_obj)
 
+
+def _mixin_cls(model_name):
+    mod = sys.modules[__name__]
+    pkg = mod.__package__
+    mixin_str = ('%(pkg)s.%(name)s.Mixin' % {'pkg': pkg, 'name':
+        model_name.lower()})
+    print mixin_str
+    return importutils.import_class(mixin_str)
+
+
 def set_schema(schema):
     global _CUR_SCHEMA
-    _create_models(schema, SomeMixInClass)
+    _create_models(schema)
     print Models.Instance.columns
     _CUR_SCHEMA = schema
 

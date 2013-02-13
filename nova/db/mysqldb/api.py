@@ -33,7 +33,6 @@ from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
-from nova.openstack.common import uuidutils
 
 
 mysqldb_opts = [
@@ -191,175 +190,28 @@ class API(object):
     @_retry
     def instance_get_by_uuid(self, context, instance_uuid):
         with self.pool.get() as conn:
-            return self._instance_get_by_uuid(context, instance_uuid, conn)
+            return models.Models.Instance.get_by_uuid(context, instance_uuid, conn)
 
-    def _build_instance_get(self, context):
-        sql = """SELECT * from instances
-            LEFT OUTER JOIN instance_info_caches on
-                instance_info_caches.instance_uuid = instances.uuid
-            LEFT OUTER JOIN instance_metadata as metadata on
-                metadata.instance_uuid = instances.uuid and
-                metadata.deleted = 0
-            LEFT OUTER JOIN instance_system_metadata as system_metadata on
-                system_metadata.instance_uuid = instances.uuid and
-                system_metadata.deleted = 0
-            LEFT OUTER JOIN instance_types on
-                instances.instance_type_id = instance_types.id"""
-
-        if context.read_deleted == 'no':
-            sql += " AND instances.deleted = 0"
-        elif context.read_deleted == 'only':
-            sql += " AND instances.deleted > 0"
-        if not context.is_admin:
-            sql += " AND instances.project_id = %(project_id)s"
-
-        kwargs = {'project_id': context.project_id}
-
-        class Join(object):
-            def __init__(self, table, target):
-                self.table = table
-                self.target = target
-                self.use_list = True
-
-        joins = [Join('instance_info_caches', 'info_cache'),
-                 Join('instance_metadata', 'metadata'),
-                 Join('instance_system_metadata', 'system_metadata'),
-                 Join('instance_types', 'instance_type')]
-
-        return sql, kwargs, joins
 
     @dbutils.require_context
     @_tpool_enabled
     @_retry
     def instance_get_all(self, context, columns_to_join):
-        sql, kwargs, joins = self._build_instance_get(context)
         with self.pool.get() as conn:
-            cursor = conn.select(sql, kwargs)
-            rows = cursor.fetchall()
-            instances = transform.to_objects(rows, 'instances', joins)
-
-        return instances
-
-    def _instance_get_by_uuid(self, context, instance_uuid, conn):
-        sql, kwargs, joins = self._build_instance_get(context)
-        sql += " WHERE instances.uuid = %(uuid)s"
-        kwargs['uuid'] = instance_uuid
-
-        with self.pool.get() as conn:
-            cursor = conn.select(sql, kwargs)
-            rows = cursor.fetchall()
-            instances = transform.to_objects(rows, 'instances', joins)
-            if not instances:
-                raise exception.InstanceNotFound(instance_id=instance_uuid)
-
-            return instances[0]
-                
+            return models.Models.Instance.get_all(conn, context, columns_to_join)
 
     @dbutils.require_context
     @_tpool_enabled
     @_retry
     def instance_destroy(self, context, instance_uuid, constraint=None):
         with self.pool.get() as conn:
-            if uuidutils.is_uuid_like(instance_uuid):
-                instance_ref = self._instance_get_by_uuid(context,
-                        instance_uuid, conn)
-            else:
-                raise exception.InvalidUUID(instance_uuid)
-            if constraint:
-                where = constraint.get_where()
-            else:
-                where = []
-            where.append(('uuid', '=', instance_uuid))
-            result = conn.soft_delete('instances', where)
-            if result == 0:
-                raise exception.ConstraintNotMet()
-            where = (('instance_uuid', '=', instance_uuid),)
-            conn.soft_delete('security_group_instance_association', where)
-            conn.soft_delete('instance_info_caches', where)
-        return instance_ref
-
-    def _instance_metadata_update(self, context, instance_ref, metadata_type,
-                                  table, metadata, conn):
-        uuid = instance_ref['uuid']
-
-        for keyvalue in instance_ref[metadata_type]:
-            print "---"
-            print instance_ref[metadata_type]
-            key = keyvalue['key']
-            if key in metadata:
-                # update existing value:
-                values = {'key': key, 'value': metadata.pop(key)}
-                where = (
-                    ('key', '=', key),
-                    ('instance_uuid', '=', uuid)
-                )
-                conn.update(table, values, where)
-
-            elif key not in metadata:
-                # purge keys not being updated:
-                where = (
-                    ('key', '=', key),
-                    ('instance_uuid', '=', uuid)
-                )
-                conn.soft_delete(table, where)
-
-        # add new keys:
-        for key, value in metadata.iteritems():
-            values = {
-                'key': key,
-                'value': value,
-                'instance_uuid': uuid
-            }
-            conn.insert(table, values)
-
-
-    def _instance_update(self, context, instance_uuid, values,
-                         copy_old_instance=False):
-        with self.pool.get() as conn:
-            if not uuidutils.is_uuid_like(instance_uuid):
-                raise exception.InvalidUUID(instance_uuid)
-
-            instance_ref = self._instance_get_by_uuid(context, instance_uuid,
-                                                      conn)            
-            # confirm actual task state matched the expected value:
-            dbutils.check_task_state(instance_ref, values)
-
-            if copy_old_instance:
-                # just return the 1st instance_ref, we don't mutate the
-                # instance in this DB backend
-                old_instance_ref = instance_ref
-            else:
-                old_instance_ref = None
-
-            # TODO hostname validation
-
-            metadata = values.get('metadata')
-            if metadata is not None:
-                self._instance_metadata_update(context, instance_ref,
-                        'metadata', 'instance_metadata',
-                        values.pop('metadata'), conn)
-                
-            system_metadata = values.get('system_metadata')
-            if system_metadata is not None:
-                self._instance_metadata_update(context, instance_ref,
-                        'system_metadata', 'instance_system_metadata',
-                        values.pop('system_metadata'), conn)
-
-            # update the instance itself:
-            if len(values) > 0:
-                where = (('uuid', '=', instance_uuid),)
-                cursor = conn.update('instances', values, where)
-                if cursor.rowcount != 1:
-                    raise exception.InstanceNotFound(instance_id=instance_uuid)
-
-            # get updated record
-            new_instance_ref = self._instance_get_by_uuid(context,
-                    instance_uuid, conn)
-            return old_instance_ref, new_instance_ref
+            return models.Models.Instance.destroy(conn, context, instance_uuid,
+                    constraint)
 
     @dbutils.require_context
     @_tpool_enabled
     @_retry
     def instance_update(self, context, instance_uuid, values):
-        instance_ref = self._instance_update(context, instance_uuid, values)[1]
-        return instance_ref
+        with self.pool.get() as conn:
+            return models.Models.Instance.update(conn, context, instance_uuid,
+                    values)

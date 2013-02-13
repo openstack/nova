@@ -214,7 +214,7 @@ class _Connection(object):
         LOG.debug(sql)
         LOG.debug(where_args)
         cursor = self.execute(sql, args=where_args)
-        return rowcount 
+        return cursor.rowcount 
 
     def update(self, table, value_map, where):
         update_str = ''
