@@ -48,13 +48,14 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.42'
+    RPC_API_VERSION = '1.43'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
         self.security_group_api = compute_api.SecurityGroupAPI()
         self._network_api = None
+        self._compute_api = None
         self.quotas = quota.QUOTAS
 
     @property
@@ -65,6 +66,12 @@ class ConductorManager(manager.SchedulerDependentManager):
         if self._network_api is None:
             self._network_api = network.API()
         return self._network_api
+
+    @property
+    def compute_api(self):
+        if self._compute_api is None:
+            self._compute_api = compute_api.API()
+        return self._compute_api
 
     def ping(self, context, arg):
         return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
@@ -406,3 +413,6 @@ class ConductorManager(manager.SchedulerDependentManager):
                 ec2_ids['%s-id' % image_type] = ec2_id
 
         return ec2_ids
+
+    def compute_stop(self, context, instance, do_cast=True):
+        self.compute_api.stop(context, instance, do_cast)

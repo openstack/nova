@@ -79,6 +79,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                  instance_floating_address_get_all, quota_commit,
                  quota_rollback
     1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
+    1.43 - Added compute_stop
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -420,3 +421,9 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         msg = self.make_msg('get_ec2_ids', instance=instance_p)
         return self.call(context, msg, version='1.42')
+
+    def compute_stop(self, context, instance, do_cast=True):
+        instance_p = jsonutils.to_primitive(instance)
+        msg = self.make_msg('compute_stop', instance=instance_p,
+                            do_cast=do_cast)
+        return self.call(context, msg, version='1.43')

@@ -328,6 +328,9 @@ class LocalAPI(object):
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
 
+    def compute_stop(self, context, instance, do_cast=True):
+        return self._manager.compute_stop(context, instance, do_cast)
+
 
 class API(object):
     """Conductor API that does updates via RPC to the ConductorManager."""
@@ -654,3 +657,6 @@ class API(object):
 
     def get_ec2_ids(self, context, instance):
         return self.conductor_rpcapi.get_ec2_ids(context, instance)
+
+    def compute_stop(self, context, instance, do_cast=True):
+        return self.conductor_rpcapi.compute_stop(context, instance, do_cast)
