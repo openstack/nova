@@ -99,7 +99,11 @@ class _Connection(object):
     def _get_tables(self):
         cursor = self.execute('SHOW TABLES')
         rows = cursor.fetchall()
-        tables = dict([(r[0], self._get_columns(r[0])) for r in rows])
+        tables = {}
+        for row in rows:
+            table_name = row[0]
+            columns = self._get_columns(table_name)
+            tables[table_name] = dict(columns=columns)
         return tables
 
     def _get_migrate_version(self):

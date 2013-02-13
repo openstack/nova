@@ -72,7 +72,7 @@ def _create_models(schema, mixin_cls):
     tbl_to_base_model = _table_to_base_model_mapping()
     version = schema['version']
     models_obj = type('Models', (object, ), {})
-    for table in schema['tables']:
+    for table, table_info in schema['tables'].iteritems():
         base_model = tbl_to_base_model.get(table)
         if not base_model:
             continue
@@ -80,13 +80,15 @@ def _create_models(schema, mixin_cls):
         vers_model_name = '%s_v%s' % (base_model.__model__, str(version))
         vers_model = type(vers_model_name, (base_model, ), {})
         model = type(model_name, (vers_model, mixin_cls),
-                {'__repo_version__': version})
+                {'__repo_version__': version,
+                 'columns': table_info['columns']})
         setattr(models_obj, model_name, model)
     setattr(_OUR_MODULE, 'Models', models_obj)
 
 def set_schema(schema):
     global _CUR_SCHEMA
     _create_models(schema, SomeMixInClass)
+    print Models.Instance.columns
     _CUR_SCHEMA = schema
 
 
