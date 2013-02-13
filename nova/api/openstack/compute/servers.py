@@ -1202,7 +1202,7 @@ class Controller(wsgi.Controller):
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
         try:
-            flavor_ref = body["resize"]["flavorRef"]
+            flavor_ref = str(body["resize"]["flavorRef"])
             if not flavor_ref:
                 msg = _("Resize request has invalid 'flavorRef' attribute.")
                 raise exc.HTTPBadRequest(explanation=msg)
