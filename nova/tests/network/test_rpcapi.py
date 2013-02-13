@@ -178,10 +178,9 @@ class NetworkRpcAPITestCase(test.TestCase):
 
     def test_allocate_for_instance(self):
         self._test_network_api('allocate_for_instance', rpc_method='call',
-                instance_id='fake_id', instance_uuid='fake_uuid',
-                project_id='fake_id', host='fake_host',
+                instance_id='fake_id', project_id='fake_id', host='fake_host',
                 rxtx_factor='fake_factor', vpn=False, requested_networks={},
-                macs=set(), version="1.8")
+                macs=set(), version='1.9')
 
     def test_deallocate_for_instance(self):
         self._test_network_api('deallocate_for_instance', rpc_method='call',
@@ -189,12 +188,14 @@ class NetworkRpcAPITestCase(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         self._test_network_api('add_fixed_ip_to_instance', rpc_method='call',
-                instance_id='fake_id', host='fake_host', network_id='fake_id')
+                instance_id='fake_id', rxtx_factor='fake_factor',
+                host='fake_host', network_id='fake_id', version='1.9')
 
     def test_remove_fixed_ip_from_instance(self):
         self._test_network_api('remove_fixed_ip_from_instance',
-                rpc_method='call', instance_id='fake_id', host='fake_host',
-                address='fake_address')
+                rpc_method='call', instance_id='fake_id',
+                rxtx_factor='fake_factor', host='fake_host',
+                address='fake_address', version='1.9')
 
     def test_add_network_to_project(self):
         self._test_network_api('add_network_to_project', rpc_method='call',
@@ -202,9 +203,8 @@ class NetworkRpcAPITestCase(test.TestCase):
 
     def test_get_instance_nw_info(self):
         self._test_network_api('get_instance_nw_info', rpc_method='call',
-                instance_id='fake_id', instance_uuid='fake_uuid',
-                rxtx_factor='fake_factor', host='fake_host',
-                project_id='fake_id')
+                instance_id='fake_id', rxtx_factor='fake_factor',
+                host='fake_host', project_id='fake_id', version='1.9')
 
     def test_validate_networks(self):
         self._test_network_api('validate_networks', rpc_method='call',

@@ -28,6 +28,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common import uuidutils
 from nova import quota
 from nova import servicegroup
 
@@ -102,8 +103,9 @@ class FloatingIP(object):
 
         rpc.called by network_api
         """
-        instance_id = kwargs.get('instance_id')
-        instance_uuid = kwargs.get('instance_uuid')
+        instance_uuid = kwargs.get('instance_id')
+        if not uuidutils.is_uuid_like(instance_uuid):
+            instance_uuid = kwargs.get('instance_uuid')
         project_id = kwargs.get('project_id')
         requested_networks = kwargs.get('requested_networks')
         # call the next inherited class's allocate_for_instance()
@@ -143,17 +145,19 @@ class FloatingIP(object):
 
         rpc.called by network_api
         """
-        instance_id = kwargs.get('instance_id')
+        instance_uuid = kwargs.get('instance_id')
 
-        # NOTE(francois.charlier): in some cases the instance might be
-        # deleted before the IPs are released, so we need to get deleted
-        # instances too
-        instance = self.db.instance_get(
-                context.elevated(read_deleted='yes'), instance_id)
+        if not uuidutils.is_uuid_like(instance_uuid):
+            # NOTE(francois.charlier): in some cases the instance might be
+            # deleted before the IPs are released, so we need to get deleted
+            # instances too
+            instance = self.db.instance_get(
+                    context.elevated(read_deleted='yes'), instance_uuid)
+            instance_uuid = instance['uuid']
 
         try:
             fixed_ips = self.db.fixed_ip_get_by_instance(context,
-                                                         instance['uuid'])
+                                                         instance_uuid)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         # add to kwargs so we can pass to super to save a db lookup there

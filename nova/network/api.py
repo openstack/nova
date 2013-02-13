@@ -260,8 +260,7 @@ class API(base.Base):
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
-        args['instance_id'] = instance['id']
-        args['instance_uuid'] = instance['uuid']
+        args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
@@ -278,7 +277,7 @@ class API(base.Base):
         #             have db access so we do it on the other side of the
         #             rpc.
         args = {}
-        args['instance_id'] = instance['id']
+        args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         self.network_rpcapi.deallocate_for_instance(context, **args)
@@ -289,6 +288,7 @@ class API(base.Base):
                                  conductor_api=None):
         """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance['uuid'],
+                'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'network_id': network_id}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
@@ -300,6 +300,7 @@ class API(base.Base):
         """Removes a fixed ip from instance from specified network."""
 
         args = {'instance_id': instance['uuid'],
+                'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'address': address}
         self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
@@ -342,8 +343,7 @@ class API(base.Base):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
-        args = {'instance_id': instance['id'],
-                'instance_uuid': instance['uuid'],
+        args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}

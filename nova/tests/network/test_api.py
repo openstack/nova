@@ -74,9 +74,9 @@ class ApiTestCase(test.TestCase):
         macs = set(['ab:cd:ef:01:23:34'])
         self.mox.StubOutWithMock(
             self.network_api.network_rpcapi, "allocate_for_instance")
-        kwargs = dict(zip(['host', 'instance_id', 'instance_uuid',
-            'project_id', 'requested_networks', 'rxtx_factor', 'vpn', 'macs'],
-            itertools.repeat(mox.IgnoreArg())))
+        kwargs = dict(zip(['host', 'instance_id', 'project_id',
+                'requested_networks', 'rxtx_factor', 'vpn', 'macs'],
+                itertools.repeat(mox.IgnoreArg())))
         self.network_api.network_rpcapi.allocate_for_instance(
             mox.IgnoreArg(), **kwargs).AndReturn([])
         self.mox.ReplayAll()
