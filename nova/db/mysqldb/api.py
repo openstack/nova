@@ -173,12 +173,12 @@ class API(object):
         sql = """SELECT * from instances
             LEFT OUTER JOIN instance_info_caches on
                 instance_info_caches.instance_uuid = instances.uuid
-            LEFT OUTER JOIN instance_metadata on
-                instance_metadata.instance_uuid = %(uuid)s and
-                instance_metadata.deleted = 0
-            LEFT OUTER JOIN instance_system_metadata on
-                instance_system_metadata.instance_uuid = %(uuid)s and
-                instance_system_metadata.deleted = 0
+            LEFT OUTER JOIN instance_metadata as metadata on
+                metadata.instance_uuid = %(uuid)s and
+                metadata.deleted = 0
+            LEFT OUTER JOIN instance_system_metadata as system_metadata on
+                system_metadata.instance_uuid = %(uuid)s and
+                system_metadata.deleted = 0
             LEFT OUTER JOIN instance_types on
                 instances.instance_type_id = instance_types.id
             WHERE instances.uuid = %(uuid)s"""
@@ -192,12 +192,12 @@ class API(object):
         cursor = conn.cursor()
         cursor.execute(sql, args)
 
-        row = cursor.fetchone()
+        rows = cursor.fetchall()
 
-        if not row:
+        if not rows:
             raise exception.InstanceNotFound(instance_id=uuid)
 
-        return self._make_sqlalchemy_like_dict(row)
+        return self._make_sqlalchemy_like_dict(rows)
 
     @_tpool_enabled
     @dbutils.require_context
@@ -221,6 +221,42 @@ class API(object):
             conn.soft_delete('instance_info_caches', where)
         return instance_ref
 
+    def _instance_metadata_update(self, context, instance_ref, metadata_type,
+                                  table, metadata, conn):
+        uuid = instance_ref['uuid']
+
+        self._pretty_print(instance_ref)
+        for keyvalue in instance_ref[metadata_type]:
+            print "---"
+            print instance_ref[metadata_type]
+            key = keyvalue['key']
+            if key in metadata:
+                # update existing value:
+                values = {'key': key, 'value': metadata.pop(key)}
+                where = (
+                    ('key', '=', key),
+                    ('instance_uuid', '=', uuid)
+                )
+                conn.update(table, values, where)
+
+            elif key not in metadata:
+                # purge keys not being updated:
+                where = (
+                    ('key', '=', key),
+                    ('instance_uuid', '=', uuid)
+                )
+                conn.soft_delete(table, where)
+
+        # add new keys:
+        for key, value in metadata.iteritems():
+            values = {
+                'key': key,
+                'value': value,
+                'instance_uuid': uuid
+            }
+            conn.insert(table, values)
+
+
     def _instance_update(self, context, instance_uuid, values,
                          copy_old_instance=False):
         with self.pool.get() as conn:
@@ -229,30 +265,41 @@ class API(object):
 
             instance_ref = self._instance_get_by_uuid(context, instance_uuid,
                                                       conn)            
-
-            # TODO instance type extra specs
-
             # confirm actual task state matched the expected value:
             dbutils.check_task_state(instance_ref, values)
 
+            if copy_old_instance:
+                # just return the 1st instance_ref, we don't mutate the
+                # instance in this DB backend
+                old_instance_ref = instance_ref
+            else:
+                old_instance_ref = None
+
             # TODO hostname validation
 
-            # TODO update metadata
+            metadata = values.get('metadata')
+            if metadata is not None:
+                self._instance_metadata_update(context, instance_ref,
+                        'metadata', 'instance_metadata',
+                        values.pop('metadata'), conn)
+                
+            system_metadata = values.get('system_metadata')
+            if system_metadata is not None:
+                self._instance_metadata_update(context, instance_ref,
+                        'system_metadata', 'instance_system_metadata',
+                        values.pop('system_metadata'), conn)
 
-            # TODO update sys metadata
-
-            # TODO update inst type
-
-
-            where = (('uuid', '=', instance_uuid),)
-            rowcount = conn.update("instances", values, where)
-            if rowcount != 1:
-                raise exception.InstanceNotFound(instance_id=instance_uuid)
+            # update the instance itself:
+            if len(values) > 0:
+                where = (('uuid', '=', instance_uuid),)
+                rowcount = conn.update('instances', values, where)
+                if rowcount != 1:
+                    raise exception.InstanceNotFound(instance_id=instance_uuid)
 
             # get updated record
             new_instance_ref = self._instance_get_by_uuid(context,
                     instance_uuid, conn)
-            return instance_ref, new_instance_ref
+            return old_instance_ref, new_instance_ref
 
     @_tpool_enabled
     @dbutils.require_context
@@ -260,24 +307,47 @@ class API(object):
         instance_ref = self._instance_update(context, instance_uuid, values)[1]
         return instance_ref
 
-    def _make_sqlalchemy_like_dict(self, row):
+    def _make_sqlalchemy_like_dict(self, rows):
         """Make a SQLAlchemy-like dictionary, where each join gets namespaced as
-        dictionary within the top-level dictionary.
+        list within the top-level dictionary. (lists are the default sqlalchemy
+        type)
         """
         result = {}
-        for key, value in row.iteritems():
-            # find keys like join_table_name.column and dump them into a
-            # sub-dict
-            tok = key.split(".")
-            if len(tok) == 2:
-                tbl, col = tok
-                join_dict = result.setdefault(tbl, {})
-                join_dict[col] = value
-            else:
-                result[key] = value
-            
+        joins = {}
+        # this assumes we're converting the set of rows to a single "model"
+        # object
+        for row in rows:
+            rowjoins = {}
+
+            for key, value in row.iteritems():
+                #print "sa to dict: %s = %s" % (key, value)
+                tok = key.split(".")
+                if len(tok) == 2:
+                    join_tbl, col = tok
+                    rowjoins.setdefault(join_tbl, {})
+
+                    rowjoins[join_tbl][col] = value
+                else:
+                    result[key] = value
+
+            # organize the joins by id to easily eliminate duplicates:
+            for join_tbl, join in rowjoins.iteritems():
+                join_id = join['id']
+                join_id_map = joins.setdefault(join_tbl, {})
+                join_id_map[join_id] = join                
+                
+        #self._pretty_print(joins)
+
+        # now convert joins to be lists in the result:
+        for join_tbl, join_id_map in joins.iteritems():
+            join_tbl_list = result.setdefault(join_tbl, [])
+            for join in join_id_map.values():
+                if join['id'] is not None:
+                    join_tbl_list.append(join)
+
+        #self._pretty_print(result)
         return result
 
-    def _pretty_print_result(self, result):
+    def _pretty_print(self, result):
         import pprint
         pprint.pprint(result, indent=4)

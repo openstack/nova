@@ -158,7 +158,7 @@ class _Connection(object):
         for column, operator, value in where:
             if where_str:
                 where_str += ' AND '
-            where_str += '%s %s ' % (column, operator)
+            where_str += '`%s` %s ' % (column, operator)
             if isinstance(value, (list, tuple)):
                 where_str += '(%s)' % ','.join(['%s' for x in value])
                 args.extend(list(value))
