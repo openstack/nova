@@ -17,11 +17,11 @@
 
 """MySQdb connection handling."""
 
+import sys
 import time
 
 import MySQLdb
 from MySQLdb.constants import CLIENT as mysql_client_constants
-from MySQLdb import cursors
 
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
@@ -55,6 +55,11 @@ CONF.register_opts(mysqldb_opts, group='mysqldb')
 LOG = logging.getLogger(__name__)
 
 
+class RetryableException(BaseException):
+    def __init__(self, *args, **kwargs):
+        super(RetryableException, self).__init__(*args, **kwargs)
+
+
 def _create_connection():
     conn_args = {
         'db': CONF.mysqldb.database,
@@ -69,17 +74,18 @@ def _create_connection():
 class _Connection(object):
     def __init__(self, pool):
         self._conn = None
-        self.ensure_connection()
+        self._ensure_connection()
         self.pool = pool
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc, value, tb):
-        if exc:
-            self._conn.rollback()
-        else:
-            self._conn.commit()
+        if self._conn:
+            if exc:
+                self._conn.rollback()
+            else:
+                self._conn.commit()
         self.pool.put(self)
 
     def cursor(self):
@@ -93,14 +99,34 @@ class _Connection(object):
     def _get_tables(self):
         cursor = self.execute('SHOW TABLES')
         rows = cursor.fetchall()
-        tables = dict([(r[0], self._get_columns(r[0])) for r in rows])
+        tables = {}
+        for row in rows:
+            table_name = row[0]
+            columns = self._get_columns(table_name)
+            tables[table_name] = dict(columns=columns)
         return tables
 
-    def _init_connection(self):
-        # Get tables
-        self.tables = self._get_tables()
+    def _get_migrate_version(self):
+        cursor = self.execute('SELECT version from migrate_version WHERE '
+                              'repository_id = %s',
+                              (CONF.mysqldb.database, ))
+        rows = cursor.fetchall()
+        if not rows:
+            # FIXME(comstud)
+            raise SystemError
+        return rows[0][0]
 
-    def ensure_connection(self):
+    def get_schema(self):
+        with self._conn:
+            tables = self._get_tables()
+            version = self._get_migrate_version()
+            return {'version': version,
+                    'tables': tables}
+
+    def _init_connection(self):
+        pass
+
+    def _ensure_connection(self):
         if self._conn:
             return self._conn
         conn_args = {
@@ -131,20 +157,20 @@ class _Connection(object):
             LOG.info(info_str % conn_args)
             return self._conn
 
-
     def execute(self, query, args=None):
-        while True:
-            conn = self.ensure_connection()
+        conn = self._ensure_connection()
+        try:
+            cursor = self.cursor()
+            cursor.execute(query, args)
+            return cursor
+        except IOError:
+            exc = sys.exc_info()
             try:
-                cursor = self.cursor()
-                cursor.execute(query, args)
-                return cursor
-            except IOError:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-                self.conn = None
+                conn.close()
+            except Exception:
+                pass
+            self._conn = None
+            raise RetryableException(exc[1])
 
     def insert(self, table, value_map):
         columns = ''

@@ -19,10 +19,12 @@
 Translate SQL result rows into dictionaries that Nova code is used to working
 with.
 """
+from nova.db.mysqldb import models
 
 
-def to_objects(rows, table, joins, tables):
+def to_objects(rows, table, joins):
     """Return a list of dictionaries representing the objects returned."""
+    tables = models.get_schema()['tables']
     result_dict = {}
 
     for row in rows:
@@ -36,7 +38,7 @@ def _xform_row(result_dict, table, row, joins, tables):
 
     # All of the columns for our table come first.
     this_obj = {}
-    for column in tables[table]:
+    for column in tables[table]['columns']:
         this_obj[column] = col_iter.next()
 
     main_obj = result_dict.setdefault(this_obj['id'], this_obj)
@@ -47,7 +49,7 @@ def _xform_row(result_dict, table, row, joins, tables):
     # or single objects below
     for join in joins:
         join_obj = {}
-        for column in tables[join.table]:
+        for column in tables[join.table]['columns']:
             join_obj[column] = col_iter.next()
         j2 = main_obj.setdefault(join.target, {})
 
