@@ -86,11 +86,13 @@ class _Connection(object):
         return self._conn.cursor()
 
     def _get_columns(self, name):
-        rows = self._execute('DESCRIBE %s' % name, None, True)
+        cursor = self.execute('DESCRIBE %s' % name)
+        rows = cursor.fetchall()
         return [r[0] for r in rows]
 
     def _get_tables(self):
-        rows = self._execute('SHOW TABLES', None, True)
+        cursor = self.execute('SHOW TABLES')
+        rows = cursor.fetchall()
         tables = dict([(r[0], self._get_columns(r[0])) for r in rows])
         return tables
 
@@ -130,31 +132,13 @@ class _Connection(object):
             return self._conn
 
 
-#    def __getattr__(self, key):
-#        if key is '_conn':
-#            return self._conn
-#        print "GETTING %s" % key
-#        attr = getattr(self._conn, key)
-#        return attr
-#        if not hasattr(method, '__call__'):
-#            return attr
-#        def _wrapper(*args, **kwargs):
-#            return self.ensure(attr, *args, **kwargs)
-#        _wrapper.__name__ = attr.__name__
-#        return _wrapper
-
-    def _execute(self, query, args, fetch):
-        cursor = self.cursor()
-        result = cursor.execute(query, args)
-        if fetch:
-            return cursor.fetchall()
-        return result
-
-    def execute(self, query, args=None, fetch=False):
+    def execute(self, query, args=None):
         while True:
             conn = self.ensure_connection()
             try:
-                return self._execute(query, args, fetch)
+                cursor = self.cursor()
+                cursor.execute(query, args)
+                return cursor
             except IOError:
                 try:
                     conn.close()
@@ -192,19 +176,8 @@ class _Connection(object):
                 args.append(value)
         return where_str, args
 
-    def select(self, table, joins=None, where=None):
-        str_ = 'SELECT * from %s self' % table
-        args = []
-        if joins:
-            for join in joins:
-                j_str, j_args = join.to_mysql()
-                str_ += '\n  ' + j_str
-                args.extend(j_args)
-        if where:
-            where_str, where_args = where.to_mysql()
-            str_ += '\n  ' + where_str
-            args.extend(where_args)
-        return self.execute(str_, args=args, fetch=True)
+    def select(self, sql, args):
+        return self.execute(sql, args)
 
     def soft_delete(self, table, where):
         where_str, where_args = self._where(where)
@@ -214,7 +187,7 @@ class _Connection(object):
                      where_str))
         LOG.debug(sql)
         LOG.debug(where_args)
-        rowcount = self.execute(sql, args=where_args)
+        cursor = self.execute(sql, args=where_args)
         return rowcount 
 
     def update(self, table, value_map, where):
@@ -234,8 +207,8 @@ class _Connection(object):
                 % locals())
         LOG.debug(sql)
         LOG.debug(args)
-        rowcount = self.execute(sql, args=args)
-        return rowcount
+        cursor = self.execute(sql, args=args)
+        return cursor
 
 
 class ConnectionPool(object):

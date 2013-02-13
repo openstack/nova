@@ -25,8 +25,7 @@ from eventlet import tpool
 
 from nova.db import utils as dbutils
 from nova.db.mysqldb import connection
-from nova.db.mysqldb import models
-from nova.db.mysqldb import sql
+from nova.db.mysqldb import transform
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common import cfg
@@ -153,28 +152,66 @@ class API(object):
         with self.pool.get() as conn:
             return self._instance_get_by_uuid(context, instance_uuid, conn)
 
+    def _build_instance_get(self, context):
+        sql = """SELECT * from instances
+            LEFT OUTER JOIN instance_info_caches on
+                instance_info_caches.instance_uuid = instances.uuid
+            LEFT OUTER JOIN instance_metadata as metadata on
+                metadata.instance_uuid = instances.uuid and
+                metadata.deleted = 0
+            LEFT OUTER JOIN instance_system_metadata as system_metadata on
+                system_metadata.instance_uuid = instances.uuid and
+                system_metadata.deleted = 0
+            LEFT OUTER JOIN instance_types on
+                instances.instance_type_id = instance_types.id"""
+
+        if context.read_deleted == 'no':
+            sql += " AND instances.deleted = 0"
+        elif context.read_deleted == 'only':
+            sql += " AND instances.deleted > 0"
+        if not context.is_admin:
+            sql += " AND instances.project_id = %(project_id)s"
+
+        kwargs = {'project_id': context.project_id}
+
+        class Join(object):
+            def __init__(self, table, target):
+                self.table = table
+                self.target = target
+                self.use_list = True
+
+        joins = [Join('instance_info_caches', 'info_cache'),
+                 Join('instance_metadata', 'metadata'),
+                 Join('instance_system_metadata', 'system_metadata'),
+                 Join('instance_types', 'instance_type')]
+
+        return sql, kwargs, joins
+
     @_tpool_enabled
     def instance_get_all(self, context, columns_to_join):
-        # FIXME: implement context checking.
-        clauses = [sql.EQ(sql.Literal('self.deleted'), 0)]
+        sql, kwargs, joins = self._build_instance_get(context)
         with self.pool.get() as conn:
-            return models.Instance.select(conn, clauses=clauses)
+            cursor = conn.select(sql, kwargs)
+            rows = cursor.fetchall()
+            instances = transform.to_objects(rows, 'instances', joins, conn.tables)
+
+        return instances
 
     def _instance_get_by_uuid(self, context, instance_uuid, conn):
+        sql, kwargs, joins = self._build_instance_get(context)
+        sql += " AND instances.uuid = %(uuid)s"
+        kwargs['uuid'] = instance_uuid
 
-        clauses = [sql.EQ(sql.Literal('self.uuid'), instance_uuid)]
-        if context.read_deleted == 'no':
-            clauses.append(sql.EQ(sql.Literal('self.deleted'), 0))
-        elif context.read_deleted == 'only':
-            clauses.append(sql.GT(sql.Literal('self.deleted'), 0))
-        if not context.is_admin:
-            clauses.append(sql.GT(sql.Literal('self.project_id'),
-                context.project_id))
         with self.pool.get() as conn:
-            instance = models.Instance.select(conn, clauses=clauses)
-            if not instance:
+            cursor = conn.select(sql, kwargs)
+            rows = cursor.fetchall()
+            instances = transform.to_objects(rows, 'instances', joins, conn.tables)
+
+            if not instances:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
-            return instance[0]
+
+            return instances[0]
+                
 
     @_tpool_enabled
     @dbutils.require_context
@@ -202,7 +239,6 @@ class API(object):
                                   table, metadata, conn):
         uuid = instance_ref['uuid']
 
-        self._pretty_print(instance_ref)
         for keyvalue in instance_ref[metadata_type]:
             print "---"
             print instance_ref[metadata_type]
@@ -269,8 +305,8 @@ class API(object):
             # update the instance itself:
             if len(values) > 0:
                 where = (('uuid', '=', instance_uuid),)
-                rowcount = conn.update('instances', values, where)
-                if rowcount != 1:
+                cursor = conn.update('instances', values, where)
+                if cursor.rowcount != 1:
                     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
             # get updated record
