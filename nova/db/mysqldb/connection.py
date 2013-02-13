@@ -83,7 +83,20 @@ class _Connection(object):
         self.pool.put(self)
 
     def cursor(self):
-        return self._conn.cursor(cursorclass=cursors.DictCursor)
+        return self._conn.cursor()
+
+    def _get_columns(self, name):
+        rows = self._execute('DESCRIBE %s' % name, None, True)
+        return [r[0] for r in rows]
+
+    def _get_tables(self):
+        rows = self._execute('SHOW TABLES', None, True)
+        tables = dict([(r[0], self._get_columns(r[0])) for r in rows])
+        return tables
+
+    def _init_connection(self):
+        # Get tables
+        self.tables = self._get_tables()
 
     def ensure_connection(self):
         if self._conn:
@@ -101,15 +114,21 @@ class _Connection(object):
                              "'%(host)s:%(port)s'")
                 LOG.info(info_str % conn_args)
                 self._conn = _create_connection()
-                return self._conn
+                self._init_connection()
             except IOError:
+                if self._conn is not None:
+                    self._conn.close()
+                    self._conn = None
                 err_str = _("Error connecting to mysql server "
                             "'%(host)s:%(port)s'")
                 LOG.exception(err_str % conn_args)
+                # TODO(comstud): Make configurable and backoff.
+                time.sleep(1)
+                continue
             info_str = _("Connected to to mysql server '%(host)s:%(port)s'")
             LOG.info(info_str % conn_args)
-            # TODO(comstud): Make configurable and backoff.
-            time.sleep(1)
+            return self._conn
+
 
 #    def __getattr__(self, key):
 #        if key is '_conn':
@@ -124,12 +143,18 @@ class _Connection(object):
 #        _wrapper.__name__ = attr.__name__
 #        return _wrapper
 
-    def execute(self, query, args=None):
+    def _execute(self, query, args, fetch):
+        cursor = self.cursor()
+        result = cursor.execute(query, args)
+        if fetch:
+            return cursor.fetchall()
+        return result
+
+    def execute(self, query, args=None, fetch=False):
         while True:
             conn = self.ensure_connection()
             try:
-                cursor = self.cursor()
-                return cursor.execute(query, args)
+                return self._execute(query, args, fetch)
             except IOError:
                 try:
                     conn.close()
@@ -167,33 +192,19 @@ class _Connection(object):
                 args.append(value)
         return where_str, args
 
-    # TODO HMMM, do we want a big gnarly select() function or just write
-    # fully-formed queries in mysqldb/api.py?
-    """
     def select(self, table, joins=None, where=None):
-        join_str = ''
-        where_str = ''
-
-        for join in joins:
-            type_ = join.get('type', 'LEFT OUTER JOIN')
-            table = join['table']
-            on = join['on']  # TODO could be prettier?
-            join_str += ' %s %s on\n' % (type_, table)
-            join_str += '  %s\n' % on
-
-        print join_str
-
-        sql = "SELECT * from %s" % table
-        args = None
-
+        str_ = 'SELECT * from %s self' % table
+        args = []
+        if joins:
+            for join in joins:
+                j_str, j_args = join.to_mysql()
+                str_ += '\n  ' + j_str
+                args.extend(j_args)
         if where:
-            where_str, where_args = self._where(where)
-            sql += ' WHERE ' + where_str
-            args = where_args
-
-        print sql, args
-        raise  # TODO needs fixin'
-    """
+            where_str, where_args = where.to_mysql()
+            str_ += '\n  ' + where_str
+            args.extend(where_args)
+        return self.execute(str_, args=args, fetch=True)
 
     def soft_delete(self, table, where):
         where_str, where_args = self._where(where)
