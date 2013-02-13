@@ -46,8 +46,8 @@ these objects be simple dictionaries.
 from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova import utils
 
 
 db_opts = [
@@ -68,8 +68,32 @@ db_opts = [
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
 
-IMPL = utils.LazyPluggable('db_backend',
-                           sqlalchemy='nova.db.sqlalchemy.api')
+
+class DBAPI(object):
+    known_backends = {'sqlalchemy': 'nova.db.sqlalchemy.api',
+                      'mysqldb': 'nova.db.mysqldb.api'}
+
+    def __init__(self):
+        self.__backend = None
+
+    def __get_backend(self):
+        if self.__backend:
+            return self.__backend
+        backend_name = CONF.db_backend
+        backend_path = self.known_backends.get(backend_name,
+                                               backend_name)
+        backend_mod = importutils.import_module(backend_path)
+        try:
+            self.__backend = backend_mod.API()
+        except AttributeError:
+            self.__backend = backend_mod
+        return self.__backend
+
+    def __getattr__(self, key):
+        return getattr(self.__get_backend(), key)
+
+
+IMPL = DBAPI()
 LOG = logging.getLogger(__name__)
 
 

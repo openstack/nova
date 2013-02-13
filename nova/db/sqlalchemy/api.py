@@ -39,6 +39,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova.db.sqlalchemy import models
+from nova.db import utils as dbutils
 from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
@@ -66,20 +67,9 @@ LOG = logging.getLogger(__name__)
 get_session = db_session.get_session
 
 
-def is_user_context(context):
-    """Indicates if the request context is a normal user."""
-    if not context:
-        return False
-    if context.is_admin:
-        return False
-    if not context.user_id or not context.project_id:
-        return False
-    return True
-
-
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
-    if is_user_context(context):
+    if dbutils.is_user_context(context):
         if not context.project_id:
             raise exception.NotAuthorized()
         elif context.project_id != project_id:
@@ -88,7 +78,7 @@ def authorize_project_context(context, project_id):
 
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
-    if is_user_context(context):
+    if dbutils.is_user_context(context):
         if not context.user_id:
             raise exception.NotAuthorized()
         elif context.user_id != user_id:
@@ -97,7 +87,7 @@ def authorize_user_context(context, user_id):
 
 def authorize_quota_class_context(context, class_name):
     """Ensures a request has permission to access the given quota class."""
-    if is_user_context(context):
+    if dbutils.is_user_context(context):
         if not context.quota_class:
             raise exception.NotAuthorized()
         elif context.quota_class != class_name:
@@ -115,25 +105,6 @@ def require_admin_context(f):
         context = args[0]
         if not context.is_admin:
             raise exception.AdminRequired()
-        return f(*args, **kwargs)
-    return wrapper
-
-
-def require_context(f):
-    """Decorator to require *any* user or admin context.
-
-    This does no authorization for user or project access matching, see
-    :py:func:`authorize_project_context` and
-    :py:func:`authorize_user_context`.
-
-    The first argument to the wrapped function must be the context.
-
-    """
-
-    def wrapper(*args, **kwargs):
-        context = args[0]
-        if not context.is_admin and not is_user_context(context):
-            raise exception.NotAuthorized()
         return f(*args, **kwargs)
     return wrapper
 
@@ -207,7 +178,7 @@ def model_query(context, model, *args, **kwargs):
         raise Exception(_("Unrecognized read_deleted value '%s'")
                             % read_deleted)
 
-    if is_user_context(context) and project_only:
+    if dbutils.is_user_context(context) and project_only:
         if project_only == 'allow_none':
             query = query.\
                 filter(or_(base_model.project_id == context.project_id,
@@ -626,7 +597,7 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get(context, id):
     result = model_query(context, models.FloatingIp, project_only=True).\
                  filter_by(id=id).\
@@ -639,7 +610,7 @@ def floating_ip_get(context, id):
     return result
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get_pools(context):
     pools = []
     for result in model_query(context, models.FloatingIp.pool,
@@ -648,7 +619,7 @@ def floating_ip_get_pools(context):
     return pools
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_allocate_address(context, project_id, pool):
     authorize_project_context(context, project_id)
     session = get_session()
@@ -669,7 +640,7 @@ def floating_ip_allocate_address(context, project_id, pool):
     return floating_ip_ref['address']
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_bulk_create(context, ips):
     existing_ips = {}
     for floating in _floating_ip_get_all(context).all():
@@ -705,7 +676,7 @@ def _ip_range_splitter(ips, block_size=256):
         yield out
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_bulk_destroy(context, ips):
     session = get_session()
     with session.begin():
@@ -715,7 +686,7 @@ def floating_ip_bulk_destroy(context, ips):
                 soft_delete(synchronize_session='fetch')
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_create(context, values, session=None):
     if not session:
         session = get_session()
@@ -739,7 +710,7 @@ def floating_ip_create(context, values, session=None):
     return floating_ip_ref['address']
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_count_by_project(context, project_id, session=None):
     authorize_project_context(context, project_id)
     # TODO(tr3buchet): why leave auto_assigned floating IPs out?
@@ -750,7 +721,7 @@ def floating_ip_count_by_project(context, project_id, session=None):
                    count()
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
@@ -770,7 +741,7 @@ def floating_ip_fixed_ip_associate(context, floating_address,
         return fixed_ip_ref
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_deallocate(context, address):
     model_query(context, models.FloatingIp).\
             filter_by(address=address).\
@@ -779,14 +750,14 @@ def floating_ip_deallocate(context, address):
                     'auto_assigned': False})
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_destroy(context, address):
     model_query(context, models.FloatingIp).\
             filter_by(address=address).\
             delete()
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
@@ -808,7 +779,7 @@ def floating_ip_disassociate(context, address):
     return fixed_ip_ref
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_set_auto_assigned(context, address):
     model_query(context, models.FloatingIp).\
             filter_by(address=address).\
@@ -838,7 +809,7 @@ def floating_ip_get_all_by_host(context, host):
     return floating_ip_refs
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
@@ -849,12 +820,12 @@ def floating_ip_get_all_by_project(context, project_id):
                          all()
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get_by_address(context, address):
     return _floating_ip_get_by_address(context, address)
 
 
-@require_context
+@dbutils.require_context
 def _floating_ip_get_by_address(context, address, session=None):
 
     # if address string is empty explicitly set it to None
@@ -871,13 +842,13 @@ def _floating_ip_get_by_address(context, address, session=None):
 
     # If the floating IP has a project ID set, check to make sure
     # the non-admin user has access.
-    if result.project_id and is_user_context(context):
+    if result.project_id and dbutils.is_user_context(context):
         authorize_project_context(context, result.project_id)
 
     return result
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get_by_fixed_address(context, fixed_address):
     return model_query(context, models.FloatingIp).\
                        outerjoin(models.FixedIp,
@@ -887,7 +858,7 @@ def floating_ip_get_by_fixed_address(context, fixed_address):
                        all()
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
     if not session:
         session = get_session()
@@ -897,7 +868,7 @@ def floating_ip_get_by_fixed_ip_id(context, fixed_ip_id, session=None):
                    all()
 
 
-@require_context
+@dbutils.require_context
 def floating_ip_update(context, address, values):
     session = get_session()
     with session.begin():
@@ -909,7 +880,7 @@ def floating_ip_update(context, address, values):
         floating_ip_ref.save(session=session)
 
 
-@require_context
+@dbutils.require_context
 def _dnsdomain_get(context, session, fqdomain):
     return model_query(context, models.DNSDomain,
                        session=session, read_deleted="no").\
@@ -918,7 +889,7 @@ def _dnsdomain_get(context, session, fqdomain):
                first()
 
 
-@require_context
+@dbutils.require_context
 def dnsdomain_get(context, fqdomain):
     session = get_session()
     with session.begin():
@@ -965,7 +936,7 @@ def dnsdomain_unregister(context, fqdomain):
                  delete()
 
 
-@require_context
+@dbutils.require_context
 def dnsdomain_list(context):
     query = model_query(context, models.DNSDomain, read_deleted="no")
     return [row.domain for row in query.all()]
@@ -1046,7 +1017,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
     return fixed_ip_ref['address']
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.update(values)
@@ -1054,7 +1025,7 @@ def fixed_ip_create(context, values):
     return fixed_ip_ref['address']
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_bulk_create(context, ips):
     session = get_session()
     with session.begin():
@@ -1064,7 +1035,7 @@ def fixed_ip_bulk_create(context, ips):
             session.add(model)
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
@@ -1109,7 +1080,7 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
         return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_get(context, id, get_network=False):
     query = model_query(context, models.FixedIp).filter_by(id=id)
     if get_network:
@@ -1120,7 +1091,7 @@ def fixed_ip_get(context, id, get_network=False):
 
     # FIXME(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_uuid'] is not None:
+    if dbutils.is_user_context(context) and result['instance_uuid'] is not None:
         instance = instance_get_by_uuid(context.elevated(read_deleted='yes'),
                                         result['instance_uuid'])
         authorize_project_context(context, instance.project_id)
@@ -1139,7 +1110,7 @@ def fixed_ip_get_all(context, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_get_by_address(context, address, session=None):
     result = model_query(context, models.FixedIp, session=session).\
                      filter_by(address=address).\
@@ -1149,7 +1120,7 @@ def fixed_ip_get_by_address(context, address, session=None):
 
     # NOTE(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_uuid'] is not None:
+    if dbutils.is_user_context(context) and result['instance_uuid'] is not None:
         instance = _instance_get_by_uuid(context.elevated(read_deleted='yes'),
                                          result['instance_uuid'],
                                          session)
@@ -1182,7 +1153,7 @@ def fixed_ip_get_by_address_detailed(context, address, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_get_by_floating_address(context, floating_address):
     return model_query(context, models.FixedIp).\
                        outerjoin(models.FloatingIp,
@@ -1193,7 +1164,7 @@ def fixed_ip_get_by_floating_address(context, floating_address):
     # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
@@ -1208,7 +1179,7 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_get_by_network_host(context, network_id, host):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(network_id=network_id).\
@@ -1221,7 +1192,7 @@ def fixed_ip_get_by_network_host(context, network_id, host):
     return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ips_by_virtual_interface(context, vif_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(virtual_interface_id=vif_id).\
@@ -1230,7 +1201,7 @@ def fixed_ips_by_virtual_interface(context, vif_id):
     return result
 
 
-@require_context
+@dbutils.require_context
 def fixed_ip_update(context, address, values):
     session = get_session()
     with session.begin():
@@ -1244,7 +1215,7 @@ def fixed_ip_update(context, address, values):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_create(context, values):
     """Create a new virtual interface record in the database.
 
@@ -1260,13 +1231,13 @@ def virtual_interface_create(context, values):
     return vif_ref
 
 
-@require_context
+@dbutils.require_context
 def _virtual_interface_query(context, session=None):
     return model_query(context, models.VirtualInterface, session=session,
                        read_deleted="yes")
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table.
 
@@ -1278,7 +1249,7 @@ def virtual_interface_get(context, vif_id):
     return vif_ref
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_get_by_address(context, address):
     """Gets a virtual interface from the table.
 
@@ -1290,7 +1261,7 @@ def virtual_interface_get_by_address(context, address):
     return vif_ref
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_get_by_uuid(context, vif_uuid):
     """Gets a virtual interface from the table.
 
@@ -1302,7 +1273,7 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
     return vif_ref
 
 
-@require_context
+@dbutils.require_context
 @require_instance_exists_using_uuid
 def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
@@ -1315,7 +1286,7 @@ def virtual_interface_get_by_instance(context, instance_uuid):
     return vif_refs
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_get_by_instance_and_network(context, instance_uuid,
                                                   network_id):
     """Gets virtual interface for instance that's associated with network."""
@@ -1326,7 +1297,7 @@ def virtual_interface_get_by_instance_and_network(context, instance_uuid,
     return vif_ref
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_delete(context, vif_id):
     """Delete virtual interface record from the database.
 
@@ -1337,7 +1308,7 @@ def virtual_interface_delete(context, vif_id):
                       delete()
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records that are associated
     with the instance given by instance_id.
@@ -1349,7 +1320,7 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
            delete()
 
 
-@require_context
+@dbutils.require_context
 def virtual_interface_get_all(context):
     """Get all vifs."""
     vif_refs = _virtual_interface_query(context).all()
@@ -1398,7 +1369,7 @@ def _validate_unique_server_name(context, session, name):
             raise exception.InstanceExists(name=instance['hostname'])
 
 
-@require_context
+@dbutils.require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
 
@@ -1466,7 +1437,7 @@ def instance_data_get_for_project(context, project_id, session=None):
     return (result[0] or 0, result[1] or 0, result[2] or 0)
 
 
-@require_context
+@dbutils.require_context
 def instance_destroy(context, instance_uuid, constraint=None):
     session = get_session()
     with session.begin():
@@ -1493,12 +1464,12 @@ def instance_destroy(context, instance_uuid, constraint=None):
     return instance_ref
 
 
-@require_context
+@dbutils.require_context
 def instance_get_by_uuid(context, uuid):
     return _instance_get_by_uuid(context, uuid)
 
 
-@require_context
+@dbutils.require_context
 def _instance_get_by_uuid(context, uuid, session=None):
     result = _build_instance_get(context, session=session).\
                 filter_by(uuid=uuid).\
@@ -1510,7 +1481,7 @@ def _instance_get_by_uuid(context, uuid, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_get(context, instance_id):
     result = _build_instance_get(context).\
                 filter_by(id=instance_id).\
@@ -1522,7 +1493,7 @@ def instance_get(context, instance_id):
     return result
 
 
-@require_context
+@dbutils.require_context
 def _build_instance_get(context, session=None):
     return model_query(context, models.Instance, session=session,
                         project_only=True).\
@@ -1533,7 +1504,7 @@ def _build_instance_get(context, session=None):
             options(joinedload('system_metadata'))
 
 
-@require_context
+@dbutils.require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups',
@@ -1550,7 +1521,7 @@ def instance_get_all(context, columns_to_join=None):
     return query.all()
 
 
-@require_context
+@dbutils.require_context
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                                 limit=None, marker=None, session=None):
     """Return instances that match all filters.  Deleted instances
@@ -1707,7 +1678,7 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
                    filter(models.Instance.instance_type_id != type_id).all()
 
 
-@require_context
+@dbutils.require_context
 def instance_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     return _instance_get_all_query(context).\
@@ -1715,7 +1686,7 @@ def instance_get_all_by_project(context, project_id):
                     all()
 
 
-@require_context
+@dbutils.require_context
 def instance_get_all_by_reservation(context, reservation_id):
     return _instance_get_all_query(context, project_only=True).\
                     filter_by(reservation_id=reservation_id).\
@@ -1727,7 +1698,7 @@ def instance_get_all_by_reservation(context, reservation_id):
 #                in network_info. Once it starts return the model. This
 #                function and its call in compute/manager.py on 1829 can
 #                go away
-@require_context
+@dbutils.require_context
 def instance_get_floating_address(context, instance_id):
     instance = instance_get(context, instance_id)
     fixed_ips = fixed_ip_get_by_instance(context, instance['uuid'])
@@ -1745,7 +1716,7 @@ def instance_get_floating_address(context, instance_id):
     return floating_ips[0]['address']
 
 
-@require_context
+@dbutils.require_context
 def instance_floating_address_get_all(context, instance_uuid):
     fixed_ips = fixed_ip_get_by_instance(context, instance_uuid)
 
@@ -1768,13 +1739,13 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
             filter_by(task_state=task_states.REBOOTING).all()
 
 
-@require_context
+@dbutils.require_context
 def instance_update(context, instance_uuid, values):
     instance_ref = _instance_update(context, instance_uuid, values)[1]
     return instance_ref
 
 
-@require_context
+@dbutils.require_context
 def instance_update_and_get_original(context, instance_uuid, values):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
@@ -1841,15 +1812,7 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
         else:
             instance_ref['extra_specs'] = {}
 
-        if "expected_task_state" in values:
-            # it is not a db column so always pop out
-            expected = values.pop("expected_task_state")
-            if not isinstance(expected, (tuple, list, set)):
-                expected = (expected,)
-            actual_state = instance_ref["task_state"]
-            if actual_state not in expected:
-                raise exception.UnexpectedTaskStateError(actual=actual_state,
-                                                         expected=expected)
+        dbutils.check_task_state(instance_ref, values)
 
         if ("hostname" in values and
             values["hostname"].lower() != instance_ref["hostname"].lower()):
@@ -1899,7 +1862,7 @@ def instance_add_security_group(context, instance_uuid, security_group_id):
     sec_group_ref.save()
 
 
-@require_context
+@dbutils.require_context
 def instance_remove_security_group(context, instance_uuid, security_group_id):
     """Disassociate the given security group from the given instance."""
     model_query(context, models.SecurityGroupInstanceAssociation).\
@@ -1911,7 +1874,7 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
@@ -1923,7 +1886,7 @@ def instance_info_cache_get(context, instance_uuid):
                          first()
 
 
-@require_context
+@dbutils.require_context
 def instance_info_cache_update(context, instance_uuid, values):
     """Update an instance info cache record in the table.
 
@@ -1950,7 +1913,7 @@ def instance_info_cache_update(context, instance_uuid, values):
     return info_cache
 
 
-@require_context
+@dbutils.require_context
 def instance_info_cache_delete(context, instance_uuid):
     """Deletes an existing instance_info_cache record
 
@@ -1965,7 +1928,7 @@ def instance_info_cache_delete(context, instance_uuid):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def key_pair_create(context, values):
     key_pair_ref = models.KeyPair()
     key_pair_ref.update(values)
@@ -1973,7 +1936,7 @@ def key_pair_create(context, values):
     return key_pair_ref
 
 
-@require_context
+@dbutils.require_context
 def key_pair_destroy(context, user_id, name):
     authorize_user_context(context, user_id)
     model_query(context, models.KeyPair).\
@@ -1982,7 +1945,7 @@ def key_pair_destroy(context, user_id, name):
              delete()
 
 
-@require_context
+@dbutils.require_context
 def key_pair_get(context, user_id, name):
     authorize_user_context(context, user_id)
     result = model_query(context, models.KeyPair).\
@@ -1996,7 +1959,7 @@ def key_pair_get(context, user_id, name):
     return result
 
 
-@require_context
+@dbutils.require_context
 def key_pair_get_all_by_user(context, user_id):
     authorize_user_context(context, user_id)
     return model_query(context, models.KeyPair, read_deleted="no").\
@@ -2129,7 +2092,7 @@ def network_disassociate(context, network_id, disassociate_host,
     network_update(context, network_id, net_update)
 
 
-@require_context
+@dbutils.require_context
 def network_get(context, network_id, session=None, project_only='allow_none'):
     result = model_query(context, models.Network, session=session,
                          project_only=project_only).\
@@ -2142,7 +2105,7 @@ def network_get(context, network_id, session=None, project_only='allow_none'):
     return result
 
 
-@require_context
+@dbutils.require_context
 def network_get_all(context):
     result = model_query(context, models.Network, read_deleted="no").all()
 
@@ -2152,7 +2115,7 @@ def network_get_all(context):
     return result
 
 
-@require_context
+@dbutils.require_context
 def network_get_all_by_uuids(context, network_uuids,
                              project_only="allow_none"):
     result = model_query(context, models.Network, read_deleted="no",
@@ -2350,7 +2313,7 @@ def network_set_host(context, network_id, host_id):
     return network_ref['host']
 
 
-@require_context
+@dbutils.require_context
 def network_update(context, network_id, values):
     session = get_session()
     with session.begin():
@@ -2386,7 +2349,7 @@ def iscsi_target_create_safe(context, values):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def quota_get(context, project_id, resource):
     result = model_query(context, models.Quota, read_deleted="no").\
                      filter_by(project_id=project_id).\
@@ -2399,7 +2362,7 @@ def quota_get(context, project_id, resource):
     return result
 
 
-@require_context
+@dbutils.require_context
 def quota_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
 
@@ -2438,7 +2401,7 @@ def quota_update(context, project_id, resource, limit):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def quota_class_get(context, class_name, resource):
     result = model_query(context, models.QuotaClass, read_deleted="no").\
                      filter_by(class_name=class_name).\
@@ -2451,7 +2414,7 @@ def quota_class_get(context, class_name, resource):
     return result
 
 
-@require_context
+@dbutils.require_context
 def quota_class_get_all_by_name(context, class_name):
     authorize_quota_class_context(context, class_name)
 
@@ -2490,7 +2453,7 @@ def quota_class_update(context, class_name, resource, limit):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def quota_usage_get(context, project_id, resource):
     result = model_query(context, models.QuotaUsage, read_deleted="no").\
                      filter_by(project_id=project_id).\
@@ -2503,7 +2466,7 @@ def quota_usage_get(context, project_id, resource):
     return result
 
 
-@require_context
+@dbutils.require_context
 def quota_usage_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
 
@@ -2555,7 +2518,7 @@ def quota_usage_update(context, project_id, resource, **kwargs):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def reservation_get(context, uuid):
     result = model_query(context, models.Reservation, read_deleted="no").\
                      filter_by(uuid=uuid).\
@@ -2610,7 +2573,7 @@ def _get_quota_usages(context, session, project_id):
     return dict((row.resource, row) for row in rows)
 
 
-@require_context
+@dbutils.require_context
 def quota_reserve(context, resources, quotas, deltas, expire,
                   until_refresh, max_age, project_id=None):
     elevated = context.elevated()
@@ -2757,7 +2720,7 @@ def _quota_reservations_query(session, context, reservations):
                    with_lockmode('update')
 
 
-@require_context
+@dbutils.require_context
 def reservation_commit(context, reservations, project_id=None):
     session = get_session()
     with session.begin():
@@ -2772,7 +2735,7 @@ def reservation_commit(context, reservations, project_id=None):
         reservation_query.soft_delete(synchronize_session=False)
 
 
-@require_context
+@dbutils.require_context
 def reservation_rollback(context, reservations, project_id=None):
     session = get_session()
     with session.begin():
@@ -2826,13 +2789,13 @@ def reservation_expire(context):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def _ec2_volume_get_query(context, session=None):
     return model_query(context, models.VolumeIdMapping,
                        session=session, read_deleted='yes')
 
 
-@require_context
+@dbutils.require_context
 def _ec2_snapshot_get_query(context, session=None):
     return model_query(context, models.SnapshotIdMapping,
                        session=session, read_deleted='yes')
@@ -2850,7 +2813,7 @@ def volume_get_iscsi_target_num(context, volume_id):
     return result.target_num
 
 
-@require_context
+@dbutils.require_context
 def ec2_volume_create(context, volume_uuid, id=None):
     """Create ec2 compatable volume by provided uuid."""
     ec2_volume_ref = models.VolumeIdMapping()
@@ -2863,7 +2826,7 @@ def ec2_volume_create(context, volume_uuid, id=None):
     return ec2_volume_ref
 
 
-@require_context
+@dbutils.require_context
 def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
     result = _ec2_volume_get_query(context, session=session).\
                     filter_by(uuid=volume_id).\
@@ -2875,7 +2838,7 @@ def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
     return result['id']
 
 
-@require_context
+@dbutils.require_context
 def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
     result = _ec2_volume_get_query(context, session=session).\
                     filter_by(id=ec2_id).\
@@ -2887,7 +2850,7 @@ def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
     return result['uuid']
 
 
-@require_context
+@dbutils.require_context
 def ec2_snapshot_create(context, snapshot_uuid, id=None):
     """Create ec2 compatable snapshot by provided uuid."""
     ec2_snapshot_ref = models.SnapshotIdMapping()
@@ -2900,7 +2863,7 @@ def ec2_snapshot_create(context, snapshot_uuid, id=None):
     return ec2_snapshot_ref
 
 
-@require_context
+@dbutils.require_context
 def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
     result = _ec2_snapshot_get_query(context, session=session).\
                     filter_by(uuid=snapshot_id).\
@@ -2912,7 +2875,7 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
     return result['id']
 
 
-@require_context
+@dbutils.require_context
 def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
     result = _ec2_snapshot_get_query(context, session=session).\
                     filter_by(id=ec2_id).\
@@ -2931,7 +2894,7 @@ def _block_device_mapping_get_query(context, session=None):
     return model_query(context, models.BlockDeviceMapping, session=session)
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_create(context, values):
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
@@ -2941,7 +2904,7 @@ def block_device_mapping_create(context, values):
         bdm_ref.save(session=session)
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_update(context, bdm_id, values):
     session = get_session()
     with session.begin():
@@ -2950,7 +2913,7 @@ def block_device_mapping_update(context, bdm_id, values):
                 update(values)
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_update_or_create(context, values):
     session = get_session()
     with session.begin():
@@ -2978,14 +2941,14 @@ def block_device_mapping_update_or_create(context, values):
                 soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_get_all_by_instance(context, instance_uuid):
     return _block_device_mapping_get_query(context).\
                  filter_by(instance_uuid=instance_uuid).\
                  all()
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_destroy(context, bdm_id):
     session = get_session()
     with session.begin():
@@ -2994,7 +2957,7 @@ def block_device_mapping_destroy(context, bdm_id):
                 soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
     session = get_session()
@@ -3005,7 +2968,7 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
             soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
                                                         device_name):
     session = get_session()
@@ -3048,12 +3011,12 @@ def _security_group_get_by_names(context, session, project_id, group_names):
     # Not Reached
 
 
-@require_context
+@dbutils.require_context
 def security_group_get_all(context):
     return _security_group_get_query(context).all()
 
 
-@require_context
+@dbutils.require_context
 def security_group_get(context, security_group_id, session=None):
     result = _security_group_get_query(context, session=session,
                                        project_only=True).\
@@ -3068,7 +3031,7 @@ def security_group_get(context, security_group_id, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def security_group_get_by_name(context, project_id, group_name,
         columns_to_join=None, session=None):
     if session is None:
@@ -3093,14 +3056,14 @@ def security_group_get_by_name(context, project_id, group_name,
     return result
 
 
-@require_context
+@dbutils.require_context
 def security_group_get_by_project(context, project_id):
     return _security_group_get_query(context, read_deleted="no").\
                         filter_by(project_id=project_id).\
                         all()
 
 
-@require_context
+@dbutils.require_context
 def security_group_get_by_instance(context, instance_id):
     return _security_group_get_query(context, read_deleted="no").\
                    join(models.SecurityGroup.instances).\
@@ -3108,7 +3071,7 @@ def security_group_get_by_instance(context, instance_id):
                    all()
 
 
-@require_context
+@dbutils.require_context
 def security_group_exists(context, project_id, group_name):
     try:
         group = security_group_get_by_name(context, project_id, group_name)
@@ -3117,7 +3080,7 @@ def security_group_exists(context, project_id, group_name):
         return False
 
 
-@require_context
+@dbutils.require_context
 def security_group_in_use(context, group_id):
     session = get_session()
     with session.begin():
@@ -3139,7 +3102,7 @@ def security_group_in_use(context, group_id):
     return False
 
 
-@require_context
+@dbutils.require_context
 def security_group_create(context, values, session=None):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
@@ -3174,7 +3137,7 @@ def security_group_ensure_default(context, session=None):
         return (False, default_group)
 
 
-@require_context
+@dbutils.require_context
 def security_group_destroy(context, security_group_id):
     session = get_session()
     with session.begin():
@@ -3192,7 +3155,7 @@ def security_group_destroy(context, security_group_id):
                 soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def security_group_count_by_project(context, project_id, session=None):
     authorize_project_context(context, project_id)
     return model_query(context, models.SecurityGroup, read_deleted="no",
@@ -3208,7 +3171,7 @@ def _security_group_rule_get_query(context, session=None):
                        session=session)
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_get(context, security_group_rule_id, session=None):
     result = _security_group_rule_get_query(context, session=session).\
                          filter_by(id=security_group_rule_id).\
@@ -3221,7 +3184,7 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_get_by_security_group(context, security_group_id,
                                               session=None):
     return _security_group_rule_get_query(context, session=session).\
@@ -3230,7 +3193,7 @@ def security_group_rule_get_by_security_group(context, security_group_id,
             all()
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_get_by_security_group_grantee(context,
                                                       security_group_id,
                                                       session=None):
@@ -3240,7 +3203,7 @@ def security_group_rule_get_by_security_group_grantee(context,
                          all()
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_create(context, values):
     security_group_rule_ref = models.SecurityGroupIngressRule()
     security_group_rule_ref.update(values)
@@ -3248,7 +3211,7 @@ def security_group_rule_create(context, values):
     return security_group_rule_ref
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_destroy(context, security_group_rule_id):
     session = get_session()
     with session.begin():
@@ -3260,7 +3223,7 @@ def security_group_rule_destroy(context, security_group_rule_id):
                                                rule_id=security_group_rule_id)
 
 
-@require_context
+@dbutils.require_context
 def security_group_rule_count_by_group(context, security_group_id):
     return model_query(context, models.SecurityGroupIngressRule,
                    read_deleted="no").\
@@ -3296,7 +3259,7 @@ def provider_fw_rule_destroy(context, rule_id):
 ###################
 
 
-@require_context
+@dbutils.require_context
 def project_get_networks(context, project_id, associate=True):
     # NOTE(tr3buchet): as before this function will associate
     # a project with a network if it doesn't have one and
@@ -3549,7 +3512,7 @@ def _instance_type_get_query(context, session=None, read_deleted=None):
                      options(joinedload('extra_specs'))
 
 
-@require_context
+@dbutils.require_context
 def instance_type_get_all(context, inactive=False, filters=None):
     """
     Returns all instance types.
@@ -3594,7 +3557,7 @@ def instance_type_get_all(context, inactive=False, filters=None):
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
-@require_context
+@dbutils.require_context
 def instance_type_get(context, id, session=None):
     """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context, session=session).\
@@ -3607,7 +3570,7 @@ def instance_type_get(context, id, session=None):
     return _dict_with_extra_specs(result)
 
 
-@require_context
+@dbutils.require_context
 def instance_type_get_by_name(context, name, session=None):
     """Returns a dict describing specific instance_type."""
     result = _instance_type_get_query(context, session=session).\
@@ -3620,7 +3583,7 @@ def instance_type_get_by_name(context, name, session=None):
     return _dict_with_extra_specs(result)
 
 
-@require_context
+@dbutils.require_context
 def instance_type_get_by_flavor_id(context, flavor_id, session=None):
     """Returns a dict describing specific flavor_id."""
     result = _instance_type_get_query(context, session=session).\
@@ -3649,7 +3612,7 @@ def instance_type_destroy(context, name):
                 soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def _instance_type_access_query(context, session=None):
     return model_query(context, models.InstanceTypeProjects, session=session,
                        read_deleted="no")
@@ -3759,7 +3722,7 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
                     filter_by(instance_uuid=instance_uuid)
 
 
-@require_context
+@dbutils.require_context
 def instance_metadata_get(context, instance_uuid, session=None):
     rows = _instance_metadata_get_query(context, instance_uuid,
                                         session=session).all()
@@ -3771,14 +3734,14 @@ def instance_metadata_get(context, instance_uuid, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
         soft_delete()
 
 
-@require_context
+@dbutils.require_context
 def instance_metadata_get_item(context, instance_uuid, key, session=None):
     result = _instance_metadata_get_query(
                             context, instance_uuid, session=session).\
@@ -3792,7 +3755,7 @@ def instance_metadata_get_item(context, instance_uuid, key, session=None):
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_metadata_update(context, instance_uuid, metadata, delete,
                              session=None):
     all_keys = metadata.keys()
@@ -3837,7 +3800,7 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
                     filter_by(instance_uuid=instance_uuid)
 
 
-@require_context
+@dbutils.require_context
 def instance_system_metadata_get(context, instance_uuid, session=None):
     rows = _instance_system_metadata_get_query(context, instance_uuid,
                                                session=session).all()
@@ -3863,7 +3826,7 @@ def _instance_system_metadata_get_item(context, instance_uuid, key,
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_system_metadata_update(context, instance_uuid, metadata, delete,
                                     session=None):
     all_keys = metadata.keys()
@@ -3959,7 +3922,7 @@ def agent_build_update(context, agent_build_id, values):
 
 ####################
 
-@require_context
+@dbutils.require_context
 def bw_usage_get(context, uuid, start_period, mac):
     return model_query(context, models.BandwidthUsage, read_deleted="yes").\
                       filter_by(start_period=start_period).\
@@ -3968,7 +3931,7 @@ def bw_usage_get(context, uuid, start_period, mac):
                       first()
 
 
-@require_context
+@dbutils.require_context
 def bw_usage_get_by_uuids(context, uuids, start_period):
     return model_query(context, models.BandwidthUsage, read_deleted="yes").\
                    filter(models.BandwidthUsage.uuid.in_(uuids)).\
@@ -3976,7 +3939,7 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
                    all()
 
 
-@require_context
+@dbutils.require_context
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed=None,
                     session=None):
@@ -4015,7 +3978,6 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
         bwusage.last_ctr_out = last_ctr_out
         bwusage.save(session=session)
 
-
 ####################
 
 
@@ -4033,7 +3995,7 @@ def _instance_type_extra_specs_get_query(context, flavor_id,
                               instance_type_id.in_(t))
 
 
-@require_context
+@dbutils.require_context
 def instance_type_extra_specs_get(context, flavor_id):
     rows = _instance_type_extra_specs_get_query(
                             context, flavor_id).\
@@ -4046,7 +4008,7 @@ def instance_type_extra_specs_get(context, flavor_id):
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_type_extra_specs_delete(context, flavor_id, key):
     # Don't need synchronize the session since we will not use the query result
     _instance_type_extra_specs_get_query(
@@ -4055,7 +4017,7 @@ def instance_type_extra_specs_delete(context, flavor_id, key):
         soft_delete(synchronize_session=False)
 
 
-@require_context
+@dbutils.require_context
 def instance_type_extra_specs_get_item(context, flavor_id, key,
                                        session=None):
     result = _instance_type_extra_specs_get_query(
@@ -4069,7 +4031,7 @@ def instance_type_extra_specs_get_item(context, flavor_id, key,
     return result
 
 
-@require_context
+@dbutils.require_context
 def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
     # NOTE(boris-42): There is a race condition in this method. We should add
     #                 UniqueConstraint on (instance_type_id, key, deleted) to
@@ -4113,7 +4075,7 @@ def instance_type_extra_specs_update_or_create(context, flavor_id, specs):
 ####################
 
 
-@require_context
+@dbutils.require_context
 def vol_get_usage_by_time(context, begin):
     """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
@@ -4125,7 +4087,7 @@ def vol_get_usage_by_time(context, begin):
                               all()
 
 
-@require_context
+@dbutils.require_context
 def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                      instance_id, last_refreshed=None, update_totals=False,
                      session=None):
@@ -4673,7 +4635,7 @@ def action_event_get_by_id(context, action_id, event_id):
 ##################
 
 
-@require_context
+@dbutils.require_context
 def ec2_instance_create(context, instance_uuid, id=None):
     """Create ec2 compatable instance by provided uuid."""
     ec2_instance_ref = models.InstanceIdMapping()
@@ -4686,7 +4648,7 @@ def ec2_instance_create(context, instance_uuid, id=None):
     return ec2_instance_ref
 
 
-@require_context
+@dbutils.require_context
 def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
     result = _ec2_instance_get_query(context,
                                      session=session).\
@@ -4699,7 +4661,7 @@ def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
     return result['id']
 
 
-@require_context
+@dbutils.require_context
 def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
     result = _ec2_instance_get_query(context,
                                      session=session).\
@@ -4712,7 +4674,7 @@ def get_instance_uuid_by_ec2_id(context, ec2_id, session=None):
     return result['uuid']
 
 
-@require_context
+@dbutils.require_context
 def _ec2_instance_get_query(context, session=None):
     return model_query(context,
                        models.InstanceIdMapping,
