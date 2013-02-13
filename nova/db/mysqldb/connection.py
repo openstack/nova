@@ -110,7 +110,7 @@ class _Connection(object):
         if not rows:
             # FIXME(comstud)
             raise SystemError
-        return rows[0]
+        return rows[0][0]
 
     def get_schema(self):
         with self._conn:
