@@ -19,7 +19,6 @@
 
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -44,7 +43,6 @@ class API(object):
         'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver'
     }
 
-    @lockutils.synchronized('nova.servicegroup.api.new', 'nova-')
     def __new__(cls, *args, **kwargs):
         '''Create an instance of the servicegroup API.
 
