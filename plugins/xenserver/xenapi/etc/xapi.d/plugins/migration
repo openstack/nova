@@ -25,7 +25,7 @@ configure_logging('migration')
 
 
 def move_vhds_into_sr(session, instance_uuid, sr_path, uuid_stack):
-    """Moves the VHDs from their copied location to the SR"""
+    """Moves the VHDs from their copied location to the SR."""
     staging_path = "/images/instance%s" % instance_uuid
     imported_vhds = utils.import_vhds(sr_path, staging_path, uuid_stack)
     utils.cleanup_staging_area(staging_path)
@@ -47,7 +47,7 @@ def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
 
 
 def transfer_vhd(session, instance_uuid, host, vdi_uuid, sr_path, seq_num):
-    """Rsyncs a VHD to an adjacent host"""
+    """Rsyncs a VHD to an adjacent host."""
     staging_path = utils.make_staging_area(sr_path)
     try:
         utils.prepare_staging_area(

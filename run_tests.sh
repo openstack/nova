@@ -93,8 +93,6 @@ export venv_name
 export tools_dir
 export venv=${venv_path}/${venv_dir}
 
-SCRIPT_ROOT=$(dirname $(readlink -f "$0"))
-
 if [ $no_site_packages -eq 1 ]; then
   installvenvopts="--no-site-packages"
 fi
@@ -149,43 +147,7 @@ function copy_subunit_log {
 
 function run_pep8 {
   echo "Running PEP8 and HACKING compliance check..."
-
-  # Files of interest
-  # NOTE(lzyeval): Avoid selecting nova-api-paste.ini and nova.conf in nova/bin
-  #                when running on devstack.
-  # NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
-  #                when running on devstack.
-  srcfiles=`find nova -type f -name "*.py" ! -wholename "nova\/openstack*"`
-  srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*" ! -name "*~"`"
-  srcfiles+=" `find tools -type f -name "*.py"`"
-  srcfiles+=" `find smoketests -type f -name "*.py"`"
-  srcfiles+=" setup.py"
-
-  # Until all these issues get fixed, ignore.
-  ignore='--ignore=E12,E711,E721,E712,N403,N404,N303'
-
-  # First run the hacking selftest, to make sure it's right
-  echo "Running hacking.py self test"
-  ${wrapper} python tools/hacking.py --doctest
-
-  # Then actually run it
-  echo "Running pep8"
-  ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
-
-  PYTHONPATH=$SCRIPT_ROOT/plugins/xenserver/networking/etc/xensource/scripts ${wrapper} python tools/hacking.py ${ignore} ./plugins/xenserver/networking
-
-  PYTHONPATH=$SCRIPT_ROOT/plugins/xenserver/xenapi/etc/xapi.d/plugins ${wrapper} python tools/hacking.py ${ignore} ./plugins/xenserver/xenapi
-
-  ${wrapper} bash tools/unused_imports.sh
-  # NOTE(sdague): as of grizzly-2 these are passing however leaving the comment
-  # in here in case we need to break it out when we get more of our hacking working
-  # again.
-  #
-  # NOTE(sirp): Dom0 plugins are written for Python 2.4, meaning some HACKING
-  #             checks are too strict.
-  # pep8onlyfiles=`find plugins -type f -name "*.py"`
-  # pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -perm +111`"
-  # ${wrapper} pep8 ${ignore} ${pep8onlyfiles}
+  bash tools/run_pep8.sh
 }
 
 
