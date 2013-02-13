@@ -230,8 +230,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         'memory_target': mem,
         'name_description': '',
         'name_label': name_label,
-        'other_config': {'allowvssprovider': str(False),
-                         'nova_uuid': str(instance['uuid'])},
+        'other_config': {'nova_uuid': str(instance['uuid'])},
         'PCI_bus': '',
         'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
                      'viridian': 'true', 'timeoffset': '0'},
@@ -247,7 +246,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         'VCPUs_at_startup': vcpus,
         'VCPUs_max': vcpus,
         'VCPUs_params': {},
-        'xenstore_data': {}}
+        'xenstore_data': {'allowvssprovider': 'false'}}
 
     # Complete VM configuration record according to the image type
     # non-raw/raw with PV kernel/raw in HVM mode
