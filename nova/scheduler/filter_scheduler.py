@@ -137,6 +137,11 @@ class FilterScheduler(driver.Scheduler):
                 request_spec=request_spec, filter_properties=filter_properties,
                 node=weighed_host.obj.nodename)
 
+    def select_hosts(self, context, request_spec, filter_properties):
+        """Selects a filtered set of hosts."""
+        return [host.obj.host for host in self._schedule(context, request_spec,
+            filter_properties)]
+
     def _provision_resource(self, context, weighed_host, request_spec,
             filter_properties, requested_networks, injected_files,
             admin_password, is_first_time, instance_uuid=None):

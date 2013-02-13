@@ -160,6 +160,11 @@ class Scheduler(object):
         msg = _("Driver must implement schedule_run_instance")
         raise NotImplementedError(msg)
 
+    def select_hosts(self, context, request_spec, filter_properties):
+        """Must override select_hosts method for scheduler to work."""
+        msg = _("Driver must implement select_hosts")
+        raise NotImplementedError(msg)
+
     def schedule_live_migration(self, context, instance, dest,
                                 block_migration, disk_over_commit):
         """Live migration scheduling method.

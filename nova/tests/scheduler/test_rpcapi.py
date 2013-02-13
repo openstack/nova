@@ -90,3 +90,9 @@ class SchedulerRpcAPITestCase(test.TestCase):
     def test_get_backdoor_port(self):
         self._test_scheduler_api('get_backdoor_port', rpc_method='call',
                                  host='fake_host', version='2.5')
+
+    def test_select_hosts(self):
+        self._test_scheduler_api('select_hosts', rpc_method='call',
+                request_spec='fake_request_spec',
+                filter_properties='fake_prop',
+                version='2.6')

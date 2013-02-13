@@ -56,7 +56,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '2.5'
+    RPC_API_VERSION = '2.6'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -285,3 +285,10 @@ class SchedulerManager(manager.Manager):
 
     def get_backdoor_port(self, context):
         return self.backdoor_port
+
+    def select_hosts(self, context, request_spec, filter_properties):
+        """Returns host(s) best suited for this request_spec and
+        filter_properties"""
+        hosts = self.driver.select_hosts(context, request_spec,
+            filter_properties)
+        return hosts

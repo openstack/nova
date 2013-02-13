@@ -165,3 +165,33 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.schedule_prep_resize(fake_context, {}, {}, {},
                 instance, {}, None)
         self.assertEqual(info['called'], 0)
+
+    def test_select_hosts(self):
+        ctxt = context.RequestContext('fake', 'fake', False)
+        ctxt_elevated = 'fake-context-elevated'
+        fake_args = (1, 2, 3)
+        instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
+        instance1 = {'uuid': 'fake-uuid1'}
+        instance2 = {'uuid': 'fake-uuid2'}
+        request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
+                        'instance_properties': instance_opts}
+
+        self.mox.StubOutWithMock(ctxt, 'elevated')
+        self.mox.StubOutWithMock(self.driver, 'hosts_up')
+        self.mox.StubOutWithMock(random, 'random')
+
+        ctxt.elevated().AndReturn(ctxt_elevated)
+        # instance 1
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
+            ['host1', 'host2', 'host3', 'host4'])
+        random.random().AndReturn(.5)
+
+        # instance 2
+        ctxt.elevated().AndReturn(ctxt_elevated)
+        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
+            ['host1', 'host2', 'host3', 'host4'])
+        random.random().AndReturn(.2)
+
+        self.mox.ReplayAll()
+        hosts = self.driver.select_hosts(ctxt, request_spec, {})
+        self.assertEquals(['host3', 'host1'], hosts)
