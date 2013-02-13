@@ -574,19 +574,19 @@ class ParseState(object):
 
         for reduction, methname in self.reducers:
             if (len(self.tokens) >= len(reduction) and
-                self.tokens[-len(reduction):] == reduction):
-                    # Get the reduction method
-                    meth = getattr(self, methname)
+                    self.tokens[-len(reduction):] == reduction):
+                # Get the reduction method
+                meth = getattr(self, methname)
 
-                    # Reduce the token stream
-                    results = meth(*self.values[-len(reduction):])
+                # Reduce the token stream
+                results = meth(*self.values[-len(reduction):])
 
-                    # Update the tokens and values
-                    self.tokens[-len(reduction):] = [r[0] for r in results]
-                    self.values[-len(reduction):] = [r[1] for r in results]
+                # Update the tokens and values
+                self.tokens[-len(reduction):] = [r[0] for r in results]
+                self.values[-len(reduction):] = [r[1] for r in results]
 
-                    # Check for any more reductions
-                    return self.reduce()
+                # Check for any more reductions
+                return self.reduce()
 
     def shift(self, tok, value):
         """Adds one more token to the state.  Calls reduce()."""

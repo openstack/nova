@@ -24,6 +24,8 @@ import logging
 import sys
 import traceback
 
+from nova.openstack.common.gettextutils import _
+
 
 @contextlib.contextmanager
 def save_and_reraise_exception():
@@ -43,7 +45,7 @@ def save_and_reraise_exception():
     try:
         yield
     except Exception:
-        logging.error('Original exception being dropped: %s' %
-                      (traceback.format_exception(type_, value, tb)))
+        logging.error(_('Original exception being dropped: %s'),
+                      traceback.format_exception(type_, value, tb))
         raise
     raise type_, value, tb

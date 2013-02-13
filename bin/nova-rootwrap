@@ -20,14 +20,17 @@
 
    Filters which commands a service is allowed to run as another user.
 
-   To use this with nova, you should set the following in nova.conf:
+   To use this with nova, you should set the following in
+   nova.conf:
    rootwrap_config=/etc/nova/rootwrap.conf
 
-   You also need to let the nova user run nova-rootwrap as root in sudoers:
-   nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap /etc/nova/rootwrap.conf *
+   You also need to let the nova user run nova-rootwrap
+   as root in sudoers:
+   nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap
+                                   /etc/nova/rootwrap.conf *
 
-   Service packaging should deploy .filters files only on nodes where they are
-   needed, to avoid allowing more than is necessary.
+   Service packaging should deploy .filters files only on nodes where
+   they are needed, to avoid allowing more than is necessary.
 """
 
 import ConfigParser
@@ -102,8 +105,8 @@ if __name__ == '__main__':
                                               exec_dirs=config.exec_dirs)
             if config.use_syslog:
                 logging.info("(%s > %s) Executing %s (filter match = %s)" % (
-                     os.getlogin(), pwd.getpwuid(os.getuid())[0],
-                     command, filtermatch.name))
+                    os.getlogin(), pwd.getpwuid(os.getuid())[0],
+                    command, filtermatch.name))
 
             obj = subprocess.Popen(command,
                                    stdin=sys.stdin,
