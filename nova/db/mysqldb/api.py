@@ -25,6 +25,8 @@ from eventlet import tpool
 
 from nova.db import utils as dbutils
 from nova.db.mysqldb import connection
+from nova.db.mysqldb import models
+from nova.db.mysqldb import sql
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common import cfg
@@ -146,58 +148,33 @@ class API(object):
         with self.pool.get() as conn:
             conn.insert('bw_usage_cache', values)
 
-    def _instance_get_by_uuid(self, context, uuid, conn):
+    @_tpool_enabled
+    def instance_get_by_uuid(self, context, instance_uuid):
+        with self.pool.get() as conn:
+            return self._instance_get_by_uuid(context, instance_uuid, conn)
 
-        # TODO right now the select query is just a full sql stmt below,
-        # but we could opt to build a select() function that is more of a
-        # one-size fits all.
-        """
-        joins = (
-            {'type': 'LEFT OUTER JOIN',
-             'table': 'instance_info_caches',
-             'on': 'instance_info_caches.instance_uuid = instances.uuid'},
-            {'type': 'LEFT OUTER JOIN',
-             'table': 'instance_metadata',
-             'on': instance_metadata.instance_uuid = %(uuid)s and
-        )
-        conn.select('instance', joins)
-        raise
-        """
+    @_tpool_enabled
+    def instance_get_all(self, context, columns_to_join):
+        # FIXME: implement context checking.
+        clauses = [sql.EQ(sql.Literal('self.deleted'), 0)]
+        with self.pool.get() as conn:
+            return models.Instance.select(conn, clauses=clauses)
 
-        # TODO impl read_deleted fully
-        read_deleted = context.read_deleted == 'yes'
+    def _instance_get_by_uuid(self, context, instance_uuid, conn):
 
-        # TODO project_only
-
-        # TODO security_group_rules join
-        sql = """SELECT * from instances
-            LEFT OUTER JOIN instance_info_caches on
-                instance_info_caches.instance_uuid = instances.uuid
-            LEFT OUTER JOIN instance_metadata as metadata on
-                metadata.instance_uuid = %(uuid)s and
-                metadata.deleted = 0
-            LEFT OUTER JOIN instance_system_metadata as system_metadata on
-                system_metadata.instance_uuid = %(uuid)s and
-                system_metadata.deleted = 0
-            LEFT OUTER JOIN instance_types on
-                instances.instance_type_id = instance_types.id
-            WHERE instances.uuid = %(uuid)s"""
-        if not read_deleted:
-            sql += " AND instances.deleted = 0"
-
-        args = {'uuid': uuid}
-
-        LOG.debug(sql)
-        LOG.debug(args)
-        cursor = conn.cursor()
-        cursor.execute(sql, args)
-
-        rows = cursor.fetchall()
-
-        if not rows:
-            raise exception.InstanceNotFound(instance_id=uuid)
-
-        return self._make_sqlalchemy_like_dict(rows)
+        clauses = [sql.EQ(sql.Literal('self.uuid'), instance_uuid)]
+        if context.read_deleted == 'no':
+            clauses.append(sql.EQ(sql.Literal('self.deleted'), 0))
+        elif context.read_deleted == 'only':
+            clauses.append(sql.GT(sql.Literal('self.deleted'), 0))
+        if not context.is_admin:
+            clauses.append(sql.GT(sql.Literal('self.project_id'),
+                context.project_id))
+        with self.pool.get() as conn:
+            instance = models.Instance.select(conn, clauses=clauses)
+            if not instance:
+                raise exception.InstanceNotFound(instance_id=instance_uuid)
+            return instance[0]
 
     @_tpool_enabled
     @dbutils.require_context
@@ -306,48 +283,3 @@ class API(object):
     def instance_update(self, context, instance_uuid, values):
         instance_ref = self._instance_update(context, instance_uuid, values)[1]
         return instance_ref
-
-    def _make_sqlalchemy_like_dict(self, rows):
-        """Make a SQLAlchemy-like dictionary, where each join gets namespaced as
-        list within the top-level dictionary. (lists are the default sqlalchemy
-        type)
-        """
-        result = {}
-        joins = {}
-        # this assumes we're converting the set of rows to a single "model"
-        # object
-        for row in rows:
-            rowjoins = {}
-
-            for key, value in row.iteritems():
-                #print "sa to dict: %s = %s" % (key, value)
-                tok = key.split(".")
-                if len(tok) == 2:
-                    join_tbl, col = tok
-                    rowjoins.setdefault(join_tbl, {})
-
-                    rowjoins[join_tbl][col] = value
-                else:
-                    result[key] = value
-
-            # organize the joins by id to easily eliminate duplicates:
-            for join_tbl, join in rowjoins.iteritems():
-                join_id = join['id']
-                join_id_map = joins.setdefault(join_tbl, {})
-                join_id_map[join_id] = join                
-                
-        #self._pretty_print(joins)
-
-        # now convert joins to be lists in the result:
-        for join_tbl, join_id_map in joins.iteritems():
-            join_tbl_list = result.setdefault(join_tbl, [])
-            for join in join_id_map.values():
-                if join['id'] is not None:
-                    join_tbl_list.append(join)
-
-        #self._pretty_print(result)
-        return result
-
-    def _pretty_print(self, result):
-        import pprint
-        pprint.pprint(result, indent=4)

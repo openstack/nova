@@ -86,7 +86,7 @@ import random
 random.seed()
 
 # Populate the cache
-db.IMPL._get_bw_usage()
+#db.IMPL._get_bw_usage()
 
 def bw_updater():
     for x in xrange(2000):
