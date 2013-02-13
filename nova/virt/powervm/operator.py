@@ -207,6 +207,16 @@ class PowerVMOperator(object):
                 # MAC address for the mac_base_value parameter and then
                 # get the integer value of the final 2 characters as the
                 # slot_id parameter
+                #
+                # NOTE(mjfork) the slot_id should not exceed 255 (FF) to
+                #              to avoid spilling over into the next
+                #              higest octect.  The contract with
+                #              macs_for_instance limits to a value between
+                #              32 and 63 inclusive so we are safe.
+                #
+                #              Further, with the contract on slot_id, we
+                #              can hard code max_virtual_slots to 64 in
+                #              LPAR definition.
                 mac = network_info[0]['address']
                 mac_base_value = (mac[:-2]).replace(':', '')
                 eth_id = self._operator.get_virtual_eth_adapter_id()
@@ -215,8 +225,6 @@ class PowerVMOperator(object):
                                         locals())
 
                 # LPAR configuration data
-                # max_virtual_slots is hardcoded to 64 since we generate a MAC
-                # address that must be placed in slots 32 - 64
                 lpar_inst = LPAR.LPAR(
                                 name=inst_name, lpar_env='aixlinux',
                                 min_mem=mem_min, desired_mem=mem,
@@ -233,7 +241,7 @@ class PowerVMOperator(object):
                 LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
                 self._operator.create_lpar(lpar_inst)
             #TODO(mjfork) capture the error and handle the error when the MAC
-            #             prefix already exists on the system (1 in 2^28)
+            #             prefix already exists on the system (1 in 2^32)
             except nova_exception.ProcessExecutionError:
                 LOG.exception(_("LPAR instance '%s' creation failed") %
                             instance['name'])
@@ -617,18 +625,21 @@ class IVMOperator(BaseOperator):
         #             Discussion: https://bugs.launchpad.net/nova/+bug/921838
         # NOTE(mjfork): For IVM-based PowerVM, we cannot directly set a MAC
         #               address on an LPAR, but rather need to construct one
-        #               that can be used.  Retain the 0xfe as noted above,
-        #               but ensure the final 3 hex values represent a value
+        #               that can be used.  Retain the 0xfa as noted above,
+        #               but ensure the final 2 hex values represent a value
         #               between 32 and 64 so we can assign as the slot id on
-        #               the system.
-        #               FA:xx:xx:xx:x0:[32-64]
+        #               the system. For future reference, the last octect
+        #               should not exceed FF (255) since it would spill over
+        #               into the higher-order octect.
+        #
+        #               FA:xx:xx:xx:xx:[32-64]
 
         macs = set()
         mac_base = [0xfa,
                random.randint(0x00, 0xff),
                random.randint(0x00, 0xff),
                random.randint(0x00, 0xff),
-               random.randint(0x00, 0xff) & 0xf0,
+               random.randint(0x00, 0xff),
                random.randint(0x00, 0x00)]
         for n in range(32, 64):
             mac_base[5] = n
