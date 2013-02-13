@@ -248,8 +248,7 @@ class Lvm(Image):
             size = size if resize else base_size
             libvirt_utils.create_lvm_image(self.vg, self.lv,
                                            size, sparse=self.sparse)
-            cmd = ('dd', 'if=%s' % base, 'of=%s' % self.path, 'bs=4M')
-            utils.execute(*cmd, run_as_root=True)
+            images.convert_image(base, self.path, 'raw', run_as_root=True)
             if resize:
                 disk.resize2fs(self.path, run_as_root=True)
 
