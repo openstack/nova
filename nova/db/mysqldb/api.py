@@ -21,10 +21,12 @@ MySQLdb DB API implementation.
 This will fall back to sqlalchemy for methods that are not yet implemented
 here.
 """
+import eventlet
 from eventlet import tpool
 
 from nova.db import utils as dbutils
 from nova.db.mysqldb import connection
+from nova.db.mysqldb import models
 from nova.db.mysqldb import transform
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
@@ -44,16 +46,34 @@ CONF = cfg.CONF
 CONF.register_opts(mysqldb_opts, group='mysqldb')
 LOG = logging.getLogger(__name__)
 
+_RetryExceptions = (connection.RetryableException, )
+
 
 def _tpool_enabled(f):
     """Decorator to use that will wrap a call in tpool.execute if
-    CONF.mysqldb.tpool_enable is True
+    CONF.mysqldb.use_tpool is True
     """
     def wrapped(*args, **kwargs):
         if CONF.mysqldb.use_tpool:
             return tpool.execute(f, *args, **kwargs)
         else:
             return f(*args, **kwargs)
+    wrapped.__name__ = f.__name__
+    return wrapped
+
+
+def _retry(f):
+    def wrapped(*args, **kwargs):
+        while True:
+            try:
+                return f(*args, **kwargs)
+            except _RetryExceptions:
+                LOG.exception("Retrying...")
+                eventlet.sleep(2)
+                continue
+            except Exception:
+                LOG.exception('foo')
+                raise
     wrapped.__name__ = f.__name__
     return wrapped
 
@@ -93,6 +113,24 @@ class InequalityCondition(object):
 class API(object):
     def __init__(self):
         self.pool = connection.ConnectionPool()
+        self._launch_monitor()
+
+    @_tpool_enabled
+    @_retry
+    def _check_schema(self):
+        with self.pool.get() as conn:
+            schema = conn.get_schema()
+            models.set_schema(schema)
+
+    def _launch_monitor(self):
+        def _schema_monitor():
+            while True:
+                self._check_schema()
+                print "sleeping"
+                eventlet.sleep(5)
+                print "done sleeping"
+        self._check_schema()
+        self._monitor_thread = eventlet.spawn_n(_schema_monitor)
 
     def __getattr__(self, key):
         # forward unimplemented method to sqlalchemy backend:
@@ -110,8 +148,9 @@ class API(object):
     def not_equal(*values):
         return InequalityCondition(values)
 
-    @_tpool_enabled
     @dbutils.require_context
+    @_tpool_enabled
+    @_retry
     def bw_usage_update(self, context, uuid, mac, start_period, bw_in, bw_out,
                         last_ctr_in, last_ctr_out, last_refreshed=None):
 
@@ -147,7 +186,9 @@ class API(object):
         with self.pool.get() as conn:
             conn.insert('bw_usage_cache', values)
 
+    @dbutils.require_context
     @_tpool_enabled
+    @_retry
     def instance_get_by_uuid(self, context, instance_uuid):
         with self.pool.get() as conn:
             return self._instance_get_by_uuid(context, instance_uuid, conn)
@@ -187,34 +228,36 @@ class API(object):
 
         return sql, kwargs, joins
 
+    @dbutils.require_context
     @_tpool_enabled
+    @_retry
     def instance_get_all(self, context, columns_to_join):
         sql, kwargs, joins = self._build_instance_get(context)
         with self.pool.get() as conn:
             cursor = conn.select(sql, kwargs)
             rows = cursor.fetchall()
-            instances = transform.to_objects(rows, 'instances', joins, conn.tables)
+            instances = transform.to_objects(rows, 'instances', joins)
 
         return instances
 
     def _instance_get_by_uuid(self, context, instance_uuid, conn):
         sql, kwargs, joins = self._build_instance_get(context)
-        sql += " AND instances.uuid = %(uuid)s"
+        sql += " WHERE instances.uuid = %(uuid)s"
         kwargs['uuid'] = instance_uuid
 
         with self.pool.get() as conn:
             cursor = conn.select(sql, kwargs)
             rows = cursor.fetchall()
-            instances = transform.to_objects(rows, 'instances', joins, conn.tables)
-
+            instances = transform.to_objects(rows, 'instances', joins)
             if not instances:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
 
             return instances[0]
                 
 
-    @_tpool_enabled
     @dbutils.require_context
+    @_tpool_enabled
+    @_retry
     def instance_destroy(self, context, instance_uuid, constraint=None):
         with self.pool.get() as conn:
             if uuidutils.is_uuid_like(instance_uuid):
@@ -314,8 +357,9 @@ class API(object):
                     instance_uuid, conn)
             return old_instance_ref, new_instance_ref
 
-    @_tpool_enabled
     @dbutils.require_context
+    @_tpool_enabled
+    @_retry
     def instance_update(self, context, instance_uuid, values):
         instance_ref = self._instance_update(context, instance_uuid, values)[1]
         return instance_ref

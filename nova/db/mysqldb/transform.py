@@ -19,10 +19,12 @@
 Translate SQL result rows into dictionaries that Nova code is used to working
 with.
 """
+from nova.db.mysqldb import models
 
 
-def to_objects(rows, table, joins, tables):
+def to_objects(rows, table, joins):
     """Return a list of dictionaries representing the objects returned."""
+    tables = models.get_schema()['tables']
     result_dict = {}
 
     for row in rows:
