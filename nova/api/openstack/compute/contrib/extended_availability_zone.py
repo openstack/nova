@@ -21,26 +21,35 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
+from nova.common import memorycache
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
+# NOTE(vish): azs don't change that often, so cache them for an hour to
+#             avoid hitting the db multiple times on every request.
+AZ_CACHE_SECONDS = 60 * 60
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_availability_zone')
 
 
 class ExtendedAZController(wsgi.Controller):
+    def __init__(self):
+        self.mc = memorycache.get_client()
 
     def _get_host_az(self, context, instance):
-        admin_context = context.elevated()
-        if instance['host']:
-            return availability_zones.get_host_availability_zone(
-                                            admin_context, instance['host'])
+        host = instance.get('host')
+        if not host:
+            return None
+        cache_key = "azcache-%s" % host
+        az = self.mc.get(cache_key)
+        if not az:
+            elevated = context.elevated()
+            az = availability_zones.get_host_availability_zone(elevated, host)
+            self.mc.set(cache_key, az, AZ_CACHE_SECONDS)
+        return az
 
     def _extend_server(self, context, server, instance):
         key = "%s:availability_zone" % Extended_availability_zone.alias
-        server[key] = instance.get('availability_zone', None)
-
-        key = "%s:host_availability_zone" % Extended_availability_zone.alias
         server[key] = self._get_host_az(context, instance)
 
     @wsgi.extends
@@ -81,10 +90,6 @@ class Extended_availability_zone(extensions.ExtensionDescriptor):
 def make_server(elem):
     elem.set('{%s}availability_zone' % Extended_availability_zone.namespace,
              '%s:availability_zone' % Extended_availability_zone.alias)
-    elem.set('{%s}host_availability_zone' %
-             Extended_availability_zone.namespace,
-             '%s:host_availability_zone' %
-             Extended_availability_zone.alias)
 
 
 class ExtendedAZTemplate(xmlutil.TemplateBuilder):

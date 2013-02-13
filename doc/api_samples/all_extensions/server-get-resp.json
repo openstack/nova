@@ -1,8 +1,7 @@
 {
     "server": {
         "OS-DCF:diskConfig": "AUTO",
-        "OS-EXT-AZ:availability_zone": null,
-        "OS-EXT-AZ:host_availability_zone": "nova",
+        "OS-EXT-AZ:availability_zone": "nova",
         "OS-EXT-SRV-ATTR:host": "b00875071c774b5487d217b82f03dfa2",
         "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
         "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
