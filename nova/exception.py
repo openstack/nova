@@ -344,7 +344,7 @@ class ComputeResourcesUnavailable(ServiceUnavailable):
 
 
 class ComputeServiceUnavailable(ServiceUnavailable):
-    message = _("Compute service is unavailable at this time.")
+    message = _("Compute service of %(host)s is unavailable at this time.")
 
 
 class UnableToMigrateToSelf(Invalid):
