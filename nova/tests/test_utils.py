@@ -964,3 +964,18 @@ class GetCallArgsTestCase(test.TestCase):
         self.assertEqual(3, callargs['red'])
         self.assertTrue('blue' in callargs)
         self.assertEqual(None, callargs['blue'])
+
+
+class StringLengthTestCase(test.TestCase):
+    def test_check_string_length(self):
+        self.assertIsNone(utils.check_string_length(
+                          'test', 'name', max_length=255))
+        self.assertRaises(exception.InvalidInput,
+                          utils.check_string_length,
+                          11, 'name', max_length=255)
+        self.assertRaises(exception.InvalidInput,
+                          utils.check_string_length,
+                          '', 'name', min_length=1)
+        self.assertRaises(exception.InvalidInput,
+                          utils.check_string_length,
+                          'a' * 256, 'name', max_length=255)
