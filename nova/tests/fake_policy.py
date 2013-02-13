@@ -121,6 +121,7 @@ policy_data = """
     "compute_extension:extended_server_attributes": "",
     "compute_extension:extended_status": "",
     "compute_extension:extended_availability_zone": "",
+    "compute_extension:extended_ips": "",
     "compute_extension:fixed_ips": "",
     "compute_extension:flavor_access": "",
     "compute_extension:flavor_disabled": "",

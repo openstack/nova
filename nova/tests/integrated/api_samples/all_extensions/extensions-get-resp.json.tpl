@@ -25,6 +25,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-EXT-IPS",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedIps",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_ips/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "%(text)s",
             "links": [],

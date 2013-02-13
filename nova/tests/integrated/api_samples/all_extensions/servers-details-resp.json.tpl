@@ -15,6 +15,7 @@
             "addresses": {
                 "private": [
                     {
+                        "OS-EXT-IPS:type": "fixed",
                         "addr": "%(ip)s",
                         "version": 4
                     }

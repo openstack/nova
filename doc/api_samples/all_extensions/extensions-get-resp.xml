@@ -9,6 +9,9 @@
   <extension alias="OS-EXT-AZ" updated="2013-01-30T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" name="ExtendedAvailabilityZone">
     <description>Extended Server Attributes support.</description>
   </extension>
+  <extension alias="OS-EXT-IPS" updated="2013-01-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" name="ExtendedIps">
+    <description>Adds type parameter to the ip list.</description>
+  </extension>
   <extension alias="OS-EXT-SRV-ATTR" updated="2011-11-03T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_status/api/v1.1" name="ExtendedServerAttributes">
     <description>Extended Server Attributes support.</description>
   </extension>
@@ -37,16 +40,17 @@
   <extension alias="os-aggregates" updated="2012-01-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/aggregates/api/v1.1" name="Aggregates">
     <description>Admin-only aggregate administration.</description>
   </extension>
-  <extension alias="os-availability-zone" updated="2012-08-09T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1" name="AvailabilityZone">
-    <description>Add availability_zone to the Create Server v1.1 API.</description>
+  <extension alias="os-availability-zone" updated="2012-12-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1" name="AvailabilityZone">
+    <description>1. Add availability_zone to the Create Server v1.1 API.
+       2. Add availability zones describing.
+    </description>
   </extension>
   <extension alias="os-baremetal-nodes" updated="2013-01-04T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2" name="BareMetalNodes">
     <description>Admin-only bare-metal node administration.</description>
   </extension>
   <extension alias="os-cells" updated="2011-09-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/cells/api/v1.1" name="Cells">
-    <description>Enables cells-related functionality such as adding child cells,
-    listing child cells, getting the capabilities of the local cell,
-    and returning build plans to parent cells' schedulers
+    <description>Enables cells-related functionality such as adding neighbor cells,
+    listing neighbor cells, and getting the capabilities of the local cell.
     </description>
   </extension>
   <extension alias="os-certificates" updated="2012-01-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/certificates/api/v1.1" name="Certificates">
@@ -91,7 +95,7 @@
     <description>Fixed IPs support.</description>
   </extension>
   <extension alias="os-flavor-access" updated="2012-08-01T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_access/api/v2" name="FlavorAccess">
-    <description>Flavor access supprt.</description>
+    <description>Flavor access support.</description>
   </extension>
   <extension alias="os-flavor-extra-specs" updated="2011-06-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/flavor_extra_specs/api/v1.1" name="FlavorExtraSpecs">
     <description>Instance type (flavor) extra specs.</description>
@@ -146,9 +150,6 @@
   <extension alias="os-networks-associate" updated="2012-11-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/networks_associate/api/v2" name="NetworkAssociationSupport">
     <description>Network association support.</description>
   </extension>
-  <extension alias="os-tenant-networks" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2" name="OSTenantNetworks">
-    <description>Tenant-based Network Management Extension.</description>
-  </extension>
   <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
     <description>Quota classes management support.</description>
   </extension>
@@ -165,7 +166,7 @@
     <description>Allow Admins to view server diagnostics through server action.</description>
   </extension>
   <extension alias="os-server-password" updated="2012-11-29T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/server-password/api/v2" name="ServerPassword">
-    <description>Server password support</description>
+    <description>Server password support.</description>
   </extension>
   <extension alias="os-server-start-stop" updated="2012-01-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/servers/api/v1.1" name="ServerStartStop">
     <description>Start/Stop instance compute API support.</description>
@@ -175,6 +176,9 @@
   </extension>
   <extension alias="os-simple-tenant-usage" updated="2011-08-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1" name="SimpleTenantUsage">
     <description>Simple tenant usage extension.</description>
+  </extension>
+  <extension alias="os-tenant-networks" updated="2012-03-07T09:46:43-05:00" namespace="http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2" name="OSTenantNetworks">
+    <description>Tenant-based Network Management Extension.</description>
   </extension>
   <extension alias="os-used-limits" updated="2012-07-13T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/used_limits/api/v1.1" name="UsedLimits">
     <description>Provide data on limited resources that are being used.</description>

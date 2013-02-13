@@ -2217,6 +2217,34 @@ class QuotasSampleXmlTests(QuotasSampleJsonTests):
     ctype = "xml"
 
 
+class ExtendedIpsSampleJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".extended_ips.Extended_ips")
+
+    def test_show(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/%s' % uuid)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        return self._verify_response('server-get-resp', subs, response)
+
+    def test_detail(self):
+        uuid = self._post_server()
+        response = self._do_get('servers/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        subs['hostid'] = '[a-f0-9]+'
+        return self._verify_response('servers-detail-resp', subs, response)
+
+
+class ExtendedIpsSampleXmlTests(ExtendedIpsSampleJsonTests):
+        ctype = 'xml'
+
+
 class ExtendedStatusSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_status.Extended_status")
