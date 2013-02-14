@@ -2513,8 +2513,11 @@ class AggregateAPI(base.Base):
         """Creates the model for the aggregate."""
 
         values = {"name": aggregate_name}
+        metadata = None
+        if availability_zone:
+            metadata = {'availability_zone': availability_zone}
         aggregate = self.db.aggregate_create(context, values,
-                metadata={'availability_zone': availability_zone})
+                metadata=metadata)
         aggregate = self._get_aggregate_info(context, aggregate)
         # To maintain the same API result as before.
         del aggregate['hosts']
