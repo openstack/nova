@@ -892,6 +892,15 @@ def is_valid_ipv4(address):
         return False
 
 
+def is_valid_ipv6(address):
+    return netaddr.valid_ipv6(address)
+
+
+def get_shortened_ipv6(address):
+    addr = netaddr.IPAddress(address, version=6)
+    return str(addr.ipv6())
+
+
 def is_valid_cidr(address):
     """Check if the provided ipv4 or ipv6 address is a valid
     CIDR address or not"""
