@@ -775,10 +775,13 @@ def get_dhcp_hosts(context, network_ref):
     host = None
     if network_ref['multi_host']:
         host = CONF.host
+    macs = set()
     for data in db.network_get_associated_fixed_ips(context,
                                                     network_ref['id'],
                                                     host=host):
-        hosts.append(_host_dhcp(data))
+        if data['vif_address'] not in macs:
+            hosts.append(_host_dhcp(data))
+            macs.add(data['vif_address'])
     return '\n'.join(hosts)
 
 
