@@ -24,6 +24,7 @@ from nova import context
 from nova import db
 from nova.network import driver
 from nova.network import linux_net
+from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -31,6 +32,7 @@ from nova import test
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 HOST = "testhost"
 
@@ -471,6 +473,71 @@ class LinuxNetworkTestCase(test.TestCase):
         self.flags(flat_interface="override_interface")
         driver.plug(network, "fakemac")
         self.assertEqual(info['passed_interface'], "override_interface")
+
+    def _test_dnsmasq_execute(self, extra_expected=None):
+        network_ref = {'id': 'fake',
+                       'label': 'fake',
+                       'multi_host': False,
+                       'cidr': '10.0.0.0/24',
+                       'dns1': '8.8.4.4',
+                       'dhcp_start': '1.0.0.2',
+                       'dhcp_server': '10.0.0.1'}
+        executes = []
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            return "", ""
+
+        self.stubs.Set(linux_net, '_execute', fake_execute)
+
+        self.stubs.Set(os, 'chmod', lambda *a, **kw: None)
+        self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
+        self.stubs.Set(linux_net, '_dnsmasq_pid_for', lambda *a, **kw: None)
+        dev = 'br100'
+        linux_net.restart_dhcp(self.context, dev, network_ref)
+        expected = ['env',
+          'CONFIG_FILE=%s' % CONF.dhcpbridge_flagfile,
+          'NETWORK_ID=fake',
+          'dnsmasq',
+          '--strict-order',
+          '--bind-interfaces',
+          '--conf-file=%s' % CONF.dnsmasq_config_file,
+          '--domain=%s' % CONF.dhcp_domain,
+          '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
+          '--listen-address=%s' % network_ref['dhcp_server'],
+          '--except-interface=lo',
+          "--dhcp-range=set:'%s',%s,static,%ss" % (network_ref['label'],
+                                                   network_ref['dhcp_start'],
+                                                   CONF.dhcp_lease_time),
+          '--dhcp-lease-max=256',
+          '--dhcp-hostsfile=%s' % linux_net._dhcp_file(dev, 'conf'),
+          '--dhcp-script=%s' % CONF.dhcpbridge,
+          '--leasefile-ro']
+        if extra_expected:
+            expected += extra_expected
+        self.assertEqual([tuple(expected)], executes)
+
+    def test_dnsmasq_execute(self):
+        self._test_dnsmasq_execute()
+
+    def test_dnsmasq_execute_dns_servers(self):
+        self.flags(dns_server=['1.1.1.1', '2.2.2.2'])
+        expected = [
+            '--no-hosts',
+            '--no-resolv',
+            '--server=1.1.1.1',
+            '--server=2.2.2.2',
+        ]
+        self._test_dnsmasq_execute(expected)
+
+    def test_dnsmasq_execute_use_network_dns_servers(self):
+        self.flags(use_network_dns_servers=True)
+        expected = [
+            '--no-hosts',
+            '--no-resolv',
+            '--server=8.8.4.4',
+        ]
+        self._test_dnsmasq_execute(expected)
 
     def test_isolated_host(self):
         self.flags(fake_network=False,
