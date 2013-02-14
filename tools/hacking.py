@@ -21,6 +21,7 @@
 Built on top of pep8.py
 """
 
+import imp
 import inspect
 import logging
 import os
@@ -45,7 +46,9 @@ logging.disable('LOG')
 #N8xx git commit messages
 #N9xx other
 
-IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
+IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session',
+                     'nova.openstack.common.log.logging',
+                     'nova.db.sqlalchemy.migration.versioning_api']
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
 END_DOCSTRING_TRIPLE = ['"""', "'''"]
 VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
@@ -150,111 +153,116 @@ def nova_except_format_assert(logical_line):
         yield 1, "N202: assertRaises Exception too broad"
 
 
-def nova_one_import_per_line(logical_line):
-    r"""Check for import format.
+modules_cache = dict((mod, True) for mod in tuple(sys.modules.keys())
+                     + sys.builtin_module_names)
+
+RE_RELATIVE_IMPORT = re.compile('^from\s*[.]')
+
+
+def nova_import_rules(logical_line):
+    r"""Check for imports.
 
     nova HACKING guide recommends one import per line:
     Do not import more than one module per line
 
     Examples:
-    Okay: from nova.rpc.common import RemoteError
-    N301: from nova.rpc.common import RemoteError, LOG
-    """
-    pos = logical_line.find(',')
-    parts = logical_line.split()
-    if (pos > -1 and (parts[0] == "import" or
-                      parts[0] == "from" and parts[2] == "import") and
-        not is_import_exception(parts[1])):
-        yield pos, "N301: one import per line"
+    Okay: from nova.compute import api
+    N301: from nova.compute import api, utils
 
 
-def nova_import_module_only(logical_line):
-    r"""Check for import module only.
+    Imports should usually be on separate lines.
 
     nova HACKING guide recommends importing only modules:
     Do not import objects, only modules
 
+    Examples:
     Okay: from os import path
     Okay: import os.path
+    Okay: from nova.compute import rpcapi
     N302: from os.path import dirname as dirname2
-    N303  from os.path import *
-    N304  import flakes
+    N303: from os.path import *
+    N304: from .compute import rpcapi
     """
-    # N302 import only modules
-    # N303 Invalid Import
-    # N304 Relative Import
+    #NOTE(afazekas): An old style relative import example will not be able to
+    # pass the doctest, since the relativity depends on the file's locality
 
-    # TODO(sdague) actually get these tests working
-    # TODO(jogo) simplify this code
-    def import_module_check(mod, parent=None, added=False):
-        """Checks for relative, modules and invalid imports.
+    def is_module_for_sure(mod, search_path=sys.path):
+        mod_path = mod.replace('.', os.sep)
+        try:
+            imp.find_module(mod_path, search_path)
+        except ImportError:
+            return False
+        return True
 
-        If can't find module on first try, recursively check for relative
-        imports.
+    def is_module_for_sure_cached(mod):
+        if mod in modules_cache:
+            return modules_cache[mod]
+        res = is_module_for_sure(mod)
+        modules_cache[mod] = res
+        return res
+
+    def is_module(mod):
+        """Checks for non module imports.
+
+        If can't find module on first try, recursively check for the parent
+        modules.
         When parsing 'from x import y,' x is the parent.
         """
-        current_path = os.path.dirname(pep8.current_file)
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                valid = True
-                if parent:
-                    parent_mod = __import__(parent, globals(), locals(),
-                        [mod], -1)
-                    valid = inspect.ismodule(getattr(parent_mod, mod))
-                else:
-                    __import__(mod, globals(), locals(), [], -1)
-                    valid = inspect.ismodule(sys.modules[mod])
-                if not valid:
-                    if added:
-                        sys.path.pop()
-                        added = False
-                        return logical_line.find(mod), ("N304: No "
-                            "relative imports. '%s' is a relative import"
-                            % logical_line)
-                    return logical_line.find(mod), ("N302: import only "
-                        "modules. '%s' does not import a module"
-                        % logical_line)
+        if is_module_for_sure_cached(mod):
+            return True
+        parts = mod.split('.')
+        for i in range(len(parts) - 1, 0, -1):
+            path = '.'.join(parts[0:i])
+            if is_module_for_sure_cached(path):
+                return False
+        _missingImport.add(mod)
+        return True
 
-        except (ImportError, NameError) as exc:
-            if not added:
-                added = True
-                sys.path.append(current_path)
-                return import_module_check(mod, parent, added)
-            else:
-                name = logical_line.split()[1]
-                if name not in _missingImport:
-                    if VERBOSE_MISSING_IMPORT != 'False':
-                        print >> sys.stderr, ("ERROR: import '%s' in %s "
-                                              "failed: %s" %
-                            (name, pep8.current_file, exc))
-                    _missingImport.add(name)
-                added = False
-                sys.path.pop()
-                return
-
-        except AttributeError:
-            # Invalid import
-            if "import *" in logical_line:
-                # TODO(jogo): handle "from x import *, by checking all
-                #           "objects in x"
-                return
-            return logical_line.find(mod), ("N303: Invalid import, "
-                "%s" % mod)
+    current_path = os.path.dirname(pep8.current_file)
+    current_mod = os.path.basename(pep8.current_file)
+    if current_mod[-3:] == ".py":
+        current_mod = current_mod[:-3]
 
     split_line = logical_line.split()
-    if (", " not in logical_line and
-            split_line[0] in ('import', 'from') and
-            (len(split_line) in (2, 4, 6)) and
-            split_line[1] != "__future__"):
-        if is_import_exception(split_line[1]):
+    split_line_len = len(split_line)
+    if (split_line[0] in ('import', 'from') and split_line_len > 1 and
+        not is_import_exception(split_line[1])):
+        pos = logical_line.find(',')
+        if pos != -1:
+            if split_line[0] == 'from':
+                yield pos, "N301: one import per line"
+            return  # ',' is not supported by the N302 checker yet
+        pos = logical_line.find('*')
+        if pos != -1:
+            yield pos, "N303: No wildcard (*) import."
             return
-        if "from" == split_line[0]:
-            rval = import_module_check(split_line[3], parent=split_line[1])
-        else:
-            rval = import_module_check(split_line[1])
-        if rval is not None:
-            yield rval
+
+        if split_line_len in (2, 4, 6) and split_line[1] != "__future__":
+            if 'from' == split_line[0] and split_line_len > 3:
+                mod = '.'.join((split_line[1], split_line[3]))
+                if is_import_exception(mod):
+                        return
+                if RE_RELATIVE_IMPORT.search(logical_line):
+                    yield logical_line.find('.'), ("N304: No "
+                        "relative imports. '%s' is a relative import"
+                        % logical_line)
+                    return
+
+                if not is_module(mod):
+                    yield 0, ("N302: import only modules."
+                              "'%s' does not import a module" % logical_line)
+                return
+
+        #NOTE(afazekas): import searches first in the package
+        # The import keyword just imports modules
+        # The guestfs module now imports guestfs
+        mod = split_line[1]
+        if (current_mod != mod and
+            not is_module_for_sure_cached(mod) and
+            is_module_for_sure(mod, [current_path])):
+                yield 0, ("N304: No relative imports."
+                          " '%s' is a relative import"
+                          % logical_line)
 
 
 #TODO(jogo): import template: N305

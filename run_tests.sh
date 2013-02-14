@@ -93,6 +93,8 @@ export venv_name
 export tools_dir
 export venv=${venv_path}/${venv_dir}
 
+SCRIPT_ROOT=$(dirname $(readlink -f "$0"))
+
 if [ $no_site_packages -eq 1 ]; then
   installvenvopts="--no-site-packages"
 fi
@@ -156,12 +158,11 @@ function run_pep8 {
   srcfiles=`find nova -type f -name "*.py" ! -wholename "nova\/openstack*"`
   srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*" ! -name "*~"`"
   srcfiles+=" `find tools -type f -name "*.py"`"
-  srcfiles+=" `find plugins -type f -name "*.py"`"
   srcfiles+=" `find smoketests -type f -name "*.py"`"
   srcfiles+=" setup.py"
 
   # Until all these issues get fixed, ignore.
-  ignore='--ignore=E12,E711,E721,E712,N403,N404'
+  ignore='--ignore=E12,E711,E721,E712,N403,N404,N303'
 
   # First run the hacking selftest, to make sure it's right
   echo "Running hacking.py self test"
@@ -170,6 +171,10 @@ function run_pep8 {
   # Then actually run it
   echo "Running pep8"
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
+
+  PYTHONPATH=$SCRIPT_ROOT/plugins/xenserver/networking/etc/xensource/scripts ${wrapper} python tools/hacking.py ${ignore} ./plugins/xenserver/networking
+
+  PYTHONPATH=$SCRIPT_ROOT/plugins/xenserver/xenapi/etc/xapi.d/plugins ${wrapper} python tools/hacking.py ${ignore} ./plugins/xenserver/xenapi
 
   ${wrapper} bash tools/unused_imports.sh
   # NOTE(sdague): as of grizzly-2 these are passing however leaving the comment

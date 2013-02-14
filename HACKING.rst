@@ -52,6 +52,7 @@ Imports
 -------
 - Do not import objects, only modules (*)
 - Do not import more than one module per line (*)
+- Do not use wildcard ``*`` import (*)
 - Do not make relative imports
 - Do not make new nova.db imports in nova/virt/*
 - Order your imports by the full module path
@@ -62,6 +63,8 @@ Imports
 - imports from ``migrate`` package
 - imports from ``sqlalchemy`` package
 - imports from ``nova.db.sqlalchemy.session`` module
+- imports from ``nova.openstack.common.log.logging`` package
+- imports from ``nova.db.sqlalchemy.migration.versioning_api`` package
 
 Example::
 
