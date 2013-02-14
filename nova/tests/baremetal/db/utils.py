@@ -22,6 +22,7 @@ from nova.virt.baremetal.db.sqlalchemy import models as bm_models
 def new_bm_node(**kwargs):
     h = bm_models.BareMetalNode()
     h.id = kwargs.pop('id', None)
+    h.uuid = kwargs.pop('uuid', None)
     h.service_host = kwargs.pop('service_host', None)
     h.instance_uuid = kwargs.pop('instance_uuid', None)
     h.cpus = kwargs.pop('cpus', 1)

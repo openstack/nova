@@ -20,6 +20,8 @@
 
 """Implementation of SQLAlchemy backend."""
 
+import uuid
+
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import literal_column
 
@@ -132,7 +134,7 @@ def bm_node_get(context, bm_node_id):
                      first()
 
     if not result:
-        raise exception.InstanceNotFound(instance_id=bm_node_id)
+        raise exception.NodeNotFound(node_id=bm_node_id)
 
     return result
 
@@ -153,7 +155,21 @@ def bm_node_get_by_instance_uuid(context, instance_uuid):
 
 
 @sqlalchemy_api.require_admin_context
+def bm_node_get_by_node_uuid(context, bm_node_uuid):
+    result = model_query(context, models.BareMetalNode, read_deleted="no").\
+                     filter_by(uuid=bm_node_uuid).\
+                     first()
+
+    if not result:
+        raise exception.NodeNotFoundByUUID(node_uuid=bm_node_uuid)
+
+    return result
+
+
+@sqlalchemy_api.require_admin_context
 def bm_node_create(context, values):
+    if not values.get('uuid'):
+        values['uuid'] = str(uuid.uuid4())
     bm_node_ref = models.BareMetalNode()
     bm_node_ref.update(values)
     _save(bm_node_ref)
@@ -167,11 +183,11 @@ def bm_node_update(context, bm_node_id, values):
             update(values)
 
     if not rows:
-        raise exception.InstanceNotFound(instance_id=bm_node_id)
+        raise exception.NodeNotFound(node_id=bm_node_id)
 
 
 @sqlalchemy_api.require_admin_context
-def bm_node_set_uuid_safe(context, bm_node_id, values):
+def bm_node_associate_and_update(context, node_uuid, values):
     """Associate an instance to a node safely
 
     Associate an instance to a node only if that node is not yet assocated.
@@ -182,21 +198,21 @@ def bm_node_set_uuid_safe(context, bm_node_id, values):
     """
     if 'instance_uuid' not in values:
         raise exception.NovaException(_(
-            "instance_uuid must be supplied to bm_node_set_uuid_safe"))
+            "instance_uuid must be supplied to bm_node_associate_and_update"))
 
     session = db_session.get_session()
     with session.begin():
         query = model_query(context, models.BareMetalNode,
                                 session=session, read_deleted="no").\
-                        filter_by(id=bm_node_id)
+                        filter_by(uuid=node_uuid)
 
         count = query.filter_by(instance_uuid=None).\
                         update(values, synchronize_session=False)
         if count != 1:
             raise exception.NovaException(_(
-                "Failed to associate instance %(uuid)s to baremetal node "
-                "%(id)s.") % {'id': bm_node_id,
-                              'uuid': values['instance_uuid']})
+                "Failed to associate instance %(i_uuid)s to baremetal node "
+                "%(n_uuid)s.") % {'i_uuid': values['instance_uuid'],
+                                  'n_uuid': node_uuid})
         ref = query.first()
     return ref
 
@@ -270,7 +286,7 @@ def bm_pxe_ip_get_by_bm_node_id(context, bm_node_id):
             first()
 
     if not result:
-        raise exception.InstanceNotFound(instance_id=bm_node_id)
+        raise exception.NodeNotFound(node_id=bm_node_id)
 
     return result
 
@@ -285,7 +301,7 @@ def bm_pxe_ip_associate(context, bm_node_id):
                      filter_by(id=bm_node_id).\
                      first()
         if not node_ref:
-            raise exception.InstanceNotFound(instance_id=bm_node_id)
+            raise exception.NodeNotFound(node_id=bm_node_id)
 
         # Check if the node already has a pxe_ip
         ip_ref = model_query(context, models.BareMetalPxeIp,
@@ -408,6 +424,6 @@ def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
                  all()
 
     if not result:
-        raise exception.InstanceNotFound(instance_id=bm_node_id)
+        raise exception.NodeNotFound(node_id=bm_node_id)
 
     return result

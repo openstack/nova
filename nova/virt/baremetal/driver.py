@@ -186,17 +186,17 @@ class BareMetalDriver(driver.ComputeDriver):
         return l
 
     def _require_node(self, instance):
-        """Get a node_id out of a manager instance dict.
+        """Get a node's uuid out of a manager instance dict.
 
-        The compute manager is meant to know the node id, so a missing node is
+        The compute manager is meant to know the node uuid, so missing uuid
         a significant issue - it may mean we've been passed someone elses data.
         """
-        node_id = instance.get('node')
-        if not node_id:
+        node_uuid = instance.get('node')
+        if not node_uuid:
             raise exception.NovaException(_(
                     "Baremetal node id not supplied to driver for %r")
                     % instance['uuid'])
-        return node_id
+        return node_uuid
 
     def _attach_block_devices(self, instance, block_device_info):
         block_device_mapping = driver.\
@@ -230,18 +230,19 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def macs_for_instance(self, instance):
         context = nova_context.get_admin_context()
-        node_id = self._require_node(instance)
-        return set(iface['address'] for iface in
-            db.bm_interface_get_all_by_bm_node_id(context, node_id))
+        node_uuid = self._require_node(instance)
+        node = db.bm_node_get_by_node_uuid(context, node_uuid)
+        ifaces = db.bm_interface_get_all_by_bm_node_id(context, node['id'])
+        return set(iface['address'] for iface in ifaces)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        node_id = self._require_node(instance)
+        node_uuid = self._require_node(instance)
 
         # NOTE(deva): this db method will raise an exception if the node is
         #             already in use. We call it here to ensure no one else
         #             allocates this node before we begin provisioning it.
-        node = db.bm_node_set_uuid_safe(context, node_id,
+        node = db.bm_node_associate_and_update(context, node_uuid,
                     {'instance_uuid': instance['uuid'],
                      'task_state': baremetal_states.BUILDING})
 
@@ -265,7 +266,8 @@ class BareMetalDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 LOG.error(_("Error deploying instance %(instance)s "
                             "on baremetal node %(node)s.") %
-                            {'instance': instance['uuid'], 'node': node['id']})
+                            {'instance': instance['uuid'],
+                             'node': node['uuid']})
 
                 # Do not set instance=None yet. This prevents another
                 # spawn() while we are cleaning up.
@@ -408,7 +410,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'local_gb_used': local_gb_used,
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
-               'hypervisor_hostname': str(node['id']),
+               'hypervisor_hostname': str(node['uuid']),
                'cpu_info': 'baremetal cpu',
                }
         return dic
@@ -418,7 +420,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def get_available_resource(self, nodename):
         context = nova_context.get_admin_context()
-        node = db.bm_node_get(context, nodename)
+        node = db.bm_node_get_by_node_uuid(context, nodename)
         dic = self._node_resource(node)
         return dic
 
@@ -438,7 +440,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                      service_host=CONF.host)
         for node in nodes:
             res = self._node_resource(node)
-            nodename = str(node['id'])
+            nodename = str(node['uuid'])
             data = {}
             data['vcpus'] = res['vcpus']
             data['vcpus_used'] = res['vcpus_used']
@@ -489,5 +491,5 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def get_available_nodes(self):
         context = nova_context.get_admin_context()
-        return [str(n['id']) for n in
+        return [str(n['uuid']) for n in
                 db.bm_node_get_unassociated(context, service_host=CONF.host)]

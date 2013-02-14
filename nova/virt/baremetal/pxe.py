@@ -413,7 +413,7 @@ class PXE(base.NodeDriver):
                      'pxe_config_path': None,
                      'root_mb': 0,
                      'swap_mb': 0})
-        except exception.InstanceNotFound:
+        except exception.NodeNotFound:
             pass
 
         try:
@@ -464,7 +464,7 @@ class PXE(base.NodeDriver):
                     raise utils.LoopingCallDone()
                 elif status == baremetal_states.DEPLOYFAIL:
                     locals['error'] = _("PXE deploy failed for instance %s")
-            except exception.InstanceNotFound:
+            except exception.NodeNotFound:
                 locals['error'] = _("Baremetal node deleted while waiting "
                                     "for deployment of instance %s")
 
