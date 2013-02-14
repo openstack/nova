@@ -4586,13 +4586,9 @@ def actions_get(context, instance_uuid):
     return actions
 
 
-def action_get_by_id(context, instance_uuid, action_id):
-    """Get the action by id and given instance."""
-    action = model_query(context, models.InstanceAction).\
-                         filter_by(instance_uuid=instance_uuid).\
-                         filter_by(id=action_id).\
-                         first()
-
+def action_get_by_request_id(context, instance_uuid, request_id):
+    """Get the action by request_id and given instance."""
+    action = _action_get_by_request_id(context, instance_uuid, request_id)
     return action
 
 

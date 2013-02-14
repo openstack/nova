@@ -135,6 +135,9 @@
   <extension alias="os-hypervisors" updated="2012-06-21T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/hypervisors/api/v1.1" name="Hypervisors">
     <description>Admin-only hypervisor administration.</description>
   </extension>
+  <extension alias="os-instance-actions" updated="2013-02-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/instance-actions/api/v1.1" name="InstanceActions">
+    <description>View a log of actions taken on an instance</description>
+  </extension>
   <extension alias="os-instance_usage_audit_log" updated="2012-07-06T01:00:00+00:00" namespace="http://docs.openstack.org/ext/services/api/v1.1" name="OSInstanceUsageAuditLog">
     <description>Admin-only Task Log Monitoring.</description>
   </extension>

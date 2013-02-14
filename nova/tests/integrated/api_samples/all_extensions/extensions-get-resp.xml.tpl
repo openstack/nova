@@ -174,4 +174,7 @@
   <extension alias="os-volumes" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-instance-actions" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/instance-actions/api/v1.1" name="InstanceActions">
+    <description>%(text)s</description>
+  </extension>
 </extensions>
