@@ -12,6 +12,7 @@ function usage {
   echo "  -r, --recreate-db           Recreate the test database (deprecated, as this is now the default)."
   echo "  -n, --no-recreate-db        Don't recreate the test database."
   echo "  -f, --force                 Force a clean re-build of the virtual environment. Useful when dependencies have been added."
+  echo "  -u, --update                Update the virtual environment with any newer package versions"
   echo "  -p, --pep8                  Just run PEP8 and HACKING compliance check"
   echo "  -P, --no-pep8               Don't run static code checks"
   echo "  -c, --coverage              Generate coverage report"
@@ -42,6 +43,7 @@ function process_options {
       -r|--recreate-db) recreate_db=1;;
       -n|--no-recreate-db) recreate_db=0;;
       -f|--force) force=1;;
+      -u|--update) update=1;;
       -p|--pep8) just_pep8=1;;
       -P|--no-pep8) no_pep8=1;;
       -c|--coverage) coverage=1;;
@@ -80,6 +82,7 @@ just_pep8=0
 no_pep8=0
 coverage=0
 recreate_db=1
+update=0
 
 LANG=en_US.UTF-8
 LANGUAGE=en_US:en
@@ -197,6 +200,10 @@ then
   if [ $force -eq 1 ]; then
     echo "Cleaning virtualenv..."
     rm -rf ${venv}
+  fi
+  if [ $update -eq 1 ]; then
+      echo "Updating virtualenv..."
+      python tools/install_venv.py $installvenvopts
   fi
   if [ -e ${venv} ]; then
     wrapper="${with_venv}"
