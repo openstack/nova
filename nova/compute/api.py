@@ -2352,7 +2352,9 @@ class API(base.Base):
                 instance['uuid'])
 
     def is_volume_backed_instance(self, context, instance, bdms):
-        bdms = bdms or self.get_instance_bdms(context, instance)
+        if bdms is None:
+            bdms = self.get_instance_bdms(context, instance)
+
         for bdm in bdms:
             if (block_device.strip_dev(bdm.device_name) ==
                 block_device.strip_dev(instance['root_device_name'])):
