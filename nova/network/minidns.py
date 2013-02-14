@@ -168,7 +168,6 @@ class MiniDNS(dns_driver.DNSDriver):
         return entries
 
     def delete_dns_file(self):
-        LOG.warn(_("This shouldn't be getting called except during testing."))
         if os.path.exists(self.filename):
             try:
                 os.remove(self.filename)
