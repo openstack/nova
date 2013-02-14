@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import socket
 import time
 
 from nova.image import glance
@@ -44,7 +45,7 @@ powervm_opts = [
                help='PowerVM image remote path'),
     cfg.StrOpt('powervm_img_local_path',
                default=None,
-               help='Local directory to download glance images to'),
+               help='Local directory to download glance images to')
     ]
 
 CONF = cfg.CONF
@@ -113,10 +114,15 @@ class PowerVMDriver(driver.ComputeDriver):
         pass
 
     def get_host_ip_addr(self):
-        """
-        Retrieves the IP address of the dom0
-        """
-        pass
+        """Retrieves the IP address of the hypervisor host."""
+        LOG.debug(_("In get_host_ip_addr"))
+        # TODO(mrodden): use operator get_hostname instead
+        hostname = CONF.powervm_mgr
+        LOG.debug(_("Attempting to resolve %s") % hostname)
+        ip_addr = socket.gethostbyname(hostname)
+        LOG.debug(_("%(hostname)s was successfully resolved to %(ip_addr)s") %
+                  {'hostname': hostname, 'ip_addr': ip_addr})
+        return ip_addr
 
     def snapshot(self, context, instance, image_id):
         """Snapshots the specified instance.
@@ -208,3 +214,89 @@ class PowerVMDriver(driver.ComputeDriver):
         the cache and remove images which are no longer of interest.
         """
         pass
+
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type, network_info,
+                                   block_device_info=None):
+        """Transfers the disk of a running instance in multiple phases, turning
+           off the instance before the end.
+
+        :returns: disk_info dictionary that is passed as the
+                  disk_info parameter to finish_migration
+                  on the destination nova-compute host
+        """
+        src_host = self.get_host_ip_addr()
+        pvm_op = self._powervm._operator
+        lpar_obj = pvm_op.get_lpar(instance['name'])
+        vhost = pvm_op.get_vhost_by_instance_id(lpar_obj['lpar_id'])
+        diskname = pvm_op.get_disk_name_by_vhost(vhost)
+
+        self._powervm.power_off(instance['name'], timeout=120)
+
+        disk_info = self._powervm.migrate_disk(
+                diskname, src_host, dest, CONF.powervm_img_remote_path,
+                instance['name'])
+        disk_info['old_lv_size'] = pvm_op.get_logical_vol_size(diskname)
+        new_name = self._get_resize_name(instance['name'])
+        pvm_op.rename_lpar(instance['name'], new_name)
+        return disk_info
+
+    def _get_resize_name(self, instance_name):
+        """Rename the instance to be migrated to avoid naming conflicts
+
+        :param instance_name: name of instance to be migrated
+        :returns: the new instance name
+        """
+        name_tag = 'rsz_'
+
+        # if the current name would overflow with new tag
+        if ((len(instance_name) + len(name_tag)) > 31):
+            # remove enough chars for the tag to fit
+            num_chars = len(name_tag)
+            old_name = instance_name[num_chars:]
+        else:
+            old_name = instance_name
+
+        return ''.join([name_tag, old_name])
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, image_meta, resize_instance,
+                         block_device_info=None):
+        """Completes a resize, turning on the migrated instance
+
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which this instance
+                           was created
+        """
+        lpar_obj = self._powervm._create_lpar_instance(instance)
+
+        new_lv_size = instance['instance_type']['root_gb']
+        old_lv_size = disk_info['old_lv_size']
+        if 'root_disk_file' in disk_info:
+            disk_size = max(int(new_lv_size), int(old_lv_size))
+            disk_size_bytes = disk_size * 1024 * 1024 * 1024
+            self._powervm.deploy_from_migrated_file(
+                    lpar_obj, disk_info['root_disk_file'], disk_size_bytes)
+        else:
+            # this shouldn't get hit unless someone forgot to handle
+            # a certain migration type
+            raise Exception(
+                    _('Unrecognized root disk information: %s') %
+                    disk_info)
+
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM."""
+
+        new_name = self._get_resize_name(instance['name'])
+        self._powervm.destroy(new_name)
+
+    def finish_revert_migration(self, instance, network_info,
+                                block_device_info=None):
+        """Finish reverting a resize, powering back on the instance."""
+
+        # undo instance rename and start
+        new_name = self._get_resize_name(instance['name'])
+        self._powervm._operator.rename_lpar(new_name, instance['name'])
+        self._powervm.power_on(instance['name'])

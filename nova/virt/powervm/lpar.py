@@ -49,7 +49,11 @@ def load_from_conf_data(conf_data):
     attribs = dict(item.split("=") for item in list(cf_splitter))
     lpar = LPAR()
     for (key, value) in attribs.items():
-        lpar[key] = value
+        try:
+            lpar[key] = value
+        except exception.PowerVMLPARAttributeNotFound, e:
+            LOG.info(_('Encountered unknown LPAR attribute: %s\n'
+                       'Continuing without storing') % key)
     return lpar
 
 

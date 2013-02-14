@@ -65,6 +65,9 @@ class BaseCommand(object):
     def vhost_by_instance_id(self, instance_id_hex):
         pass
 
+    def chsyscfg(self, args=''):
+        return 'chsyscfg %s' % args
+
 
 class IVMCommand(BaseCommand):
 
