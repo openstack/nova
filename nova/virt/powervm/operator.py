@@ -210,7 +210,7 @@ class PowerVMOperator(object):
                 #
                 # NOTE(mjfork) the slot_id should not exceed 255 (FF) to
                 #              to avoid spilling over into the next
-                #              higest octect.  The contract with
+                #              highest octet.  The contract with
                 #              macs_for_instance limits to a value between
                 #              32 and 63 inclusive so we are safe.
                 #
