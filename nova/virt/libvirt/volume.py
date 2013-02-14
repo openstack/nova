@@ -52,7 +52,11 @@ volume_opts = [
                     'of the nfs man page for details'),
     cfg.StrOpt('num_aoe_discover_tries',
                default=3,
-               help='number of times to rediscover AoE target to find volume')
+               help='number of times to rediscover AoE target to find volume'),
+    cfg.StrOpt('glusterfs_mount_point_base',
+                default=paths.state_path_def('mnt'),
+                help='Dir where the glusterfs volume is mounted on the '
+                      'compute node'),
     ]
 
 CONF = cfg.CONF
@@ -390,3 +394,59 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_type = "block"
         conf.source_path = aoedevpath
         return conf
+
+
+class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
+    """Class implements libvirt part of volume driver for GlusterFS."""
+
+    def __init__(self, connection):
+        """Create back-end to glusterfs."""
+        super(LibvirtGlusterfsVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def connect_volume(self, connection_info, mount_device):
+        """Connect the volume. Returns xml for libvirt."""
+        conf = super(LibvirtGlusterfsVolumeDriver,
+                     self).connect_volume(connection_info, mount_device)
+        path = self._ensure_mounted(connection_info['data']['export'])
+        path = os.path.join(path, connection_info['data']['name'])
+        conf.source_type = 'file'
+        conf.source_path = path
+        return conf
+
+    def _ensure_mounted(self, glusterfs_export):
+        """
+        @type glusterfs_export: string
+        """
+        mount_path = os.path.join(CONF.glusterfs_mount_point_base,
+                                  self.get_hash_str(glusterfs_export))
+        self._mount_glusterfs(mount_path, glusterfs_export, ensure=True)
+        return mount_path
+
+    def _mount_glusterfs(self, mount_path, glusterfs_share, ensure=False):
+        """Mount glusterfs export to mount path."""
+        if not self._path_exists(mount_path):
+            utils.execute('mkdir', '-p', mount_path)
+
+        try:
+            utils.execute('mount', '-t', 'glusterfs', glusterfs_share,
+                          mount_path,
+                          run_as_root=True)
+        except exception.ProcessExecutionError as exc:
+            if ensure and 'already mounted' in exc.message:
+                LOG.warn(_("%s is already mounted"), glusterfs_share)
+            else:
+                raise
+
+    @staticmethod
+    def get_hash_str(base_str):
+        """returns string that represents hash of base_str (in hex format)."""
+        return hashlib.md5(base_str).hexdigest()
+
+    @staticmethod
+    def _path_exists(path):
+        """Check path."""
+        try:
+            return utils.execute('stat', path, run_as_root=True)
+        except exception.ProcessExecutionError:
+            return False

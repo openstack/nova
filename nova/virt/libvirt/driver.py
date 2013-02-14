@@ -152,7 +152,9 @@ libvirt_opts = [
                   'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
                   'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
                   'nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver',
-                  'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver'
+                  'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver',
+                  'glusterfs='
+                      'nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver'
                   ],
                 help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('libvirt_disk_prefix',

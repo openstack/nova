@@ -392,3 +392,31 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), aoedevpath)
         libvirt_driver.disconnect_volume(connection_info, "vde")
+
+    def test_libvirt_glusterfs_driver(self):
+        mnt_base = '/mnt'
+        self.flags(glusterfs_mount_point_base=mnt_base)
+
+        libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/volume-00001'
+        name = 'volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                libvirt_driver.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, name)
+
+        connection_info = {'data': {'export': export_string, 'name': name}}
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./source').get('file'), file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('stat', export_mnt_base),
+            ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
+        self.assertEqual(self.executes, expected_commands)
