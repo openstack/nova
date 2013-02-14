@@ -1,0 +1,22 @@
+{
+    "volume": {
+        "attachments": [
+            {
+                "device": "/",
+                "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
+                "serverId": "3912f2b4-c5ba-4aec-9165-872876fe202e",
+                "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+            }
+        ],
+        "availabilityZone": "zone1:host1",
+        "createdAt": "2013-02-18T14:51:17.970024",
+        "displayDescription": "Volume Description",
+        "displayName": "Volume Name",
+        "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
+        "metadata": {},
+        "size": 100,
+        "snapshotId": null,
+        "status": "in-use",
+        "volumeType": "Backup"
+    }
+}

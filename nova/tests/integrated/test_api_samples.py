@@ -3752,3 +3752,116 @@ class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
 
 class VolumeAttachmentsSampleXmlTest(VolumeAttachmentsSampleJsonTest):
     ctype = 'xml'
+
+
+class VolumesSampleJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
+
+    def _get_volume_id(self):
+        return 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+
+    def _stub_volume(self, id, displayname="Volume Name",
+                     displaydesc="Volume Description", size=100):
+        volume = {
+                  'id': id,
+                  'size': size,
+                  'availability_zone': 'zone1:host1',
+                  'instance_uuid': '3912f2b4-c5ba-4aec-9165-872876fe202e',
+                  'mountpoint': '/',
+                  'status': 'in-use',
+                  'attach_status': 'attached',
+                  'name': 'vol name',
+                  'display_name': displayname,
+                  'display_description': displaydesc,
+                  'created_at': "2008-12-01T11:01:55",
+                  'snapshot_id': None,
+                  'volume_type_id': 'fakevoltype',
+                  'volume_metadata': [],
+                  'volume_type': {'name': 'Backup'}
+                  }
+        return volume
+
+    def _stub_volume_get(self, context, volume_id):
+        return self._stub_volume(volume_id)
+
+    def _stub_volume_delete(self, context, *args, **param):
+        pass
+
+    def _stub_volume_get_all(self, context, search_opts=None):
+        id = self._get_volume_id()
+        return [self._stub_volume(id)]
+
+    def _stub_volume_create(self, context, size, name, description, snapshot,
+                       **param):
+        id = self._get_volume_id()
+        return self._stub_volume(id)
+
+    def setUp(self):
+        super(VolumesSampleJsonTest, self).setUp()
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+
+        self.stubs.Set(cinder.API, "delete", self._stub_volume_delete)
+        self.stubs.Set(cinder.API, "get", self._stub_volume_get)
+        self.stubs.Set(cinder.API, "get_all", self._stub_volume_get_all)
+
+    def _post_volume(self):
+        subs_req = {
+                'volume_name': "Volume Name",
+                'volume_desc': "Volume Description",
+        }
+
+        self.stubs.Set(cinder.API, "create", self._stub_volume_create)
+        response = self._do_post('os-volumes', 'os-volumes-post-req',
+                                 subs_req)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs.update(subs_req)
+        return self._verify_response('os-volumes-post-resp', subs, response)
+
+    def test_volumes_show(self):
+        subs = {
+                'volume_name': "Volume Name",
+                'volume_desc': "Volume Description",
+        }
+        vol_id = self._get_volume_id()
+        response = self._do_get('os-volumes/%s' % vol_id)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('os-volumes-get-resp', subs, response)
+
+    def test_volumes_index(self):
+        subs = {
+                'volume_name': "Volume Name",
+                'volume_desc': "Volume Description",
+        }
+        response = self._do_get('os-volumes')
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('os-volumes-index-resp', subs, response)
+
+    def test_volumes_detail(self):
+        # For now, index and detail are the same.
+        # See the volumes api
+        subs = {
+                'volume_name': "Volume Name",
+                'volume_desc': "Volume Description",
+        }
+        response = self._do_get('os-volumes/detail')
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('os-volumes-detail-resp', subs, response)
+
+    def test_volumes_create(self):
+        return self._post_volume()
+
+    def test_volumes_delete(self):
+        self._post_volume()
+        vol_id = self._get_volume_id()
+        response = self._do_delete('os-volumes/%s' % vol_id)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class VolumesSampleXmlTest(VolumesSampleJsonTest):
+    ctype = 'xml'
