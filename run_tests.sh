@@ -33,7 +33,6 @@ function usage {
 function process_options {
   i=1
   while [ $i -le $# ]; do
-    FOO=${!i}
     case "${!i}" in
       -h|--help) usage;;
       -V|--virtual-env) always_venv=1; never_venv=0;;
@@ -57,8 +56,8 @@ function process_options {
         (( i++ ))
         tools_path=${!i}
         ;;
-      -*) testropts="$testropts $1";;
-      *) testrargs="$testrargs $1"
+      -*) testropts="$testropts ${!i}";;
+      *) testrargs="$testrargs ${!i}"
     esac
     (( i++ ))
   done
