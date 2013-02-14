@@ -72,7 +72,6 @@ gettext.install('nova', unicode=1)
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
 from nova.compute import instance_types
-from nova.compute import rpcapi as compute_rpcapi
 from nova import config
 from nova import context
 from nova import db

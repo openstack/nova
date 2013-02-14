@@ -54,12 +54,7 @@
   CLI interface for nova bare-metal management.
 """
 
-import ast
-import errno
 import gettext
-import math
-import netaddr
-import optparse
 import os
 import sys
 
@@ -75,15 +70,9 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import config
-from nova import context
-from nova import exception
 from nova.openstack.common import cfg
 from nova.openstack.common import cliutils
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
-from nova.openstack.common import timeutils
-from nova import utils
 from nova import version
 from nova.virt.baremetal import db as bmdb
 from nova.virt.baremetal.db import migration as bmdb_migration
