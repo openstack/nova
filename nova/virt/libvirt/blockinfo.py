@@ -175,8 +175,7 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
             }
 
         if virt_type not in valid_bus:
-            raise exception.NovaException(
-                _("Unsupported virt type %s") % virt_type)
+            raise exception.UnsupportedVirtType(virt=virt_type)
 
         return disk_bus in valid_bus[virt_type]
 
@@ -200,9 +199,8 @@ def get_disk_bus_for_device_type(virt_type,
         disk_bus = image_meta.get('properties', {}).get(key)
         if disk_bus is not None:
             if not is_disk_bus_valid_for_virt(virt_type, disk_bus):
-                raise exception.NovaException(
-                    _("Disk bus %(disk_bus)s is not valid for %(virt)s") %
-                    {'disk_bus': disk_bus, 'virt': virt_type})
+                raise exception.UnsupportedHardware(model=disk_bus,
+                                                    virt=virt_type)
             return disk_bus
 
     # Otherwise pick a hypervisor default disk bus

@@ -421,7 +421,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.assertEqual(bus, 'usb')
 
         image_meta = {'properties': {'disk_bus': 'xen'}}
-        self.assertRaises(exception.NovaException,
+        self.assertRaises(exception.UnsupportedHardware,
                           blockinfo.get_disk_bus_for_device_type,
                           'kvm',
                           image_meta)
