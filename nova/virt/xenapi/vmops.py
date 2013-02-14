@@ -1640,6 +1640,7 @@ class VMOps(object):
             try:
                 self._call_live_migrate_command(
                     "VM.assert_can_migrate", vm_ref, migrate_data)
+                return dest_check_data
             except self._session.XenAPI.Failure as exc:
                 LOG.exception(exc)
                 raise exception.MigrationError(_('VM.assert_can_migrate'
