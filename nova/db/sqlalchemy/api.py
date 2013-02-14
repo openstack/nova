@@ -1656,7 +1656,7 @@ def regex_filter(query, model, filters):
     return query
 
 
-@require_admin_context
+@require_context
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None):
     """Return instances and joins that were active during window."""
