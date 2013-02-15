@@ -182,6 +182,11 @@ def bm_node_set_uuid_safe(context, bm_node_id, values):
 
 @sqlalchemy_api.require_admin_context
 def bm_node_destroy(context, bm_node_id):
+    # First, delete all interfaces belonging to the node.
+    # Delete physically since these have unique columns.
+    model_query(context, models.BareMetalInterface, read_deleted="no").\
+            filter_by(bm_node_id=bm_node_id).\
+            delete()
     model_query(context, models.BareMetalNode).\
             filter_by(id=bm_node_id).\
             update({'deleted': True,

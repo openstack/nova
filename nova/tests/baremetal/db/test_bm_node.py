@@ -108,6 +108,40 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         r = db.bm_node_get_all(self.context)
         self.assertEquals(len(r), 5)
 
+    def test_destroy_with_interfaces(self):
+        self._create_nodes()
+
+        if_a_id = db.bm_interface_create(self.context, self.ids[0],
+                                         'aa:aa:aa:aa:aa:aa', None, None)
+        if_b_id = db.bm_interface_create(self.context, self.ids[0],
+                                         'bb:bb:bb:bb:bb:bb', None, None)
+        if_x_id = db.bm_interface_create(self.context, self.ids[1],
+                                         '11:22:33:44:55:66', None, None)
+
+        db.bm_node_destroy(self.context, self.ids[0])
+
+        self.assertRaises(
+              exception.NovaException,
+              db.bm_interface_get,
+              self.context, if_a_id)
+
+        self.assertRaises(
+              exception.NovaException,
+              db.bm_interface_get,
+              self.context, if_b_id)
+
+        # Another node's interface is not affected
+        if_x = db.bm_interface_get(self.context, if_x_id)
+        self.assertEqual(self.ids[1], if_x['bm_node_id'])
+
+        self.assertRaises(
+              exception.InstanceNotFound,
+              db.bm_node_get,
+              self.context, self.ids[0])
+
+        r = db.bm_node_get_all(self.context)
+        self.assertEquals(len(r), 5)
+
     def test_find_free(self):
         self._create_nodes()
         fn = db.bm_node_find_free(self.context, 'host2')
