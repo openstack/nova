@@ -18,11 +18,19 @@
 from migrate.changeset import UniqueConstraint
 from sqlalchemy.engine import reflection
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy import func
 from sqlalchemy import MetaData, Table, Column, Index
-from sqlalchemy.sql.expression import UpdateBase
+from sqlalchemy.sql.expression import UpdateBase, literal_column
+from sqlalchemy.sql import select
 from sqlalchemy.types import NullType
 
+
 from nova import exception
+from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
+
+
+LOG = logging.getLogger(__name__)
 
 
 class InsertFromSelect(UpdateBase):
@@ -115,3 +123,46 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
     else:
         _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
                                           **col_name_col_instance)
+
+
+def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
+                                          use_soft_delete, *uc_column_names):
+    """
+    This method is used to drop all old rowss that have the same values for
+    columns in uc_columns.
+    """
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    table = Table(table_name, meta, autoload=True)
+    columns_for_group_by = [table.c[name] for name in uc_column_names]
+
+    columns_for_select = [func.max(table.c.id)]
+    columns_for_select.extend(list(columns_for_group_by))
+
+    duplicated_rows_select = select(columns_for_select,
+                                    group_by=columns_for_group_by,
+                                    having=func.count(table.c.id) > 1)
+
+    for row in migrate_engine.execute(duplicated_rows_select):
+        # NOTE(boris-42): Do not remove row that has the biggest ID.
+        delete_condition = table.c.id != row[0]
+        for name in uc_column_names:
+            delete_condition &= table.c[name] == row[name]
+
+        rows_to_delete_select = select([table.c.id]).where(delete_condition)
+        for row in migrate_engine.execute(rows_to_delete_select).fetchall():
+            LOG.info(_("Deleted duplicated row with id: %(id)s from table: "
+                       "%(table)s") % dict(id=row[0], table=table_name))
+
+        if use_soft_delete:
+            delete_statement = table.update().\
+                    where(delete_condition).\
+                    values({
+                        'deleted': literal_column('id'),
+                        'updated_at': literal_column('updated_at'),
+                        'deleted_at': timeutils.utcnow()
+                    })
+        else:
+            delete_statement = table.delete().where(delete_condition)
+        migrate_engine.execute(delete_statement)
