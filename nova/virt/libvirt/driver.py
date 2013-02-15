@@ -3306,10 +3306,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
-    def __init__(self, connection):
+    def __init__(self, driver):
         super(HostState, self).__init__()
         self._stats = {}
-        self.connection = connection
+        self.driver = driver
         self.update_status()
 
     def get_host_stats(self, refresh=False):
@@ -3324,20 +3324,20 @@ class HostState(object):
         """Retrieve status info from libvirt."""
         LOG.debug(_("Updating host stats"))
         data = {}
-        data["vcpus"] = self.connection.get_vcpu_total()
-        data["vcpus_used"] = self.connection.get_vcpu_used()
-        data["cpu_info"] = jsonutils.loads(self.connection.get_cpu_info())
-        data["disk_total"] = self.connection.get_local_gb_total()
-        data["disk_used"] = self.connection.get_local_gb_used()
+        data["vcpus"] = self.driver.get_vcpu_total()
+        data["vcpus_used"] = self.driver.get_vcpu_used()
+        data["cpu_info"] = jsonutils.loads(self.driver.get_cpu_info())
+        data["disk_total"] = self.driver.get_local_gb_total()
+        data["disk_used"] = self.driver.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
-        data["host_memory_total"] = self.connection.get_memory_mb_total()
+        data["host_memory_total"] = self.driver.get_memory_mb_total()
         data["host_memory_free"] = (data["host_memory_total"] -
-                                    self.connection.get_memory_mb_used())
-        data["hypervisor_type"] = self.connection.get_hypervisor_type()
-        data["hypervisor_version"] = self.connection.get_hypervisor_version()
-        data["hypervisor_hostname"] = self.connection.get_hypervisor_hostname()
+                                    self.driver.get_memory_mb_used())
+        data["hypervisor_type"] = self.driver.get_hypervisor_type()
+        data["hypervisor_version"] = self.driver.get_hypervisor_version()
+        data["hypervisor_hostname"] = self.driver.get_hypervisor_hostname()
         data["supported_instances"] = \
-            self.connection.get_instance_capabilities()
+            self.driver.get_instance_capabilities()
 
         self._stats = data
 
