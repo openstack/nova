@@ -101,7 +101,7 @@ class BareMetalVPDTestCase(bm_db_base.BMDBTestCase):
         return self.pm
 
 
-class VPDClassMethodsTestCase(BareMetalVPDTestCase):
+class VPDMissingOptionsTestCase(BareMetalVPDTestCase):
 
     def test_get_conn_missing_options(self):
         self.flags(virtual_power_ssh_host=None, group="baremetal")
@@ -121,10 +121,16 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.assertRaises(exception.NovaException,
                 self.pm._get_conn)
 
-    def test_get_conn_success(self):
+
+class VPDClassMethodsTestCase(BareMetalVPDTestCase):
+
+    def setUp(self):
+        super(VPDClassMethodsTestCase, self).setUp()
         self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
         self.flags(virtual_power_host_user='user', group="baremetal")
         self.flags(virtual_power_host_pass='password', group="baremetal")
+
+    def test_get_conn_success(self):
         self._create_node()
         self._create_pm()
         self._conn = self.pm._get_conn()
@@ -138,9 +144,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_get_full_node_list(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -154,9 +157,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_check_for_node(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -175,9 +175,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_check_for_node_not_found(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -194,9 +191,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_activate_node(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -212,9 +206,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_activate_node_fail(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -230,9 +221,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_deactivate_node(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -249,9 +237,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_deactivate_node_fail(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -268,9 +253,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_reboot_node(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -286,9 +268,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_reboot_node_fail(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -304,9 +283,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_is_power_on(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -322,9 +298,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_is_power_on_fail(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -340,9 +313,6 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.VerifyAll()
 
     def test_run_command(self):
-        self.flags(virtual_power_ssh_host='127.0.0.1', group="baremetal")
-        self.flags(virtual_power_host_user='user', group="baremetal")
-        self.flags(virtual_power_host_pass='password', group="baremetal")
         self._create_node()
         self._create_pm()
 
@@ -355,4 +325,43 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.ReplayAll()
         result = self.pm._run_command("test return")
         self.assertEqual(result, ['test', 'return'])
+        self.mox.VerifyAll()
+
+    def test_run_command_raises_exception(self):
+        self._create_node()
+        self._create_pm()
+
+        self.mox.StubOutWithMock(self.pm, '_set_connection')
+        self.mox.StubOutWithMock(nutils, 'ssh_execute')
+
+        self.pm._set_connection().AndReturn(True)
+        nutils.ssh_execute(None, '/usr/bin/VBoxManage test return',
+                check_exit_code=True).\
+                AndRaise(exception.ProcessExecutionError)
+        self.mox.ReplayAll()
+
+        result = self.pm._run_command("test return")
+        self.assertEqual(result, [])
+        self.mox.VerifyAll()
+
+    def test_activate_node_with_exception(self):
+        self._create_node()
+        self._create_pm()
+
+        self.mox.StubOutWithMock(self.pm, '_check_for_node')
+        self.mox.StubOutWithMock(nutils, 'ssh_execute')
+
+        self.pm._check_for_node().AndReturn(["testNode"])
+        self.pm._check_for_node().AndReturn(["testNode"])
+        nutils.ssh_execute('test', '/usr/bin/VBoxManage startvm ',
+                check_exit_code=True).\
+                AndRaise(exception.ProcessExecutionError)
+        nutils.ssh_execute('test', '/usr/bin/VBoxManage list runningvms',
+                check_exit_code=True).\
+                AndRaise(exception.ProcessExecutionError)
+
+        self.mox.ReplayAll()
+        self.pm._connection = 'test'
+        state = self.pm.activate_node()
+        self.assertEqual(state, 'error')
         self.mox.VerifyAll()

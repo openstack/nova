@@ -212,8 +212,12 @@ class VirtualPowerManager(base.PowerManager):
 
         cmd = '%s %s' % (self._vp_cmd.base_cmd, cmd)
 
-        stdout, stderr = utils.ssh_execute(self._connection, cmd,
+        try:
+            stdout, stderr = utils.ssh_execute(self._connection, cmd,
                                            check_exit_code=check_exit_code)
-        result = stdout.strip().splitlines()
-        LOG.debug('Result for run_command: %s' % result)
+            result = stdout.strip().splitlines()
+            LOG.debug('Result for run_command: %s' % result)
+        except exception.ProcessExecutionError:
+            result = []
+            LOG.exception("Error running command: %s" % cmd)
         return result
