@@ -33,9 +33,9 @@ import subprocess
 import tempfile
 import time
 
+import pluginlib_nova as pluginlib
 import XenAPI
 import XenAPIPlugin
-import pluginlib_nova as pluginlib
 
 
 pluginlib.configure_logging("xenhost")

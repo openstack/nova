@@ -116,7 +116,7 @@ def _remove_file(filepath):
 
 
 def remove_kernel_ramdisk(session, args):
-    """Removes kernel and/or ramdisk from dom0's file system"""
+    """Removes kernel and/or ramdisk from dom0's file system."""
     kernel_file = optional(args, 'kernel-file')
     ramdisk_file = optional(args, 'ramdisk-file')
     if kernel_file:
