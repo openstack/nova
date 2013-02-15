@@ -293,7 +293,8 @@ class LibvirtConnTestCase(test.TestCase):
                 'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                 'root_gb': 10,
                 'ephemeral_gb': 20,
-                'instance_type_id': '5'}  # m1.small
+                'instance_type_id': '5',  # m1.small
+                'extra_specs': {}}
 
     def tearDown(self):
         nova.tests.image.fake.FakeImageService_reset()

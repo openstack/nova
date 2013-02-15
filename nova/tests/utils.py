@@ -83,7 +83,8 @@ def get_test_instance(context=None, instance_type=None):
                      'bridge': 'br101',
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                      'instance_type_id': '5',
-                     'system_metadata': metadata}
+                     'system_metadata': metadata,
+                     'extra_specs': {}}
 
     instance_ref = nova.db.instance_create(context, test_instance)
     return instance_ref
