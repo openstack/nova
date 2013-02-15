@@ -18,7 +18,6 @@
 
 import base64
 import re
-import socket
 
 from nova.openstack.common import log as logging
 
@@ -91,14 +90,6 @@ def validate_image_path(val):
     if not validate_url_path('/' + val):
         return False
 
-    return True
-
-
-def validate_ipv4(addr):
-    try:
-        socket.inet_aton(addr)
-    except (socket.error, TypeError):
-        return False
     return True
 
 

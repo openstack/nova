@@ -73,14 +73,6 @@ class ValidatorTestCase(test.TestCase):
         self.assertFalse(validator.validate_ec2_id(1234))
         self.assertTrue(validator.validate_ec2_id('i-284f3a41'))
 
-    def test_validate_ipv4(self):
-        self.assertTrue(validator.validate_ipv4('4.2.2.4'))
-        self.assertFalse(validator.validate_ipv4('foobar'))
-        self.assertFalse(
-            validator.validate_ipv4('2001:5a8:4:68e0:e6ce:8fff:fe27:d116'))
-        self.assertFalse(validator.validate_ipv4(123))
-        self.assertFalse(validator.validate_ipv4(''))
-
     def test_validate_url_path(self):
         self.assertTrue(validator.validate_url_path('/path/to/file'))
         self.assertFalse(validator.validate_url_path('path/to/file'))
