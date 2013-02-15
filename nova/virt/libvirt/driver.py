@@ -1793,6 +1793,11 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.memory = inst_type['memory_mb'] * 1024
         guest.vcpus = inst_type['vcpus']
 
+        quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
+        for key, value in instance['extra_specs'].iteritems():
+            if key in quota_items:
+                setattr(guest, key, value)
+
         guest.cpu = self.get_guest_cpu_config()
 
         if 'root' in disk_mapping:
