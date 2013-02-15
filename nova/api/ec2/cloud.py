@@ -214,7 +214,7 @@ class CloudController(object):
         self.image_service = s3.S3ImageService()
         self.network_api = network.API()
         self.volume_api = volume.API()
-        self.security_group_api = CloudSecurityGroupAPI()
+        self.security_group_api = get_cloud_security_group_api()
         self.compute_api = compute.API(network_api=self.network_api,
                                    volume_api=self.volume_api,
                                    security_group_api=self.security_group_api)
@@ -712,8 +712,8 @@ class CloudController(object):
             self.security_group_api.validate_property(group_name, 'name',
                                                       allowed)
 
-        group_ref = self.security_group_api.create(context, group_name,
-                                                   group_description)
+        group_ref = self.security_group_api.create_security_group(
+            context, group_name, group_description)
 
         return {'securityGroupSet': [self._format_security_group(context,
                                                                  group_ref)]}
@@ -1662,7 +1662,7 @@ class CloudController(object):
         return {'imageId': ec2_id}
 
 
-class CloudSecurityGroupAPI(compute_api.SecurityGroupAPI):
+class EC2SecurityGroupExceptions(object):
     @staticmethod
     def raise_invalid_property(msg):
         raise exception.InvalidParameterValue(err=msg)
@@ -1689,3 +1689,13 @@ class CloudSecurityGroupAPI(compute_api.SecurityGroupAPI):
     @staticmethod
     def raise_not_found(msg):
         pass
+
+
+class CloudSecurityGroupNovaAPI(compute_api.SecurityGroupAPI,
+                                EC2SecurityGroupExceptions):
+    pass
+
+
+def get_cloud_security_group_api():
+    if cfg.CONF.security_group_api.lower() == 'nova':
+        return CloudSecurityGroupNovaAPI()

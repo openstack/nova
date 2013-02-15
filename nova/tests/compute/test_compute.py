@@ -46,6 +46,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -68,7 +69,6 @@ from nova.tests import matchers
 from nova import utils
 from nova.virt import fake
 from nova.volume import cinder
-
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
@@ -3649,7 +3649,9 @@ class ComputeAPITestCase(BaseTestCase):
         super(ComputeAPITestCase, self).setUp()
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
-        self.security_group_api = compute_api.SecurityGroupAPI()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
+
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
         self.fake_image = {
