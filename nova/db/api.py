@@ -1715,3 +1715,25 @@ def task_log_get(context, task_name, period_beginning,
                  period_ending, host, state=None):
     return IMPL.task_log_get(context, task_name, period_beginning,
                  period_ending, host, state)
+
+
+####################
+
+
+def archive_deleted_rows(context, max_rows=None):
+    """Move up to max_rows rows from production tables to corresponding shadow
+    tables.
+
+    :returns: number of rows archived.
+    """
+    return IMPL.archive_deleted_rows(context, max_rows=max_rows)
+
+
+def archive_deleted_rows_for_table(context, tablename, max_rows=None):
+    """Move up to max_rows rows from tablename to corresponding shadow
+    table.
+
+    :returns: number of rows archived.
+    """
+    return IMPL.archive_deleted_rows_for_table(context, tablename,
+                                               max_rows=max_rows)

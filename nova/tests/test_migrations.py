@@ -631,3 +631,49 @@ class TestMigrations(BaseMigrationTestCase):
                 self.assertIn(prop_name, inst_sys_meta)
                 self.assertEqual(str(inst_sys_meta[prop_name]),
                                  str(inst_type[prop]))
+
+    # migration 154, add shadow tables for deleted data
+    # There are 53 shadow tables but we only test one
+    # There are additional tests in test_db_api.py
+    def _prerun_154(self, engine):
+        meta = sqlalchemy.schema.MetaData()
+        meta.reflect(engine)
+        table_names = meta.tables.keys()
+        for table_name in table_names:
+            self.assertFalse(table_name.startswith("_shadow"))
+
+    def _check_154(self, engine, data):
+        meta = sqlalchemy.schema.MetaData()
+        meta.reflect(engine)
+        table_names = set(meta.tables.keys())
+        for table_name in table_names:
+            print table_name
+            if table_name.startswith("shadow_"):
+                shadow_name = table_name
+                base_name = table_name.replace("shadow_", "")
+                self.assertIn(base_name, table_names)
+            else:
+                base_name = table_name
+                shadow_name = "shadow_" + table_name
+                self.assertIn(shadow_name, table_names)
+            shadow_table = get_table(engine, shadow_name)
+            base_table = get_table(engine, base_name)
+            base_columns = []
+            shadow_columns = []
+            for column in base_table.columns:
+                base_columns.append(column)
+            for column in shadow_table.columns:
+                shadow_columns.append(column)
+            for ii, base_column in enumerate(base_columns):
+                shadow_column = shadow_columns[ii]
+            self.assertEqual(base_column.name, shadow_column.name)
+            # NullType needs a special case.  We end up with NullType on sqlite
+            # where bigint is not defined.
+            if isinstance(base_column.type, sqlalchemy.types.NullType):
+                self.assertTrue(isinstance(shadow_column.type,
+                                           sqlalchemy.types.NullType))
+            else:
+                # Identical types do not test equal because sqlalchemy does not
+                # override __eq__, but if we stringify them then they do.
+                self.assertEqual(str(base_column.type),
+                                 str(shadow_column.type))
