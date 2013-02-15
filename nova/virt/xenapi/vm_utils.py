@@ -2083,6 +2083,7 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
                             break
 
                         data = src.read(min(block_size, left))
+                        greenthread.sleep(0)
 
     duration = time.time() - start_time
     compression_pct = float(skipped_bytes) / bytes_read * 100
