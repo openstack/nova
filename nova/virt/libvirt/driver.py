@@ -319,7 +319,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @property
     def host_state(self):
         if not self._host_state:
-            self._host_state = HostState(self.virtapi, self.read_only)
+            self._host_state = HostState(self)
         return self._host_state
 
     def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
@@ -3306,12 +3306,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
-    def __init__(self, virtapi, read_only):
+    def __init__(self, connection):
         super(HostState, self).__init__()
-        self.read_only = read_only
         self._stats = {}
-        self.connection = None
-        self.virtapi = virtapi
+        self.connection = connection
         self.update_status()
 
     def get_host_stats(self, refresh=False):
@@ -3325,8 +3323,6 @@ class HostState(object):
     def update_status(self):
         """Retrieve status info from libvirt."""
         LOG.debug(_("Updating host stats"))
-        if self.connection is None:
-            self.connection = LibvirtDriver(self.virtapi, self.read_only)
         data = {}
         data["vcpus"] = self.connection.get_vcpu_total()
         data["vcpus_used"] = self.connection.get_vcpu_used()
