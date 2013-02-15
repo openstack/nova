@@ -86,13 +86,15 @@ class Image(object):
         """
         pass
 
-    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
+            extra_specs):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
         :disk_bus: Disk bus type
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
+        :extra_specs: Instance type extra specs dict.
         """
         info = vconfig.LibvirtConfigGuestDisk()
         info.source_type = self.source_type
@@ -104,6 +106,16 @@ class Image(object):
         driver_name = libvirt_utils.pick_disk_driver_name(self.is_block_dev)
         info.driver_name = driver_name
         info.source_path = self.path
+
+        tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
+            'disk_write_bytes_sec', 'disk_write_iops_sec',
+            'disk_total_bytes_sec', 'disk_total_iops_sec']
+        # Note(yaguang): Currently, the only tuning available is Block I/O
+        # throttling for qemu.
+        if self.source_type in ['file', 'block']:
+            for key, value in extra_specs.iteritems():
+                if key in tune_items:
+                    setattr(info, key, value)
         return info
 
     def cache(self, fetch_func, filename, size=None, *args, **kwargs):

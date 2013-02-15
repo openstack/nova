@@ -1680,7 +1680,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return image.libvirt_info(disk_info['bus'],
                                   disk_info['dev'],
                                   disk_info['type'],
-                                  self.disk_cachemode)
+                                  self.disk_cachemode,
+                                  instance['extra_specs'])
 
     def get_guest_storage_config(self, instance, image_meta,
                                  disk_info,
