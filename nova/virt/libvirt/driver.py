@@ -1794,7 +1794,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         guest.cpu = self.get_guest_cpu_config()
 
-        if 'root' in disk_mapping:
+        if 'root' in disk_mapping and disk_mapping['root']['dev'] is not None:
             root_device_name = "/dev/" + disk_mapping['root']['dev']
         else:
             root_device_name = None

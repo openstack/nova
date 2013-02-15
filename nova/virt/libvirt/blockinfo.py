@@ -116,6 +116,8 @@ def get_dev_prefix_for_disk_bus(disk_bus):
         return "sd"
     elif disk_bus == "uml":
         return "ubd"
+    elif disk_bus == "lxc":
+        return None
     else:
         raise exception.NovaException(
             _("Unable to determine disk prefix for %s") %
@@ -150,6 +152,9 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
     """
 
     dev_prefix = get_dev_prefix_for_disk_bus(bus)
+    if dev_prefix is None:
+        return None
+
     max_dev = get_dev_count_for_disk_bus(bus)
     if last_device:
         devs = [max_dev - 1]
@@ -172,6 +177,7 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
             'kvm': ['virtio', 'scsi', 'ide', 'usb'],
             'xen': ['xen', 'ide'],
             'uml': ['uml'],
+            'lxc': ['lxc'],
             }
 
         if virt_type not in valid_bus:
@@ -207,6 +213,8 @@ def get_disk_bus_for_device_type(virt_type,
     if virt_type == "uml":
         if device_type == "disk":
             return "uml"
+    elif virt_type == "lxc":
+        return "lxc"
     elif virt_type == "xen":
         if device_type == "cdrom":
             return "ide"
@@ -293,6 +301,19 @@ def get_disk_mapping(virt_type, instance,
     mapping = {}
 
     if virt_type == "lxc":
+        # NOTE(zul): This information is not used by the libvirt driver
+        # however we need to populate mapping so the image can be
+        # created when the instance is started. This can
+        # be removed when we convert LXC to use block devices.
+        root_disk_bus = disk_bus
+        root_device_type = 'disk'
+
+        root_info = get_next_disk_info(mapping,
+                                       root_disk_bus,
+                                       root_device_type)
+        mapping['root'] = root_info
+        mapping['disk'] = root_info
+
         return mapping
 
     if rescue:
