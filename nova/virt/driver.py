@@ -39,6 +39,11 @@ driver_opts = [
                default=None,
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
+    cfg.StrOpt('preallocate_images',
+               default='none',
+               help='VM image preallocation mode: '
+                    '"none" => no storage provisioning is done up front, '
+                    '"space" => storage is fully allocated at instance start'),
     cfg.BoolOpt('use_cow_images',
                 default=True,
                 help='Whether to use cow images'),

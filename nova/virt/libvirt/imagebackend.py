@@ -23,6 +23,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import lockutils
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -52,6 +53,9 @@ __imagebackend_opts = [
 CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
+CONF.import_opt('preallocate_images', 'nova.virt.driver')
+
+LOG = logging.getLogger(__name__)
 
 
 class Image(object):
@@ -67,6 +71,7 @@ class Image(object):
         self.source_type = source_type
         self.driver_format = driver_format
         self.is_block_dev = is_block_dev
+        self.preallocate = False
 
         # NOTE(mikal): We need a lock directory which is shared along with
         # instance files, to cover the scenario where multiple compute nodes
@@ -133,6 +138,25 @@ class Image(object):
             self.create_image(call_if_not_exists, base, size,
                               *args, **kwargs)
 
+        if size and self.preallocate and self._can_fallocate():
+            utils.execute('fallocate', '-n', '-l', size, self.path)
+
+    def _can_fallocate(self):
+        """Check once per class, whether fallocate(1) is available,
+           and that the instances directory supports fallocate(2).
+        """
+        can_fallocate = getattr(self.__class__, 'can_fallocate', None)
+        if can_fallocate is None:
+            _out, err = utils.trycmd('fallocate', '-n', '-l', '1',
+                                     self.path + '.fallocate_test')
+            utils.delete_if_exists(self.path + '.fallocate_test')
+            can_fallocate = not err
+            self.__class__.can_fallocate = can_fallocate
+            if not can_fallocate:
+                LOG.error('Unable to preallocate_images=%s at path: %s' %
+                          (CONF.preallocate_images, self.path))
+        return can_fallocate
+
     def snapshot_create(self):
         raise NotImplementedError
 
@@ -152,6 +176,7 @@ class Raw(Image):
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
         self.snapshot_name = snapshot_name
+        self.preallocate = CONF.preallocate_images != 'none'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
@@ -190,11 +215,15 @@ class Qcow2(Image):
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
         self.snapshot_name = snapshot_name
+        self.preallocate = CONF.preallocate_images != 'none'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
                                 lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
+            # TODO(pbrady): Consider copying the cow image here
+            # with preallocation=metadata set for performance reasons.
+            # This would be keyed on a 'preallocate_images' setting.
             libvirt_utils.create_cow_image(base, target)
             if size:
                 disk.extend(target, size)
@@ -241,12 +270,18 @@ class Lvm(Image):
                                  self.escape(disk_name))
             self.path = os.path.join('/dev', self.vg, self.lv)
 
+        # TODO(pbrady): possibly deprecate libvirt_sparse_logical_volumes
+        # for the more general preallocate_images
         self.sparse = CONF.libvirt_sparse_logical_volumes
+        self.preallocate = not self.sparse
 
         if snapshot_name:
             self.snapshot_name = snapshot_name
             self.snapshot_path = os.path.join('/dev', self.vg,
                                               self.snapshot_name)
+
+    def _can_fallocate(self):
+        return False
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @lockutils.synchronized(base, 'nova-', external=True,
