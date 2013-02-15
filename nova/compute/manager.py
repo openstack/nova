@@ -2729,9 +2729,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         Returns a dict values required for live migration without shared
         storage.
         """
+        capi = self.conductor_api
+        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance)
+
         is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
                                                                       instance,
-                                                                      None)
+                                                                      bdms)
         dest_check_data['is_volume_backed'] = is_volume_backed
         return self.driver.check_can_live_migrate_source(ctxt, instance,
                                                          dest_check_data)
