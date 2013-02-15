@@ -191,3 +191,6 @@ class SecurityGroupBase(object):
 
     def remove_from_instance(self, context, instance, security_group_name):
         raise NotImplementedError()
+
+    def rule_exists(self, security_group, new_rule):
+        raise NotImplementedError()

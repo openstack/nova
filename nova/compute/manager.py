@@ -57,6 +57,7 @@ from nova.image import glance
 from nova import manager
 from nova import network
 from nova.network import model as network_model
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
@@ -332,7 +333,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.conductor_api = conductor.API()
-
+        self.is_quantum_security_groups = (
+            openstack_driver.is_quantum_security_groups())
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -716,6 +718,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Launch a new instance with specified options."""
         context = context.elevated()
 
+        # If quantum security groups pass requested security
+        # groups to allocate_for_instance()
+        if request_spec and self.is_quantum_security_groups:
+            security_groups = request_spec.get('security_group')
+        else:
+            security_groups = []
+
         try:
             self._check_instance_exists(context, instance)
             image_meta = self._check_image_size(context, instance)
@@ -747,7 +756,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     macs = self.driver.macs_for_instance(instance)
 
                     network_info = self._allocate_network(context, instance,
-                            requested_networks, macs)
+                            requested_networks, macs, security_groups)
 
                     self._instance_update(
                             context, instance['uuid'],
@@ -982,7 +991,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=(task_states.SCHEDULING,
                                                    None))
 
-    def _allocate_network(self, context, instance, requested_networks, macs):
+    def _allocate_network(self, context, instance, requested_networks, macs,
+                          security_groups):
         """Allocate networks for an instance and return the network info."""
         instance = self._instance_update(context, instance['uuid'],
                                          vm_state=vm_states.BUILDING,
@@ -994,7 +1004,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
                                 requested_networks=requested_networks,
-                                macs=macs, conductor_api=self.conductor_api)
+                                macs=macs,
+                                conductor_api=self.conductor_api,
+                                security_groups=security_groups)
         except Exception:
             LOG.exception(_('Instance failed network setup'),
                           instance=instance)

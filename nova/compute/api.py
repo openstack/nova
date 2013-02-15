@@ -2747,6 +2747,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     Sub-set of the Compute API related to managing security groups
     and security group rules
     """
+
+    # The nova seurity group api does not use a uuid for the id.
+    id_is_uuid = False
+
     def __init__(self, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
         self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()

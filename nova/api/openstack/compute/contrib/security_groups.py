@@ -16,8 +16,10 @@
 
 """The security groups extension."""
 
+import json
 import webob
 from webob import exc
+from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
@@ -28,6 +30,7 @@ from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova.network.security_group import openstack_driver
+from nova.network.security_group import quantum_driver
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import netutils
@@ -194,8 +197,8 @@ class SecurityGroupControllerBase(object):
         if rule['group_id']:
             source_group = self.security_group_api.get(context,
                                                        id=rule['group_id'])
-            sg_rule['group'] = {'name': source_group.name,
-                             'tenant_id': source_group.project_id}
+            sg_rule['group'] = {'name': source_group.get('name'),
+                             'tenant_id': source_group.get('project_id')}
         else:
             sg_rule['ip_range'] = {'cidr': rule['cidr']}
         return sg_rule
@@ -466,11 +469,46 @@ class SecurityGroupsOutputController(wsgi.Controller):
 
     def _extend_servers(self, req, servers):
         key = "security_groups"
-        for server in servers:
-            instance = req.get_db_instance(server['id'])
-            groups = instance.get(key)
-            if groups:
-                server[key] = [{"name": group["name"]} for group in groups]
+        if not openstack_driver.is_quantum_security_groups():
+            for server in servers:
+                instance = req.get_db_instance(server['id'])
+                groups = instance.get(key)
+                if groups:
+                    server[key] = [{"name": group["name"]} for group in groups]
+        else:
+            # If method is a POST we get the security groups intended for an
+            # instance from the request. The reason for this is if using
+            # quantum security groups the requested security groups for the
+            # instance are not in the db and have not been sent to quantum yet.
+            instance_sgs = []
+            if req.method != 'POST':
+                for server in servers:
+                    instance_sgs = (
+                        self.security_group_api.get_instance_security_groups(
+                            req, server['id']))
+            else:
+                try:
+                    # try converting to json
+                    req_obj = json.loads(req.body)
+                    # Add security group to server, if no security group was in
+                    # request add default since that is the group it is part of
+                    instance_sgs = req_obj['server'].get(
+                        key, [{'name': 'default'}])
+                except ValueError:
+                    root = minidom.parseString(req.body)
+                    sg_root = root.getElementsByTagName(key)
+                    if sg_root:
+                        security_groups = sg_root[0].getElementsByTagName(
+                            'security_group')
+                        for security_group in security_groups:
+                            instance_sgs.append(
+                                {'name': security_group.getAttribute('name')})
+                    if not instance_sgs:
+                        instance_sgs = [{'name': 'default'}]
+
+            if instance_sgs:
+                for server in servers:
+                    server[key] = instance_sgs
 
     def _show(self, req, resp_obj):
         if not softauth(req.environ['nova.context']):
@@ -586,4 +624,9 @@ class NativeSecurityGroupExceptions(object):
 
 class NativeNovaSecurityGroupAPI(compute_api.SecurityGroupAPI,
                                  NativeSecurityGroupExceptions):
+    pass
+
+
+class NativeQuantumSecurityGroupAPI(quantum_driver.SecurityGroupAPI,
+                                    NativeSecurityGroupExceptions):
     pass

@@ -35,12 +35,25 @@ CONF.register_opts(security_group_opts)
 
 NOVA_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
                'NativeNovaSecurityGroupAPI')
+QUANTUM_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
+                  'NativeQuantumSecurityGroupAPI')
 
 
 def get_openstack_security_group_driver():
     if CONF.security_group_api.lower() == 'nova':
         return importutils.import_object(NOVA_DRIVER)
+    elif CONF.security_group_api.lower() == 'quantum':
+        return importutils.import_object(QUANTUM_DRIVER)
+    else:
+        return importutils.import_object(CONF.security_group_api)
 
 
 def get_security_group_handler():
     return importutils.import_object(CONF.security_group_handler)
+
+
+def is_quantum_security_groups():
+    if CONF.security_group_api.lower() == "quantum":
+        return True
+    else:
+        return False
