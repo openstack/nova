@@ -1792,7 +1792,6 @@ class ComputeTestCase(BaseTestCase):
             kwargs = {}
 
         instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance=instance)
 
         # The API would have set task_state, so do that here to test
         # that the state gets reverted on failure
