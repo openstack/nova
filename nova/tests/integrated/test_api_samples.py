@@ -383,7 +383,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # removed) soon.
         do_not_approve_additions = []
         do_not_approve_additions.append('os-create-server-ext')
-        do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-volumes')
 
         tests = self._get_extensions_tested()
@@ -3333,6 +3332,66 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBase):
 
 
 class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
+    ctype = 'xml'
+
+
+class HypervisorsSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
+                      "Hypervisors")
+
+    def test_hypervisors_list(self):
+        response = self._do_get('os-hypervisors')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('hypervisors-list-resp',
+                                     {}, response)
+
+    def test_hypervisors_search(self):
+        response = self._do_get('os-hypervisors/fake/search')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('hypervisors-search-resp',
+                                     {}, response)
+
+    def test_hypervisors_servers(self):
+        response = self._do_get('os-hypervisors/fake/servers')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('hypervisors-servers-resp',
+                                     {}, response)
+
+    def test_hypervisors_show(self):
+        hypervisor_id = 1
+        subs = {
+            'hypervisor_id': hypervisor_id
+        }
+        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response('hypervisors-show-resp',
+                                     subs, response)
+
+    def test_hypervisors_statistics(self):
+        response = self._do_get('os-hypervisors/statistics')
+        self.assertEqual(response.status, 200)
+        return self._verify_response('hypervisors-statistics-resp',
+                                     {}, response)
+
+    def test_hypervisors_uptime(self):
+        def fake_get_host_uptime(self, context, hyp):
+            return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
+                    " 0.20, 0.12, 0.14")
+
+        self.stubs.Set(compute_api.HostAPI,
+                       'get_host_uptime', fake_get_host_uptime)
+        hypervisor_id = 1
+        response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'hypervisor_id': hypervisor_id,
+        }
+        return self._verify_response('hypervisors-uptime-resp',
+                                     subs, response)
+
+
+class HypervisorsSampleXmlTests(HypervisorsSampleJsonTests):
     ctype = "xml"
 
 
