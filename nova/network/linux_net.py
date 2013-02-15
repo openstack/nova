@@ -23,6 +23,7 @@ import calendar
 import inspect
 import netaddr
 import os
+import re
 
 from nova import db
 from nova import exception
@@ -102,6 +103,14 @@ linux_net_opts = [
     cfg.IntOpt('metadata_port',
                default=8775,
                help='the port for the metadata api port'),
+    cfg.StrOpt('iptables_top_regex',
+               default='',
+               help='Regular expression to match iptables rule that should'
+                    'always be on the top.'),
+    cfg.StrOpt('iptables_bottom_regex',
+               default='',
+               help='Regular expression to match iptables rule that should'
+                    'always be on the bottom.'),
     ]
 
 CONF = cfg.CONF
@@ -425,6 +434,25 @@ class IptablesManager(object):
         new_filter = filter(lambda line: binary_name not in line,
                             current_lines)
 
+        top_rules = []
+        bottom_rules = []
+
+        if CONF.iptables_top_regex:
+            regex = re.compile(CONF.iptables_top_regex)
+            temp_filter = filter(lambda line: regex.search(line), new_filter)
+            for rule_str in temp_filter:
+                new_filter = filter(lambda s: s.strip() != rule_str.strip(),
+                                    new_filter)
+            top_rules = temp_filter
+
+        if CONF.iptables_bottom_regex:
+            regex = re.compile(CONF.iptables_bottom_regex)
+            temp_filter = filter(lambda line: regex.search(line), new_filter)
+            for rule_str in temp_filter:
+                new_filter = filter(lambda s: s.strip() != rule_str.strip(),
+                    new_filter)
+            bottom_rules = temp_filter
+
         seen_chains = False
         rules_index = 0
         for rules_index, rule in enumerate(new_filter):
@@ -438,7 +466,7 @@ class IptablesManager(object):
         if not seen_chains:
             rules_index = 2
 
-        our_rules = []
+        our_rules = top_rules
         bot_rules = []
         for rule in rules:
             rule_str = str(rule)
@@ -484,6 +512,8 @@ class IptablesManager(object):
                                                (binary_name, name,)
                                                for name in chains]
 
+        commit_index = new_filter.index('COMMIT')
+        new_filter[commit_index:commit_index] = bottom_rules
         seen_lines = set()
 
         def _weed_out_duplicates(line):
