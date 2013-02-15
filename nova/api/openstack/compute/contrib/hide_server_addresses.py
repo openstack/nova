@@ -15,11 +15,11 @@
 
 """Extension for hiding server addresses in certain states."""
 
+from oslo.config import cfg
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 opts = [

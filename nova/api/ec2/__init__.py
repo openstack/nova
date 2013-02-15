@@ -23,6 +23,7 @@ Starting point for routing EC2 requests.
 import urlparse
 
 from eventlet.green import httplib
+from oslo.config import cfg
 import webob
 import webob.dec
 import webob.exc
@@ -34,7 +35,6 @@ from nova.api import validator
 from nova.common import memorycache
 from nova import context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

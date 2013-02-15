@@ -19,10 +19,11 @@
 Tests for availability zones
 """
 
+from oslo.config import cfg
+
 from nova import availability_zones as az
 from nova import context
 from nova import db
-from nova.openstack.common import cfg
 from nova import test
 
 CONF = cfg.CONF

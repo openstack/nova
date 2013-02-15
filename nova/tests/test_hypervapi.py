@@ -26,13 +26,14 @@ import shutil
 import time
 import uuid
 
+from oslo.config import cfg
+
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import context
 from nova import db
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests import fake_network
 from nova.tests.hyperv import db_fakes

@@ -25,6 +25,8 @@ datastore.
 import base64
 import time
 
+from oslo.config import cfg
+
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api.metadata import password
@@ -40,7 +42,6 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova import network
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota

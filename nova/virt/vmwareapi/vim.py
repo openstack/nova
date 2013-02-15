@@ -27,7 +27,8 @@ try:
 except ImportError:
     suds = None
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.virt.vmwareapi import error_util
 
 RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml"'

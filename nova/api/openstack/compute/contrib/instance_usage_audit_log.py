@@ -18,11 +18,11 @@
 
 import datetime
 
+from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
-from nova.openstack.common import cfg
 from nova import utils
 
 CONF = cfg.CONF

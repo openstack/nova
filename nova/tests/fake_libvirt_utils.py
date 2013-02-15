@@ -17,7 +17,8 @@
 import os
 import StringIO
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.virt.libvirt import utils as libvirt_utils
 
 

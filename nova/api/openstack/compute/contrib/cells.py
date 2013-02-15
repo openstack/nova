@@ -16,9 +16,10 @@
 #    under the License.
 
 """The cells extension."""
-from xml.parsers import expat
 
+from oslo.config import cfg
 from webob import exc
+from xml.parsers import expat
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
@@ -28,7 +29,6 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils

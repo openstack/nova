@@ -21,6 +21,7 @@ import copy
 import uuid
 
 import fixtures
+from oslo.config import cfg
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -29,7 +30,6 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test

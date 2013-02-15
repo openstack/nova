@@ -26,6 +26,7 @@ import string
 import tempfile
 
 import fixtures
+from oslo.config import cfg
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -40,7 +41,6 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test

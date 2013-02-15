@@ -19,6 +19,8 @@
 import doctest
 import os
 import sys
+
+from oslo.config import cfg
 import XenAPI
 
 
@@ -30,7 +32,6 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver

@@ -25,13 +25,12 @@ import time
 import weakref
 
 from eventlet import semaphore
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
-
 
 LOG = logging.getLogger(__name__)
 

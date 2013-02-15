@@ -19,6 +19,8 @@
 
 import copy
 
+from oslo.config import cfg
+
 from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -26,7 +28,6 @@ from nova import context
 from nova import db
 from nova.network import api as network_api
 from nova import notifications
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier

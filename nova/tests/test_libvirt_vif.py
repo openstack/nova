@@ -15,10 +15,10 @@
 #    under the License.
 
 from lxml import etree
+from oslo.config import cfg
 
 from nova import exception
 from nova.network import model as network_model
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests import fakelibvirt
 from nova import utils

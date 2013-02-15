@@ -18,7 +18,8 @@
 Client side of the consoleauth RPC API.
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 import nova.openstack.common.rpc.proxy
 
 CONF = cfg.CONF

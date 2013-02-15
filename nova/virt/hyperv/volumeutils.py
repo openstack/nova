@@ -24,8 +24,8 @@ and storage repositories
 import time
 
 from eventlet.green import subprocess
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import vmutils

@@ -17,7 +17,7 @@
 
 """Module for SPICE Proxying."""
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 
 spice_opts = [

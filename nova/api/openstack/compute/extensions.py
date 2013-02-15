@@ -15,8 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from nova.api.openstack import extensions as base_extensions
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 

@@ -15,8 +15,9 @@
 
 """Bare-metal DB test base class."""
 
+from oslo.config import cfg
+
 from nova import context as nova_context
-from nova.openstack.common import cfg
 from nova import test
 from nova.virt.baremetal.db import migration as bm_migration
 from nova.virt.baremetal.db.sqlalchemy import session as bm_session

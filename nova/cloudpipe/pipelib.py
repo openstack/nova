@@ -26,12 +26,13 @@ import os
 import string
 import zipfile
 
+from oslo.config import cfg
+
 from nova import compute
 from nova.compute import instance_types
 from nova import crypto
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import paths

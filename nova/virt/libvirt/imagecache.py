@@ -28,16 +28,16 @@ import os
 import re
 import time
 
+from oslo.config import cfg
+
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import utils as virtutils
-
 
 LOG = logging.getLogger(__name__)
 

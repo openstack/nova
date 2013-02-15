@@ -23,8 +23,9 @@ import random
 import string
 import uuid
 
+from oslo.config import cfg
+
 import nova.image.glance
-from nova.openstack.common import cfg
 from nova.openstack.common.log import logging
 from nova import service
 from nova import test

@@ -21,6 +21,7 @@ import hashlib
 import hmac
 import os
 
+from oslo.config import cfg
 import webob.dec
 import webob.exc
 
@@ -28,7 +29,6 @@ from nova.api.metadata import base
 from nova.common import memorycache
 from nova import conductor
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import wsgi
 

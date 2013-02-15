@@ -24,11 +24,11 @@ import tempfile
 import time
 
 import glanceclient.exc
+from oslo.config import cfg
 
 from nova import context
 from nova import exception
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs

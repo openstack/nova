@@ -17,15 +17,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from nova import context
 from nova import network
 from nova.network import linux_net
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.virt import netutils
-
 
 LOG = logging.getLogger(__name__)
 

@@ -19,6 +19,8 @@ scheduler with useful information about availability through the ComputeNode
 model.
 """
 
+from oslo.config import cfg
+
 from nova.compute import claims
 from nova.compute import instance_types
 from nova.compute import task_states
@@ -26,7 +28,6 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils

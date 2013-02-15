@@ -18,13 +18,13 @@
 
 import netaddr
 import netaddr.core as netexc
+from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack import extensions
 from nova import context as nova_context
 from nova import exception
 import nova.network
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import quota
 

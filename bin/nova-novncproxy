@@ -24,9 +24,10 @@ noVNC consoles. Leverages websockify.py by Joel Martin
 import os
 import sys
 
+from oslo.config import cfg
+
 from nova import config
 from nova.console import websocketproxy
-from nova.openstack.common import cfg
 
 
 opts = [

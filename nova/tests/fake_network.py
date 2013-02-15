@@ -15,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from oslo.config import cfg
+
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
 import nova.context
@@ -25,7 +27,6 @@ from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common import cfg
 from nova.virt.libvirt import config as libvirt_config
 
 

@@ -32,7 +32,7 @@ if os.path.exists(os.path.join(possible_topdir, "nova",
     sys.path.insert(0, possible_topdir)
 
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 
 class InstallVenv(object):

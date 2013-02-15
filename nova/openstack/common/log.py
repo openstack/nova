@@ -40,7 +40,8 @@ import stat
 import sys
 import traceback
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local

@@ -16,15 +16,15 @@
 
 import platform
 
-import nova.context
-import nova.db
+from oslo.config import cfg
 
 from nova.compute import instance_types
+import nova.context
+import nova.db
 from nova import exception
 from nova.image import glance
 from nova.network import minidns
 from nova.network import model as network_model
-from nova.openstack.common import cfg
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')

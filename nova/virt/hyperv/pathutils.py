@@ -18,7 +18,8 @@
 import os
 import shutil
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

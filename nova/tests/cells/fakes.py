@@ -16,6 +16,8 @@
 Fakes For Cells tests.
 """
 
+from oslo.config import cfg
+
 from nova.cells import driver
 from nova.cells import manager as cells_manager
 from nova.cells import messaging
@@ -23,7 +25,6 @@ from nova.cells import state as cells_state
 import nova.db
 from nova.db import base
 from nova import exception
-from nova.openstack.common import cfg
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')

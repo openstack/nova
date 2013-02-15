@@ -20,9 +20,10 @@
 
 import time
 
+from oslo.config import cfg
+
 from nova.common import memorycache
 from nova import manager
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 

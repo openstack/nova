@@ -18,6 +18,8 @@
 
 import time
 
+from oslo.config import cfg
+
 from nova import conductor
 from nova import context
 from nova.db import base
@@ -25,11 +27,9 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network import quantumv2
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
-
 
 quantum_opts = [
     cfg.StrOpt('quantum_url',

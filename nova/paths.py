@@ -19,7 +19,7 @@
 
 import os
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 path_opts = [
     cfg.StrOpt('pybasedir',

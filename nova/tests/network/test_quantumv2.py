@@ -18,16 +18,15 @@
 import uuid
 
 import mox
+from oslo.config import cfg
+from quantumclient.v2_0 import client
 
 from nova import context
 from nova import exception
 from nova.network import model
 from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantumapi
-from nova.openstack.common import cfg
 from nova import test
-from quantumclient.v2_0 import client
-
 
 CONF = cfg.CONF
 

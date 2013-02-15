@@ -17,8 +17,9 @@
 
 import os
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.storage import linuxscsi
 from nova import test
 from nova.tests import fake_libvirt_utils

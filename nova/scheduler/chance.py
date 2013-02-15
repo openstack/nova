@@ -23,8 +23,9 @@ Chance (Random) Scheduler implementation
 
 import random
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.scheduler import driver
 
 CONF = cfg.CONF

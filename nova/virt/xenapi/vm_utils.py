@@ -33,6 +33,7 @@ from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
+from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
@@ -40,7 +41,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils

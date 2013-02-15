@@ -17,6 +17,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.config import cfg
 import webob
 import webob.dec
 import webob.exc
@@ -24,7 +25,6 @@ import webob.exc
 from nova.api import ec2
 from nova import context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova import test
 

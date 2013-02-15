@@ -17,10 +17,10 @@
 #    under the License.
 
 import fixtures
+from oslo.config import cfg
 
 from nova import config
 from nova import ipv6
-from nova.openstack.common import cfg
 from nova import paths
 from nova.tests import utils
 

@@ -18,9 +18,10 @@
 Unit Tests for nova.network.rpcapi
 """
 
+from oslo.config import cfg
+
 from nova import context
 from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova import test
 

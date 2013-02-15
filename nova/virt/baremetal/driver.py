@@ -21,10 +21,11 @@
 A driver for Bare-metal platform.
 """
 
+from oslo.config import cfg
+
 from nova.compute import power_state
 from nova import context as nova_context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging

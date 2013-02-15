@@ -15,9 +15,10 @@
 import ldap
 import time
 
+from oslo.config import cfg
+
 from nova import exception
 from nova.network import dns_driver
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 

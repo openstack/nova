@@ -15,6 +15,7 @@
 import datetime
 import uuid
 
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack import compute
@@ -23,7 +24,6 @@ from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test

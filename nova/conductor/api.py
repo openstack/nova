@@ -14,10 +14,11 @@
 
 """Handles all requests to the conductor service."""
 
+from oslo.config import cfg
+
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova import exception as exc
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 from nova import utils

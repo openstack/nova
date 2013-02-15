@@ -18,6 +18,7 @@
 
 import iso8601
 from lxml import etree
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack import compute
@@ -25,7 +26,6 @@ from nova.api.openstack.compute import extensions as compute_extensions
 from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

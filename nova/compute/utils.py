@@ -20,12 +20,13 @@ import re
 import string
 import traceback
 
+from oslo.config import cfg
+
 from nova import block_device
 from nova.compute import instance_types
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
-from nova.openstack.common import cfg
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils

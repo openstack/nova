@@ -43,9 +43,10 @@ these objects be simple dictionaries.
 
 """
 
+from oslo.config import cfg
+
 from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 

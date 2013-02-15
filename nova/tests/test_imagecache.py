@@ -24,14 +24,14 @@ import logging
 import os
 import time
 
-from nova import test
+from oslo.config import cfg
 
 from nova.compute import vm_states
 from nova import conductor
 from nova import db
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log
+from nova import test
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils

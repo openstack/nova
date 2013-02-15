@@ -19,6 +19,7 @@ import os
 import re
 import socket
 
+from oslo.config import cfg
 import webob
 from webob import exc
 
@@ -30,7 +31,6 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import instance_types
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common

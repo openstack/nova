@@ -19,7 +19,8 @@ import abc
 import contextlib
 import os
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import lockutils

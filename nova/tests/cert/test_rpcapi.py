@@ -18,9 +18,10 @@
 Unit Tests for nova.cert.rpcapi
 """
 
+from oslo.config import cfg
+
 from nova.cert import rpcapi as cert_rpcapi
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova import test
 

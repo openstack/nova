@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
 import webob
 
 import nova.api.sizelimit
-from nova.openstack.common import cfg
 from nova import test
 
 CONF = cfg.CONF

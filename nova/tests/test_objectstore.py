@@ -27,9 +27,9 @@ import tempfile
 
 from boto import exception as boto_exception
 from boto.s3 import connection as s3
+from oslo.config import cfg
 
 from nova.objectstore import s3server
-from nova.openstack.common import cfg
 from nova import test
 from nova import wsgi
 

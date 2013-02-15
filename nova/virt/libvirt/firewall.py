@@ -17,11 +17,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from eventlet import tpool
+from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 

@@ -18,7 +18,7 @@
 
 """Module for VNC Proxying."""
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 
 vnc_opts = [

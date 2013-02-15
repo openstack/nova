@@ -21,7 +21,8 @@ Management class for Storage-related functions (attach, detach, etc).
 """
 import time
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import hostutils

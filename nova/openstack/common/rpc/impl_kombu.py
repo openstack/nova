@@ -28,8 +28,8 @@ import kombu
 import kombu.connection
 import kombu.entity
 import kombu.messaging
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import network_utils
 from nova.openstack.common.rpc import amqp as rpc_amqp

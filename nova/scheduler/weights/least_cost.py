@@ -25,8 +25,9 @@ NOTE(comstud): This is deprecated. One should use the RAMWeigher and/or
 create other weight modules.
 """
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 

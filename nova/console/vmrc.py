@@ -19,8 +19,9 @@
 
 import base64
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.virt.vmwareapi import vim_util
 

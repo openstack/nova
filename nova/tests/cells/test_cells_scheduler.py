@@ -17,11 +17,12 @@ Tests For CellsScheduler
 """
 import time
 
+from oslo.config import cfg
+
 from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.cells import fakes

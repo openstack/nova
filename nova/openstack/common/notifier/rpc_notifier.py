@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common import context as req_context
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging

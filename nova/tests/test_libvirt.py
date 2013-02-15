@@ -27,6 +27,7 @@ import shutil
 import tempfile
 
 from lxml import etree
+from oslo.config import cfg
 from xml.dom import minidom
 
 from nova.api.ec2 import cloud
@@ -38,7 +39,6 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -62,7 +62,6 @@ from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
-
 
 try:
     import libvirt

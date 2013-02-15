@@ -27,7 +27,8 @@ schedule requests to compute nodes but provide their own manager and topic.
 https://bugs.launchpad.net/nova/+bug/1009681
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import importutils
 from nova.scheduler import driver
 

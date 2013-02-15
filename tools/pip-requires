@@ -27,3 +27,4 @@ python-glanceclient>=0.5.0,<2
 python-keystoneclient>=0.2.0
 stevedore>=0.7
 websockify
+http://tarballs.openstack.org/oslo-config/oslo-config-2013.1b4.tar.gz#egg=oslo-config

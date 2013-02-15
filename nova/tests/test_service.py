@@ -20,18 +20,18 @@
 Unit Tests for remote procedure calls using queue
 """
 
-import mox
 import sys
+
+import mox
+from oslo.config import cfg
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import manager
-from nova.openstack.common import cfg
 from nova import service
 from nova import test
 from nova import wsgi
-
 
 test_service_opts = [
     cfg.StrOpt("fake_manager",

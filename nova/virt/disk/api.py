@@ -32,8 +32,9 @@ import tempfile
 if os.name != 'nt':
     import crypt
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import paths

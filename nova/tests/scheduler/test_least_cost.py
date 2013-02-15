@@ -15,13 +15,14 @@
 """
 Tests For Least Cost functions.
 """
+
+from oslo.config import cfg
+
 from nova import context
-from nova.openstack.common import cfg
 from nova.scheduler import weights
 from nova.scheduler.weights import least_cost
 from nova import test
 from nova.tests.scheduler import fakes
-
 
 test_least_cost_opts = [
     cfg.FloatOpt('compute_fake_weigher1_weight',

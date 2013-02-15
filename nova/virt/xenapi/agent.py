@@ -21,10 +21,11 @@ import os
 import time
 import uuid
 
+from oslo.config import cfg
+
 from nova.api.metadata import password
 from nova import context
 from nova import crypto
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils

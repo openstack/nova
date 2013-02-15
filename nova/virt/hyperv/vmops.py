@@ -21,9 +21,10 @@ Management class for basic VM operations.
 """
 import os
 
+from oslo.config import cfg
+
 from nova.api.metadata import base as instance_metadata
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging

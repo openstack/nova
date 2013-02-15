@@ -18,7 +18,8 @@
 Client side of the scheduler manager RPC API.
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 

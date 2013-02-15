@@ -25,6 +25,7 @@ import uuid as uuid_lib
 
 import coverage
 from lxml import etree
+from oslo.config import cfg
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import coverage_ext
@@ -36,7 +37,6 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import api as network_api
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common.log import logging

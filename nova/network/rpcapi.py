@@ -18,7 +18,8 @@
 Client side of the network RPC API.
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import proxy as rpc_proxy

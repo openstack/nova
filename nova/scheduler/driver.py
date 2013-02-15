@@ -23,6 +23,8 @@ Scheduler base class that all Schedulers should inherit from
 
 import sys
 
+from oslo.config import cfg
+
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -32,7 +34,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import notifications
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier

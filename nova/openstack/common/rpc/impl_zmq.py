@@ -23,8 +23,8 @@ import uuid
 
 import eventlet
 import greenlet
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils

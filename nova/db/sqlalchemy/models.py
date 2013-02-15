@@ -25,12 +25,11 @@ from sqlalchemy import Column, Integer, BigInteger, String, schema
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
+from oslo.config import cfg
 
 from nova.db.sqlalchemy import types
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import models
 from nova.openstack.common import timeutils
-
 
 CONF = cfg.CONF
 BASE = declarative_base()

@@ -16,12 +16,12 @@
 #    under the License.
 
 import netaddr
+from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
