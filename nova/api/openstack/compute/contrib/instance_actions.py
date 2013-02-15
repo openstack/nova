@@ -71,15 +71,13 @@ class InstanceActionsController(wsgi.Controller):
     def _format_action(self, action_raw):
         action = {}
         for key in ACTION_KEYS:
-            if key in action_raw:
-                action[key] = action_raw[key]
+            action[key] = action_raw.get(key)
         return action
 
     def _format_event(self, event_raw):
         event = {}
         for key in EVENT_KEYS:
-            if key in event_raw:
-                event[key] = event_raw[key]
+            event[key] = event_raw.get(key)
         return event
 
     @wsgi.serializers(xml=InstanceActionsTemplate)
