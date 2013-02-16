@@ -149,7 +149,7 @@ function copy_subunit_log {
 
 function run_pep8 {
   echo "Running PEP8 and HACKING compliance check..."
-  bash tools/run_pep8.sh
+  bash -c "${wrapper} tools/run_pep8.sh"
 }
 
 
