@@ -4267,11 +4267,11 @@ class LibvirtDriverTestCase(test.TestCase):
         disk_info = [{'type': 'qcow2', 'path': '/test/disk',
                       'virt_disk_size': '10737418240',
                       'backing_file': '/base/disk',
-                      'disk_size':'83886080'},
+                      'disk_size': '83886080'},
                      {'type': 'raw', 'path': '/test/disk.local',
                       'virt_disk_size': '10737418240',
                       'backing_file': '/base/disk.local',
-                      'disk_size':'83886080'}]
+                      'disk_size': '83886080'}]
         disk_info_text = jsonutils.dumps(disk_info)
 
         def fake_get_instance_disk_info(instance, xml=None):

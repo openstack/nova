@@ -327,7 +327,7 @@ class NetworkInfoTests(test.TestCase):
     def test_create_model(self):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(
-                    {'address':'bb:bb:bb:bb:bb:bb'})])
+                    {'address': 'bb:bb:bb:bb:bb:bb'})])
         self.assertEqual(ninfo.fixed_ips(),
                 [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
                  fake_network_cache_model.new_ip(
@@ -338,13 +338,13 @@ class NetworkInfoTests(test.TestCase):
         vif['network']['subnets'][0]['ips'][0].add_floating_ip('192.168.1.1')
         ninfo = model.NetworkInfo([vif,
                 fake_network_cache_model.new_vif(
-                    {'address':'bb:bb:bb:bb:bb:bb'})])
+                    {'address': 'bb:bb:bb:bb:bb:bb'})])
         self.assertEqual(ninfo.floating_ips(), ['192.168.1.1'])
 
     def test_hydrate(self):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(
-                        {'address':'bb:bb:bb:bb:bb:bb'})])
+                        {'address': 'bb:bb:bb:bb:bb:bb'})])
         deserialized = model.NetworkInfo.hydrate(ninfo)
         self.assertEqual(ninfo.fixed_ips(),
                 [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),

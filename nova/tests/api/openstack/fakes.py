@@ -427,7 +427,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         project_id = 'fake_project'
 
     if metadata:
-        metadata = [{'key':k, 'value':v} for k, v in metadata.items()]
+        metadata = [{'key': k, 'value': v} for k, v in metadata.items()]
     elif include_fake_metadata:
         metadata = [models.InstanceMetadata(key='seq', value=str(id))]
     else:

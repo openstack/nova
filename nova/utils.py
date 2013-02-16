@@ -1363,7 +1363,7 @@ def check_string_length(value, name, min_length=0, max_length=None):
         msg = _("%s is not a string or unicode") % name
         raise exception.InvalidInput(message=msg)
 
-    if  len(value) < min_length:
+    if len(value) < min_length:
         msg = _("%(name)s has less than %(min_length)s "
                     "characters.") % locals()
         raise exception.InvalidInput(message=msg)
