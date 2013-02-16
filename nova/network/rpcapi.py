@@ -51,6 +51,8 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
         1.7 - Adds method get_floating_ip_pools to replace get_floating_pools
         1.8 - Adds macs to allocate_for_instance
+        1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes instance_uuid
+              from allocate_for_instance and instance_get_nw_info
     '''
 
     #
@@ -154,18 +156,17 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('disassociate_floating_ip',
                 address=address, affect_auto_assigned=affect_auto_assigned))
 
-    def allocate_for_instance(self, ctxt, instance_id, instance_uuid,
-                              project_id, host, rxtx_factor, vpn,
-                              requested_networks, macs=None):
+    def allocate_for_instance(self, ctxt, instance_id, project_id, host,
+                              rxtx_factor, vpn, requested_networks, macs=None):
         if CONF.multi_host:
             topic = rpc.queue_get_for(ctxt, self.topic, host)
         else:
             topic = None
         return self.call(ctxt, self.make_msg('allocate_for_instance',
-                instance_id=instance_id, instance_uuid=instance_uuid,
-                project_id=project_id, host=host, rxtx_factor=rxtx_factor,
-                vpn=vpn, requested_networks=requested_networks, macs=macs),
-                topic=topic, version='1.8')
+                instance_id=instance_id, project_id=project_id, host=host,
+                rxtx_factor=rxtx_factor, vpn=vpn,
+                requested_networks=requested_networks, macs=macs),
+                topic=topic, version='1.9')
 
     def deallocate_for_instance(self, ctxt, instance_id, project_id, host):
         if CONF.multi_host:
@@ -176,13 +177,17 @@ class NetworkAPI(rpc_proxy.RpcProxy):
                 instance_id=instance_id, project_id=project_id, host=host),
                 topic=topic)
 
-    def add_fixed_ip_to_instance(self, ctxt, instance_id, host, network_id):
+    def add_fixed_ip_to_instance(self, ctxt, instance_id, rxtx_factor,
+                                 host, network_id):
         return self.call(ctxt, self.make_msg('add_fixed_ip_to_instance',
-                instance_id=instance_id, host=host, network_id=network_id))
+                instance_id=instance_id, rxtx_factor=rxtx_factor,
+                host=host, network_id=network_id), version='1.9')
 
-    def remove_fixed_ip_from_instance(self, ctxt, instance_id, host, address):
+    def remove_fixed_ip_from_instance(self, ctxt, instance_id, rxtx_factor,
+                                      host, address):
         return self.call(ctxt, self.make_msg('remove_fixed_ip_from_instance',
-                instance_id=instance_id, host=host, address=address))
+                instance_id=instance_id, rxtx_factor=rxtx_factor,
+                host=host, address=address), version='1.9')
 
     def add_network_to_project(self, ctxt, project_id, network_uuid):
         return self.call(ctxt, self.make_msg('add_network_to_project',
@@ -191,13 +196,13 @@ class NetworkAPI(rpc_proxy.RpcProxy):
     def associate(self, ctxt, network_uuid, associations):
         return self.call(ctxt, self.make_msg('associate',
                 network_uuid=network_uuid, associations=associations),
-                self.topic, version="1.5")
+                self.topic, version='1.5')
 
-    def get_instance_nw_info(self, ctxt, instance_id, instance_uuid,
-                             rxtx_factor, host, project_id):
+    def get_instance_nw_info(self, ctxt, instance_id, rxtx_factor, host,
+                             project_id):
         return self.call(ctxt, self.make_msg('get_instance_nw_info',
-                instance_id=instance_id, instance_uuid=instance_uuid,
-                rxtx_factor=rxtx_factor, host=host, project_id=project_id))
+                instance_id=instance_id, rxtx_factor=rxtx_factor, host=host,
+                project_id=project_id), version='1.9')
 
     def validate_networks(self, ctxt, networks):
         return self.call(ctxt, self.make_msg('validate_networks',

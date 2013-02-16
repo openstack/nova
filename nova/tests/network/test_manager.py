@@ -284,70 +284,81 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'network_get')
         self.mox.StubOutWithMock(db, 'network_update')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
+
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id': 0}]})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
+
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+        db.instance_get_by_uuid(self.context,
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
 
-        db.instance_get(self.context,
-                        1).AndReturn({'display_name': HOST,
-                                      'uuid': 'test-00001'})
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'security_groups':
-                                                             [{'id': 0}]})
-        db.instance_get(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'security_groups':
-                                            [{'id':0, 'name':'test'}]})
-        db.fixed_ip_associate_pool(mox.IgnoreArg(),
-                                   mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()).AndReturn(networks[0])
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+
+        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                          mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['id'])
 
     def test_add_fixed_ip_instance_using_uuid_without_vpn(self):
         self.mox.StubOutWithMock(db, 'network_get_by_uuid')
         self.mox.StubOutWithMock(db, 'network_update')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
-
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
-
-        db.instance_get(self.context,
-                        1).AndReturn({'display_name': HOST,
-                                      'uuid': 'test-00001'})
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'security_groups':
-                                                             [{'id': 0}]})
-        db.instance_get(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'security_groups':
-                                            [{'id':0, 'name':'test'}]})
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
+
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id': 0}]})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
+
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.instance_get_by_uuid(self.context,
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndReturn(networks[0])
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+
+        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                          mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['uuid'])
 
     def test_mini_dns_driver(self):
@@ -396,48 +407,51 @@ class FlatNetworkTestCase(test.TestCase):
 
     def test_instance_dns(self):
         fixedip = '192.168.0.101'
-        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'network_get_by_uuid')
         self.mox.StubOutWithMock(db, 'network_update')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
-
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
-
-        db.instance_get(self.context,
-                        1).AndReturn({'display_name': HOST,
-                                      'uuid': 'test-00001'})
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'security_groups':
-                                                             [{'id': 0}]})
-        db.instance_get(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'security_groups':
-                                            [{'id':0, 'name':'test'}]})
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn(fixedip)
-        db.network_get(mox.IgnoreArg(),
-                       mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()).AndReturn(networks[0])
+
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id': 0}]})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups':
+                                            [{'id':0, 'name':'test'}]})
+
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.instance_get_by_uuid(self.context,
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
+
+        db.network_get_by_uuid(mox.IgnoreArg(),
+                               mox.IgnoreArg()).AndReturn(networks[0])
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
 
+        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                          mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
-                                              networks[0]['id'])
+        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
+                                              networks[0]['uuid'])
+
         instance_manager = self.network.instance_dns_manager
         addresses = instance_manager.get_entries_by_name(HOST,
                                              self.network.instance_dns_domain)
         self.assertEqual(len(addresses), 1)
         self.assertEqual(addresses[0], fixedip)
-        addresses = instance_manager.get_entries_by_name('test-00001',
+        addresses = instance_manager.get_entries_by_name(FAKEUUID,
                                               self.network.instance_dns_domain)
         self.assertEqual(len(addresses), 1)
         self.assertEqual(addresses[0], fixedip)
@@ -452,15 +466,12 @@ class VlanNetworkTestCase(test.TestCase):
                                               is_admin=False)
 
     def test_vpn_allocate_fixed_ip(self):
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'uuid': '42',
-                                                    'display_name': HOST})
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
@@ -471,11 +482,14 @@ class VlanNetworkTestCase(test.TestCase):
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'display_name': HOST})
         self.mox.ReplayAll()
 
         network = dict(networks[0])
         network['vpn_private_address'] = '192.168.0.2'
-        self.network.allocate_fixed_ip(self.context, 0, network, vpn=True)
+        self.network.allocate_fixed_ip(self.context, FAKEUUID, network,
+                                       vpn=True)
 
     def test_vpn_allocate_fixed_ip_no_network_id(self):
         network = dict(networks[0])
@@ -487,7 +501,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(exception.FixedIpNotFoundForNetwork,
                 self.network.allocate_fixed_ip,
                 context_admin,
-                instance['id'],
+                instance['uuid'],
                 network,
                 vpn=True)
 
@@ -496,12 +510,9 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
-        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
-        db.instance_get(mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                                'uuid': FAKEUUID})
-        db.instance_get(mox.IgnoreArg(),
+        db.instance_get_by_uuid(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
@@ -512,11 +523,13 @@ class VlanNetworkTestCase(test.TestCase):
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                    mox.IgnoreArg()).AndReturn({'display_name': HOST})
         self.mox.ReplayAll()
 
         network = dict(networks[0])
         network['vpn_private_address'] = '192.168.0.2'
-        self.network.allocate_fixed_ip(self.context, 0, network)
+        self.network.allocate_fixed_ip(self.context, FAKEUUID, network)
 
     def test_create_networks_too_big(self):
         self.assertRaises(ValueError, self.network.create_networks, None,
@@ -952,33 +965,34 @@ class VlanNetworkTestCase(test.TestCase):
     def test_add_fixed_ip_instance_without_vpn_requested_networks(self):
         self.mox.StubOutWithMock(db, 'network_get')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'uuid': FAKEUUID,
-                                                    'display_name': HOST})
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
 
-        db.instance_get(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'security_groups':
-                                                             [{'id': 0}],
-                                                    'availability_zone': '',
-                                                    'uuid': FAKEUUID})
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'security_groups': [{'id': 0}],
+                                            'availability_zone': '',
+                                            'uuid': FAKEUUID})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()).AndReturn(networks[0])
+        db.instance_get_by_uuid(mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn({'display_name': HOST})
+        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
+                                          mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['id'])
 
     def test_ip_association_and_allocation_of_other_project(self):
@@ -1194,7 +1208,8 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         manager = fake_network.FakeNetworkManager()
-        manager.remove_fixed_ip_from_instance(self.context, 99, HOST,
+        manager.remove_fixed_ip_from_instance(self.context, 99,
+                                              HOST,
                                               '10.0.0.1')
 
         self.assertEquals(manager.deallocate_called, '10.0.0.1')
@@ -1852,7 +1867,7 @@ class FloatingIPTestCase(test.TestCase):
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
         self.network.deallocate_for_instance(self.context,
-                instance_id=instance['id'])
+                instance_id=instance['uuid'])
 
     def test_deallocation_duplicate_floating_ip(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
@@ -1874,7 +1889,7 @@ class FloatingIPTestCase(test.TestCase):
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
         self.network.deallocate_for_instance(self.context,
-                instance_id=instance['id'])
+                instance_id=instance['uuid'])
 
     def test_migrate_instance_start(self):
         called = {'count': 0}

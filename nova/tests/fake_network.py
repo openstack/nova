@@ -163,6 +163,10 @@ class FakeNetworkManager(network_manager.NetworkManager):
     def _create_fixed_ips(self, context, network_id, fixed_cidr=None):
         pass
 
+    def get_instance_nw_info(context, instance_id, rxtx_factor,
+                             host, instance_uuid=None, **kwargs):
+        pass
+
 
 def fake_network(network_id, ipv6=None):
     if ipv6 is None:
@@ -360,7 +364,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
 
     nw_model = network.get_instance_nw_info(
                 FakeContext('fakeuser', 'fake_project'),
-                0, 0, 3, None)
+                0, 3, None)
     if spectacular:
         return nw_model
     return nw_model.legacy()
