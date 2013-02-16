@@ -629,7 +629,7 @@ class Controller(wsgi.Controller):
                 if port_id:
                     network_uuid = None
                     if not self._is_quantum_v2():
-                        # port parameter is only for qunatum v2.0
+                        # port parameter is only for quantum v2.0
                         msg = _("Unknown argment : port")
                         raise exc.HTTPBadRequest(explanation=msg)
                     if not uuidutils.is_uuid_like(port_id):
