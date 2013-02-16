@@ -3393,13 +3393,7 @@ class HostStateTestCase(test.TestCase):
             return HostStateTestCase.instance_caps
 
     def test_update_status(self):
-        virtapi = fake.FakeVirtAPI()
-        self.mox.StubOutWithMock(libvirt_driver, 'LibvirtDriver')
-        libvirt_driver.LibvirtDriver(virtapi, True).AndReturn(
-            self.FakeConnection())
-
-        self.mox.ReplayAll()
-        hs = libvirt_driver.HostState(virtapi, True)
+        hs = libvirt_driver.HostState(self.FakeConnection())
         stats = hs._stats
         self.assertEquals(stats["vcpus"], 1)
         self.assertEquals(stats["vcpus_used"], 0)
