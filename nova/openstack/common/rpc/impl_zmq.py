@@ -772,8 +772,9 @@ def _get_ctxt():
     return ZMQ_CTX
 
 
-def _get_matchmaker():
+def _get_matchmaker(*args, **kwargs):
     global matchmaker
     if not matchmaker:
-        matchmaker = importutils.import_object(CONF.rpc_zmq_matchmaker)
+        matchmaker = importutils.import_object(
+            CONF.rpc_zmq_matchmaker, *args, **kwargs)
     return matchmaker

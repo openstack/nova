@@ -274,7 +274,7 @@ def _get_revno():
     return len(revlist.splitlines())
 
 
-def get_version_from_git(pre_version):
+def _get_version_from_git(pre_version):
     """Return a version which is equal to the tag that's on the current
     revision if there is one, or tag plus number of additional revisions
     if the current revision has no tag."""
@@ -294,7 +294,7 @@ def get_version_from_git(pre_version):
     return None
 
 
-def get_version_from_pkg_info(package_name):
+def _get_version_from_pkg_info(package_name):
     """Get the version from PKG-INFO file if we can."""
     try:
         pkg_info_file = open('PKG-INFO', 'r')
@@ -325,10 +325,10 @@ def get_version(package_name, pre_version=None):
     version = os.environ.get("OSLO_PACKAGE_VERSION", None)
     if version:
         return version
-    version = get_version_from_pkg_info(package_name)
+    version = _get_version_from_pkg_info(package_name)
     if version:
         return version
-    version = get_version_from_git(pre_version)
+    version = _get_version_from_git(pre_version)
     if version:
         return version
     raise Exception("Versioning for this project requires either an sdist"

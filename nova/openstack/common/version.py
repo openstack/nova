@@ -33,6 +33,14 @@ class VersionInfo(object):
         self.version = None
         self._cached_version = None
 
+    def __str__(self):
+        """Make the VersionInfo object behave like a string."""
+        return self.version_string()
+
+    def __repr__(self):
+        """Include the name."""
+        return "VersionInfo(%s:%s)" % (self.package, self.version_string())
+
     def _get_version_from_pkg_resources(self):
         """Get the version of the package from the pkg_resources record
         associated with the package."""
@@ -41,11 +49,11 @@ class VersionInfo(object):
             provider = pkg_resources.get_provider(requirement)
             return provider.version
         except pkg_resources.DistributionNotFound:
-            # The most likely cause for this is running tests in a tree with
+            # The most likely cause for this is running tests in a tree
             # produced from a tarball where the package itself has not been
-            # installed into anything. Check for a PKG-INFO file.
+            # installed into anything. Revert to setup-time logic.
             from nova.openstack.common import setup
-            return setup.get_version_from_pkg_info(self.package)
+            return setup.get_version(self.package)
 
     def release_string(self):
         """Return the full version of the package including suffixes indicating

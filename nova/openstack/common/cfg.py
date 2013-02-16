@@ -863,7 +863,7 @@ class SubCommandOpt(Opt):
                                            description=self.description,
                                            help=self.help)
 
-        if not self.handler is None:
+        if self.handler is not None:
             self.handler(subparsers)
 
 
@@ -1297,6 +1297,24 @@ class ConfigOpts(collections.Mapping):
         __import__(module_str)
         self._get_opt_info(name, group)
 
+    def import_group(self, group, module_str):
+        """Import an option group from a module.
+
+        Import a module and check that a given option group is registered.
+
+        This is intended for use with global configuration objects
+        like cfg.CONF where modules commonly register options with
+        CONF at module load time. If one module requires an option group
+        defined by another module it can use this method to explicitly
+        declare the dependency.
+
+        :param group: an option OptGroup object or group name
+        :param module_str: the name of a module to import
+        :raises: ImportError, NoSuchGroupError
+        """
+        __import__(module_str)
+        self._get_group(group)
+
     @__clear_cache
     def set_override(self, name, override, group=None):
         """Override an opt value.
@@ -1547,8 +1565,8 @@ class ConfigOpts(collections.Mapping):
         group = group_or_name if isinstance(group_or_name, OptGroup) else None
         group_name = group.name if group else group_or_name
 
-        if not group_name in self._groups:
-            if not group is None or not autocreate:
+        if group_name not in self._groups:
+            if group is not None or not autocreate:
                 raise NoSuchGroupError(group_name)
 
             self.register_group(OptGroup(name=group_name))
@@ -1568,7 +1586,7 @@ class ConfigOpts(collections.Mapping):
             group = self._get_group(group)
             opts = group._opts
 
-        if not opt_name in opts:
+        if opt_name not in opts:
             raise NoSuchOptError(opt_name, group)
 
         return opts[opt_name]
@@ -1606,7 +1624,7 @@ class ConfigOpts(collections.Mapping):
             opt = info['opt']
 
             if opt.required:
-                if ('default' in info or 'override' in info):
+                if 'default' in info or 'override' in info:
                     continue
 
                 if self._get(opt.dest, group) is None:
@@ -1625,7 +1643,7 @@ class ConfigOpts(collections.Mapping):
         """
         self._args = args
 
-        for opt, group in self._all_cli_opts():
+        for opt, group in sorted(self._all_cli_opts()):
             opt._add_to_cli(self._oparser, group)
 
         return vars(self._oparser.parse_args(args))
