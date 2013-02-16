@@ -383,7 +383,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # removed) soon.
         do_not_approve_additions = []
         do_not_approve_additions.append('os-create-server-ext')
-        do_not_approve_additions.append('os-flavor-access')
         do_not_approve_additions.append('os-hypervisors')
         do_not_approve_additions.append('os-volumes')
 
@@ -3210,3 +3209,96 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
 
 class ConfigDriveSampleXmlTest(ConfigDriveSampleJsonTest):
     ctype = 'xml'
+
+
+class FlavorAccessSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib.flavor_access."
+                      "Flavor_access")
+
+    def _get_flags(self):
+        f = super(FlavorAccessSampleJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # FlavorAccess extension also needs Flavormanage to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
+        return f
+
+    def _add_tenant(self):
+        subs = {
+            'tenant_id': 'fake_tenant',
+            'flavor_id': 10
+        }
+        response = self._do_post('flavors/10/action',
+                                 'flavor-access-add-tenant-req',
+                                 subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-access-add-tenant-resp',
+                                     subs, response)
+
+    def _create_flavor(self):
+        subs = {
+            'flavor_id': 10,
+            'flavor_name': 'test_flavor'
+        }
+        response = self._do_post("flavors",
+                                 "flavor-access-create-req",
+                                 subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        return self._verify_response("flavor-access-create-resp",
+                                     subs, response)
+
+    def test_flavor_access_create(self):
+        self._create_flavor()
+
+    def test_flavor_access_detail(self):
+        response = self._do_get('flavors/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('flavor-access-detail-resp',
+                                     subs, response)
+
+    def test_flavor_access_list(self):
+        self._create_flavor()
+        self._add_tenant()
+        flavor_id = 10
+        response = self._do_get('flavors/%s/os-flavor-access' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'flavor_id': flavor_id,
+            'tenant_id': 'fake_tenant',
+        }
+        return self._verify_response('flavor-access-list-resp',
+                                     subs, response)
+
+    def test_flavor_access_show(self):
+        flavor_id = 1
+        response = self._do_get('flavors/%s' % flavor_id)
+        self.assertEqual(response.status, 200)
+        subs = {
+            'flavor_id': flavor_id
+        }
+        subs.update(self._get_regexes())
+        return self._verify_response('flavor-access-show-resp',
+                                     subs, response)
+
+    def test_flavor_access_add_tenant(self):
+        self._create_flavor()
+        response = self._add_tenant()
+
+    def test_flavor_access_remove_tenant(self):
+        self._create_flavor()
+        self._add_tenant()
+        subs = {
+            'tenant_id': 'fake_tenant',
+        }
+        response = self._do_post('flavors/10/action',
+                                 "flavor-access-remove-tenant-req",
+                                 subs)
+        self.assertEqual(response.status, 200)
+        return self._verify_response('flavor-access-remove-tenant-resp',
+                                     {}, response)
+
+
+class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
+    ctype = "xml"
