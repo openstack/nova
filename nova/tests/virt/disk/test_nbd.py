@@ -141,6 +141,8 @@ class NbdTestCase(test.TestCase):
 
     def test_inner_get_dev_no_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
+        self.stubs.Set(nbd.NbdMount, '_detect_nbd_devices',
+                       _fake_detect_nbd_devices_none)
         n = nbd.NbdMount(None, tempdir)
         self.assertFalse(n._inner_get_dev())
 
