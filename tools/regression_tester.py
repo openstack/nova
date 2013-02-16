@@ -10,8 +10,15 @@ import string
 import subprocess
 import sys
 
+gerrit_number = None
+
 #TODO(jogo) use proper optParser
-gerrit_number = sys.argv[1]
+if len(sys.argv) == 2:
+    gerrit_number = sys.argv[1]
+else:
+    gerrit_number = None
+    print ("no gerrit review number specified, running on latest commit"
+            "on current branch.")
 
 
 def run(cmd, fail_ok=False):
@@ -20,7 +27,7 @@ def run(cmd, fail_ok=False):
         rval = subprocess.check_output(cmd, shell=True)
     except subprocess.CalledProcessError:
         if not fail_ok:
-            print "the above command terminated with an error"
+            print "The command above terminated with an error."
             sys.exit(1)
         pass
     return rval
@@ -28,8 +35,10 @@ def run(cmd, fail_ok=False):
 
 test_works = False
 
-original_branch = run("git rev-parse --abbrev-ref HEAD")
-run("git review -d %s" % gerrit_number)
+if gerrit_number:
+    original_branch = run("git rev-parse --abbrev-ref HEAD")
+    run("git review -d %s" % gerrit_number)
+
 # run new tests with old code
 run("git checkout HEAD^ nova")
 run("git checkout HEAD nova/tests")
@@ -41,27 +50,32 @@ test_list = []
 for test in tests:
     test_list.append(string.replace(test[0:-3], '/', '.'))
 
-# run new tests, expect them to fail
-expect_failure = run(("tox -epy27 %s 2>&1" % string.join(test_list)),
-                     fail_ok=True)
-if "FAILED (id=" in expect_failure:
-    test_works = True
+if test_list == []:
+    test_works = False
+    expect_failure = ""
+else:
+    # run new tests, expect them to fail
+    expect_failure = run(("tox -epy27 %s 2>&1" % string.join(test_list)),
+                         fail_ok=True)
+    if "FAILED (id=" in expect_failure:
+        test_works = True
 
 # cleanup
 run("git checkout HEAD nova")
-new_branch = run("git status | head -1 | cut -d ' ' -f 4")
-run("git checkout %s" % original_branch)
-run("git branch -D %s" % new_branch)
+if gerrit_number:
+    new_branch = run("git status | head -1 | cut -d ' ' -f 4")
+    run("git checkout %s" % original_branch)
+    run("git branch -D %s" % new_branch)
 
 
 if test_works:
     print expect_failure
-    print  ""
-    print  "*******************************"
-    print  "SUCCESS: test covers regression"
+    print ""
+    print "*******************************"
+    print "FOUND a regression test"
 else:
     print expect_failure
     print ""
-    print "***************************************"
-    print "FAILURE: test does not cover regression"
+    print "*******************************"
+    print "NO regression test"
     sys.exit(1)
