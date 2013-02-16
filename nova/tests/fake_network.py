@@ -148,6 +148,9 @@ class FakeNetworkManager(network_manager.NetworkManager):
             return [ip for ip in self.fixed_ips
                     if ip['virtual_interface_id'] == vif_id]
 
+        def fixed_ip_disassociate(self, context, address):
+            return True
+
     def __init__(self):
         self.db = self.FakeDB()
         self.deallocate_called = None

@@ -778,6 +778,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         for fixed_ip in fixed_ips:
             if fixed_ip['address'] == address:
                 self.deallocate_fixed_ip(context, address, host)
+                # NOTE(vish): this probably isn't a dhcp ip so just
+                #             deallocate it now. In the extremely rare
+                #             case that this is a race condition, we
+                #             will just get a warn in lease or release.
+                if not fixed_ip.get('leased'):
+                    self.db.fixed_ip_disassociate(context, address)
                 return self.get_instance_nw_info(context, instance_id,
                                                  rxtx_factor, host)
         raise exception.FixedIpNotFoundForSpecificInstance(
@@ -909,8 +915,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_uuid'] is None:
-            msg = _('IP %s leased that is not associated') % address
-            raise exception.NovaException(msg)
+            LOG.warn(_('IP %s leased that is not associated'), address,
+                       context=context)
+            return
         now = timeutils.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip['address'],
@@ -926,8 +933,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_uuid'] is None:
-            msg = _('IP %s released that is not associated') % address
-            raise exception.NovaException(msg)
+            LOG.warn(_('IP %s released that is not associated'), address,
+                       context=context)
+            return
         if not fixed_ip['leased']:
             LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)
