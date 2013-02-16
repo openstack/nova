@@ -1919,6 +1919,148 @@ class ComputeTestCase(BaseTestCase):
                 reservations=reservations)
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_finish_resize_with_volumes(self):
+        """Contrived test to ensure finish_resize doesn't raise anything."""
+
+        # create instance
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        # create volume
+        volume_id = 'fake'
+        volume = {'instance_uuid': None,
+                  'device_name': None,
+                  'volume_id': volume_id}
+
+        # stub out volume attach
+        def fake_volume_get(self, context, volume):
+            return volume
+        self.stubs.Set(cinder.API, "get", fake_volume_get)
+
+        orig_connection_data = {
+            'target_discovered': True,
+            'target_iqn': 'iqn.2010-10.org.openstack:%s.1' % volume_id,
+            'target_portal': '127.0.0.0.1:3260',
+            'volume_id': volume_id,
+        }
+        connection_info = {
+            'driver_volume_type': 'iscsi',
+            'data': orig_connection_data,
+        }
+
+        def fake_init_conn(self, context, volume, session):
+            return connection_info
+        self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
+
+        def fake_attach(self, context, volume_id, instance_uuid, device_name):
+            volume['instance_uuid'] = instance_uuid
+            volume['device_name'] = device_name
+        self.stubs.Set(cinder.API, "attach", fake_attach)
+
+        # stub out virt driver attach
+        def fake_get_volume_connector(*args, **kwargs):
+            return {}
+        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+                       fake_get_volume_connector)
+
+        def fake_attach_volume(*args, **kwargs):
+            pass
+        self.stubs.Set(self.compute.driver, 'attach_volume',
+                       fake_attach_volume)
+
+        # attach volume to instance
+        self.compute.attach_volume(self.context, volume['volume_id'],
+                                   '/dev/vdc', instance)
+
+        # assert volume attached correctly
+        self.assertEquals(volume['device_name'], '/dev/vdc')
+        disk_info = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEquals(len(disk_info), 1)
+        for bdm in disk_info:
+            self.assertEquals(bdm['device_name'], volume['device_name'])
+            self.assertEquals(bdm['connection_info'],
+                              jsonutils.dumps(connection_info))
+
+        # begin resize
+        instance_type = instance_types.get_default_instance_type()
+        db.instance_update(self.context, instance["uuid"],
+                          {"task_state": task_states.RESIZE_PREP})
+        self.compute.prep_resize(self.context, instance=instance,
+                                 instance_type=instance_type,
+                                 image={})
+
+        # NOTE(sirp): `prep_resize` mutates the `system_metadata` attribute in
+        # the DB but not on the instance passed in, so to sync the two, we need
+        # to refetch the row from the DB
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+
+        migration_ref = db.migration_get_by_instance_and_status(
+                self.context.elevated(), instance['uuid'], 'pre-migrating')
+
+        # fake out detach for prep_resize (and later terminate)
+        def fake_terminate_connection(self, context, volume, connector):
+            connection_info['data'] = None
+        self.stubs.Set(cinder.API, "terminate_connection",
+                       fake_terminate_connection)
+
+        self.compute.resize_instance(self.context, instance=instance,
+                migration=migration_ref, image={},
+                instance_type=jsonutils.to_primitive(instance_type))
+
+        # assert bdm is unchanged
+        disk_info = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEquals(len(disk_info), 1)
+        for bdm in disk_info:
+            self.assertEquals(bdm['device_name'], volume['device_name'])
+            cached_connection_info = jsonutils.loads(bdm['connection_info'])
+            self.assertEquals(cached_connection_info['data'],
+                              orig_connection_data)
+        # but connection was terminated
+        self.assertEquals(connection_info['data'], None)
+
+        # stub out virt driver finish_migration
+        def fake(*args, **kwargs):
+            pass
+        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+
+        db.instance_update(self.context, instance["uuid"],
+                           {"task_state": task_states.RESIZE_MIGRATED})
+
+        reservations = self._ensure_quota_reservations_committed()
+
+        # new initialize connection
+        new_connection_data = dict(orig_connection_data)
+        new_iqn = 'iqn.2010-10.org.openstack:%s.2' % volume_id,
+        new_connection_data['target_iqn'] = new_iqn
+
+        def fake_init_conn(self, context, volume, session):
+            connection_info['data'] = new_connection_data
+            return connection_info
+        self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
+
+        self.compute.finish_resize(self.context,
+                migration=jsonutils.to_primitive(migration_ref),
+                disk_info={}, image={}, instance=instance,
+                reservations=reservations)
+
+        # assert volume attached correctly
+        disk_info = db.block_device_mapping_get_all_by_instance(
+            self.context, instance['uuid'])
+        self.assertEquals(len(disk_info), 1)
+        for bdm in disk_info:
+            self.assertEquals(bdm['connection_info'],
+                              jsonutils.dumps(connection_info))
+
+        # stub out detach
+        def fake_detach(self, context, volume_uuid):
+            volume['device_path'] = None
+            volume['instance_uuid'] = None
+        self.stubs.Set(cinder.API, "detach", fake_detach)
+
+        # clean up
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_finish_resize_handles_error(self):
         # Make sure we don't leave the instance in RESIZE on error.
 
