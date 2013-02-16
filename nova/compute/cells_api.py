@@ -524,7 +524,7 @@ class ComputeCellsAPI(compute_api.API):
             context, device=device, instance=instance, volume_id=volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
-            self.volume_api.check_attach(context, volume)
+            self.volume_api.check_attach(context, volume, instance=instance)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self.db.block_device_mapping_destroy_by_instance_and_device(

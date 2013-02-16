@@ -51,6 +51,10 @@ cinder_opts = [
     cfg.BoolOpt('cinder_api_insecure',
                default=False,
                help='Allow to perform insecure SSL requests to cinder'),
+    cfg.BoolOpt('cinder_cross_az_attach',
+               default=True,
+               help='Allow attach between instance and volume in different '
+                    'availability zones.'),
 ]
 
 CONF = cfg.CONF
@@ -195,7 +199,7 @@ class API(base.Base):
 
         return rval
 
-    def check_attach(self, context, volume):
+    def check_attach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
             msg = _("status must be available")
@@ -203,6 +207,10 @@ class API(base.Base):
         if volume['attach_status'] == "attached":
             msg = _("already attached")
             raise exception.InvalidVolume(reason=msg)
+        if instance and not CONF.cinder_cross_az_attach:
+            if instance['availability_zone'] != volume['availability_zone']:
+                msg = _("Instance and volume not in same availability_zone")
+                raise exception.InvalidVolume(reason=msg)
 
     def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
