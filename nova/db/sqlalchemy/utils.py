@@ -98,10 +98,10 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
         4) Rename new table to the name of old table.
 
     :param migrate_engine: sqlalchemy engine
-    :oaram table_name:     name of table that contains uniq constarint.
+    :param table_name:     name of table that contains uniq constarint.
     :param uc_name:        name of uniq constraint that will be dropped.
     :param columns:        columns that are in uniq constarint.
-    :param col_name_col_instance:   constains pair column_name=column_instance.
+    :param col_name_col_instance:   contains pair column_name=column_instance.
                             column_instance is instance of Column. These params
                             are required only for columns that have unsupported
                             types by sqlite. For example BigInteger.
@@ -110,7 +110,7 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
         meta = MetaData()
         meta.bind = migrate_engine
         t = Table(table_name, meta, autoload=True)
-        uc = UniqueConstraint(*fields, table=t, name=uc_name)
+        uc = UniqueConstraint(*columns, table=t, name=uc_name)
         uc.drop()
     else:
         _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
