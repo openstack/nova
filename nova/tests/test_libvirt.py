@@ -2755,6 +2755,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndReturn(1)
 
@@ -2764,7 +2765,7 @@ class LibvirtConnTestCase(test.TestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN}
+            return {'state': power_state.SHUTDOWN, 'id': -1}
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2775,6 +2776,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_destroy_undefines_no_undefine_flags(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(libvirt.libvirtError('Err'))
         mock.undefine()
@@ -2785,7 +2787,7 @@ class LibvirtConnTestCase(test.TestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN}
+            return {'state': power_state.SHUTDOWN, 'id': -1}
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2796,6 +2798,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_destroy_undefines_no_attribute_with_managed_save(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(AttributeError())
         mock.hasManagedSaveImage(0).AndReturn(True)
@@ -2808,7 +2811,7 @@ class LibvirtConnTestCase(test.TestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN}
+            return {'state': power_state.SHUTDOWN, 'id': -1}
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2819,6 +2822,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_destroy_undefines_no_attribute_no_managed_save(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(AttributeError())
         mock.hasManagedSaveImage(0).AndRaise(AttributeError())
@@ -2830,7 +2834,7 @@ class LibvirtConnTestCase(test.TestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN}
+            return {'state': power_state.SHUTDOWN, 'id': -1}
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
@@ -2841,6 +2845,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_private_destroy_not_found(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.ID()
         mock.destroy()
         self.mox.ReplayAll()
 
