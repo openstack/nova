@@ -40,8 +40,6 @@ class FpingTest(test.TestCase):
                        return_servers)
         self.stubs.Set(nova.db, "instance_get_by_uuid",
                        return_server)
-        self.stubs.Set(nova.db, "instance_get_all_by_project",
-                       return_servers)
         self.stubs.Set(nova.utils, "execute",
                        execute)
         self.stubs.Set(fping.FpingController, "check_fping",

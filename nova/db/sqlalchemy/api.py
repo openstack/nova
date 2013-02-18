@@ -1335,17 +1335,6 @@ def virtual_interface_get_by_instance_and_network(context, instance_uuid,
 
 
 @require_context
-def virtual_interface_delete(context, vif_id):
-    """Delete virtual interface record from the database.
-
-    :param vif_id: = id of vif to delete
-    """
-    _virtual_interface_query(context).\
-                      filter_by(id=vif_id).\
-                      delete()
-
-
-@require_context
 def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records that are associated
     with the instance given by instance_id.
@@ -1713,14 +1702,6 @@ def instance_get_all_by_host_and_node(context, host, node):
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return _instance_get_all_query(context).filter_by(host=host).\
                    filter(models.Instance.instance_type_id != type_id).all()
-
-
-@require_context
-def instance_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
-    return _instance_get_all_query(context).\
-                    filter_by(project_id=project_id).\
-                    all()
 
 
 @require_context
