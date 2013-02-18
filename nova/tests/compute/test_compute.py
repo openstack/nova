@@ -3551,7 +3551,7 @@ class ComputeTestCase(BaseTestCase):
                 instance).AndReturn(power_state.SHUTDOWN)
         self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
         self.compute._get_instance_volume_block_device_info(mox.IgnoreArg(),
-                instance['uuid']).AndReturn('fake-bdm')
+                instance).AndReturn('fake-bdm')
         self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
                 instance, mox.IgnoreArg(),
                 'fake-bdm').AndRaise(test.TestingException)

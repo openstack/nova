@@ -472,7 +472,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             block_device_info = \
                 self._get_instance_volume_block_device_info(
-                    context, instance['uuid'])
+                    context, instance)
 
             try:
                 self.driver.resume_state_on_host_boot(
