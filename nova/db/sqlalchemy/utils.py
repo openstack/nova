@@ -128,7 +128,7 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
 def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
                                           use_soft_delete, *uc_column_names):
     """
-    This method is used to drop all old rowss that have the same values for
+    This method is used to drop all old rows that have the same values for
     columns in uc_columns.
     """
     meta = MetaData()
