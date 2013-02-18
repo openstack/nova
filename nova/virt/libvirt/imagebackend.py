@@ -44,7 +44,7 @@ __imagebackend_opts = [
             help='Create sparse logical volumes (with virtualsize)'
                  ' if this flag is set to True.'),
     cfg.IntOpt('libvirt_lvm_snapshot_size',
-               default='1000',
+               default=1000,
                help='The amount of storage (in megabytes) to allocate for LVM'
                     ' snapshot copy-on-write blocks.'),
         ]
