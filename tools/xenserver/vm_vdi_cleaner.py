@@ -40,8 +40,14 @@ cleaner_opts = [
                default=172800,
                help='Number of seconds zombie instances are cleaned up.'),
 ]
+
+cli_opt = cfg.StrOpt('command',
+                     default=None,
+                     help='Cleaner command')
+
 CONF = cfg.CONF
 CONF.register_opts(cleaner_opts)
+CONF.register_cli_opt(cli_opt)
 CONF.import_opt('verbose', 'nova.openstack.common.log')
 CONF.import_opt("resize_confirm_window", "nova.compute.manager")
 
@@ -279,13 +285,13 @@ def clean_orphaned_instances(xenapi, orphaned_instances):
 
 def main():
     """Main loop."""
-    args = CONF(args=sys.argv,
-                usage='%prog [options] [' + '|'.join(ALLOWED_COMMANDS) + ']')
-    if len(args) < 2:
+    args = CONF(args=sys.argv[1:], usage='%(prog)s [options] --command={' +
+            '|'.join(ALLOWED_COMMANDS) + '}')
+
+    command = CONF.command
+    if not command or command not in ALLOWED_COMMANDS:
         CONF.print_usage()
         sys.exit(1)
-
-    command = args[1]
 
     if CONF.zombie_instance_updated_at_window < CONF.resize_confirm_window:
         raise Exception("`zombie_instance_updated_at_window` has to be longer"
