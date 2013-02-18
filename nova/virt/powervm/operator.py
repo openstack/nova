@@ -170,81 +170,6 @@ class PowerVMOperator(object):
         self._host_stats = data
 
     def spawn(self, context, instance, image_id, network_info):
-        def _create_lpar_instance(instance):
-            host_stats = self.get_host_stats(refresh=True)
-            inst_name = instance['name']
-
-            # CPU/Memory min and max can be configurable. Lets assume
-            # some default values for now.
-
-            # Memory
-            mem = instance['memory_mb']
-            if mem > host_stats['host_memory_free']:
-                LOG.error(_('Not enough free memory in the host'))
-                raise exception.PowerVMInsufficientFreeMemory(
-                                               instance_name=instance['name'])
-            mem_min = min(mem, constants.POWERVM_MIN_MEM)
-            mem_max = mem + constants.POWERVM_MAX_MEM
-
-            # CPU
-            cpus = instance['vcpus']
-            avail_cpus = host_stats['vcpus'] - host_stats['vcpus_used']
-            if cpus > avail_cpus:
-                LOG.error(_('Insufficient available CPU on PowerVM'))
-                raise exception.PowerVMInsufficientCPU(
-                                               instance_name=instance['name'])
-            cpus_min = min(cpus, constants.POWERVM_MIN_CPUS)
-            cpus_max = cpus + constants.POWERVM_MAX_CPUS
-            cpus_units_min = decimal.Decimal(cpus_min) / decimal.Decimal(10)
-            cpus_units = decimal.Decimal(cpus) / decimal.Decimal(10)
-
-            try:
-                # Network
-                # To ensure the MAC address on the guest matches the
-                # generated value, pull the first 10 characters off the
-                # MAC address for the mac_base_value parameter and then
-                # get the integer value of the final 2 characters as the
-                # slot_id parameter
-                #
-                # NOTE(mjfork) the slot_id should not exceed 255 (FF) to
-                #              to avoid spilling over into the next
-                #              highest octet.  The contract with
-                #              macs_for_instance limits to a value between
-                #              32 and 63 inclusive so we are safe.
-                #
-                #              Further, with the contract on slot_id, we
-                #              can hard code max_virtual_slots to 64 in
-                #              LPAR definition.
-                mac = network_info[0]['address']
-                mac_base_value = (mac[:-2]).replace(':', '')
-                eth_id = self._operator.get_virtual_eth_adapter_id()
-                slot_id = int(mac[-2:], 16)
-                virtual_eth_adapters = ('%(slot_id)s/0/%(eth_id)s//0/0' %
-                                        locals())
-
-                # LPAR configuration data
-                lpar_inst = LPAR.LPAR(
-                                name=inst_name, lpar_env='aixlinux',
-                                min_mem=mem_min, desired_mem=mem,
-                                max_mem=mem_max, proc_mode='shared',
-                                sharing_mode='uncap', min_procs=cpus_min,
-                                desired_procs=cpus, max_procs=cpus_max,
-                                min_proc_units=cpus_units_min,
-                                desired_proc_units=cpus_units,
-                                max_proc_units=cpus_max,
-                                virtual_eth_mac_base_value=mac_base_value,
-                                max_virtual_slots=64,
-                                virtual_eth_adapters=virtual_eth_adapters)
-
-                LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
-                self._operator.create_lpar(lpar_inst)
-            #TODO(mjfork) capture the error and handle the error when the MAC
-            #             prefix already exists on the system (1 in 2^32)
-            except nova_exception.ProcessExecutionError:
-                LOG.exception(_("LPAR instance '%s' creation failed") %
-                            instance['name'])
-                raise exception.PowerVMLPARCreationFailed()
-
         def _create_image(context, instance, image_id):
             """Fetch image from glance and copy it to the remote system."""
             try:
@@ -266,7 +191,11 @@ class PowerVMOperator(object):
         try:
             try:
                 host_stats = self.get_host_stats(refresh=True)
-                lpar_inst = self._create_lpar_instance(instance, host_stats)
+                lpar_inst = self._create_lpar_instance(instance,
+                            network_info, host_stats)
+                #TODO(mjfork) capture the error and handle the error when the
+                #             MAC prefix already exists on the
+                #             system (1 in 2^28)
                 self._operator.create_lpar(lpar_inst)
                 LOG.debug(_("Creating LPAR instance '%s'") % instance['name'])
             except nova_exception.ProcessExecutionError:
@@ -279,6 +208,9 @@ class PowerVMOperator(object):
                       % instance['name'])
             self._operator.start_lpar(instance['name'])
 
+            # TODO(mrodden): probably do this a better way
+            #                that actually relies on the time module
+            #                and nonblocking threading
             # Wait for boot
             timeout_count = range(10)
             while timeout_count:
@@ -385,7 +317,7 @@ class PowerVMOperator(object):
     def macs_for_instance(self, instance):
         return self._operator.macs_for_instance(instance)
 
-    def _create_lpar_instance(self, instance, host_stats=None):
+    def _create_lpar_instance(self, instance, network_info, host_stats=None):
         inst_name = instance['name']
 
         # CPU/Memory min and max can be configurable. Lets assume
@@ -414,9 +346,21 @@ class PowerVMOperator(object):
         cpus_units = decimal.Decimal(cpus) / decimal.Decimal(10)
 
         # Network
+        # To ensure the MAC address on the guest matches the
+        # generated value, pull the first 10 characters off the
+        # MAC address for the mac_base_value parameter and then
+        # get the integer value of the final 2 characters as the
+        # slot_id parameter
+        mac = network_info[0]['address']
+        mac_base_value = (mac[:-2]).replace(':', '')
         eth_id = self._operator.get_virtual_eth_adapter_id()
+        slot_id = int(mac[-2:], 16)
+        virtual_eth_adapters = ('%(slot_id)s/0/%(eth_id)s//0/0' %
+                                locals())
 
         # LPAR configuration data
+        # max_virtual_slots is hardcoded to 64 since we generate a MAC
+        # address that must be placed in slots 32 - 64
         lpar_inst = LPAR.LPAR(
                         name=inst_name, lpar_env='aixlinux',
                         min_mem=mem_min, desired_mem=mem,
@@ -426,7 +370,9 @@ class PowerVMOperator(object):
                         min_proc_units=cpus_units_min,
                         desired_proc_units=cpus_units,
                         max_proc_units=cpus_max,
-                        virtual_eth_adapters='4/0/%s//0/0' % eth_id)
+                        virtual_eth_mac_base_value=mac_base_value,
+                        max_virtual_slots=64,
+                        virtual_eth_adapters=virtual_eth_adapters)
         return lpar_inst
 
     def _check_host_resources(self, instance, vcpus, mem, host_stats):
