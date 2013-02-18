@@ -507,27 +507,51 @@ class TestMigrations(BaseMigrationTestCase):
     # migration 149, changes IPAddr storage format
     def _prerun_149(self, engine):
         provider_fw_rules = get_table(engine, 'provider_fw_rules')
-        data = [
-            {'protocol': 'tcp', 'from_port': 1234,
-             'to_port': 1234, 'cidr': "127.0.0.1"},
-            {'protocol': 'tcp', 'from_port': 1234,
-             'to_port': 1234, 'cidr': "255.255.255.255"},
-            {'protocol': 'tcp', 'from_port': 1234,
-             'to_port': 1234, 'cidr': "2001:db8::1:2"},
-            {'protocol': 'tcp', 'from_port': 1234,
-             'to_port': 1234, 'cidr': "::1"}
-            ]
-        engine.execute(provider_fw_rules.insert(), data)
+        console_pools = get_table(engine, 'console_pools')
+        data = {
+            'provider_fw_rules':
+                [
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "::1/64"}
+                ],
+            'console_pools':
+                [
+                {'address': '10.10.10.10'},
+                {'address': '128.100.100.100'},
+                {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
+                {'address': '::1'},
+                ]
+            }
+
+        engine.execute(provider_fw_rules.insert(), data['provider_fw_rules'])
+
+        for pool in data['console_pools']:
+            engine.execute(console_pools.insert(), pool)
+
         return data
 
     def _check_149(self, engine, data):
         provider_fw_rules = get_table(engine, 'provider_fw_rules')
         result = provider_fw_rules.select().execute()
 
-        iplist = map(lambda x: x['cidr'], data)
+        iplist = map(lambda x: x['cidr'], data['provider_fw_rules'])
 
         for row in result:
             self.assertIn(row['cidr'], iplist)
+
+        console_pools = get_table(engine, 'console_pools')
+        result = console_pools.select().execute()
+
+        iplist = map(lambda x: x['address'], data['console_pools'])
+
+        for row in result:
+            self.assertIn(row['address'], iplist)
 
     # migration 151 - changes period_beginning and period_ending to DateTime
     def _prerun_151(self, engine):
@@ -703,3 +727,32 @@ class TestMigrations(BaseMigrationTestCase):
                 # override __eq__, but if we stringify them then they do.
                 self.assertEqual(str(base_column.type),
                                  str(shadow_column.type))
+
+    # migration 156 - introduce CIDR type
+    def _prerun_156(self, engine):
+        # assume the same data as from 149
+        data = {
+            'provider_fw_rules':
+                [
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "::1/64"}
+                ],
+            'console_pools':
+                [
+                {'address': '10.10.10.10'},
+                {'address': '128.100.100.100'},
+                {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
+                {'address': '::1'},
+                ]
+            }
+        return data
+
+    def _check_156(self, engine, data):
+        # recheck the 149 data
+        self._check_149(engine, data)

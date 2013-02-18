@@ -529,7 +529,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
-    cidr = Column(types.IPAddress())
+    cidr = Column(types.CIDR())
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
@@ -549,7 +549,7 @@ class ProviderFirewallRule(BASE, NovaBase):
     protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
-    cidr = Column(types.IPAddress())
+    cidr = Column(types.CIDR())
 
 
 class KeyPair(BASE, NovaBase):
@@ -599,8 +599,8 @@ class Network(BASE, NovaBase):
     label = Column(String(255))
 
     injected = Column(Boolean, default=False)
-    cidr = Column(types.IPAddress(), unique=True)
-    cidr_v6 = Column(types.IPAddress(), unique=True)
+    cidr = Column(types.CIDR(), unique=True)
+    cidr_v6 = Column(types.CIDR(), unique=True)
     multi_host = Column(Boolean, default=False)
 
     gateway_v6 = Column(types.IPAddress())

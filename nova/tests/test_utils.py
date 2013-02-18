@@ -491,6 +491,17 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertFalse(utils.is_valid_ipv6("foo"))
         self.assertFalse(utils.is_valid_ipv6("127.0.0.1"))
 
+    def test_is_valid_ipv6_cidr(self):
+        self.assertTrue(utils.is_valid_ipv6_cidr("2600::/64"))
+        self.assertTrue(utils.is_valid_ipv6_cidr(
+                "abcd:ef01:2345:6789:abcd:ef01:192.168.254.254/48"))
+        self.assertTrue(utils.is_valid_ipv6_cidr(
+                "0000:0000:0000:0000:0000:0000:0000:0001/32"))
+        self.assertTrue(utils.is_valid_ipv6_cidr(
+                "0000:0000:0000:0000:0000:0000:0000:0001"))
+        self.assertFalse(utils.is_valid_ipv6_cidr("foo"))
+        self.assertFalse(utils.is_valid_ipv6_cidr("127.0.0.1"))
+
     def test_get_shortened_ipv6(self):
         self.assertEquals("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
                           utils.get_shortened_ipv6(
@@ -503,6 +514,18 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertRaises(netaddr.AddrFormatError, utils.get_shortened_ipv6,
                           "127.0.0.1")
         self.assertRaises(netaddr.AddrFormatError, utils.get_shortened_ipv6,
+                          "failure")
+
+    def test_get_shortened_ipv6_cidr(self):
+        self.assertEquals("2600::/64", utils.get_shortened_ipv6_cidr(
+                "2600:0000:0000:0000:0000:0000:0000:0000/64"))
+        self.assertEquals("2600::/64", utils.get_shortened_ipv6_cidr(
+                "2600::1/64"))
+        self.assertRaises(netaddr.AddrFormatError,
+                          utils.get_shortened_ipv6_cidr,
+                          "127.0.0.1")
+        self.assertRaises(netaddr.AddrFormatError,
+                          utils.get_shortened_ipv6_cidr,
                           "failure")
 
 
