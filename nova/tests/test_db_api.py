@@ -1792,6 +1792,13 @@ class TaskLogTestCase(test.TestCase):
                                  self.end, self.host)
         self.assertEqual(result['task_name'], 'fake')
 
+    def test_task_log_begin_task_duplicate(self):
+        params = (self.context, 'fake', self.begin, self.end, self.host)
+        db.task_log_begin_task(*params, message=self.message)
+        self.assertRaises(exception.TaskAlreadyRunning,
+                          db.task_log_begin_task,
+                          *params, message=self.message)
+
     def test_task_log_end_task(self):
         errors = 1
         db.task_log_end_task(self.context, self.task_name, self.begin,

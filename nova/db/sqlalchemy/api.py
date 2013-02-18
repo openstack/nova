@@ -4756,27 +4756,21 @@ def task_log_get_all(context, task_name, period_beginning, period_ending,
 @require_admin_context
 def task_log_begin_task(context, task_name, period_beginning, period_ending,
                         host, task_items=None, message=None):
-    # NOTE(boris-42): This method has a race condition and will be rewritten
-    #                 after bp/db-unique-keys implementation.
-    session = get_session()
-    with session.begin():
-        task_ref = _task_log_get_query(context, task_name, period_beginning,
-                                       period_ending, host, session=session).\
-                        first()
-        if task_ref:
-            #It's already run(ning)!
-            raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
-        task = models.TaskLog()
-        task.task_name = task_name
-        task.period_beginning = period_beginning
-        task.period_ending = period_ending
-        task.host = host
-        task.state = "RUNNING"
-        if message:
-            task.message = message
-        if task_items:
-            task.task_items = task_items
-        task.save(session=session)
+
+    task = models.TaskLog()
+    task.task_name = task_name
+    task.period_beginning = period_beginning
+    task.period_ending = period_ending
+    task.host = host
+    task.state = "RUNNING"
+    if message:
+        task.message = message
+    if task_items:
+        task.task_items = task_items
+    try:
+        task.save()
+    except db_session.DBDuplicateEntry:
+        raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
 
 
 @require_admin_context
