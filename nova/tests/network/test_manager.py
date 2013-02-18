@@ -299,7 +299,7 @@ class FlatNetworkTestCase(test.TestCase):
                                             [{'id': 0}]})
         db.instance_get_by_uuid(mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn({'security_groups':
-                                            [{'id':0, 'name':'test'}]})
+                                            [{'id': 0, 'name': 'test'}]})
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
@@ -425,7 +425,7 @@ class FlatNetworkTestCase(test.TestCase):
                                             [{'id': 0}]})
         db.instance_get_by_uuid(mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn({'security_groups':
-                                            [{'id':0, 'name':'test'}]})
+                                            [{'id': 0, 'name': 'test'}]})
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})

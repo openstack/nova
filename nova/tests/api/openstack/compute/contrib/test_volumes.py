@@ -86,7 +86,7 @@ def fake_get_instance_bdms(self, context, instance):
              'volume_id': FAKE_UUID_A,
              'volume_size': 1},
             {'id': 2,
-             'instance_uuid':instance['uuid'],
+             'instance_uuid': instance['uuid'],
              'device_name': '/dev/fake1',
              'delete_on_termination': 'False',
              'virtual_name': 'MyNamesVirtual',

@@ -1226,7 +1226,7 @@ class HostFiltersTestCase(test.TestCase):
     def test_trusted_filter_untrusted_and_untrusted_passes(self):
         self.oat_data = {"hosts": [{"host_name": "host1",
                                     "trust_lvl": "untrusted",
-                                    "vtime":timeutils.isotime()}]}
+                                    "vtime": timeutils.isotime()}]}
         self._stub_service_is_up(True)
         filt_cls = self.class_map['TrustedFilter']()
         extra_specs = {'trust:trusted_host': 'untrusted'}
