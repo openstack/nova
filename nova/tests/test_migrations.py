@@ -860,6 +860,26 @@ class TestNovaMigrations(BaseMigrationTestCase):
         # recheck the 149 data
         self._check_149(engine, data)
 
+    def _prerun_158(self, engine):
+        networks = get_table(engine, 'networks')
+        data = [
+            {'vlan': 1, 'deleted': 0},
+            {'vlan': 1, 'deleted': 0},
+            {'vlan': 1, 'deleted': 0},
+        ]
+
+        for item in data:
+            networks.insert().values(item).execute()
+        return data
+
+    def _check_158(self, engine, data):
+        networks = get_table(engine, 'networks')
+        rows = networks.select().\
+                    where(networks.c.deleted != networks.c.id).\
+                    execute().\
+                    fetchall()
+        self.assertEqual(len(rows), 1)
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase):
     """Test sqlalchemy-migrate migrations."""

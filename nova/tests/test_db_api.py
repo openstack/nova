@@ -334,6 +334,16 @@ class DbApiTestCase(test.TestCase):
         self.assertRaises(exception.DuplicateVlan,
                           db.network_create_safe, ctxt, values2)
 
+    def test_network_update_with_duplicate_vlan(self):
+        ctxt = context.get_admin_context()
+        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
+        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 2}
+        network_ref = db.network_create_safe(ctxt, values1)
+        db.network_create_safe(ctxt, values2)
+        self.assertRaises(exception.DuplicateVlan,
+                          db.network_update,
+                          ctxt, network_ref["id"], values2)
+
     def test_instance_update_with_instance_uuid(self):
         # test instance_update() works when an instance UUID is passed.
         ctxt = context.get_admin_context()

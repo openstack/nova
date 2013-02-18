@@ -2070,12 +2070,6 @@ def network_count_reserved_ips(context, network_id):
 
 @require_admin_context
 def network_create_safe(context, values):
-    if values.get('vlan'):
-        if model_query(context, models.Network, read_deleted="no")\
-                      .filter_by(vlan=values['vlan'])\
-                      .first():
-            raise exception.DuplicateVlan(vlan=values['vlan'])
-
     network_ref = models.Network()
     network_ref['uuid'] = str(uuid.uuid4())
     network_ref.update(values)
@@ -2083,8 +2077,8 @@ def network_create_safe(context, values):
     try:
         network_ref.save()
         return network_ref
-    except IntegrityError:
-        return None
+    except db_session.DBDuplicateEntry:
+        raise exception.DuplicateVlan(vlan=values['vlan'])
 
 
 @require_admin_context
@@ -2323,7 +2317,10 @@ def network_update(context, network_id, values):
     with session.begin():
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
-        network_ref.save(session=session)
+        try:
+            network_ref.save(session=session)
+        except db_session.DBDuplicateEntry:
+            raise exception.DuplicateVlan(vlan=values['vlan'])
         return network_ref
 
 
