@@ -57,6 +57,9 @@ volume_opts = [
                 default=paths.state_path_def('mnt'),
                 help='Dir where the glusterfs volume is mounted on the '
                       'compute node'),
+    cfg.BoolOpt('libvirt_iscsi_use_multipath',
+                default=False,
+                help='use multipath connection of the iSCSI volume'),
     ]
 
 CONF = cfg.CONF
@@ -173,6 +176,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                          '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command, **kwargs)
 
+    def _get_target_portals_from_iscsiadm_output(self, output):
+        return [line.split()[0] for line in output.splitlines()]
+
     @lockutils.synchronized('connect_volume', 'nova-')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
@@ -181,43 +187,35 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                           disk_info)
 
         iscsi_properties = connection_info['data']
-        # NOTE(vish): If we are on the same host as nova volume, the
-        #             discovery makes the target so we don't need to
-        #             run --op new. Therefore, we check to see if the
-        #             target exists, and if we get 255 (Not Found), then
-        #             we run --op new. This will also happen if another
-        #             volume is using the same target.
-        try:
-            self._run_iscsiadm(iscsi_properties, ())
-        except exception.ProcessExecutionError as exc:
-            # iscsiadm returns 21 for "No records found" after version 2.0-871
-            if exc.exit_code in [21, 255]:
-                self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
-            else:
-                raise
 
-        if iscsi_properties.get('auth_method'):
-            self._iscsiadm_update(iscsi_properties,
-                                  "node.session.auth.authmethod",
-                                  iscsi_properties['auth_method'])
-            self._iscsiadm_update(iscsi_properties,
-                                  "node.session.auth.username",
-                                  iscsi_properties['auth_username'])
-            self._iscsiadm_update(iscsi_properties,
-                                  "node.session.auth.password",
-                                  iscsi_properties['auth_password'])
+        libvirt_iscsi_use_multipath = CONF.libvirt_iscsi_use_multipath
 
-        # NOTE(vish): If we have another lun on the same target, we may
-        #             have a duplicate login
-        self._run_iscsiadm(iscsi_properties, ("--login",),
-                           check_exit_code=[0, 255])
+        if libvirt_iscsi_use_multipath:
+            #multipath installed, discovering other targets if available
+            #multipath should be configured on the nova-compute node,
+            #in order to fit storage vendor
+            out = self._run_iscsiadm_bare(['-m',
+                                          'discovery',
+                                          '-t',
+                                          'sendtargets',
+                                          '-p',
+                                          iscsi_properties['target_portal']],
+                                          check_exit_code=[0, 255])[0] \
+                or ""
 
-        self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
+            for ip in self._get_target_portals_from_iscsiadm_output(out):
+                props = iscsi_properties.copy()
+                props['target_portal'] = ip
+                self._connect_to_iscsi_portal(props)
+
+            self._rescan_iscsi()
+        else:
+            self._connect_to_iscsi_portal(iscsi_properties)
 
         host_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
-                        (iscsi_properties['target_portal'],
-                         iscsi_properties['target_iqn'],
-                         iscsi_properties.get('target_lun', 0)))
+                       (iscsi_properties['target_portal'],
+                        iscsi_properties['target_iqn'],
+                        iscsi_properties.get('target_lun', 0)))
 
         # The /dev/disk/by-path/... node is not always present immediately
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
@@ -244,6 +242,13 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                         "(after %(tries)s rescans)") %
                       locals())
 
+        if libvirt_iscsi_use_multipath:
+            #we use the multipath device instead of the single path device
+            self._rescan_multipath()
+            multipath_device = self._get_multipath_device_name(host_device)
+            if multipath_device is not None:
+                host_device = multipath_device
+
         conf.source_type = "block"
         conf.source_path = host_device
         return conf
@@ -254,6 +259,30 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         super(LibvirtISCSIVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
         iscsi_properties = connection_info['data']
+
+        if CONF.libvirt_iscsi_use_multipath and \
+           "mapper" in connection_info['data']['device_path']:
+            self._rescan_iscsi()
+            self._rescan_multipath()
+            devices = [dev for dev in self.connection.get_all_block_devices()
+                       if "/mapper/" in dev]
+            if not devices:
+                #disconnect if no other multipath devices
+                self._disconnect_mpath(iscsi_properties)
+                return
+
+            other_iqns = [self._get_multipath_iqn(device)
+                          for device in devices]
+
+            if iscsi_properties['target_iqn'] not in other_iqns:
+                #disconnect if no other multipath devices with same iqn
+                self._disconnect_mpath(iscsi_properties)
+                return
+
+            #else do not disconnect iscsi portals,
+            #as they are used for other luns
+            return
+
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
         device_prefix = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-" %
@@ -262,12 +291,141 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         devices = self.connection.get_all_block_devices()
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
-            self._iscsiadm_update(iscsi_properties, "node.startup", "manual",
-                                  check_exit_code=[0, 21, 255])
-            self._run_iscsiadm(iscsi_properties, ("--logout",),
-                               check_exit_code=[0, 21, 255])
-            self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
-                               check_exit_code=[0, 21, 255])
+            self._disconnect_from_iscsi_portal(iscsi_properties)
+
+    def _connect_to_iscsi_portal(self, iscsi_properties):
+        # NOTE(vish): If we are on the same host as nova volume, the
+        #             discovery makes the target so we don't need to
+        #             run --op new. Therefore, we check to see if the
+        #             target exists, and if we get 255 (Not Found), then
+        #             we run --op new. This will also happen if another
+        #             volume is using the same target.
+        try:
+            self._run_iscsiadm(iscsi_properties, ())
+        except exception.ProcessExecutionError as exc:
+            # iscsiadm returns 21 for "No records found" after version 2.0-871
+            if exc.exit_code in [21, 255]:
+                self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+            else:
+                raise
+
+        if iscsi_properties.get('auth_method'):
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.authmethod",
+                                  iscsi_properties['auth_method'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.username",
+                                  iscsi_properties['auth_username'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.password",
+                                  iscsi_properties['auth_password'])
+
+        #duplicate logins crash iscsiadm after load,
+        #so we scan active sessions to see if the node is logged in.
+        out = self._run_iscsiadm_bare(["-m", "session"],
+                                      run_as_root=True,
+                                      check_exit_code=[0, 1])[0] or ""
+
+        portals = [{'portal': p.split(" ")[2], 'iqn': p.split(" ")[3]}
+                   for p in out.splitlines() if p.startswith("tcp:")]
+
+        stripped_portal = iscsi_properties['target_portal'].split(",")[0]
+        if len(portals) == 0 or len([s for s in portals
+                                     if stripped_portal ==
+                                     s['portal'].split(",")[0]
+                                     and
+                                     s['iqn'] ==
+                                     iscsi_properties['target_iqn']]
+                                    ) == 0:
+            try:
+                self._run_iscsiadm(iscsi_properties,
+                                   ("--login",),
+                                   check_exit_code=[0, 255])
+            except exception.ProcessExecutionError as err:
+                #as this might be one of many paths,
+                #only set successfull logins to startup automatically
+                if err.exit_code in [15]:
+                    self._iscsiadm_update(iscsi_properties,
+                                          "node.startup",
+                                          "automatic")
+                    return
+
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.startup",
+                                  "automatic")
+
+    def _disconnect_from_iscsi_portal(self, iscsi_properties):
+        self._iscsiadm_update(iscsi_properties, "node.startup", "manual",
+                              check_exit_code=[0, 21, 255])
+        self._run_iscsiadm(iscsi_properties, ("--logout",),
+                           check_exit_code=[0, 21, 255])
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
+                           check_exit_code=[0, 21, 255])
+
+    def _get_multipath_device_name(self, single_path_device):
+        device = os.path.realpath(single_path_device)
+        out = self._run_multipath(['-ll',
+                                  device],
+                                  check_exit_code=[0, 1])[0]
+        mpath_line = [line for line in out.splitlines()
+                      if "scsi_id" not in line]  # ignore udev errors
+        if len(mpath_line) > 0 and len(mpath_line[0]) > 0:
+            return "/dev/mapper/%s" % mpath_line[0].split(" ")[0]
+
+        return None
+
+    def _get_iscsi_devices(self):
+        return [entry for entry in list(os.walk('/dev/disk/by-path'))[0][-1]
+                if entry.startswith("ip-")]
+
+    def _disconnect_mpath(self, iscsi_properties):
+        entries = self._get_iscsi_devices()
+        ips = [ip.split("-")[1] for ip in entries
+               if iscsi_properties['target_iqn'] in ip]
+        for ip in ips:
+            props = iscsi_properties.copy()
+            props['target_portal'] = ip
+            self._disconnect_from_iscsi_portal(props)
+
+        self._rescan_multipath()
+
+    def _get_multipath_iqn(self, multipath_device):
+        entries = self._get_iscsi_devices()
+        for entry in entries:
+            entry_real_path = os.path.realpath("/dev/disk/by-path/%s" % entry)
+            entry_multipath = self._get_multipath_device_name(entry_real_path)
+            if entry_multipath == multipath_device:
+                return entry.split("iscsi-")[1].split("-lun")[0]
+        return None
+
+    def _run_iscsiadm_bare(self, iscsi_command, **kwargs):
+        check_exit_code = kwargs.pop('check_exit_code', 0)
+        (out, err) = utils.execute('iscsiadm',
+                                   *iscsi_command,
+                                   run_as_root=True,
+                                   check_exit_code=check_exit_code)
+        LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
+                  (iscsi_command, out, err))
+        return (out, err)
+
+    def _run_multipath(self, multipath_command, **kwargs):
+        check_exit_code = kwargs.pop('check_exit_code', 0)
+        (out, err) = utils.execute('multipath',
+                                   *multipath_command,
+                                   run_as_root=True,
+                                   check_exit_code=check_exit_code)
+        LOG.debug("multipath %s: stdout=%s stderr=%s" %
+                  (multipath_command, out, err))
+        return (out, err)
+
+    def _rescan_iscsi(self):
+        self._run_iscsiadm_bare(('-m', 'node', '--rescan'),
+                                check_exit_code=[0, 1, 21, 255])
+        self._run_iscsiadm_bare(('-m', 'session', '--rescan'),
+                                check_exit_code=[0, 1, 21, 255])
+
+    def _rescan_multipath(self):
+        self._run_multipath('-r', check_exit_code=[0, 1, 21])
 
 
 class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):

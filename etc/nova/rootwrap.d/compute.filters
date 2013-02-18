@@ -185,3 +185,5 @@ tgtadm: CommandFilter, /usr/sbin/tgtadm, root
 read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
 read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
 
+# nova/virt/libvirt/volume.py: 'multipath' '-R'
+multipath: CommandFilter, /sbin/multipath, root
