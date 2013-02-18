@@ -1106,6 +1106,51 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 self.assertEqual(result['value'], original['value'])
                 self.assertEqual(result['created_at'], None)
 
+    def _pre_upgrade_172(self, engine):
+        instance_types = get_table(engine, 'instance_types')
+        data = [
+            dict(id=21, name='uc_name0', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="uc_flavor1", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True, deleted=0),
+            dict(id=22, name='uc_name1', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="uc_flavor1", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True, deleted=0),
+            dict(id=23, name='uc_name2', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="uc_flavor2", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True, deleted=0),
+            dict(id=24, name='uc_name2', memory_mb=128, vcpus=1,
+                 root_gb=10, ephemeral_gb=0, flavorid="uc_flavor3", swap=0,
+                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
+                 is_public=True, deleted=0),
+        ]
+        engine.execute(instance_types.insert(), data)
+        return data
+
+    def _check_172(self, engine, data):
+        instance_types = get_table(engine, 'instance_types')
+
+        not_deleted = instance_types.c.deleted != instance_types.c.id
+
+        # There is only one instance_type with flavor `uc_flavor1`
+        uc_flavor1_rows = instance_types.select().\
+                    where(instance_types.c.flavorid == 'uc_flavor1').\
+                    where(not_deleted).\
+                    execute().\
+                    fetchall()
+
+        self.assertEqual(1, len(uc_flavor1_rows))
+
+        # There is only one instance_type with name `uc_name2`
+        uc_name2_rows = instance_types.select().\
+                    where(instance_types.c.name == 'uc_name2').\
+                    where(not_deleted).\
+                    execute().\
+                    fetchall()
+        self.assertEqual(1, len(uc_name2_rows))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

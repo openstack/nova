@@ -3460,35 +3460,29 @@ def instance_type_create(context, values):
     {'extra_specs' : {'k1': 'v1', 'k2': 'v2', ...}}
 
     """
-    session = get_session()
-    with session.begin():
-        try:
-            instance_type_get_by_name(context, values['name'], session)
-            raise exception.InstanceTypeExists(name=values['name'])
-        except exception.InstanceTypeNotFoundByName:
-            pass
-        try:
-            instance_type_get_by_flavor_id(context, values['flavorid'],
-                                           session)
+    specs = values.get('extra_specs')
+    specs_refs = []
+    if specs:
+        for k, v in specs.iteritems():
+            specs_ref = models.InstanceTypeExtraSpecs()
+            specs_ref['key'] = k
+            specs_ref['value'] = v
+            specs_refs.append(specs_ref)
+
+    values['extra_specs'] = specs_refs
+    instance_type_ref = models.InstanceTypes()
+    instance_type_ref.update(values)
+
+    try:
+        instance_type_ref.save()
+    except db_exc.DBDuplicateEntry as e:
+        if 'flavorid' in e.columns:
             raise exception.InstanceTypeIdExists(flavor_id=values['flavorid'])
-        except exception.FlavorNotFound:
-            pass
-        try:
-            specs = values.get('extra_specs')
-            specs_refs = []
-            if specs:
-                for k, v in specs.iteritems():
-                    specs_ref = models.InstanceTypeExtraSpecs()
-                    specs_ref['key'] = k
-                    specs_ref['value'] = v
-                    specs_refs.append(specs_ref)
-            values['extra_specs'] = specs_refs
-            instance_type_ref = models.InstanceTypes()
-            instance_type_ref.update(values)
-            instance_type_ref.save(session=session)
-        except Exception, e:
-            raise db_exc.DBError(e)
-        return _dict_with_extra_specs(instance_type_ref)
+        raise exception.InstanceTypeExists(name=values['name'])
+    except Exception, e:
+        raise db_exc.DBError(e)
+
+    return _dict_with_extra_specs(instance_type_ref)
 
 
 def _dict_with_extra_specs(inst_type_query):
