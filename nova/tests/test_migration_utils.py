@@ -16,7 +16,9 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
-from sqlalchemy import MetaData, Table, Column, Integer, BigInteger
+from sqlalchemy import Integer, BigInteger, DateTime, String
+from sqlalchemy import MetaData, Table, Column
+from sqlalchemy.sql import select
 
 from nova.db.sqlalchemy import utils
 from nova import exception
@@ -124,3 +126,102 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             self.assertEqual(len(constraints), 0)
             self.assertEqual(len(test_table.constraints), 1)
             test_table.drop()
+
+    def _populate_db_for_drop_duplicate_entries(self, engine, meta,
+                                                table_name):
+        values = [
+            {'id': 11, 'a': 3, 'b': 10, 'c': 'abcdef'},
+            {'id': 12, 'a': 5, 'b': 10, 'c': 'abcdef'},
+            {'id': 13, 'a': 6, 'b': 10, 'c': 'abcdef'},
+            {'id': 14, 'a': 7, 'b': 10, 'c': 'abcdef'},
+            {'id': 21, 'a': 1, 'b': 20, 'c': 'aa'},
+            {'id': 31, 'a': 1, 'b': 20, 'c': 'bb'},
+            {'id': 41, 'a': 1, 'b': 30, 'c': 'aef'},
+            {'id': 42, 'a': 2, 'b': 30, 'c': 'aef'},
+            {'id': 43, 'a': 3, 'b': 30, 'c': 'aef'}
+        ]
+
+        test_table = Table(table_name, meta,
+                           Column('id', Integer, primary_key=True,
+                                  nullable=False),
+                           Column('a', Integer),
+                           Column('b', Integer),
+                           Column('c', String),
+                           Column('deleted', Integer, default=0),
+                           Column('deleted_at', DateTime),
+                           Column('updated_at', DateTime))
+
+        test_table.create()
+        engine.execute(test_table.insert(), values)
+        return test_table, values
+
+    def test_drop_old_duplicate_entries_from_table(self):
+        table_name = "__test_tmp_table__"
+
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            test_table, values = self.\
+                    _populate_db_for_drop_duplicate_entries(engine, meta,
+                                                            table_name)
+
+            utils.drop_old_duplicate_entries_from_table(engine, table_name,
+                                                        False, 'b', 'c')
+
+            uniq_values = set()
+            expected_ids = []
+            for value in sorted(values, key=lambda x: x['id'], reverse=True):
+                uniq_value = (('b', value['b']), ('c', value['c']))
+                if uniq_value in uniq_values:
+                    continue
+                uniq_values.add(uniq_value)
+                expected_ids.append(value['id'])
+
+            real_ids = [row[0] for row in
+                        engine.execute(select([test_table.c.id])).fetchall()]
+
+            self.assertEqual(len(real_ids), len(expected_ids))
+            for id_ in expected_ids:
+                self.assertTrue(id_ in real_ids)
+
+    def test_drop_old_duplicate_entries_from_table_soft_delete(self):
+        table_name = "__test_tmp_table__"
+
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            table, values = self.\
+                    _populate_db_for_drop_duplicate_entries(engine, meta,
+                                                            table_name)
+            utils.drop_old_duplicate_entries_from_table(engine, table_name,
+                                                        True, 'b', 'c')
+            uniq_values = set()
+            expected_values = []
+            soft_deleted_values = []
+
+            for value in sorted(values, key=lambda x: x['id'], reverse=True):
+                uniq_value = (('b', value['b']), ('c', value['c']))
+                if uniq_value in uniq_values:
+                    soft_deleted_values.append(value)
+                    continue
+                uniq_values.add(uniq_value)
+                expected_values.append(value)
+
+            base_select = table.select()
+
+            rows_select = base_select.\
+                                where(table.c.deleted != table.c.id)
+            row_ids = [row['id'] for row in
+                            engine.execute(rows_select).fetchall()]
+            self.assertEqual(len(row_ids), len(expected_values))
+            for value in expected_values:
+                self.assertTrue(value['id'] in row_ids)
+
+            deleted_rows_select = base_select.\
+                                    where(table.c.deleted == table.c.id)
+            deleted_rows_ids = [row['id'] for row in
+                                engine.execute(deleted_rows_select).fetchall()]
+            self.assertEqual(len(deleted_rows_ids),
+                             len(values) - len(row_ids))
+            for value in soft_deleted_values:
+                self.assertTrue(value['id'] in deleted_rows_ids)
