@@ -78,7 +78,8 @@ class CellsSchedulerTestCase(test.TestCase):
         for instance_uuid in self.instance_uuids:
             instance = db.instance_get_by_uuid(self.ctxt, instance_uuid)
             self.assertEqual('meow', instance['hostname'])
-            self.assertEqual('moo', instance['display_name'])
+            self.assertEqual('moo-%s' % instance['uuid'],
+                             instance['display_name'])
             self.assertEqual('fake_image_ref', instance['image_ref'])
 
     def test_run_instance_selects_child_cell(self):

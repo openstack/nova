@@ -3,7 +3,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2011 Piston Cloud Computing, Inc.
-# Copyright 2012 Red Hat, Inc.
+# Copyright 2012-2013 Red Hat, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -86,6 +86,16 @@ compute_opts = [
     cfg.StrOpt('security_group_api',
                default='nova.compute.api.SecurityGroupAPI',
                help='The full class name of the security API class'),
+    cfg.StrOpt('multi_instance_display_name_template',
+               default='%(name)s-%(uuid)s',
+               help='When creating multiple instances with a single request '
+                    'using the os-multiple-create API extension, this '
+                    'template will be used to build the display name for '
+                    'each instance. The benefit is that the instances '
+                    'end up with different hostnames. To restore legacy '
+                    'behavior of every instance having the same name, set '
+                    'this option to "%(name)s".  Valid keys for the '
+                    'template are: name, uuid, count.'),
 ]
 
 
@@ -419,6 +429,26 @@ class API(base.Base):
         options_from_image['auto_disk_config'] = auto_disk_config
         return options_from_image
 
+    def _apply_instance_name_template(self, context, instance, index):
+        params = {
+            'uuid': instance['uuid'],
+            'name': instance['display_name'],
+            'count': index + 1,
+        }
+        try:
+            new_name = (CONF.multi_instance_display_name_template %
+                        params)
+        except KeyError, TypeError:
+            LOG.exception(_('Failed to set instance name using '
+                            'multi_instance_display_name_template.'))
+            new_name = instance['display_name']
+        updates = {'display_name': new_name}
+        if not instance.get('hostname'):
+            updates['hostname'] = utils.sanitize_hostname(new_name)
+        instance = self.db.instance_update(context,
+                instance['uuid'], updates)
+        return instance
+
     def _validate_and_provision_instance(self, context, instance_type,
                                          image_href, kernel_id, ramdisk_id,
                                          min_count, max_count,
@@ -573,7 +603,8 @@ class API(base.Base):
                 options = base_options.copy()
                 instance = self.create_db_entry_for_new_instance(
                         context, instance_type, image, options,
-                        security_group, block_device_mapping)
+                        security_group, block_device_mapping, num_instances, i)
+
                 instances.append(instance)
                 instance_uuids.append(instance['uuid'])
                 self._validate_bdm(context, instance)
@@ -777,7 +808,7 @@ class API(base.Base):
             image_properties.get('block_device_mapping')):
             instance['shutdown_terminate'] = False
 
-    def _populate_instance_names(self, instance):
+    def _populate_instance_names(self, instance, num_instances):
         """Populate instance display_name and hostname."""
         display_name = instance.get('display_name')
         hostname = instance.get('hostname')
@@ -785,9 +816,17 @@ class API(base.Base):
         if display_name is None:
             display_name = self._default_display_name(instance['uuid'])
             instance['display_name'] = display_name
-        if hostname is None:
+
+        if hostname is None and num_instances == 1:
+            # NOTE(russellb) In the multi-instance case, we're going to
+            # overwrite the display_name using the
+            # multi_instance_display_name_template.  We need the default
+            # display_name set so that it can be used in the template, though.
+            # Only set the hostname here if we're only creating one instance.
+            # Otherwise, it will be built after the template based
+            # display_name.
             hostname = display_name
-        instance['hostname'] = utils.sanitize_hostname(hostname)
+            instance['hostname'] = utils.sanitize_hostname(hostname)
 
     def _default_display_name(self, instance_uuid):
         return "Server %s" % instance_uuid
@@ -837,7 +876,8 @@ class API(base.Base):
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
-            base_options, security_group, block_device_mapping):
+            base_options, security_group, block_device_mapping, num_instances,
+            index):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -848,7 +888,7 @@ class API(base.Base):
         instance = self._populate_instance_for_create(base_options,
                 image, security_group)
 
-        self._populate_instance_names(instance)
+        self._populate_instance_names(instance, num_instances)
 
         self._populate_instance_shutdown_terminate(instance, image,
                                                    block_device_mapping)
@@ -858,6 +898,13 @@ class API(base.Base):
         # proxied to the sgh.
         self.security_group_api.ensure_default(context)
         instance = self.db.instance_create(context, instance)
+
+        if num_instances > 1:
+            # NOTE(russellb) We wait until this spot to handle
+            # multi_instance_display_name_template, because we need
+            # the UUID from the instance.
+            instance = self._apply_instance_name_template(context, instance,
+                                                          index)
 
         self._populate_instance_for_bdm(context, instance,
                 instance_type, image, block_device_mapping)
