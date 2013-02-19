@@ -42,11 +42,73 @@ class ConsoleauthTestCase(test.TestCase):
         self.useFixture(test.TimeOverride())
         token = 'mytok'
         self.flags(console_token_ttl=1)
+
+        def fake_validate_console_port(*args, **kwargs):
+            return True
+        self.stubs.Set(self.manager.compute_rpcapi,
+                       "validate_console_port",
+                       fake_validate_console_port)
+
         self.manager.authorize_console(self.context, token, 'novnc',
-                                       '127.0.0.1', 'host', '')
+                                         '127.0.0.1', '8080', 'host',
+                                         'instance')
         self.assertTrue(self.manager.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
         self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_multiple_tokens_for_instance(self):
+        tokens = ["token" + str(i) for i in xrange(10)]
+        instance = "12345"
+
+        def fake_validate_console_port(*args, **kwargs):
+            return True
+
+        self.stubs.Set(self.manager.compute_rpcapi,
+                       "validate_console_port",
+                       fake_validate_console_port)
+        for token in tokens:
+            self.manager.authorize_console(self.context, token, 'novnc',
+                                          '127.0.0.1', '8080', 'host',
+                                          instance)
+
+        for token in tokens:
+            self.assertTrue(self.manager.check_token(self.context, token))
+
+    def test_delete_tokens_for_instance(self):
+        instance = "12345"
+        tokens = ["token" + str(i) for i in xrange(10)]
+        for token in tokens:
+            self.manager.authorize_console(self.context, token, 'novnc',
+                                          '127.0.0.1', '8080', 'host',
+                                          instance)
+        self.manager.delete_tokens_for_instance(self.context, instance)
+        stored_tokens = self.manager._get_tokens_for_instance(instance)
+
+        self.assertEqual(len(stored_tokens), 0)
+
+        for token in tokens:
+            self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_wrong_token_has_port(self):
+        token = 'mytok'
+
+        def fake_validate_console_port(*args, **kwargs):
+            return False
+
+        self.stubs.Set(self.manager.compute_rpcapi,
+                       "validate_console_port",
+                       fake_validate_console_port)
+
+        self.manager.authorize_console(self.context, token, 'novnc',
+                                        '127.0.0.1', '8080', 'host',
+                                        instance_uuid='instance')
+        self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_console_no_instance_uuid(self):
+        self.manager.authorize_console(self.context, "token", 'novnc',
+                                        '127.0.0.1', '8080', 'host',
+                                        instance_uuid=None)
+        self.assertFalse(self.manager.check_token(self.context, "token"))
 
     def test_get_backdoor_port(self):
         self.manager.backdoor_port = 59697

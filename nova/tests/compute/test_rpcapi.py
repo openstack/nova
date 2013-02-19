@@ -171,6 +171,12 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance, console_type='type',
                 version='2.24')
 
+    def test_validate_console_port(self):
+        self._test_compute_api('validate_console_port', 'call',
+                instance=self.fake_instance, port="5900",
+                console_type="novnc",
+                version="2.26")
+
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
                 host_param='param', mode='mode', host='host')
