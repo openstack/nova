@@ -456,6 +456,23 @@ class FlatNetworkTestCase(test.TestCase):
         self.assertEqual(len(addresses), 1)
         self.assertEqual(addresses[0], fixedip)
 
+    def test_allocate_floating_ip(self):
+        self.assertEqual(self.network.allocate_floating_ip(self.context,
+                                                           1, None), None)
+
+    def test_deallocate_floating_ip(self):
+        self.assertEqual(self.network.deallocate_floating_ip(self.context,
+                                                             1, None), None)
+
+    def test_associate_floating_ip(self):
+        self.assertEqual(self.network.associate_floating_ip(self.context,
+                                                            None, None), None)
+
+    def test_disassociate_floating_ip(self):
+        self.assertEqual(self.network.disassociate_floating_ip(self.context,
+                                                               None, None),
+                         None)
+
 
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
