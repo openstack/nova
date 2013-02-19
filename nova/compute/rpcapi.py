@@ -161,6 +161,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.23 - Remove network_info from reboot_instance
         2.24 - Added get_spice_console method
         2.25 - Add attach_interface() and detach_interface()
+        2.26 - Add validate_console_token to ensure the service connects to
+               vnc on the correct port
     '''
 
     #
@@ -320,6 +322,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, console_type=console_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                          version='2.24')
+
+    def validate_console_port(self, ctxt, instance, port, console_type):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('validate_console_port',
+                instance=instance_p, port=port, console_type=console_type),
+                topic=_compute_topic(self.topic, ctxt,
+                None, instance),
+                version='2.26')
 
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode
