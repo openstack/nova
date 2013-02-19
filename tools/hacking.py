@@ -48,7 +48,8 @@ logging.disable('LOG')
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session',
                      'nova.openstack.common.log.logging',
-                     'nova.db.sqlalchemy.migration.versioning_api']
+                     'nova.db.sqlalchemy.migration.versioning_api', 'paste']
+# Paste is missing a __init__ in top level directory
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
 END_DOCSTRING_TRIPLE = ['"""', "'''"]
 VERBOSE_MISSING_IMPORT = os.getenv('HACKING_VERBOSE_MISSING_IMPORT', 'False')
@@ -187,9 +188,12 @@ def nova_import_rules(logical_line):
     # pass the doctest, since the relativity depends on the file's locality
 
     def is_module_for_sure(mod, search_path=sys.path):
-        mod_path = mod.replace('.', os.sep)
         try:
-            imp.find_module(mod_path, search_path)
+            while '.' in mod:
+                pack_name, _sep, mod = mod.partition('.')
+                f, p, d = imp.find_module(pack_name, search_path)
+                search_path = [p]
+            imp.find_module(mod, search_path)
         except ImportError:
             return False
         return True

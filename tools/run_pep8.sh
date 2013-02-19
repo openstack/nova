@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -e
 # This is used by run_tests.sh and tox.ini
 python tools/hacking.py --doctest
 
@@ -12,7 +14,7 @@ ${PEP8} ${EXCLUDE} .
 
 ${PEP8} --filename=nova* bin
 
-SCRIPT_ROOT=$(echo $(dirname $(readlink -f "$0")) | sed s/\\/tools//)
+SCRIPT_ROOT=$(echo $(cd "$(dirname $0)"; pwd) | sed s/\\/tools//)
 
 SCRIPTS_PATH=${SCRIPT_ROOT}/plugins/xenserver/networking/etc/xensource/scripts
 PYTHONPATH=${SCRIPTS_PATH} ${PEP8} ./plugins/xenserver/networking
@@ -20,6 +22,6 @@ PYTHONPATH=${SCRIPTS_PATH} ${PEP8} ./plugins/xenserver/networking
 # NOTE(sirp): Also check Dom0 plugins w/o .py extension
 PLUGINS_PATH=${SCRIPT_ROOT}/plugins/xenserver/xenapi/etc/xapi.d/plugins
 PYTHONPATH=${PLUGINS_PATH} ${PEP8} ./plugins/xenserver/xenapi \
-    `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -perm +111`
+    `find plugins/xenserver/xenapi/etc/xapi.d/plugins -type f -perm +111`
 
 ! pyflakes nova/ | grep "imported but unused"
