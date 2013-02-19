@@ -26,7 +26,12 @@ health.
 
 """
 
+NULL = None
+INIT = 'initializing'
 ACTIVE = 'active'
 BUILDING = 'building'
+DEPLOYING = 'deploying'
+DEPLOYFAIL = 'deploy failed'
+DEPLOYDONE = 'deploy complete'
 DELETED = 'deleted'
 ERROR = 'error'

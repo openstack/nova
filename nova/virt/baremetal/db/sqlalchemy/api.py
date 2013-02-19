@@ -144,9 +144,12 @@ def bm_node_create(context, values):
 
 @sqlalchemy_api.require_admin_context
 def bm_node_update(context, bm_node_id, values):
-    model_query(context, models.BareMetalNode, read_deleted="no").\
+    rows = model_query(context, models.BareMetalNode, read_deleted="no").\
             filter_by(id=bm_node_id).\
             update(values)
+
+    if not rows:
+        raise exception.InstanceNotFound(instance_id=bm_node_id)
 
 
 @sqlalchemy_api.require_admin_context
@@ -390,34 +393,3 @@ def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
         raise exception.InstanceNotFound(instance_id=bm_node_id)
 
     return result
-
-
-@sqlalchemy_api.require_admin_context
-def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb,
-                         swap_mb):
-    ref = models.BareMetalDeployment()
-    ref.key = key
-    ref.image_path = image_path
-    ref.pxe_config_path = pxe_config_path
-    ref.root_mb = root_mb
-    ref.swap_mb = swap_mb
-    _save(ref)
-    return ref.id
-
-
-@sqlalchemy_api.require_admin_context
-def bm_deployment_get(context, dep_id):
-    result = model_query(context, models.BareMetalDeployment,
-                         read_deleted="no").\
-                     filter_by(id=dep_id).\
-                     first()
-    return result
-
-
-@sqlalchemy_api.require_admin_context
-def bm_deployment_destroy(context, dep_id):
-    model_query(context, models.BareMetalDeployment).\
-                filter_by(id=dep_id).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})

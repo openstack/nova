@@ -170,17 +170,3 @@ def bm_interface_get_by_vif_uuid(context, vif_uuid):
 
 def bm_interface_get_all_by_bm_node_id(context, bm_node_id):
     return IMPL.bm_interface_get_all_by_bm_node_id(context, bm_node_id)
-
-
-def bm_deployment_create(context, key, image_path, pxe_config_path, root_mb,
-                         swap_mb):
-    return IMPL.bm_deployment_create(context, key, image_path,
-                                     pxe_config_path, root_mb, swap_mb)
-
-
-def bm_deployment_get(context, dep_id):
-    return IMPL.bm_deployment_get(context, dep_id)
-
-
-def bm_deployment_destroy(context, dep_id):
-    return IMPL.bm_deployment_destroy(context, dep_id)
