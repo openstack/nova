@@ -23,10 +23,13 @@ import collections
 import copy
 import datetime
 import functools
+import sys
+import time
 import uuid
 
 from sqlalchemy import and_
 from sqlalchemy import Boolean
+from sqlalchemy import exc as sqla_exc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
@@ -172,6 +175,39 @@ def require_aggregate_exists(f):
         db.aggregate_get(context, aggregate_id)
         return f(context, aggregate_id, *args, **kwargs)
     return wrapper
+
+
+def _retry_on_deadlock(f):
+    """Decorator to retry a DB API call if Deadlock was received."""
+    def _is_deadlock_exc(dberr_info):
+        deadlock_str = 'Deadlock found when trying to get lock'
+        try:
+            if not isinstance(dberr_info, sqla_exc.OperationalError):
+                return False
+            if deadlock_str in dberr_info.message:
+                LOG.warn(_("Deadlock detected when running "
+                           "'%(func_name)s': Retrying..."),
+                           dict(func_name=f.__name__))
+                return True
+        except Exception:
+            pass
+        return False
+
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        while True:
+            try:
+                return f(*args, **kwargs)
+            except db_session.DBError as db_err:
+                exc_info = sys.exc_info()
+                dberr_info = db_err.inner_exception
+                if not _is_deadlock_exc(dberr_info):
+                    raise exc_info[0], exc_info[1], exc_info[2]
+                # Retry!
+                time.sleep(0.5)
+                continue
+    functools.update_wrapper(wrapped, f)
+    return wrapped
 
 
 def model_query(context, model, *args, **kwargs):
@@ -3986,6 +4022,7 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 
 
 @require_context
+@_retry_on_deadlock
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed=None,
                     session=None):
