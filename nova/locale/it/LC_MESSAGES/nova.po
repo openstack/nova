@@ -4125,7 +4125,7 @@ msgstr ""
 
 #: nova/network/linux_net.py:1126
 #, python-format
-msgid "Starting VLAN inteface %s"
+msgid "Starting VLAN interface %s"
 msgstr "Avviando l'interfaccia VLAN %s"
 
 #: nova/network/linux_net.py:1162

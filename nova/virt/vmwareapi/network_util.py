@@ -113,7 +113,7 @@ def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
 
 
 def check_if_vlan_interface_exists(session, vlan_interface, cluster=None):
-    """Checks if the vlan_inteface exists on the esx host."""
+    """Checks if the vlan_interface exists on the esx host."""
     host_mor = vm_util.get_host_ref(session, cluster)
     physical_nics_ret = session._call_method(vim_util,
                 "get_dynamic_property", host_mor,

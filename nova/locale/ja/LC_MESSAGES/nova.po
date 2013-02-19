@@ -4144,7 +4144,7 @@ msgstr "Pid %d がストールしているので radvd を再実行していま�
 
 #: nova/network/linux_net.py:1126
 #, python-format
-msgid "Starting VLAN inteface %s"
+msgid "Starting VLAN interface %s"
 msgstr "VLANインタフェース %s を開始します。"
 
 #: nova/network/linux_net.py:1162

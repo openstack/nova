@@ -4211,7 +4211,7 @@ msgstr "Pid %d est dépassé, re-démarrage radvd"
 
 #: nova/network/linux_net.py:1126
 #, python-format
-msgid "Starting VLAN inteface %s"
+msgid "Starting VLAN interface %s"
 msgstr "Démarrage de l'interface VLAN %s"
 
 #: nova/network/linux_net.py:1162
