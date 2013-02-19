@@ -185,6 +185,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "FloatingIpsBulk",
             "Fox In Socks",
             "Hosts",
+            "ImageSize",
             "InstanceActions",
             "Keypairs",
             "Multinic",

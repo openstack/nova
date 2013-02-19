@@ -144,6 +144,7 @@ class Controller(wsgi.Controller):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
+        req.cache_db_items('images', [image], 'id')
         return self._view_builder.show(req, image)
 
     def delete(self, req, id):
@@ -200,6 +201,7 @@ class Controller(wsgi.Controller):
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=str(e))
 
+        req.cache_db_items('images', images, 'id')
         return self._view_builder.detail(req, images)
 
     def create(self, *args, **kwargs):

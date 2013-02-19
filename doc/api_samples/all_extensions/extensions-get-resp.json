@@ -25,6 +25,14 @@
             "updated": "2013-01-30T00:00:00+00:00"
         },
         {
+            "alias": "OS-EXT-IMG-SIZE",
+            "description": "Adds image size to image listings.",
+            "links": [],
+            "name": "ImageSize",
+            "namespace": "http://docs.openstack.org/compute/ext/image_size/api/v1.1",
+            "updated": "2013-02-19T00:00:00+00:00"
+        },
+        {
             "alias": "OS-EXT-IPS",
             "description": "Adds type parameter to the ip list.",
             "links": [],
@@ -194,11 +202,11 @@
         },
         {
             "alias": "os-evacuate",
-            "description": "Enables server evacuation",
+            "description": "Enables server evacuation.",
             "links": [],
             "name": "Evacuate",
             "namespace": "http://docs.openstack.org/compute/ext/evacuate/api/v2",
-            "updated": "2012-12-05T00:00:00+00:00"
+            "updated": "2013-01-06T00:00:00+00:00"
         },
         {
             "alias": "os-fixed-ips",
@@ -314,7 +322,7 @@
         },
         {
             "alias": "os-instance-actions",
-            "description": "View a log of actions taken on an instance",
+            "description": "View a log of actions and events taken on an instance.",
             "links": [],
             "name": "InstanceActions",
             "namespace": "http://docs.openstack.org/compute/ext/instance-actions/api/v1.1",

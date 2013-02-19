@@ -33,6 +33,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-EXT-IMG-SIZE",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ImageSize",
+            "namespace": "http://docs.openstack.org/compute/ext/image_size/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-EXT-SRV-ATTR",
             "description": "%(text)s",
             "links": [],
