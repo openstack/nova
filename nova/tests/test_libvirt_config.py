@@ -492,12 +492,12 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <source file="/tmp/hello"/>
               <target bus="ide" dev="/dev/hda"/>
               <iotune>
-              <read_bytes_sec>1024000</read_bytes_sec>
-              <read_iops_sec>1000</read_iops_sec>
-              <write_bytes_sec>1024000</write_bytes_sec>
-              <write_iops_sec>1000</write_iops_sec>
-              <total_bytes_sec>2048000</total_bytes_sec>
-              <total_iops_sec>2000</total_iops_sec>
+                <read_bytes_sec>1024000</read_bytes_sec>
+                <read_iops_sec>1000</read_iops_sec>
+                <write_bytes_sec>1024000</write_bytes_sec>
+                <write_iops_sec>1000</write_iops_sec>
+                <total_bytes_sec>2048000</total_bytes_sec>
+                <total_iops_sec>2000</total_iops_sec>
               </iotune>
             </disk>""")
 
@@ -611,11 +611,11 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <driver name="vhost"/>
-                <bandwidth>
+              <target dev="vnet0"/>
+              <bandwidth>
                 <inbound average="1024000" peak="10240000" burst="1024000"/>
                 <outbound average="1024000" peak="10240000" burst="1024000"/>
-                </bandwidth>
-              <target dev="vnet0"/>
+              </bandwidth>
             </interface>""")
 
     def test_config_bridge(self):
@@ -640,14 +640,14 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <source bridge="br0"/>
-                <bandwidth>
-                <inbound average="1024000" peak="10240000" burst="1024000"/>
-                <outbound average="1024000" peak="10240000" burst="1024000"/>
-                </bandwidth>
               <target dev="tap12345678"/>
               <filterref filter="clean-traffic">
                 <parameter name="IP" value="192.168.122.1"/>
               </filterref>
+              <bandwidth>
+                <inbound average="1024000" peak="10240000" burst="1024000"/>
+                <outbound average="1024000" peak="10240000" burst="1024000"/>
+              </bandwidth>
             </interface>""")
 
     def test_config_bridge_ovs(self):
@@ -854,11 +854,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <name>demo</name>
               <memory>104857600</memory>
               <vcpu>2</vcpu>
-                <cputune>
-                <shares>100</shares>
-                <quota>50000</quota>
-                <period>25000</period>
-                </cputune>
               <sysinfo type='smbios'>
                  <bios>
                    <entry name="vendor">Acme</entry>
@@ -876,6 +871,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <acpi/>
                 <apic/>
               </features>
+              <cputune>
+                <shares>100</shares>
+                <quota>50000</quota>
+                <period>25000</period>
+              </cputune>
               <devices>
                 <disk type="file" device="disk">
                   <source file="/tmp/img"/>
