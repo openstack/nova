@@ -421,13 +421,6 @@ def stub_out_db_instance_api(stubs, injected=True):
                 return inst_type
         return None
 
-    def fake_network_get_by_instance(context, instance_id):
-        # Even instance numbers are on vlan networks
-        if instance_id % 2 == 0:
-            return FakeModel(vlan_network_fields)
-        else:
-            return FakeModel(flat_network_fields)
-
     def fake_network_get_all_by_instance(context, instance_id):
         # Even instance numbers are on vlan networks
         if instance_id % 2 == 0:
@@ -438,8 +431,7 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    funcs = [fake_network_get_by_instance,
-             fake_network_get_all_by_instance,
+    funcs = [fake_network_get_all_by_instance,
              fake_instance_type_get_all,
              fake_instance_type_get_by_name,
              fake_instance_type_get,

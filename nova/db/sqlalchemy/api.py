@@ -2269,20 +2269,6 @@ def network_get_by_cidr(context, cidr):
 
 
 @require_admin_context
-def network_get_by_instance(context, instance_id):
-    # note this uses fixed IP to get to instance
-    # only works for networks the instance has an IP from
-    result = _network_get_query(context).\
-                 filter_by(instance_id=instance_id).\
-                 first()
-
-    if not result:
-        raise exception.NetworkNotFoundForInstance(instance_id=instance_id)
-
-    return result
-
-
-@require_admin_context
 def network_get_all_by_instance(context, instance_id):
     result = _network_get_query(context).\
                  filter_by(instance_id=instance_id).\
