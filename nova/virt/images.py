@@ -225,6 +225,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
             with utils.remove_path_on_error(staged):
                 convert_image(path_tmp, staged, 'raw')
+                os.unlink(path_tmp)
 
                 data = qemu_img_info(staged)
                 if data.file_format != "raw":
@@ -233,6 +234,5 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
                         data.file_format)
 
                 os.rename(staged, path)
-
         else:
             os.rename(path_tmp, path)
