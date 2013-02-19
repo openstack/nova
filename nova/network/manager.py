@@ -1398,9 +1398,9 @@ class FlatManager(NetworkManager):
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple
     networks for for one manager is currently not supported, but could be
-    added by modifying allocate_fixed_ip and get_network to get the a network
-    with new logic instead of network_get_by_bridge. Arbitrary lists of
-    addresses in a single network can be accomplished with manual db editing.
+    added by modifying allocate_fixed_ip and get_network to get the network
+    with new logic. Arbitrary lists of addresses in a single network can
+    be accomplished with manual db editing.
 
     If flat_injected is True, the compute host will attempt to inject network
     config into the guest.  It attempts to modify /etc/network/interfaces and

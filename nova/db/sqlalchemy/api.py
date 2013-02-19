@@ -2237,16 +2237,6 @@ def _network_get_query(context, session=None):
 
 
 @require_admin_context
-def network_get_by_bridge(context, bridge):
-    result = _network_get_query(context).filter_by(bridge=bridge).first()
-
-    if not result:
-        raise exception.NetworkNotFoundForBridge(bridge=bridge)
-
-    return result
-
-
-@require_admin_context
 def network_get_by_uuid(context, uuid):
     result = _network_get_query(context).filter_by(uuid=uuid).first()
 
