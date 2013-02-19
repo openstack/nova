@@ -468,6 +468,12 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.auth_secret_type = None
         self.auth_secret_uuid = None
         self.serial = None
+        self.disk_read_bytes_sec = None
+        self.disk_read_iops_sec = None
+        self.disk_write_bytes_sec = None
+        self.disk_write_iops_sec = None
+        self.disk_total_bytes_sec = None
+        self.disk_total_iops_sec = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -512,6 +518,34 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.serial is not None:
             dev.append(self._text_node("serial", self.serial))
 
+        iotune = etree.Element("iotune")
+
+        if self.disk_read_bytes_sec is not None:
+            iotune.append(self._text_node("read_bytes_sec",
+                self.disk_read_bytes_sec))
+
+        if self.disk_read_iops_sec is not None:
+            iotune.append(self._text_node("read_iops_sec",
+                self.disk_read_iops_sec))
+
+        if self.disk_write_bytes_sec is not None:
+            iotune.append(self._text_node("write_bytes_sec",
+                self.disk_write_bytes_sec))
+
+        if self.disk_write_iops_sec is not None:
+            iotune.append(self._text_node("write_iops_sec",
+                self.disk_write_iops_sec))
+
+        if self.disk_total_bytes_sec is not None:
+            iotune.append(self._text_node("total_bytes_sec",
+                self.disk_total_bytes_sec))
+
+        if self.disk_total_iops_sec is not None:
+            iotune.append(self._text_node("total_iops_sec",
+                self.disk_total_iops_sec))
+
+        if len(iotune) > 0:
+            dev.append(iotune)
         return dev
 
 
@@ -555,6 +589,12 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.filtername = None
         self.filterparams = []
         self.driver_name = None
+        self.vif_inbound_peak = None
+        self.vif_inbound_burst = None
+        self.vif_inbound_average = None
+        self.vif_outbound_peak = None
+        self.vif_outbound_burst = None
+        self.vif_outbound_average = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -594,6 +634,27 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                                             name=p['key'],
                                             value=p['value']))
             dev.append(filter)
+
+        if self.vif_inbound_average or self.vif_outbound_average:
+            bandwidth = etree.Element("bandwidth")
+            if self.vif_inbound_average is not None:
+                vif_inbound = etree.Element("inbound",
+                average=str(self.vif_inbound_average))
+                if self.vif_inbound_peak is not None:
+                    vif_inbound.set("peak", str(self.vif_inbound_peak))
+                if self.vif_inbound_burst is not None:
+                    vif_inbound.set("burst", str(self.vif_inbound_burst))
+                bandwidth.append(vif_inbound)
+
+            if self.vif_outbound_average is not None:
+                vif_outbound = etree.Element("outbound",
+                average=str(self.vif_outbound_average))
+                if self.vif_outbound_peak is not None:
+                    vif_outbound.set("peak", str(self.vif_outbound_peak))
+                if self.vif_outbound_burst is not None:
+                    vif_outbound.set("burst", str(self.vif_outbound_burst))
+                bandwidth.append(vif_outbound)
+            dev.append(bandwidth)
 
         return dev
 
@@ -729,6 +790,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.memory = 1024 * 1024 * 500
         self.vcpus = 1
         self.cpu = None
+        self.cpu_shares = None
+        self.cpu_quota = None
+        self.cpu_period = None
         self.acpi = False
         self.apic = False
         self.clock = None
@@ -780,6 +844,17 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 features.append(etree.Element("apic"))
             root.append(features)
 
+    def _format_cputune(self, root):
+        cputune = etree.Element("cputune")
+        if self.cpu_shares is not None:
+            cputune.append(self._text_node("shares", self.cpu_shares))
+        if self.cpu_quota is not None:
+            cputune.append(self._text_node("quota", self.cpu_quota))
+        if self.cpu_period is not None:
+            cputune.append(self._text_node("period", self.cpu_period))
+        if len(cputune) > 0:
+            root.append(cputune)
+
     def _format_devices(self, root):
         if len(self.devices) == 0:
             return
@@ -800,6 +875,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         self._format_os(root)
         self._format_features(root)
+        self._format_cputune(root)
 
         if self.clock is not None:
             root.append(self.clock.format_dom())
