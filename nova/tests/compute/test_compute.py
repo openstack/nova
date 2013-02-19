@@ -4986,6 +4986,7 @@ class ComputeAPITestCase(BaseTestCase):
                              orig_instance_type)
             self.assertEqual(request_spec['instance_uuids'],
                              [instance['uuid']])
+            self.assertEqual(FAKE_IMAGE_REF, request_spec['image']['id'])
             self.assertEqual(instance_properties['uuid'], instance['uuid'])
             self.assertEqual(instance_properties['host'], 'host2')
             # Ensure the instance passed to us has been updated with
