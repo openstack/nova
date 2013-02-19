@@ -285,8 +285,12 @@ class AdminActionsController(wsgi.Controller):
         except exception.ComputeServiceUnavailable as ex:
             raise exc.HTTPBadRequest(explanation=str(ex))
         except Exception:
-            msg = _("Live migration of instance %(id)s to host %(host)s"
-                    " failed") % locals()
+            if host is None:
+                msg = _("Live migration of instance %(id)s to another host"
+                        " failed") % locals()
+            else:
+                msg = _("Live migration of instance %(id)s to host %(host)s"
+                        " failed") % locals()
             LOG.exception(msg)
             # Return messages from scheduler
             raise exc.HTTPBadRequest(explanation=msg)

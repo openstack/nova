@@ -2136,7 +2136,7 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
         def fake_live_migration_dest_check(self, context, instance_ref, dest):
             """Skip live migration scheduler checks."""
-            return
+            return dest
 
         def fake_live_migration_common(self, context, instance_ref, dest):
             """Skip live migration scheduler checks."""
