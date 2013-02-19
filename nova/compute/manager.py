@@ -579,8 +579,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         Passes straight through to the virtualization driver.
 
+        Synchronise the call beacuse we may still be in the middle of
+        creating the instance.
         """
-        return self.driver.refresh_instance_security_rules(instance)
+        @lockutils.synchronized(instance['uuid'], 'nova-')
+        def _sync_refresh():
+            return self.driver.refresh_instance_security_rules(instance)
+        return _sync_refresh()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def refresh_provider_fw_rules(self, context):
