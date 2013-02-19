@@ -848,11 +848,6 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     return IMPL.network_get_associated_fixed_ips(context, network_id, host)
 
 
-def network_get_by_bridge(context, bridge):
-    """Get a network by bridge or raise if it does not exist."""
-    return IMPL.network_get_by_bridge(context, bridge)
-
-
 def network_get_by_uuid(context, uuid):
     """Get a network by uuid or raise if it does not exist."""
     return IMPL.network_get_by_uuid(context, uuid)
