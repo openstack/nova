@@ -42,7 +42,7 @@ class ZKServiceGroupTestCase(test.TestCase):
         except ImportError:
             self.skipTest("Unable to test due to lack of ZooKeeper")
         self.flags(servicegroup_driver='zk')
-        self.flags(address='localhost:2181', group="zk")
+        self.flags(address='localhost:2181', group="zookeeper")
 
     def test_join_leave(self):
         self.servicegroup_api = servicegroup.API()

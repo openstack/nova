@@ -48,7 +48,7 @@ zk_driver_opts = [
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(zk_driver_opts, group="zk")
+CONF.register_opts(zk_driver_opts, group="zookeeper")
 
 LOG = logging.getLogger(__name__)
 
