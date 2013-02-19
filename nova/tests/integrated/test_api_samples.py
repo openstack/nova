@@ -57,6 +57,7 @@ from nova.tests.image import fake
 from nova.tests.integrated import integrated_helpers
 from nova.tests import utils as test_utils
 from nova import utils
+from nova.volume import cinder
 
 CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
@@ -384,7 +385,6 @@ class ApiSamplesTrap(ApiSampleTestBase):
         # removed) soon.
         do_not_approve_additions = []
         do_not_approve_additions.append('os-create-server-ext')
-        do_not_approve_additions.append('os-volumes')
 
         tests = self._get_extensions_tested()
         extensions = self._get_extensions()
@@ -3589,3 +3589,73 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
 
 class AttachInterfacesSampleXmlTest(AttachInterfacesSampleJsonTest):
     ctype = 'xml'
+
+
+class SnapshotsSampleJsonTests(ApiSampleTestBase):
+    extension_name = "nova.api.openstack.compute.contrib.volumes.Volumes"
+
+    create_subs = {
+            'snapshot_name': 'snap-001',
+            'description': 'Daily backup',
+            'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
+    }
+
+    def setUp(self):
+        super(SnapshotsSampleJsonTests, self).setUp()
+        self.stubs.Set(cinder.API, "get_all_snapshots",
+                       fakes.stub_snapshot_get_all)
+        self.stubs.Set(cinder.API, "get_snapshot", fakes.stub_snapshot_get)
+
+    def _create_snapshot(self):
+        self.stubs.Set(cinder.API, "create_snapshot",
+                       fakes.stub_snapshot_create)
+        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
+
+        response = self._do_post("os-snapshots",
+                                 "snapshot-create-req",
+                                 self.create_subs)
+        return response
+
+    def test_snapshots_create(self):
+        response = self._create_snapshot()
+        self.assertEqual(response.status, 200)
+        self.create_subs.update(self._get_regexes())
+        return self._verify_response("snapshot-create-resp",
+                                     self.create_subs, response)
+
+    def test_snapshots_delete(self):
+        self.stubs.Set(cinder.API, "delete_snapshot",
+                       fakes.stub_snapshot_delete)
+        self._create_snapshot()
+        response = self._do_delete('os-snapshots/100')
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+    def test_snapshots_detail(self):
+        response = self._do_get('os-snapshots/detail')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('snapshots-detail-resp',
+                                     subs, response)
+
+    def test_snapshots_list(self):
+        response = self._do_get('os-snapshots')
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        return self._verify_response('snapshots-list-resp',
+                                     subs, response)
+
+    def test_snapshots_show(self):
+        response = self._do_get('os-snapshots/100')
+        self.assertEqual(response.status, 200)
+        subs = {
+            'snapshot_name': 'Default name',
+            'description': 'Default description'
+        }
+        subs.update(self._get_regexes())
+        return self._verify_response('snapshots-show-resp',
+                                     subs, response)
+
+
+class SnapshotsSampleXmlTests(SnapshotsSampleJsonTests):
+    ctype = "xml"
