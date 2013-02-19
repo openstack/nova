@@ -188,6 +188,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             designer.set_vif_host_backend_filter_config(
                 conf, name, primary_addr, dhcp_server,
                 ra_server, ipv4_cidr, ipv6_cidr)
+        designer.set_vif_bandwidth_config(conf, instance)
 
         return conf
 

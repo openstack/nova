@@ -131,3 +131,14 @@ def set_vif_host_backend_filter_config(conf, name,
             net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
             conf.add_filter_param("PROJNET6", net)
             conf.add_filter_param("PROJMASK6", prefix)
+
+
+def set_vif_bandwidth_config(conf, extra_specs):
+    """Config vif inbound/outbound bandwidth limit."""
+
+    bandwidth_items = ['vif_inbound_average', 'vif_inbound_peak',
+        'vif_inbound_burst', 'vif_outbound_average', 'vif_outbound_peak',
+        'vif_outbound_burst']
+    for key, value in extra_specs.iteritems():
+        if key in bandwidth_items:
+            setattr(conf, key, value)
