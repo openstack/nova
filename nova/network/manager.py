@@ -1680,13 +1680,13 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
     def _get_network_by_id(self, context, network_id):
         # NOTE(vish): Don't allow access to networks with project_id=None as
-        #             these are networksa that haven't been allocated to a
+        #             these are networks that haven't been allocated to a
         #             project yet.
         return self.db.network_get(context, network_id, project_only=True)
 
     def _get_networks_by_uuids(self, context, network_uuids):
         # NOTE(vish): Don't allow access to networks with project_id=None as
-        #             these are networksa that haven't been allocated to a
+        #             these are networks that haven't been allocated to a
         #             project yet.
         return self.db.network_get_all_by_uuids(context, network_uuids,
                                                 project_only=True)
