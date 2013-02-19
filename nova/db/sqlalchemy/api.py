@@ -3769,20 +3769,6 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 
 @require_context
-def instance_metadata_get_item(context, instance_uuid, key, session=None):
-    result = _instance_metadata_get_query(
-                            context, instance_uuid, session=session).\
-                    filter_by(key=key).\
-                    first()
-
-    if not result:
-        raise exception.InstanceMetadataNotFound(metadata_key=key,
-                                                 instance_uuid=instance_uuid)
-
-    return result
-
-
-@require_context
 def instance_metadata_update(context, instance_uuid, metadata, delete,
                              session=None):
     all_keys = metadata.keys()
@@ -3835,20 +3821,6 @@ def instance_system_metadata_get(context, instance_uuid, session=None):
     result = {}
     for row in rows:
         result[row['key']] = row['value']
-
-    return result
-
-
-def _instance_system_metadata_get_item(context, instance_uuid, key,
-                                       session=None):
-    result = _instance_system_metadata_get_query(
-                            context, instance_uuid, session=session).\
-                    filter_by(key=key).\
-                    first()
-
-    if not result:
-        raise exception.InstanceSystemMetadataNotFound(
-                metadata_key=key, instance_uuid=instance_uuid)
 
     return result
 
@@ -4043,20 +4015,6 @@ def instance_type_extra_specs_delete(context, flavor_id, key):
                             context, flavor_id).\
         filter(models.InstanceTypeExtraSpecs.key == key).\
         soft_delete(synchronize_session=False)
-
-
-@require_context
-def instance_type_extra_specs_get_item(context, flavor_id, key,
-                                       session=None):
-    result = _instance_type_extra_specs_get_query(
-                            context, flavor_id, session=session).\
-                    filter(models.InstanceTypeExtraSpecs.key == key).\
-                    first()
-    if not result:
-        raise exception.InstanceTypeExtraSpecsNotFound(
-                extra_specs_key=key, instance_type_id=flavor_id)
-
-    return result
 
 
 @require_context
@@ -4404,23 +4362,6 @@ def aggregate_metadata_delete(context, aggregate_id, key):
     if count == 0:
         raise exception.AggregateMetadataNotFound(aggregate_id=aggregate_id,
                                                   metadata_key=key)
-
-
-@require_admin_context
-@require_aggregate_exists
-def aggregate_metadata_get_item(context, aggregate_id, key, session=None):
-    result = _aggregate_get_query(context,
-                                  models.AggregateMetadata,
-                                  models.AggregateMetadata.aggregate_id,
-                                  aggregate_id, session=session,
-                                  read_deleted='yes').\
-                                  filter_by(key=key).first()
-
-    if not result:
-        raise exception.AggregateMetadataNotFound(metadata_key=key,
-                                                 aggregate_id=aggregate_id)
-
-    return result
 
 
 @require_admin_context
