@@ -560,6 +560,34 @@ class Connection(object):
 
         return consumer
 
+    def join_consumer_pool(self, callback, pool_name, topic,
+                           exchange_name=None):
+        """Register as a member of a group of consumers for a given topic from
+        the specified exchange.
+
+        Exactly one member of a given pool will receive each message.
+
+        A message will be delivered to multiple pools, if more than
+        one is created.
+        """
+        callback_wrapper = rpc_amqp.CallbackWrapper(
+            conf=self.conf,
+            callback=callback,
+            connection_pool=rpc_amqp.get_connection_pool(self.conf,
+                                                         Connection),
+        )
+        self.proxy_callbacks.append(callback_wrapper)
+
+        consumer = TopicConsumer(conf=self.conf,
+                                 session=self.session,
+                                 topic=topic,
+                                 callback=callback_wrapper,
+                                 name=pool_name,
+                                 exchange_name=exchange_name)
+
+        self._register_consumer(consumer)
+        return consumer
+
 
 def create_connection(conf, new=True):
     """Create a connection"""

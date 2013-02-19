@@ -299,7 +299,7 @@ def _get_impl():
         try:
             _RPCIMPL = importutils.import_module(CONF.rpc_backend)
         except ImportError:
-            # For backwards compatibility with older nova config.
+            # For backwards compatibility with older oslo.config.
             impl = CONF.rpc_backend.replace('nova.rpc',
                                             'nova.openstack.common.rpc')
             _RPCIMPL = importutils.import_module(impl)

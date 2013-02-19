@@ -197,6 +197,28 @@ class Connection(object):
         """
         raise NotImplementedError()
 
+    def join_consumer_pool(self, callback, pool_name, topic, exchange_name):
+        """Register as a member of a group of consumers for a given topic from
+        the specified exchange.
+
+        Exactly one member of a given pool will receive each message.
+
+        A message will be delivered to multiple pools, if more than
+        one is created.
+
+        :param callback: Callable to be invoked for each message.
+        :type callback: callable accepting one argument
+        :param pool_name: The name of the consumer pool.
+        :type pool_name: str
+        :param topic: The routing topic for desired messages.
+        :type topic: str
+        :param exchange_name: The name of the message exchange where
+                              the client should attach. Defaults to
+                              the configured exchange.
+        :type exchange_name: str
+        """
+        raise NotImplementedError()
+
     def consume_in_thread(self):
         """Spawn a thread to handle incoming messages.
 
