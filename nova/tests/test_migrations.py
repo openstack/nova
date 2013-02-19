@@ -44,6 +44,7 @@ import collections
 import commands
 import ConfigParser
 import datetime
+import netaddr
 import os
 import sqlalchemy
 import urlparse
@@ -516,9 +517,15 @@ class TestMigrations(BaseMigrationTestCase):
                 {'protocol': 'tcp', 'from_port': 1234,
                  'to_port': 1234, 'cidr': "128.128.128.128/16"},
                 {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
+                {'protocol': 'tcp', 'from_port': 1234,
                  'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "::1/64"}
+                 'to_port': 1234, 'cidr': "::1/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
                 ],
             'console_pools':
                 [
@@ -526,6 +533,7 @@ class TestMigrations(BaseMigrationTestCase):
                 {'address': '128.100.100.100'},
                 {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
                 {'address': '::1'},
+                {'address': '0000:0000:0000:2013:0000:6535:abcd:ef11'}
                 ]
             }
 
@@ -540,18 +548,20 @@ class TestMigrations(BaseMigrationTestCase):
         provider_fw_rules = get_table(engine, 'provider_fw_rules')
         result = provider_fw_rules.select().execute()
 
-        iplist = map(lambda x: x['cidr'], data['provider_fw_rules'])
+        iplist = map(lambda x: str(netaddr.IPNetwork(x['cidr'])),
+                     data['provider_fw_rules'])
 
         for row in result:
-            self.assertIn(row['cidr'], iplist)
+            self.assertIn(str(netaddr.IPNetwork(row['cidr'])), iplist)
 
         console_pools = get_table(engine, 'console_pools')
         result = console_pools.select().execute()
 
-        iplist = map(lambda x: x['address'], data['console_pools'])
+        iplist = map(lambda x: str(netaddr.IPAddress(x['address'])),
+                     data['console_pools'])
 
         for row in result:
-            self.assertIn(row['address'], iplist)
+            self.assertIn(str(netaddr.IPAddress(row['address'])), iplist)
 
     # migration 151 - changes period_beginning and period_ending to DateTime
     def _prerun_151(self, engine):
@@ -739,9 +749,15 @@ class TestMigrations(BaseMigrationTestCase):
                 {'protocol': 'tcp', 'from_port': 1234,
                  'to_port': 1234, 'cidr': "128.128.128.128/16"},
                 {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
+                {'protocol': 'tcp', 'from_port': 1234,
                  'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
                 {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "::1/64"}
+                 'to_port': 1234, 'cidr': "::1/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
                 ],
             'console_pools':
                 [
@@ -749,6 +765,7 @@ class TestMigrations(BaseMigrationTestCase):
                 {'address': '128.100.100.100'},
                 {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
                 {'address': '::1'},
+                {'address': '0000:0000:0000:2013:0000:6535:abcd:ef11'}
                 ]
             }
         return data
