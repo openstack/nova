@@ -58,7 +58,7 @@ def upgrade(migrate_engine):
     else:
         for table, column in TABLE_COLUMNS:
             t = Table(table, meta, autoload=True)
-            getattr(t.c, column).alter(type=String(39))
+            getattr(t.c, column).alter(type=String(43))
 
 
 def downgrade(migrate_engine):
