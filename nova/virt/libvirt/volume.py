@@ -50,7 +50,7 @@ volume_opts = [
                default=None,
                help='Mount options passed to the nfs client. See section '
                     'of the nfs man page for details'),
-    cfg.StrOpt('num_aoe_discover_tries',
+    cfg.IntOpt('num_aoe_discover_tries',
                default=3,
                help='number of times to rediscover AoE target to find volume'),
     cfg.StrOpt('glusterfs_mount_point_base',
