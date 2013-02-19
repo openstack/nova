@@ -1706,13 +1706,6 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
                    filter(models.Instance.instance_type_id != type_id).all()
 
 
-@require_context
-def instance_get_all_by_reservation(context, reservation_id):
-    return _instance_get_all_query(context, project_only=True).\
-                    filter_by(reservation_id=reservation_id).\
-                    all()
-
-
 # NOTE(jkoelker) This is only being left here for compat with floating
 #                ips. Currently the network_api doesn't return floaters
 #                in network_info. Once it starts return the model. This

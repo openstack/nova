@@ -627,11 +627,6 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return IMPL.instance_get_all_by_host_and_not_type(context, host, type_id)
 
 
-def instance_get_all_by_reservation(context, reservation_id):
-    """Get all instances belonging to a reservation."""
-    return IMPL.instance_get_all_by_reservation(context, reservation_id)
-
-
 def instance_get_floating_address(context, instance_id):
     """Get the first floating ip address of an instance."""
     return IMPL.instance_get_floating_address(context, instance_id)
