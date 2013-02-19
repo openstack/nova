@@ -165,8 +165,6 @@ class ServersControllerTest(test.TestCase):
                 return_servers)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        return_server)
-        self.stubs.Set(db, 'instance_get_all_by_project',
-                       return_servers)
         self.stubs.Set(db, 'instance_add_security_group',
                        return_security_group)
         self.stubs.Set(db, 'instance_update_and_get_original',

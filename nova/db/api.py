@@ -542,11 +542,6 @@ def virtual_interface_get_by_instance_and_network(context, instance_id,
                                                               network_id)
 
 
-def virtual_interface_delete(context, vif_id):
-    """Delete virtual interface record from the database."""
-    return IMPL.virtual_interface_delete(context, vif_id)
-
-
 def virtual_interface_delete_by_instance(context, instance_id):
     """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
@@ -615,11 +610,6 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     """
     return IMPL.instance_get_active_by_window_joined(context, begin, end,
                                               project_id, host)
-
-
-def instance_get_all_by_project(context, project_id):
-    """Get all instances belonging to a project."""
-    return IMPL.instance_get_all_by_project(context, project_id)
 
 
 def instance_get_all_by_host(context, host):
