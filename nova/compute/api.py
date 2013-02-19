@@ -3176,6 +3176,46 @@ class SecurityGroupAPI(base.Base):
         self.trigger_rules_refresh(context, id=security_group['id'])
         self.trigger_handler('security_group_rule_destroy', context, rule_ids)
 
+    def remove_default_rules(self, context, rule_ids):
+        for rule_id in rule_ids:
+            self.db.security_group_default_rule_destroy(context, rule_id)
+
+    def add_default_rules(self, context, vals):
+        rules = [self.db.security_group_default_rule_create(context, v)
+                 for v in vals]
+        return rules
+
+    def default_rule_exists(self, context, values):
+        """Indicates whether the specified rule values are already
+           defined in the default security group rules.
+        """
+        for rule in self.db.security_group_default_rule_list(context):
+            is_duplicate = True
+            keys = ('cidr', 'from_port', 'to_port', 'protocol')
+            for key in keys:
+                if rule.get(key) != values.get(key):
+                    is_duplicate = False
+                    break
+            if is_duplicate:
+                return rule.get('id') or True
+        return False
+
+    def get_all_default_rules(self, context):
+        try:
+            rules = self.db.security_group_default_rule_list(context)
+        except Exception:
+            msg = 'cannot get default security group rules'
+            raise exception.SecurityGroupDefaultRuleNotFound(msg)
+
+        return rules
+
+    def get_default_rule(self, context, id):
+        try:
+            return self.db.security_group_default_rule_get(context, id)
+        except exception.NotFound:
+            msg = _("Rule (%s) not found") % id
+            self.raise_not_found(msg)
+
     @staticmethod
     def raise_invalid_property(msg):
         raise NotImplementedError()

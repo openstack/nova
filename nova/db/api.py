@@ -1186,6 +1186,28 @@ def security_group_rule_count_by_group(context, security_group_id):
 ###################
 
 
+def security_group_default_rule_get(context, security_group_rule_default_id):
+    return IMPL.security_group_default_rule_get(context,
+                                                security_group_rule_default_id)
+
+
+def security_group_default_rule_destroy(context,
+                                        security_group_rule_default_id):
+    return IMPL.security_group_default_rule_destroy(
+        context, security_group_rule_default_id)
+
+
+def security_group_default_rule_create(context, values):
+    return IMPL.security_group_default_rule_create(context, values)
+
+
+def security_group_default_rule_list(context):
+    return IMPL.security_group_default_rule_list(context)
+
+
+###################
+
+
 def provider_fw_rule_create(context, rule):
     """Add a firewall rule at the provider level (all hosts & instances)."""
     return IMPL.provider_fw_rule_create(context, rule)

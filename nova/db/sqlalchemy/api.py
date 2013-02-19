@@ -3138,6 +3138,16 @@ def security_group_ensure_default(context, session=None):
                   'project_id': context.project_id}
         default_group = security_group_create(context, values,
                 session=session)
+        for default_rule in security_group_default_rule_list(context):
+            # This is suboptimal, it should be programmatic to know
+            # the values of the default_rule
+            rule_values = {'protocol': default_rule.protocol,
+                           'from_port': default_rule.from_port,
+                           'to_port': default_rule.to_port,
+                           'cidr': default_rule.cidr,
+                           'parent_group_id': default_group.id,
+            }
+            security_group_rule_create(context, rule_values)
         return (False, default_group)
 
 
@@ -3235,6 +3245,56 @@ def security_group_rule_count_by_group(context, security_group_id):
                    count()
 
 #
+###################
+
+
+def _security_group_rule_get_default_query(context, session=None):
+    return model_query(context, models.SecurityGroupIngressDefaultRule,
+                       session=session)
+
+
+@require_context
+def security_group_default_rule_get(context, security_group_rule_default_id,
+                                    session=None):
+    result = _security_group_rule_get_default_query(context, session=session).\
+                        filter_by(id=security_group_rule_default_id).\
+                        first()
+
+    if not result:
+        raise exception.SecurityGroupDefaultRuleNotFound(
+                                        rule_id=security_group_rule_default_id)
+
+    return result
+
+
+@require_admin_context
+def security_group_default_rule_destroy(context,
+                                        security_group_rule_default_id):
+    session = get_session()
+    with session.begin():
+        count = _security_group_rule_get_default_query(context,
+                                                       session=session).\
+                            filter_by(id=security_group_rule_default_id).\
+                            soft_delete()
+        if count == 0:
+            raise exception.SecurityGroupDefaultRuleNotFound(
+                                        rule_id=security_group_rule_default_id)
+
+
+@require_admin_context
+def security_group_default_rule_create(context, values):
+    security_group_default_rule_ref = models.SecurityGroupIngressDefaultRule()
+    security_group_default_rule_ref.update(values)
+    security_group_default_rule_ref.save()
+    return security_group_default_rule_ref
+
+
+@require_context
+def security_group_default_rule_list(context, session=None):
+    return _security_group_rule_get_default_query(context, session=session).\
+                                    all()
+
+
 ###################
 
 
