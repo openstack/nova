@@ -20,6 +20,8 @@
 
 import pprint
 
+from testtools import content
+
 from lxml import etree
 
 
@@ -226,8 +228,8 @@ class XMLMismatch(object):
 
     def get_details(self):
         return {
-            'expected': self.expected,
-            'actual': self.actual,
+            'expected': content.text_content(self.expected),
+            'actual': content.text_content(self.actual),
         }
 
 
