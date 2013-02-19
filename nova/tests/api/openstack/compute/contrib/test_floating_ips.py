@@ -364,8 +364,9 @@ class FloatingIpTest(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
-        self.assertTrue(rsp.status_int == 404)
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.manager._remove_floating_ip,
+                          req, 'test_inst', body)
 
     def test_floating_ip_associate_non_existent_ip(self):
         def fake_network_api_associate(self, context, instance,
@@ -414,8 +415,9 @@ class FloatingIpTest(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        rsp = self.manager._remove_floating_ip(req, wrong_uuid, body)
-        self.assertTrue(rsp.status_int == 404)
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.manager._remove_floating_ip,
+                          req, wrong_uuid, body)
 
     def test_floating_ip_disassociate_wrong_instance_id(self):
         def get_instance_by_floating_ip_addr(self, context, address):
@@ -428,8 +430,9 @@ class FloatingIpTest(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
-        self.assertTrue(rsp.status_int == 404)
+        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+                          self.manager._remove_floating_ip,
+                          req, 'test_inst', body)
 
     def test_floating_ip_disassociate_auto_assigned(self):
         def fake_get_floating_ip_addr_auto_assigned(self, context, address):
