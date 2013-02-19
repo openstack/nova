@@ -41,7 +41,6 @@ Background Concepts for Nova
    vmstates
    il8n
    filter_scheduler
-   multinic
    rpc
    hooks
 
@@ -74,7 +73,6 @@ Module Reference
    scheduler
    fakes
    nova
-   cloudpipe
    objectstore
    glance
 
