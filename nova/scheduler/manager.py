@@ -36,6 +36,7 @@ from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova import quota
@@ -291,4 +292,4 @@ class SchedulerManager(manager.Manager):
         filter_properties"""
         hosts = self.driver.select_hosts(context, request_spec,
             filter_properties)
-        return hosts
+        return jsonutils.to_primitive(hosts)
