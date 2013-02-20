@@ -360,14 +360,19 @@ class PowerVMOperator(object):
             LOG.debug(_("Shutting down the instance '%s'") % instance_name)
             self._operator.stop_lpar(instance_name)
 
+            #dperaza: LPAR should be deleted first so that vhost is
+            #cleanly removed and detached from disk device.
+            LOG.debug(_("Deleting the LPAR instance '%s'") % instance_name)
+            self._operator.remove_lpar(instance_name)
+
             if disk_name and destroy_disks:
                 # TODO(mrodden): we should also detach from the instance
                 # before we start deleting things...
-                self._disk_adapter.detach_volume_from_host(disk_name)
-                self._disk_adapter.delete_volume(disk_name)
-
-            LOG.debug(_("Deleting the LPAR instance '%s'") % instance_name)
-            self._operator.remove_lpar(instance_name)
+                volume_info = {'device_name': disk_name}
+                #Volume info dictionary might need more info that is lost when
+                #volume is detached from host so that it can be deleted
+                self._disk_adapter.detach_volume_from_host(volume_info)
+                self._disk_adapter.delete_volume(volume_info)
         except Exception:
             LOG.exception(_("PowerVM instance cleanup failed"))
             raise exception.PowerVMLPARInstanceCleanupFailed(
