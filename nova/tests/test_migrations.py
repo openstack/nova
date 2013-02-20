@@ -47,30 +47,37 @@ import datetime
 import netaddr
 import os
 import sqlalchemy
+import sqlalchemy.exc
 import urlparse
 import uuid
 
 from migrate.versioning import repository
 
-import nova.db.migration as migration
 import nova.db.sqlalchemy.migrate_repo
-from nova.db.sqlalchemy.migration import versioning_api as migration_api
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
+import nova.virt.baremetal.db.sqlalchemy.migrate_repo
 
 
 LOG = logging.getLogger(__name__)
 
 
 def _get_connect_string(backend,
-                        user="openstack_citest",
-                        passwd="openstack_citest",
-                        database="openstack_citest"):
+        user=None,
+        passwd=None,
+        database=None):
     """
     Try to get a connection with a very specific set of values, if we get
     these then we'll run the tests, otherwise they are skipped
     """
+    if not user:
+        user = "openstack_citest"
+    if not passwd:
+        passwd = "openstack_citest"
+    if not database:
+        database = "openstack_citest"
+
     if backend == "postgres":
         backend = "postgresql+psycopg2"
     elif backend == "mysql":
@@ -120,32 +127,66 @@ def get_table(engine, name):
     return sqlalchemy.Table(name, metadata, autoload=True)
 
 
+def get_mysql_connection_info(conn_pieces):
+    database = conn_pieces.path.strip('/')
+    loc_pieces = conn_pieces.netloc.split('@')
+    host = loc_pieces[1]
+    auth_pieces = loc_pieces[0].split(':')
+    user = auth_pieces[0]
+    password = ""
+    if len(auth_pieces) > 1:
+        if auth_pieces[1].strip():
+            password = "-p\"%s\"" % auth_pieces[1]
+
+    return (user, password, database, host)
+
+
+def get_pgsql_connection_info(conn_pieces):
+    database = conn_pieces.path.strip('/')
+    loc_pieces = conn_pieces.netloc.split('@')
+    host = loc_pieces[1]
+
+    auth_pieces = loc_pieces[0].split(':')
+    user = auth_pieces[0]
+    password = ""
+    if len(auth_pieces) > 1:
+        password = auth_pieces[1].strip()
+
+    return (user, password, database, host)
+
+
 class BaseMigrationTestCase(test.TestCase):
     """Base class fort testing migrations and migration utils."""
 
-    DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
+    def __init__(self, *args, **kwargs):
+        super(BaseMigrationTestCase, self).__init__(*args, **kwargs)
+
+        self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
                                        'test_migrations.conf')
-    # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
-    # to override the location of the config file for migration testing
-    CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
-                                      DEFAULT_CONFIG_FILE)
-    MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
-    REPOSITORY = repository.Repository(
-                                os.path.abspath(os.path.dirname(MIGRATE_FILE)))
+        # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
+        # to override the location of the config file for migration testing
+        self.CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
+                                      self.DEFAULT_CONFIG_FILE)
+        self.MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
+        self.REPOSITORY = repository.Repository(
+                        os.path.abspath(os.path.dirname(self.MIGRATE_FILE)))
+        self.INIT_VERSION = 0
+
+        self.snake_walk = False
+        self.test_databases = {}
+        self.migration = None
+        self.migration_api = None
 
     def setUp(self):
         super(BaseMigrationTestCase, self).setUp()
 
-        self.snake_walk = False
-        self.test_databases = {}
-
         # Load test databases from the config file. Only do this
         # once. No need to re-run this on each test...
-        LOG.debug('config_path is %s' % BaseMigrationTestCase.CONFIG_FILE_PATH)
-        if os.path.exists(BaseMigrationTestCase.CONFIG_FILE_PATH):
+        LOG.debug('config_path is %s' % self.CONFIG_FILE_PATH)
+        if os.path.exists(self.CONFIG_FILE_PATH):
             cp = ConfigParser.RawConfigParser()
             try:
-                cp.read(BaseMigrationTestCase.CONFIG_FILE_PATH)
+                cp.read(self.CONFIG_FILE_PATH)
                 defaults = cp.defaults()
                 for key, value in defaults.items():
                     self.test_databases[key] = value
@@ -192,34 +233,20 @@ class BaseMigrationTestCase(test.TestCase):
                 # We can execute the MySQL client to destroy and re-create
                 # the MYSQL database, which is easier and less error-prone
                 # than using SQLAlchemy to do this via MetaData...trust me.
-                database = conn_pieces.path.strip('/')
-                loc_pieces = conn_pieces.netloc.split('@')
-                host = loc_pieces[1]
-                auth_pieces = loc_pieces[0].split(':')
-                user = auth_pieces[0]
-                password = ""
-                if len(auth_pieces) > 1:
-                    if auth_pieces[1].strip():
-                        password = "-p\"%s\"" % auth_pieces[1]
+                (user, password, database, host) = \
+                        get_mysql_connection_info(conn_pieces)
                 sql = ("drop database if exists %(database)s; "
-                       "create database %(database)s;") % locals()
+                        "create database %(database)s;") % locals()
                 cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
                        "-e \"%(sql)s\"") % locals()
                 execute_cmd(cmd)
             elif conn_string.startswith('postgresql'):
-                database = conn_pieces.path.strip('/')
-                loc_pieces = conn_pieces.netloc.split('@')
-                host = loc_pieces[1]
-
-                auth_pieces = loc_pieces[0].split(':')
-                user = auth_pieces[0]
-                password = ""
-                if len(auth_pieces) > 1:
-                    password = auth_pieces[1].strip()
                 # note(krtaylor): File creation problems with tests in
                 # venv using .pgpass authentication, changed to
                 # PGPASSWORD environment variable which is no longer
                 # planned to be deprecated
+                (user, password, database, host) = \
+                        get_pgsql_connection_info(conn_pieces)
                 os.environ['PGPASSWORD'] = password
                 os.environ['PGUSER'] = user
                 # note(boris-42): We must create and drop database, we can't
@@ -236,18 +263,6 @@ class BaseMigrationTestCase(test.TestCase):
                 os.unsetenv('PGPASSWORD')
                 os.unsetenv('PGUSER')
 
-
-class TestMigrations(BaseMigrationTestCase):
-    """Test sqlalchemy-migrate migrations."""
-
-    def test_walk_versions(self):
-        """
-        Walks all version scripts for each tested database, ensuring
-        that there are no errors in the version scripts for each engine
-        """
-        for key, engine in self.engines.items():
-            self._walk_versions(engine, self.snake_walk)
-
     def test_mysql_connect_fail(self):
         """
         Test that we can trigger a mysql connection failure and we fail
@@ -256,16 +271,18 @@ class TestMigrations(BaseMigrationTestCase):
         if _is_backend_avail('mysql', user="openstack_cifail"):
             self.fail("Shouldn't have connected")
 
-    def test_mysql_opportunistically(self):
+    def _test_mysql_opportunistically(self, database=None):
         # Test that table creation on mysql only builds InnoDB tables
         if not _is_backend_avail('mysql'):
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("mysql")
+        connect_string = _get_connect_string("mysql", database=database)
+        (user, password, database, host) = \
+                get_mysql_connection_info(urlparse.urlparse(connect_string))
         engine = sqlalchemy.create_engine(connect_string)
-        self.engines["mysqlcitest"] = engine
-        self.test_databases["mysqlcitest"] = connect_string
+        self.engines[database] = engine
+        self.test_databases[database] = connect_string
 
         # build a fully populated mysql database with all the tables
         self._reset_databases()
@@ -275,14 +292,16 @@ class TestMigrations(BaseMigrationTestCase):
         # sanity check
         total = connection.execute("SELECT count(*) "
                                    "from information_schema.TABLES "
-                                   "where TABLE_SCHEMA='openstack_citest'")
+                                   "where TABLE_SCHEMA='%(database)s'" %
+                                   locals())
         self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
 
         noninnodb = connection.execute("SELECT count(*) "
                                        "from information_schema.TABLES "
-                                       "where TABLE_SCHEMA='openstack_citest' "
+                                       "where TABLE_SCHEMA='%(database)s' "
                                        "and ENGINE!='InnoDB' "
-                                       "and TABLE_NAME!='migrate_version'")
+                                       "and TABLE_NAME!='migrate_version'" %
+                                       locals())
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
         connection.close()
@@ -295,16 +314,18 @@ class TestMigrations(BaseMigrationTestCase):
         if _is_backend_avail('postgresql', user="openstack_cifail"):
             self.fail("Shouldn't have connected")
 
-    def test_postgresql_opportunistically(self):
+    def _test_postgresql_opportunistically(self, database=None):
         # Test postgresql database migration walk
         if not _is_backend_avail('postgres'):
             self.skipTest("postgresql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("postgres")
+        connect_string = _get_connect_string("postgres", database=database)
         engine = sqlalchemy.create_engine(connect_string)
-        self.engines["postgresqlcitest"] = engine
-        self.test_databases["postgresqlcitest"] = connect_string
+        (user, password, database, host) = \
+                get_mysql_connection_info(urlparse.urlparse(connect_string))
+        self.engines[database] = engine
+        self.test_databases[database] = connect_string
 
         # build a fully populated postgresql database with all the tables
         self._reset_databases()
@@ -317,19 +338,21 @@ class TestMigrations(BaseMigrationTestCase):
         # upgrades successfully.
 
         # Place the database under version control
-        migration_api.version_control(engine, TestMigrations.REPOSITORY,
-                                     migration.INIT_VERSION)
-        self.assertEqual(migration.INIT_VERSION,
-                migration_api.db_version(engine,
-                                         TestMigrations.REPOSITORY))
+        self.migration_api.version_control(engine,
+                self.REPOSITORY,
+                self.INIT_VERSION)
+        self.assertEqual(self.INIT_VERSION,
+                self.migration_api.db_version(engine,
+                                         self.REPOSITORY))
 
-        migration_api.upgrade(engine, TestMigrations.REPOSITORY,
-                              migration.INIT_VERSION + 1)
+        self.migration_api.upgrade(engine,
+                self.REPOSITORY,
+                self.INIT_VERSION + 1)
 
-        LOG.debug('latest version is %s' % TestMigrations.REPOSITORY.latest)
+        LOG.debug('latest version is %s' % self.REPOSITORY.latest)
 
-        for version in xrange(migration.INIT_VERSION + 2,
-                               TestMigrations.REPOSITORY.latest + 1):
+        for version in xrange(self.INIT_VERSION + 2,
+                              self.REPOSITORY.latest + 1):
             # upgrade -> downgrade -> upgrade
             self._migrate_up(engine, version, with_data=True)
             if snake_walk:
@@ -340,8 +363,8 @@ class TestMigrations(BaseMigrationTestCase):
             # Now walk it back down to 0 from the latest, testing
             # the downgrade paths.
             for version in reversed(
-                xrange(migration.INIT_VERSION + 2,
-                       TestMigrations.REPOSITORY.latest + 1)):
+                xrange(self.INIT_VERSION + 2,
+                       self.REPOSITORY.latest + 1)):
                 # downgrade -> upgrade -> downgrade
                 self._migrate_down(engine, version)
                 if snake_walk:
@@ -349,12 +372,12 @@ class TestMigrations(BaseMigrationTestCase):
                     self._migrate_down(engine, version)
 
     def _migrate_down(self, engine, version):
-        migration_api.downgrade(engine,
-                                TestMigrations.REPOSITORY,
+        self.migration_api.downgrade(engine,
+                                self.REPOSITORY,
                                 version)
         self.assertEqual(version,
-                         migration_api.db_version(engine,
-                                                  TestMigrations.REPOSITORY))
+                         self.migration_api.db_version(engine,
+                                                  self.REPOSITORY))
 
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.
@@ -372,13 +395,13 @@ class TestMigrations(BaseMigrationTestCase):
                 if prerun:
                     data = prerun(engine)
 
-                migration_api.upgrade(engine,
-                                          TestMigrations.REPOSITORY,
-                                          version)
+                self.migration_api.upgrade(engine,
+                                      self.REPOSITORY,
+                                      version)
                 self.assertEqual(
                     version,
-                    migration_api.db_version(engine,
-                                             TestMigrations.REPOSITORY))
+                    self.migration_api.db_version(engine,
+                                             self.REPOSITORY))
 
             if with_data:
                 check = getattr(self, "_check_%d" % version, None)
@@ -388,6 +411,50 @@ class TestMigrations(BaseMigrationTestCase):
             LOG.error("Failed to migrate to version %s on engine %s" %
                       (version, engine))
             raise
+
+
+class TestNovaMigrations(BaseMigrationTestCase):
+    """Test sqlalchemy-migrate migrations."""
+
+    def __init__(self, *args, **kwargs):
+        super(TestNovaMigrations, self).__init__(*args, **kwargs)
+
+        self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
+                                       'test_migrations.conf')
+        # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
+        # to override the location of the config file for migration testing
+        self.CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
+                                      self.DEFAULT_CONFIG_FILE)
+        self.MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
+        self.REPOSITORY = repository.Repository(
+                        os.path.abspath(os.path.dirname(self.MIGRATE_FILE)))
+
+    def setUp(self):
+        super(TestNovaMigrations, self).setUp()
+
+        if self.migration is None:
+            self.migration = __import__('nova.db.migration',
+                    globals(), locals(), ['INIT_VERSION'], -1)
+            self.INIT_VERSION = self.migration.INIT_VERSION
+        if self.migration_api is None:
+            temp = __import__('nova.db.sqlalchemy.migration',
+                    globals(), locals(), ['versioning_api'], -1)
+            self.migration_api = temp.versioning_api
+
+    def tearDown(self):
+        super(TestNovaMigrations, self).tearDown()
+
+    def test_walk_versions(self):
+        for key, engine in self.engines.items():
+            self._walk_versions(engine, self.snake_walk)
+
+    def test_mysql_opportunistically(self):
+        self._test_mysql_opportunistically(
+                database='openstack_citest')
+
+    def test_postgresql_opportunistically(self):
+        self._test_postgresql_opportunistically(
+                database='openstack_citest')
 
     def _prerun_134(self, engine):
         now = timeutils.utcnow()
@@ -792,3 +859,60 @@ class TestMigrations(BaseMigrationTestCase):
     def _check_156(self, engine, data):
         # recheck the 149 data
         self._check_149(engine, data)
+
+
+class TestBaremetalMigrations(BaseMigrationTestCase):
+    """Test sqlalchemy-migrate migrations."""
+
+    def __init__(self, *args, **kwargs):
+        super(TestBaremetalMigrations, self).__init__(*args, **kwargs)
+
+        self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
+                                       'test_baremetal_migrations.conf')
+        # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
+        # to override the location of the config file for migration testing
+        self.CONFIG_FILE_PATH = os.environ.get(
+                'BAREMETAL_TEST_MIGRATIONS_CONF',
+                self.DEFAULT_CONFIG_FILE)
+        self.MIGRATE_FILE = \
+                nova.virt.baremetal.db.sqlalchemy.migrate_repo.__file__
+        self.REPOSITORY = repository.Repository(
+                        os.path.abspath(os.path.dirname(self.MIGRATE_FILE)))
+
+    def setUp(self):
+        super(TestBaremetalMigrations, self).setUp()
+
+        if self.migration is None:
+            self.migration = __import__('nova.virt.baremetal.db.migration',
+                    globals(), locals(), ['INIT_VERSION'], -1)
+            self.INIT_VERSION = self.migration.INIT_VERSION
+        if self.migration_api is None:
+            temp = __import__('nova.virt.baremetal.db.sqlalchemy.migration',
+                    globals(), locals(), ['versioning_api'], -1)
+            self.migration_api = temp.versioning_api
+
+    def tearDown(self):
+        super(TestBaremetalMigrations, self).tearDown()
+
+    def test_walk_versions(self):
+        for key, engine in self.engines.items():
+            self._walk_versions(engine, self.snake_walk)
+
+    def test_mysql_opportunistically(self):
+        self._test_mysql_opportunistically(
+                database='openstack_baremetal_citest')
+
+    def test_postgresql_opportunistically(self):
+        self._test_postgresql_opportunistically(
+                database='openstack_baremetal_citest')
+
+    def _prerun_002(self, engine):
+        data = [{'id': 1, 'key': 'fake-key', 'image_path': '/dev/null',
+                 'pxe_config_path': '/dev/null/', 'root_mb': 0, 'swap_mb': 0}]
+        table = get_table(engine, 'bm_deployments')
+        engine.execute(table.insert(), data)
+        return data
+
+    def _check_002(self, engine, data):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          get_table, engine, 'bm_deployments')

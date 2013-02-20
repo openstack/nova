@@ -374,16 +374,14 @@ class PXE(base.NodeDriver):
 
         deployment_key = bm_utils.random_alnum(32)
         deployment_iscsi_iqn = "iqn-%s" % instance['uuid']
-        deployment_id = db.bm_deployment_create(
-                            context,
-                            deployment_key,
-                            image_file_path,
-                            pxe_config_file_path,
-                            root_mb,
-                            swap_mb
-                        )
+        db.bm_node_update(context, node['id'],
+                {'deploy_key': deployment_key,
+                 'image_path': image_file_path,
+                 'pxe_config_path': pxe_config_file_path,
+                 'root_mb': root_mb,
+                 'swap_mb': swap_mb})
         pxe_config = build_pxe_config(
-                    deployment_id,
+                    node['id'],
                     deployment_key,
                     deployment_iscsi_iqn,
                     image_info['deploy_kernel'][1],
@@ -401,6 +399,16 @@ class PXE(base.NodeDriver):
 
     def deactivate_bootloader(self, context, node, instance):
         """Delete PXE bootloader images and config."""
+        try:
+            db.bm_node_update(context, node['id'],
+                    {'deploy_key': None,
+                     'image_path': None,
+                     'pxe_config_path': None,
+                     'root_mb': 0,
+                     'swap_mb': 0})
+        except exception.InstanceNotFound:
+            pass
+
         try:
             image_info = get_tftp_image_info(instance)
         except exception.NovaException:

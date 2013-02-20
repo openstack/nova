@@ -47,6 +47,7 @@ from nova import config
 from nova import context as nova_context
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 
 
@@ -234,22 +235,27 @@ class Worker(threading.Thread):
         while not self.stop:
             try:
                 # Set timeout to check self.stop periodically
-                (deployment_id, params) = QUEUE.get(block=True,
+                (node_id, params) = QUEUE.get(block=True,
                                                     timeout=self.queue_timeout)
             except Queue.Empty:
                 pass
             else:
                 # Requests comes here from BareMetalDeploy.post()
-                LOG.info("start deployment: %s, %s", deployment_id, params)
+                LOG.info(_('start deployment for node %(node_id)s, '
+                           'params %(params)s') % locals())
+                context = nova_context.get_admin_context()
                 try:
+                    db.bm_node_update(context, node_id,
+                          {'task_state': baremetal_states.DEPLOYING})
                     deploy(**params)
                 except Exception:
-                    LOG.exception('deployment %s failed' % deployment_id)
+                    LOG.error(_('deployment to node %s failed') % node_id)
+                    db.bm_node_update(context, node_id,
+                          {'task_state': baremetal_states.DEPLOYFAIL})
                 else:
-                    LOG.info("deployment %s done", deployment_id)
-                finally:
-                    context = nova_context.get_admin_context()
-                    db.bm_deployment_destroy(context, deployment_id)
+                    LOG.info(_('deployment to node %s done') % node_id)
+                    db.bm_node_update(context, node_id,
+                          {'task_state': baremetal_states.DEPLOYDONE})
 
 
 class BareMetalDeploy(object):
@@ -276,8 +282,8 @@ class BareMetalDeploy(object):
         x = inpt.read(length)
         q = dict(cgi.parse_qsl(x))
         try:
-            deployment_id = q['i']
-            deployment_key = q['k']
+            node_id = q['i']
+            deploy_key = q['k']
             address = q['a']
             port = q.get('p', '3260')
             iqn = q['n']
@@ -287,9 +293,9 @@ class BareMetalDeploy(object):
             return "parameter '%s' is not defined" % e
 
         context = nova_context.get_admin_context()
-        d = db.bm_deployment_get(context, deployment_id)
+        d = db.bm_node_get(context, node_id)
 
-        if d['key'] != deployment_key:
+        if d['deploy_key'] != deploy_key:
             start_response('400 Bad Request', [('Content-type', 'text/plain')])
             return 'key is not match'
 
@@ -306,8 +312,8 @@ class BareMetalDeploy(object):
         if not self.worker.isAlive():
             self.worker = Worker()
             self.worker.start()
-        LOG.info("request is queued: %s, %s", deployment_id, params)
-        QUEUE.put((deployment_id, params))
+        LOG.info("request is queued: node %s, params %s", node_id, params)
+        QUEUE.put((node_id, params))
         # Requests go to Worker.run()
         start_response('200 OK', [('Content-type', 'text/plain')])
         return ''

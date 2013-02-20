@@ -22,10 +22,11 @@ import sys
 import tempfile
 import time
 
+import mox
+
 from nova import test
-
 from nova.tests.baremetal.db import base as bm_db_base
-
+from nova.virt.baremetal import db as bm_db
 
 TOPDIR = os.path.normpath(os.path.join(
                             os.path.dirname(os.path.abspath(__file__)),
@@ -93,11 +94,19 @@ class WorkerTestCase(bm_db_base.BMDBTestCase):
             history.append(params)
 
         self.stubs.Set(bmdh, 'deploy', fake_deploy)
+        self.mox.StubOutWithMock(bm_db, 'bm_node_update')
+        # update is called twice inside Worker.run
+        for i in range(6):
+            bm_db.bm_node_update(mox.IgnoreArg(), mox.IgnoreArg(),
+                                        mox.IgnoreArg())
+        self.mox.ReplayAll()
+
         params_list = [{'fake1': ''}, {'fake2': ''}, {'fake3': ''}]
         for (dep_id, params) in enumerate(params_list):
             bmdh.QUEUE.put((dep_id, params))
         self.wait_queue_empty(1)
         self.assertEqual(params_list, history)
+        self.mox.VerifyAll()
 
     def test_run_with_failing_deploy(self):
         """Check a worker keeps on running even if deploy() raises
@@ -111,11 +120,19 @@ class WorkerTestCase(bm_db_base.BMDBTestCase):
             raise Exception('test')
 
         self.stubs.Set(bmdh, 'deploy', fake_deploy)
+        self.mox.StubOutWithMock(bm_db, 'bm_node_update')
+        # update is called twice inside Worker.run
+        for i in range(6):
+            bm_db.bm_node_update(mox.IgnoreArg(), mox.IgnoreArg(),
+                                        mox.IgnoreArg())
+        self.mox.ReplayAll()
+
         params_list = [{'fake1': ''}, {'fake2': ''}, {'fake3': ''}]
         for (dep_id, params) in enumerate(params_list):
             bmdh.QUEUE.put((dep_id, params))
         self.wait_queue_empty(1)
         self.assertEqual(params_list, history)
+        self.mox.VerifyAll()
 
 
 class PhysicalWorkTestCase(test.TestCase):
@@ -174,6 +191,8 @@ class PhysicalWorkTestCase(test.TestCase):
 
         bmdh.deploy(address, port, iqn, lun, image_path, pxe_config_path,
                     root_mb, swap_mb)
+
+        self.mox.VerifyAll()
 
     def test_always_logout_iscsi(self):
         """logout_iscsi() must be called once login_iscsi() is called."""
