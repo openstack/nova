@@ -28,8 +28,10 @@ import random
 LOG = logging.getLogger(__name__)
 _default_driver = 'db'
 servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
-                                   default=_default_driver,
-                                   help='The driver for servicegroup service.')
+                                     default=_default_driver,
+                                     help='The driver for servicegroup '
+                                          'service (valid options are: '
+                                          'db, zk, mc)')
 
 CONF = cfg.CONF
 CONF.register_opt(servicegroup_driver_opt)
@@ -40,7 +42,8 @@ class API(object):
     _driver = None
     _driver_name_class_mapping = {
         'db': 'nova.servicegroup.drivers.db.DbDriver',
-        'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver'
+        'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver',
+        'mc': 'nova.servicegroup.drivers.mc.MemcachedDriver'
     }
 
     def __new__(cls, *args, **kwargs):
