@@ -88,9 +88,15 @@ def periodic_task(*args, **kwargs):
         1. Without arguments '@periodic_task', this will be run on every cycle
            of the periodic scheduler.
 
-        2. With arguments, @periodic_task(periodic_spacing=N), this will be
-           run on approximately every N seconds. If this number is negative the
-           periodic task will be disabled.
+        2. With arguments:
+           @periodic_task(spacing=N [, run_immediately=[True|False]])
+           this will be run on approximately every N seconds. If this number is
+           negative the periodic task will be disabled. If the run_immediately
+           argument is provided and has a value of 'True', the first run of the
+           task will be shortly after task scheduler starts.  If
+           run_immediately is omitted or set to 'False', the first time the
+           task runs will be approximately N seconds after the task scheduler
+           starts.
     """
     def decorator(f):
         # Test for old style invocation
@@ -107,7 +113,10 @@ def periodic_task(*args, **kwargs):
 
         # Control frequency
         f._periodic_spacing = kwargs.pop('spacing', 0)
-        f._periodic_last_run = time.time()
+        if kwargs.pop('run_immediately', False):
+            f._periodic_last_run = None
+        else:
+            f._periodic_last_run = time.time()
         return f
 
     # NOTE(sirp): The `if` is necessary to allow the decorator to be used with
@@ -212,6 +221,8 @@ class Manager(base.Base):
 
             # If a periodic task is _nearly_ due, then we'll run it early
             if self._periodic_spacing[task_name] is None:
+                wait = 0
+            elif self._periodic_last_run[task_name] is None:
                 wait = 0
             else:
                 due = (self._periodic_last_run[task_name] +

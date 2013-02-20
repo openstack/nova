@@ -3356,7 +3356,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 capability['host_ip'] = CONF.my_ip
             self.update_service_capabilities(capabilities)
 
-    @manager.periodic_task(spacing=600.0)
+    @manager.periodic_task(spacing=600.0, run_immediately=True)
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
