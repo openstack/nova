@@ -29,7 +29,6 @@ import re
 import subprocess
 import sys
 import tokenize
-import warnings
 
 import pep8
 
@@ -49,8 +48,6 @@ logging.disable('LOG')
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session',
                      'nova.openstack.common.log.logging',
                      'nova.db.sqlalchemy.migration.versioning_api']
-# imp.find_module() doesn't support namespace packages
-IMPORT_EXCEPTIONS += ['oslo', 'paste']
 # Paste is missing a __init__ in top level directory
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
 END_DOCSTRING_TRIPLE = ['"""', "'''"]
@@ -191,38 +188,33 @@ def nova_import_rules(logical_line):
 
     def is_module_for_sure(mod, search_path=sys.path):
         try:
-            while '.' in mod:
-                pack_name, _sep, mod = mod.partition('.')
+            mod_name = mod
+            while '.' in mod_name:
+                pack_name, _sep, mod_name = mod.partition('.')
                 f, p, d = imp.find_module(pack_name, search_path)
                 search_path = [p]
-            imp.find_module(mod, search_path)
+            imp.find_module(mod_name, search_path)
         except ImportError:
-            return False
+            try:
+                # NOTE(vish): handle namespace modules
+                module = __import__(mod)
+            except ImportError, exc:
+                # NOTE(vish): the import error might be due
+                #             to a missing dependency
+                missing = str(exc).split()[-1]
+                if missing != mod.split('.')[-1]:
+                    _missingImport.add(missing)
+                    return True
+                return False
         return True
 
-    def is_module_for_sure_cached(mod):
+    def is_module(mod):
+        """Checks for non module imports."""
         if mod in modules_cache:
             return modules_cache[mod]
         res = is_module_for_sure(mod)
         modules_cache[mod] = res
         return res
-
-    def is_module(mod):
-        """Checks for non module imports.
-
-        If can't find module on first try, recursively check for the parent
-        modules.
-        When parsing 'from x import y,' x is the parent.
-        """
-        if is_module_for_sure_cached(mod):
-            return True
-        parts = mod.split('.')
-        for i in range(len(parts) - 1, 0, -1):
-            path = '.'.join(parts[0:i])
-            if is_module_for_sure_cached(path):
-                return False
-        _missingImport.add(mod)
-        return True
 
     current_path = os.path.dirname(pep8.current_file)
     current_mod = os.path.basename(pep8.current_file)
@@ -264,7 +256,7 @@ def nova_import_rules(logical_line):
         # The guestfs module now imports guestfs
         mod = split_line[1]
         if (current_mod != mod and
-            not is_module_for_sure_cached(mod) and
+            not is_module(mod) and
             is_module_for_sure(mod, [current_path])):
                 yield 0, ("N304: No relative imports."
                           " '%s' is a relative import"
