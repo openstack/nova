@@ -2012,6 +2012,10 @@ class ServicesJsonTest(ApiSampleTestBase):
                                      subs, response)
 
 
+class ServicesXmlTest(ServicesJsonTest):
+    ctype = 'xml'
+
+
 class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.simple_tenant_usage."
                       "Simple_tenant_usage")
