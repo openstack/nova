@@ -21,6 +21,7 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import instance_actions
 from nova import db
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova.openstack.common import policy
 from nova import test
@@ -98,7 +99,12 @@ class InstanceActionsTest(test.TestCase):
 
     def test_list_actions(self):
         def fake_get_actions(context, uuid):
-            return self.fake_actions[uuid].values()
+            actions = []
+            for act in self.fake_actions[uuid].itervalues():
+                action = models.InstanceAction()
+                action.update(act)
+                actions.append(action)
+            return actions
 
         self.stubs.Set(db, 'actions_get', fake_get_actions)
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-instance-actions')
@@ -110,10 +116,17 @@ class InstanceActionsTest(test.TestCase):
 
     def test_get_action_with_events_allowed(self):
         def fake_get_action(context, uuid, request_id):
-            return self.fake_actions[uuid][request_id]
+            action = models.InstanceAction()
+            action.update(self.fake_actions[uuid][request_id])
+            return action
 
         def fake_get_events(context, action_id):
-            return self.fake_events[action_id]
+            events = []
+            for evt in self.fake_events[action_id]:
+                event = models.InstanceActionEvent()
+                event.update(evt)
+                events.append(event)
+            return events
 
         self.stubs.Set(db, 'action_get_by_request_id', fake_get_action)
         self.stubs.Set(db, 'action_events_get', fake_get_events)
