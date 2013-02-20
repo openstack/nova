@@ -184,10 +184,15 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
 class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def setUp(self):
         super(_VirtDriverTestCase, self).setUp()
+
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         self.connection = importutils.import_object(self.driver_module,
                                                     fake.FakeVirtAPI())
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = fake_image.FakeImageService()
+
+    def tearDown(self):
+        super(_VirtDriverTestCase, self).tearDown()
 
     def _get_running_instance(self):
         instance_ref = test_utils.get_test_instance()

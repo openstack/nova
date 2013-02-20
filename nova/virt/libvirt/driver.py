@@ -2006,8 +2006,7 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = conf.to_xml()
 
         if write_to_disk:
-            instance_dir = os.path.join(CONF.instances_path,
-                                        instance["name"])
+            instance_dir = libvirt_utils.get_instance_path(instance)
             xml_path = os.path.join(instance_dir, 'libvirt.xml')
             libvirt_utils.write_to_file(xml_path, xml)
 

@@ -43,6 +43,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.tests import fake_network
@@ -135,7 +136,8 @@ class FakeVirtDomain(object):
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
         super(CacheConcurrencyTestCase, self).setUp()
-        self.flags(instances_path='nova.compute.manager')
+
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
 
         # utils.synchronized() will create the lock_path for us if it
         # doesn't already exist. It will also delete it when it's done,
@@ -165,19 +167,18 @@ class CacheConcurrencyTestCase(test.TestCase):
             fake_libvirt_utils))
 
     def tearDown(self):
-        # Make sure the lock_path for this test is cleaned up
-        if os.path.exists(self.lock_path):
-            shutil.rmtree(self.lock_path)
-
         super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
         # Ensures that the same fname cache runs at a sequentially.
+        uuid = uuidutils.generate_uuid()
+
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image({'name': 'instance'},
+        thr1 = eventlet.spawn(backend.image({'name': 'instance',
+                                             'uuid': uuid},
                                             'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -188,7 +189,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image({'name': 'instance'},
+        thr2 = eventlet.spawn(backend.image({'name': 'instance',
+                                             'uuid': uuid},
                                             'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -209,11 +211,14 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_different_fname_concurrency(self):
         # Ensures that two different fname caches are concurrent.
+        uuid = uuidutils.generate_uuid()
+
         backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image({'name': 'instance'},
+        thr1 = eventlet.spawn(backend.image({'name': 'instance',
+                                             'uuid': uuid},
                                             'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -224,7 +229,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image({'name': 'instance'},
+        thr2 = eventlet.spawn(backend.image({'name': 'instance',
+                                             'uuid': uuid},
                                             'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -2357,8 +2363,8 @@ class LibvirtConnTestCase(test.TestCase):
             ret = conn.pre_live_migration(c, inst_ref, vol, nw_info,
                                           migrate_data)
             self.assertEqual(ret, None)
-            self.assertTrue(os.path.exists('%s/%s/' %
-                           (tmpdir, inst_ref['name'])))
+            self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
+                                                       inst_ref['uuid'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
 
     def test_pre_block_migration_works_correctly(self):
@@ -2394,7 +2400,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      dummyjson)
 
             self.assertTrue(os.path.exists('%s/%s/' %
-                                           (tmpdir, instance_ref['name'])))
+                                           (tmpdir, instance_ref['uuid'])))
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
