@@ -561,14 +561,31 @@ class NetworkCommands(object):
         #1) Associate (set not None value given by project/host parameter)
         #2) Disassociate (set None by disassociate parameter)
         #3) Keep unchanged (project/host key is not added to 'net')
+        if dis_project:
+            net['project_id'] = None
+        if dis_host:
+            net['host'] = None
+
+        # The --disassociate-X are boolean options, but if they user
+        # mistakenly provides a value, it will be used as a positional argument
+        # and be erroneously interepreted as some other parameter (e.g.
+        # a project instead of host value). The safest thing to do is error-out
+        # with a message indicating that there is probably a problem with
+        # how the disassociate modifications are being used.
+        if dis_project or dis_host:
+            if project or host:
+                error_msg = "ERROR: Unexpected arguments provided. Please " \
+                    "use separate commands."
+                print(error_msg)
+                sys.exit(1)
+            db.network_update(admin_context, network['id'], net)
+            return
+
         if project:
             net['project_id'] = project
-        elif dis_project:
-            net['project_id'] = None
         if host:
             net['host'] = host
-        elif dis_host:
-            net['host'] = None
+
         db.network_update(admin_context, network['id'], net)
 
 
