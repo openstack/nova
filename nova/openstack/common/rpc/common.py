@@ -49,8 +49,8 @@ deserialize_msg().
 The current message format (version 2.0) is very simple.  It is:
 
     {
-        'nova.version': <RPC Envelope Version as a String>,
-        'nova.message': <Application Message Payload, JSON encoded>
+        'oslo.version': <RPC Envelope Version as a String>,
+        'oslo.message': <Application Message Payload, JSON encoded>
     }
 
 Message format version '1.0' is just considered to be the messages we sent
@@ -66,8 +66,8 @@ to the messaging libraries as a dict.
 '''
 _RPC_ENVELOPE_VERSION = '2.0'
 
-_VERSION_KEY = 'nova.version'
-_MESSAGE_KEY = 'nova.message'
+_VERSION_KEY = 'oslo.version'
+_MESSAGE_KEY = 'oslo.message'
 
 
 # TODO(russellb) Turn this on after Grizzly.
