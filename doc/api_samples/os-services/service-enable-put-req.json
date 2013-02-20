@@ -1,4 +1,4 @@
 {
     "host": "host1",
-    "service": "nova-compute"
+    "binary": "nova-compute"
 }

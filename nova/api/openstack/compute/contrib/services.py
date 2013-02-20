@@ -23,6 +23,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova import servicegroup
+from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'services')
 CONF = cfg.CONF
@@ -39,6 +40,7 @@ class ServicesIndexTemplate(xmlutil.TemplateBuilder):
         elem.set('status')
         elem.set('state')
         elem.set('updated_at')
+        elem.set('disabled_reason')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -49,6 +51,7 @@ class ServiceUpdateTemplate(xmlutil.TemplateBuilder):
         root.set('host')
         root.set('binary')
         root.set('status')
+        root.set('disabled_reason')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -62,21 +65,20 @@ class ServiceUpdateDeserializer(wsgi.XMLDeserializer):
             return service
         service['host'] = service_node.getAttribute('host')
         service['binary'] = service_node.getAttribute('binary')
+        service['disabled_reason'] = service_node.getAttribute(
+                                                    'disabled_reason')
 
         return dict(body=service)
 
 
 class ServiceController(object):
 
-    def __init__(self):
+    def __init__(self, ext_mgr=None, *args, **kwargs):
         self.host_api = compute.HostAPI()
         self.servicegroup_api = servicegroup.API()
+        self.ext_mgr = ext_mgr
 
-    @wsgi.serializers(xml=ServicesIndexTemplate)
-    def index(self, req):
-        """
-        Return a list of all running services. Filter by host & service name.
-        """
+    def _get_services(self, req):
         context = req.environ['nova.context']
         authorize(context)
         services = self.host_api.service_get_all(
@@ -93,18 +95,49 @@ class ServiceController(object):
         if binary:
             services = [s for s in services if s['binary'] == binary]
 
+        return services
+
+    def _get_service_detail(self, svc, detailed):
+        alive = self.servicegroup_api.service_is_up(svc)
+        state = (alive and "up") or "down"
+        active = 'enabled'
+        if svc['disabled']:
+            active = 'disabled'
+        service_detail = {'binary': svc['binary'], 'host': svc['host'],
+                     'zone': svc['availability_zone'],
+                     'status': active, 'state': state,
+                     'updated_at': svc['updated_at']}
+        if detailed:
+            service_detail['disabled_reason'] = svc['disabled_reason']
+
+        return service_detail
+
+    def _get_services_list(self, req, detailed):
+        services = self._get_services(req)
         svcs = []
         for svc in services:
-            alive = self.servicegroup_api.service_is_up(svc)
-            art = (alive and "up") or "down"
-            active = 'enabled'
-            if svc['disabled']:
-                active = 'disabled'
-            svcs.append({"binary": svc['binary'], 'host': svc['host'],
-                         'zone': svc['availability_zone'],
-                         'status': active, 'state': art,
-                         'updated_at': svc['updated_at']})
-        return {'services': svcs}
+            svcs.append(self._get_service_detail(svc, detailed))
+
+        return svcs
+
+    def _is_valid_as_reason(self, reason):
+        try:
+            utils.check_string_length(reason.strip(), 'Disabled reason',
+                                      min_length=1, max_length=255)
+        except exception.InvalidInput:
+            return False
+
+        return True
+
+    @wsgi.serializers(xml=ServicesIndexTemplate)
+    def index(self, req):
+        """
+        Return a list of all running services. Filter by host & service name.
+        """
+        detailed = self.ext_mgr.is_loaded('os-extended-services')
+        services = self._get_services_list(req, detailed)
+
+        return {'services': services}
 
     @wsgi.deserializers(xml=ServiceUpdateDeserializer)
     @wsgi.serializers(xml=ServiceUpdateTemplate)
@@ -113,28 +146,49 @@ class ServiceController(object):
         context = req.environ['nova.context']
         authorize(context)
 
+        ext_loaded = self.ext_mgr.is_loaded('os-extended-services')
         if id == "enable":
             disabled = False
-        elif id == "disable":
+            status = "enabled"
+        elif (id == "disable" or
+                (id == "disable-log-reason" and ext_loaded)):
             disabled = True
+            status = "disabled"
         else:
-            raise webob.exc.HTTPNotFound(_("Unknown action"))
-
-        status = id + 'd'
-
+            raise webob.exc.HTTPNotFound("Unknown action")
         try:
             host = body['host']
             binary = body['binary']
+            ret_value = {
+                'service': {
+                    'host': host,
+                    'binary': binary,
+                    'status': status,
+                },
+            }
+            status_detail = {'disabled': disabled}
+            if id == "disable-log-reason":
+                reason = body['disabled_reason']
+                if not self._is_valid_as_reason(reason):
+                    msg = _('Disabled reason contains invalid characters '
+                            'or is too long')
+                    raise webob.exc.HTTPUnprocessableEntity(detail=msg)
+
+                status_detail['disabled_reason'] = reason
+                ret_value['service']['disabled_reason'] = reason
         except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+            msg = _('Invalid attribute in the request')
+            if 'host' in body and 'binary' in body:
+                msg = _('Missing disabled reason field')
+            raise webob.exc.HTTPUnprocessableEntity(detail=msg)
 
         try:
             svc = self.host_api.service_update(context, host, binary,
-                                               {'disabled': disabled})
-        except exception.ServiceNotFound as exc:
+                                               status_detail)
+        except exception.ServiceNotFound:
             raise webob.exc.HTTPNotFound(_("Unknown service"))
 
-        return {'service': {'host': host, 'binary': binary, 'status': status}}
+        return ret_value
 
 
 class Services(extensions.ExtensionDescriptor):
@@ -148,6 +202,7 @@ class Services(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
         resource = extensions.ResourceExtension('os-services',
-                                                ServiceController())
+                                               ServiceController(self.ext_mgr))
+
         resources.append(resource)
         return resources

@@ -1626,6 +1626,16 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # check that groups does not exist
         self._check_no_group_instance_tables(engine)
 
+    def _check_188(self, engine, data):
+        services = db_utils.get_table(engine, 'services')
+        rows = services.select().execute().fetchall()
+        self.assertEqual(rows[0]['disabled_reason'], None)
+
+    def _post_downgrade_188(self, engine):
+        services = db_utils.get_table(engine, 'services')
+        rows = services.select().execute().fetchall()
+        self.assertFalse('disabled_reason' in rows[0])
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

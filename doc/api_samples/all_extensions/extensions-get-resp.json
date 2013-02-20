@@ -497,6 +497,14 @@
             "updated": "2012-10-28T00:00:00-00:00"
         },
         {
+            "alias": "os-extended-services",
+            "description": "Extended services support.",
+            "links": [],
+            "name": "ExtendedServices",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
+            "updated": "2013-05-17T00:00:00-00:00"
+        },
+        {
             "alias": "os-simple-tenant-usage",
             "description": "Simple tenant usage extension.",
             "links": [],

@@ -361,6 +361,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-services",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedServices",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-fping",
             "description": "%(text)s",
             "links": [],
