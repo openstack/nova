@@ -327,7 +327,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         #so we scan active sessions to see if the node is logged in.
         out = self._run_iscsiadm_bare(["-m", "session"],
                                       run_as_root=True,
-                                      check_exit_code=[0, 1])[0] or ""
+                                      check_exit_code=[0, 1, 21])[0] or ""
 
         portals = [{'portal': p.split(" ")[2], 'iqn': p.split(" ")[3]}
                    for p in out.splitlines() if p.startswith("tcp:")]
