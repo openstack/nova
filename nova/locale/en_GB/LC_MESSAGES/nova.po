@@ -4128,8 +4128,8 @@ msgstr "Pid %d is stale, relaunching radvd"
 
 #: nova/network/linux_net.py:1126
 #, python-format
-msgid "Starting VLAN inteface %s"
-msgstr "Starting VLAN inteface %s"
+msgid "Starting VLAN interface %s"
+msgstr "Starting VLAN interface %s"
 
 #: nova/network/linux_net.py:1162
 #, python-format

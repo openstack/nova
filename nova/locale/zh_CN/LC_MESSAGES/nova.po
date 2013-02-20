@@ -4206,7 +4206,7 @@ msgstr "Pid %d 过期了，重新启动radvd"
 
 #: nova/network/linux_net.py:1126
 #, python-format
-msgid "Starting VLAN inteface %s"
+msgid "Starting VLAN interface %s"
 msgstr "正在开启VLAN接口 %s"
 
 #: nova/network/linux_net.py:1162
