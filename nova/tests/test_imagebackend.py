@@ -22,6 +22,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils
+from nova.tests import fake_utils
 from nova.virt.libvirt import imagebackend
 
 CONF = cfg.CONF
@@ -124,6 +125,27 @@ class _ImageTestCase(object):
         image.cache(fn, self.TEMPLATE)
 
         self.mox.VerifyAll()
+
+    def test_prealloc_image(self):
+        CONF.set_override('preallocate_images', 'space')
+
+        fake_utils.fake_execute_clear_log()
+        fake_utils.stub_out_utils_execute(self.stubs)
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        def fake_fetch(target, *args, **kwargs):
+            return
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+
+        # Call twice to verify testing fallocate is only called once.
+        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+
+        self.assertEqual(fake_utils.fake_execute_get_log(),
+            ['fallocate -n -l 1 %s.fallocate_test' % self.PATH,
+             'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
+             'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
 
 
 class RawTestCase(_ImageTestCase, test.TestCase):
@@ -360,6 +382,22 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
                           self.TEMPLATE_PATH, self.SIZE,
                           ephemeral_size=None)
         self.mox.VerifyAll()
+
+    def test_prealloc_image(self):
+        CONF.set_override('preallocate_images', 'space')
+
+        fake_utils.fake_execute_clear_log()
+        fake_utils.stub_out_utils_execute(self.stubs)
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        def fake_fetch(target, *args, **kwargs):
+            return
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+
+        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+
+        self.assertEqual(fake_utils.fake_execute_get_log(), [])
 
 
 class BackendTestCase(test.TestCase):
