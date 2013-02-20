@@ -1,0 +1,47 @@
+# Copyright (c) 2011-2013 OpenStack, LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from nova import db
+from nova.openstack.common import log as logging
+from nova.scheduler import filters
+
+LOG = logging.getLogger(__name__)
+
+
+class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
+    """Isolate tenants in specific aggregates."""
+
+    def host_passes(self, host_state, filter_properties):
+        """If a host is in an aggregate that has the metadata key
+        "filter_tenant_id" it can only create instances from that tenant(s).
+        A host can be in different aggregates.
+
+        If a host doesn't belong to an aggregate with the metadata key
+        "filter_tenant_id" it can create instances from all tenants.
+        """
+        spec = filter_properties.get('request_spec', {})
+        props = spec.get('instance_properties', {})
+        tenant_id = props.get('project_id')
+
+        context = filter_properties['context'].elevated()
+        metadata = db.aggregate_metadata_get_by_host(context, host_state.host,
+                                                     key="filter_tenant_id")
+
+        if metadata != {}:
+            if tenant_id not in metadata["filter_tenant_id"]:
+                LOG.debug(_("%(host_state)s fails tenant id on "
+                    "aggregate"), locals())
+                return False
+        return True
