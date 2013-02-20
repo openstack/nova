@@ -21,7 +21,6 @@ import re
 import urlparse
 
 import webob
-from xml.dom import minidom
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -32,6 +31,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import log as logging
 from nova import quota
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -341,7 +341,7 @@ def raise_http_conflict_for_instance_invalid_state(exc, action):
 
 class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
     def deserialize(self, text):
-        dom = minidom.parseString(text)
+        dom = utils.safe_minidom_parse_string(text)
         metadata_node = self.find_first_child_named(dom, "metadata")
         metadata = self.extract_metadata(metadata_node)
         return {'body': {'metadata': metadata}}
@@ -349,7 +349,7 @@ class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
 
 class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
     def deserialize(self, text):
-        dom = minidom.parseString(text)
+        dom = utils.safe_minidom_parse_string(text)
         metadata_item = self.extract_metadata(dom)
         return {'body': {'meta': metadata_item}}
 
@@ -367,7 +367,7 @@ class MetadataXMLDeserializer(wsgi.XMLDeserializer):
         return metadata
 
     def _extract_metadata_container(self, datastring):
-        dom = minidom.parseString(datastring)
+        dom = utils.safe_minidom_parse_string(datastring)
         metadata_node = self.find_first_child_named(dom, "metadata")
         metadata = self.extract_metadata(metadata_node)
         return {'body': {'metadata': metadata}}
@@ -379,7 +379,7 @@ class MetadataXMLDeserializer(wsgi.XMLDeserializer):
         return self._extract_metadata_container(datastring)
 
     def update(self, datastring):
-        dom = minidom.parseString(datastring)
+        dom = utils.safe_minidom_parse_string(datastring)
         metadata_item = self.extract_metadata(dom)
         return {'body': {'meta': metadata_item}}
 
