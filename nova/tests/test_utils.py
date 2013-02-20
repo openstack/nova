@@ -23,6 +23,7 @@ import os
 import os.path
 import StringIO
 import tempfile
+from xml.dom import minidom
 
 import mox
 import netaddr
@@ -1059,3 +1060,47 @@ class StringLengthTestCase(test.TestCase):
         self.assertRaises(exception.InvalidInput,
                           utils.check_string_length,
                           'a' * 256, 'name', max_length=255)
+
+
+class SafeParserTestCase(test.TestCase):
+    def test_external_dtd(self):
+        xml_string = ("""<?xml version="1.0" encoding="utf-8"?>
+                <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+                <html>
+                   <head/>
+                     <body>html with dtd</body>
+                   </html>""")
+
+        parser = utils.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)
+
+    def test_external_file(self):
+        xml_string = """<!DOCTYPE external [
+                <!ENTITY ee SYSTEM "file:///PATH/TO/root.xml">
+                ]>
+                <root>&ee;</root>"""
+
+        parser = utils.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)
+
+    def test_notation(self):
+        xml_string = """<?xml version="1.0" standalone="no"?>
+                        <!-- comment data -->
+                        <!DOCTYPE x [
+                        <!NOTATION notation SYSTEM "notation.jpeg">
+                        ]>
+                        <root attr1="value1">
+                        </root>"""
+
+        parser = utils.ProtectedExpatParser(forbid_dtd=False,
+                                            forbid_entities=True)
+        self.assertRaises(ValueError,
+                          minidom.parseString,
+                          xml_string, parser)

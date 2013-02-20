@@ -672,19 +672,33 @@ class ProtectedExpatParser(expatreader.ExpatParser):
 
     def entity_decl(self, entityName, is_parameter_entity, value, base,
                     systemId, publicId, notationName):
-        raise ValueError("<!ENTITY> forbidden")
+        raise ValueError("<!ENTITY> entity declaration forbidden")
 
     def unparsed_entity_decl(self, name, base, sysid, pubid, notation_name):
         # expat 1.2
-        raise ValueError("<!ENTITY> forbidden")
+        raise ValueError("<!ENTITY> unparsed entity forbidden")
+
+    def external_entity_ref(self, context, base, systemId, publicId):
+        raise ValueError("<!ENTITY> external entity forbidden")
+
+    def notation_decl(self, name, base, sysid, pubid):
+        raise ValueError("<!ENTITY> notation forbidden")
 
     def reset(self):
         expatreader.ExpatParser.reset(self)
         if self.forbid_dtd:
             self._parser.StartDoctypeDeclHandler = self.start_doctype_decl
+            self._parser.EndDoctypeDeclHandler = None
         if self.forbid_entities:
             self._parser.EntityDeclHandler = self.entity_decl
             self._parser.UnparsedEntityDeclHandler = self.unparsed_entity_decl
+            self._parser.ExternalEntityRefHandler = self.external_entity_ref
+            self._parser.NotationDeclHandler = self.notation_decl
+            try:
+                self._parser.SkippedEntityHandler = None
+            except AttributeError:
+                # some pyexpat versions do not support SkippedEntity
+                pass
 
 
 def safe_minidom_parse_string(xml_string):
