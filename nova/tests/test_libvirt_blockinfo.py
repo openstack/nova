@@ -178,6 +178,21 @@ class LibvirtBlockInfoTest(test.TestCase):
             }
         self.assertEqual(mapping, expect)
 
+    def test_get_disk_mapping_lxc(self):
+        # A simple disk mapping setup, but for lxc
+
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+
+        mapping = blockinfo.get_disk_mapping("lxc", instance_ref,
+                                             "lxc", "lxc",
+                                             None)
+        expect = {
+            'disk': {'bus': 'lxc', 'dev': None, 'type': 'disk'},
+            'root': {'bus': 'lxc', 'dev': None, 'type': 'disk'}
+        }
+        self.assertEqual(mapping, expect)
+
     def test_get_disk_mapping_simple_iso(self):
         # A simple disk mapping setup, but with a ISO for root device
 
