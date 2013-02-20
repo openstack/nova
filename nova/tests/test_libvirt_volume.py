@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import os
 
 from oslo.config import cfg
@@ -547,3 +548,43 @@ class LibvirtVolumeTestCase(test.TestCase):
                               "/0000:05:00.3/0000:06:00.6/host2/fc_host/host2"}
         pci_num = libvirt_driver._get_pci_num(hba)
         self.assertEqual("0000:06:00.6", pci_num)
+
+    def test_libvirt_scality_driver(self):
+        tempdir = self.useFixture(fixtures.TempDir()).path
+        TEST_MOUNT = os.path.join(tempdir, 'fake_mount')
+        TEST_CONFIG = os.path.join(tempdir, 'fake_config')
+        TEST_VOLDIR = 'volumes'
+        TEST_VOLNAME = 'volume_name'
+        TEST_CONN_INFO = {
+            'data': {
+                'sofs_path': os.path.join(TEST_VOLDIR, TEST_VOLNAME)
+            }
+        }
+        TEST_VOLPATH = os.path.join(TEST_MOUNT,
+                                    TEST_VOLDIR,
+                                    TEST_VOLNAME)
+        TEST_DISK_INFO = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+        }
+
+        open(TEST_CONFIG, "w+").close()
+        os.makedirs(os.path.join(TEST_MOUNT, 'sys'))
+
+        def _access_wrapper(path, flags):
+            if path == '/sbin/mount.sofs':
+                return True
+            else:
+                return os.access(path, flags)
+
+        self.stubs.Set(os, 'access', _access_wrapper)
+
+        self.flags(scality_sofs_config=TEST_CONFIG,
+                   scality_sofs_mount_point=TEST_MOUNT)
+        driver = volume.LibvirtScalityVolumeDriver(self.fake_conn)
+        conf = driver.connect_volume(TEST_CONN_INFO, TEST_DISK_INFO)
+
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./source').get('file'), TEST_VOLPATH)
