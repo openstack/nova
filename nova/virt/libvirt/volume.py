@@ -378,8 +378,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         return None
 
     def _get_iscsi_devices(self):
-        return [entry for entry in list(os.walk('/dev/disk/by-path'))[0][-1]
-                if entry.startswith("ip-")]
+        try:
+            devices = list(os.walk('/dev/disk/by-path'))[0][-1]
+        except IndexError:
+            return []
+        return [entry for entry in devices if entry.startswith("ip-")]
 
     def _disconnect_mpath(self, iscsi_properties):
         entries = self._get_iscsi_devices()
