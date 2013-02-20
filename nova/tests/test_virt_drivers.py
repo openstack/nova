@@ -28,6 +28,7 @@ from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
+from nova.virt import event as virtevent
 from nova.virt import fake
 
 LOG = logging.getLogger(__name__)
@@ -548,6 +549,72 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_remove_from_aggregate(self):
         self.connection.remove_from_aggregate(self.ctxt, 'aggregate', 'host')
+
+    def test_events(self):
+        got_events = []
+
+        def handler(event):
+            got_events.append(event)
+
+        self.connection.register_event_listener(handler)
+
+        event1 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STARTED)
+        event2 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_PAUSED)
+
+        self.connection.emit_event(event1)
+        self.connection.emit_event(event2)
+        want_events = [event1, event2]
+        self.assertEqual(want_events, got_events)
+
+        event3 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_RESUMED)
+        event4 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STOPPED)
+
+        self.connection.emit_event(event3)
+        self.connection.emit_event(event4)
+
+        want_events = [event1, event2, event3, event4]
+        self.assertEqual(want_events, got_events)
+
+    def test_event_bad_object(self):
+        # Passing in something which does not inherit
+        # from virtevent.Event
+
+        def handler(event):
+            pass
+
+        self.connection.register_event_listener(handler)
+
+        badevent = {
+            "foo": "bar"
+        }
+
+        self.assertRaises(ValueError,
+                          self.connection.emit_event,
+                          badevent)
+
+    def test_event_bad_callback(self):
+        # Check that if a callback raises an exception,
+        # it does not propagate back out of the
+        # 'emit_event' call
+
+        def handler(event):
+            raise Exception("Hit Me!")
+
+        self.connection.register_event_listener(handler)
+
+        event1 = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STARTED)
+
+        self.connection.emit_event(event1)
 
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
