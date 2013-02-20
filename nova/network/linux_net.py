@@ -73,6 +73,11 @@ linux_net_opts = [
     cfg.ListOpt('dmz_cidr',
                default=[],
                help='A list of dmz range that should be accepted'),
+    cfg.MultiStrOpt('force_snat_range',
+               default=[],
+               help='Traffic to this range will always be snatted to the '
+                    'fallback ip, even if it would normally be bridged out '
+                    'of the node. Can be specified multiple times.'),
     cfg.StrOpt('dnsmasq_config_file',
                default='',
                help='Override the default dnsmasq settings with this file'),
@@ -626,6 +631,14 @@ def init_host(ip_range=None):
         ip_range = CONF.fixed_range
 
     add_snat_rule(ip_range)
+
+    rules = []
+    for snat_range in CONF.force_snat_range:
+        rules.append('PREROUTING -p ipv4 --ip-src %s --ip-dst %s '
+                     '-j redirect --redirect-target ACCEPT' %
+                     (ip_range, snat_range))
+    if rules:
+        ensure_ebtables_rules(rules, 'nat')
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %s -d %s/32 -j ACCEPT' %
