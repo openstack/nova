@@ -85,7 +85,7 @@ class VFSLocalFS(vfs.VFS):
     def teardown(self):
         try:
             if self.mount:
-                self.mount.do_umount()
+                self.mount.do_teardown()
         except Exception, e:
             LOG.debug(_("Failed to unmount %(imgdir)s: %(ex)s") %
                       {'imgdir': self.imgdir, 'ex': str(e)})

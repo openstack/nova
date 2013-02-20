@@ -211,11 +211,11 @@ class Mount(object):
         finally:
             if not status:
                 LOG.debug(_("Fail to mount, tearing back down"))
-                self.do_umount()
+                self.do_teardown()
         return status
 
     def do_umount(self):
-        """Call the unmnt, unmap and unget operations."""
+        """Call the unmnt operation."""
         if self.mounted:
             self.unmnt_dev()
 
