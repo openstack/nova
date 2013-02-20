@@ -13,12 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from nova.api.openstack.compute.contrib import attach_interfaces
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova.network import api as network_api
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import test
 
