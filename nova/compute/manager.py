@@ -501,7 +501,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               'firewall rules'), instance=instance)
 
     def handle_lifecycle_event(self, event):
-        LOG.error(_("Lifecycle event %(state)d on VM %(uuid)s") %
+        LOG.info(_("Lifecycle event %(state)d on VM %(uuid)s") %
                   {'state': event.get_transition(),
                    'uuid': event.get_instance_uuid()})
         context = nova.context.get_admin_context()
