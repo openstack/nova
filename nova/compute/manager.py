@@ -315,7 +315,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.24'
+    RPC_API_VERSION = '2.25'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2690,6 +2690,39 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.volume_api.terminate_connection(context, volume, connector)
         except exception.NotFound:
             pass
+
+    def attach_interface(self, context, instance, network_id, port_id,
+                         requested_ip=None):
+        """Use hotplug to add an network adapter to an instance."""
+        network_info = self.network_api.allocate_port_for_instance(
+            context, instance, port_id, network_id, requested_ip,
+            self.conductor_api)
+        image_meta = _get_image_meta(context, instance['image_ref'])
+        legacy_net_info = self._legacy_nw_info(network_info)
+        for (network, mapping) in legacy_net_info:
+            if mapping['vif_uuid'] == port_id:
+                self.driver.attach_interface(instance, image_meta,
+                                             [(network, mapping)])
+                return (network, mapping)
+
+    def detach_interface(self, context, instance, port_id):
+        """Detach an network adapter from an instance."""
+        network_info = self.network_api.get_instance_nw_info(
+            context.elevated(), instance, conductor_api=self.conductor_api)
+        legacy_nwinfo = self._legacy_nw_info(network_info)
+        condemned = None
+        for (network, mapping) in legacy_nwinfo:
+            if mapping['vif_uuid'] == port_id:
+                condemned = (network, mapping)
+                break
+        if condemned is None:
+            raise exception.PortNotFound(_("Port %(port_id)s is not "
+                                           "attached") % locals())
+
+        self.network_api.deallocate_port_for_instance(context, instance,
+                                                      port_id,
+                                                      self.conductor_api)
+        self.driver.detach_interface(instance, [condemned])
 
     def _get_compute_info(self, context, host):
         compute_node_ref = self.conductor_api.service_get_by_compute_host(

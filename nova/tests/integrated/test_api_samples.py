@@ -31,6 +31,7 @@ from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cloudpipe import pipelib
+from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -266,7 +267,6 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 sample_data = "{}"
             else:
                 sample_data = None
-
         try:
             response_result = self._verify_something(subs, expected,
                                                      response_data)
@@ -3334,3 +3334,174 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBase):
 
 class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
     ctype = "xml"
+
+
+class AttachInterfacesSampleJsonTest(ServersSampleBase):
+    extension_name = ('nova.api.openstack.compute.contrib.attach_interfaces.'
+                      'Attach_interfaces')
+
+    def setUp(self):
+        super(AttachInterfacesSampleJsonTest, self).setUp()
+
+        def fake_list_ports(self, *args, **kwargs):
+            uuid = kwargs.get('device_id', None)
+            if not uuid:
+                raise InstanceNotFound(instance_id=None)
+            port_data = {
+                "id": "ce531f90-199f-48c0-816c-13e38010b442",
+                "network_id": "3cb9bc59-5699-4588-a4b1-b87f96708bc6",
+                "admin_state_up": True,
+                "status": "ACTIVE",
+                "mac_address": "fa:16:3e:4c:2c:30",
+                "fixed_ips": [
+                    {
+                        "ip_address": "192.168.1.3",
+                        "subnet_id": "f8a6e8f8-c2ec-497c-9f23-da9616de54ef"
+                    }
+                ],
+                "device_id": uuid,
+                }
+            ports = {'ports': [port_data]}
+            return ports
+
+        def fake_show_port(self, context, port_id=None):
+            if not port_id:
+                raise PortNotFound(port_id=None)
+            port_data = {
+                "id": port_id,
+                "network_id": "3cb9bc59-5699-4588-a4b1-b87f96708bc6",
+                "admin_state_up": True,
+                "status": "ACTIVE",
+                "mac_address": "fa:16:3e:4c:2c:30",
+                "fixed_ips": [
+                    {
+                        "ip_address": "192.168.1.3",
+                        "subnet_id": "f8a6e8f8-c2ec-497c-9f23-da9616de54ef"
+                    }
+                ],
+                "device_id": 'bece68a3-2f8b-4e66-9092-244493d6aba7',
+                }
+            port = {'port': port_data}
+            return port
+
+        def fake_attach_interface(self, context, instance,
+                                  network_id, port_id,
+                                  requested_ip='192.168.1.3'):
+            if not network_id:
+                network_id = "fake_net_uuid"
+            if not port_id:
+                port_id = "fake_port_uuid"
+            network_info = [
+                {
+                    'bridge': 'br-100',
+                    'id': network_id,
+                    'cidr': '192.168.1.0/24',
+                    'vlan': '101',
+                    'injected': 'False',
+                    'multi_host': 'False',
+                    'bridge_interface': 'bridge_interface'
+                },
+                {
+                    "vif_uuid": port_id,
+                    "network_id": network_id,
+                    "admin_state_up": True,
+                    "status": "ACTIVE",
+                    "mac_address": "fa:16:3e:4c:2c:30",
+                    "fixed_ips": [
+                        {
+                            "ip_address": requested_ip,
+                            "subnet_id": "f8a6e8f8-c2ec-497c-9f23-da9616de54ef"
+                        }
+                    ],
+                    "device_id": instance['uuid'],
+                }
+            ]
+            return network_info
+
+        def fake_detach_interface(self, context, instance, port_id):
+            pass
+
+        self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
+        self.stubs.Set(network_api.API, 'show_port', fake_show_port)
+        self.stubs.Set(compute_api.API, 'attach_interface',
+                       fake_attach_interface)
+        self.stubs.Set(compute_api.API, 'detach_interface',
+                       fake_detach_interface)
+        self.flags(quantum_auth_strategy=None)
+        self.flags(quantum_url='http://anyhost/')
+        self.flags(quantum_url_timeout=30)
+
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['subnet_id'] = vanilla_regexes['uuid']
+        subs['net_id'] = vanilla_regexes['uuid']
+        subs['port_id'] = vanilla_regexes['uuid']
+        subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
+        subs['ip_address'] = vanilla_regexes['ip']
+        return subs
+
+    def test_list_interfaces(self):
+        instance_uuid = self._post_server()
+        response = self._do_get('servers/%s/os-interface' % instance_uuid)
+        self.assertEqual(response.status, 200)
+        subs = {
+                'ip_address': '192.168.1.3',
+                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
+                'mac_addr': 'fa:16:3e:4c:2c:30',
+                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
+                'port_state': 'ACTIVE'
+                }
+        self._verify_response('attach-interfaces-list-resp', subs, response)
+
+    def _stub_show_for_instance(self, instance_uuid, port_id):
+        show_port = network_api.API().show_port(None, port_id)
+        show_port['port']['device_id'] = instance_uuid
+        self.stubs.Set(network_api.API, 'show_port', lambda *a, **k: show_port)
+
+    def test_show_interfaces(self):
+        instance_uuid = self._post_server()
+        port_id = 'ce531f90-199f-48c0-816c-13e38010b442'
+        self._stub_show_for_instance(instance_uuid, port_id)
+        response = self._do_get('servers/%s/os-interface/%s' %
+                                (instance_uuid, port_id))
+        self.assertEqual(response.status, 200)
+        subs = {
+                'ip_address': '192.168.1.3',
+                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
+                'mac_addr': 'fa:16:3e:4c:2c:30',
+                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+                'port_id': port_id,
+                'port_state': 'ACTIVE'
+                }
+        self._verify_response('attach-interfaces-show-resp', subs, response)
+
+    def test_create_interfaces(self, instance_uuid=None):
+        if instance_uuid is None:
+            instance_uuid = self._post_server()
+        subs = {
+                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
+                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
+                'ip_address': '192.168.1.3',
+                'port_state': 'ACTIVE',
+                'mac_addr': 'fa:16:3e:4c:2c:30',
+                }
+        self._stub_show_for_instance(instance_uuid, subs['port_id'])
+        response = self._do_post('servers/%s/os-interface' % instance_uuid,
+                                 'attach-interfaces-create-req', subs)
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        self._verify_response('attach-interfaces-create-resp',
+                              subs, response)
+
+    def test_delete_interfaces(self):
+        instance_uuid = self._post_server()
+        port_id = 'ce531f90-199f-48c0-816c-13e38010b442'
+        response = self._do_delete('servers/%s/os-interface/%s' %
+                                (instance_uuid, port_id))
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class AttachInterfacesSampleXmlTest(AttachInterfacesSampleJsonTest):
+    ctype = 'xml'

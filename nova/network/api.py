@@ -282,6 +282,25 @@ class API(base.Base):
         args['host'] = instance['host']
         self.network_rpcapi.deallocate_for_instance(context, **args)
 
+    # NOTE(danms): Here for quantum compatibility
+    def allocate_port_for_instance(self, context, instance, port_id,
+                                   network_id=None, requested_ip=None,
+                                   conductor_api=None):
+        raise NotImplementedError()
+
+    # NOTE(danms): Here for quantum compatibility
+    def deallocate_port_for_instance(self, context, instance, port_id,
+                                     conductor_api=None):
+        raise NotImplementedError()
+
+    # NOTE(danms): Here for quantum compatibility
+    def list_ports(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    # NOTE(danms): Here for quantum compatibility
+    def show_port(self, *args, **kwargs):
+        raise NotImplementedError()
+
     @wrap_check_policy
     @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id,

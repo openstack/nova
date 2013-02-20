@@ -122,7 +122,7 @@ class API(base.Base):
         return nets
 
     def allocate_for_instance(self, context, instance, **kwargs):
-        """Allocate all network resources for the instance.
+        """Allocate network resources for the instance.
 
         TODO(someone): document the rest of these parameters.
 
@@ -261,6 +261,33 @@ class API(base.Base):
                               % {'portid': port['id']})
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
+
+    def allocate_port_for_instance(self, context, instance, port_id,
+                                   network_id=None, requested_ip=None,
+                                   conductor_api=None):
+        return self.allocate_for_instance(context, instance,
+                requested_networks=[(network_id, requested_ip, port_id)],
+                conductor_api=conductor_api)
+
+    def deallocate_port_for_instance(self, context, instance, port_id,
+                                     conductor_api=None):
+        try:
+            quantumv2.get_client(context).delete_port(port_id)
+        except Exception as ex:
+            LOG.exception(_("Failed to delete quantum port %(port_id)s ") %
+                          locals())
+
+        self.trigger_security_group_members_refresh(context, instance)
+        self.trigger_instance_remove_security_group_refresh(context, instance)
+
+        return self.get_instance_nw_info(context, instance,
+                                         conductor_api=conductor_api)
+
+    def list_ports(self, context, **search_opts):
+        return quantumv2.get_client(context).list_ports(**search_opts)
+
+    def show_port(self, context, port_id):
+        return quantumv2.get_client(context).show_port(port_id)
 
     def get_instance_nw_info(self, context, instance, networks=None,
             conductor_api=None):
@@ -672,7 +699,7 @@ class API(base.Base):
         data = quantumv2.get_client(context,
                                     admin=True).list_ports(**search_opts)
         ports = data.get('ports', [])
-        if not networks:
+        if networks is None:
             networks = self._get_available_networks(context,
                                                     instance['project_id'])
         else:

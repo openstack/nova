@@ -159,6 +159,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                rebuild_instance()
         2.23 - Remove network_info from reboot_instance
         2.24 - Added get_spice_console method
+        2.25 - Add attach_interface() and detach_interface()
     '''
 
     #
@@ -199,6 +200,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('add_fixed_ip_to_instance',
                 instance=instance_p, network_id=network_id),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def attach_interface(self, ctxt, instance, network_id, port_id,
+                         requested_ip):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('attach_interface',
+                 instance=instance_p, network_id=network_id,
+                 port_id=port_id, requested_ip=requested_ip),
+                 topic=_compute_topic(self.topic, ctxt, None, instance),
+                 version='2.25')
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
         instance_p = jsonutils.to_primitive(instance)
@@ -242,6 +252,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
                 version='2.7')
+
+    def detach_interface(self, ctxt, instance, port_id):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('detach_interface',
+                 instance=instance_p, port_id=port_id),
+                 topic=_compute_topic(self.topic, ctxt, None, instance),
+                 version='2.25')
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)

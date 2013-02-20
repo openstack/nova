@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceAttachment>
+  <port_state>ACTIVE</port_state>
+  <fixed_ips>
+    <fixed_ip>
+      <subnet_id>b6e47749-6bf0-4d6e-ae4b-ba6b5e238510</subnet_id>
+      <ip_address>192.168.123.131</ip_address>
+    </fixed_ip>
+  </fixed_ips>
+  <port_id>89e64f2e-86bd-4c19-9155-4548b36fdcb2</port_id>
+  <net_id>a9efd207-2c1a-4cdd-a296-d3c7c3211302</net_id>
+  <mac_addr>fa:16:3e:a4:1c:12</mac_addr>
+</interfaceAttachment>
