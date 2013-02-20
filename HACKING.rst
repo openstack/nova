@@ -63,7 +63,6 @@ Imports
 - imports from ``migrate`` package
 - imports from ``sqlalchemy`` package
 - imports from ``nova.db.sqlalchemy.session`` module
-- imports from ``nova.openstack.common.log.logging`` package
 - imports from ``nova.db.sqlalchemy.migration.versioning_api`` package
 
 Example::

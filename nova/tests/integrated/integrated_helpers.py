@@ -26,7 +26,7 @@ import uuid
 from oslo.config import cfg
 
 import nova.image.glance
-from nova.openstack.common.log import logging
+from nova.openstack.common import log as logging
 from nova import service
 from nova import test
 from nova.tests import fake_crypto

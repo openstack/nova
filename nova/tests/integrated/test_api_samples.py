@@ -39,7 +39,7 @@ from nova import exception
 from nova.network import api as network_api
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova.openstack.common.log import logging
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 import nova.quota
 from nova.scheduler import driver

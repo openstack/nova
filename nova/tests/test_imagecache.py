@@ -20,7 +20,6 @@ import contextlib
 import cStringIO
 import hashlib
 import json
-import logging
 import os
 import time
 
@@ -30,7 +29,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import db
 from nova.openstack.common import importutils
-from nova.openstack.common import log
+from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
 from nova.virt.libvirt import imagecache
@@ -40,7 +39,7 @@ CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 
-LOG = log.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class ImageCacheManagerTestCase(test.TestCase):
@@ -341,10 +340,10 @@ class ImageCacheManagerTestCase(test.TestCase):
     @contextlib.contextmanager
     def _intercept_log_messages(self):
         try:
-            mylog = log.getLogger('nova')
+            mylog = logging.getLogger('nova')
             stream = cStringIO.StringIO()
-            handler = logging.StreamHandler(stream)
-            handler.setFormatter(log.LegacyFormatter())
+            handler = logging.logging.StreamHandler(stream)
+            handler.setFormatter(logging.LegacyFormatter())
             mylog.logger.addHandler(handler)
             yield stream
         finally:

@@ -46,7 +46,6 @@ logging.disable('LOG')
 #N9xx other
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session',
-                     'nova.openstack.common.log.logging',
                      'nova.db.sqlalchemy.migration.versioning_api']
 # Paste is missing a __init__ in top level directory
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
