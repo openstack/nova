@@ -20,10 +20,11 @@ import copy
 import datetime
 import functools
 
+from oslo.config import cfg
+
 from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
-from nova.openstack.common import cfg
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

@@ -18,10 +18,11 @@ Tests For CellsManager
 import copy
 import datetime
 
+from oslo.config import cfg
+
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test

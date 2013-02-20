@@ -23,9 +23,9 @@ and storage repositories
 import re
 import string
 
-from nova.openstack.common import cfg
-from nova.openstack.common import log as logging
+from oslo.config import cfg
 
+from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

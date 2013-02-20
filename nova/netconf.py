@@ -19,7 +19,7 @@
 
 import socket
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 CONF = cfg.CONF
 

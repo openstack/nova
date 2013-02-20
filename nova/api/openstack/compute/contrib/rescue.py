@@ -14,6 +14,7 @@
 
 """The rescue mode extension."""
 
+from oslo.config import cfg
 import webob
 from webob import exc
 
@@ -22,7 +23,6 @@ from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 

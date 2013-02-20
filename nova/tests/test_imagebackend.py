@@ -15,10 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import os
 
-from nova.openstack.common import cfg
+import fixtures
+from oslo.config import cfg
+
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_libvirt_utils

@@ -18,10 +18,10 @@ Request Body limiting middleware.
 
 """
 
+from oslo.config import cfg
 import webob.dec
 import webob.exc
 
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import wsgi
 

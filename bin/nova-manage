@@ -59,6 +59,8 @@ import netaddr
 import os
 import sys
 
+from oslo.config import cfg
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -77,7 +79,6 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import cliutils
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import importutils

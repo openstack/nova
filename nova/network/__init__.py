@@ -16,23 +16,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import oslo.config.cfg
+
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.network import <foo>' elsewhere.
-import nova.openstack.common.cfg
 import nova.openstack.common.importutils
 
 _network_opts = [
-    nova.openstack.common.cfg.StrOpt('network_api_class',
-                                     default='nova.network.api.API',
-                                     help='The full class name of the '
-                                          'network API class to use'),
+    oslo.config.cfg.StrOpt('network_api_class',
+                           default='nova.network.api.API',
+                           help='The full class name of the '
+                                'network API class to use'),
 ]
 
-nova.openstack.common.cfg.CONF.register_opts(_network_opts)
+oslo.config.cfg.CONF.register_opts(_network_opts)
 
 
 def API():
     importutils = nova.openstack.common.importutils
-    network_api_class = nova.openstack.common.cfg.CONF.network_api_class
+    network_api_class = oslo.config.cfg.CONF.network_api_class
     cls = importutils.import_class(network_api_class)
     return cls()

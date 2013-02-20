@@ -20,8 +20,9 @@
 
 """Tests for the base baremetal driver class."""
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils

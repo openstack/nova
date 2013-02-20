@@ -19,7 +19,8 @@
 
 """Session Handling for SQLAlchemy backend."""
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common.db.sqlalchemy import session as nova_session
 from nova import paths
 

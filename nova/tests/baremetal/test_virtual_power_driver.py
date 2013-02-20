@@ -19,16 +19,14 @@
 """Tests for baremetal virtual power driver."""
 
 import mox
+from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common import cfg
-from nova import utils as nutils
-
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
-
+from nova import utils as nutils
 from nova.virt.baremetal import db
 from nova.virt.baremetal import virtual_power_driver
 import nova.virt.powervm.common as connection

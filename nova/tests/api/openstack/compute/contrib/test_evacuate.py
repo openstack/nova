@@ -14,12 +14,12 @@
 
 import uuid
 
+from oslo.config import cfg
 import webob
 
 from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -17,12 +17,12 @@
 import socket
 import time
 
+from oslo.config import cfg
+
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.powervm import operator
-
 
 LOG = logging.getLogger(__name__)
 

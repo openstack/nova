@@ -18,10 +18,11 @@
 Unit Tests for nova.compute.rpcapi
 """
 
+from oslo.config import cfg
+
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import db
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test

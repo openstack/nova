@@ -18,7 +18,8 @@
 
 """Super simple fake memcache client."""
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import timeutils
 
 memcache_opts = [

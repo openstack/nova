@@ -15,13 +15,13 @@
 #    under the License.
 
 from lxml import etree
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import security_group_default_rules
 from nova.api.openstack import wsgi
 from nova import context
 import nova.db
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests.api.openstack import fakes
 

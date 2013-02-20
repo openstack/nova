@@ -15,8 +15,8 @@
 import os
 
 import fixtures
+from oslo.config import cfg
 
-from nova.openstack.common import cfg
 from nova.openstack.common import policy as common_policy
 import nova.policy
 from nova.tests import fake_policy

@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -24,11 +24,9 @@ from nova.api.openstack import xmlutil
 from nova import availability_zones
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
-
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'services')

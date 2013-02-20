@@ -28,11 +28,11 @@ For some wrappers that add message versioning to rpc, see:
 import inspect
 import logging
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import local
-
 
 LOG = logging.getLogger(__name__)
 

@@ -21,10 +21,10 @@
 
 import os
 
+from oslo.config import cfg
 from testtools import matchers
 
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.tests.baremetal.db import base as bm_db_base
 from nova.tests.baremetal.db import utils as bm_db_utils

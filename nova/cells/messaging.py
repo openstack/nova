@@ -25,6 +25,7 @@ The interface into this module is the MessageRunner class.
 import sys
 
 from eventlet import queue
+from oslo.config import cfg
 
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
@@ -32,7 +33,6 @@ from nova import compute
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils

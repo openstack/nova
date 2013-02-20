@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
 
 from nova import db
-from nova.openstack.common import cfg
 from nova.scheduler import filters
-
 
 CONF = cfg.CONF
 CONF.import_opt('default_availability_zone', 'nova.availability_zones')

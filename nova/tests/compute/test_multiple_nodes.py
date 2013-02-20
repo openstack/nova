@@ -16,9 +16,10 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes."""
 
+from oslo.config import cfg
+
 from nova import context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova import test
 from nova.virt import fake

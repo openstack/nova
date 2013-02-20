@@ -26,7 +26,7 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
-from nova.openstack.common import iniparser
+from oslo.config import iniparser
 
 
 class PropertyCollecter(iniparser.BaseParser):

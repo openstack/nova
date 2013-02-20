@@ -59,6 +59,7 @@ from eventlet import patcher
 from eventlet import tpool
 from eventlet import util as eventlet_util
 from lxml import etree
+from oslo.config import cfg
 from xml.dom import minidom
 
 from nova.api.metadata import base as instance_metadata
@@ -69,7 +70,6 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils

@@ -18,8 +18,9 @@
 Client side of the compute RPC API.
 """
 
+from oslo.config import cfg
+
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 import nova.openstack.common.rpc.proxy

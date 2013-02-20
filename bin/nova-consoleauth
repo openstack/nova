@@ -24,6 +24,8 @@ eventlet.monkey_patch()
 import os
 import sys
 
+from oslo.config import cfg
+
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
                                    os.pardir))
@@ -33,7 +35,6 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 from nova import config
 from nova.consoleauth import manager
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
 

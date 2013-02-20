@@ -19,6 +19,8 @@
 
 import string
 
+from oslo.config import cfg
+
 from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova import context
@@ -26,7 +28,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier_api

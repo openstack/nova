@@ -15,9 +15,9 @@
 
 """Tests for baremetal volume driver."""
 
-from nova.openstack.common import cfg
-from nova import test
+from oslo.config import cfg
 
+from nova import test
 from nova.virt.baremetal import volume_driver
 
 CONF = cfg.CONF

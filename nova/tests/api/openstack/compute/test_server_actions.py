@@ -17,6 +17,7 @@ import base64
 import uuid
 
 import mox
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import servers
@@ -26,13 +27,11 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.image import fake
 from nova.tests import matchers
-
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')

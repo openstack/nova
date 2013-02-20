@@ -23,6 +23,7 @@ import uuid
 
 import iso8601
 from lxml import etree
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack import compute
@@ -41,7 +42,6 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import manager
 from nova.network.quantumv2 import api as quantum_api
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
@@ -51,7 +51,6 @@ from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
-
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')

@@ -37,6 +37,7 @@ import traceback
 import uuid
 
 from eventlet import greenthread
+from oslo.config import cfg
 
 from nova import block_device
 from nova.cloudpipe import pipelib
@@ -56,7 +57,6 @@ from nova.image import glance
 from nova import manager
 from nova import network
 from nova.network import model as network_model
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils

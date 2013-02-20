@@ -42,9 +42,9 @@ these objects be simple dictionaries.
 
 """
 
-from nova.openstack.common import cfg
-from nova import utils
+from oslo.config import cfg
 
+from nova import utils
 
 # NOTE(deva): we can't move baremetal_db_backend into an OptGroup yet
 #             because utils.LazyPluggable doesn't support reading from

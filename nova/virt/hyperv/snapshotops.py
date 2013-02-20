@@ -20,9 +20,10 @@ Management class for VM snapshot operations.
 """
 import os
 
+from oslo.config import cfg
+
 from nova.compute import task_states
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vhdutils

@@ -23,6 +23,8 @@ import functools
 import os
 import re
 
+from oslo.config import cfg
+
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -31,7 +33,6 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

@@ -19,13 +19,14 @@ Cells Service Manager
 import datetime
 import time
 
+from oslo.config import cfg
+
 from nova.cells import messaging
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
 from nova import manager
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

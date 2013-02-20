@@ -13,10 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from nova.cloudpipe import pipelib
 from nova import context
 from nova import crypto
-from nova.openstack.common import cfg
 from nova import test
 from nova import utils
 

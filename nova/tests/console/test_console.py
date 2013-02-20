@@ -18,12 +18,13 @@
 
 """Tests For Console proxy."""
 
+from oslo.config import cfg
+
 from nova.console import api as console_api
 from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import rpc
 from nova import test

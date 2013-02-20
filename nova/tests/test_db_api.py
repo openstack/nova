@@ -22,6 +22,7 @@
 import datetime
 import uuid as stdlib_uuid
 
+from oslo.config import cfg
 from sqlalchemy import MetaData
 from sqlalchemy.schema import Table
 from sqlalchemy.sql.expression import select
@@ -29,7 +30,6 @@ from sqlalchemy.sql.expression import select
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import timeutils
 from nova import test

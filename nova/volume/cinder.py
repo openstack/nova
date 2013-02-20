@@ -26,10 +26,10 @@ import sys
 from cinderclient import exceptions as cinder_exception
 from cinderclient import service_catalog
 from cinderclient.v1 import client as cinder_client
+from oslo.config import cfg
 
 from nova.db import base
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 cinder_opts = [

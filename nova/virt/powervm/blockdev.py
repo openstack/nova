@@ -18,8 +18,9 @@ import hashlib
 import os
 import re
 
+from oslo.config import cfg
+
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import utils

@@ -48,7 +48,9 @@ logging.disable('LOG')
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session',
                      'nova.openstack.common.log.logging',
-                     'nova.db.sqlalchemy.migration.versioning_api', 'paste']
+                     'nova.db.sqlalchemy.migration.versioning_api']
+# imp.find_module() doesn't support namespace packages
+IMPORT_EXCEPTIONS += ['oslo', 'paste']
 # Paste is missing a __init__ in top level directory
 START_DOCSTRING_TRIPLE = ['u"""', 'r"""', '"""', "u'''", "r'''", "'''"]
 END_DOCSTRING_TRIPLE = ['"""', "'''"]

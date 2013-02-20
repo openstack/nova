@@ -53,12 +53,13 @@ This module provides Manager, a base class for managers.
 
 """
 
-import eventlet
 import time
+
+import eventlet
+from oslo.config import cfg
 
 from nova.db import base
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher

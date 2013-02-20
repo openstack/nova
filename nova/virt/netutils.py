@@ -23,7 +23,7 @@
 
 import netaddr
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')

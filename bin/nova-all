@@ -33,6 +33,7 @@ eventlet.monkey_patch(os=False)
 import os
 import sys
 
+from oslo.config import cfg
 
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(
         sys.argv[0]), os.pardir, os.pardir))
@@ -42,7 +43,6 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 
 from nova import config
 from nova.objectstore import s3server
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils

@@ -15,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import image_metadata
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -21,10 +21,10 @@ import os
 import eventlet
 import evzookeeper
 from evzookeeper import membership
+from oslo.config import cfg
 import zookeeper
 
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.servicegroup import api
 from nova import utils

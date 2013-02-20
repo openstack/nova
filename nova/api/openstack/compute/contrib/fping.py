@@ -19,16 +19,15 @@
 import itertools
 import os
 
+from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'fping')

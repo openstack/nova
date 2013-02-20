@@ -18,7 +18,7 @@
 Global cells config options
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
 
 cells_opts = [
     cfg.BoolOpt('enable',

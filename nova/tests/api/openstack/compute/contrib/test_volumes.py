@@ -16,19 +16,19 @@
 import datetime
 
 from lxml import etree
+from oslo.config import cfg
 import webob
+from webob import exc
 
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.volume import cinder
-from webob import exc
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')

@@ -25,6 +25,7 @@ import hmac
 import json
 import re
 
+from oslo.config import cfg
 import webob
 
 from nova.api.metadata import base
@@ -36,7 +37,6 @@ from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
-from nova.openstack.common import cfg
 from nova import test
 from nova.tests import fake_network
 

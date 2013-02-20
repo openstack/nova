@@ -16,8 +16,9 @@
 Tests For Cells RPCAPI
 """
 
+from oslo.config import cfg
+
 from nova.cells import rpcapi as cells_rpcapi
-from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova import test
 

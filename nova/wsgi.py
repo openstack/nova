@@ -26,6 +26,7 @@ import sys
 import eventlet
 import eventlet.wsgi
 import greenlet
+from oslo.config import cfg
 from paste import deploy
 import routes.middleware
 import ssl
@@ -33,7 +34,6 @@ import webob.dec
 import webob.exc
 
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 
 wsgi_opts = [

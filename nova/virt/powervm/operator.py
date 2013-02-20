@@ -19,21 +19,19 @@ import random
 import re
 import time
 
-from nova import exception as nova_exception
-from nova import utils
+from oslo.config import cfg
 
 from nova.compute import power_state
-from nova.openstack.common import cfg
+from nova import exception as nova_exception
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-
+from nova import utils
 from nova.virt.powervm import blockdev
 from nova.virt.powervm import command
 from nova.virt.powervm import common
 from nova.virt.powervm import constants
 from nova.virt.powervm import exception
 from nova.virt.powervm import lpar as LPAR
-
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF

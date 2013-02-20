@@ -25,6 +25,7 @@ import time
 
 from eventlet import greenthread
 import netaddr
+from oslo.config import cfg
 
 from nova import block_device
 from nova.compute import api as compute
@@ -34,7 +35,6 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils

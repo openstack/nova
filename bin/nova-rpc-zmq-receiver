@@ -22,6 +22,7 @@ import contextlib
 import os
 import sys
 
+from oslo.config import cfg
 import zmq
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
@@ -34,7 +35,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import config
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import impl_zmq

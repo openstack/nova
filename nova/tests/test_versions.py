@@ -17,7 +17,8 @@
 import __builtin__
 import StringIO
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova import test
 from nova import version
 

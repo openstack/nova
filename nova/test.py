@@ -31,6 +31,7 @@ import uuid
 import eventlet
 import fixtures
 import mox
+from oslo.config import cfg
 import stubout
 import testtools
 
@@ -38,7 +39,6 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova.network import manager as network_manager
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

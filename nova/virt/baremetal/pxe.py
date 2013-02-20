@@ -22,16 +22,16 @@ Class for PXE bare-metal nodes.
 
 import os
 
+from oslo.config import cfg
+
 from nova.compute import instance_types
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import base
 from nova.virt.baremetal import db
 from nova.virt.baremetal import utils as bm_utils
-
 
 pxe_opts = [
     cfg.StrOpt('deploy_kernel',

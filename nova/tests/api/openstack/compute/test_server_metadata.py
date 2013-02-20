@@ -17,6 +17,7 @@
 
 import uuid
 
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import server_metadata
@@ -24,7 +25,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes

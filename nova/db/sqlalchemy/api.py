@@ -25,6 +25,7 @@ import datetime
 import functools
 import uuid
 
+from oslo.config import cfg
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import IntegrityError
@@ -47,7 +48,6 @@ from nova.compute import vm_states
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import log as logging

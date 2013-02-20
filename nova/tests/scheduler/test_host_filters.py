@@ -16,11 +16,12 @@ Tests For Scheduler Host Filters.
 """
 
 import httplib
+
+from oslo.config import cfg
 import stubout
 
 from nova import context
 from nova import db
-from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.scheduler import filters

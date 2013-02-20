@@ -41,10 +41,10 @@ import os
 import os.path
 import urllib
 
+from oslo.config import cfg
 import routes
 import webob
 
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova import paths
 from nova import utils

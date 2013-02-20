@@ -18,6 +18,7 @@
 
 import fixtures
 import mox
+from oslo.config import cfg
 
 from nova import context
 from nova import db
@@ -28,7 +29,6 @@ from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
-from nova.openstack.common import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -39,7 +39,6 @@ from nova.tests import fake_ldap
 from nova.tests import fake_network
 from nova.tests import matchers
 from nova import utils
-
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

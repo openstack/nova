@@ -27,13 +27,14 @@ import urllib
 import urllib2
 import uuid
 
+from oslo.config import cfg
+
 from nova import block_device
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import context as nova_context
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.virt import driver

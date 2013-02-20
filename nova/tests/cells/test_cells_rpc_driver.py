@@ -16,10 +16,11 @@
 Tests For Cells RPC Communication Driver
 """
 
+from oslo.config import cfg
+
 from nova.cells import messaging
 from nova.cells import rpc_driver
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova import test

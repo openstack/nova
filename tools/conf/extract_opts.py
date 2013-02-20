@@ -26,7 +26,8 @@ import socket
 import sys
 import textwrap
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import importutils
 
 

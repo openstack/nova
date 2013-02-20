@@ -26,9 +26,9 @@ SHOULD include dedicated exception logging.
 
 import functools
 
+from oslo.config import cfg
 import webob.exc
 
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 

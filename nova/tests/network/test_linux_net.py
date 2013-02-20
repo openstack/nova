@@ -19,12 +19,12 @@ import calendar
 import os
 
 import mox
+from oslo.config import cfg
 
 from nova import context
 from nova import db
 from nova.network import driver
 from nova.network import linux_net
-from nova.openstack.common import cfg
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

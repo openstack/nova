@@ -22,7 +22,8 @@ services.  That communication is handled by the cells driver via the
 messging module.
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy

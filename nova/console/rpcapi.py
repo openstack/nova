@@ -18,7 +18,8 @@
 Client side of the console RPC API.
 """
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 import nova.openstack.common.rpc.proxy
 
 rpcapi_opts = [

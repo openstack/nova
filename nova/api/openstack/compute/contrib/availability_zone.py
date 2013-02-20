@@ -14,16 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
+from oslo.config import cfg
+
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
 from nova import db
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import servicegroup
-
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF

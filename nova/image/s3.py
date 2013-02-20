@@ -28,12 +28,12 @@ import tempfile
 import boto.s3.connection
 import eventlet
 from lxml import etree
+from oslo.config import cfg
 
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
 from nova import exception
 from nova.image import glance
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
 

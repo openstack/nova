@@ -50,6 +50,7 @@ import uuid
 
 from eventlet import greenpool
 import netaddr
+from oslo.config import cfg
 
 from nova.compute import api as compute_api
 from nova import context
@@ -61,7 +62,6 @@ from nova.network import driver
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -71,7 +71,6 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import servicegroup
 from nova import utils
-
 
 LOG = logging.getLogger(__name__)
 

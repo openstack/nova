@@ -19,11 +19,12 @@ Cells Scheduler
 import random
 import time
 
+from oslo.config import cfg
+
 from nova import compute
 from nova.compute import vm_states
 from nova.db import base
 from nova import exception
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
 

@@ -21,13 +21,13 @@
 
 import copy
 
+from oslo.config import cfg
+
 from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import utils
-
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
 

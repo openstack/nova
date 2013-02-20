@@ -15,7 +15,8 @@
 
 import uuid
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import context
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils

@@ -27,6 +27,7 @@ import traceback
 import uuid
 
 import mox
+from oslo.config import cfg
 
 import nova
 from nova import compute
@@ -45,7 +46,6 @@ from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
-from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

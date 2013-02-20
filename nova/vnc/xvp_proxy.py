@@ -25,10 +25,10 @@ import eventlet
 import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
+from oslo.config import cfg
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
-from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova import version
 from nova import wsgi

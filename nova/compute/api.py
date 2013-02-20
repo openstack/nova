@@ -29,6 +29,8 @@ import time
 import urllib
 import uuid
 
+from oslo.config import cfg
+
 from nova import availability_zones
 from nova import block_device
 from nova.compute import instance_actions
@@ -46,7 +48,6 @@ from nova import hooks
 from nova.image import glance
 from nova import network
 from nova import notifications
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
