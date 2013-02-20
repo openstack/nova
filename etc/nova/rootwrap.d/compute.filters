@@ -187,3 +187,10 @@ read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localf
 
 # nova/virt/libvirt/volume.py: 'multipath' '-R'
 multipath: CommandFilter, /sbin/multipath, root
+
+# nova/virt/libvirt/utils.py:
+systool: CommandFilter, /usr/bin/systool, root
+
+# nova/virt/libvirt/volume.py:
+sginfo: CommandFilter, /usr/bin/sginfo, root
+sg_scan: CommandFilter, /usr/bin/sg_scan, root
