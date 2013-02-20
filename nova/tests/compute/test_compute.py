@@ -1786,12 +1786,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
-    def _test_state_revert(self, operation, pre_task_state,
+    def _test_state_revert(self, instance, operation, pre_task_state,
                            post_task_state=None, kwargs=None):
         if kwargs is None:
             kwargs = {}
-
-        instance = self._create_fake_instance()
 
         # The API would have set task_state, so do that here to test
         # that the state gets reverted on failure
@@ -1862,8 +1860,9 @@ class ComputeTestCase(BaseTestCase):
             ("resume_instance", task_states.RESUMING),
             ]
 
+        instance = self._create_fake_instance()
         for operation in actions:
-            self._test_state_revert(*operation)
+            self._test_state_revert(instance, *operation)
 
     def _ensure_quota_reservations_committed(self):
         """Mock up commit of quota reservations."""
