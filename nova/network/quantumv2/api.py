@@ -484,11 +484,16 @@ class API(base.Base):
 
     def get_all(self, context):
         client = quantumv2.get_client(context)
-        return client.list_networks()
+        networks = client.list_networks().get('networks') or {}
+        for network in networks:
+            network['label'] = network['name']
+        return networks
 
     def get(self, context, network_uuid):
         client = quantumv2.get_client(context)
-        return client.show_network(network_uuid)
+        network = client.show_network(network_uuid).get('network') or {}
+        network['label'] = network['name']
+        return network
 
     def delete(self, context, network_uuid):
         raise NotImplementedError()

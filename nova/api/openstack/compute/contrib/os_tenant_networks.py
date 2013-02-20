@@ -64,9 +64,9 @@ authorize = extensions.extension_authorizer('compute', 'os-tenant-networks')
 
 
 def network_dict(network):
-    return {"id": network.get("uuid") or network["id"],
-                        "cidr": network["cidr"],
-                        "label": network["label"]}
+    return {"id": network.get("uuid") or network.get("id"),
+                        "cidr": network.get("cidr"),
+                        "label": network.get("label")}
 
 
 class NetworkController(object):
@@ -108,7 +108,7 @@ class NetworkController(object):
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
             raise exc.HTTPNotFound(_("Network not found"))
-        return network_dict(network)
+        return {'network': network_dict(network)}
 
     def delete(self, req, id):
         context = req.environ['nova.context']

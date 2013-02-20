@@ -46,7 +46,7 @@ def network_dict(context, network):
         #               are only visible if they are an admin.
         if context.is_admin:
             fields += admin_fields
-        result = dict((field, network[field]) for field in fields)
+        result = dict((field, network.get(field)) for field in fields)
         if 'uuid' in network:
             result['id'] = network['uuid']
         return result
