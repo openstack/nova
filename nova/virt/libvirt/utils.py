@@ -205,7 +205,8 @@ def create_lvm_image(vg, lv, size, sparse=False):
     :size: size of image in bytes
     :sparse: create sparse logical volume
     """
-    free_space = volume_group_free_space(vg)
+    vg_info = get_volume_group_info(vg)
+    free_space = vg_info['free']
 
     def check_size(vg, lv, size):
         if size > free_space:
@@ -232,33 +233,14 @@ def create_lvm_image(vg, lv, size, sparse=False):
     execute(*cmd, run_as_root=True, attempts=3)
 
 
-def volume_group_free_space(vg):
-    """Return available space on volume group in bytes.
+def get_volume_group_info(vg):
+    """Return free/used/total space info for a volume group in bytes
 
     :param vg: volume group name
-    """
-    out, err = execute('vgs', '--noheadings', '--nosuffix',
-                       '--units', 'b', '-o', 'vg_free', vg,
-                       run_as_root=True)
-    return int(out.strip())
-
-
-def volume_group_total_space(vg):
-    """Return total space on volume group in bytes.
-
-    :param vg: volume group name
-    """
-
-    out, err = execute('vgs', '--noheadings', '--nosuffix',
-                       '--units', 'b', '-o', 'vg_size', vg,
-                       run_as_root=True)
-    return int(out.strip())
-
-
-def volume_group_used_space(vg):
-    """Return available space on volume group in bytes.
-
-    :param vg: volume group name
+    :returns: A dict containing:
+             :total: How big the filesystem is (in bytes)
+             :free: How much space is free (in bytes)
+             :used: How much space is used (in bytes)
     """
 
     out, err = execute('vgs', '--noheadings', '--nosuffix',
@@ -270,7 +252,9 @@ def volume_group_used_space(vg):
     if len(info) != 2:
         raise RuntimeError(_("vg %s must be LVM volume group") % vg)
 
-    return int(info[0]) - int(info[1])
+    return {'total': int(info[0]),
+            'free': int(info[1]),
+            'used': int(info[0]) - int(info[1])}
 
 
 def list_logical_volumes(vg):
