@@ -18,7 +18,7 @@
 import time
 import zlib
 
-from nova.openstack.common.log import logging
+from nova.openstack.common import log as logging
 from nova.tests import fake_network
 from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers
