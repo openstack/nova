@@ -172,22 +172,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         mac_id = mapping['mac'].replace(':', '')
         name = "nova-instance-" + instance['name'] + "-" + mac_id
-        primary_addr = mapping['ips'][0]['ip']
-        dhcp_server = ra_server = ipv4_cidr = ipv6_cidr = None
-
-        if mapping['dhcp_server']:
-            dhcp_server = mapping['dhcp_server']
-        if CONF.use_ipv6:
-            ra_server = mapping.get('gateway_v6') + "/128"
-        if CONF.allow_same_net_traffic:
-            ipv4_cidr = network['cidr']
-            if CONF.use_ipv6:
-                ipv6_cidr = network['cidr_v6']
-
-        if self.get_firewall_required():
-            designer.set_vif_host_backend_filter_config(
-                conf, name, primary_addr, dhcp_server,
-                ra_server, ipv4_cidr, ipv6_cidr)
+        conf.filtername = name
         designer.set_vif_bandwidth_config(conf, instance)
 
         return conf

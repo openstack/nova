@@ -21,8 +21,6 @@ This module provides helper APIs for populating the config.py
 classes based on common operational needs / policies
 """
 
-from nova.virt import netutils
-
 
 def set_vif_guest_frontend_config(conf, mac, model, driver):
     """Populate a LibvirtConfigGuestInterface instance
@@ -100,37 +98,6 @@ def set_vif_host_backend_802qbh_config(conf, devname, profileid,
     conf.add_vport_param("profileid", profileid)
     if tapname:
         conf.target_dev = tapname
-
-
-def set_vif_host_backend_filter_config(conf, name,
-                                       primary_addr,
-                                       dhcp_server=None,
-                                       ra_server=None,
-                                       allow_same_net=False,
-                                       ipv4_cidr=None,
-                                       ipv6_cidr=None):
-    """Populate a LibvirtConfigGuestInterface instance
-    with host backend details for traffic filtering"""
-
-    conf.filtername = name
-    conf.add_filter_param("IP", primary_addr)
-
-    if dhcp_server:
-        conf.add_filter_param("DHCPSERVER", dhcp_server)
-
-    if ra_server:
-        conf.add_filter_param("RASERVER", ra_server)
-
-    if allow_same_net:
-        if ipv4_cidr:
-            net, mask = netutils.get_net_and_mask(ipv4_cidr)
-            conf.add_filter_param("PROJNET", net)
-            conf.add_filter_param("PROJMASK", mask)
-
-        if ipv6_cidr:
-            net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
-            conf.add_filter_param("PROJNET6", net)
-            conf.add_filter_param("PROJMASK6", prefix)
 
 
 def set_vif_bandwidth_config(conf, extra_specs):

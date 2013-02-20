@@ -63,6 +63,7 @@ from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import netutils
 
 try:
     import libvirt
@@ -1667,10 +1668,7 @@ class LibvirtConnTestCase(test.TestCase):
         tree = etree.fromstring(xml)
         interfaces = tree.findall("./devices/interface")
         self.assertEquals(len(interfaces), 2)
-        parameters = interfaces[0].findall('./filterref/parameter')
         self.assertEquals(interfaces[0].get('type'), 'bridge')
-        self.assertEquals(parameters[0].get('name'), 'IP')
-        self.assertTrue(_ipv4_like(parameters[0].get('value'), '192.168'))
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(self.user_id,
@@ -1947,12 +1945,8 @@ class LibvirtConnTestCase(test.TestCase):
                         'type'), 'pty')
                 check_list.append(check)
 
-        parameter = './devices/interface/filterref/parameter'
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
-            (lambda t: t.find(parameter).get('name'), 'IP'),
-            (lambda t: _ipv4_like(t.find(parameter).get('value'), '192.168'),
-             True),
             (lambda t: t.find('./memory').text, '2097152')]
         if rescue:
             common_checks += [
@@ -1993,6 +1987,14 @@ class LibvirtConnTestCase(test.TestCase):
                                  '%s != %s failed common check %d' %
                                  (check(tree), expected_result, i))
 
+            filterref = './devices/interface/filterref'
+            (network, mapping) = network_info[0]
+            nic_id = mapping['mac'].replace(':', '')
+            fw = firewall.NWFilterFirewall(fake.FakeVirtAPI(), conn)
+            instance_filter_name = fw._instance_filter_name(instance_ref,
+                                                            nic_id)
+            self.assertEqual(tree.find(filterref).get('filter'),
+                             instance_filter_name)
         # This test is supposed to make sure we don't
         # override a specifically set uri
         #
@@ -3517,9 +3519,10 @@ class NWFilterFakes:
 
     def filterDefineXMLMock(self, xml):
         class FakeNWFilterInternal:
-            def __init__(self, parent, name):
+            def __init__(self, parent, name, xml):
                 self.name = name
                 self.parent = parent
+                self.xml = xml
 
             def undefine(self):
                 del self.parent.filters[self.name]
@@ -3527,7 +3530,7 @@ class NWFilterFakes:
         tree = etree.fromstring(xml)
         name = tree.get('name')
         if name not in self.filters:
-            self.filters[name] = FakeNWFilterInternal(self, name)
+            self.filters[name] = FakeNWFilterInternal(self, name, xml)
         return True
 
 
@@ -4047,6 +4050,67 @@ class NWFilterTestCase(test.TestCase):
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance, network_info)
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
+
+        db.instance_destroy(admin_ctxt, instance_ref['uuid'])
+
+    def test_nwfilter_parameters(self):
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+        inst_uuid = instance_ref['uuid']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_uuid,
+                                       self.security_group['id'])
+
+        instance = db.instance_get(self.context, inst_id)
+
+        network_info = _fake_network_info(self.stubs, 1)
+        self.fw.setup_basic_filtering(instance, network_info)
+
+        (network, mapping) = network_info[0]
+        nic_id = mapping['mac'].replace(':', '')
+        instance_filter_name = self.fw._instance_filter_name(instance, nic_id)
+        f = fakefilter.nwfilterLookupByName(instance_filter_name)
+        tree = etree.fromstring(f.xml)
+
+        for fref in tree.findall('filterref'):
+            parameters = fref.findall('./parameter')
+            for parameter in parameters:
+                if parameter.get('name') == 'IP':
+                    self.assertTrue(_ipv4_like(parameter.get('value'),
+                                                             '192.168'))
+                elif parameter.get('name') == 'DHCPSERVER':
+                    dhcp_server = mapping['dhcp_server']
+                    self.assertEqual(parameter.get('value'), dhcp_server)
+                elif parameter.get('name') == 'RASERVER':
+                    ra_server = mapping.get('gateway_v6') + "/128"
+                    self.assertEqual(parameter.get('value'), ra_server)
+                elif parameter.get('name') == 'PROJNET':
+                    ipv4_cidr = network['cidr']
+                    net, mask = netutils.get_net_and_mask(ipv4_cidr)
+                    self.assertEqual(parameter.get('value'), net)
+                elif parameter.get('name') == 'PROJMASK':
+                    ipv4_cidr = network['cidr']
+                    net, mask = netutils.get_net_and_mask(ipv4_cidr)
+                    self.assertEqual(parameter.get('value'), mask)
+                elif parameter.get('name') == 'PROJNET6':
+                    ipv6_cidr = network['cidr_v6']
+                    net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
+                    self.assertEqual(parameter.get('value'), net)
+                elif parameter.get('name') == 'PROJMASK6':
+                    ipv6_cidr = network['cidr_v6']
+                    net, prefix = netutils.get_net_and_prefixlen(ipv6_cidr)
+                    self.assertEqual(parameter.get('value'), prefix)
+                else:
+                    raise exception.InvalidParameterValue('unknown parameter '
+                                                          'in filter')
 
         db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
