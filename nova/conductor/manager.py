@@ -208,9 +208,9 @@ class ConductorManager(manager.SchedulerDependentManager):
         return jsonutils.to_primitive(group)
 
     def security_group_rule_get_by_security_group(self, context, secgroup):
-        rule = self.db.security_group_rule_get_by_security_group(
+        rules = self.db.security_group_rule_get_by_security_group(
             context, secgroup['id'])
-        return jsonutils.to_primitive(rule)
+        return jsonutils.to_primitive(rules, max_depth=4)
 
     def provider_fw_rule_get_all(self, context):
         rules = self.db.provider_fw_rule_get_all(context)

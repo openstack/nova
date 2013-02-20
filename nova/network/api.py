@@ -20,6 +20,7 @@
 import functools
 import inspect
 
+from nova.compute import instance_types
 from nova.db import base
 from nova import exception
 from nova.network import floating_ips
@@ -362,8 +363,9 @@ class API(base.Base):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
-                'rxtx_factor': instance['instance_type']['rxtx_factor'],
+                'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}
         nw_info = self.network_rpcapi.get_instance_nw_info(context, **args)
