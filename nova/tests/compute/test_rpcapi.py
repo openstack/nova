@@ -162,6 +162,9 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('get_diagnostics', 'call',
                 instance=self.fake_instance)
 
+    def test_get_host_uptime(self):
+        self._test_compute_api('get_host_uptime', 'call')
+
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
                 instance=self.fake_instance, console_type='type')
