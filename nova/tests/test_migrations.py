@@ -117,6 +117,13 @@ def _have_mysql():
     return present.lower() in ('', 'true')
 
 
+def _have_postgresql():
+    present = os.environ.get('NOVA_TEST_POSTGRESQL_PRESENT')
+    if present is None:
+        return _is_backend_avail('postgres')
+    return present.lower() in ('', 'true')
+
+
 def get_table(engine, name):
     """Returns an sqlalchemy table dynamically from db.
 
@@ -273,7 +280,7 @@ class BaseMigrationTestCase(test.TestCase):
 
     def _test_mysql_opportunistically(self, database=None):
         # Test that table creation on mysql only builds InnoDB tables
-        if not _is_backend_avail('mysql'):
+        if not _have_mysql():
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
@@ -316,7 +323,7 @@ class BaseMigrationTestCase(test.TestCase):
 
     def _test_postgresql_opportunistically(self, database=None):
         # Test postgresql database migration walk
-        if not _is_backend_avail('postgres'):
+        if not _have_postgresql():
             self.skipTest("postgresql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
