@@ -42,6 +42,7 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova import network
+from nova.network.security_group import quantum_driver
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
@@ -1696,6 +1697,15 @@ class CloudSecurityGroupNovaAPI(compute_api.SecurityGroupAPI,
     pass
 
 
+class CloudSecurityGroupQuantumAPI(quantum_driver.SecurityGroupAPI,
+                                   EC2SecurityGroupExceptions):
+    pass
+
+
 def get_cloud_security_group_api():
     if cfg.CONF.security_group_api.lower() == 'nova':
         return CloudSecurityGroupNovaAPI()
+    elif cfg.CONF.security_group_api.lower() == 'quantum':
+        return CloudSecurityGroupQuantumAPI()
+    else:
+        raise NotImplementedError()
