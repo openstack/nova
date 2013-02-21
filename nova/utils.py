@@ -983,6 +983,15 @@ def is_valid_cidr(address):
     return True
 
 
+def get_ip_version(network):
+    """Returns the IP version of a network (IPv4 or IPv6). Raises
+    AddrFormatError if invalid network."""
+    if netaddr.IPNetwork(network).version == 6:
+        return "IPv6"
+    elif netaddr.IPNetwork(network).version == 4:
+        return "IPv4"
+
+
 def monkey_patch():
     """If the Flags.monkey_patch set as True,
     this function patches a decorator

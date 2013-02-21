@@ -118,6 +118,14 @@ class TestSecurityGroups(test.TestCase):
             security_groups.ServerSecurityGroupController())
         self.manager = security_groups.SecurityGroupActionController()
 
+        # This needs to be done here to set fake_id because the derived
+        # class needs to be called first if it wants to set
+        # 'security_group_api' and this setUp method needs to be called.
+        if self.controller.security_group_api.id_is_uuid:
+            self.fake_id = '11111111-1111-1111-1111-111111111111'
+        else:
+            self.fake_id = '11111111'
+
     def _assert_no_security_groups_reserved(self, context):
         """Check that no reservations are leaked during tests."""
         result = quota.QUOTAS.get_project_quotas(context, context.project_id)
@@ -392,9 +400,10 @@ class TestSecurityGroups(test.TestCase):
                           req, 'invalid')
 
     def test_get_security_group_by_non_existing_id(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/111111111')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/%s' %
+                                      self.fake_id)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
-                          req, '111111111')
+                          req, self.fake_id)
 
     def test_delete_security_group_by_id(self):
         sg = security_group_template(id=1, rules=[])
@@ -424,9 +433,10 @@ class TestSecurityGroups(test.TestCase):
                           req, 'invalid')
 
     def test_delete_security_group_by_non_existing_id(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/11111111')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/%s'
+                                      % self.fake_id)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
-                          req, '11111111')
+                          req, self.fake_id)
 
     def test_delete_security_group_in_use(self):
         sg = security_group_template(id=1, rules=[])
@@ -639,12 +649,23 @@ class TestSecurityGroupRules(test.TestCase):
     def setUp(self):
         super(TestSecurityGroupRules, self).setUp()
 
-        sg1 = security_group_template(id=1)
-        sg2 = security_group_template(id=2,
-                                      name='authorize_revoke',
-                                      description='authorize-revoke testing')
-        db1 = security_group_db(sg1)
-        db2 = security_group_db(sg2)
+        self.controller = security_groups.SecurityGroupController()
+        if self.controller.security_group_api.id_is_uuid:
+            id1 = '11111111-1111-1111-1111-111111111111'
+            id2 = '22222222-2222-2222-2222-222222222222'
+            self.invalid_id = '33333333-3333-3333-3333-333333333333'
+        else:
+            id1 = 1
+            id2 = 2
+            self.invalid_id = '33333333'
+
+        self.sg1 = security_group_template(id=id1)
+        self.sg2 = security_group_template(
+            id=id2, name='authorize_revoke',
+            description='authorize-revoke testing')
+
+        db1 = security_group_db(self.sg1)
+        db2 = security_group_db(self.sg2)
 
         def return_security_group(context, group_id):
             if group_id == db1['id']:
@@ -661,41 +682,47 @@ class TestSecurityGroupRules(test.TestCase):
         self.controller = security_groups.SecurityGroupRulesController()
 
     def test_create_by_cidr(self):
-        rule = security_group_rule_template(cidr='10.2.3.124/24')
+        rule = security_group_rule_template(cidr='10.2.3.124/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
-
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'], 2)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.sg2['id'])
         self.assertEquals(security_group_rule['ip_range']['cidr'],
                           "10.2.3.124/24")
 
     def test_create_by_group_id(self):
-        rule = security_group_rule_template(group_id=1)
+        rule = security_group_rule_template(group_id=self.sg1['id'],
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'], 2)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.sg2['id'])
 
     def test_create_by_same_group_id(self):
-        rule1 = security_group_rule_template(group_id=1, from_port=80,
-                                             to_port=80)
+        rule1 = security_group_rule_template(group_id=self.sg1['id'],
+                                             from_port=80, to_port=80,
+                                             parent_group_id=self.sg2['id'])
         self.parent_security_group['rules'] = [security_group_rule_db(rule1)]
 
-        rule2 = security_group_rule_template(group_id=1, from_port=81,
-                                             to_port=81)
+        rule2 = security_group_rule_template(group_id=self.sg1['id'],
+                                             from_port=81, to_port=81,
+                                             parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule2})
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'], 2)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.sg2['id'])
         self.assertEquals(security_group_rule['from_port'], 81)
         self.assertEquals(security_group_rule['to_port'], 81)
 
@@ -705,13 +732,13 @@ class TestSecurityGroupRules(test.TestCase):
                         "ip_protocol": "tcp",
                         "from_port": "22",
                         "to_port": "22",
-                        "parent_group_id": 2,
+                        "parent_group_id": self.sg2['id'],
                         "cidr": "10.2.3.124/2433"}}
         rule = security_group_rule_template(
                 ip_protocol="tcp",
                 from_port=22,
                 to_port=22,
-                parent_group_id=2,
+                parent_group_id=self.sg2['id'],
                 cidr="10.2.3.124/2433")
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -722,7 +749,7 @@ class TestSecurityGroupRules(test.TestCase):
                 ip_protocol="tcp",
                 from_port=75534,
                 to_port=22,
-                parent_group_id=2,
+                parent_group_id=self.sg2['id'],
                 cidr="10.2.3.124/24")
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
@@ -734,14 +761,15 @@ class TestSecurityGroupRules(test.TestCase):
                 ip_protocol="icmp",
                 from_port=1,
                 to_port=256,
-                parent_group_id=2,
+                parent_group_id=self.sg2['id'],
                 cidr="10.2.3.124/24")
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_add_existing_rules_by_cidr(self):
-        rule = security_group_rule_template(cidr='10.0.0.0/24')
+        rule = security_group_rule_template(cidr='10.0.0.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         self.parent_security_group['rules'] = [security_group_rule_db(rule)]
 
@@ -778,7 +806,7 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_non_existing_parent_group_id(self):
         rule = security_group_rule_template(group_id='invalid',
-                                            parent_group_id='1111111111111')
+                                            parent_group_id=self.invalid_id)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
@@ -786,14 +814,16 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_invalid_protocol(self):
         rule = security_group_rule_template(ip_protocol='invalid-protocol',
-                                            cidr='10.2.2.0/24')
+                                            cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_protocol(self):
-        rule = security_group_rule_template(cidr='10.2.2.0/24')
+        rule = security_group_rule_template(cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
         del rule['ip_protocol']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
@@ -802,7 +832,8 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_invalid_from_port(self):
         rule = security_group_rule_template(from_port='666666',
-                                            cidr='10.2.2.0/24')
+                                            cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -810,7 +841,8 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_invalid_to_port(self):
         rule = security_group_rule_template(to_port='666666',
-                                            cidr='10.2.2.0/24')
+                                            cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -818,7 +850,8 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_non_numerical_from_port(self):
         rule = security_group_rule_template(from_port='invalid',
-                                            cidr='10.2.2.0/24')
+                                            cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -826,14 +859,16 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_non_numerical_to_port(self):
         rule = security_group_rule_template(to_port='invalid',
-                                            cidr='10.2.2.0/24')
+                                            cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_from_port(self):
-        rule = security_group_rule_template(cidr='10.2.2.0/24')
+        rule = security_group_rule_template(cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
         del rule['from_port']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
@@ -841,7 +876,8 @@ class TestSecurityGroupRules(test.TestCase):
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_to_port(self):
-        rule = security_group_rule_template(cidr='10.2.2.0/24')
+        rule = security_group_rule_template(cidr='10.2.2.0/24',
+                                            parent_group_id=self.sg2['id'])
         del rule['to_port']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
@@ -849,14 +885,15 @@ class TestSecurityGroupRules(test.TestCase):
                           req, {'security_group_rule': rule})
 
     def test_create_with_invalid_cidr(self):
-        rule = security_group_rule_template(cidr='10.2.2222.0/24')
+        rule = security_group_rule_template(cidr='10.2.2222.0/24',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_cidr_group(self):
-        rule = security_group_rule_template()
+        rule = security_group_rule_template(parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
@@ -869,54 +906,59 @@ class TestSecurityGroupRules(test.TestCase):
                           "0.0.0.0/0")
 
     def test_create_with_invalid_group_id(self):
-        rule = security_group_rule_template(group_id='invalid')
+        rule = security_group_rule_template(group_id='invalid',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_empty_group_id(self):
-        rule = security_group_rule_template(group_id='')
+        rule = security_group_rule_template(group_id='',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_nonexist_group_id(self):
-        rule = security_group_rule_template(group_id='222222')
+        rule = security_group_rule_template(group_id=self.invalid_id,
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_same_group_parent_id_and_group_id(self):
-        rule = security_group_rule_template(group_id=1, parent_group_id=1)
-
+        rule = security_group_rule_template(group_id=self.sg1['id'],
+                                            parent_group_id=self.sg1['id'])
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'], 1)
-        self.assertEquals(security_group_rule['id'], 1)
+        self.assertEquals(security_group_rule['parent_group_id'],
+                          self.sg1['id'])
+        self.assertEquals(security_group_rule['group']['name'],
+                          self.sg1['name'])
 
     def _test_create_with_no_ports_and_no_group(self, proto):
-        rule = {'ip_protocol': proto, 'parent_group_id': '2'}
+        rule = {'ip_protocol': proto, 'parent_group_id': self.sg2['id']}
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def _test_create_with_no_ports(self, proto):
-        rule = {'ip_protocol': proto, 'parent_group_id': '2', 'group_id': '1'}
+        rule = {'ip_protocol': proto, 'parent_group_id': self.sg2['id'],
+                 'group_id': self.sg1['id']}
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
-
         security_group_rule = res_dict['security_group_rule']
         expected_rule = {
             'from_port': 1, 'group': {'tenant_id': '123', 'name': 'test'},
-            'ip_protocol': proto, 'to_port': 65535, 'parent_group_id': 2,
-            'ip_range': {}, 'id': 1
+            'ip_protocol': proto, 'to_port': 65535, 'parent_group_id':
+             self.sg2['id'], 'ip_range': {}, 'id': security_group_rule['id']
         }
         if proto == 'icmp':
             expected_rule['to_port'] = -1
@@ -935,10 +977,10 @@ class TestSecurityGroupRules(test.TestCase):
         self._test_create_with_no_ports_and_no_group('udp')
         self._test_create_with_no_ports('udp')
 
-    def _test_create_with_ports(self, id_val, proto, from_port, to_port):
+    def _test_create_with_ports(self, proto, from_port, to_port):
         rule = {
             'ip_protocol': proto, 'from_port': from_port, 'to_port': to_port,
-            'parent_group_id': '2', 'group_id': '1'
+            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
         }
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
@@ -947,32 +989,32 @@ class TestSecurityGroupRules(test.TestCase):
         expected_rule = {
             'from_port': from_port,
             'group': {'tenant_id': '123', 'name': 'test'},
-            'ip_protocol': proto, 'to_port': to_port, 'parent_group_id': 2,
-            'ip_range': {}, 'id': id_val
+            'ip_protocol': proto, 'to_port': to_port, 'parent_group_id':
+             self.sg2['id'], 'ip_range': {}, 'id': security_group_rule['id']
         }
         self.assertTrue(security_group_rule['ip_protocol'] == proto)
-        self.assertTrue(security_group_rule['id'] == id_val)
         self.assertTrue(security_group_rule['from_port'] == from_port)
         self.assertTrue(security_group_rule['to_port'] == to_port)
         self.assertTrue(security_group_rule == expected_rule)
 
     def test_create_with_ports_icmp(self):
-        self._test_create_with_ports(1, 'icmp', 0, 1)
-        self._test_create_with_ports(2, 'icmp', 0, 0)
-        self._test_create_with_ports(3, 'icmp', 1, 0)
+        self._test_create_with_ports('icmp', 0, 1)
+        self._test_create_with_ports('icmp', 0, 0)
+        self._test_create_with_ports('icmp', 1, 0)
 
     def test_create_with_ports_tcp(self):
-        self._test_create_with_ports(1, 'tcp', 1, 1)
-        self._test_create_with_ports(2, 'tcp', 1, 65535)
-        self._test_create_with_ports(3, 'tcp', 65535, 65535)
+        self._test_create_with_ports('tcp', 1, 1)
+        self._test_create_with_ports('tcp', 1, 65535)
+        self._test_create_with_ports('tcp', 65535, 65535)
 
     def test_create_with_ports_udp(self):
-        self._test_create_with_ports(1, 'udp', 1, 1)
-        self._test_create_with_ports(2, 'udp', 1, 65535)
-        self._test_create_with_ports(3, 'udp', 65535, 65535)
+        self._test_create_with_ports('udp', 1, 1)
+        self._test_create_with_ports('udp', 1, 65535)
+        self._test_create_with_ports('udp', 65535, 65535)
 
     def test_delete(self):
-        rule = security_group_rule_template(id=10)
+        rule = security_group_rule_template(id=self.sg2['id'],
+                                            parent_group_id=self.sg2['id'])
 
         def security_group_rule_get(context, id):
             return security_group_rule_db(rule)
@@ -985,8 +1027,9 @@ class TestSecurityGroupRules(test.TestCase):
         self.stubs.Set(nova.db, 'security_group_rule_destroy',
                        security_group_rule_destroy)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules/10')
-        self.controller.delete(req, '10')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules/%s'
+                                      % self.sg2['id'])
+        self.controller.delete(req, self.sg2['id'])
 
     def test_delete_invalid_rule_id(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules' +
@@ -995,30 +1038,32 @@ class TestSecurityGroupRules(test.TestCase):
                           req, 'invalid')
 
     def test_delete_non_existing_rule_id(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules' +
-                                      '/22222222222222')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules/%s'
+                                      % self.invalid_id)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
-                          req, '22222222222222')
+                          req, self.invalid_id)
 
     def test_create_rule_quota_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         for num in range(100, 100 + CONF.quota_security_group_rules):
             rule = {
                 'ip_protocol': 'tcp', 'from_port': num,
-                'to_port': num, 'parent_group_id': '2', 'group_id': '1'
+                'to_port': num, 'parent_group_id': self.sg2['id'],
+                'group_id': self.sg1['id']
             }
             self.controller.create(req, {'security_group_rule': rule})
 
         rule = {
             'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
-            'parent_group_id': '2', 'group_id': '1'
+            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
         }
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_rule_cidr_allow_all(self):
-        rule = security_group_rule_template(cidr='0.0.0.0/0')
+        rule = security_group_rule_template(cidr='0.0.0.0/0',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
@@ -1031,7 +1076,8 @@ class TestSecurityGroupRules(test.TestCase):
                           "0.0.0.0/0")
 
     def test_create_rule_cidr_allow_some(self):
-        rule = security_group_rule_template(cidr='15.0.0.0/8')
+        rule = security_group_rule_template(cidr='15.0.0.0/8',
+                                            parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
@@ -1340,6 +1386,7 @@ class SecurityGroupsOutputTest(test.TestCase):
 
     def setUp(self):
         super(SecurityGroupsOutputTest, self).setUp()
+        self.controller = security_groups.SecurityGroupController()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)

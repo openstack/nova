@@ -244,7 +244,7 @@ class API(base.Base):
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              conductor_api=None):
+                              conductor_api=None, security_groups=None):
         """Allocates all network structures for an instance.
 
         TODO(someone): document the rest of these parameters.

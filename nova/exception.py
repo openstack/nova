@@ -736,6 +736,16 @@ class SecurityGroupDefaultRuleNotFound(Invalid):
     message = _("Security group default rule (%rule_id)s not found.")
 
 
+class SecurityGroupCannotBeApplied(Invalid):
+    message = _("Network requires port_security_enabled and subnet associated"
+                " in order to apply security groups.")
+
+
+class NoUniqueMatch(NovaException):
+    message = _("No Unique Match Found.")
+    code = 409
+
+
 class MigrationNotFound(NotFound):
     message = _("Migration %(migration_id)s could not be found.")
 

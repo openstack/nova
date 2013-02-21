@@ -27,6 +27,7 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network import quantumv2
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
@@ -83,6 +84,7 @@ class API(base.Base):
     """API for interacting with the quantum 2.x API."""
 
     conductor_api = conductor.API()
+    security_group_api = openstack_driver.get_openstack_security_group_driver()
 
     def __init__(self):
         super(API, self).__init__()
@@ -175,9 +177,55 @@ class API(base.Base):
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
+        security_groups = kwargs.get('security_groups', [])
+        security_group_ids = []
+
+        # TODO(arosen) Should optimize more to do direct query for security
+        # group if len(security_groups) == 1
+        if len(security_groups):
+            search_opts = {'tenant_id': instance['project_id']}
+            user_security_groups = quantum.list_security_groups(
+                **search_opts).get('security_groups')
+
+        for security_group in security_groups:
+            name_match = None
+            uuid_match = None
+            for user_security_group in user_security_groups:
+                if user_security_group['name'] == security_group:
+                    if name_match:
+                        msg = (_("Multiple security groups found matching"
+                                 " '%s'. Use an ID to be more specific."),
+                                 security_group)
+                        raise exception.NoUniqueMatch(msg)
+                    name_match = user_security_group['id']
+                if user_security_group['id'] == security_group:
+                    uuid_match = user_security_group['id']
+
+            # If a user names the security group the same as
+            # another's security groups uuid, the name takes priority.
+            if not name_match and not uuid_match:
+                raise exception.SecurityGroupNotFound(
+                    security_group_id=security_group)
+                security_group_ids.append(name_match)
+            elif name_match:
+                security_group_ids.append(name_match)
+            elif uuid_match:
+                security_group_ids.append(uuid_match)
+
         touched_port_ids = []
         created_port_ids = []
         for network in nets:
+            # If security groups are requested on an instance then the
+            # network must has a subnet associated with it. Some plugins
+            # implement the port-security extension which requires
+            # 'port_security_enabled' to be True for security groups.
+            # That is why True is returned if 'port_security_enabled'
+            # is not found.
+            if (security_groups and not (
+                    network['subnets']
+                    and network.get('port_security_enabled', True))):
+
+                raise exception.SecurityGroupCannotBeApplied()
             network_id = network['id']
             zone = 'compute:%s' % instance['availability_zone']
             port_req_body = {'port': {'device_id': instance['uuid'],
@@ -194,6 +242,9 @@ class API(base.Base):
                     port_req_body['port']['network_id'] = network_id
                     port_req_body['port']['admin_state_up'] = True
                     port_req_body['port']['tenant_id'] = instance['project_id']
+                    if security_group_ids:
+                        port_req_body['port']['security_groups'] = (
+                            security_group_ids)
                     if available_macs is not None:
                         if not available_macs:
                             raise exception.PortNotFree(
