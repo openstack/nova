@@ -48,3 +48,15 @@ def HostAPI(*args, **kwargs):
     compute_api_class = importutils.import_class(compute_api_class_name)
     class_name = compute_api_class.__module__ + ".HostAPI"
     return importutils.import_object(class_name, *args, **kwargs)
+
+
+def InstanceActionAPI(*args, **kwargs):
+    """
+    Returns the 'InstanceActionAPI' class from the same module as the
+    configured compute api.
+    """
+    importutils = nova.openstack.common.importutils
+    compute_api_class_name = oslo.config.cfg.CONF.compute_api_class
+    compute_api_class = importutils.import_class(compute_api_class_name)
+    class_name = compute_api_class.__module__ + ".InstanceActionAPI"
+    return importutils.import_object(class_name, *args, **kwargs)

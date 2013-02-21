@@ -2557,6 +2557,20 @@ class HostAPI(base.Base):
         return self.db.compute_node_statistics(context)
 
 
+class InstanceActionAPI(base.Base):
+    """Sub-set of the Compute Manager API for managing instance actions."""
+
+    def actions_get(self, context, instance):
+        return self.db.actions_get(context, instance['uuid'])
+
+    def action_get_by_request_id(self, context, instance, request_id):
+        return self.db.action_get_by_request_id(context, instance['uuid'],
+                                                request_id)
+
+    def action_events_get(self, context, instance, action_id):
+        return self.db.action_events_get(context, action_id)
+
+
 class AggregateAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host aggregates."""
     def __init__(self, **kwargs):

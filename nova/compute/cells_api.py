@@ -667,3 +667,21 @@ class HostAPI(compute_api.HostAPI):
 
     def compute_node_statistics(self, context):
         return self.cells_rpcapi.compute_node_stats(context)
+
+
+class InstanceActionAPI(compute_api.InstanceActionAPI):
+    """InstanceActionAPI() class for cells."""
+    def __init__(self):
+        super(InstanceActionAPI, self).__init__()
+        self.cells_rpcapi = cells_rpcapi.CellsAPI()
+
+    def actions_get(self, context, instance):
+        return self.cells_rpcapi.actions_get(context, instance)
+
+    def action_get_by_request_id(self, context, instance, request_id):
+        return self.cells_rpcapi.action_get_by_request_id(context, instance,
+                                                          request_id)
+
+    def action_events_get(self, context, instance, action_id):
+        return self.cells_rpcapi.action_events_get(context, instance,
+                                                   action_id)

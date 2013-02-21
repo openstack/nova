@@ -19,7 +19,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova import db
 
 authorize_actions = extensions.extension_authorizer('compute',
                                                     'instance_actions')
@@ -67,6 +66,7 @@ class InstanceActionsController(wsgi.Controller):
     def __init__(self):
         super(InstanceActionsController, self).__init__()
         self.compute_api = compute.API()
+        self.action_api = compute.InstanceActionAPI()
 
     def _format_action(self, action_raw):
         action = {}
@@ -86,7 +86,7 @@ class InstanceActionsController(wsgi.Controller):
         context = req.environ["nova.context"]
         instance = self.compute_api.get(context, server_id)
         authorize_actions(context, target=instance)
-        actions_raw = db.actions_get(context, server_id)
+        actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
         return {'instanceActions': actions}
 
@@ -96,14 +96,16 @@ class InstanceActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self.compute_api.get(context, server_id)
         authorize_actions(context, target=instance)
-        action = db.action_get_by_request_id(context, server_id, id)
+        action = self.action_api.action_get_by_request_id(context, instance,
+                                                          id)
         if action is None:
             raise exc.HTTPNotFound()
 
         action_id = action['id']
         action = self._format_action(action)
         if authorize_events(context):
-            events_raw = db.action_events_get(context, action_id)
+            events_raw = self.action_api.action_events_get(context, instance,
+                                                           action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]
         return {'instanceAction': action}
 

@@ -24,6 +24,7 @@ messging module.
 
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import proxy as rpc_proxy
@@ -47,6 +48,8 @@ class CellsAPI(rpc_proxy.RpcProxy):
         1.3 - Adds task_log_get_all()
         1.4 - Adds compute_node_get(), compute_node_get_all(), and
               compute_node_stats()
+        1.5 - Adds actions_get(), action_get_by_request_id(), and
+              action_events_get()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -219,3 +222,28 @@ class CellsAPI(rpc_proxy.RpcProxy):
         """Return compute node stats from all cells."""
         return self.call(ctxt, self.make_msg('compute_node_stats'),
                          version='1.4')
+
+    def actions_get(self, ctxt, instance):
+        if not instance['cell_name']:
+            raise exception.InstanceUnknownCell(instance_uuid=instance['uuid'])
+        return self.call(ctxt, self.make_msg('actions_get',
+                                             cell_name=instance['cell_name'],
+                                             instance_uuid=instance['uuid']),
+                         version='1.5')
+
+    def action_get_by_request_id(self, ctxt, instance, request_id):
+        if not instance['cell_name']:
+            raise exception.InstanceUnknownCell(instance_uuid=instance['uuid'])
+        return self.call(ctxt, self.make_msg('action_get_by_request_id',
+                                             cell_name=instance['cell_name'],
+                                             instance_uuid=instance['uuid'],
+                                             request_id=request_id),
+                         version='1.5')
+
+    def action_events_get(self, ctxt, instance, action_id):
+        if not instance['cell_name']:
+            raise exception.InstanceUnknownCell(instance_uuid=instance['uuid'])
+        return self.call(ctxt, self.make_msg('action_events_get',
+                                             cell_name=instance['cell_name'],
+                                             action_id=action_id),
+                         version='1.5')

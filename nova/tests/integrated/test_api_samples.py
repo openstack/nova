@@ -3165,12 +3165,16 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBase):
         def fake_instance_get_by_uuid(context, instance_id):
             return self.instance
 
+        def fake_get(self, context, instance_uuid):
+            return {'uuid': instance_uuid}
+
         self.stubs.Set(db, 'action_get_by_request_id',
                        fake_instance_action_get_by_request_id)
         self.stubs.Set(db, 'actions_get', fake_instance_actions_get)
         self.stubs.Set(db, 'action_events_get',
                        fake_instance_action_events_get)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stubs.Set(compute_api.API, 'get', fake_get)
 
     def test_instance_action_get(self):
         fake_uuid = fake_instance_actions.FAKE_UUID

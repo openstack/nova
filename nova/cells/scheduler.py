@@ -22,6 +22,8 @@ import time
 from oslo.config import cfg
 
 from nova import compute
+from nova.compute import instance_actions
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.db import base
 from nova import exception
@@ -70,6 +72,12 @@ class CellsScheduler(base.Base):
 
             self.msg_runner.instance_update_at_top(ctxt, instance)
 
+    def _create_action_here(self, ctxt, instance_uuids):
+        for instance_uuid in instance_uuids:
+            action = compute_utils.pack_action_start(ctxt, instance_uuid,
+                    instance_actions.CREATE)
+            self.db.action_start(ctxt, action)
+
     def _get_possible_cells(self):
         cells = set(self.state_manager.get_child_cells())
         our_cell = self.state_manager.get_my_state()
@@ -102,6 +110,9 @@ class CellsScheduler(base.Base):
             # Need to create instance DB entries as the host scheduler
             # expects that the instance(s) already exists.
             self._create_instances_here(ctxt, request_spec)
+            # Need to record the create action in the db as the scheduler
+            # expects it to already exist.
+            self._create_action_here(ctxt, request_spec['instance_uuids'])
             self.scheduler_rpcapi.run_instance(ctxt,
                     **host_sched_kwargs)
             return
