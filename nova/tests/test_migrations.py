@@ -374,7 +374,7 @@ class BaseMigrationTestCase(test.TestCase):
             # upgrade -> downgrade -> upgrade
             self._migrate_up(engine, version, with_data=True)
             if snake_walk:
-                self._migrate_down(engine, version)
+                self._migrate_down(engine, version - 1)
                 self._migrate_up(engine, version)
 
         if downgrade:
@@ -384,10 +384,10 @@ class BaseMigrationTestCase(test.TestCase):
                 xrange(self.INIT_VERSION + 2,
                        self.REPOSITORY.latest + 1)):
                 # downgrade -> upgrade -> downgrade
-                self._migrate_down(engine, version)
+                self._migrate_down(engine, version - 1)
                 if snake_walk:
                     self._migrate_up(engine, version)
-                    self._migrate_down(engine, version)
+                    self._migrate_down(engine, version - 1)
 
     def _migrate_down(self, engine, version):
         self.migration_api.downgrade(engine,
