@@ -2818,7 +2818,7 @@ def volume_get_iscsi_target_num(context, volume_id):
 
 @require_context
 def ec2_volume_create(context, volume_uuid, id=None):
-    """Create ec2 compatable volume by provided uuid."""
+    """Create ec2 compatible volume by provided uuid."""
     ec2_volume_ref = models.VolumeIdMapping()
     ec2_volume_ref.update({'uuid': volume_uuid})
     if id is not None:
@@ -2855,7 +2855,7 @@ def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
 
 @require_context
 def ec2_snapshot_create(context, snapshot_uuid, id=None):
-    """Create ec2 compatable snapshot by provided uuid."""
+    """Create ec2 compatible snapshot by provided uuid."""
     ec2_snapshot_ref = models.SnapshotIdMapping()
     ec2_snapshot_ref.update({'uuid': snapshot_uuid})
     if id is not None:
@@ -4640,7 +4640,7 @@ def action_event_get_by_id(context, action_id, event_id):
 
 @require_context
 def ec2_instance_create(context, instance_uuid, id=None):
-    """Create ec2 compatable instance by provided uuid."""
+    """Create ec2 compatible instance by provided uuid."""
     ec2_instance_ref = models.InstanceIdMapping()
     ec2_instance_ref.update({'uuid': instance_uuid})
     if id is not None:
