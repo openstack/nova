@@ -2569,6 +2569,129 @@ class LibvirtConnTestCase(test.TestCase):
                    None)
         self.assertTrue(self.create_image_called)
 
+    def test_create_image_plain(self):
+        gotFiles = []
+
+        def fake_image(self, instance, name, image_type=''):
+            class FakeImage(imagebackend.Image):
+                def __init__(self, instance, name):
+                    self.path = os.path.join(instance['name'], name)
+
+                def create_image(self, prepare_template, base,
+                                 size, *args, **kwargs):
+                    pass
+
+                def cache(self, fetch_func, filename, size=None,
+                          *args, **kwargs):
+                    gotFiles.append({'filename': filename,
+                                     'size': size})
+
+                def snapshot(self, name):
+                    pass
+
+            return FakeImage(instance, name)
+
+        def fake_none(*args, **kwargs):
+            return
+
+        def fake_get_info(instance):
+            return {'state': power_state.RUNNING}
+
+        # Stop 'libvirt_driver._create_image' touching filesystem
+        self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
+                       fake_image)
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 1
+        instance = db.instance_create(self.context, instance_ref)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'to_xml', fake_none)
+        self.stubs.Set(conn, '_create_domain_and_network', fake_none)
+        self.stubs.Set(conn, 'get_info', fake_get_info)
+
+        image_meta = {'id': instance['image_ref']}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance,
+                                            None,
+                                            image_meta)
+        xml = conn.to_xml(instance, None,
+                          disk_info, image_meta)
+        conn._create_image(context, instance, xml,
+                           disk_info['mapping'])
+
+        wantFiles = [
+            {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
+             'size': 10 * 1024 * 1024 * 1024},
+            {'filename': 'ephemeral_20_default',
+             'size': 20 * 1024 * 1024 * 1024},
+            ]
+        self.assertEquals(gotFiles, wantFiles)
+
+    def test_create_image_with_swap(self):
+        gotFiles = []
+
+        def fake_image(self, instance, name, image_type=''):
+            class FakeImage(imagebackend.Image):
+                def __init__(self, instance, name):
+                    self.path = os.path.join(instance['name'], name)
+
+                def create_image(self, prepare_template, base,
+                                 size, *args, **kwargs):
+                    pass
+
+                def cache(self, fetch_func, filename, size=None,
+                          *args, **kwargs):
+                    gotFiles.append({'filename': filename,
+                                     'size': size})
+
+                def snapshot(self, name):
+                    pass
+
+            return FakeImage(instance, name)
+
+        def fake_none(*args, **kwargs):
+            return
+
+        def fake_get_info(instance):
+            return {'state': power_state.RUNNING}
+
+        # Stop 'libvirt_driver._create_image' touching filesystem
+        self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
+                       fake_image)
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 1
+        instance = db.instance_create(self.context, instance_ref)
+
+        # Turn on some swap to exercise that codepath in _create_image
+        instance['instance_type']['swap'] = 500
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'to_xml', fake_none)
+        self.stubs.Set(conn, '_create_domain_and_network', fake_none)
+        self.stubs.Set(conn, 'get_info', fake_get_info)
+
+        image_meta = {'id': instance['image_ref']}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance,
+                                            None,
+                                            image_meta)
+        xml = conn.to_xml(instance, None,
+                          disk_info, image_meta)
+        conn._create_image(context, instance, xml,
+                           disk_info['mapping'])
+
+        wantFiles = [
+            {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
+             'size': 10 * 1024 * 1024 * 1024},
+            {'filename': 'ephemeral_20_default',
+             'size': 20 * 1024 * 1024 * 1024},
+            {'filename': 'swap_500',
+             'size': 500 * 1024 * 1024},
+            ]
+        self.assertEquals(gotFiles, wantFiles)
+
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
 
