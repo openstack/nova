@@ -47,13 +47,8 @@ def downgrade(migrate_engine):
 
     bm_nodes = Table('bm_nodes', meta, autoload=True)
 
-    image_path = Column('image_path', String(length=255))
-    pxe_config_path = Column('pxe_config_path', String(length=255))
-    deploy_key = Column('deploy_key', String(length=255))
-    root_mb = Column('root_mb', Integer())
-    swap_mb = Column('swap_mb', Integer())
-
-    for c in [image_path, pxe_config_path, deploy_key, root_mb, swap_mb]:
+    for c in ['image_path', 'pxe_config_path', 'deploy_key', 'root_mb',
+              'swap_mb']:
         bm_nodes.drop_column(c)
 
     bm_deployments = Table('bm_deployments', meta,
