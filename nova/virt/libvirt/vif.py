@@ -67,7 +67,8 @@ class LibvirtBridgeDriver(vif.VIFDriver):
         if FLAGS.firewall_driver != "nova.virt.firewall.NoopFirewallDriver":
             conf.filtername = "nova-instance-" + instance['name'] + "-" + \
                               mac_id
-            conf.add_filter_param("IP", mapping['ips'][0]['ip'])
+            if mapping['ips']:
+                conf.add_filter_param("IP", mapping['ips'][0]['ip'])
             if mapping['dhcp_server']:
                 conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
 

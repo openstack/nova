@@ -65,7 +65,7 @@ class LibvirtVifTestCase(test.TestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
-    def _get_instance_xml(self, driver):
+    def _get_instance_xml(self, driver, mapping=None):
         conf = config.LibvirtConfigGuest()
         conf.virt_type = "qemu"
         conf.name = "fake-name"
@@ -73,7 +73,9 @@ class LibvirtVifTestCase(test.TestCase):
         conf.memory = 100 * 1024
         conf.vcpus = 4
 
-        nic = driver.plug(self.instance, (self.net, self.mapping))
+        if mapping is None:
+            mapping = self.mapping
+        nic = driver.plug(self.instance, (self.net, mapping))
         conf.add_device(nic)
         return conf.to_xml()
 
@@ -90,6 +92,28 @@ class LibvirtVifTestCase(test.TestCase):
         self.assertEqual(br_name, self.net['bridge'])
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping['mac'])
+        first_filter = node.find("filterref")[0]
+        self.assertEqual(first_filter.get('name'), 'IP')
+
+        d.unplug(None, (self.net, self.mapping))
+
+    def test_bridge_driver_no_ips(self):
+        d = vif.LibvirtBridgeDriver()
+        mapping = dict(self.mapping)
+        mapping['ips'] = []
+        xml = self._get_instance_xml(d, mapping)
+
+        doc = etree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        self.assertEqual(node.get("type"), "bridge")
+        br_name = node.find("source").get("bridge")
+        self.assertEqual(br_name, self.net['bridge'])
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping['mac'])
+        first_filter = node.find("filterref")[0]
+        self.assertNotEqual(first_filter.get('name'), 'IP')
 
         d.unplug(None, (self.net, self.mapping))
 
