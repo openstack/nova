@@ -73,6 +73,16 @@ def bm_node_get_all(context, service_host=None):
                                 service_host=service_host)
 
 
+def bm_node_get_associated(context, service_host=None):
+    return IMPL.bm_node_get_associated(context,
+                                service_host=service_host)
+
+
+def bm_node_get_unassociated(context, service_host=None):
+    return IMPL.bm_node_get_unassociated(context,
+                                service_host=service_host)
+
+
 def bm_node_find_free(context, service_host=None,
                       memory_mb=None, cpus=None, local_gb=None):
     return IMPL.bm_node_find_free(context,

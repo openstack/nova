@@ -83,11 +83,6 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.NoopFirewallDriver.__name__)
 
 
-def _get_baremetal_nodes(context):
-    nodes = db.bm_node_get_all(context, service_host=CONF.host)
-    return nodes
-
-
 def _get_baremetal_node_by_instance_uuid(instance_uuid):
     ctx = nova_context.get_admin_context()
     node = db.bm_node_get_by_instance_uuid(ctx, instance_uuid)
@@ -173,14 +168,14 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def list_instances(self):
         l = []
-        ctx = nova_context.get_admin_context()
-        for node in _get_baremetal_nodes(ctx):
+        context = nova_context.get_admin_context()
+        for node in db.bm_node_get_associated(context, service_host=CONF.host):
             if not node['instance_uuid']:
                 # Not currently assigned to an instance.
                 continue
             try:
                 inst = self.virtapi.instance_get_by_uuid(
-                    ctx, node['instance_uuid'])
+                    context, node['instance_uuid'])
             except exception.InstanceNotFound:
                 # Assigned to an instance that no longer exists.
                 LOG.warning(_("Node %(id)r assigned to instance %(uuid)r "
@@ -494,4 +489,5 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def get_available_nodes(self):
         context = nova_context.get_admin_context()
-        return [str(n['id']) for n in _get_baremetal_nodes(context)]
+        return [str(n['id']) for n in
+                db.bm_node_get_unassociated(context, service_host=CONF.host)]

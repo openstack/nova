@@ -46,10 +46,6 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
             ref = db.bm_node_create(self.context, n)
             self.ids.append(ref['id'])
 
-    def test_get_all0(self):
-        r = db.bm_node_get_all(self.context)
-        self.assertEquals(r, [])
-
     def test_get_all(self):
         r = db.bm_node_get_all(self.context)
         self.assertEquals(r, [])
@@ -94,6 +90,22 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
 
         r = db.bm_node_get_all(self.context, service_host="host3")
         self.assertEquals(r, [])
+
+    def test_get_associated(self):
+        self._create_nodes()
+
+        r = db.bm_node_get_associated(self.context, service_host=None)
+        self.assertEquals(len(r), 1)
+        self.assertEquals(r[0]['pm_address'], '1')
+
+        r = db.bm_node_get_unassociated(self.context, service_host=None)
+        self.assertEquals(len(r), 5)
+        pmaddrs = [x['pm_address'] for x in r]
+        self.assertIn('0', pmaddrs)
+        self.assertIn('2', pmaddrs)
+        self.assertIn('3', pmaddrs)
+        self.assertIn('4', pmaddrs)
+        self.assertIn('5', pmaddrs)
 
     def test_destroy(self):
         self._create_nodes()
