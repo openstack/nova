@@ -78,6 +78,11 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
+def get_backend():
+    """The backend is this module itself."""
+    return sys.modules[__name__]
+
+
 def require_admin_context(f):
     """Decorator to require admin request context.
 
