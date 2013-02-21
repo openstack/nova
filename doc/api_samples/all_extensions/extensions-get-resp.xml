@@ -9,6 +9,9 @@
   <extension alias="OS-EXT-AZ" updated="2013-01-30T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2" name="ExtendedAvailabilityZone">
     <description>Extended Server Attributes support.</description>
   </extension>
+  <extension alias="OS-EXT-IMG-SIZE" updated="2013-02-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/image_size/api/v1.1" name="ImageSize">
+    <description>Adds image size to image listings.</description>
+  </extension>
   <extension alias="OS-EXT-IPS" updated="2013-01-06T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_ips/api/v1.1" name="ExtendedIps">
     <description>Adds type parameter to the ip list.</description>
   </extension>
@@ -139,7 +142,7 @@
     <description>Admin-only hypervisor administration.</description>
   </extension>
   <extension alias="os-instance-actions" updated="2013-02-08T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/instance-actions/api/v1.1" name="InstanceActions">
-    <description>View a log of actions taken on an instance</description>
+    <description>View a log of actions and events taken on an instance.</description>
   </extension>
   <extension alias="os-instance_usage_audit_log" updated="2012-07-06T01:00:00+00:00" namespace="http://docs.openstack.org/ext/services/api/v1.1" name="OSInstanceUsageAuditLog">
     <description>Admin-only Task Log Monitoring.</description>

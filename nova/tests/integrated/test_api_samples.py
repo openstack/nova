@@ -325,6 +325,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'glance_host': self._get_glance_host(),
             'compute_host': self.compute.host,
             'text': text,
+            'int': '[0-9]+',
         }
 
     def _get_response(self, url, method, body=None, strip_version=False):
@@ -3202,6 +3203,30 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBase):
 
 
 class InstanceActionsSampleXmlTest(InstanceActionsSampleJsonTest):
+        ctype = 'xml'
+
+
+class ImageSizeSampleJsonTests(ApiSampleTestBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".image_size.Image_size")
+
+    def test_show(self):
+        # Get api sample of one single image details request.
+        image_id = fake.get_valid_image_id()
+        response = self._do_get('images/%s' % image_id)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        subs['image_id'] = image_id
+        return self._verify_response('image-get-resp', subs, response)
+
+    def test_detail(self):
+        # Get api sample of all images details request.
+        response = self._do_get('images/detail')
+        subs = self._get_regexes()
+        return self._verify_response('images-details-get-resp', subs, response)
+
+
+class ImageSizeSampleXmlTests(ImageSizeSampleJsonTests):
         ctype = 'xml'
 
 

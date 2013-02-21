@@ -144,6 +144,7 @@ policy_data = """
     "compute_extension:hide_server_addresses": "",
     "compute_extension:hosts": "",
     "compute_extension:hypervisors": "",
+    "compute_extension:image_size": "",
     "compute_extension:instance_actions": "",
     "compute_extension:instance_actions:events": "is_admin:True",
     "compute_extension:instance_usage_audit_log": "",
