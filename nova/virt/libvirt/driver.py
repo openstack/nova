@@ -1319,7 +1319,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def power_on(self, instance):
         """Power on the specified instance."""
         dom = self._lookup_by_name(instance['name'])
-        self._create_domain(domain=dom)
+        self._create_domain(domain=dom, instance=instance)
         timer = utils.FixedIntervalLoopingCall(self._wait_for_running,
                                                instance)
         timer.start(interval=0.5).wait()
