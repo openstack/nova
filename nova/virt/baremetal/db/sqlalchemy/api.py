@@ -222,14 +222,19 @@ def bm_node_associate_and_update(context, node_uuid, values):
 def bm_node_destroy(context, bm_node_id):
     # First, delete all interfaces belonging to the node.
     # Delete physically since these have unique columns.
-    model_query(context, models.BareMetalInterface, read_deleted="no").\
+    session = db_session.get_session()
+    with session.begin():
+        model_query(context, models.BareMetalInterface, read_deleted="no").\
             filter_by(bm_node_id=bm_node_id).\
             delete()
-    model_query(context, models.BareMetalNode).\
+        rows = model_query(context, models.BareMetalNode, read_deleted="no").\
             filter_by(id=bm_node_id).\
             update({'deleted': True,
                     'deleted_at': timeutils.utcnow(),
                     'updated_at': literal_column('updated_at')})
+
+        if not rows:
+            raise exception.NodeNotFound(node_id=bm_node_id)
 
 
 @sqlalchemy_api.require_admin_context
