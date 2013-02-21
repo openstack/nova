@@ -2763,13 +2763,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip,
             self.conductor_api)
+        if len(network_info) != 1:
+            LOG.error(_('allocate_port_for_instance returned %(port)s ports') %
+                      dict(ports=len(network_info)))
+            raise exception.InterfaceAttachFailed(instance=instance)
         image_meta = _get_image_meta(context, instance['image_ref'])
         legacy_net_info = self._legacy_nw_info(network_info)
-        for (network, mapping) in legacy_net_info:
-            if mapping['vif_uuid'] == port_id:
-                self.driver.attach_interface(instance, image_meta,
-                                             [(network, mapping)])
-                return (network, mapping)
+        (network, mapping) = legacy_net_info[0]
+        self.driver.attach_interface(instance, image_meta, legacy_net_info)
+        return legacy_net_info[0]
 
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""

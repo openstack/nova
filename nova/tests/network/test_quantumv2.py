@@ -227,6 +227,7 @@ class TestQuantumv2(test.TestCase):
                                'port_id': self.port_data2[1]['id'],
                                'fixed_ip_address': fixed_ip_address,
                                'router_id': 'router_id1'}
+        self._returned_nw_info = []
 
     def tearDown(self):
         self.addCleanup(CONF.reset)
@@ -457,13 +458,14 @@ class TestQuantumv2(test.TestCase):
         api.get_instance_nw_info(mox.IgnoreArg(),
                                  self.instance,
                                  networks=nets,
-                                 conductor_api=mox.IgnoreArg()).AndReturn(None)
+                                 conductor_api=mox.IgnoreArg()).AndReturn(
+                                         self._returned_nw_info)
         self.mox.ReplayAll()
         return api
 
     def _allocate_for_instance(self, net_idx=1, **kwargs):
         api = self._stub_allocate_for_instance(net_idx, **kwargs)
-        api.allocate_for_instance(self.context, self.instance, **kwargs)
+        return api.allocate_for_instance(self.context, self.instance, **kwargs)
 
     def test_allocate_for_instance_1(self):
         # Allocate one port in one network env.
@@ -645,6 +647,14 @@ class TestQuantumv2(test.TestCase):
                           api.allocate_for_instance,
                               self.context, self.instance,
                               requested_networks=[(None, None, None)])
+
+    def test_allocate_for_instance_second_time(self):
+        # Make sure that allocate_for_instance only returns ports that it
+        # allocated during _that_ run.
+        new_port = {'id': 'fake'}
+        self._returned_nw_info = self.port_data1 + [new_port]
+        nw_info = self._allocate_for_instance()
+        self.assertEqual(nw_info, [new_port])
 
     def _deallocate_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
