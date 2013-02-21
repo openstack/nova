@@ -409,7 +409,7 @@ class LibvirtVifTestCase(test.TestCase):
                                   self.mapping_bridge_quantum,
                                   br_want)
 
-    def _check_ovs_ethernet_driver(self, d, net, mapping):
+    def _check_ovs_ethernet_driver(self, d, net, mapping, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
         xml = self._get_instance_xml(d, net, mapping)
 
@@ -419,22 +419,22 @@ class LibvirtVifTestCase(test.TestCase):
         node = ret[0]
         self.assertEqual(node.get("type"), "ethernet")
         dev_name = node.find("target").get("dev")
-        self.assertTrue(dev_name.startswith("tap"))
+        self.assertTrue(dev_name.startswith(dev_prefix))
         mac = node.find("mac").get("address")
         self.assertEqual(mac, self.mapping_ovs['mac'])
         script = node.find("script").get("path")
         self.assertEquals(script, "")
 
-    def test_ovs_ethernet_driver(self):
+    def test_ovs_ethernet_driver_legacy(self):
         def get_connection():
             return fakelibvirt.Connection("qemu:///session",
                                           False,
                                           9010)
         d = vif.LibvirtOpenVswitchDriver(get_connection)
-        d = vif.LibvirtOpenVswitchDriver()
         self._check_ovs_ethernet_driver(d,
                                         self.net_ovs,
-                                        self.mapping_ovs_legacy)
+                                        self.mapping_ovs_legacy,
+                                        "nic")
 
     def test_ovs_ethernet_driver(self):
         def get_connection():
@@ -444,7 +444,8 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtGenericVIFDriver(get_connection)
         self._check_ovs_ethernet_driver(d,
                                         self.net_ovs,
-                                        self.mapping_ovs)
+                                        self.mapping_ovs,
+                                        "tap")
 
     def _check_ovs_virtualport_driver(self, d, net, mapping, want_iface_id):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")

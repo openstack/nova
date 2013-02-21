@@ -2102,10 +2102,11 @@ class ComputeTestCase(BaseTestCase):
         new_iqn = 'iqn.2010-10.org.openstack:%s.2' % volume_id,
         new_connection_data['target_iqn'] = new_iqn
 
-        def fake_init_conn(self, context, volume, session):
+        def fake_init_conn_with_data(self, context, volume, session):
             connection_info['data'] = new_connection_data
             return connection_info
-        self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
+        self.stubs.Set(cinder.API, "initialize_connection",
+                       fake_init_conn_with_data)
 
         self.compute.finish_resize(self.context,
                 migration=jsonutils.to_primitive(migration_ref),

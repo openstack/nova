@@ -152,7 +152,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(row['instance_uuid'], node['instance']['uuid'])
         self.assertEqual(row['instance_name'], node['instance']['hostname'])
 
-    def test_macs_for_instance(self):
+    def test_macs_from_nic_for_instance(self):
         node = self._create_node()
         expected = set([nic['address'] for nic in node['nic_info']])
         self.assertEqual(

@@ -541,7 +541,7 @@ class _BaseTestCase(object):
         self.mox.ReplayAll()
         self.conductor.quota_commit(self.context, 'reservations')
 
-    def test_quota_commit(self):
+    def test_quota_rollback(self):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
         quota.QUOTAS.rollback(self.context, 'reservations')
         self.mox.ReplayAll()

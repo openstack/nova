@@ -1141,7 +1141,7 @@ class TestQuantumv2(test.TestCase):
 
 
 class TestQuantumv2ModuleMethods(test.TestCase):
-    def test_ensure_requested_network_ordering_no_preference(self):
+    def test_ensure_requested_network_ordering_no_preference_ids(self):
         l = [1, 2, 3]
 
         quantumapi._ensure_requested_network_ordering(
@@ -1149,7 +1149,7 @@ class TestQuantumv2ModuleMethods(test.TestCase):
             l,
             None)
 
-    def test_ensure_requested_network_ordering_no_preference(self):
+    def test_ensure_requested_network_ordering_no_preference_hashes(self):
         l = [{'id': 3}, {'id': 1}, {'id': 2}]
 
         quantumapi._ensure_requested_network_ordering(

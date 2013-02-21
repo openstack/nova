@@ -24,4 +24,4 @@ PLUGINS_PATH=${SCRIPT_ROOT}/plugins/xenserver/xenapi/etc/xapi.d/plugins
 PYTHONPATH=${PLUGINS_PATH} ${PEP8} ./plugins/xenserver/xenapi \
     `find plugins/xenserver/xenapi/etc/xapi.d/plugins -type f -perm +111`
 
-! pyflakes nova/ | grep "imported but unused"
+! pyflakes nova/ | grep "imported but unused\|redefinition of function"

@@ -42,14 +42,6 @@ def _fake_listdir_nbd_devices(path):
     return ORIG_LISTDIR(path)
 
 
-def _fake_exists_no_users(path):
-    if path.startswith('/sys/block/nbd'):
-        if path.endswith('pid'):
-            return False
-        return True
-    return ORIG_EXISTS(path)
-
-
 def _fake_exists_all_used(path):
     if path.startswith('/sys/block/nbd'):
         return True
