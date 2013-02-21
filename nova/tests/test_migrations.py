@@ -561,6 +561,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             aggregate_md.c.aggregate_id == data['id']).execute().first()
         self.assertEqual(data['availability_zone'], md['value'])
 
+    def _post_downgrade_146(self, engine):
+        # Downgrade should delete availability_zone aggregate_metadata entries
+        aggregate_md = get_table(engine, 'aggregate_metadata')
+        num_azs = aggregate_md.count().where(
+                aggregate_md.c.key == 'availability_zone').execute().scalar()
+        self.assertEqual(0, num_azs)
+
     # migration 147, availability zone transition for services
     def _pre_upgrade_147(self, engine):
         az = 'test_zone'
