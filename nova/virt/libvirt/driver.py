@@ -2422,23 +2422,25 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._conn.getInfo()[1]
 
     @staticmethod
-    def get_local_gb_total():
-        """Get the total hdd size(GB) of physical computer.
+    def get_local_gb_info():
+        """Get local storage info of the compute node in GB.
 
-        :returns:
-            The total amount of HDD(GB).
-            Note that this value shows a partition where
-            NOVA-INST-DIR/instances mounts.
-
+        :returns: A dict containing:
+             :total: How big the overall usable filesystem is (in gigabytes)
+             :free: How much space is free (in gigabytes)
+             :used: How much space is used (in gigabytes)
         """
 
         if CONF.libvirt_images_type == 'lvm':
-            vg_total = libvirt_utils.volume_group_total_space(
+            info = libvirt_utils.get_volume_group_info(
                                  CONF.libvirt_images_volume_group)
-            return vg_total / (1024 ** 3)
         else:
-            stats = libvirt_utils.get_fs_info(CONF.instances_path)
-            return stats['total'] / (1024 ** 3)
+            info = libvirt_utils.get_fs_info(CONF.instances_path)
+
+        for (k, v) in info.iteritems():
+            info[k] = v / (1024 ** 3)
+
+        return info
 
     def get_vcpu_used(self):
         """Get vcpu usage number of physical computer.
@@ -2503,24 +2505,6 @@ class LibvirtDriver(driver.ComputeDriver):
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
             return self.get_memory_mb_total() - avail / 1024
-
-    def get_local_gb_used(self):
-        """Get the free hdd size(GB) of physical computer.
-
-        :returns:
-           The total usage of HDD(GB).
-           Note that this value shows a partition where
-           NOVA-INST-DIR/instances mounts.
-
-        """
-
-        if CONF.libvirt_images_type == 'lvm':
-            vg_used = libvirt_utils.volume_group_used_space(
-                                  CONF.libvirt_images_volume_group)
-            return vg_used / (1024 ** 3)
-        else:
-            stats = libvirt_utils.get_fs_info(CONF.instances_path)
-            return stats['used'] / (1024 ** 3)
 
     def get_hypervisor_type(self):
         """Get hypervisor type.
@@ -2693,17 +2677,35 @@ class LibvirtDriver(driver.ComputeDriver):
         :param nodename: ignored in this driver
         :returns: dictionary containing resource info
         """
+
+        def _get_disk_available_least():
+            """Return total real disk available least size.
+
+            The size of available disk, when block_migration command given
+            disk_over_commit param is FALSE.
+
+            The size that deducted real instance disk size from the total size
+            of the virtual disk of all instances.
+
+            """
+            disk_free_gb = disk_info_dict['free']
+            disk_over_committed = self.get_disk_over_committed_size_total()
+            # Disk available least size
+            available_least = disk_free_gb * (1024 ** 3) - disk_over_committed
+            return (available_least / (1024 ** 3))
+
+        disk_info_dict = self.get_local_gb_info()
         dic = {'vcpus': self.get_vcpu_total(),
                'memory_mb': self.get_memory_mb_total(),
-               'local_gb': self.get_local_gb_total(),
+               'local_gb': disk_info_dict['total'],
                'vcpus_used': self.get_vcpu_used(),
                'memory_mb_used': self.get_memory_mb_used(),
-               'local_gb_used': self.get_local_gb_used(),
+               'local_gb_used': disk_info_dict['used'],
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
                'hypervisor_hostname': self.get_hypervisor_hostname(),
                'cpu_info': self.get_cpu_info(),
-               'disk_available_least': self.get_disk_available_least()}
+               'disk_available_least': _get_disk_available_least()}
         return dic
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
@@ -3232,22 +3234,11 @@ class LibvirtDriver(driver.ComputeDriver):
                               'disk_size': dk_size})
         return jsonutils.dumps(disk_info)
 
-    def get_disk_available_least(self):
-        """Return disk available least size.
-
-        The size of available disk, when block_migration command given
-        disk_over_commit param is FALSE.
-
-        The size that deducted real nstance disk size from the total size
-        of the virtual disk of all instances.
-
-        """
-        # available size of the disk
-        dk_sz_gb = self.get_local_gb_total() - self.get_local_gb_used()
-
+    def get_disk_over_committed_size_total(self):
+        """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         instances_name = self.list_instances()
-        instances_sz = 0
+        disk_over_committed_size = 0
         for i_name in instances_name:
             try:
                 disk_infos = jsonutils.loads(
@@ -3255,7 +3246,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 for info in disk_infos:
                     i_vt_sz = int(info['virt_disk_size'])
                     i_dk_sz = int(info['disk_size'])
-                    instances_sz += i_vt_sz - i_dk_sz
+                    disk_over_committed_size += i_vt_sz - i_dk_sz
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     LOG.error(_("Getting disk size of %(i_name)s: %(e)s") %
@@ -3267,9 +3258,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 pass
             # NOTE(gtt116): give change to do other task.
             greenthread.sleep(0)
-        # Disk available least size
-        available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
-        return (available_least_size / 1024 / 1024 / 1024)
+        return disk_over_committed_size
 
     def unfilter_instance(self, instance_ref, network_info):
         """See comments of same method in firewall_driver."""
@@ -3572,9 +3561,10 @@ class HostState(object):
         data["vcpus"] = self.driver.get_vcpu_total()
         data["vcpus_used"] = self.driver.get_vcpu_used()
         data["cpu_info"] = jsonutils.loads(self.driver.get_cpu_info())
-        data["disk_total"] = self.driver.get_local_gb_total()
-        data["disk_used"] = self.driver.get_local_gb_used()
-        data["disk_available"] = data["disk_total"] - data["disk_used"]
+        disk_info_dict = self.driver.get_local_gb_info()
+        data["disk_total"] = disk_info_dict['total']
+        data["disk_used"] = disk_info_dict['used']
+        data["disk_available"] = disk_info_dict['free']
         data["host_memory_total"] = self.driver.get_memory_mb_total()
         data["host_memory_free"] = (data["host_memory_total"] -
                                     self.driver.get_memory_mb_used())

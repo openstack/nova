@@ -2875,21 +2875,29 @@ class LibvirtConnTestCase(test.TestCase):
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         conn._destroy(instance)
 
-    def test_available_least_handles_missing(self):
+    def test_disk_over_committed_size_total(self):
         # Ensure destroy calls managedSaveRemove for saved instance.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         def list_instances():
-            return ['fake']
+            return ['fake1', 'fake2']
         self.stubs.Set(conn, 'list_instances', list_instances)
 
+        fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
+                                 'virt_disk_size': '10737418240',
+                                 'backing_file': '/somepath/disk1',
+                                 'disk_size':'83886080'}],
+                      'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
+                                 'virt_disk_size': '10737418240',
+                                 'backing_file': '/somepath/disk2',
+                                 'disk_size':'10737418240'}]}
+
         def get_info(instance_name):
-            raise exception.InstanceNotFound(instance_id='fake')
+            return jsonutils.dumps(fake_disks.get(instance_name))
         self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
-        result = conn.get_disk_available_least()
-        space = fake_libvirt_utils.get_fs_info(CONF.instances_path)['free']
-        self.assertEqual(result, space / 1024 ** 3)
+        result = conn.get_disk_over_committed_size_total()
+        self.assertEqual(result, 10653532160)
 
     def test_cpu_info(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3455,11 +3463,8 @@ class HostStateTestCase(test.TestCase):
         def get_cpu_info(self):
             return HostStateTestCase.cpu_info
 
-        def get_local_gb_total(self):
-            return 100
-
-        def get_local_gb_used(self):
-            return 20
+        def get_local_gb_info(self):
+            return {'total': 100, 'used': 20, 'free': 80}
 
         def get_memory_mb_total(self):
             return 497
