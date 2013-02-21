@@ -102,6 +102,7 @@ def _update_state(context, node, instance, state):
     values = {'task_state': state}
     if not instance:
         values['instance_uuid'] = None
+        values['instance_name'] = None
     db.bm_node_update(context, node['id'], values)
 
 
@@ -170,19 +171,7 @@ class BareMetalDriver(driver.ComputeDriver):
         l = []
         context = nova_context.get_admin_context()
         for node in db.bm_node_get_associated(context, service_host=CONF.host):
-            if not node['instance_uuid']:
-                # Not currently assigned to an instance.
-                continue
-            try:
-                inst = self.virtapi.instance_get_by_uuid(
-                    context, node['instance_uuid'])
-            except exception.InstanceNotFound:
-                # Assigned to an instance that no longer exists.
-                LOG.warning(_("Node %(id)r assigned to instance %(uuid)r "
-                    "which cannot be found."),
-                    dict(id=node['id'], uuid=node['instance_uuid']))
-                continue
-            l.append(inst['name'])
+            l.append(node['instance_name'])
         return l
 
     def _require_node(self, instance):
@@ -244,6 +233,7 @@ class BareMetalDriver(driver.ComputeDriver):
         #             allocates this node before we begin provisioning it.
         node = db.bm_node_associate_and_update(context, node_uuid,
                     {'instance_uuid': instance['uuid'],
+                     'instance_name': instance['hostname'],
                      'task_state': baremetal_states.BUILDING})
 
         try:
