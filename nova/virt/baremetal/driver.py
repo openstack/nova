@@ -26,7 +26,6 @@ from oslo.config import cfg
 from nova.compute import power_state
 from nova import context as nova_context
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import paths
@@ -219,6 +218,7 @@ class BareMetalDriver(driver.ComputeDriver):
         node = db.bm_node_set_uuid_safe(context, node_id,
                     {'instance_uuid': instance['uuid'],
                      'task_state': baremetal_states.BUILDING})
+
         pm = get_power_manager(node=node, instance=instance)
 
         try:
@@ -249,6 +249,15 @@ class BareMetalDriver(driver.ComputeDriver):
                             )
                 try:
                     self.driver.activate_bootloader(context, node, instance)
+                    pm.activate_node()
+                    pm.start_console()
+                    if pm.state != baremetal_states.ACTIVE:
+                        raise exception.NovaException(_(
+                            "Baremetal power manager failed to start node "
+                            "for instance %r") % instance['uuid'])
+                    self.driver.activate_node(context, node, instance)
+                    _update_state(context, node, instance,
+                                    baremetal_states.ACTIVE)
                 except Exception, e:
                     self.driver.deactivate_bootloader(context, node, instance)
                     raise e
@@ -257,20 +266,8 @@ class BareMetalDriver(driver.ComputeDriver):
                 raise e
         except Exception, e:
             # TODO(deva): do network and volume cleanup here
+            _update_state(context, node, instance, baremetal_states.ERROR)
             raise e
-        else:
-            # NOTE(deva): pm.activate_node should not raise exceptions.
-            #             We check its success in "finally" block
-            pm.activate_node()
-            pm.start_console()
-        finally:
-            if pm.state != baremetal_states.ACTIVE:
-                pm.state = baremetal_states.ERROR
-            try:
-                _update_state(context, node, instance, pm.state)
-            except db_session.DBError, e:
-                LOG.warning(_("Failed to update state record for "
-                              "baremetal node %s") % instance['uuid'])
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None):

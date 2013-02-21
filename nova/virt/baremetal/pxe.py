@@ -20,6 +20,7 @@
 Class for PXE bare-metal nodes.
 """
 
+import datetime
 import os
 
 from oslo.config import cfg
@@ -29,6 +30,9 @@ from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
+from nova import utils
+from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
 from nova.virt.baremetal import db
 from nova.virt.baremetal import utils as bm_utils
@@ -47,6 +51,9 @@ pxe_opts = [
     cfg.StrOpt('pxe_config_template',
                default='$pybasedir/nova/virt/baremetal/pxe_config.template',
                help='Template file for PXE configuration'),
+    cfg.IntOpt('pxe_deploy_timeout',
+                help='Timeout for PXE deployments. Default: 0 (unlimited)',
+                default=0),
     ]
 
 LOG = logging.getLogger(__name__)
@@ -431,7 +438,51 @@ class PXE(base.NodeDriver):
                 os.path.join(CONF.baremetal.tftp_root, instance['uuid']))
 
     def activate_node(self, context, node, instance):
-        pass
+        """Wait for PXE deployment to complete."""
+
+        locals = {'error': '', 'started': False}
+
+        def _wait_for_deploy():
+            """Called at an interval until the deployment completes."""
+            try:
+                row = db.bm_node_get(context, node['id'])
+                if instance['uuid'] != row.get('instance_uuid'):
+                    locals['error'] = _("Node associated with another instance"
+                                        " while waiting for deploy of %s")
+                    raise utils.LoopingCallDone()
+
+                status = row.get('task_state')
+                if (status == baremetal_states.DEPLOYING
+                        and locals['started'] == False):
+                    LOG.info(_("PXE deploy started for instance %s")
+                                % instance['uuid'])
+                    locals['started'] = True
+                elif status in (baremetal_states.DEPLOYDONE,
+                                baremetal_states.ACTIVE):
+                    LOG.info(_("PXE deploy completed for instance %s")
+                                % instance['uuid'])
+                    raise utils.LoopingCallDone()
+                elif status == baremetal_states.DEPLOYFAIL:
+                    locals['error'] = _("PXE deploy failed for instance %s")
+            except exception.InstanceNotFound:
+                locals['error'] = _("Baremetal node deleted while waiting "
+                                    "for deployment of instance %s")
+
+            if (CONF.baremetal.pxe_deploy_timeout and
+                    timeutils.utcnow() > expiration):
+                locals['error'] = _("Timeout reached while waiting for "
+                                     "PXE deploy of instance %s")
+            if locals['error']:
+                raise utils.LoopingCallDone()
+
+        expiration = timeutils.utcnow() + datetime.timedelta(
+                            seconds=CONF.baremetal.pxe_deploy_timeout)
+        timer = utils.FixedIntervalLoopingCall(_wait_for_deploy)
+        timer.start(interval=1).wait()
+
+        if locals['error']:
+            raise exception.InstanceDeployFailure(
+                    locals['error'] % instance['uuid'])
 
     def deactivate_node(self, context, node, instance):
         pass
