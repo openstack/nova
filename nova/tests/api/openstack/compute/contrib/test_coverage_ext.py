@@ -34,12 +34,27 @@ def fake_check_coverage(self):
     return False
 
 
-def fake_xml_report(self, outfile):
-    return
+class FakeCoverage(object):
+    def __init__(self, data_file=None):
+        self.started = False
+        return super(FakeCoverage, self).__init__()
 
+    def save(self):
+        pass
 
-def fake_report(self, file):
-    return
+    def start(self):
+        self.started = True
+
+    def stop(self):
+        if not self.started:
+            raise AssertionError
+        self.started = False
+
+    def report(self, file):
+        pass
+
+    def xml_report(self, outfile):
+        pass
 
 
 class CoverageExtensionTest(test.TestCase):
@@ -48,8 +63,7 @@ class CoverageExtensionTest(test.TestCase):
         super(CoverageExtensionTest, self).setUp()
         self.stubs.Set(telnetlib.Telnet, 'write', fake_telnet)
         self.stubs.Set(telnetlib.Telnet, 'expect', fake_telnet)
-        self.stubs.Set(coverage.coverage, 'report', fake_report)
-        self.stubs.Set(coverage.coverage, 'xml_report', fake_xml_report)
+        self.stubs.Set(coverage, 'coverage', FakeCoverage)
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'fake',
                                                      is_admin=True)

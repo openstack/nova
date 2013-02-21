@@ -110,10 +110,6 @@ function run_tests {
   ${wrapper} find . -type f -name "*.pyc" -delete
 
   if [ $coverage -eq 1 ]; then
-    # Do not test test_coverage_ext when gathering coverage.
-    if [ "x$testrargs" = "x" ]; then
-      testrargs="^(?!.*test.*coverage).*$"
-    fi
     TESTRTESTS="$TESTRTESTS --coverage"
   else
     TESTRTESTS="$TESTRTESTS --slowest"
