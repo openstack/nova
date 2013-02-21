@@ -111,7 +111,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                                     nic['port_no'],
                 )
         result['instance'] = utils.get_test_instance()
-        result['instance']['node'] = result['node']['id']
+        result['instance']['node'] = result['node']['uuid']
         result['spawn_params'] = dict(
                 admin_password='test_pass',
                 block_device_info=None,
@@ -139,7 +139,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(stats['cpu_arch'], 'test')
         self.assertEqual(stats['test_spec'], 'test_value')
         self.assertEqual(stats['hypervisor_type'], 'baremetal')
-        self.assertEqual(stats['hypervisor_hostname'], '123')
+        self.assertEqual(stats['hypervisor_hostname'], node['node']['uuid'])
         self.assertEqual(stats['host'], 'test_host')
         self.assertEqual(stats['vcpus'], 2)
         self.assertEqual(stats['host_memory_total'], 2048)
@@ -153,7 +153,15 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
     def test_macs_for_instance(self):
         node = self._create_node()
-        expected = set(['01:23:45:67:89:01', '01:23:45:67:89:02'])
+        expected = set([nic['address'] for nic in node['nic_info']])
+        self.assertEqual(
+            expected, self.driver.macs_for_instance(node['instance']))
+
+    def test_macs_for_instance_after_spawn(self):
+        node = self._create_node()
+        self.driver.spawn(**node['spawn_params'])
+
+        expected = set([nic['address'] for nic in node['nic_info']])
         self.assertEqual(
             expected, self.driver.macs_for_instance(node['instance']))
 
@@ -184,12 +192,12 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
     def test_spawn_node_not_found(self):
         node = self._create_node()
         db.bm_node_update(self.context, node['node']['id'],
-                {'id': 9876})
+                {'uuid': 'hide-this-node'})
 
         self.assertRaises(exception.NovaException,
                 self.driver.spawn, **node['spawn_params'])
 
-        row = db.bm_node_get(self.context, 9876)
+        row = db.bm_node_get(self.context, node['node']['id'])
         self.assertEqual(row['task_state'], None)
 
     def test_spawn_fails(self):
@@ -247,18 +255,18 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
     def test_get_available_resources(self):
         node = self._create_node()
 
-        resources = self.driver.get_available_resource(node['node']['id'])
+        resources = self.driver.get_available_resource(node['node']['uuid'])
         self.assertEqual(resources['memory_mb'],
                          node['node_info']['memory_mb'])
         self.assertEqual(resources['memory_mb_used'], 0)
 
         self.driver.spawn(**node['spawn_params'])
-        resources = self.driver.get_available_resource(node['node']['id'])
+        resources = self.driver.get_available_resource(node['node']['uuid'])
         self.assertEqual(resources['memory_mb_used'],
                          node['node_info']['memory_mb'])
 
         self.driver.destroy(**node['destroy_params'])
-        resources = self.driver.get_available_resource(node['node']['id'])
+        resources = self.driver.get_available_resource(node['node']['uuid'])
         self.assertEqual(resources['memory_mb_used'], 0)
 
     def test_get_available_nodes(self):
@@ -281,7 +289,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
             ]
         node2 = self._create_node(node_info=node_info, nic_info=nic_info)
         self.assertEqual(2, len(self.driver.get_available_nodes()))
-        self.assertEqual(['123', '456'],
+        self.assertEqual([node1['node']['uuid'], node2['node']['uuid']],
                          self.driver.get_available_nodes())
 
         node1['instance']['hostname'] = 'test-host-1'
@@ -298,5 +306,5 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         self.driver.destroy(**node2['destroy_params'])
         self.assertEqual(2, len(self.driver.get_available_nodes()))
-        self.assertEqual(['123', '456'],
+        self.assertEqual([node1['node']['uuid'], node2['node']['uuid']],
                          self.driver.get_available_nodes())

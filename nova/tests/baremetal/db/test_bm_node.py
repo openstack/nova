@@ -65,7 +65,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         self.assertEquals(r['pm_address'], '1')
 
         self.assertRaises(
-              exception.InstanceNotFound,
+              exception.NodeNotFound,
               db.bm_node_get,
               self.context, -1)
 
@@ -113,7 +113,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         db.bm_node_destroy(self.context, self.ids[0])
 
         self.assertRaises(
-              exception.InstanceNotFound,
+              exception.NodeNotFound,
               db.bm_node_get,
               self.context, self.ids[0])
 
@@ -147,7 +147,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         self.assertEqual(self.ids[1], if_x['bm_node_id'])
 
         self.assertRaises(
-              exception.InstanceNotFound,
+              exception.NodeNotFound,
               db.bm_node_get,
               self.context, self.ids[0])
 

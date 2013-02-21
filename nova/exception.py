@@ -1060,6 +1060,14 @@ class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
 
+class NodeNotFound(NotFound):
+    message = _("Node %(node_id)s could not be found.")
+
+
+class NodeNotFoundByUUID(NotFound):
+    message = _("Node with UUID %(node_uuid)s could not be found.")
+
+
 class MarkerNotFound(NotFound):
     message = _("Marker %(marker)s could not be found.")
 

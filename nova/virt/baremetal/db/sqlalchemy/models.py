@@ -34,6 +34,7 @@ class BareMetalNode(BASE, models.NovaBase):
 
     __tablename__ = 'bm_nodes'
     id = Column(Integer, primary_key=True)
+    uuid = Column(String(36))
     service_host = Column(String(255))
     instance_uuid = Column(String(36), nullable=True)
     cpus = Column(Integer)
