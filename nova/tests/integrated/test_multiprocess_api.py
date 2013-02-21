@@ -16,6 +16,7 @@
 """
 Test multiprocess enabled API service.
 """
+import fixtures
 import os
 import signal
 import time
@@ -94,8 +95,16 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # Make sure all processes are stopped
             os.kill(self.pid, signal.SIGTERM)
 
-            # Make sure we reap our test process
-            self._reap_test()
+            try:
+                # Make sure we reap our test process
+                self._reap_test()
+            except fixtures.TimeoutException:
+                # If the child gets stuck or is too slow in existing
+                # after receiving the SIGTERM, gracefully handle the
+                # timeout exception and try harder to kill it. We need
+                # to do this otherwise the child process can hold up
+                # the test run
+                os.kill(self.pid, signal.SIGKILL)
 
         super(MultiprocessWSGITest, self).tearDown()
 
