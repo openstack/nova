@@ -20,6 +20,7 @@ from nova.compute import utils as compute_utils
 from nova import exception
 from nova import manager
 from nova import network
+from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -53,7 +54,8 @@ class ConductorManager(manager.SchedulerDependentManager):
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
                                                *args, **kwargs)
-        self.security_group_api = compute_api.SecurityGroupAPI()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
         self._network_api = None
         self._compute_api = None
         self.quotas = quota.QUOTAS

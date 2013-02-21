@@ -27,9 +27,11 @@ from nova import compute
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import netutils
+
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'security_groups')
@@ -175,7 +177,8 @@ class SecurityGroupControllerBase(object):
     """Base class for Security Group controllers."""
 
     def __init__(self):
-        self.security_group_api = NativeSecurityGroupAPI()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
 
@@ -214,13 +217,6 @@ class SecurityGroupControllerBase(object):
         authorize(context)
         return context
 
-    def _validate_id(self, id):
-        try:
-            return int(id)
-        except ValueError:
-            msg = _("Security group id should be integer")
-            raise exc.HTTPBadRequest(explanation=msg)
-
     def _from_body(self, body, key):
         if not body:
             raise exc.HTTPUnprocessableEntity()
@@ -238,7 +234,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
         """Return data about the given security group."""
         context = self._authorize_context(req)
 
-        id = self._validate_id(id)
+        id = self.security_group_api.validate_id(id)
 
         security_group = self.security_group_api.get(context, None, id,
                                                      map_exception=True)
@@ -250,7 +246,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
         """Delete a security group."""
         context = self._authorize_context(req)
 
-        id = self._validate_id(id)
+        id = self.security_group_api.validate_id(id)
 
         security_group = self.security_group_api.get(context, None, id,
                                                      map_exception=True)
@@ -273,7 +269,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
 
         limited_list = common.limited(raw_groups, req)
         result = [self._format_security_group(context, group)
-                     for group in limited_list]
+                    for group in limited_list]
 
         return {'security_groups':
                 list(sorted(result,
@@ -294,11 +290,11 @@ class SecurityGroupController(SecurityGroupControllerBase):
         self.security_group_api.validate_property(group_description,
                                                   'description', None)
 
-        group_ref = self.security_group_api.create(context, group_name,
-                                                   group_description)
+        group_ref = self.security_group_api.create_security_group(
+            context, group_name, group_description)
 
         return {'security_group': self._format_security_group(context,
-                                                                 group_ref)}
+                                                              group_ref)}
 
 
 class SecurityGroupRulesController(SecurityGroupControllerBase):
@@ -310,14 +306,13 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
 
         sg_rule = self._from_body(body, 'security_group_rule')
 
-        parent_group_id = self._validate_id(sg_rule.get('parent_group_id',
-                                                        None))
+        parent_group_id = self.security_group_api.validate_id(
+            sg_rule.get('parent_group_id', None))
 
         security_group = self.security_group_api.get(context, None,
                                           parent_group_id, map_exception=True)
-
         try:
-            values = self._rule_args_to_dict(context,
+            new_rule = self._rule_args_to_dict(context,
                               to_port=sg_rule.get('to_port'),
                               from_port=sg_rule.get('from_port'),
                               ip_protocol=sg_rule.get('ip_protocol'),
@@ -326,24 +321,21 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
         except Exception as exp:
             raise exc.HTTPBadRequest(explanation=unicode(exp))
 
-        if values is None:
+        if new_rule is None:
             msg = _("Not enough parameters to build a valid rule.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        values['parent_group_id'] = security_group.id
+        new_rule['parent_group_id'] = security_group['id']
 
-        if 'cidr' in values:
-            net, prefixlen = netutils.get_net_and_prefixlen(values['cidr'])
+        if 'cidr' in new_rule:
+            net, prefixlen = netutils.get_net_and_prefixlen(new_rule['cidr'])
             if net != '0.0.0.0' and prefixlen == '0':
-                msg = _("Bad prefix for network in cidr %s") % values['cidr']
+                msg = _("Bad prefix for network in cidr %s") % new_rule['cidr']
                 raise exc.HTTPBadRequest(explanation=msg)
 
-        if self.security_group_api.rule_exists(security_group, values):
-            msg = _('This rule already exists in group %s') % parent_group_id
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        security_group_rule = self.security_group_api.add_rules(
-                context, parent_group_id, security_group['name'], [values])[0]
+        security_group_rule = (
+            self.security_group_api.create_security_group_rule(
+                context, security_group, new_rule))
 
         return {"security_group_rule": self._format_security_group_rule(
                                                         context,
@@ -353,8 +345,9 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                            ip_protocol=None, cidr=None, group_id=None):
 
         if group_id is not None:
-            group_id = self._validate_id(group_id)
-            #check if groupId exists
+            group_id = self.security_group_api.validate_id(group_id)
+
+            # check if groupId exists
             self.security_group_api.get(context, id=group_id)
             return self.security_group_api.new_group_ingress_rule(
                                     group_id, ip_protocol, from_port, to_port)
@@ -366,11 +359,11 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
     def delete(self, req, id):
         context = self._authorize_context(req)
 
-        id = self._validate_id(id)
+        id = self.security_group_api.validate_id(id)
 
         rule = self.security_group_api.get_rule(context, id)
 
-        group_id = rule.parent_group_id
+        group_id = rule['parent_group_id']
 
         security_group = self.security_group_api.get(context, None, group_id,
                                                      map_exception=True)
@@ -408,7 +401,8 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
 class SecurityGroupActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupActionController, self).__init__(*args, **kwargs)
-        self.security_group_api = NativeSecurityGroupAPI()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(
                                    security_group_api=self.security_group_api)
 
@@ -467,6 +461,8 @@ class SecurityGroupsOutputController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupsOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
 
     def _extend_servers(self, req, servers):
         key = "security_groups"
@@ -562,7 +558,7 @@ class Security_groups(extensions.ExtensionDescriptor):
         return resources
 
 
-class NativeSecurityGroupAPI(compute_api.SecurityGroupAPI):
+class NativeSecurityGroupExceptions(object):
     @staticmethod
     def raise_invalid_property(msg):
         raise exc.HTTPBadRequest(explanation=msg)
@@ -586,3 +582,8 @@ class NativeSecurityGroupAPI(compute_api.SecurityGroupAPI):
     @staticmethod
     def raise_not_found(msg):
         raise exc.HTTPNotFound(explanation=msg)
+
+
+class NativeNovaSecurityGroupAPI(compute_api.SecurityGroupAPI,
+                                 NativeSecurityGroupExceptions):
+    pass

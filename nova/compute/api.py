@@ -26,7 +26,6 @@ import functools
 import re
 import string
 import time
-import urllib
 import uuid
 
 from oslo.config import cfg
@@ -47,9 +46,10 @@ from nova import exception
 from nova import hooks
 from nova.image import glance
 from nova import network
+from nova.network.security_group import openstack_driver
+from nova.network.security_group import security_group_base
 from nova import notifications
 from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -60,7 +60,6 @@ from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import servicegroup
 from nova import utils
 from nova import volume
-
 
 LOG = logging.getLogger(__name__)
 
@@ -81,12 +80,6 @@ compute_opts = [
                default='nokernel',
                help='kernel image that indicates not to use a kernel, but to '
                     'use a raw disk image instead'),
-    cfg.StrOpt('security_group_handler',
-               default='nova.network.sg.NullSecurityGroupHandler',
-               help='The full class name of the security group handler class'),
-    cfg.StrOpt('security_group_api',
-               default='nova.compute.api.SecurityGroupAPI',
-               help='The full class name of the security API class'),
     cfg.StrOpt('multi_instance_display_name_template',
                default='%(name)s-%(uuid)s',
                help='When creating multiple instances with a single request '
@@ -191,9 +184,8 @@ class API(base.Base):
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
         self.security_group_api = (security_group_api or
-                                   importutils.import_object(
-                                   CONF.security_group_api))
-        self.sgh = importutils.import_object(CONF.security_group_handler)
+            openstack_driver.get_openstack_security_group_driver())
+        self.sgh = openstack_driver.get_security_group_handler()
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -864,13 +856,8 @@ class API(base.Base):
             base_image_ref = base_options['image_ref']
 
         instance['system_metadata']['image_base_image_ref'] = base_image_ref
-
-        # Use 'default' security_group if none specified.
-        if security_groups is None:
-            security_groups = ['default']
-        elif not isinstance(security_groups, list):
-            security_groups = [security_groups]
-        instance['security_groups'] = security_groups
+        self.security_group_api.populate_security_groups(instance,
+                                                         security_groups)
 
         return instance
 
@@ -2755,7 +2742,7 @@ class KeypairAPI(base.Base):
                 'fingerprint': key_pair['fingerprint']}
 
 
-class SecurityGroupAPI(base.Base):
+class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     """
     Sub-set of the Compute API related to managing security groups
     and security group rules
@@ -2763,7 +2750,7 @@ class SecurityGroupAPI(base.Base):
     def __init__(self, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
         self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()
-        self.sgh = importutils.import_object(CONF.security_group_handler)
+        self.sgh = openstack_driver.get_security_group_handler()
 
     def validate_property(self, value, property, allowed):
         """
@@ -2810,7 +2797,7 @@ class SecurityGroupAPI(base.Base):
         if not existed:
             self.sgh.trigger_security_group_create_refresh(context, group)
 
-    def create(self, context, name, description):
+    def create_security_group(self, context, name, description):
         try:
             reservations = QUOTAS.reserve(context, security_groups=1)
         except exception.OverQuota:
@@ -2989,164 +2976,15 @@ class SecurityGroupAPI(base.Base):
         self.trigger_handler('instance_remove_security_group',
                 context, instance, security_group_name)
 
-    def trigger_handler(self, event, *args):
-        handle = getattr(self.sgh, 'trigger_%s_refresh' % event)
-        handle(*args)
-
-    def trigger_rules_refresh(self, context, id):
-        """Called when a rule is added to or removed from a security_group."""
-
-        security_group = self.db.security_group_get(context, id)
-
-        for instance in security_group['instances']:
-            if instance['host'] is not None:
-                self.security_group_rpcapi.refresh_instance_security_rules(
-                        context, instance['host'], instance)
-
-    def trigger_members_refresh(self, context, group_ids):
-        """Called when a security group gains a new or loses a member.
-
-        Sends an update request to each compute node for each instance for
-        which this is relevant.
-        """
-        # First, we get the security group rules that reference these groups as
-        # the grantee..
-        security_group_rules = set()
-        for group_id in group_ids:
-            security_group_rules.update(
-                self.db.security_group_rule_get_by_security_group_grantee(
-                                                                     context,
-                                                                     group_id))
-
-        # ..then we distill the rules into the groups to which they belong..
-        security_groups = set()
-        for rule in security_group_rules:
-            security_group = self.db.security_group_get(
-                                                    context,
-                                                    rule['parent_group_id'])
-            security_groups.add(security_group)
-
-        # ..then we find the instances that are members of these groups..
-        instances = {}
-        for security_group in security_groups:
-            for instance in security_group['instances']:
-                if instance['uuid'] not in instances:
-                    instances[instance['uuid']] = instance
-
-        # ..then we send a request to refresh the rules for each instance.
-        for instance in instances.values():
-            if instance['host']:
-                self.security_group_rpcapi.refresh_instance_security_rules(
-                        context, instance['host'], instance)
-
-    def parse_cidr(self, cidr):
-        if cidr:
-            try:
-                cidr = urllib.unquote(cidr).decode()
-            except Exception as e:
-                self.raise_invalid_cidr(cidr, e)
-
-            if not utils.is_valid_cidr(cidr):
-                self.raise_invalid_cidr(cidr)
-
-            return cidr
-        else:
-            return '0.0.0.0/0'
-
-    @staticmethod
-    def new_group_ingress_rule(grantee_group_id, protocol, from_port,
-                               to_port):
-        return SecurityGroupAPI._new_ingress_rule(protocol, from_port,
-                                to_port, group_id=grantee_group_id)
-
-    @staticmethod
-    def new_cidr_ingress_rule(grantee_cidr, protocol, from_port, to_port):
-        return SecurityGroupAPI._new_ingress_rule(protocol, from_port,
-                                to_port, cidr=grantee_cidr)
-
-    @staticmethod
-    def _new_ingress_rule(ip_protocol, from_port, to_port,
-                          group_id=None, cidr=None):
-        values = {}
-
-        if group_id:
-            values['group_id'] = group_id
-            # Open everything if an explicit port range or type/code are not
-            # specified, but only if a source group was specified.
-            ip_proto_upper = ip_protocol.upper() if ip_protocol else ''
-            if (ip_proto_upper == 'ICMP' and
-                from_port is None and to_port is None):
-                from_port = -1
-                to_port = -1
-            elif (ip_proto_upper in ['TCP', 'UDP'] and from_port is None
-                  and to_port is None):
-                from_port = 1
-                to_port = 65535
-
-        elif cidr:
-            values['cidr'] = cidr
-
-        if ip_protocol and from_port is not None and to_port is not None:
-
-            ip_protocol = str(ip_protocol)
-            try:
-                # Verify integer conversions
-                from_port = int(from_port)
-                to_port = int(to_port)
-            except ValueError:
-                if ip_protocol.upper() == 'ICMP':
-                    raise exception.InvalidInput(reason="Type and"
-                         " Code must be integers for ICMP protocol type")
-                else:
-                    raise exception.InvalidInput(reason="To and From ports "
-                          "must be integers")
-
-            if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-                raise exception.InvalidIpProtocol(protocol=ip_protocol)
-
-            # Verify that from_port must always be less than
-            # or equal to to_port
-            if (ip_protocol.upper() in ['TCP', 'UDP'] and
-                (from_port > to_port)):
-                raise exception.InvalidPortRange(from_port=from_port,
-                      to_port=to_port, msg="Former value cannot"
-                                            " be greater than the later")
-
-            # Verify valid TCP, UDP port ranges
-            if (ip_protocol.upper() in ['TCP', 'UDP'] and
-                (from_port < 1 or to_port > 65535)):
-                raise exception.InvalidPortRange(from_port=from_port,
-                      to_port=to_port, msg="Valid TCP ports should"
-                                           " be between 1-65535")
-
-            # Verify ICMP type and code
-            if (ip_protocol.upper() == "ICMP" and
-                (from_port < -1 or from_port > 255 or
-                to_port < -1 or to_port > 255)):
-                raise exception.InvalidPortRange(from_port=from_port,
-                      to_port=to_port, msg="For ICMP, the"
-                                           " type:code must be valid")
-
-            values['protocol'] = ip_protocol
-            values['from_port'] = from_port
-            values['to_port'] = to_port
-
-        else:
-            # If cidr based filtering, protocol and ports are mandatory
-            if cidr:
-                return None
-
-        return values
-
-    def rule_exists(self, security_group, values):
-        """Indicates whether the specified rule values are already
+    def rule_exists(self, security_group, new_rule):
+        """Indicates whether the specified rule is already
            defined in the given security group.
         """
         for rule in security_group['rules']:
             is_duplicate = True
             keys = ('group_id', 'cidr', 'from_port', 'to_port', 'protocol')
             for key in keys:
-                if rule.get(key) != values.get(key):
+                if rule.get(key) != new_rule.get(key):
                     is_duplicate = False
                     break
             if is_duplicate:
@@ -3162,6 +3000,13 @@ class SecurityGroupAPI(base.Base):
             self.raise_not_found(msg)
 
     def add_rules(self, context, id, name, vals):
+        """Add security group rule(s) to security group.
+
+        Note: the Nova security group API doesn't support adding muliple
+        security group rules at once but the EC2 one does. Therefore,
+        this function is writen to support both.
+        """
+
         count = QUOTAS.count(context, 'security_group_rules', id)
         try:
             projected = count + len(vals)
@@ -3231,26 +3076,82 @@ class SecurityGroupAPI(base.Base):
             msg = _("Rule (%s) not found") % id
             self.raise_not_found(msg)
 
-    @staticmethod
-    def raise_invalid_property(msg):
-        raise NotImplementedError()
+    def validate_id(self, id):
+        try:
+            return int(id)
+        except ValueError:
+            msg = _("Security group id should be integer")
+            self.raise_invalid_property(msg)
 
-    @staticmethod
-    def raise_group_already_exists(msg):
-        raise NotImplementedError()
+    def create_security_group_rule(self, context, security_group, new_rule):
+        if self.rule_exists(security_group, new_rule):
+            msg = (_('This rule already exists in group %s') %
+                   new_rule['parent_group_id'])
+            self.raise_group_already_exists(msg)
+        return self.add_rules(context, new_rule['parent_group_id'],
+                             security_group['name'],
+                             [new_rule])[0]
 
-    @staticmethod
-    def raise_invalid_group(msg):
-        raise NotImplementedError()
+    def trigger_handler(self, event, *args):
+        handle = getattr(self.sgh, 'trigger_%s_refresh' % event)
+        handle(*args)
 
-    @staticmethod
-    def raise_invalid_cidr(cidr, decoding_exception=None):
-        raise NotImplementedError()
+    def trigger_rules_refresh(self, context, id):
+        """Called when a rule is added to or removed from a security_group."""
 
-    @staticmethod
-    def raise_over_quota(msg):
-        raise NotImplementedError()
+        security_group = self.db.security_group_get(context, id)
 
-    @staticmethod
-    def raise_not_found(msg):
-        raise NotImplementedError()
+        for instance in security_group['instances']:
+            if instance['host'] is not None:
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
+
+    def trigger_members_refresh(self, context, group_ids):
+        """Called when a security group gains a new or loses a member.
+
+        Sends an update request to each compute node for each instance for
+        which this is relevant.
+        """
+        # First, we get the security group rules that reference these groups as
+        # the grantee..
+        security_group_rules = set()
+        for group_id in group_ids:
+            security_group_rules.update(
+                self.db.security_group_rule_get_by_security_group_grantee(
+                                                                     context,
+                                                                     group_id))
+
+        # ..then we distill the rules into the groups to which they belong..
+        security_groups = set()
+        for rule in security_group_rules:
+            security_group = self.db.security_group_get(
+                                                    context,
+                                                    rule['parent_group_id'])
+            security_groups.add(security_group)
+
+        # ..then we find the instances that are members of these groups..
+        instances = {}
+        for security_group in security_groups:
+            for instance in security_group['instances']:
+                if instance['uuid'] not in instances:
+                    instances[instance['uuid']] = instance
+
+        # ..then we send a request to refresh the rules for each instance.
+        for instance in instances.values():
+            if instance['host']:
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
+
+    def get_instance_security_groups(self, req, instance_id):
+        instance = req.get_db_instance(instance_id)
+        groups = instance.get('security_groups')
+        if groups:
+            return [{'name': group['name']} for group in groups]
+
+    def populate_security_groups(self, instance, security_groups):
+        # Use 'default' security_group if none specified.
+        if security_groups is None:
+            security_groups = ['default']
+        elif not isinstance(security_groups, list):
+            security_groups = [security_groups]
+        instance['security_groups'] = security_groups

@@ -52,7 +52,6 @@ from eventlet import greenpool
 import netaddr
 from oslo.config import cfg
 
-from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import ipv6
@@ -62,6 +61,7 @@ from nova.network import driver
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -286,7 +286,9 @@ class NetworkManager(manager.SchedulerDependentManager):
                 CONF.floating_ip_dns_manager)
         self.network_api = network_api.API()
         self.network_rpcapi = network_rpcapi.NetworkAPI()
-        self.security_group_api = compute_api.SecurityGroupAPI()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
+
         self.servicegroup_api = servicegroup.API()
 
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has

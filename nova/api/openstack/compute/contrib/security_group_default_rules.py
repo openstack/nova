@@ -24,6 +24,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
+from nova.network.security_group import openstack_driver
 from nova.openstack.common import log as logging
 
 
@@ -104,6 +105,10 @@ class SecurityGroupDefaultRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
 class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
+    def __init__(self):
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
+
     @wsgi.serializers(xml=SecurityGroupDefaultRuleTemplate)
     @wsgi.deserializers(xml=SecurityGroupDefaultRulesXMLDeserializer)
     def create(self, req, body):
@@ -144,7 +149,8 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         context = self._authorize_context(req)
         authorize(context)
 
-        id = self._validate_id(id)
+        id = self.security_group_api.validate_id(id)
+
         LOG.debug(_("Showing security_group_default_rule with id %s") % id)
         try:
             rule = self.security_group_api.get_default_rule(context, id)
@@ -158,7 +164,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         context = self._authorize_context(req)
         authorize(context)
 
-        id = self._validate_id(id)
+        id = self.security_group_api.validate_id(id)
 
         rule = self.security_group_api.get_default_rule(context, id)
 
