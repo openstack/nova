@@ -57,6 +57,7 @@ vmware_group = cfg.OptGroup(name='vmware',
 CONF = cfg.CONF
 CONF.register_group(vmware_group)
 CONF.register_opts(vmware_vif_opts, vmware_group)
+CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 CONF.import_opt('vnc_enabled', 'nova.vnc')
 
 LOG = logging.getLogger(__name__)
