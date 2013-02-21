@@ -597,11 +597,23 @@ def stub_snapshot(id, **kwargs):
     return snapshot
 
 
-def stub_snapshot_get_all(self):
+def stub_snapshot_create(self, context, volume_id, name, description):
+    return stub_snapshot(100, volume_id=volume_id, display_name=name,
+                         display_description=description)
+
+
+def stub_snapshot_delete(self, context, snapshot):
+    if snapshot['id'] == '-1':
+        raise exc.NotFound
+
+
+def stub_snapshot_get(self, context, snapshot_id):
+    if snapshot_id == '-1':
+        raise exc.NotFound
+    return stub_snapshot(snapshot_id)
+
+
+def stub_snapshot_get_all(self, context):
     return [stub_snapshot(100, project_id='fake'),
             stub_snapshot(101, project_id='superfake'),
             stub_snapshot(102, project_id='superduperfake')]
-
-
-def stub_snapshot_get_all_by_project(self, context):
-    return [stub_snapshot(1)]
