@@ -51,12 +51,20 @@ def _print_greenthreads():
         print
 
 
+def _print_nativethreads():
+    for threadId, stack in sys._current_frames().items():
+        print threadId
+        traceback.print_stack(stack)
+        print
+
+
 def initialize_if_enabled():
     backdoor_locals = {
         'exit': _dont_use_this,      # So we don't exit the entire process
         'quit': _dont_use_this,      # So we don't exit the entire process
         'fo': _find_objects,
         'pgt': _print_greenthreads,
+        'pnt': _print_nativethreads,
     }
 
     if CONF.backdoor_port is None:
