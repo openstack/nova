@@ -3545,6 +3545,9 @@ class LibvirtDriver(driver.ComputeDriver):
                  % locals())
         return os.access(instance_path, os.W_OK)
 
+    def inject_network_info(self, instance, nw_info):
+        self.firewall_driver.setup_basic_filtering(instance, nw_info)
+
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""
