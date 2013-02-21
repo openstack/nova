@@ -662,8 +662,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # If the instance is already terminated, we're still happy
         # Otherwise, destroy it
+        old_domid = -1
         if virt_dom is not None:
             try:
+                old_domid = virt_dom.ID()
                 virt_dom.destroy()
             except libvirt.libvirtError as e:
                 is_okay = False
@@ -683,14 +685,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                 locals(), instance=instance)
                     raise
 
-        def _wait_for_destroy():
+        def _wait_for_destroy(expected_domid):
             """Called at an interval until the VM is gone."""
             # NOTE(vish): If the instance disappears during the destroy
             #             we ignore it so the cleanup can still be
             #             attempted because we would prefer destroy to
             #             never fail.
             try:
-                state = self.get_info(instance)['state']
+                dom_info = self.get_info(instance)
+                state = dom_info['state']
+                new_domid = dom_info['id']
             except exception.NotFound:
                 LOG.error(_("During wait destroy, instance disappeared."),
                           instance=instance)
@@ -701,8 +705,23 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise utils.LoopingCallDone()
 
-        timer = utils.FixedIntervalLoopingCall(_wait_for_destroy)
+            # NOTE(wangpan): If the instance was booted again after destroy,
+            #                this may be a endless loop, so check the id of
+            #                domain here, if it changed and the instance is
+            #                still running, we should destroy it again.
+            # see https://bugs.launchpad.net/nova/+bug/1111213 for more details
+            if new_domid != expected_domid:
+                LOG.info(_("Instance may be started again."),
+                         instance=instance)
+                kwargs['is_running'] = True
+                raise utils.LoopingCallDone()
+
+        kwargs = {'is_running': False}
+        timer = utils.FixedIntervalLoopingCall(_wait_for_destroy, old_domid)
         timer.start(interval=0.5).wait()
+        if kwargs['is_running']:
+            LOG.info(_("Going to destroy instance again."), instance=instance)
+            self._destroy(instance)
 
     def destroy(self, instance, network_info, block_device_info=None,
                 destroy_disks=True):
@@ -744,16 +763,39 @@ class LibvirtDriver(driver.ComputeDriver):
                  destroy_disks):
         self._undefine_domain(instance)
         self.unplug_vifs(instance, network_info)
-        try:
-            self.firewall_driver.unfilter_instance(instance,
-                                                   network_info=network_info)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            LOG.error(_("Error from libvirt during unfilter. "
-                          "Code=%(errcode)s Error=%(e)s") %
-                        locals(), instance=instance)
-            reason = "Error unfiltering instance."
-            raise exception.InstanceTerminationFailure(reason=reason)
+        retry = True
+        while retry:
+            try:
+                self.firewall_driver.unfilter_instance(instance,
+                                                    network_info=network_info)
+            except libvirt.libvirtError as e:
+                try:
+                    state = self.get_info(instance)['state']
+                except exception.NotFound:
+                    state = power_state.SHUTDOWN
+
+                if state != power_state.SHUTDOWN:
+                    LOG.warn(_("Instance may be still running, destroy "
+                               "it again."), instance=instance)
+                    self._destroy(instance)
+                else:
+                    retry = False
+                    errcode = e.get_error_code()
+                    LOG.error(_("Error from libvirt during unfilter. "
+                                  "Code=%(errcode)s Error=%(e)s") %
+                                locals(), instance=instance)
+                    reason = "Error unfiltering instance."
+                    raise exception.InstanceTerminationFailure(reason=reason)
+            except Exception:
+                retry = False
+                raise
+            else:
+                retry = False
+
+        # FIXME(wangpan): if the instance is booted again here, such as the
+        #                 the soft reboot operation boot it here, it will
+        #                 become "running deleted", should we check and destroy
+        #                 it at the end of this method?
 
         # NOTE(vish): we disconnect from volumes regardless
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -2259,7 +2301,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 'max_mem': max_mem,
                 'mem': mem,
                 'num_cpu': num_cpu,
-                'cpu_time': cpu_time}
+                'cpu_time': cpu_time,
+                'id': virt_dom.ID()}
 
     def _create_domain(self, xml=None, domain=None,
                        instance=None, launch_flags=0):
