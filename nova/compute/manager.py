@@ -2755,10 +2755,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         LOG.exception(_("error during stop() in "
                                         "sync_power_state."),
                                       instance=db_instance)
-                elif vm_power_state in (power_state.PAUSED,
-                                        power_state.SUSPENDED):
-                    LOG.warn(_("Instance is paused or suspended "
-                               "unexpectedly. Calling "
+                elif vm_power_state == power_state.SUSPENDED:
+                    LOG.warn(_("Instance is suspended unexpectedly. Calling "
                                "the stop API."), instance=db_instance)
                     try:
                         self.compute_api.stop(context, db_instance)
@@ -2766,6 +2764,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                         LOG.exception(_("error during stop() in "
                                         "sync_power_state."),
                                       instance=db_instance)
+                elif vm_power_state == power_state.PAUSED:
+                    # Note(maoy): a VM may get into the paused state not only
+                    # because the user request via API calls, but also
+                    # due to (temporary) external instrumentations.
+                    # Before the virt layer can reliably report the reason,
+                    # we simply ignore the state discrepancy. In many cases,
+                    # the VM state will go back to running after the external
+                    # instrumentation is done. See bug 1097806 for details.
+                    LOG.warn(_("Instance is paused unexpectedly. Ignore."),
+                             instance=db_instance)
             elif vm_state == vm_states.STOPPED:
                 if vm_power_state not in (power_state.NOSTATE,
                                           power_state.SHUTDOWN,
