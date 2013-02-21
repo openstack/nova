@@ -50,6 +50,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
+from nova import consoleauth
 import nova.context
 from nova import exception
 from nova import hooks
@@ -317,7 +318,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.25'
+    RPC_API_VERSION = '2.26'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -335,6 +336,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.conductor_api = conductor.API()
         self.is_quantum_security_groups = (
             openstack_driver.is_quantum_security_groups())
+        self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
+
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -1222,6 +1225,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
+
+        if CONF.vnc_enabled or CONF.spice.enabled:
+            self.consoleauth_rpcapi.delete_tokens_for_instance(context,
+                                                       instance['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
@@ -2554,6 +2561,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         connect_info['access_url'] = access_url
 
         return connect_info
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
+    def validate_console_port(self, ctxt, instance, port, console_type):
+        if console_type == "spice-html5":
+            console_info = self.driver.get_spice_console(instance)
+        else:
+            console_info = self.driver.get_vnc_console(instance)
+
+        return console_info['port'] == port
 
     def _attach_volume_boot(self, context, instance, volume, mountpoint):
         """Attach a volume to an instance at boot time. So actual attach
