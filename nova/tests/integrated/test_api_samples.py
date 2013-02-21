@@ -3430,7 +3430,7 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
         def fake_list_ports(self, *args, **kwargs):
             uuid = kwargs.get('device_id', None)
             if not uuid:
-                raise InstanceNotFound(instance_id=None)
+                raise exception.InstanceNotFound(instance_id=None)
             port_data = {
                 "id": "ce531f90-199f-48c0-816c-13e38010b442",
                 "network_id": "3cb9bc59-5699-4588-a4b1-b87f96708bc6",
@@ -3450,7 +3450,7 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
 
         def fake_show_port(self, context, port_id=None):
             if not port_id:
-                raise PortNotFound(port_id=None)
+                raise exception.PortNotFound(port_id=None)
             port_data = {
                 "id": port_id,
                 "network_id": "3cb9bc59-5699-4588-a4b1-b87f96708bc6",
