@@ -25,6 +25,7 @@ import uuid
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import literal_column
 
+import nova.context
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common import log as logging
@@ -61,7 +62,7 @@ def model_query(context, *args, **kwargs):
         raise Exception(
                 _("Unrecognized read_deleted value '%s'") % read_deleted)
 
-    if project_only and sqlalchemy_api.is_user_context(context):
+    if project_only and nova.context.is_user_context(context):
         query = query.filter_by(project_id=context.project_id)
 
     return query

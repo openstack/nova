@@ -45,6 +45,7 @@ from sqlalchemy import String
 from nova import block_device
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -74,44 +75,6 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
-def is_user_context(context):
-    """Indicates if the request context is a normal user."""
-    if not context:
-        return False
-    if context.is_admin:
-        return False
-    if not context.user_id or not context.project_id:
-        return False
-    return True
-
-
-def authorize_project_context(context, project_id):
-    """Ensures a request has permission to access the given project."""
-    if is_user_context(context):
-        if not context.project_id:
-            raise exception.NotAuthorized()
-        elif context.project_id != project_id:
-            raise exception.NotAuthorized()
-
-
-def authorize_user_context(context, user_id):
-    """Ensures a request has permission to access the given user."""
-    if is_user_context(context):
-        if not context.user_id:
-            raise exception.NotAuthorized()
-        elif context.user_id != user_id:
-            raise exception.NotAuthorized()
-
-
-def authorize_quota_class_context(context, class_name):
-    """Ensures a request has permission to access the given quota class."""
-    if is_user_context(context):
-        if not context.quota_class:
-            raise exception.NotAuthorized()
-        elif context.quota_class != class_name:
-            raise exception.NotAuthorized()
-
-
 def require_admin_context(f):
     """Decorator to require admin request context.
 
@@ -120,9 +83,7 @@ def require_admin_context(f):
     """
 
     def wrapper(*args, **kwargs):
-        context = args[0]
-        if not context.is_admin:
-            raise exception.AdminRequired()
+        nova.context.require_admin_context(args[0])
         return f(*args, **kwargs)
     return wrapper
 
@@ -131,17 +92,15 @@ def require_context(f):
     """Decorator to require *any* user or admin context.
 
     This does no authorization for user or project access matching, see
-    :py:func:`authorize_project_context` and
-    :py:func:`authorize_user_context`.
+    :py:func:`nova.context.authorize_project_context` and
+    :py:func:`nova.context.authorize_user_context`.
 
     The first argument to the wrapped function must be the context.
 
     """
 
     def wrapper(*args, **kwargs):
-        context = args[0]
-        if not context.is_admin and not is_user_context(context):
-            raise exception.NotAuthorized()
+        nova.context.require_context(args[0])
         return f(*args, **kwargs)
     return wrapper
 
@@ -215,7 +174,7 @@ def model_query(context, model, *args, **kwargs):
         raise Exception(_("Unrecognized read_deleted value '%s'")
                             % read_deleted)
 
-    if is_user_context(context) and project_only:
+    if nova.context.is_user_context(context) and project_only:
         if project_only == 'allow_none':
             query = query.\
                 filter(or_(base_model.project_id == context.project_id,
@@ -658,7 +617,7 @@ def floating_ip_get_pools(context):
 
 @require_context
 def floating_ip_allocate_address(context, project_id, pool):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
         floating_ip_ref = model_query(context, models.FloatingIp,
@@ -749,7 +708,7 @@ def floating_ip_create(context, values, session=None):
 
 @require_context
 def floating_ip_count_by_project(context, project_id, session=None):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why leave auto_assigned floating IPs out?
     return model_query(context, models.FloatingIp, read_deleted="no",
                        session=session).\
@@ -848,7 +807,7 @@ def floating_ip_get_all_by_host(context, host):
 
 @require_context
 def floating_ip_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
     # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
     return _floating_ip_get_all(context).\
                          filter_by(project_id=project_id).\
@@ -879,8 +838,8 @@ def _floating_ip_get_by_address(context, address, session=None):
 
     # If the floating IP has a project ID set, check to make sure
     # the non-admin user has access.
-    if result.project_id and is_user_context(context):
-        authorize_project_context(context, result.project_id)
+    if result.project_id and nova.context.is_user_context(context):
+        nova.context.authorize_project_context(context, result.project_id)
 
     return result
 
@@ -1128,10 +1087,11 @@ def fixed_ip_get(context, id, get_network=False):
 
     # FIXME(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_uuid'] is not None:
+    if (nova.context.is_user_context(context) and
+            result['instance_uuid'] is not None):
         instance = instance_get_by_uuid(context.elevated(read_deleted='yes'),
                                         result['instance_uuid'])
-        authorize_project_context(context, instance.project_id)
+        nova.context.authorize_project_context(context, instance.project_id)
 
     return result
 
@@ -1157,11 +1117,12 @@ def fixed_ip_get_by_address(context, address, session=None):
 
     # NOTE(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_uuid'] is not None:
+    if (nova.context.is_user_context(context) and
+            result['instance_uuid'] is not None):
         instance = _instance_get_by_uuid(context.elevated(read_deleted='yes'),
                                          result['instance_uuid'],
                                          session)
-        authorize_project_context(context, instance.project_id)
+        nova.context.authorize_project_context(context, instance.project_id)
 
     return result
 
@@ -1966,7 +1927,7 @@ def key_pair_create(context, values):
 
 @require_context
 def key_pair_destroy(context, user_id, name):
-    authorize_user_context(context, user_id)
+    nova.context.authorize_user_context(context, user_id)
     model_query(context, models.KeyPair).\
              filter_by(user_id=user_id).\
              filter_by(name=name).\
@@ -1975,7 +1936,7 @@ def key_pair_destroy(context, user_id, name):
 
 @require_context
 def key_pair_get(context, user_id, name):
-    authorize_user_context(context, user_id)
+    nova.context.authorize_user_context(context, user_id)
     result = model_query(context, models.KeyPair).\
                      filter_by(user_id=user_id).\
                      filter_by(name=name).\
@@ -1989,14 +1950,14 @@ def key_pair_get(context, user_id, name):
 
 @require_context
 def key_pair_get_all_by_user(context, user_id):
-    authorize_user_context(context, user_id)
+    nova.context.authorize_user_context(context, user_id)
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
                    all()
 
 
 def key_pair_count_by_user(context, user_id):
-    authorize_user_context(context, user_id)
+    nova.context.authorize_user_context(context, user_id)
     return model_query(context, models.KeyPair, read_deleted="no").\
                    filter_by(user_id=user_id).\
                    count()
@@ -2365,7 +2326,7 @@ def quota_get(context, project_id, resource):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
 
     rows = model_query(context, models.Quota, read_deleted="no").\
                    filter_by(project_id=project_id).\
@@ -2417,7 +2378,7 @@ def quota_class_get(context, class_name, resource):
 
 @require_context
 def quota_class_get_all_by_name(context, class_name):
-    authorize_quota_class_context(context, class_name)
+    nova.context.authorize_quota_class_context(context, class_name)
 
     rows = model_query(context, models.QuotaClass, read_deleted="no").\
                    filter_by(class_name=class_name).\
@@ -2469,7 +2430,7 @@ def quota_usage_get(context, project_id, resource):
 
 @require_context
 def quota_usage_get_all_by_project(context, project_id):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
 
     rows = model_query(context, models.QuotaUsage, read_deleted="no").\
                    filter_by(project_id=project_id).\
@@ -3168,7 +3129,7 @@ def security_group_destroy(context, security_group_id):
 
 @require_context
 def security_group_count_by_project(context, project_id, session=None):
-    authorize_project_context(context, project_id)
+    nova.context.authorize_project_context(context, project_id)
     return model_query(context, models.SecurityGroup, read_deleted="no",
                        session=session).\
                    filter_by(project_id=project_id).\

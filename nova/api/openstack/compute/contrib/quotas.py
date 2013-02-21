@@ -20,8 +20,8 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+import nova.context
 from nova import db
-from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.openstack.common import log as logging
 from nova import quota
@@ -78,7 +78,7 @@ class QuotaSetsController(object):
         context = req.environ['nova.context']
         authorize_show(context)
         try:
-            sqlalchemy_api.authorize_project_context(context, id)
+            nova.context.authorize_project_context(context, id)
             return self._format_quota_set(id, self._get_quotas(context, id))
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()

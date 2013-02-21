@@ -18,6 +18,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+import nova.context
 from nova import db
 from nova import exception
 from nova import quota
@@ -59,7 +60,7 @@ class QuotaClassSetsController(object):
         context = req.environ['nova.context']
         authorize(context)
         try:
-            db.sqlalchemy.api.authorize_quota_class_context(context, id)
+            nova.context.authorize_quota_class_context(context, id)
             return self._format_quota_set(id,
                                           QUOTAS.get_class_quotas(context, id))
         except exception.NotAuthorized:
