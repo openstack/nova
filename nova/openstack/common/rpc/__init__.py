@@ -34,6 +34,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import local
 
+
 LOG = logging.getLogger(__name__)
 
 
