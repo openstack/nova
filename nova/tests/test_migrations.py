@@ -397,11 +397,19 @@ class BaseMigrationTestCase(test.TestCase):
                          self.migration_api.db_version(engine,
                                                   self.REPOSITORY))
 
+        # NOTE(sirp): `version` is what we're downgrading to (i.e. the 'target'
+        # version). So if we have any downgrade checks, they need to be run for
+        # the previous (higher numbered) migration.
+        post_downgrade = getattr(
+                self, "_post_downgrade_%d" % (version + 1), None)
+        if post_downgrade:
+            post_downgrade(engine)
+
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.
 
         We allow for data insertion and post checks at every
-        migration version with special _prerun_### and
+        migration version with special _pre_upgrade_### and
         _check_### functions in the main test.
         """
         # NOTE(sdague): try block is here because it's impossible to debug
@@ -409,9 +417,9 @@ class BaseMigrationTestCase(test.TestCase):
         try:
             if with_data:
                 data = None
-                prerun = getattr(self, "_prerun_%d" % version, None)
-                if prerun:
-                    data = prerun(engine)
+                pre_upgrade = getattr(self, "_pre_upgrade_%d" % version, None)
+                if pre_upgrade:
+                    data = pre_upgrade(engine)
 
                 self.migration_api.upgrade(engine,
                                       self.REPOSITORY,
@@ -462,7 +470,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     globals(), locals(), ['versioning_api'], -1)
             self.migration_api = temp.versioning_api
 
-    def _prerun_134(self, engine):
+    def _pre_upgrade_134(self, engine):
         now = timeutils.utcnow()
         data = [{
             'id': 1,
@@ -516,7 +524,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(data[0]['mac'], bw['mac'])
 
     # migration 141, update migrations instance uuid
-    def _prerun_141(self, engine):
+    def _pre_upgrade_141(self, engine):
         data = {
             'instance_uuid': str(uuid.uuid4())
             }
@@ -534,7 +542,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(data['instance_uuid'], row['instance_uuid'])
 
     # migration 146, availability zone transition
-    def _prerun_146(self, engine):
+    def _pre_upgrade_146(self, engine):
         data = {
             'availability_zone': 'custom_az',
             'name': 'name',
@@ -554,7 +562,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(data['availability_zone'], md['value'])
 
     # migration 147, availability zone transition for services
-    def _prerun_147(self, engine):
+    def _pre_upgrade_147(self, engine):
         az = 'test_zone'
         host1 = 'compute-host1'
         host2 = 'compute-host2'
@@ -598,7 +606,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(host, None)
 
     # migration 149, changes IPAddr storage format
-    def _prerun_149(self, engine):
+    def _pre_upgrade_149(self, engine):
         provider_fw_rules = get_table(engine, 'provider_fw_rules')
         console_pools = get_table(engine, 'console_pools')
         data = {
@@ -656,7 +664,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             self.assertIn(str(netaddr.IPAddress(row['address'])), iplist)
 
     # migration 151 - changes period_beginning and period_ending to DateTime
-    def _prerun_151(self, engine):
+    def _pre_upgrade_151(self, engine):
         task_log = get_table(engine, 'task_log')
         data = {
             'task_name': 'The name of the task',
@@ -682,7 +690,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(data['period_ending'], str(row['period_ending']))
 
     # migration 152 - convert deleted from boolean to int
-    def _prerun_152(self, engine):
+    def _pre_upgrade_152(self, engine):
         host1 = 'compute-host1'
         host2 = 'compute-host2'
         # NOTE(sdague): start at #4 because services data already in table
@@ -719,7 +727,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(volume.id, volume.deleted)
 
     # migration 153, copy flavor information into system_metadata
-    def _prerun_153(self, engine):
+    def _pre_upgrade_153(self, engine):
         fake_types = [
             dict(id=10, name='type1', memory_mb=128, vcpus=1,
                  root_gb=10, ephemeral_gb=0, flavorid="1", swap=0,
@@ -787,7 +795,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     # migration 154, add shadow tables for deleted data
     # There are 53 shadow tables but we only test one
     # There are additional tests in test_db_api.py
-    def _prerun_154(self, engine):
+    def _pre_upgrade_154(self, engine):
         meta = sqlalchemy.schema.MetaData()
         meta.reflect(engine)
         table_names = meta.tables.keys()
@@ -831,7 +839,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                                  str(shadow_column.type))
 
     # migration 156 - introduce CIDR type
-    def _prerun_156(self, engine):
+    def _pre_upgrade_156(self, engine):
         # assume the same data as from 149
         data = {
             'provider_fw_rules':
@@ -866,7 +874,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         # recheck the 149 data
         self._check_149(engine, data)
 
-    def _prerun_158(self, engine):
+    def _pre_upgrade_158(self, engine):
         networks = get_table(engine, 'networks')
         data = [
             {'vlan': 1, 'deleted': 0},
@@ -920,7 +928,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     globals(), locals(), ['versioning_api'], -1)
             self.migration_api = temp.versioning_api
 
-    def _prerun_002(self, engine):
+    def _pre_upgrade_002(self, engine):
         data = [{'id': 1, 'key': 'fake-key', 'image_path': '/dev/null',
                  'pxe_config_path': '/dev/null/', 'root_mb': 0, 'swap_mb': 0}]
         table = get_table(engine, 'bm_deployments')
