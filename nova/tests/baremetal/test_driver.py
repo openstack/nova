@@ -116,6 +116,11 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                 instance=self.test_instance,
                 network_info=utils.get_test_network_info(),
             )
+        self.destroy_params = dict(
+                instance=self.spawn_params['instance'],
+                network_info=self.spawn_params['network_info'],
+                block_device_info=self.spawn_params['block_device_info'],
+            )
 
     def test_get_host_stats(self):
         self._create_node()
@@ -183,4 +188,43 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                 self.driver.spawn, **self.spawn_params)
 
         row = db.bm_node_get(self.context, self.node['id'])
+        self.assertEqual(row['task_state'], baremetal_states.DELETED)
+
+    def test_spawn_fails_to_cleanup(self):
+        self._create_node()
+
+        self.mox.StubOutWithMock(fake.FakePowerManager, 'activate_node')
+        self.mox.StubOutWithMock(fake.FakePowerManager, 'deactivate_node')
+        fake.FakePowerManager.activate_node().AndRaise(test.TestingException)
+        fake.FakePowerManager.deactivate_node().AndRaise(test.TestingException)
+        self.mox.ReplayAll()
+
+        self.assertRaises(test.TestingException,
+                self.driver.spawn, **self.spawn_params)
+
+        row = db.bm_node_get(self.context, self.node['id'])
         self.assertEqual(row['task_state'], baremetal_states.ERROR)
+
+    def test_destroy_ok(self):
+        self._create_node()
+        self.driver.spawn(**self.spawn_params)
+        self.driver.destroy(**self.destroy_params)
+
+        row = db.bm_node_get(self.context, self.node['id'])
+        self.assertEqual(row['task_state'], baremetal_states.DELETED)
+        self.assertEqual(row['instance_uuid'], None)
+
+    def test_destroy_fails(self):
+        self._create_node()
+
+        self.mox.StubOutWithMock(fake.FakePowerManager, 'deactivate_node')
+        fake.FakePowerManager.deactivate_node().AndRaise(test.TestingException)
+        self.mox.ReplayAll()
+
+        self.driver.spawn(**self.spawn_params)
+        self.assertRaises(test.TestingException,
+                self.driver.destroy, **self.destroy_params)
+
+        row = db.bm_node_get(self.context, self.node['id'])
+        self.assertEqual(row['task_state'], baremetal_states.ERROR)
+        self.assertEqual(row['instance_uuid'], self.test_instance['uuid'])
