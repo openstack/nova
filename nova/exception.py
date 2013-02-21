@@ -31,6 +31,7 @@ import webob.exc
 
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
+from nova import safe_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -71,6 +72,11 @@ class ProcessExecutionError(IOError):
         IOError.__init__(self, message)
 
 
+def _cleanse_dict(original):
+    """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
+    return dict((k, v) for k, v in original.iteritems() if not "_pass" in k)
+
+
 def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                    level=None):
     """This decorator wraps a method to catch any exceptions that may
@@ -89,8 +95,10 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
             except Exception, e:
                 with excutils.save_and_reraise_exception():
                     if notifier:
-                        payload = dict(args=args, exception=e)
-                        payload.update(kw)
+                        payload = dict(exception=e)
+                        call_dict = safe_utils.getcallargs(f, *args, **kw)
+                        cleansed = _cleanse_dict(call_dict)
+                        payload.update({'args': cleansed})
 
                         # Use a temp vars so we don't shadow
                         # our outer definitions.
