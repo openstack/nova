@@ -50,9 +50,9 @@ def _compute_topic(topic, ctxt, host, instance):
         if not instance:
             raise exception.NovaException(_('No compute host specified'))
         host = instance['host']
-    if not host:
-        raise exception.NovaException(_('Unable to find host for '
-                                           'Instance %s') % instance['uuid'])
+        if not host:
+            raise exception.NovaException(_('Unable to find host for '
+                                          'Instance %s') % instance['uuid'])
     return rpc.queue_get_for(ctxt, topic, host)
 
 
