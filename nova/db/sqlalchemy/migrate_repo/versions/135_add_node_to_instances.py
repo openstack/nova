@@ -50,6 +50,5 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     instances = Table('instances', meta, autoload=True)
-    node = Column('node', String(length=255))
 
-    instances.drop_column(node)
+    instances.drop_column('node')
