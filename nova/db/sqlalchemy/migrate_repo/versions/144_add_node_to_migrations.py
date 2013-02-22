@@ -1,4 +1,4 @@
-# Copyright 2012 OpenSmigrations.ck LLC.
+# Copyright 2012 Openstack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,6 +14,29 @@
 
 from sqlalchemy import and_, Index, String, Column, MetaData, Table
 from sqlalchemy.sql.expression import select, update
+
+
+def _drop_index(engine, table, idx_name):
+    """Drop index from DB and remove index from SQLAlchemy table metadata.
+
+    idx.drop() in SQLAlchemy will issue a DROP INDEX statement to the DB but
+    WILL NOT update the table metadata to remove the `Index` object.
+
+    This can cause subsequent drop column calls on a related column to fail
+    because `drop_column` will see an `Index` object that isn't there, thus
+    issuing an erroneous second DROP INDEX call.
+
+    The solution is to update the table metadata to reflect the now dropped
+    column.
+    """
+    for idx in getattr(table, 'indexes'):
+        if idx.name == idx_name:
+            break
+    else:
+        raise Exception("Index '%s' not found!" % idx_name)
+
+    idx.drop(engine)
+    table.indexes.remove(idx)
 
 
 def upgrade(migrate_engine):
@@ -52,15 +75,14 @@ def downgrade(migrate_engine):
 
     migrations = Table('migrations', meta, autoload=True)
 
-    # drop new columns:
-    source_node = Column('source_node', String(length=255))
-    migrations.drop_column(source_node)
-
-    dest_node = Column('dest_node', String(length=255))
-    migrations.drop_column(dest_node)
-
     # drop new index:
-    _drop_new_index(migrations, migrate_engine)
+    _drop_index(migrate_engine, migrations,
+                'migrations_by_host_nodes_and_status_idx')
+
+    # drop new columns:
+    migrations.drop_column('source_node')
+
+    migrations.drop_column('dest_node')
 
     # re-add old index:
     i = _old_index(migrations)
@@ -108,20 +130,6 @@ def _add_new_index(migrations, migrate_engine):
                   migrations.c.dest_compute, migrations.c.source_node,
                   migrations.c.dest_node, migrations.c.status)
         i.create(migrate_engine)
-
-
-def _drop_new_index(migrations, migrate_engine):
-    if migrate_engine.name == "mysql":
-        sql = ("drop index migrations_by_host_nodes_and_status_idx on "
-               "migrations")
-        migrate_engine.execute(sql)
-
-    else:
-        i = Index('migrations_by_host_nodes_and_status_idx',
-                  migrations.c.deleted, migrations.c.source_compute,
-                  migrations.c.dest_compute, migrations.c.source_node,
-                  migrations.c.dest_node, migrations.c.status)
-        i.drop(migrate_engine)
 
 
 def _old_index(migrations):
