@@ -37,7 +37,8 @@ https://bitbucket.org/eventlet/eventlet/issue/137/
 """
 import functools
 
-from nova.openstack.common import cfg
+from oslo.config import cfg
+
 from nova.openstack.common import lockutils
 from nova.openstack.common import importutils
 
