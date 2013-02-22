@@ -63,41 +63,25 @@ import nova.virt.baremetal.db.sqlalchemy.migrate_repo
 LOG = logging.getLogger(__name__)
 
 
-def _get_connect_string(backend,
-        user=None,
-        passwd=None,
-        database=None):
+def _get_connect_string(backend, user, passwd, database):
     """
     Try to get a connection with a very specific set of values, if we get
     these then we'll run the tests, otherwise they are skipped
     """
-    if not user:
-        user = "openstack_citest"
-    if not passwd:
-        passwd = "openstack_citest"
-    if not database:
-        database = "openstack_citest"
-
     if backend == "postgres":
         backend = "postgresql+psycopg2"
     elif backend == "mysql":
         backend = "mysql+mysqldb"
+    else:
+        raise Exception("Unrecognized backend: '%s'" % backend)
 
     return ("%(backend)s://%(user)s:%(passwd)s@localhost/%(database)s"
             % locals())
 
 
-def _is_backend_avail(backend,
-                      user="openstack_citest",
-                      passwd="openstack_citest",
-                      database="openstack_citest"):
+def _is_backend_avail(backend, user, passwd, database):
     try:
-        if backend == "mysql":
-            connect_uri = _get_connect_string("mysql",
-                user=user, passwd=passwd, database=database)
-        elif backend == "postgres":
-            connect_uri = _get_connect_string("postgres",
-                user=user, passwd=passwd, database=database)
+        connect_uri = _get_connect_string(backend, user, passwd, database)
         engine = sqlalchemy.create_engine(connect_uri)
         connection = engine.connect()
     except Exception:
@@ -110,17 +94,17 @@ def _is_backend_avail(backend,
         return True
 
 
-def _have_mysql():
+def _have_mysql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_MYSQL_PRESENT')
     if present is None:
-        return _is_backend_avail('mysql')
+        return _is_backend_avail('mysql', user, passwd, database)
     return present.lower() in ('', 'true')
 
 
-def _have_postgresql():
+def _have_postgresql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_POSTGRESQL_PRESENT')
     if present is None:
-        return _is_backend_avail('postgres')
+        return _is_backend_avail('postgres', user, passwd, database)
     return present.lower() in ('', 'true')
 
 
@@ -162,8 +146,49 @@ def get_pgsql_connection_info(conn_pieces):
     return (user, password, database, host)
 
 
+class CommonTestsMixIn(object):
+    """These tests are shared between TestNovaMigrations and
+    TestBaremetalMigrations.
+
+    BaseMigrationTestCase is effectively an abstract class, meant to be derived
+    from and not directly tested against; that's why these `test_` methods need
+    to be on a Mixin, so that they won't be picked up as valid tests for
+    BaseMigrationTestCase.
+    """
+    def test_walk_versions(self):
+        for key, engine in self.engines.items():
+            self._walk_versions(engine, self.snake_walk)
+
+    def test_mysql_opportunistically(self):
+        self._test_mysql_opportunistically()
+
+    def test_mysql_connect_fail(self):
+        """
+        Test that we can trigger a mysql connection failure and we fail
+        gracefully to ensure we don't break people without mysql
+        """
+        if _is_backend_avail('mysql', "openstack_cifail", self.PASSWD,
+                             self.DATABASE):
+            self.fail("Shouldn't have connected")
+
+    def test_postgresql_opportunistically(self):
+        self._test_postgresql_opportunistically()
+
+    def test_postgresql_connect_fail(self):
+        """
+        Test that we can trigger a postgres connection failure and we fail
+        gracefully to ensure we don't break people without postgres
+        """
+        if _is_backend_avail('postgres', "openstack_cifail", self.PASSWD,
+                             self.DATABASE):
+            self.fail("Shouldn't have connected")
+
+
 class BaseMigrationTestCase(test.TestCase):
     """Base class fort testing migrations and migration utils."""
+    USER = None
+    PASSWD = None
+    DATABASE = None
 
     def __init__(self, *args, **kwargs):
         super(BaseMigrationTestCase, self).__init__(*args, **kwargs)
@@ -270,21 +295,14 @@ class BaseMigrationTestCase(test.TestCase):
                 os.unsetenv('PGPASSWORD')
                 os.unsetenv('PGUSER')
 
-    def test_mysql_connect_fail(self):
-        """
-        Test that we can trigger a mysql connection failure and we fail
-        gracefully to ensure we don't break people without mysql
-        """
-        if _is_backend_avail('mysql', user="openstack_cifail"):
-            self.fail("Shouldn't have connected")
-
-    def _test_mysql_opportunistically(self, database=None):
+    def _test_mysql_opportunistically(self):
         # Test that table creation on mysql only builds InnoDB tables
-        if not _have_mysql():
+        if not _have_mysql(self.USER, self.PASSWD, self.DATABASE):
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("mysql", database=database)
+        connect_string = _get_connect_string("mysql", self.USER, self.PASSWD,
+                self.DATABASE)
         (user, password, database, host) = \
                 get_mysql_connection_info(urlparse.urlparse(connect_string))
         engine = sqlalchemy.create_engine(connect_string)
@@ -313,21 +331,14 @@ class BaseMigrationTestCase(test.TestCase):
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
         connection.close()
 
-    def test_postgresql_connect_fail(self):
-        """
-        Test that we can trigger a postgres connection failure and we fail
-        gracefully to ensure we don't break people without postgres
-        """
-        if _is_backend_avail('postgresql', user="openstack_cifail"):
-            self.fail("Shouldn't have connected")
-
-    def _test_postgresql_opportunistically(self, database=None):
+    def _test_postgresql_opportunistically(self):
         # Test postgresql database migration walk
-        if not _have_postgresql():
+        if not _have_postgresql(self.USER, self.PASSWD, self.DATABASE):
             self.skipTest("postgresql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("postgres", database=database)
+        connect_string = _get_connect_string("postgres", self.USER,
+                self.PASSWD, self.DATABASE)
         engine = sqlalchemy.create_engine(connect_string)
         (user, password, database, host) = \
                 get_mysql_connection_info(urlparse.urlparse(connect_string))
@@ -420,8 +431,11 @@ class BaseMigrationTestCase(test.TestCase):
             raise
 
 
-class TestNovaMigrations(BaseMigrationTestCase):
+class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
+    USER = "openstack_citest"
+    PASSWD = "openstack_citest"
+    DATABASE = "openstack_citest"
 
     def __init__(self, *args, **kwargs):
         super(TestNovaMigrations, self).__init__(*args, **kwargs)
@@ -447,21 +461,6 @@ class TestNovaMigrations(BaseMigrationTestCase):
             temp = __import__('nova.db.sqlalchemy.migration',
                     globals(), locals(), ['versioning_api'], -1)
             self.migration_api = temp.versioning_api
-
-    def tearDown(self):
-        super(TestNovaMigrations, self).tearDown()
-
-    def test_walk_versions(self):
-        for key, engine in self.engines.items():
-            self._walk_versions(engine, self.snake_walk)
-
-    def test_mysql_opportunistically(self):
-        self._test_mysql_opportunistically(
-                database='openstack_citest')
-
-    def test_postgresql_opportunistically(self):
-        self._test_postgresql_opportunistically(
-                database='openstack_citest')
 
     def _prerun_134(self, engine):
         now = timeutils.utcnow()
@@ -888,8 +887,11 @@ class TestNovaMigrations(BaseMigrationTestCase):
         self.assertEqual(len(rows), 1)
 
 
-class TestBaremetalMigrations(BaseMigrationTestCase):
+class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
+    USER = "openstack_baremetal_citest"
+    PASSWD = "openstack_baremetal_citest"
+    DATABASE = "openstack_baremetal_citest"
 
     def __init__(self, *args, **kwargs):
         super(TestBaremetalMigrations, self).__init__(*args, **kwargs)
@@ -917,21 +919,6 @@ class TestBaremetalMigrations(BaseMigrationTestCase):
             temp = __import__('nova.virt.baremetal.db.sqlalchemy.migration',
                     globals(), locals(), ['versioning_api'], -1)
             self.migration_api = temp.versioning_api
-
-    def tearDown(self):
-        super(TestBaremetalMigrations, self).tearDown()
-
-    def test_walk_versions(self):
-        for key, engine in self.engines.items():
-            self._walk_versions(engine, self.snake_walk)
-
-    def test_mysql_opportunistically(self):
-        self._test_mysql_opportunistically(
-                database='openstack_baremetal_citest')
-
-    def test_postgresql_opportunistically(self):
-        self._test_postgresql_opportunistically(
-                database='openstack_baremetal_citest')
 
     def _prerun_002(self, engine):
         data = [{'id': 1, 'key': 'fake-key', 'image_path': '/dev/null',
