@@ -100,6 +100,7 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
+RO_SECURITY_GROUPS = ['default']
 
 
 def check_instance_state(vm_state=None, task_state=(None,)):
@@ -2881,6 +2882,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         return groups
 
     def destroy(self, context, security_group):
+        if security_group['name'] in RO_SECURITY_GROUPS:
+            msg = _("Unable to delete system group '%s'") % \
+                    security_group['name']
+            self.raise_invalid_group(msg)
+
         if self.db.security_group_in_use(context, security_group['id']):
             msg = _("Security group is still in use")
             self.raise_invalid_group(msg)
