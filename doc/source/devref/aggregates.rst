@@ -1,5 +1,5 @@
 ..
-      Copyright 2012 OpenStack, LLC
+      Copyright 2012 OpenStack Foundation
       Copyright 2012 Citrix Systems, Inc.
       Copyright 2012, The Cloudscaling Group, Inc.
       All Rights Reserved.

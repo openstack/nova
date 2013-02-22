@@ -2,7 +2,7 @@
 
 # Copyright (C) 2011 Midokura KK
 # Copyright (C) 2011 Nicira, Inc
-# Copyright 2011 OpenStack LLC.
+# Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may

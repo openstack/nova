@@ -8,7 +8,7 @@ Receiver for 0MQ based nova RPC
 
 :Author: openstack@lists.launchpad.net
 :Date:   2012-09-27
-:Copyright: OpenStack LLC
+:Copyright: OpenStack Foundation
 :Version: 2012.1
 :Manual section: 1
 :Manual group: cloud computing

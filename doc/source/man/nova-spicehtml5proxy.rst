@@ -8,7 +8,7 @@ Websocket Proxy for OpenStack Nova SPICE HTML5 consoles.
 
 :Author: openstack@lists.launchpad.net
 :Date:   2012-09-27
-:Copyright: OpenStack LLC
+:Copyright: OpenStack Foundation
 :Version: 2012.1
 :Manual section: 1
 :Manual group: cloud computing

@@ -1,7 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #    Copyright (c) 2012 NTT DOCOMO, INC.
-#    Copyright 2011 OpenStack LLC
+#    Copyright 2011 OpenStack Foundation
 #    Copyright 2011 Ilya Alekseyev
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may

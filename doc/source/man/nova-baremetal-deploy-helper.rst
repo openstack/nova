@@ -8,7 +8,7 @@ Writes images to a bare-metal node and switch it to instance-mode
 
 :Author: openstack@lists.launchpad.net
 :Date:   2012-10-17
-:Copyright: OpenStack LLC
+:Copyright: OpenStack Foundation
 :Version: 2013.1
 :Manual section: 1
 :Manual group: cloud computing
