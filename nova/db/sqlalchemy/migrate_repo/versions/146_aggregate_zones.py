@@ -53,5 +53,6 @@ def downgrade(migrate_engine):
         [aggregate_metadata.c.value]).where(aggregates.c.id ==
         aggregate_metadata.c.aggregate_id).where(aggregate_metadata.c.key ==
         'availability_zone')).execute()
-    delete(aggregate_metadata, aggregate_metadata.c.key == 'availability_zone')
+    delete(aggregate_metadata,
+           aggregate_metadata.c.key == 'availability_zone').execute()
     aggregates.c.availability_zone.alter(nullable=False)
