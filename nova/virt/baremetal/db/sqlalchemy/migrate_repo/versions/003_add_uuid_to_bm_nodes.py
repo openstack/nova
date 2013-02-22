@@ -35,6 +35,5 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     t = Table('bm_nodes', meta, autoload=True)
-    uuid_col = Column('uuid', String(length=36))
 
-    t.drop_column(uuid_col)
+    t.drop_column('uuid')
