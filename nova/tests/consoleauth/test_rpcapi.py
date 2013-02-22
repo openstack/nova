@@ -68,7 +68,11 @@ class ConsoleAuthRpcAPITestCase(test.TestCase):
     def test_authorize_console(self):
         self._test_consoleauth_api('authorize_console', token='token',
                 console_type='ctype', host='h', port='p',
-                internal_access_path='iap')
+                internal_access_path='iap', instance_uuid="1234")
 
     def test_check_token(self):
         self._test_consoleauth_api('check_token', token='t')
+
+    def test_delete_tokens_for_instnace(self):
+        self._test_consoleauth_api('delete_tokens_for_instance',
+                                   instance_uuid="instance")

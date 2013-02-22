@@ -1372,6 +1372,24 @@ class ComputeTestCase(BaseTestCase):
         self.compute._delete_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def test_delete_instance_deletes_console_auth_tokens(self):
+        instance = self._create_fake_instance()
+        self.flags(vnc_enabled=True)
+
+        self.tokens_deleted = False
+
+        def fake_delete_tokens(*args, **kwargs):
+            self.tokens_deleted = True
+
+        cauth_rpcapi = self.compute.consoleauth_rpcapi
+        self.stubs.Set(cauth_rpcapi, 'delete_tokens_for_instance',
+                       fake_delete_tokens)
+
+        self.compute._delete_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
+
+        self.assertTrue(self.tokens_deleted)
+
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure
         which is propagated up from the underlying driver.
@@ -4505,7 +4523,9 @@ class ComputeAPITestCase(BaseTestCase):
                              'console_type': fake_console_type,
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
-                             'internal_access_path': 'fake_access_path'}
+                             'internal_access_path': 'fake_access_path',
+                             'instance_uuid': fake_instance["uuid"]}
+
         fake_connect_info2 = copy.deepcopy(fake_connect_info)
         fake_connect_info2['access_url'] = 'fake_console_url'
 
@@ -4538,6 +4558,36 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance, 'novnc')
 
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_validate_console_port(self):
+        self.flags(vnc_enabled=True)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        def fake_driver_get_console(*args, **kwargs):
+            return {'host': "fake_host", 'port': "5900",
+                    'internal_access_path': None}
+        self.stubs.Set(self.compute.driver, "get_vnc_console",
+                       fake_driver_get_console)
+
+        self.assertTrue(self.compute.validate_console_port(self.context,
+                                                            instance,
+                                                            "5900",
+                                                            "novnc"))
+
+    def test_validate_console_port_wrong_port(self):
+        self.flags(vnc_enabled=True)
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        def fake_driver_get_console(*args, **kwargs):
+            return {'host': "fake_host", 'port': "5900",
+                    'internal_access_path': None}
+        self.stubs.Set(self.compute.driver, "get_vnc_console",
+                       fake_driver_get_console)
+
+        self.assertFalse(self.compute.validate_console_port(self.context,
+                                                            instance,
+                                                            "wrongport",
+                                                            "novnc"))
 
     def test_console_output(self):
         fake_instance = {'uuid': 'fake_uuid',

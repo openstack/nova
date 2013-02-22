@@ -259,6 +259,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, console_type=console_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
+    def validate_console_port(self, ctxt, instance, port, console_type):
+        instance_p = jsonutils.to_primitive(instance)
+        return self.call(ctxt, self.make_msg('validate_console_port',
+                instance=instance_p, port=port, console_type=console_type),
+                topic=_compute_topic(self.topic, ctxt,
+                None, instance))
+
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode
 

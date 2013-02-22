@@ -168,6 +168,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('get_vnc_console', 'call',
                 instance=self.fake_instance, console_type='type')
 
+    def test_validate_console_port(self):
+        self._test_compute_api('validate_console_port', 'call',
+                instance=self.fake_instance, port="5900",
+                console_type="novnc")
+
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
                 host_param='param', mode='mode', host='host')
