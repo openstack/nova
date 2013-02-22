@@ -1780,6 +1780,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 ephemeral_size=eph['size'])
 
         if 'disk.swap' in disk_mapping:
+            mapping = disk_mapping['disk.swap']
             swap_mb = 0
 
             swap = driver.block_device_info_get_swap(block_device_info)
@@ -1787,7 +1788,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 swap_mb = swap['swap_size']
             elif (inst_type['swap'] > 0 and
                   not block_device.volume_in_mapping(
-                    swap['dev'], block_device_info)):
+                    mapping['dev'], block_device_info)):
                 swap_mb = inst_type['swap']
 
             if swap_mb > 0:

@@ -67,6 +67,9 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
     convert the type itself if necessary.
     """
 
+    if network_info is None:
+        return None
+
     # the code below depends on the legacy 'network_info'
     if hasattr(network_info, 'legacy'):
         network_info = network_info.legacy()
