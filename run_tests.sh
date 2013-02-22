@@ -16,6 +16,7 @@ function usage {
   echo "  -p, --pep8                  Just run PEP8 and HACKING compliance check"
   echo "  -P, --no-pep8               Don't run static code checks"
   echo "  -c, --coverage              Generate coverage report"
+  echo "  -d, --debug                 Run tests with testtools instead of testr. This allows you to use the debugger."
   echo "  -h, --help                  Print this usage message"
   echo "  --hide-elapsed              Don't print the elapsed time for each test along with slow test list"
   echo "  --virtual-env-path <path>   Location of the virtualenv directory"
@@ -46,6 +47,7 @@ function process_options {
       -p|--pep8) just_pep8=1;;
       -P|--no-pep8) no_pep8=1;;
       -c|--coverage) coverage=1;;
+      -d|--debug) debug=1;;
       --virtual-env-path)
         (( i++ ))
         venv_path=${!i}
@@ -80,6 +82,7 @@ wrapper=""
 just_pep8=0
 no_pep8=0
 coverage=0
+debug=0
 recreate_db=1
 update=0
 
@@ -108,6 +111,20 @@ function init_testr {
 function run_tests {
   # Cleanup *pyc
   ${wrapper} find . -type f -name "*.pyc" -delete
+
+  if [ $debug -eq 1 ]; then
+    if [ "$testropts" = "" ] && [ "$testrargs" = "" ]; then
+      # Default to running all tests if specific test is not
+      # provided.
+      testrargs="discover ./nova/tests"
+    fi
+    ${wrapper} python -m testtools.run $testropts $testrargs
+
+    # Short circuit because all of the testr and coverage stuff
+    # below does not make sense when running testtools.run for
+    # debugging purposes.
+    return $?
+  fi
 
   if [ $coverage -eq 1 ]; then
     # Do not test test_coverage_ext when gathering coverage.
