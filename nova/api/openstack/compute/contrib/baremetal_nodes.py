@@ -104,7 +104,7 @@ class BareMetalNodeController(wsgi.Controller):
             try:
                 ifs = db.bm_interface_get_all_by_bm_node_id(
                         context, node_from_db['id'])
-            except exception.InstanceNotFound:
+            except exception.NodeNotFound:
                 ifs = []
             node = _node_dict(node_from_db)
             node['interfaces'] = [_interface_dict(i) for i in ifs]
@@ -117,11 +117,11 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         try:
             node = db.bm_node_get(context, id)
-        except exception.InstanceNotFound:
+        except exception.NodeNotFound:
             raise webob.exc.HTTPNotFound
         try:
             ifs = db.bm_interface_get_all_by_bm_node_id(context, id)
-        except exception.InstanceNotFound:
+        except exception.NodeNotFound:
             ifs = []
         node = _node_dict(node)
         node['interfaces'] = [_interface_dict(i) for i in ifs]
@@ -141,14 +141,14 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         try:
             db.bm_node_destroy(context, id)
-        except exception.InstanceNotFound:
+        except exception.NodeNotFound:
             raise webob.exc.HTTPNotFound
         return webob.Response(status_int=202)
 
     def _check_node_exists(self, context, node_id):
         try:
             db.bm_node_get(context, node_id)
-        except exception.InstanceNotFound:
+        except exception.NodeNotFound:
             raise webob.exc.HTTPNotFound
 
     @wsgi.serializers(xml=InterfaceTemplate)

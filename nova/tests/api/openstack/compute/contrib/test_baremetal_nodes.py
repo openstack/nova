@@ -67,6 +67,17 @@ class BareMetalNodesTest(test.TestCase):
         self.mox.ReplayAll()
         self.controller.delete(self.request, 1)
 
+    def test_delete_node_not_found(self):
+        self.mox.StubOutWithMock(db, 'bm_node_destroy')
+        db.bm_node_destroy(self.context, 1).\
+                AndRaise(exception.NodeNotFound(node_id=1))
+        self.mox.ReplayAll()
+        self.assertRaises(
+                exc.HTTPNotFound,
+                self.controller.delete,
+                self.request,
+                1)
+
     def test_index(self):
         nodes = [{'id': 1},
                  {'id': 2},
@@ -78,7 +89,7 @@ class BareMetalNodesTest(test.TestCase):
         self.mox.StubOutWithMock(db, 'bm_interface_get_all_by_bm_node_id')
         db.bm_node_get_all(self.context).AndReturn(nodes)
         db.bm_interface_get_all_by_bm_node_id(self.context, 1).\
-                AndRaise(exception.InstanceNotFound(instance_id=1))
+                AndRaise(exception.NodeNotFound(node_id=1))
         db.bm_interface_get_all_by_bm_node_id(self.context, 2).\
                 AndReturn(interfaces)
         self.mox.ReplayAll()
@@ -102,6 +113,19 @@ class BareMetalNodesTest(test.TestCase):
         res_dict = self.controller.show(self.request, node_id)
         self.assertEqual(node_id, res_dict['node']['id'])
         self.assertEqual(2, len(res_dict['node']['interfaces']))
+
+    def test_show_no_interfaces(self):
+        node_id = 1
+        node = {'id': node_id}
+        self.mox.StubOutWithMock(db, 'bm_node_get')
+        self.mox.StubOutWithMock(db, 'bm_interface_get_all_by_bm_node_id')
+        db.bm_node_get(self.context, node_id).AndReturn(node)
+        db.bm_interface_get_all_by_bm_node_id(self.context, node_id).\
+                AndRaise(exception.NodeNotFound(node_id=node_id))
+        self.mox.ReplayAll()
+        res_dict = self.controller.show(self.request, node_id)
+        self.assertEqual(node_id, res_dict['node']['id'])
+        self.assertEqual(0, len(res_dict['node']['interfaces']))
 
     def test_add_interface(self):
         node_id = 1
@@ -174,7 +198,7 @@ class BareMetalNodesTest(test.TestCase):
         node_id = 1
         self.mox.StubOutWithMock(db, 'bm_node_get')
         db.bm_node_get(self.context, node_id).\
-                AndRaise(exception.InstanceNotFound(instance_id=node_id))
+                AndRaise(exception.NodeNotFound(node_id=node_id))
         self.mox.ReplayAll()
         body = {'add_interface': {'address': '11:11:11:11:11:11'}}
         self.assertRaises(exc.HTTPNotFound,
@@ -187,7 +211,7 @@ class BareMetalNodesTest(test.TestCase):
         node_id = 1
         self.mox.StubOutWithMock(db, 'bm_node_get')
         db.bm_node_get(self.context, node_id).\
-                AndRaise(exception.InstanceNotFound(instance_id=node_id))
+                AndRaise(exception.NodeNotFound(node_id=node_id))
         self.mox.ReplayAll()
         body = {'remove_interface': {'address': '11:11:11:11:11:11'}}
         self.assertRaises(exc.HTTPNotFound,
