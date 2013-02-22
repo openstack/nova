@@ -44,8 +44,6 @@ CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
 _ENGINE = None
 _MAKER = None
 
-DBError = nova_session.DBError
-
 
 def get_session(autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy session."""

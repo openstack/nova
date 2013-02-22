@@ -18,7 +18,7 @@ Bare-metal DB testcase for BareMetalInterface
 """
 
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db import exception as db_exc
 from nova.tests.baremetal.db import base
 from nova.virt.baremetal import db
 
@@ -28,7 +28,7 @@ class BareMetalInterfaceTestCase(base.BMDBTestCase):
     def test_unique_address(self):
         pif1_id = db.bm_interface_create(self.context, 1, '11:11:11:11:11:11',
                                          '0x1', 1)
-        self.assertRaises(db_session.DBError,
+        self.assertRaises(db_exc.DBError,
                           db.bm_interface_create,
                           self.context, 2, '11:11:11:11:11:11', '0x2', 2)
         # succeed after delete pif1

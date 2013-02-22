@@ -29,7 +29,7 @@ from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
-from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -2157,7 +2157,7 @@ class FloatingIPTestCase(test.TestCase):
         # address column, so fake the collision-avoidance here
         def fake_vif_save(vif):
             if vif.address == crash_test_dummy_vif['address']:
-                raise db_session.DBError("If you're smart, you'll retry!")
+                raise db_exc.DBError("If you're smart, you'll retry!")
         self.stubs.Set(models.VirtualInterface, 'save', fake_vif_save)
 
         # Attempt to add another and make sure that both MACs are consumed
