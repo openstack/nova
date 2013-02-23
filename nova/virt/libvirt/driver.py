@@ -44,7 +44,6 @@ import errno
 import eventlet
 import functools
 import glob
-import hashlib
 import os
 import shutil
 import socket
@@ -1718,7 +1717,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            'ramdisk_id': instance['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            fname = disk_images['kernel_id']
+            fname = imagecache.get_cache_fname(disk_images, 'kernel_id')
             raw('kernel').cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
                                 filename=fname,
@@ -1726,7 +1725,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 user_id=instance['user_id'],
                                 project_id=instance['project_id'])
             if disk_images['ramdisk_id']:
-                fname = disk_images['ramdisk_id']
+                fname = imagecache.get_cache_fname(disk_images, 'ramdisk_id')
                 raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_image,
                                      context=context,
                                      filename=fname,
@@ -1734,7 +1733,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
 
-        root_fname = hashlib.sha1(str(disk_images['image_id'])).hexdigest()
+        root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
         size = instance['root_gb'] * 1024 * 1024 * 1024
 
         inst_type = instance['instance_type']

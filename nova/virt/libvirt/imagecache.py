@@ -54,6 +54,12 @@ imagecache_opts = [
     cfg.BoolOpt('remove_unused_base_images',
                 default=True,
                 help='Should unused base images be removed?'),
+    cfg.BoolOpt('remove_unused_kernels',
+                default=False,
+                help='Should unused kernel images be removed? This is only '
+                     'safe to enable if all compute nodes have been updated '
+                     'to support this option. This will enabled by default '
+                     'in future.'),
     cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
                help='Unused resized base images younger than this will not be '
@@ -74,6 +80,29 @@ CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')
+
+
+def get_cache_fname(images, key):
+    """Return a filename based on the SHA1 hash of a given image ID.
+
+    Image files stored in the _base directory that match this pattern
+    are considered for cleanup by the image cache manager. The cache
+    manager considers the file to be in use if it matches an instance's
+    image_ref, kernel_id or ramdisk_id property.
+
+    However, in grizzly-3 and before, only the image_ref property was
+    considered. This means that it's unsafe to store kernel and ramdisk
+    images using this pattern until we're sure that all compute nodes
+    are running a cache manager newer than grizzly-3. For now, we
+    require admins to confirm that by setting the remove_unused_kernels
+    boolean but, at some point in the future, we'll be safely able to
+    assume this.
+    """
+    image_id = str(images[key])
+    if not CONF.remove_unused_kernels and key in ['kernel_id', 'ramdisk_id']:
+        return image_id
+    else:
+        return hashlib.sha1(image_id).hexdigest()
 
 
 def get_info_filename(base_path):
@@ -240,8 +269,8 @@ class ImageCacheManager(object):
         """Return a list of the images present in _base.
 
         Determine what images we have on disk. There will be other files in
-        this directory (for example kernels) so we only grab the ones which
-        are the right length to be disk images.
+        this directory so we only grab the ones which are the right length
+        to be disk images.
 
         Note that this does not return a value. It instead populates a class
         variable with a list of images that we need to try and explain.
@@ -278,18 +307,22 @@ class ImageCacheManager(object):
                 self.instance_names.add(instance['name'] + '_resize')
                 self.instance_names.add(instance['uuid'] + '_resize')
 
-            image_ref_str = str(instance['image_ref'])
-            local, remote, insts = self.used_images.get(image_ref_str,
-                                                        (0, 0, []))
-            if instance['host'] == CONF.host:
-                local += 1
-            else:
-                remote += 1
-            insts.append(instance['name'])
-            self.used_images[image_ref_str] = (local, remote, insts)
+            for image_key in ['image_ref', 'kernel_id', 'ramdisk_id']:
+                try:
+                    image_ref_str = str(instance[image_key])
+                except KeyError:
+                    continue
+                local, remote, insts = self.used_images.get(image_ref_str,
+                                                            (0, 0, []))
+                if instance['host'] == CONF.host:
+                    local += 1
+                else:
+                    remote += 1
+                insts.append(instance['name'])
+                self.used_images[image_ref_str] = (local, remote, insts)
 
-            self.image_popularity.setdefault(image_ref_str, 0)
-            self.image_popularity[image_ref_str] += 1
+                self.image_popularity.setdefault(image_ref_str, 0)
+                self.image_popularity[image_ref_str] += 1
 
     def _list_backing_images(self):
         """List the backing images currently in use."""
