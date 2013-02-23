@@ -166,7 +166,8 @@ class NetworkAPI(rpc_proxy.RpcProxy):
         return self.call(ctxt, self.make_msg('allocate_for_instance',
                 instance_id=instance_id, project_id=project_id, host=host,
                 rxtx_factor=rxtx_factor, vpn=vpn,
-                requested_networks=requested_networks, macs=macs),
+                requested_networks=requested_networks,
+                macs=jsonutils.to_primitive(macs)),
                 topic=topic, version='1.9')
 
     def deallocate_for_instance(self, ctxt, instance_id, project_id, host):
