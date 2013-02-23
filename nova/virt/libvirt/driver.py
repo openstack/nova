@@ -205,6 +205,10 @@ libvirt_opts = [
     cfg.StrOpt('xen_hvmloader_path',
                 default='/usr/lib/xen/boot/hvmloader',
                 help='Location where the Xen hvmloader is kept'),
+    cfg.ListOpt('disk_cachemodes',
+                 default=[],
+                 help='Specific cachemodes to use for different disk types '
+                      'e.g: ["file=directsync","block=none"]'),
     ]
 
 CONF = cfg.CONF
@@ -318,6 +322,25 @@ class LibvirtDriver(driver.ComputeDriver):
         self.image_cache_manager = imagecache.ImageCacheManager()
         self.image_backend = imagebackend.Backend(CONF.use_cow_images)
 
+        self.disk_cachemodes = {}
+
+        self.valid_cachemodes = ["default",
+                                 "none",
+                                 "writethrough",
+                                 "writeback",
+                                 "directsync",
+                                 "writethrough",
+                                 "unsafe",
+                                ]
+
+        for mode_str in CONF.disk_cachemodes:
+            disk_type, sep, cache_mode = mode_str.partition('=')
+            if cache_mode not in self.valid_cachemodes:
+                LOG.warn(_("Invalid cachemode %(cache_mode)s specified "
+                           "for disk type %(disk_type)s.") % locals())
+                continue
+            self.disk_cachemodes[disk_type] = cache_mode
+
     @property
     def disk_cachemode(self):
         if self._disk_cachemode is None:
@@ -338,6 +361,18 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self._host_state:
             self._host_state = HostState(self)
         return self._host_state
+
+    def set_cache_mode(self, conf):
+        """Set cache mode on LibvirtConfigGuestDisk object."""
+        try:
+            source_type = conf.source_type
+            driver_cache = conf.driver_cache
+        except AttributeError:
+            return
+
+        cache_mode = self.disk_cachemodes.get(source_type,
+                                              driver_cache)
+        conf.driver_cache = cache_mode
 
     def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
         def _munge_version(ver):
@@ -919,6 +954,7 @@ class LibvirtDriver(driver.ComputeDriver):
         conf = self.volume_driver_method('connect_volume',
                                          connection_info,
                                          disk_info)
+        self.set_cache_mode(conf)
 
         try:
             # NOTE(vish): We can always affect config because our
@@ -2039,6 +2075,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                         disk_mapping,
                                                         'raw')
                 devices.append(diskconfig)
+
+        for d in devices:
+            self.set_cache_mode(d)
 
         return devices
 

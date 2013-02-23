@@ -270,6 +270,17 @@ class FakeVolumeDriver(object):
         return ""
 
 
+class FakeConfigGuestDisk(object):
+    def __init__(self, *args, **kwargs):
+        self.source_type = None
+        self.driver_cache = None
+
+
+class FakeConfigGuest(object):
+    def __init__(self, *args, **kwargs):
+        self.driver_cache = None
+
+
 class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
@@ -3570,6 +3581,33 @@ class LibvirtConnTestCase(test.TestCase):
                          "cef19ce0-0ca2-11df-855d-b19fbce37686")
         self.assertEqual(got_events[0].transition,
                          virtevent.EVENT_LIFECYCLE_STOPPED)
+
+    def test_set_cache_mode(self):
+        self.flags(disk_cachemodes=['file=directsync'])
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        fake_conf = FakeConfigGuestDisk()
+
+        fake_conf.source_type = 'file'
+        conn.set_cache_mode(fake_conf)
+        self.assertEqual(fake_conf.driver_cache, 'directsync')
+
+    def test_set_cache_mode_invalid_mode(self):
+        self.flags(disk_cachemodes=['file=FAKE'])
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        fake_conf = FakeConfigGuestDisk()
+
+        fake_conf.source_type = 'file'
+        conn.set_cache_mode(fake_conf)
+        self.assertEqual(fake_conf.driver_cache, None)
+
+    def test_set_cache_mode_invalid_object(self):
+        self.flags(disk_cachemodes=['file=directsync'])
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        fake_conf = FakeConfigGuest()
+
+        fake_conf.driver_cache = 'fake'
+        conn.set_cache_mode(fake_conf)
+        self.assertEqual(fake_conf.driver_cache, 'fake')
 
 
 class HostStateTestCase(test.TestCase):
