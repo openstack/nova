@@ -515,14 +515,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
-            LOG.debug(_('Connecting to libvirt: %s'), self.uri)
+            LOG.debug(_('Connecting to libvirt: %s'), self.uri())
             if not CONF.libvirt_nonblocking:
-                self._wrapped_conn = self._connect(self.uri,
+                self._wrapped_conn = self._connect(self.uri(),
                                                self.read_only)
             else:
                 self._wrapped_conn = tpool.proxy_call(
                     (libvirt.virDomain, libvirt.virConnect),
-                    self._connect, self.uri, self.read_only)
+                    self._connect, self.uri(), self.read_only)
 
             try:
                 LOG.debug("Registering for lifecycle events %s" % str(self))
@@ -533,7 +533,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     self)
             except Exception, e:
                 LOG.warn(_("URI %s does not support events"),
-                         self.uri)
+                         self.uri())
 
         return self._wrapped_conn
 
@@ -551,8 +551,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 return False
             raise
 
-    @property
-    def uri(self):
+    @staticmethod
+    def uri():
         if CONF.libvirt_type == 'uml':
             uri = CONF.libvirt_uri or 'uml:///system'
         elif CONF.libvirt_type == 'xen':
