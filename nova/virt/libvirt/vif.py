@@ -172,7 +172,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         mac_id = mapping['mac'].replace(':', '')
         name = "nova-instance-" + instance['name'] + "-" + mac_id
-        conf.filtername = name
+        if self.get_firewall_required():
+            conf.filtername = name
         designer.set_vif_bandwidth_config(conf, instance)
 
         return conf

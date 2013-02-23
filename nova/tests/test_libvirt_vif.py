@@ -371,6 +371,8 @@ class LibvirtVifTestCase(test.TestCase):
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 1)
         self.assertEqual(node.get("type"), "bridge")
         br_name = node.find("source").get("bridge")
         self.assertEqual(br_name, br_want)
@@ -417,6 +419,8 @@ class LibvirtVifTestCase(test.TestCase):
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 0)
         self.assertEqual(node.get("type"), "ethernet")
         dev_name = node.find("target").get("dev")
         self.assertTrue(dev_name.startswith(dev_prefix))
@@ -455,6 +459,8 @@ class LibvirtVifTestCase(test.TestCase):
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 0)
         self.assertEqual(node.get("type"), "bridge")
 
         br_name = node.find("source").get("bridge")
@@ -504,6 +510,8 @@ class LibvirtVifTestCase(test.TestCase):
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
+        ret = node.findall("filterref")
+        self.assertEqual(len(ret), 1)
         self.assertEqual(node.get("type"), "bridge")
         br_name = node.find("source").get("bridge")
         self.assertEqual(br_name, br_want)
