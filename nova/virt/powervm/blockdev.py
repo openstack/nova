@@ -159,9 +159,9 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         if not os.path.isfile(file_path):
             LOG.debug(_("Fetching image '%s' from glance") % image_id)
-            images.fetch_to_raw(context, image_id, file_path,
-                                instance['user_id'],
-                                project_id=instance['project_id'])
+            images.fetch(context, image_id, file_path,
+                        instance['user_id'],
+                        instance['project_id'])
         else:
             LOG.debug((_("Using image found at '%s'") % file_path))
 

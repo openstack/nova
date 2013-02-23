@@ -151,11 +151,11 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertTrue(self.powervm_connection.instance_exists(name))
 
     def test_spawn(self):
-        def fake_image_fetch_to_raw(context, image_id, file_path,
+        def fake_image_fetch(context, image_id, file_path,
                                     user_id, project_id):
             pass
         self.flags(powervm_img_local_path='/images/')
-        self.stubs.Set(images, 'fetch_to_raw', fake_image_fetch_to_raw)
+        self.stubs.Set(images, 'fetch', fake_image_fetch)
         image_meta = {}
         image_meta['id'] = '666'
         fake_net_info = network_model.NetworkInfo([
@@ -173,7 +173,7 @@ class PowerVMDriverTestCase(test.TestCase):
             raise ex
 
         self.flags(powervm_img_local_path='/images/')
-        self.stubs.Set(images, 'fetch_to_raw', lambda *x, **y: None)
+        self.stubs.Set(images, 'fetch', lambda *x, **y: None)
         self.stubs.Set(
             self.powervm_connection._powervm._disk_adapter,
             'create_volume_from_image',
