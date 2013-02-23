@@ -19,6 +19,8 @@ import guestfs
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.libvirt import driver as libvirt_driver
+
 
 LOG = logging.getLogger(__name__)
 
@@ -95,6 +97,9 @@ class VFSGuestFS(vfs.VFS):
 
         try:
             self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
+            if self.handle.get_attach_method() == 'libvirt':
+                libvirt_url = 'libvirt:' + libvirt_driver.LibvirtDriver.uri()
+                self.handle.set_attach_method(libvirt_url)
             self.handle.launch()
 
             self.setup_os()

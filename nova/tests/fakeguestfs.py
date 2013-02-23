@@ -24,6 +24,7 @@ class GuestFS(object):
         self.mounts = []
         self.files = {}
         self.auginit = False
+        self.attach_method = 'libvirt'
 
     def launch(self):
         self.running = True
@@ -38,6 +39,12 @@ class GuestFS(object):
 
     def add_drive_opts(self, file, *args, **kwargs):
         self.drives.append((file, kwargs['format']))
+
+    def get_attach_method(self):
+        return self.attach_method
+
+    def set_attach_method(self, attach_method):
+        self.attach_method = attach_method
 
     def inspect_os(self):
         return ["/dev/guestvgf/lv_root"]
