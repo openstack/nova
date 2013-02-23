@@ -20,6 +20,7 @@
 
 """Extracts OpenStack config option info from module(s)."""
 
+import imp
 import os
 import re
 import socket
@@ -98,7 +99,11 @@ def main(srcfiles):
 
 def _import_module(mod_str):
     try:
-        return importutils.import_module(mod_str)
+        if mod_str.startswith('bin.'):
+            imp.load_source(mod_str[4:], os.path.join('bin', mod_str[4:]))
+            return sys.modules[mod_str[4:]]
+        else:
+            return importutils.import_module(mod_str)
     except (ValueError, AttributeError), err:
         return None
     except ImportError, ie:
@@ -141,9 +146,9 @@ def _guess_groups(opt, mod_obj):
         return 'DEFAULT'
 
     if group is None:
-        sys.stderr("Unable to guess what group " + opt.dest +
-                   " in " + mod_obj.__name__ +
-                   " is in out of " + ','.join(groups) + "\n")
+        sys.stderr.write("Unable to guess what group " + opt.dest +
+                         " in " + mod_obj.__name__ +
+                         " is in out of " + ','.join(groups) + "\n")
         sys.exit(1)
 
     sys.stderr.write("Guessing that " + opt.dest +
@@ -154,13 +159,17 @@ def _guess_groups(opt, mod_obj):
 
 
 def _list_opts(obj):
+    def is_opt(o):
+        return (isinstance(o, cfg.Opt) and
+                not isinstance(o, cfg.SubCommandOpt))
+
     opts = list()
     for attr_str in dir(obj):
         attr_obj = getattr(obj, attr_str)
-        if isinstance(attr_obj, cfg.Opt):
+        if is_opt(attr_obj):
             opts.append(attr_obj)
         elif (isinstance(attr_obj, list) and
-              all(map(lambda x: isinstance(x, cfg.Opt), attr_obj))):
+              all(map(lambda x: is_opt(x), attr_obj))):
             opts.extend(attr_obj)
 
     ret = {}
@@ -199,6 +208,8 @@ def _sanitize_default(s):
     """Set up a reasonably sensible default for pybasedir, my_ip and host."""
     if s.startswith(BASEDIR):
         return s.replace(BASEDIR, '/usr/lib/python/site-packages')
+    elif BASEDIR in s:
+        return s.replace(BASEDIR, '')
     elif s == _get_my_ip():
         return '10.0.0.1'
     elif s == socket.getfqdn():
@@ -241,6 +252,8 @@ def _print_opt(opt):
             print '#%s=%s' % (opt_name, ','.join(opt_default))
         elif opt_type == MULTISTROPT:
             assert(isinstance(opt_default, list))
+            if not opt_default:
+                opt_default = ['']
             for default in opt_default:
                 print '#%s=%s' % (opt_name, default)
         print

@@ -39,10 +39,10 @@ from nova.openstack.common.rpc import impl_zmq
 CONF = cfg.CONF
 CONF.register_opts(rpc.rpc_opts)
 CONF.register_opts(impl_zmq.zmq_opts)
-CONF(sys.argv[1:], project='nova')
 
 
 def main():
+    CONF(sys.argv[1:], project='nova')
     logging.setup("nova")
 
     with contextlib.closing(impl_zmq.ZmqProxy(CONF)) as reactor:
