@@ -1912,7 +1912,9 @@ class LibvirtConnTestCase(test.TestCase):
                 check = (lambda t: t.findall(xpath)[2].get("name"),
                          "version")
                 check_list.append(check)
-                check = (lambda t: t.findall(xpath)[2].text,
+                # NOTE(sirp): empty strings don't roundtrip in lxml (they are
+                # converted to None), so we need an `or ''` to correct for that
+                check = (lambda t: t.findall(xpath)[2].text or '',
                          version.version_string_with_package())
                 check_list.append(check)
 
