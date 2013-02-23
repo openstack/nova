@@ -27,6 +27,8 @@ from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova import utils
+from nova import exception
+from nova import compute
 
 
 LOG = logging.getLogger(__name__)
@@ -49,6 +51,7 @@ class ConsoleAuthManager(manager.Manager):
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
+        self.compute_api = compute.API()
         self.tokens = {}
         utils.LoopingCall(self._delete_expired_tokens).start(1)
 
@@ -64,18 +67,43 @@ class ConsoleAuthManager(manager.Manager):
             del self.tokens[k]
 
     def authorize_console(self, context, token, console_type, host, port,
-                          internal_access_path):
+                          instance_id, internal_access_path):
         self.tokens[token] = {'token': token,
                               'console_type': console_type,
                               'host': host,
                               'port': port,
+                              'instance_id': instance_id,
                               'internal_access_path': internal_access_path,
                               'last_activity_at': time.time()}
         token_dict = self.tokens[token]
+        if instance_id is not None:
+            tokens = self.tokens[instance_id]
+            tokens.append(token)
+            self.tokens[instance_id] = tokens
+
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
+
+    def _validate_console(self, context, token):
+        console_valid = False
+        token_dict = self.tokens[token]
+        try:
+            console_valid = self.compute_api.validate_vnc_console(context,
+                                                token_dict['instance_id'],
+                                                token_dict['host'],
+                                                token_dict['port'])
+        except exception.InstanceNotFound:
+            pass
+        return console_valid
 
     def check_token(self, context, token):
         token_valid = token in self.tokens
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
-        if token_valid:
+        if token_valid and _validate_console(token):
             return self.tokens[token]
+
+    def delete_tokens_for_instance(self, context, instance_id):
+        for token in self.tokens[instance_id]:
+            token_dict = self.tokens[token]
+            token_dict['last_activity_at'] = 0
+            self.tokens[token] = token_dict
+        del self.tokens[instance_id]

@@ -754,6 +754,47 @@ class ComputeTestCase(BaseTestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
+    def test_validate_vnc_console(self):
+        """Check if a vnc console is really for the instance"""
+        def fake(*args, **kwargs):
+            vnc = {'host': 'myhost', 'port': '5900'}
+            return vnc
+        self.stubs.Set(self.compute_api, '_call_compute_message', fake)
+        instance = self._create_instance_full()
+        self.compute.run_instance(self.context, instance['id'])
+
+        console_valid = self.compute_api.validate_vnc_console(self.context,
+                                               instance['id'],
+                                               'myhost',
+                                               '5900')
+        self.assertTrue(console_valid)
+        self.compute.terminate_instance(self.context, instance['id'])
+
+    def test_validate_vnc_console_wrong_port(self):
+        """Check if a vnc console is really for the instance"""
+        def fake(*args, **kwargs):
+            vnc = {'host': 'myhost', 'port': '5901'}
+            return vnc
+        self.stubs.Set(self.compute_api, '_call_compute_message', fake)
+        instance = self._create_instance_full()
+        self.compute.run_instance(self.context, instance['id'])
+
+        console_valid = self.compute_api.validate_vnc_console(self.context,
+                                               instance['id'],
+                                               'myhost',
+                                               '5900')
+        self.assertFalse(console_valid)
+        self.compute.terminate_instance(self.context, instance['id'])
+
+    def test_validate_vnc_console_deleted_instance(self):
+        """Check if a vnc console is really for the instance"""
+        instance = self._create_instance_full()
+        self.compute.run_instance(self.context, instance['id'])
+        self.assertRaises(exception.InstanceNotFound,
+                            self.compute_api.validate_vnc_console,
+                            self.context, 5555, 'myhost', '5900')
+        self.compute.terminate_instance(self.context, instance['id'])
+
     def test_xvpvnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         instance = self._create_fake_instance()

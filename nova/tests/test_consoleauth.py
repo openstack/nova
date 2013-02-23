@@ -47,6 +47,13 @@ class ConsoleauthTestCase(test.TestCase):
         """Test that tokens expire correctly."""
         token = 'mytok'
         self.flags(console_token_ttl=1)
+
+        def fake_validate_console(*args, **kwargs):
+            return True
+        self.stubs.Set(self.manager,
+                       "_validate_console",
+                       fake_validate_console)
+
         self.manager.authorize_console(self.context, token, 'novnc',
                                        '127.0.0.1', 'host', '')
         self.assertTrue(self.manager.check_token(self.context, token))

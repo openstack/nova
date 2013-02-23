@@ -749,6 +749,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                               terminated_at=utils.utcnow())
 
         self.db.instance_destroy(context, instance_id)
+        if FLAGS.vnc_enabled:
+            rpc.cast(context, '%s' % FLAGS.consoleauth_topic,
+                 {'method': 'delete_tokens_for_instance',
+                  'args': {'instance_id': instance['id']}})
         self._notify_about_instance_usage(instance, "delete.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
