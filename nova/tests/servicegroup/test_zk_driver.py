@@ -38,7 +38,7 @@ class ZKServiceGroupTestCase(test.TestCase):
         servicegroup.API._driver = None
         try:
             from nova.servicegroup.drivers import zk
-            _unused = zk
+            _unused = zk.ZooKeeperDriver()
         except ImportError:
             self.skipTest("Unable to test due to lack of ZooKeeper")
         self.flags(servicegroup_driver='zk')

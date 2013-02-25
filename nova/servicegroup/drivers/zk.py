@@ -19,16 +19,17 @@
 import os
 
 import eventlet
-import evzookeeper
-from evzookeeper import membership
 from oslo.config import cfg
-import zookeeper
 
 from nova import exception
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.servicegroup import api
 from nova import utils
 
+evzookeeper = importutils.try_import('evzookeeper')
+membership = importutils.try_import('evzookeeper.membersip')
+zookeeper = importutils.try_import('zookeeper')
 
 zk_driver_opts = [
     cfg.StrOpt('address',
@@ -58,6 +59,8 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
 
     def __init__(self, *args, **kwargs):
         """Create the zk session object."""
+        if not all([evzookeeper, membership, zookeeper]):
+            raise ImportError('zookeeper module not found')
         null = open(os.devnull, "w")
         self._session = evzookeeper.ZKSession(CONF.zookeeper.address,
                                               recv_timeout=
