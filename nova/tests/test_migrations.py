@@ -248,7 +248,8 @@ class BaseMigrationTestCase(test.TestCase):
         def execute_cmd(cmd=None):
             status, output = commands.getstatusoutput(cmd)
             LOG.debug(output)
-            self.assertEqual(0, status)
+            self.assertEqual(0, status,
+                             "Failed to run: %s\n%s" % (cmd, output))
         for key, engine in self.engines.items():
             conn_string = self.test_databases[key]
             conn_pieces = urlparse.urlparse(conn_string)
