@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from eventlet import tpool
 import guestfs
 
 from nova import exception
@@ -93,7 +94,7 @@ class VFSGuestFS(vfs.VFS):
     def setup(self):
         LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
                   {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
-        self.handle = guestfs.GuestFS()
+        self.handle = tpool.Proxy(guestfs.GuestFS())
 
         try:
             self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
