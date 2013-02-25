@@ -59,15 +59,15 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
     def __init__(self, *args, **kwargs):
         """Create the zk session object."""
         null = open(os.devnull, "w")
-        self._session = evzookeeper.ZKSession(CONF.zk.address,
+        self._session = evzookeeper.ZKSession(CONF.zookeeper.address,
                                               recv_timeout=
-                                                CONF.zk.recv_timeout,
+                                                CONF.zookeeper.recv_timeout,
                                               zklog_fd=null)
         self._memberships = {}
         self._monitors = {}
         # Make sure the prefix exists
         try:
-            self._session.create(CONF.zk.sg_prefix, "",
+            self._session.create(CONF.zookeeper.sg_prefix, "",
                                  acl=[evzookeeper.ZOO_OPEN_ACL_UNSAFE])
         except zookeeper.NodeExistsException:
             pass
@@ -82,7 +82,7 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
         member = self._memberships.get((group, member_id), None)
         if member is None:
             # the first time to join. Generate a new object
-            path = "%s/%s" % (CONF.zk.sg_prefix, group)
+            path = "%s/%s" % (CONF.zookeeper.sg_prefix, group)
             try:
                 member = membership.Membership(self._session, path, member_id)
             except RuntimeError:
@@ -90,7 +90,7 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
                                 "another node exists with the same name, or "
                                 "this node just restarted. We will try "
                                 "again in a short while to make sure."))
-                eventlet.sleep(CONF.zk.sg_retry_interval)
+                eventlet.sleep(CONF.zookeeper.sg_retry_interval)
                 member = membership.Membership(self._session, path, member_id)
             self._memberships[(group, member_id)] = member
         return FakeLoopingCall(self, member_id, group)
@@ -120,7 +120,7 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
         """
         monitor = self._monitors.get(group_id, None)
         if monitor is None:
-            path = "%s/%s" % (CONF.zk.sg_prefix, group_id)
+            path = "%s/%s" % (CONF.zookeeper.sg_prefix, group_id)
             monitor = membership.MembershipMonitor(self._session, path)
             self._monitors[group_id] = monitor
             # Note(maoy): When initialized for the first time, it takes a
