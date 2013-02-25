@@ -97,6 +97,9 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def get(self, context, name=None, id=None, map_exception=False):
         quantum = quantumv2.get_client(context)
         try:
+            if not id and name:
+                id = quantumv20.find_resourceid_by_name_or_id(
+                    quantum, 'security_group', name)
             group = quantum.show_security_group(id).get('security_group')
         except q_exc.QuantumClientException as e:
             if e.status_code == 404:
@@ -113,8 +116,13 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
              search_opts=None):
         """Returns list of security group rules owned by tenant."""
         quantum = quantumv2.get_client(context)
+        search_opts = {}
+        if names:
+            search_opts['name'] = names
+        if ids:
+            search_opts['id'] = ids
         try:
-            security_groups = quantum.list_security_groups().get(
+            security_groups = quantum.list_security_groups(**search_opts).get(
                 'security_groups')
         except q_exc.QuantumClientException as e:
             LOG.exception(_("Quantum Error getting security groups"))

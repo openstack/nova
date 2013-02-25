@@ -569,10 +569,21 @@ class MockClient(object):
     def list_security_groups(self, **_params):
         ret = []
         for security_group in self._fake_security_groups.values():
-            if _params.get('name'):
-                if security_group.get('name') == _params['name']:
-                    ret.append(security_group)
-            else:
+            names = _params.get('name')
+            if names:
+                if not isinstance(names, list):
+                    names = [names]
+                for name in names:
+                    if security_group.get('name') == name:
+                        ret.append(security_group)
+            ids = _params.get('id')
+            if ids:
+                if not isinstance(ids, list):
+                    ids = [ids]
+                for id in ids:
+                    if security_group.get('id') == id:
+                        ret.append(security_group)
+            elif not (names or ids):
                 ret.append(security_group)
         return {'security_groups': ret}
 

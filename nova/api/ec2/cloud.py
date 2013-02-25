@@ -503,9 +503,17 @@ class CloudController(object):
             r['groups'] = []
             r['ipRanges'] = []
             if rule['group_id']:
-                source_group = rule['grantee_group']
-                r['groups'] += [{'groupName': source_group['name'],
-                                 'userId': source_group['project_id']}]
+                if rule.get('grantee_group'):
+                    source_group = rule['grantee_group']
+                    r['groups'] += [{'groupName': source_group['name'],
+                                     'userId': source_group['project_id']}]
+                else:
+                    # rule is not always joined with grantee_group
+                    # for example when using quantum driver.
+                    source_group = self.security_group_api.get(
+                        context, id=rule['group_id'])
+                    r['groups'] += [{'groupName': source_group.get('name'),
+                                     'userId': source_group.get('project_id')}]
                 if rule['protocol']:
                     r['ipProtocol'] = rule['protocol'].lower()
                     r['fromPort'] = rule['from_port']
