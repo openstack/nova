@@ -771,8 +771,13 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                 # if we actually want this code to remain..
                 self.db.instance_create(message.ctxt, instance)
         if info_cache:
-            self.db.instance_info_cache_update(message.ctxt, instance_uuid,
-                    info_cache, update_cells=False)
+            try:
+                self.db.instance_info_cache_update(message.ctxt,
+                        instance_uuid, info_cache, update_cells=False)
+            except exception.InstanceInfoCacheNotFound:
+                # Can happen if we try to update a deleted instance's
+                # network information.
+                pass
 
     def instance_destroy_at_top(self, message, instance, **kwargs):
         """Destroy an instance from the DB if we're a top level cell."""
