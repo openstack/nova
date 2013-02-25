@@ -96,6 +96,9 @@ class FakeIVMOperator(object):
     def get_hostname(self):
         return 'fake-powervm'
 
+    def rename_lpar(self, old, new):
+        pass
+
 
 class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
 
@@ -230,3 +233,36 @@ class PowerVMDriverTestCase(test.TestCase):
         joined_path = common.aix_path_join(path_one, path_two)
         expected_path = '/some/file/path/filename'
         self.assertEqual(joined_path, expected_path)
+
+    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
+        inst = {'name': 'foo'}
+
+        self.mox.StubOutWithMock(self.powervm_connection, 'instance_exists')
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'destroy')
+        self.mox.StubOutWithMock(self.powervm_connection._powervm._operator,
+                                 'rename_lpar')
+        self.mox.StubOutWithMock(self.powervm_connection._powervm, 'power_on')
+
+        self.powervm_connection.instance_exists('rsz_foo').AndReturn(
+            backup_made)
+
+        if backup_made:
+            self.powervm_connection.instance_exists('foo').AndReturn(new_made)
+            if new_made:
+                self.powervm_connection._powervm.destroy('foo')
+            self.powervm_connection._powervm._operator.rename_lpar('rsz_foo',
+                                                                   'foo')
+        self.powervm_connection._powervm.power_on('foo')
+
+        self.mox.ReplayAll()
+
+        self.powervm_connection.finish_revert_migration(inst, [])
+
+    def test_finish_revert_migration_after_crash(self):
+        self._test_finish_revert_migration_after_crash(True, True)
+
+    def test_finish_revert_migration_after_crash_before_new(self):
+        self._test_finish_revert_migration_after_crash(True, False)
+
+    def test_finish_revert_migration_after_crash_before_backup(self):
+        self._test_finish_revert_migration_after_crash(False, False)

@@ -448,8 +448,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
-        db_state = instance['power_state']
-        drv_state = self._get_power_state(context, instance)
         closing_vm_states = (vm_states.DELETED,
                              vm_states.SOFT_DELETED)
 
@@ -458,18 +456,37 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance['vm_state'] in closing_vm_states:
             return
 
-        expect_running = (db_state == power_state.RUNNING and
-                          drv_state != db_state)
-
-        LOG.debug(_('Current state is %(drv_state)s, state in DB is '
-                    '%(db_state)s.'), locals(), instance=instance)
-
         net_info = compute_utils.get_nw_info_for_instance(instance)
 
         # We're calling plug_vifs to ensure bridge and iptables
         # rules exist. This needs to be called for each instance.
         legacy_net_info = self._legacy_nw_info(net_info)
         self.driver.plug_vifs(instance, legacy_net_info)
+
+        if instance['task_state'] == task_states.RESIZE_MIGRATING:
+            # We crashed during resize/migration, so roll back for safety
+            try:
+                self.driver.finish_revert_migration(
+                    instance, self._legacy_nw_info(net_info),
+                    self._get_instance_volume_block_device_info(context,
+                                                                instance))
+            except Exception, e:
+                LOG.exception(_('Failed to revert crashed migration'),
+                              instance=instance)
+            finally:
+                LOG.info(_('Instance found in migrating state during '
+                           'startup. Resetting task_state'),
+                         instance=instance)
+                instance = self._instance_update(context, instance['uuid'],
+                                                 task_state=None)
+
+        db_state = instance['power_state']
+        drv_state = self._get_power_state(context, instance)
+        expect_running = (db_state == power_state.RUNNING and
+                          drv_state != db_state)
+
+        LOG.debug(_('Current state is %(drv_state)s, state in DB is '
+                    '%(db_state)s.'), locals(), instance=instance)
 
         if expect_running and CONF.resume_guests_state_on_host_boot:
             LOG.info(
