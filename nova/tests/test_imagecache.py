@@ -163,6 +163,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                           'vm_state': '',
                           'task_state': ''},
                          {'image_ref': '2',
+                          'kernel_id': '21',
+                          'ramdisk_id': '22',
                           'host': 'remotehost',
                           'name': 'inst-3',
                           'uuid': '789',
@@ -174,18 +176,24 @@ class ImageCacheManagerTestCase(test.TestCase):
         # The argument here should be a context, but it's mocked out
         image_cache_manager._list_running_instances(None, all_instances)
 
-        self.assertEqual(len(image_cache_manager.used_images), 2)
+        self.assertEqual(len(image_cache_manager.used_images), 4)
         self.assertTrue(image_cache_manager.used_images['1'] ==
                         (1, 0, ['inst-1']))
         self.assertTrue(image_cache_manager.used_images['2'] ==
                         (1, 1, ['inst-2', 'inst-3']))
+        self.assertTrue(image_cache_manager.used_images['21'] ==
+                        (0, 1, ['inst-3']))
+        self.assertTrue(image_cache_manager.used_images['22'] ==
+                        (0, 1, ['inst-3']))
 
         self.assertTrue('inst-1' in image_cache_manager.instance_names)
         self.assertTrue('123' in image_cache_manager.instance_names)
 
-        self.assertEqual(len(image_cache_manager.image_popularity), 2)
+        self.assertEqual(len(image_cache_manager.image_popularity), 4)
         self.assertEqual(image_cache_manager.image_popularity['1'], 1)
         self.assertEqual(image_cache_manager.image_popularity['2'], 2)
+        self.assertEqual(image_cache_manager.image_popularity['21'], 1)
+        self.assertEqual(image_cache_manager.image_popularity['22'], 1)
 
     def test_list_resizing_instances(self):
         all_instances = [{'image_ref': '1',
@@ -703,6 +711,8 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def test_verify_base_images(self):
         hashed_1 = '356a192b7913b04c54574d18c28d46e6395428ab'
+        hashed_21 = '472b07b9fcf2c2451e8781e944bf5f77cd8457c8'
+        hashed_22 = '12c6fc06c99a462375eeb3f43dfd832b08ca9e17'
         hashed_42 = '92cfceb39d57d914ed8b14d0e37643de0797ae56'
 
         self.flags(instances_path='/instance_path')
@@ -715,6 +725,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                           'e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm',
                           hashed_42,
                           hashed_1,
+                          hashed_21,
+                          hashed_22,
                           '%s_5368709120' % hashed_1,
                           '%s_10737418240' % hashed_1,
                           '00000004']
@@ -744,8 +756,10 @@ class ImageCacheManagerTestCase(test.TestCase):
                 if path == fq_path(p) + '.info':
                     return False
 
-            if path in ['/instance_path/_base/%s_sm' % hashed_1,
-                        '/instance_path/_base/%s_sm' % hashed_42]:
+            if path in ['/instance_path/_base/%s_sm' % i for i in [hashed_1,
+                                                                   hashed_21,
+                                                                   hashed_22,
+                                                                   hashed_42]]:
                 return False
 
             self.fail('Unexpected path existence check: %s' % path)
@@ -800,6 +814,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                           'vm_state': '',
                           'task_state': ''},
                          {'image_ref': '1',
+                          'kernel_id': '21',
+                          'ramdisk_id': '22',
                           'host': CONF.host,
                           'name': 'instance-2',
                           'uuid': '456',
@@ -850,7 +866,8 @@ class ImageCacheManagerTestCase(test.TestCase):
         image_cache_manager.verify_base_images(None, all_instances)
 
         # Verify
-        active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1)]
+        active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1),
+                  fq_path(hashed_21), fq_path(hashed_22)]
         self.assertEquals(image_cache_manager.active_base_files, active)
 
         for rem in [fq_path('e97222e91fc4241f49a7f520d1dcf446751129b3_sm'),
