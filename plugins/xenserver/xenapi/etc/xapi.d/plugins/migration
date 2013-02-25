@@ -40,9 +40,20 @@ def _rsync_vhds(instance_uuid, host, staging_path, user="root"):
 
     dest_path = '%s@%s:/images/instance%s/' % (user, host, instance_uuid)
 
-    rsync_cmd = "nohup /usr/bin/rsync -av -e %(ssh_cmd)s %(staging_path)s"\
-               " %(dest_path)s" % locals()
-    rsync_proc = utils.make_subprocess(rsync_cmd, stdout=True, stderr=True)
+    rsync_cmd = "/usr/bin/rsync -av --progress -e %(ssh_cmd)s "\
+        "%(staging_path)s %(dest_path)s" % locals()
+
+    # NOTE(hillad): rsync's progress is carriage returned, requiring
+    # universal_newlines for real-time output.
+
+    rsync_proc = utils.make_subprocess(rsync_cmd, stdout=True, stderr=True,
+                                       universal_newlines=True)
+    while True:
+        rsync_progress = rsync_proc.stdout.readline()
+        if not rsync_progress:
+            break
+        logging.debug(rsync_progress)
+
     utils.finish_subprocess(rsync_proc, rsync_cmd)
 
 
