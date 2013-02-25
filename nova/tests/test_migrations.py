@@ -904,8 +904,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
-    USER = "openstack_baremetal_citest"
-    PASSWD = "openstack_baremetal_citest"
+    USER = "openstack_citest"
+    PASSWD = "openstack_citest"
     DATABASE = "openstack_baremetal_citest"
 
     def __init__(self, *args, **kwargs):
