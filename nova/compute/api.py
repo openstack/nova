@@ -2438,10 +2438,10 @@ class API(base.Base):
         raising an exception.
         """
         LOG.debug(_('vm evacuation scheduled'))
-        host = instance['host']
-        service = self.db.service_get_by_compute_host(context, host)
+        inst_host = instance['host']
+        service = self.db.service_get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
-            msg = (_('Instance compute service state on %(host)s '
+            msg = (_('Instance compute service state on %(inst_host)s '
                      'expected to be down, but it was up.'
                      ) % locals())
             LOG.error(msg)
