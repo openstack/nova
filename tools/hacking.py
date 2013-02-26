@@ -201,7 +201,8 @@ def nova_import_rules(logical_line):
                 # NOTE(vish): the import error might be due
                 #             to a missing dependency
                 missing = str(exc).split()[-1]
-                if missing != mod.split('.')[-1]:
+                if (missing != mod.split('.')[-1] or
+                        "cannot import" in str(exc)):
                     _missingImport.add(missing)
                     return True
                 return False
