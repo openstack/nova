@@ -588,7 +588,23 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         services = get_table(engine, 'services')
         engine.execute(services.insert(), data)
+        self._pre_upgrade_147_no_duplicate_aggregate_hosts(engine)
         return data
+
+    def _pre_upgrade_147_no_duplicate_aggregate_hosts(self, engine):
+        engine.execute(get_table(engine, 'aggregate_metadata').insert(), [
+            {'aggregate_id': 1,
+             'key': 'availability_zone',
+             'value': 'custom_az'}])
+
+        engine.execute(get_table(engine, 'aggregate_hosts').insert(), [
+            {'aggregate_id': 1,
+             'host': 'compute-host3'}])
+
+        engine.execute(get_table(engine, 'services').insert(), [
+            {'id': 99, 'host': 'compute-host3',
+             'binary': 'nova-compute', 'topic': 'compute',
+             'report_count': 0, 'availability_zone': 'custom_az'}])
 
     def _check_147(self, engine, data):
         aggregate_md = get_table(engine, 'aggregate_metadata')
@@ -611,6 +627,15 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             aggregate_hosts.c.aggregate_id == 3
             ).execute().first()
         self.assertEqual(host, None)
+
+        self._check_147_no_duplicate_aggregate_hosts(engine, data)
+
+    def _check_147_no_duplicate_aggregate_hosts(self, engine, data):
+        aggregate_hosts = get_table(engine, 'aggregate_hosts')
+        agg1_hosts = [h['host'] for h in aggregate_hosts.select(
+            aggregate_hosts.c.aggregate_id == 1
+            ).execute().fetchall()]
+        self.assertEqual(['compute-host3'], agg1_hosts)
 
     # migration 149, changes IPAddr storage format
     def _pre_upgrade_149(self, engine):
