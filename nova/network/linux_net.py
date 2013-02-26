@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -41,9 +42,9 @@ LOG = logging.getLogger(__name__)
 
 
 linux_net_opts = [
-    cfg.StrOpt('dhcpbridge_flagfile',
-               default='/etc/nova/nova-dhcpbridge.conf',
-               help='location of flagfile for dhcpbridge'),
+    cfg.MultiStrOpt('dhcpbridge_flagfile',
+                    default=['/etc/nova/nova-dhcpbridge.conf'],
+                    help='location of flagfiles for dhcpbridge'),
     cfg.StrOpt('networks_path',
                default=paths.state_path_def('networks'),
                help='Location to keep network config files'),
@@ -994,7 +995,7 @@ def restart_dhcp(context, dev, network_ref):
             LOG.debug(_('Pid %d is stale, relaunching dnsmasq'), pid)
 
     cmd = ['env',
-           'CONFIG_FILE=%s' % CONF.dhcpbridge_flagfile,
+           'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
            'NETWORK_ID=%s' % str(network_ref['id']),
            'dnsmasq',
            '--strict-order',

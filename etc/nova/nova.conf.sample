@@ -970,7 +970,7 @@
 # Options defined in nova.network.linux_net
 #
 
-# location of flagfile for dhcpbridge (string value)
+# location of flagfile(s) for dhcpbridge (multi valued)
 #dhcpbridge_flagfile=/etc/nova/nova-dhcpbridge.conf
 
 # Location to keep network config files (string value)

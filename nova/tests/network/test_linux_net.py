@@ -26,6 +26,7 @@ from nova import db
 from nova.network import driver
 from nova.network import linux_net
 from nova.openstack.common import fileutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
@@ -496,7 +497,7 @@ class LinuxNetworkTestCase(test.TestCase):
         dev = 'br100'
         linux_net.restart_dhcp(self.context, dev, network_ref)
         expected = ['env',
-          'CONFIG_FILE=%s' % CONF.dhcpbridge_flagfile,
+          'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
           'NETWORK_ID=fake',
           'dnsmasq',
           '--strict-order',

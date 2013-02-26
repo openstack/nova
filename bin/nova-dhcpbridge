@@ -42,6 +42,7 @@ from nova import context
 from nova import db
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 
@@ -121,7 +122,8 @@ def main():
     except KeyError:
         config_file = os.environ['FLAGFILE']
 
-    config.parse_args(sys.argv, default_config_files=[config_file])
+    config.parse_args(sys.argv,
+        default_config_files=jsonutils.loads(config_file))
 
     logging.setup("nova")
 
