@@ -3571,14 +3571,14 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                 'list_instance_uuids')
         self.mox.StubOutWithMock(self.compute.conductor_api,
-                'instance_get_by_uuid')
+                'instance_get_all_by_filters')
 
         self.compute.driver.list_instance_uuids().AndReturn(
                 [inst['uuid'] for inst in driver_instances])
-        for x in xrange(len(driver_instances)):
-            self.compute.conductor_api.instance_get_by_uuid(fake_context,
-                    driver_instances[x]['uuid']).AndReturn(
-                            driver_instances[x])
+        self.compute.conductor_api.instance_get_all_by_filters(
+                fake_context, {'uuid': [inst['uuid'] for
+                                        inst in driver_instances]}).AndReturn(
+                        driver_instances)
 
         self.mox.ReplayAll()
 
@@ -3588,6 +3588,7 @@ class ComputeTestCase(BaseTestCase):
     def test_get_instances_on_driver_fallback(self):
         # Test getting instances when driver doesn't support
         # 'list_instance_uuids'
+        self.compute.host = 'host'
         fake_context = context.get_admin_context()
 
         all_instances = []
@@ -3603,14 +3604,14 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                 'list_instances')
         self.mox.StubOutWithMock(self.compute.conductor_api,
-                'instance_get_all')
+                'instance_get_all_by_host')
 
         self.compute.driver.list_instance_uuids().AndRaise(
                 NotImplementedError())
         self.compute.driver.list_instances().AndReturn(
                 [inst['name'] for inst in driver_instances])
-        self.compute.conductor_api.instance_get_all(
-                fake_context).AndReturn(all_instances)
+        self.compute.conductor_api.instance_get_all_by_host(
+                fake_context, self.compute.host).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 
