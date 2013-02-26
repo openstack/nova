@@ -154,7 +154,7 @@ class CreateDeserializer(CommonDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted volume create request."""
-        dom = utils.safe_minidom_parse_string(string)
+        dom = xmlutil.safe_minidom_parse_string(string)
         vol = self._extract_volume(dom)
         return {'body': {'volume': vol}}
 

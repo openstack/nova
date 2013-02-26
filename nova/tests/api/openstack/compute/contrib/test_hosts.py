@@ -21,9 +21,11 @@ from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
 from nova import db
+from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import fake_hosts
+from nova.tests import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -390,3 +392,9 @@ class HostSerializerTest(test.TestCase):
         result = self.deserializer.deserialize(intext)
 
         self.assertEqual(dict(body=exemplar), result)
+
+    def test_corrupt_xml(self):
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                self.deserializer.deserialize,
+                utils.killer_xml_body())

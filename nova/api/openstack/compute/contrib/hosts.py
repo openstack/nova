@@ -16,7 +16,6 @@
 """The hosts admin extension."""
 
 import webob.exc
-from xml.parsers import expat
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -24,7 +23,6 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.openstack.common import log as logging
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'hosts')
@@ -71,11 +69,7 @@ class HostShowTemplate(xmlutil.TemplateBuilder):
 
 class HostUpdateDeserializer(wsgi.XMLDeserializer):
     def default(self, string):
-        try:
-            node = utils.safe_minidom_parse_string(string)
-        except expat.ExpatError:
-            msg = _("cannot understand XML")
-            raise exception.MalformedRequestBody(reason=msg)
+        node = xmlutil.safe_minidom_parse_string(string)
 
         updates = {}
         updates_node = self.find_first_child_named(node, 'updates')

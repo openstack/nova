@@ -19,15 +19,14 @@ import inspect
 import math
 import time
 from xml.dom import minidom
-from xml.parsers import expat
 
 from lxml import etree
 import webob
 
+from nova.api.openstack import xmlutil
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova import utils
 from nova import wsgi
 
 
@@ -216,13 +215,8 @@ class XMLDeserializer(TextDeserializer):
 
     def _from_xml(self, datastring):
         plurals = set(self.metadata.get('plurals', {}))
-
-        try:
-            node = utils.safe_minidom_parse_string(datastring).childNodes[0]
-            return {node.nodeName: self._from_xml_node(node, plurals)}
-        except expat.ExpatError:
-            msg = _("cannot understand XML")
-            raise exception.MalformedRequestBody(reason=msg)
+        node = xmlutil.safe_minidom_parse_string(datastring).childNodes[0]
+        return {node.nodeName: self._from_xml_node(node, plurals)}
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
@@ -634,7 +628,7 @@ def action_peek_json(body):
 def action_peek_xml(body):
     """Determine action to invoke."""
 
-    dom = utils.safe_minidom_parse_string(body)
+    dom = xmlutil.safe_minidom_parse_string(body)
     action_node = dom.childNodes[0]
 
     return action_node.tagName
@@ -890,17 +884,8 @@ class Resource(wsgi.Application):
         #            function.  If we try to audit __call__(), we can
         #            run into troubles due to the @webob.dec.wsgify()
         #            decorator.
-        try:
-            return self._process_stack(request, action, action_args,
-                                   content_type, body, accept)
-        except expat.ExpatError:
-            msg = _("Invalid XML in request body")
-            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
-        except LookupError as e:
-        #NOTE(Vijaya Erukala): XML input such as
-        #                      <?xml version="1.0" encoding="TF-8"?>
-        #                      raises LookupError: unknown encoding: TF-8
-            return Fault(webob.exc.HTTPBadRequest(explanation=unicode(e)))
+        return self._process_stack(request, action, action_args,
+                               content_type, body, accept)
 
     def _process_stack(self, request, action, action_args,
                        content_type, body, accept):

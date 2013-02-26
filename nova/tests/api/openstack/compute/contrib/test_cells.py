@@ -27,6 +27,7 @@ from nova import exception
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import utils
 
 
 FAKE_CELLS = [
@@ -394,3 +395,10 @@ class TestCellsXMLDeserializer(test.TestCase):
         deserializer = cells_ext.CellDeserializer()
         result = deserializer.deserialize(intext)
         self.assertEqual(dict(body=expected), result)
+
+    def test_with_corrupt_xml(self):
+        deserializer = cells_ext.CellDeserializer()
+        self.assertRaises(
+                exception.MalformedRequestBody,
+                deserializer.deserialize,
+                utils.killer_xml_body())

@@ -19,7 +19,6 @@
 
 from oslo.config import cfg
 from webob import exc
-from xml.parsers import expat
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
@@ -31,7 +30,6 @@ from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -98,11 +96,7 @@ class CellDeserializer(wsgi.XMLDeserializer):
 
     def default(self, string):
         """Deserialize an xml-formatted cell create request."""
-        try:
-            node = utils.safe_minidom_parse_string(string)
-        except expat.ExpatError:
-            msg = _("cannot understand XML")
-            raise exception.MalformedRequestBody(reason=msg)
+        node = xmlutil.safe_minidom_parse_string(string)
 
         return {'body': {'cell': self._extract_cell(node)}}
 

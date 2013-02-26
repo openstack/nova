@@ -31,7 +31,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common import log as logging
 from nova import quota
-from nova import utils
 
 osapi_opts = [
     cfg.IntOpt('osapi_max_limit',
@@ -356,7 +355,7 @@ def raise_http_conflict_for_instance_invalid_state(exc, action):
 
 class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
     def deserialize(self, text):
-        dom = utils.safe_minidom_parse_string(text)
+        dom = xmlutil.safe_minidom_parse_string(text)
         metadata_node = self.find_first_child_named(dom, "metadata")
         metadata = self.extract_metadata(metadata_node)
         return {'body': {'metadata': metadata}}
@@ -364,7 +363,7 @@ class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
 
 class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
     def deserialize(self, text):
-        dom = utils.safe_minidom_parse_string(text)
+        dom = xmlutil.safe_minidom_parse_string(text)
         metadata_item = self.extract_metadata(dom)
         return {'body': {'meta': metadata_item}}
 
@@ -382,7 +381,7 @@ class MetadataXMLDeserializer(wsgi.XMLDeserializer):
         return metadata
 
     def _extract_metadata_container(self, datastring):
-        dom = utils.safe_minidom_parse_string(datastring)
+        dom = xmlutil.safe_minidom_parse_string(datastring)
         metadata_node = self.find_first_child_named(dom, "metadata")
         metadata = self.extract_metadata(metadata_node)
         return {'body': {'metadata': metadata}}
@@ -394,7 +393,7 @@ class MetadataXMLDeserializer(wsgi.XMLDeserializer):
         return self._extract_metadata_container(datastring)
 
     def update(self, datastring):
-        dom = utils.safe_minidom_parse_string(datastring)
+        dom = xmlutil.safe_minidom_parse_string(datastring)
         metadata_item = self.extract_metadata(dom)
         return {'body': {'meta': metadata_item}}
 
