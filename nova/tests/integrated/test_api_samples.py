@@ -33,6 +33,7 @@ from nova.api.openstack.compute.contrib import fping
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
+from nova.compute import manager as compute_manager
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -3660,3 +3661,94 @@ class SnapshotsSampleJsonTests(ApiSampleTestBase):
 
 class SnapshotsSampleXmlTests(SnapshotsSampleJsonTests):
     ctype = "xml"
+
+
+class VolumeAttachmentsSampleJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
+
+    def test_attach_volume_to_server(self):
+        device_name = '/dev/vdd'
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', lambda *a, **k: None)
+        self.stubs.Set(cinder.API, 'reserve_volume', lambda *a, **k: None)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       "reserve_block_device_name",
+                       lambda *a, **k: device_name)
+
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/os-volume_attachments'
+                                 % server_id,
+                                 'attach-volume-to-server-req', subs)
+
+        self.assertEqual(response.status, 200)
+        subs.update(self._get_regexes())
+        self._verify_response('attach-volume-to-server-resp',
+                              subs, response)
+
+    def _stub_compute_api_get_instance_bdms(self, server_id):
+
+        def fake_compute_api_get_instance_bdms(self, context, instance):
+            bdms = [
+                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
+                'instance_uuid': server_id,
+                'device_name': '/dev/sdd'},
+                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
+                'instance_uuid': server_id,
+                'device_name': '/dev/sdc'}
+            ]
+            return bdms
+
+        self.stubs.Set(compute_api.API, "get_instance_bdms",
+                       fake_compute_api_get_instance_bdms)
+
+    def _stub_compute_api_get(self):
+
+        def fake_compute_api_get(self, context, instance_id):
+            return {'uuid': instance_id}
+
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+
+    def test_list_volume_attachments(self):
+        server_id = self._post_server()
+
+        self._stub_compute_api_get_instance_bdms(server_id)
+
+        response = self._do_get('servers/%s/os-volume_attachments'
+                                % server_id)
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('list-volume-attachments-resp',
+                              subs, response)
+
+    def test_volume_attachment_detail(self):
+        server_id = self._post_server()
+        attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        self._stub_compute_api_get_instance_bdms(server_id)
+        self._stub_compute_api_get()
+        response = self._do_get('servers/%s/os-volume_attachments/%s'
+                                % (server_id, attach_id))
+        self.assertEqual(response.status, 200)
+        subs = self._get_regexes()
+        self._verify_response('volume-attachment-detail-resp',
+                              subs, response)
+
+    def test_volume_attachment_delete(self):
+        server_id = self._post_server()
+        attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        self._stub_compute_api_get_instance_bdms(server_id)
+        self._stub_compute_api_get()
+        self.stubs.Set(compute_api.API, 'detach_volume', lambda *a, **k: None)
+        response = self._do_delete('servers/%s/os-volume_attachments/%s'
+                                   % (server_id, attach_id))
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+
+class VolumeAttachmentsSampleXmlTest(VolumeAttachmentsSampleJsonTest):
+    ctype = 'xml'
