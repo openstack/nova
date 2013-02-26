@@ -197,6 +197,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_get_nw_info)
         self.stubs.Set(nova.network.API, 'allocate_for_instance',
                        fake_get_nw_info)
+        self.compute_api = compute.API()
 
     def test_wrap_instance_fault(self):
         inst_uuid = "fake_uuid"
@@ -760,15 +761,15 @@ class ComputeTestCase(BaseTestCase):
             vnc = {'host': 'myhost', 'port': '5900'}
             return vnc
         self.stubs.Set(self.compute_api, '_call_compute_message', fake)
-        instance = self._create_instance_full()
-        self.compute.run_instance(self.context, instance['id'])
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
 
         console_valid = self.compute_api.validate_vnc_console(self.context,
-                                               instance['id'],
+                                               instance['uuid'],
                                                'myhost',
                                                '5900')
         self.assertTrue(console_valid)
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_validate_vnc_console_wrong_port(self):
         """Check if a vnc console is really for the instance"""
@@ -776,24 +777,24 @@ class ComputeTestCase(BaseTestCase):
             vnc = {'host': 'myhost', 'port': '5901'}
             return vnc
         self.stubs.Set(self.compute_api, '_call_compute_message', fake)
-        instance = self._create_instance_full()
-        self.compute.run_instance(self.context, instance['id'])
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
 
         console_valid = self.compute_api.validate_vnc_console(self.context,
-                                               instance['id'],
+                                               instance['uuid'],
                                                'myhost',
                                                '5900')
         self.assertFalse(console_valid)
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_validate_vnc_console_deleted_instance(self):
         """Check if a vnc console is really for the instance"""
-        instance = self._create_instance_full()
-        self.compute.run_instance(self.context, instance['id'])
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
         self.assertRaises(exception.InstanceNotFound,
                             self.compute_api.validate_vnc_console,
                             self.context, 5555, 'myhost', '5900')
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_xvpvnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
@@ -3125,10 +3126,12 @@ class ComputeAPITestCase(BaseTestCase):
         """Make sure we can a vnc console for an instance."""
 
         fake_instance = {'uuid': 'fake_uuid',
+                         'id': 'fake_id',
                          'host': 'fake_compute_host'}
         fake_console_type = "novnc"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
+                             'instance_id': fake_instance['id'],
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',

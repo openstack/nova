@@ -22,6 +22,7 @@
 
     "compute:get_vnc_console": [],
     "compute:get_console_output": [],
+    "compute:validate_vnc_console": [],
 
     "compute:associate_floating_ip": [],
     "compute:reset_network": [],

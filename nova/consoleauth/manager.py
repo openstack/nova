@@ -53,6 +53,7 @@ class ConsoleAuthManager(manager.Manager):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.tokens = {}
+        self.instance_tokens = {}
         utils.LoopingCall(self._delete_expired_tokens).start(1)
 
     def _delete_expired_tokens(self):
@@ -67,28 +68,28 @@ class ConsoleAuthManager(manager.Manager):
             del self.tokens[k]
 
     def authorize_console(self, context, token, console_type, host, port,
-                          instance_id, internal_access_path):
+                          internal_access_path, instance_id=None):
         self.tokens[token] = {'token': token,
+                              'instance_id': instance_id,
                               'console_type': console_type,
                               'host': host,
                               'port': port,
-                              'instance_id': instance_id,
                               'internal_access_path': internal_access_path,
                               'last_activity_at': time.time()}
         token_dict = self.tokens[token]
         if instance_id is not None:
-            tokens = self.tokens[instance_id]
-            tokens.append(token)
-            self.tokens[instance_id] = tokens
+            instance_token_list = self.instance_tokens.get(instance_id, [])
+            instance_token_list.append(token)
+            self.instance_tokens[instance_id] = instance_token_list
 
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
 
-    def _validate_console(self, context, token):
+    def _validate_console(self, token):
         console_valid = False
         token_dict = self.tokens[token]
         try:
             console_valid = self.compute_api.validate_vnc_console(context,
-                                                token_dict['instance_id'],
+                                                token_dict['instance_uuid'],
                                                 token_dict['host'],
                                                 token_dict['port'])
         except exception.InstanceNotFound:
@@ -98,12 +99,12 @@ class ConsoleAuthManager(manager.Manager):
     def check_token(self, context, token):
         token_valid = token in self.tokens
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
-        if token_valid and _validate_console(token):
+        if token_valid and self._validate_console(token):
             return self.tokens[token]
 
     def delete_tokens_for_instance(self, context, instance_id):
-        for token in self.tokens[instance_id]:
+        for token in self.instance_tokens[instance_id]:
             token_dict = self.tokens[token]
             token_dict['last_activity_at'] = 0
             self.tokens[token] = token_dict
-        del self.tokens[instance_id]
+        del self.instance_tokens[instance_id]
