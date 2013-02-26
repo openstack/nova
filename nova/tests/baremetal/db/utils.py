@@ -32,9 +32,7 @@ def new_bm_node(**kwargs):
     h.pm_user = kwargs.pop('pm_user', 'ipmi_user')
     h.pm_password = kwargs.pop('pm_password', 'ipmi_password')
     h.prov_mac_address = kwargs.pop('prov_mac_address', '12:34:56:78:90:ab')
-    h.registration_status = kwargs.pop('registration_status', 'done')
     h.task_state = kwargs.pop('task_state', None)
-    h.prov_vlan_id = kwargs.pop('prov_vlan_id', None)
     h.terminal_port = kwargs.pop('terminal_port', 8000)
     if len(kwargs) > 0:
         raise test.TestingException("unknown field: %s"

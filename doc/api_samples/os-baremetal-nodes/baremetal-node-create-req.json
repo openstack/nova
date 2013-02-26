@@ -8,7 +8,6 @@
         "pm_user": "pm_user",
         "pm_password": "pm_pass",
         "prov_mac_address": "12:34:56:78:90:ab",
-        "prov_vlan_id": 1234,
         "terminal_port": 8000
     }
 }
