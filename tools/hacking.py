@@ -303,9 +303,22 @@ def nova_import_no_db_in_virt(logical_line, filename):
             yield (0, "N307: nova.db import not allowed in nova/virt/*")
 
 
-def in_docstring_position(previous_logical):
-    return (previous_logical.startswith("def ") or
-        previous_logical.startswith("class "))
+def is_docstring(physical_line, previous_logical):
+    """Return True if found docstring
+    'A docstring is a string literal that occurs as the first statement in a
+    module, function, class,'
+    http://www.python.org/dev/peps/pep-0257/#what-is-a-docstring
+    """
+    line = physical_line.lstrip()
+    start = max([line.find(i) for i in START_DOCSTRING_TRIPLE])
+    end = max([line[-4:-1] == i for i in END_DOCSTRING_TRIPLE])
+    if (previous_logical.startswith("def ") or
+            previous_logical.startswith("class ")):
+        if start is 0:
+            return True
+        else:
+            # Handle multi line comments
+            return end and start in (-1, len(line) - 4)
 
 
 def nova_docstring_start_space(physical_line, previous_logical):
@@ -315,6 +328,8 @@ def nova_docstring_start_space(physical_line, previous_logical):
     Docstring should not start with space
 
     Okay: def foo():\n    '''This is good.'''
+    Okay: def foo():\n    a = ''' This is not a docstring.'''
+    Okay: def foo():\n    pass\n    ''' This is not.'''
     N401: def foo():\n    ''' This is not.'''
     """
     # short circuit so that we don't fail on our own fail test
@@ -325,30 +340,32 @@ def nova_docstring_start_space(physical_line, previous_logical):
     # it's important that we determine this is actually a docstring,
     # and not a doc block used somewhere after the first line of a
     # function def
-    if in_docstring_position(previous_logical):
+    if is_docstring(physical_line, previous_logical):
         pos = max([physical_line.find(i) for i in START_DOCSTRING_TRIPLE])
-        if pos != -1 and len(physical_line) > pos + 4:
-            if physical_line[pos + 3] == ' ':
-                return (pos, "N401: docstring should not start with"
-                        " a space")
+        if physical_line[pos + 3] == ' ':
+            return (pos, "N401: docstring should not start with"
+                    " a space")
 
 
-def nova_docstring_one_line(physical_line):
+def nova_docstring_one_line(physical_line, previous_logical):
     r"""Check one line docstring end.
 
     nova HACKING guide recommendation for one line docstring:
     A one line docstring looks like this and ends in punctuation.
 
-    Okay: '''This is good.'''
-    Okay: '''This is good too!'''
-    Okay: '''How about this?'''
-    N402: '''This is not'''
-    N402: '''Bad punctuation,'''
+    Okay: def foo():\n    '''This is good.'''
+    Okay: def foo():\n    '''This is good too!'''
+    Okay: def foo():\n    '''How about this?'''
+    Okay: def foo():\n    a = '''This is not a docstring'''
+    Okay: def foo():\n    pass\n    '''This is not a docstring'''
+    Okay: class Foo:\n    pass\n    '''This is not a docstring'''
+    N402: def foo():\n    '''This is not'''
+    N402: def foo():\n    '''Bad punctuation,'''
+    N402: class Foo:\n    '''Bad punctuation,'''
     """
     #TODO(jogo) make this apply to multi line docstrings as well
     line = physical_line.lstrip()
-
-    if line.startswith('"') or line.startswith("'"):
+    if is_docstring(physical_line, previous_logical):
         pos = max([line.find(i) for i in START_DOCSTRING_TRIPLE])  # start
         end = max([line[-4:-1] == i for i in END_DOCSTRING_TRIPLE])  # end
 
@@ -357,20 +374,27 @@ def nova_docstring_one_line(physical_line):
                 return pos, "N402: one line docstring needs punctuation."
 
 
-def nova_docstring_multiline_end(physical_line, previous_logical):
+def nova_docstring_multiline_end(physical_line, previous_logical, tokens):
     r"""Check multi line docstring end.
 
     nova HACKING guide recommendation for docstring:
     Docstring should end on a new line
 
     Okay: '''foobar\nfoo\nbar\n'''
-    N403: def foo():\n'''foobar\nfoo\nbar\n   d'''\n\n
+    Okay: def foo():\n    '''foobar\nfoo\nbar\n'''
+    Okay: class Foo:\n    '''foobar\nfoo\nbar\n'''
+    Okay: def foo():\n    a = '''not\na\ndocstring'''
+    Okay: def foo():\n    pass\n'''foobar\nfoo\nbar\n   d'''
+    N403: def foo():\n    '''foobar\nfoo\nbar\ndocstring'''
+    N403: class Foo:\n    '''foobar\nfoo\nbar\ndocstring'''\n\n
     """
-    if in_docstring_position(previous_logical):
+    # if find OP tokens, not a docstring
+    ops = [t for t, _, _, _, _ in tokens if t == tokenize.OP]
+    if (is_docstring(physical_line, previous_logical) and len(tokens) > 0 and
+            len(ops) == 0):
         pos = max(physical_line.find(i) for i in END_DOCSTRING_TRIPLE)
-        if pos != -1 and len(physical_line) == pos + 4:
-            if physical_line.strip() not in START_DOCSTRING_TRIPLE:
-                return (pos, "N403: multi line docstring end on new line")
+        if physical_line.strip() not in START_DOCSTRING_TRIPLE:
+            return (pos, "N403: multi line docstring end on new line")
 
 
 def nova_docstring_multiline_start(physical_line, previous_logical, tokens):
@@ -380,9 +404,10 @@ def nova_docstring_multiline_start(physical_line, previous_logical, tokens):
     Docstring should start with A multi line docstring has a one-line summary
 
     Okay: '''foobar\nfoo\nbar\n'''
-    N404: def foo():\n'''\nfoo\nbar\n''' \n\n
+    Okay: def foo():\n    a = '''\nnot\na docstring\n'''
+    N404: def foo():\n'''\nfoo\nbar\n'''\n\n
     """
-    if in_docstring_position(previous_logical):
+    if is_docstring(physical_line, previous_logical):
         pos = max([physical_line.find(i) for i in START_DOCSTRING_TRIPLE])
         # start of docstring when len(tokens)==0
         if len(tokens) == 0 and pos != -1 and len(physical_line) == pos + 4:
@@ -392,7 +417,7 @@ def nova_docstring_multiline_start(physical_line, previous_logical, tokens):
 
 
 def nova_no_cr(physical_line):
-    r"""Check that we only use newlines not cariage returns.
+    r"""Check that we only use newlines not carriage returns.
 
     Okay: import os\nimport sys
     # pep8 doesn't yet replace \r in strings, will work on an
