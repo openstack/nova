@@ -1,5 +1,5 @@
 SQLAlchemy>=0.7.8,<=0.7.9
-Cheetah==2.4.4
+Cheetah>=2.4.4
 amqplib>=0.6.1
 anyjson>=0.2.4
 argparse
