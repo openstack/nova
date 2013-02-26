@@ -2068,8 +2068,10 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         ipv6 = self.fw.iptables.ipv6['filter'].rules
         ipv4_network_rules = len(ipv4) - len(inst_ipv4) - ipv4_len
         ipv6_network_rules = len(ipv6) - len(inst_ipv6) - ipv6_len
-        self.assertEquals(ipv4_network_rules,
-                  ipv4_rules_per_addr * ipv4_addr_per_network * networks_count)
+        # Extra rule is for the DHCP request
+        rules = (ipv4_rules_per_addr * ipv4_addr_per_network *
+                 networks_count) + 1
+        self.assertEquals(ipv4_network_rules, rules)
         self.assertEquals(ipv6_network_rules,
                   ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
