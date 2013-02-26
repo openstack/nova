@@ -1644,12 +1644,12 @@ class API(base.Base):
 
         #disk format of vhd is non-shrinkable
         if orig_image.get('disk_format') == 'vhd':
-            min_ram = instance['instance_type']['memory_mb']
             min_disk = instance['instance_type']['root_gb']
         else:
             #set new image values to the original image values
-            min_ram = orig_image.get('min_ram')
             min_disk = orig_image.get('min_disk')
+
+        min_ram = orig_image.get('min_ram')
 
         return min_ram, min_disk
 

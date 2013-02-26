@@ -4663,8 +4663,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_snapshot_minram_mindisk_VHD(self):
         """Ensure a snapshots min_ram and min_disk are correct.
 
-        A snapshot of a non-shrinkable VHD should have min_ram
-        and min_disk set to that of the original instances flavor.
+        A snapshot of a non-shrinkable VHD should have min_disk
+        set to that of the original instances flavor.
         """
 
         self.fake_image.update(disk_format='vhd',
@@ -4678,7 +4678,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertEqual(image['name'], 'snap1')
         instance_type = instance['instance_type']
-        self.assertEqual(image['min_ram'], instance_type['memory_mb'])
+        self.assertEqual(image['min_ram'], self.fake_image['min_ram'])
         self.assertEqual(image['min_disk'], instance_type['root_gb'])
         properties = image['properties']
         self.assertTrue('backup_type' not in properties)
