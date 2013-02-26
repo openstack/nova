@@ -14,7 +14,7 @@ PasteDeploy==1.5.0
 paste
 sqlalchemy-migrate>=0.7.2
 netaddr
-suds==0.4
+suds>=0.4
 paramiko
 pyasn1
 Babel>=0.9.6
