@@ -22,82 +22,20 @@ This version of the api is deprecated in Grizzly and will be removed.
 It is provided just in case a third party manager is in use.
 """
 
-import functools
-import inspect
-
 from nova.db import base
 from nova import exception
+from nova.network import api as shiny_api
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.openstack.common import log as logging
-from nova import policy
 
 LOG = logging.getLogger(__name__)
 
 
-def refresh_cache(f):
-    """
-    Decorator to update the instance_info_cache
-
-    Requires context and instance as function args
-    """
-    argspec = inspect.getargspec(f)
-
-    @functools.wraps(f)
-    def wrapper(self, context, *args, **kwargs):
-        res = f(self, context, *args, **kwargs)
-
-        try:
-            # get the instance from arguments (or raise ValueError)
-            instance = kwargs.get('instance')
-            if not instance:
-                instance = args[argspec.args.index('instance') - 2]
-        except ValueError:
-            msg = _('instance is a required argument to use @refresh_cache')
-            raise Exception(msg)
-
-        update_instance_cache_with_nw_info(self, context, instance,
-                                           nw_info=res)
-
-        # return the original function's return value
-        return res
-    return wrapper
-
-
-def update_instance_cache_with_nw_info(api, context, instance,
-                                        nw_info=None):
-
-    try:
-        if not isinstance(nw_info, network_model.NetworkInfo):
-            nw_info = None
-        if not nw_info:
-            nw_info = api._get_instance_nw_info(context, instance)
-        # update cache
-        cache = {'network_info': nw_info.json()}
-        api.db.instance_info_cache_update(context, instance['uuid'], cache)
-    except Exception:
-        LOG.exception(_('Failed storing info cache'), instance=instance)
-
-
-def wrap_check_policy(func):
-    """Check policy corresponding to the wrapped methods prior to execution."""
-
-    @functools.wraps(func)
-    def wrapped(self, context, *args, **kwargs):
-        action = func.__name__
-        check_policy(context, action)
-        return func(self, context, *args, **kwargs)
-
-    return wrapped
-
-
-def check_policy(context, action):
-    target = {
-        'project_id': context.project_id,
-        'user_id': context.user_id,
-    }
-    _action = 'network:%s' % action
-    policy.enforce(context, _action, target)
+refresh_cache = shiny_api.refresh_cache
+_update_instance_cache = shiny_api.update_instance_cache_with_nw_info
+update_instance_cache_with_nw_info = _update_instance_cache
+wrap_check_policy = shiny_api.wrap_check_policy
 
 
 class API(base.Base):
@@ -232,7 +170,9 @@ class API(base.Base):
     @wrap_check_policy
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
-                              requested_networks, macs=None):
+                              requested_networks, macs=None,
+                              conductor_api=None, security_groups=None,
+                              **kwargs):
         """Allocates all network structures for an instance.
 
         TODO(someone): document the rest of these parameters.
@@ -246,8 +186,7 @@ class API(base.Base):
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
-        args['instance_id'] = instance['id']
-        args['instance_uuid'] = instance['uuid']
+        args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
@@ -256,7 +195,7 @@ class API(base.Base):
         return network_model.NetworkInfo.hydrate(nw_info)
 
     @wrap_check_policy
-    def deallocate_for_instance(self, context, instance):
+    def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocates all network structures related to instance."""
 
         args = {}
@@ -267,21 +206,25 @@ class API(base.Base):
 
     @wrap_check_policy
     @refresh_cache
-    def add_fixed_ip_to_instance(self, context, instance, network_id):
+    def add_fixed_ip_to_instance(self, context, instance, network_id,
+                                 conductor_api=None, **kwargs):
         """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance['uuid'],
                 'host': instance['host'],
-                'network_id': network_id}
+                'network_id': network_id,
+                'rxtx_factor': None}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
 
     @wrap_check_policy
     @refresh_cache
-    def remove_fixed_ip_from_instance(self, context, instance, address):
+    def remove_fixed_ip_from_instance(self, context, instance, address,
+                                      conductor=None, **kwargs):
         """Removes a fixed ip from instance from specified network."""
 
         args = {'instance_id': instance['uuid'],
                 'host': instance['host'],
-                'address': address}
+                'address': address,
+                'rxtx_factor': None}
         self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
 
     @wrap_check_policy
@@ -302,18 +245,17 @@ class API(base.Base):
         self.network_rpcapi.associate(context, network_uuid, associations)
 
     @wrap_check_policy
-    def get_instance_nw_info(self, context, instance, update_cache=True):
+    def get_instance_nw_info(self, context, instance, conductor_api=None,
+                             **kwargs):
         """Returns all network info related to an instance."""
         result = self._get_instance_nw_info(context, instance)
-        if update_cache:
-            update_instance_cache_with_nw_info(self, context, instance,
-                                                result)
+        update_instance_cache_with_nw_info(self, context, instance,
+                                           result, conductor_api)
         return result
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
-        args = {'instance_id': instance['id'],
-                'instance_uuid': instance['uuid'],
+        args = {'instance_id': instance['uuid'],
                 'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}
@@ -463,3 +405,20 @@ class API(base.Base):
             args['host'] = migration['dest_compute']
 
         self.network_rpcapi.migrate_instance_finish(context, **args)
+
+    # NOTE(jkoelker) These functions where added to the api after
+    #                deprecation. Stubs provided for support documentation
+    def allocate_port_for_instance(self, context, instance, port_id,
+                                   network_id=None, requested_ip=None,
+                                   conductor_api=None):
+        raise NotImplementedError()
+
+    def deallocate_port_for_instance(self, context, instance, port_id,
+                                     conductor_api=None):
+        raise NotImplementedError()
+
+    def list_ports(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def show_port(self, *args, **kwargs):
+        raise NotImplementedError()
