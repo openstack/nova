@@ -16,6 +16,7 @@
 
 from lxml import etree
 
+import time
 import uuid
 
 # Allow passing None to the various connect methods
