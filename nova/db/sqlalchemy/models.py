@@ -841,29 +841,16 @@ class Aggregate(BASE, NovaBase):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
     _hosts = relationship(AggregateHost,
-                          lazy="joined",
-                          secondary="aggregate_hosts",
                           primaryjoin='and_('
-                                 'Aggregate.id == AggregateHost.aggregate_id,'
-                                 'AggregateHost.deleted == 0,'
-                                 'Aggregate.deleted == 0)',
-                         secondaryjoin='and_('
-                                'AggregateHost.aggregate_id == Aggregate.id, '
-                                'AggregateHost.deleted == 0,'
-                                'Aggregate.deleted == 0)',
-                         backref='aggregates')
+                          'Aggregate.id == AggregateHost.aggregate_id,'
+                          'AggregateHost.deleted == 0,'
+                          'Aggregate.deleted == 0)')
 
     _metadata = relationship(AggregateMetadata,
-                         secondary="aggregate_metadata",
-                         primaryjoin='and_('
+                             primaryjoin='and_('
                              'Aggregate.id == AggregateMetadata.aggregate_id,'
                              'AggregateMetadata.deleted == 0,'
-                             'Aggregate.deleted == 0)',
-                         secondaryjoin='and_('
-                             'AggregateMetadata.aggregate_id == Aggregate.id, '
-                             'AggregateMetadata.deleted == 0,'
-                             'Aggregate.deleted == 0)',
-                         backref='aggregates')
+                             'Aggregate.deleted == 0)')
 
     def _extra_keys(self):
         return ['hosts', 'metadetails', 'availability_zone']
