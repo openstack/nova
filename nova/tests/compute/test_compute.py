@@ -1085,7 +1085,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
-    def _test_reboot(self, soft, legacy_nwinfo_driver):
+    def _test_reboot(self, soft, legacy_nwinfo_driver, test_delete=False):
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self.stubs)
 
@@ -1164,13 +1164,24 @@ class ComputeTestCase(BaseTestCase):
         # Power state should be updated again
         self.compute._get_power_state(econtext,
                 updated_instance1).AndReturn(fake_power_state2)
-        self.compute._instance_update(econtext, updated_instance1['uuid'],
-                power_state=fake_power_state2,
-                task_state=None,
-                vm_state=vm_states.ACTIVE).AndReturn(updated_instance2)
-        self.compute._notify_about_instance_usage(econtext,
-                                                  updated_instance2,
-                                                  'reboot.end')
+        if test_delete:
+            self.compute._instance_update(econtext, updated_instance1['uuid'],
+                    power_state=fake_power_state2,
+                    task_state=None,
+                    vm_state=vm_states.ACTIVE).AndRaise(
+                        exception.InstanceNotFound(
+                            instance_id=updated_instance1['uuid']))
+            self.compute._notify_about_instance_usage(econtext,
+                                                      updated_instance1,
+                                                      'reboot.end')
+        else:
+            self.compute._instance_update(econtext, updated_instance1['uuid'],
+                    power_state=fake_power_state2,
+                    task_state=None,
+                    vm_state=vm_states.ACTIVE).AndReturn(updated_instance2)
+            self.compute._notify_about_instance_usage(econtext,
+                                                      updated_instance2,
+                                                      'reboot.end')
 
         self.mox.ReplayAll()
         self.compute.reboot_instance(self.context, instance=instance,
@@ -1181,8 +1192,14 @@ class ComputeTestCase(BaseTestCase):
     def test_reboot_soft(self):
         self._test_reboot(True, False)
 
+    def test_reboot_soft_and_delete(self):
+        self._test_reboot(True, False, True)
+
     def test_reboot_hard(self):
         self._test_reboot(False, False)
+
+    def test_reboot_hard_and_delete(self):
+        self._test_reboot(False, False, True)
 
     def test_reboot_soft_legacy_nwinfo_driver(self):
         self._test_reboot(True, True)
