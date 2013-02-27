@@ -470,3 +470,6 @@ class FakeVirtAPI(virtapi.VirtAPI):
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
         return db.agent_build_get_by_triple(context,
                                             hypervisor, os, architecture)
+
+    def instance_type_get(self, context, instance_type_id):
+        return db.instance_type_get(context, instance_type_id)

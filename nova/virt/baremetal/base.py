@@ -21,8 +21,8 @@ from nova.virt.baremetal import baremetal_states
 
 class NodeDriver(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, virtapi):
+        self.virtapi = virtapi
 
     def cache_images(self, context, node, instance, **kwargs):
         raise NotImplementedError()

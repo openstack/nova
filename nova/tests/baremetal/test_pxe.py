@@ -37,6 +37,7 @@ from nova.virt.baremetal import db
 from nova.virt.baremetal import pxe
 from nova.virt.baremetal import utils as bm_utils
 from nova.virt.disk import api as disk_api
+from nova.virt import fake as fake_virt
 
 CONF = cfg.CONF
 
@@ -61,7 +62,7 @@ class BareMetalPXETestCase(bm_db_base.BMDBTestCase):
         super(BareMetalPXETestCase, self).setUp()
         self.flags(**COMMON_FLAGS)
         self.flags(**BAREMETAL_FLAGS)
-        self.driver = pxe.PXE()
+        self.driver = pxe.PXE(fake_virt.FakeVirtAPI())
 
         fake_image.stub_out_image_service(self.stubs)
         self.addCleanup(fake_image.FakeImageService_reset)
@@ -239,20 +240,21 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.assertEqual(sizes[1], 1)
 
     def test_get_tftp_image_info(self):
+        instance_type = utils.get_test_instance_type()
         # Raises an exception when options are neither specified
         # on the instance nor in configuration file
         CONF.baremetal.deploy_kernel = None
         CONF.baremetal.deploy_ramdisk = None
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance)
+                self.instance, instance_type)
 
         # Test that other non-true values also raise an exception
         CONF.baremetal.deploy_kernel = ""
         CONF.baremetal.deploy_ramdisk = ""
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance)
+                self.instance, instance_type)
 
         # Even if the instance includes kernel_id and ramdisk_id,
         # we still need deploy_kernel_id and deploy_ramdisk_id.
@@ -262,7 +264,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.instance['ramdisk_id'] = 'bbbb'
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance)
+                self.instance, instance_type)
 
         # If an instance doesn't specify deploy_kernel_id or deploy_ramdisk_id,
         # but defaults are set in the config file, we should use those.
@@ -272,7 +274,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         CONF.baremetal.deploy_kernel = 'cccc'
         CONF.baremetal.deploy_ramdisk = 'dddd'
         base = os.path.join(CONF.baremetal.tftp_root, self.instance['uuid'])
-        res = pxe.get_tftp_image_info(self.instance)
+        res = pxe.get_tftp_image_info(self.instance, instance_type)
         expected = {
                 'kernel': ['aaaa', os.path.join(base, 'kernel')],
                 'ramdisk': ['bbbb', os.path.join(base, 'ramdisk')],
@@ -290,8 +292,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'deploy_kernel_id': 'eeee',
                 'deploy_ramdisk_id': 'ffff',
             }
-        self.instance['extra_specs'] = extra_specs
-        res = pxe.get_tftp_image_info(self.instance)
+        instance_type['extra_specs'] = extra_specs
+        res = pxe.get_tftp_image_info(self.instance, instance_type)
         self.assertEqual(res['deploy_kernel'][0], 'eeee')
         self.assertEqual(res['deploy_ramdisk'][0], 'ffff')
 
@@ -301,10 +303,10 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'deploy_kernel_id': '',
                 'deploy_ramdisk_id': '',
             }
-        self.instance['extra_specs'] = extra_specs
+        instance_type['extra_specs'] = extra_specs
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance)
+                self.instance, instance_type)
 
 
 class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
@@ -320,12 +322,13 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
     def test_cache_tftp_images(self):
         self.instance['kernel_id'] = 'aaaa'
         self.instance['ramdisk_id'] = 'bbbb'
+        instance_type = utils.get_test_instance_type()
         extra_specs = {
                 'deploy_kernel_id': 'cccc',
                 'deploy_ramdisk_id': 'dddd',
             }
-        self.instance['extra_specs'] = extra_specs
-        image_info = pxe.get_tftp_image_info(self.instance)
+        instance_type['extra_specs'] = extra_specs
+        image_info = pxe.get_tftp_image_info(self.instance, instance_type)
 
         self.mox.StubOutWithMock(os, 'makedirs')
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -390,12 +393,15 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_cache_images(self):
         self._create_node()
+        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
         self.mox.StubOutWithMock(pxe, "get_tftp_image_info")
         self.mox.StubOutWithMock(self.driver, "_cache_tftp_images")
         self.mox.StubOutWithMock(self.driver, "_cache_image")
         self.mox.StubOutWithMock(self.driver, "_inject_into_image")
 
-        pxe.get_tftp_image_info(self.instance).AndReturn([])
+        self.driver.virtapi.instance_type_get(
+            self.context, self.instance['instance_type_id']).AndReturn({})
+        pxe.get_tftp_image_info(self.instance, {}).AndReturn([])
         self.driver._cache_tftp_images(self.context, self.instance, [])
         self.driver._cache_image(self.context, self.instance, [])
         self.driver._inject_into_image(self.context, self.node, self.instance,
@@ -440,6 +446,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
         image_path = pxe.get_image_file_path(self.instance)
 
+        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(pxe, 'get_partition_sizes')
         self.mox.StubOutWithMock(bm_utils, 'random_alnum')
@@ -447,7 +454,9 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
 
-        pxe.get_tftp_image_info(self.instance).AndReturn(image_info)
+        self.driver.virtapi.instance_type_get(
+            self.context, self.instance['instance_type_id']).AndReturn({})
+        pxe.get_tftp_image_info(self.instance, {}).AndReturn(image_info)
         pxe.get_partition_sizes(self.instance).AndReturn((0, 0))
         bm_utils.random_alnum(32).AndReturn('alnum')
         pxe.build_pxe_config(
@@ -466,17 +475,23 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_activate_and_deactivate_bootloader(self):
         self._create_node()
-        extra_specs = {
+        instance_type = {
+            'extra_specs': {
                 'deploy_kernel_id': 'eeee',
                 'deploy_ramdisk_id': 'ffff',
+                }
             }
-        self.instance['extra_specs'] = extra_specs
         self.instance['uuid'] = 'fake-uuid'
 
+        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
+
+        self.driver.virtapi.instance_type_get(
+            self.context, self.instance['instance_type_id']).AndReturn(
+                instance_type)
 
         # create the config file
         bm_utils.write_to_file(mox.StrContains('fake-uuid'),
@@ -525,7 +540,9 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(self.driver, '_collect_mac_addresses')
 
-        pxe.get_tftp_image_info(self.instance).\
+        extra_specs = dict(extra_specs=dict(deploy_ramdisk_id='ignore',
+                                            deploy_kernel_id='ignore'))
+        pxe.get_tftp_image_info(self.instance, extra_specs).\
                 AndRaise(exception.NovaException)
         bm_utils.unlink_without_raise(pxe_path)
         self.driver._collect_mac_addresses(self.context, self.node).\

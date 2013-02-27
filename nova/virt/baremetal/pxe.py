@@ -148,13 +148,13 @@ def build_network_config(network_info):
     return network_config
 
 
-def get_deploy_aki_id(instance):
-    return instance.get('extra_specs', {}).\
+def get_deploy_aki_id(instance_type):
+    return instance_type.get('extra_specs', {}).\
                 get('deploy_kernel_id', CONF.baremetal.deploy_kernel)
 
 
-def get_deploy_ari_id(instance):
-    return instance.get('extra_specs', {}).\
+def get_deploy_ari_id(instance_type):
+    return instance_type.get('extra_specs', {}).\
                 get('deploy_ramdisk_id', CONF.baremetal.deploy_ramdisk)
 
 
@@ -196,13 +196,13 @@ def get_pxe_mac_path(mac):
         )
 
 
-def get_tftp_image_info(instance):
+def get_tftp_image_info(instance, instance_type):
     """Generate the paths for tftp files for this instance
 
     Raises NovaException if
     - instance does not contain kernel_id or ramdisk_id
     - deploy_kernel_id or deploy_ramdisk_id can not be read from
-      instance['extra_specs'] and defaults are not set
+      instance_type['extra_specs'] and defaults are not set
 
     """
     image_info = {
@@ -214,8 +214,8 @@ def get_tftp_image_info(instance):
     try:
         image_info['kernel'][0] = str(instance['kernel_id'])
         image_info['ramdisk'][0] = str(instance['ramdisk_id'])
-        image_info['deploy_kernel'][0] = get_deploy_aki_id(instance)
-        image_info['deploy_ramdisk'][0] = get_deploy_ari_id(instance)
+        image_info['deploy_kernel'][0] = get_deploy_aki_id(instance_type)
+        image_info['deploy_ramdisk'][0] = get_deploy_ari_id(instance_type)
     except KeyError as e:
         pass
 
@@ -237,8 +237,8 @@ def get_tftp_image_info(instance):
 class PXE(base.NodeDriver):
     """PXE bare metal driver."""
 
-    def __init__(self):
-        super(PXE, self).__init__()
+    def __init__(self, virtapi):
+        super(PXE, self).__init__(virtapi)
 
     def _collect_mac_addresses(self, context, node):
         macs = set()
@@ -341,7 +341,9 @@ class PXE(base.NodeDriver):
     def cache_images(self, context, node, instance,
             admin_password, image_meta, injected_files, network_info):
         """Prepare all the images for this instance."""
-        tftp_image_info = get_tftp_image_info(instance)
+        instance_type = self.virtapi.instance_type_get(
+            context, instance['instance_type_id'])
+        tftp_image_info = get_tftp_image_info(instance, instance_type)
         self._cache_tftp_images(context, instance, tftp_image_info)
 
         self._cache_image(context, instance, image_meta)
@@ -374,7 +376,9 @@ class PXE(base.NodeDriver):
             ./pxelinux.cfg/
                  {mac} -> ../{uuid}/config
         """
-        image_info = get_tftp_image_info(instance)
+        instance_type = self.virtapi.instance_type_get(
+            context, instance['instance_type_id'])
+        image_info = get_tftp_image_info(instance, instance_type)
         (root_mb, swap_mb) = get_partition_sizes(instance)
         pxe_config_file_path = get_pxe_config_file_path(instance)
         image_file_path = get_image_file_path(instance)
@@ -416,8 +420,13 @@ class PXE(base.NodeDriver):
         except exception.NodeNotFound:
             pass
 
+        # NOTE(danms): the instance_type extra_specs do not need to be
+        # present/correct at deactivate time, so pass something empty
+        # to avoid an extra lookup
+        instance_type = dict(extra_specs=dict(deploy_ramdisk_id='ignore',
+                                              deploy_kernel_id='ignore'))
         try:
-            image_info = get_tftp_image_info(instance)
+            image_info = get_tftp_image_info(instance, instance_type)
         except exception.NovaException:
             pass
         else:

@@ -77,6 +77,10 @@ class VirtAPIBaseTest(test.TestCase, test.APICoverage):
         self.assertExpected('agent_build_get_by_triple',
                             'fake-hv', 'gnu/hurd', 'fake-arch')
 
+    def test_instance_type_get(self):
+        self.assertExpected('instance_type_get',
+                            'fake-instance-type')
+
 
 class FakeVirtAPITest(VirtAPIBaseTest):
 

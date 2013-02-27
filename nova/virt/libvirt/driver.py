@@ -1986,7 +1986,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
-    def get_guest_disk_config(self, instance, name, disk_mapping,
+    def get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                               image_type=None):
         image = self.image_backend.image(instance,
                                          name,
@@ -1996,7 +1996,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info['dev'],
                                   disk_info['type'],
                                   self.disk_cachemode,
-                                  instance['extra_specs'])
+                                  inst_type['extra_specs'])
 
     def get_guest_storage_config(self, instance, image_meta,
                                  disk_info,
@@ -2019,24 +2019,28 @@ class LibvirtDriver(driver.ComputeDriver):
             if rescue:
                 diskrescue = self.get_guest_disk_config(instance,
                                                         'disk.rescue',
-                                                        disk_mapping)
+                                                        disk_mapping,
+                                                        inst_type)
                 devices.append(diskrescue)
 
                 diskos = self.get_guest_disk_config(instance,
                                                     'disk',
-                                                    disk_mapping)
+                                                    disk_mapping,
+                                                    inst_type)
                 devices.append(diskos)
             else:
                 if 'disk' in disk_mapping:
                     diskos = self.get_guest_disk_config(instance,
                                                         'disk',
-                                                        disk_mapping)
+                                                        disk_mapping,
+                                                        inst_type)
                     devices.append(diskos)
 
                 if 'disk.local' in disk_mapping:
                     disklocal = self.get_guest_disk_config(instance,
                                                            'disk.local',
-                                                           disk_mapping)
+                                                           disk_mapping,
+                                                           inst_type)
                     devices.append(disklocal)
                     self.virtapi.instance_update(
                         nova_context.get_admin_context(), instance['uuid'],
@@ -2048,13 +2052,14 @@ class LibvirtDriver(driver.ComputeDriver):
                     diskeph = self.get_guest_disk_config(
                         instance,
                         blockinfo.get_eph_disk(eph),
-                        disk_mapping)
+                        disk_mapping, inst_type)
                     devices.append(diskeph)
 
                 if 'disk.swap' in disk_mapping:
                     diskswap = self.get_guest_disk_config(instance,
                                                           'disk.swap',
-                                                          disk_mapping)
+                                                          disk_mapping,
+                                                          inst_type)
                     devices.append(diskswap)
                     self.virtapi.instance_update(
                         nova_context.get_admin_context(), instance['uuid'],
@@ -2072,6 +2077,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 diskconfig = self.get_guest_disk_config(instance,
                                                         'disk.config',
                                                         disk_mapping,
+                                                        inst_type,
                                                         'raw')
                 devices.append(diskconfig)
 
@@ -2100,7 +2106,10 @@ class LibvirtDriver(driver.ComputeDriver):
             'ramdisk_id' if a ramdisk is needed for the rescue image and
             'kernel_id' if a kernel is needed for the rescue image.
         """
-        inst_type = instance['instance_type']
+
+        inst_type = self.virtapi.instance_type_get(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
 
@@ -2112,7 +2121,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.vcpus = inst_type['vcpus']
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
-        for key, value in instance['extra_specs'].iteritems():
+        for key, value in inst_type['extra_specs'].iteritems():
             if key in quota_items:
                 setattr(guest, key, value)
 
