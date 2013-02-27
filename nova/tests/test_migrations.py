@@ -401,7 +401,7 @@ class BaseMigrationTestCase(test.TestCase):
         # version). So if we have any downgrade checks, they need to be run for
         # the previous (higher numbered) migration.
         post_downgrade = getattr(
-                self, "_post_downgrade_%d" % (version + 1), None)
+                self, "_post_downgrade_%03d" % (version + 1), None)
         if post_downgrade:
             post_downgrade(engine)
 
@@ -417,7 +417,8 @@ class BaseMigrationTestCase(test.TestCase):
         try:
             if with_data:
                 data = None
-                pre_upgrade = getattr(self, "_pre_upgrade_%d" % version, None)
+                pre_upgrade = getattr(
+                        self, "_pre_upgrade_%03d" % version, None)
                 if pre_upgrade:
                     data = pre_upgrade(engine)
 
@@ -430,7 +431,7 @@ class BaseMigrationTestCase(test.TestCase):
                                              self.REPOSITORY))
 
             if with_data:
-                check = getattr(self, "_check_%d" % version, None)
+                check = getattr(self, "_check_%03d" % version, None)
                 if check:
                     check(engine, data)
         except Exception:
