@@ -19,10 +19,12 @@
 
 import os
 import re
+import socket
 import sys
 import telnetlib
 import tempfile
 
+from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -39,6 +41,7 @@ from nova.scheduler import rpcapi as scheduler_api
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'coverage_ext')
+CONF = cfg.CONF
 
 
 class CoverageController(object):
@@ -55,6 +58,7 @@ class CoverageController(object):
         self.services = []
         self.combine = False
         self._cover_inst = None
+        self.host = CONF.host
         super(CoverageController, self).__init__()
 
     @property
@@ -71,7 +75,7 @@ class CoverageController(object):
     def _find_services(self, req):
         """Returns a list of services."""
         context = req.environ['nova.context']
-        services = db.service_get_all(context, False)
+        services = db.service_get_all(context)
         hosts = []
         for serv in services:
             hosts.append({"service": serv["topic"], "host": serv["host"]})
@@ -140,8 +144,21 @@ class CoverageController(object):
         ports = self._find_ports(req, hosts)
         self.services = []
         for service in ports:
-            service['telnet'] = telnetlib.Telnet(service['host'],
-                                                 service['port'])
+            try:
+                service['telnet'] = telnetlib.Telnet(service['host'],
+                                                     service['port'])
+            # NOTE(mtreinish): Fallback to try connecting to lo if
+            # ECONNREFUSED is raised. If using the hostname that is returned
+            # for the service from the service_get_all() DB query raises
+            # ECONNREFUSED it most likely means that the hostname in the DB
+            # doesn't resolve to 127.0.0.1. Currently backdoors only open on
+            # loopback so this is for covering the common single host use case
+            except socket.error as e:
+                if 'ECONNREFUSED' in e and service['host'] == self.host:
+                        service['telnet'] = telnetlib.Telnet('127.0.0.1',
+                                                             service['port'])
+                else:
+                    raise e
             self.services.append(service)
             self._start_coverage_telnet(service['telnet'], service['service'])
 
