@@ -744,6 +744,7 @@ def floating_ip_count_by_project(context, project_id, session=None):
 
 
 @require_context
+@_retry_on_deadlock
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
