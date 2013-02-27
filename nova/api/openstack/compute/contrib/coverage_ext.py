@@ -45,7 +45,6 @@ class CoverageController(object):
     """The Coverage report API controller for the OpenStack API."""
     def __init__(self):
         self.data_path = tempfile.mkdtemp(prefix='nova-coverage_')
-        data_out = os.path.join(self.data_path, '.nova-coverage')
         self.compute_api = compute_api.API()
         self.network_api = network_api.API()
         self.conductor_api = conductor_api.API()
@@ -55,13 +54,19 @@ class CoverageController(object):
         self.cert_api = cert_api.CertAPI()
         self.services = []
         self.combine = False
-        try:
-            import coverage
-            self.coverInst = coverage.coverage(data_file=data_out)
-            self.has_coverage = True
-        except ImportError:
-            self.has_coverage = False
+        self._cover_inst = None
         super(CoverageController, self).__init__()
+
+    @property
+    def coverInst(self):
+        if not self._cover_inst:
+            try:
+                import coverage
+                data_out = os.path.join(self.data_path, '.nova-coverage')
+                self._cover_inst = coverage.coverage(data_file=data_out)
+            except ImportError:
+                pass
+        return self._cover_inst
 
     def _find_services(self, req):
         """Returns a list of services."""
@@ -242,7 +247,7 @@ class CoverageController(object):
                 'report': self._report_coverage,
         }
         authorize(req.environ['nova.context'])
-        if not self.has_coverage:
+        if not self.coverInst:
             msg = _("Python coverage module is not installed.")
             raise exc.HTTPServiceUnavailable(explanation=msg)
         for action, data in body.iteritems():

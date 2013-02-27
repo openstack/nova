@@ -127,10 +127,6 @@ function run_tests {
   fi
 
   if [ $coverage -eq 1 ]; then
-    # Do not test test_coverage_ext when gathering coverage.
-    if [ "x$testrargs" = "x" ]; then
-      testrargs="^(?!.*test.*coverage).*$"
-    fi
     TESTRTESTS="$TESTRTESTS --coverage"
   else
     TESTRTESTS="$TESTRTESTS --slowest"

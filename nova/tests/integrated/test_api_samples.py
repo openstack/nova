@@ -46,6 +46,7 @@ import nova.quota
 from nova.scheduler import driver
 from nova.servicegroup import api as service_group_api
 from nova import test
+from nova.tests.api.openstack.compute.contrib import test_coverage_ext
 from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
 from nova.tests.api.openstack.compute.contrib import test_services
@@ -760,7 +761,7 @@ class CoverageExtJsonTests(ApiSampleTestBase):
 
         self.stubs.Set(coverage_ext.CoverageController, '_check_coverage',
                        _fake_check_coverage)
-        self.stubs.Set(coverage.coverage, 'xml_report', _fake_xml_report)
+        self.stubs.Set(coverage, 'coverage', test_coverage_ext.FakeCoverage)
 
     def test_start_coverage(self):
         # Start coverage data collection.
