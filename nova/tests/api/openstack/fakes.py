@@ -587,7 +587,7 @@ def stub_snapshot(id, **kwargs):
         'volume_id': 12,
         'status': 'available',
         'volume_size': 100,
-        'created_at': None,
+        'created_at': timeutils.utcnow(),
         'display_name': 'Default name',
         'display_description': 'Default description',
         'project_id': 'fake'
