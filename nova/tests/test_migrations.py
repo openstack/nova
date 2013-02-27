@@ -971,3 +971,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _check_002(self, engine, data):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                           get_table, engine, 'bm_deployments')
+
+    def _post_downgrade_004(self, engine):
+        bm_nodes = get_table(engine, 'bm_nodes')
+        self.assertNotIn(u'instance_name', [c.name for c in bm_nodes.columns])
