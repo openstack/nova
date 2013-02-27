@@ -28,7 +28,7 @@ from oslo.config import cfg
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -134,7 +134,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
 
     try:
         return db.instance_type_create(context.get_admin_context(), kwargs)
-    except db_session.DBError, e:
+    except db_exc.DBError, e:
         LOG.exception(_('DB error: %s') % e)
         raise exception.InstanceTypeCreateFailed()
 

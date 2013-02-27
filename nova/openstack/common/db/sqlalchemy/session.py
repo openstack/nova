@@ -246,12 +246,13 @@ import time
 
 from eventlet import greenthread
 from oslo.config import cfg
-from sqlalchemy.exc import DisconnectionError, OperationalError, IntegrityError
+from sqlalchemy import exc as sqla_exc
 import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
 
+from nova.openstack.common.db import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
@@ -327,25 +328,6 @@ def get_session(autocommit=True, expire_on_commit=False):
     return session
 
 
-class DBError(Exception):
-    """Wraps an implementation specific exception."""
-    def __init__(self, inner_exception=None):
-        self.inner_exception = inner_exception
-        super(DBError, self).__init__(str(inner_exception))
-
-
-class DBDuplicateEntry(DBError):
-    """Wraps an implementation specific exception."""
-    def __init__(self, columns=[], inner_exception=None):
-        self.columns = columns
-        super(DBDuplicateEntry, self).__init__(inner_exception)
-
-
-class InvalidUnicodeParameter(Exception):
-    message = _("Invalid Parameter: "
-                "Unicode is not supported by the current database.")
-
-
 # note(boris-42): In current versions of DB backends unique constraint
 # violation messages follow the structure:
 #
@@ -364,7 +346,7 @@ class InvalidUnicodeParameter(Exception):
 #               'c1'")
 # N columns - (IntegrityError) (1062, "Duplicate entry 'values joined
 #               with -' for key 'name_of_our_constraint'")
-_RE_DB = {
+_DUP_KEY_RE_DB = {
     "sqlite": re.compile(r"^.*columns?([^)]+)(is|are)\s+not\s+unique$"),
     "postgresql": re.compile(r"^.*duplicate\s+key.*\"([^\"]+)\"\s*\n.*$"),
     "mysql": re.compile(r"^.*\(1062,.*'([^\']+)'\"\)$")
@@ -390,7 +372,7 @@ def raise_if_duplicate_entry_error(integrity_error, engine_name):
     if engine_name not in ["mysql", "sqlite", "postgresql"]:
         return
 
-    m = _RE_DB[engine_name].match(integrity_error.message)
+    m = _DUP_KEY_RE_DB[engine_name].match(integrity_error.message)
     if not m:
         return
     columns = m.group(1)
@@ -399,7 +381,32 @@ def raise_if_duplicate_entry_error(integrity_error, engine_name):
         columns = columns.strip().split(", ")
     else:
         columns = get_columns_from_uniq_cons_or_name(columns)
-    raise DBDuplicateEntry(columns, integrity_error)
+    raise exception.DBDuplicateEntry(columns, integrity_error)
+
+
+# NOTE(comstud): In current versions of DB backends, Deadlock violation
+# messages follow the structure:
+#
+# mysql:
+# (OperationalError) (1213, 'Deadlock found when trying to get lock; try '
+#                     'restarting transaction') <query_str> <query_args>
+_DEADLOCK_RE_DB = {
+    "mysql": re.compile(r"^.*\(1213, 'Deadlock.*")
+}
+
+
+def raise_if_deadlock_error(operational_error, engine_name):
+    """
+    Raise DBDeadlock exception if OperationalError contains a Deadlock
+    condition.
+    """
+    re = _DEADLOCK_RE_DB.get(engine_name)
+    if re is None:
+        return
+    m = re.match(operational_error.message)
+    if not m:
+        return
+    raise exception.DBDeadlock(operational_error)
 
 
 def wrap_db_error(f):
@@ -407,21 +414,26 @@ def wrap_db_error(f):
         try:
             return f(*args, **kwargs)
         except UnicodeEncodeError:
-            raise InvalidUnicodeParameter()
+            raise exception.DBInvalidUnicodeParameter()
         # note(boris-42): We should catch unique constraint violation and
         # wrap it by our own DBDuplicateEntry exception. Unique constraint
         # violation is wrapped by IntegrityError.
-        except IntegrityError, e:
+        except sqla_exc.OperationalError, e:
+            raise_if_deadlock_error(e, get_engine().name)
+            # NOTE(comstud): A lot of code is checking for OperationalError
+            # so let's not wrap it for now.
+            raise
+        except sqla_exc.IntegrityError, e:
             # note(boris-42): SqlAlchemy doesn't unify errors from different
             # DBs so we must do this. Also in some tables (for example
             # instance_types) there are more than one unique constraint. This
             # means we should get names of columns, which values violate
             # unique constraint, from error message.
             raise_if_duplicate_entry_error(e, get_engine().name)
-            raise DBError(e)
+            raise exception.DBError(e)
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
-            raise DBError(e)
+            raise exception.DBError(e)
     _wrap.func_name = f.func_name
     return _wrap
 
@@ -471,7 +483,7 @@ def ping_listener(dbapi_conn, connection_rec, connection_proxy):
     except dbapi_conn.OperationalError, ex:
         if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
             LOG.warn(_('Got mysql server has gone away: %s'), ex)
-            raise DisconnectionError("Database server went away")
+            raise sqla_exc.DisconnectionError("Database server went away")
         else:
             raise
 
@@ -532,7 +544,7 @@ def create_engine(sql_connection):
 
     try:
         engine.connect()
-    except OperationalError, e:
+    except sqla_exc.OperationalError, e:
         if not is_db_connection_error(e.args[0]):
             raise
 
@@ -548,7 +560,7 @@ def create_engine(sql_connection):
             try:
                 engine.connect()
                 break
-            except OperationalError, e:
+            except sqla_exc.OperationalError, e:
                 if (remaining != 'infinite' and remaining == 0) or \
                         not is_db_connection_error(e.args[0]):
                     raise

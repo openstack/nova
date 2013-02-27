@@ -30,7 +30,6 @@ import uuid
 from oslo.config import cfg
 from sqlalchemy import and_
 from sqlalchemy import Boolean
-from sqlalchemy import exc as sqla_exc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
@@ -52,6 +51,7 @@ import nova.context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import log as logging
@@ -143,30 +143,15 @@ def require_aggregate_exists(f):
 
 def _retry_on_deadlock(f):
     """Decorator to retry a DB API call if Deadlock was received."""
-    def _is_deadlock_exc(dberr_info):
-        deadlock_str = 'Deadlock found when trying to get lock'
-        try:
-            if not isinstance(dberr_info, sqla_exc.OperationalError):
-                return False
-            if deadlock_str in dberr_info.message:
-                LOG.warn(_("Deadlock detected when running "
-                           "'%(func_name)s': Retrying..."),
-                           dict(func_name=f.__name__))
-                return True
-        except Exception:
-            pass
-        return False
-
     @functools.wraps(f)
     def wrapped(*args, **kwargs):
         while True:
             try:
                 return f(*args, **kwargs)
-            except db_session.DBError as db_err:
-                exc_info = sys.exc_info()
-                dberr_info = db_err.inner_exception
-                if not _is_deadlock_exc(dberr_info):
-                    raise exc_info[0], exc_info[1], exc_info[2]
+            except db_exc.DBDeadlock:
+                LOG.warn(_("Deadlock detected when running "
+                           "'%(func_name)s': Retrying..."),
+                           dict(func_name=f.__name__))
                 # Retry!
                 time.sleep(0.5)
                 continue
@@ -1264,7 +1249,7 @@ def virtual_interface_create(context, values):
         vif_ref = models.VirtualInterface()
         vif_ref.update(values)
         vif_ref.save()
-    except db_session.DBError:
+    except db_exc.DBError:
         raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
@@ -2079,7 +2064,7 @@ def network_create_safe(context, values):
     try:
         network_ref.save()
         return network_ref
-    except db_session.DBDuplicateEntry:
+    except db_exc.DBDuplicateEntry:
         raise exception.DuplicateVlan(vlan=values['vlan'])
 
 
@@ -2321,7 +2306,7 @@ def network_update(context, network_id, values):
         network_ref.update(values)
         try:
             network_ref.save(session=session)
-        except db_session.DBDuplicateEntry:
+        except db_exc.DBDuplicateEntry:
             raise exception.DuplicateVlan(vlan=values['vlan'])
         return network_ref
 
@@ -3547,7 +3532,7 @@ def instance_type_create(context, values):
             instance_type_ref.update(values)
             instance_type_ref.save(session=session)
         except Exception, e:
-            raise db_session.DBError(e)
+            raise db_exc.DBError(e)
         return _dict_with_extra_specs(instance_type_ref)
 
 
@@ -4209,7 +4194,7 @@ def s3_image_create(context, image_uuid):
         s3_image_ref.update({'uuid': image_uuid})
         s3_image_ref.save()
     except Exception, e:
-        raise db_session.DBError(e)
+        raise db_exc.DBError(e)
 
     return s3_image_ref
 
@@ -4729,7 +4714,7 @@ def task_log_begin_task(context, task_name, period_beginning, period_ending,
         task.task_items = task_items
     try:
         task.save()
-    except db_session.DBDuplicateEntry:
+    except db_exc.DBDuplicateEntry:
         raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
 
 

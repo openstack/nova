@@ -27,7 +27,7 @@ from oslo.config import cfg
 
 from nova.compute import instance_types
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -428,7 +428,7 @@ class PXE(base.NodeDriver):
         bm_utils.unlink_without_raise(get_pxe_config_file_path(instance))
         try:
             macs = self._collect_mac_addresses(context, node)
-        except db_session.DBError:
+        except db_exc.DBError:
             pass
         else:
             for mac in macs:

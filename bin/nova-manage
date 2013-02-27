@@ -80,7 +80,7 @@ from nova import db
 from nova.db import migration
 from nova import exception
 from nova.openstack.common import cliutils
-from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
@@ -861,7 +861,7 @@ class InstanceTypeCommands(object):
         except exception.InstanceTypeNotFound:
             print _("Valid instance type name is required")
             sys.exit(1)
-        except db_session.DBError, e:
+        except db_exc.DBError, e:
             print _("DB Error: %s") % e
             sys.exit(2)
         except Exception:
@@ -878,7 +878,7 @@ class InstanceTypeCommands(object):
                 inst_types = instance_types.get_all_types()
             else:
                 inst_types = instance_types.get_instance_type_by_name(name)
-        except db_session.DBError, e:
+        except db_exc.DBError, e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
             for k, v in inst_types.iteritems():
@@ -909,7 +909,7 @@ class InstanceTypeCommands(object):
                             ext_spec)
             print _("Key %(key)s set to %(value)s on instance"
                     " type %(name)s") % locals()
-        except db_session.DBError, e:
+        except db_exc.DBError, e:
             _db_error(e)
 
     @args('--name', dest='name', metavar='<name>',
@@ -932,7 +932,7 @@ class InstanceTypeCommands(object):
                         key)
 
             print _("Key %(key)s on instance type %(name)s unset") % locals()
-        except db_session.DBError, e:
+        except db_exc.DBError, e:
             _db_error(e)
 
 
