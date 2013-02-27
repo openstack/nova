@@ -176,9 +176,12 @@ def nova_import_rules(logical_line):
 
     Examples:
     Okay: from os import path
+    Okay: from os import path as p
+    Okay: from os import (path as p)
     Okay: import os.path
     Okay: from nova.compute import rpcapi
     N302: from os.path import dirname as dirname2
+    N302: from os.path import (dirname as dirname2)
     N303: from os.path import *
     N304: from .compute import rpcapi
     """
@@ -186,6 +189,7 @@ def nova_import_rules(logical_line):
     # pass the doctest, since the relativity depends on the file's locality
 
     def is_module_for_sure(mod, search_path=sys.path):
+        mod = mod.replace('(', '')  # Ignore parentheses
         try:
             mod_name = mod
             while '.' in mod_name:
