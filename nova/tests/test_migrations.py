@@ -47,6 +47,8 @@ import datetime
 import netaddr
 import os
 import sqlalchemy
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import sqlite
 import sqlalchemy.exc
 import urlparse
 import uuid
@@ -901,6 +903,55 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     execute().\
                     fetchall()
         self.assertEqual(len(rows), 1)
+
+    def _pre_upgrade_159(self, engine):
+        data = {
+            'provider_fw_rules':
+                [
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
+                {'protocol': 'tcp', 'from_port': 1234,
+                 'to_port': 1234, 'cidr': "::1/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
+                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
+                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
+                ],
+            'console_pools':
+                [
+                {'address': '10.10.10.10'},
+                {'address': '128.100.100.100'},
+                {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
+                {'address': '::1'},
+                {'address': '0000:0000:0000:2013:0000:6535:abcd:ef11'}
+                ]
+            }
+        return data
+
+    # migration 159 - revert ip column size
+    def _check_159(self, engine, data):
+        dialect = engine.url.get_dialect()
+        # NOTE(maurosr): check if column length is 39 again (it currently makes
+        # sense only for mysql)
+        if dialect not in [postgresql.dialect, sqlite.dialect]:
+            console_pools = get_table(engine, 'console_pools')
+            self.assertEqual(console_pools.columns['address'].type.length, 39)
+        # recheck the 149 data
+        self._check_149(engine, data)
+
+    def _post_downgrade_159(self, engine):
+        dialect = engine.url.get_dialect()
+        # NOTE(maurosr): check if column length is 43 again (it currently makes
+        # sense only for mysql)
+        if dialect not in [postgresql.dialect, sqlite.dialect]:
+            console_pools = get_table(engine, 'console_pools')
+            self.assertEqual(console_pools.columns['address'].type.length, 43)
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
