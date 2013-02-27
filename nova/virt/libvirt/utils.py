@@ -5,7 +5,7 @@
 #    All Rights Reserved.
 #    Copyright (c) 2010 Citrix Systems, Inc.
 #    Copyright (c) 2011 Piston Cloud Computing, Inc
-#    Copyright (c) 2011 OpenStack LLC
+#    Copyright (c) 2011 OpenStack Foundation
 #    (c) Copyright 2013 Hewlett-Packard Development Company, L.P.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may

@@ -1,4 +1,4 @@
-# Copyright (c) 2012 OpenStack, LLC.
+# Copyright (c) 2012 OpenStack Foundation
 # Copyright (c) 2012 Cloudscaling
 # All Rights Reserved.
 #

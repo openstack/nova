@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2012 OpenStack, LLC
+# Copyright (c) 2011-2012 OpenStack Foundation
 # Copyright (c) 2012 Canonical Ltd
 # Copyright (c) 2012 SUSE LINUX Products GmbH
 # All Rights Reserved.

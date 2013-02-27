@@ -6,7 +6,7 @@
 # description: Apply initial OVS flows for Nova
 
 # Copyright 2011 Citrix Systems, Inc.
-# Copyright 2011 OpenStack LLC.
+# Copyright 2011 OpenStack Foundation
 # Copyright (C) 2009, 2010, 2011 Nicira Networks, Inc.
 # All Rights Reserved.
 #
