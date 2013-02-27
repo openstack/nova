@@ -7314,6 +7314,9 @@ class KeypairAPITestCase(BaseTestCase):
                           self.ctxt, self.ctxt.user_id, '* BAD CHARACTERS! *')
 
     def test_create_keypair_already_exists(self):
+        def db_key_pair_create_duplicate(context, keypair):
+            raise exception.KeyPairExists(key_name=keypair.get('name', ''))
+        self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
         self.assertRaises(exception.KeyPairExists,
                           self.keypair_api.create_key_pair,
                           self.ctxt, self.ctxt.user_id,

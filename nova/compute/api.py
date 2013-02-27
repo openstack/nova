@@ -2710,13 +2710,6 @@ class KeypairAPI(base.Base):
             msg = _('Keypair name must be between 1 and 255 characters long')
             raise exception.InvalidKeypair(explanation=msg)
 
-        # NOTE: check for existing keypairs of same name
-        try:
-            self.db.key_pair_get(context, user_id, key_name)
-            raise exception.KeyPairExists(key_name=key_name)
-        except exception.NotFound:
-            pass
-
     def import_key_pair(self, context, user_id, key_name, public_key):
         """Import a key pair using an existing public key."""
         self._validate_keypair_name(context, user_id, key_name)
@@ -2759,7 +2752,6 @@ class KeypairAPI(base.Base):
                    'public_key': public_key,
                    'private_key': private_key}
         self.db.key_pair_create(context, keypair)
-
         return keypair
 
     def delete_key_pair(self, context, user_id, key_name):

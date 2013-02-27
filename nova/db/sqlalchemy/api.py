@@ -1953,10 +1953,13 @@ def instance_info_cache_delete(context, instance_uuid):
 
 @require_context
 def key_pair_create(context, values):
-    key_pair_ref = models.KeyPair()
-    key_pair_ref.update(values)
-    key_pair_ref.save()
-    return key_pair_ref
+    try:
+        key_pair_ref = models.KeyPair()
+        key_pair_ref.update(values)
+        key_pair_ref.save()
+        return key_pair_ref
+    except db_exc.DBDuplicateEntry:
+        raise exception.KeyPairExists(key_name=values['name'])
 
 
 @require_context
@@ -1965,7 +1968,7 @@ def key_pair_destroy(context, user_id, name):
     result = model_query(context, models.KeyPair).\
                          filter_by(user_id=user_id).\
                          filter_by(name=name).\
-                         delete()
+                         soft_delete()
     if not result:
         raise exception.KeypairNotFound(user_id=user_id, name=name)
 
