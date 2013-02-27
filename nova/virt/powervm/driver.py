@@ -41,11 +41,13 @@ powervm_opts = [
                help='PowerVM manager user password',
                secret=True),
     cfg.StrOpt('powervm_img_remote_path',
-               default=None,
-               help='PowerVM image remote path'),
+               default='/home/padmin',
+               help='PowerVM image remote path where images will be moved.'
+               ' Make sure this path can fit your biggest image in glance'),
     cfg.StrOpt('powervm_img_local_path',
-               default=None,
-               help='Local directory to download glance images to')
+               default='/tmp',
+               help='Local directory to download glance images to.'
+               ' Make sure this path can fit your biggest image in glance')
     ]
 
 CONF = cfg.CONF
