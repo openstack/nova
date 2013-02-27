@@ -1080,6 +1080,10 @@ class CouldNotFetchImage(NovaException):
     message = _("Could not fetch image %(image_id)s")
 
 
+class CouldNotUploadImage(NovaException):
+    message = _("Could not upload image %(image_id)s")
+
+
 class TaskAlreadyRunning(NovaException):
     message = _("Task %(task_name)s is already running on host %(host)s")
 
