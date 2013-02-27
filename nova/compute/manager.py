@@ -780,6 +780,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                     msg = _('Failed to dealloc network for deleted instance')
                     LOG.exception(msg, instance=instance)
                 raise
+            except exception.UnexpectedTaskStateError as e:
+                actual_task_state = e.kwargs.get('actual', None)
+                if actual_task_state == 'deleting':
+                    msg = _('Instance was deleted during spawn.')
+                    LOG.debug(msg, instance=instance)
+                else:
+                    raise
             except Exception:
                 exc_info = sys.exc_info()
                 # try to re-schedule instance:
