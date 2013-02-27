@@ -393,18 +393,6 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).unpause(context, instance)
         self._cast_to_cells(context, instance, 'unpause')
 
-    def set_host_enabled(self, context, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        # FIXME(comstud): Since there's no instance here, we have no
-        # idea which cell should be the target.
-        pass
-
-    def host_power_action(self, context, host, action):
-        """Reboots, shuts down or powers up the host."""
-        # FIXME(comstud): Since there's no instance here, we have no
-        # idea which cell should be the target.
-        pass
-
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         # FIXME(comstud): Cache this?
