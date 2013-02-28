@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 import tokenize
+import traceback
 
 import pep8
 
@@ -209,6 +210,11 @@ def nova_import_rules(logical_line):
                         "cannot import" in str(exc)):
                     _missingImport.add(missing)
                     return True
+                return False
+            except Exception, exc:
+                # NOTE(jogo) don't stack trace if unexpected import error,
+                # log and continue.
+                traceback.print_exc()
                 return False
         return True
 
