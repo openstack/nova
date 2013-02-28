@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<volumeAttachments>
+  <volumeAttachment device="/dev/sdd" serverId="4335bab6-6086-4247-8274-8b8b048edaaa" id="a26887c6-c47b-4654-abb5-dfadf7d3f803" volumeId="a26887c6-c47b-4654-abb5-dfadf7d3f803"/>
+  <volumeAttachment device="/dev/sdc" serverId="4335bab6-6086-4247-8274-8b8b048edaaa" id="a26887c6-c47b-4654-abb5-dfadf7d3f804" volumeId="a26887c6-c47b-4654-abb5-dfadf7d3f804"/>
+</volumeAttachments>
