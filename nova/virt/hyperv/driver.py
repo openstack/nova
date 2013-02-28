@@ -112,9 +112,6 @@ class HyperVDriver(driver.ComputeDriver):
                                               post_method, recover_method,
                                               block_migration, migrate_data)
 
-    def compare_cpu(self, cpu_info):
-        return self._livemigrationops.compare_cpu(cpu_info)
-
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, migrate_data=None):
         self._livemigrationops.pre_live_migration(context, instance,
@@ -134,14 +131,19 @@ class HyperVDriver(driver.ComputeDriver):
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
-        pass
+        return self._livemigrationops.check_can_live_migrate_destination(
+            ctxt, instance_ref, src_compute_info, dst_compute_info,
+            block_migration, disk_over_commit)
 
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):
-        pass
+        self._livemigrationops.check_can_live_migrate_destination_cleanup(
+            ctxt, dest_check_data)
 
-    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        pass
+    def check_can_live_migrate_source(self, ctxt, instance_ref,
+                                      dest_check_data):
+        return self._livemigrationops.check_can_live_migrate_source(
+            ctxt, instance_ref, dest_check_data)
 
     def plug_vifs(self, instance, network_info):
         LOG.debug(_("plug_vifs called"), instance=instance)
