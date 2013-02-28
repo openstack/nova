@@ -201,6 +201,10 @@ class IptablesFirewallDriver(FirewallDriver):
                     'INPUT',
                     '-s 0.0.0.0/32 -d 255.255.255.255/32 '
                     '-p udp -m udp --sport 68 --dport 67 -j ACCEPT')
+            self.iptables.ipv4['filter'].add_rule(
+                    'FORWARD',
+                    '-s 0.0.0.0/32 -d 255.255.255.255/32 '
+                    '-p udp -m udp --sport 68 --dport 67 -j ACCEPT')
             self.dhcp_created = True
         self.iptables.apply()
 
