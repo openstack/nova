@@ -1222,4 +1222,4 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    LOG.exception(_('Downgrade from Folsom is unsupported.'))
+    raise NotImplementedError('Downgrade from Folsom is unsupported.')

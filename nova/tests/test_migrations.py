@@ -363,36 +363,37 @@ class BaseMigrationTestCase(test.TestCase):
                 self.migration_api.db_version(engine,
                                          self.REPOSITORY))
 
-        self.migration_api.upgrade(engine,
-                self.REPOSITORY,
-                self.INIT_VERSION + 1)
-
         LOG.debug('latest version is %s' % self.REPOSITORY.latest)
+        versions = range(self.INIT_VERSION + 1, self.REPOSITORY.latest + 1)
 
-        for version in xrange(self.INIT_VERSION + 2,
-                              self.REPOSITORY.latest + 1):
+        for version in versions:
             # upgrade -> downgrade -> upgrade
             self._migrate_up(engine, version, with_data=True)
             if snake_walk:
-                self._migrate_down(engine, version - 1, with_data=True)
-                self._migrate_up(engine, version)
+                downgraded = self._migrate_down(
+                        engine, version - 1, with_data=True)
+                if downgraded:
+                    self._migrate_up(engine, version)
 
         if downgrade:
             # Now walk it back down to 0 from the latest, testing
             # the downgrade paths.
-            for version in reversed(
-                xrange(self.INIT_VERSION + 2,
-                       self.REPOSITORY.latest + 1)):
+            for version in reversed(versions):
                 # downgrade -> upgrade -> downgrade
-                self._migrate_down(engine, version - 1)
-                if snake_walk:
+                downgraded = self._migrate_down(engine, version - 1)
+
+                if snake_walk and downgraded:
                     self._migrate_up(engine, version)
                     self._migrate_down(engine, version - 1)
 
     def _migrate_down(self, engine, version, with_data=False):
-        self.migration_api.downgrade(engine,
-                                self.REPOSITORY,
-                                version)
+        try:
+            self.migration_api.downgrade(engine, self.REPOSITORY, version)
+        except NotImplementedError:
+            # NOTE(sirp): some migrations, namely release-level
+            # migrations, don't support a downgrade.
+            return False
+
         self.assertEqual(version,
                          self.migration_api.db_version(engine,
                                                   self.REPOSITORY))
@@ -405,6 +406,8 @@ class BaseMigrationTestCase(test.TestCase):
                     self, "_post_downgrade_%03d" % (version + 1), None)
             if post_downgrade:
                 post_downgrade(engine)
+
+        return True
 
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.

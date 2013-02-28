@@ -120,4 +120,4 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    pass
+    raise NotImplementedError('Downgrade from 001_init is unsupported.')
