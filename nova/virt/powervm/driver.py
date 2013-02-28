@@ -126,13 +126,15 @@ class PowerVMDriver(driver.ComputeDriver):
                   {'hostname': hostname, 'ip_addr': ip_addr})
         return ip_addr
 
-    def snapshot(self, context, instance, image_id):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Snapshots the specified instance.
 
         :param context: security context
         :param instance: Instance object as returned by DB layer.
         :param image_id: Reference to a pre-created image that will
                          hold the snapshot.
+        :param update_task_state: Function reference that allows for updates
+                                  to the instance task state.
         """
         snapshot_start = time.time()
 
@@ -161,7 +163,7 @@ class PowerVMDriver(driver.ComputeDriver):
 
         # disk capture and glance upload
         self._powervm.capture_image(context, instance, image_id,
-                                    new_snapshot_meta)
+                                    new_snapshot_meta, update_task_state)
 
         snapshot_time = time.time() - snapshot_start
         inst_name = instance['name']
