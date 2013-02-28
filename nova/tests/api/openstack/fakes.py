@@ -412,7 +412,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
 
 
 def stub_instance(id, user_id=None, project_id=None, host=None,
-                  vm_state=None, task_state=None,
+                  node=None, vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", name=None, key_name='',
                   access_ipv4=None, access_ipv6=None, progress=0,
@@ -477,6 +477,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "ephemeral_gb": 0,
         "hostname": display_name or server_name,
         "host": host,
+        "node": node,
         "instance_type_id": 1,
         "instance_type": dict(inst_type),
         "user_data": "",

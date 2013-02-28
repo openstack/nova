@@ -546,15 +546,6 @@ def compute_node_delete(context, compute_id):
         raise exception.ComputeHostNotFound(host=compute_id)
 
 
-def compute_node_get_by_host(context, host):
-    """Get all capacity entries for the given host."""
-    result = model_query(context, models.ComputeNode, read_deleted="no").\
-            join('service').\
-            filter(models.Service.host == host).\
-            first()
-    return result
-
-
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
     result = model_query(context,

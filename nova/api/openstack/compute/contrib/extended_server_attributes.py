@@ -17,8 +17,6 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import compute
-from nova import db
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -27,22 +25,9 @@ authorize = extensions.soft_extension_authorizer('compute',
 
 
 class ExtendedServerAttributesController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ExtendedServerAttributesController, self).__init__(*args,
-                                                                 **kwargs)
-        self.compute_api = compute.API()
-
-    def _get_hypervisor_hostname(self, context, instance):
-        compute_node = db.compute_node_get_by_host(context, instance["host"])
-
-        try:
-            return compute_node["hypervisor_hostname"]
-        except TypeError:
-            return
-
     def _extend_server(self, context, server, instance):
         key = "%s:hypervisor_hostname" % Extended_server_attributes.alias
-        server[key] = self._get_hypervisor_hostname(context, instance)
+        server[key] = instance['node']
 
         for attr in ['host', 'name']:
             if attr == 'name':
