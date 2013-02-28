@@ -631,6 +631,21 @@ class TestQuantumv2(test.TestCase):
         self.assertRaises(QUANTUM_CLIENT_EXCEPTION, api.allocate_for_instance,
                           self.context, self.instance)
 
+    def test_allocate_for_instance_no_port_or_network(self):
+        class BailOutEarly(Exception):
+            pass
+        api = quantumapi.API()
+        self.mox.StubOutWithMock(api, '_get_available_networks')
+        # Make sure we get an empty list and then bail out of the rest
+        # of the function
+        api._get_available_networks(self.context, self.instance['project_id'],
+                                    []).AndRaise(BailOutEarly)
+        self.mox.ReplayAll()
+        self.assertRaises(BailOutEarly,
+                          api.allocate_for_instance,
+                              self.context, self.instance,
+                              requested_networks=[(None, None, None)])
+
     def _deallocate_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
         self.moxed_client.list_ports(

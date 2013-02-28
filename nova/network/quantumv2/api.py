@@ -172,9 +172,10 @@ class API(base.Base):
                             available_macs.discard(port['mac_address'])
                     network_id = port['network_id']
                     ports[network_id] = port
-                elif fixed_ip:
+                elif fixed_ip and network_id:
                     fixed_ips[network_id] = fixed_ip
-                net_ids.append(network_id)
+                if network_id:
+                    net_ids.append(network_id)
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
@@ -773,6 +774,12 @@ class API(base.Base):
                 if port['network_id'] == net['id']:
                     network_name = net['name']
                     break
+
+            if network_name is None:
+                raise exception.NotFound(_('Network %(net)s for '
+                                           'port %(port_id)s not found!') %
+                                         {'net': port['network_id'],
+                                          'port': port['id']})
 
             network_IPs = [network_model.FixedIP(address=ip_address)
                            for ip_address in [ip['ip_address']
