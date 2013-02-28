@@ -4228,7 +4228,7 @@ def aggregate_create(context, values, metadata=None):
                                  values['name'],
                                  session=session,
                                  read_deleted='no')
-    aggregate = query.options(joinedload('_metadata')).first()
+    aggregate = query.first()
     if not aggregate:
         aggregate = models.Aggregate()
         aggregate.update(values)
@@ -4250,7 +4250,7 @@ def aggregate_get(context, aggregate_id):
                                  models.Aggregate,
                                  models.Aggregate.id,
                                  aggregate_id)
-    aggregate = query.options(joinedload('_metadata')).first()
+    aggregate = query.first()
 
     if not aggregate:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
@@ -4304,8 +4304,7 @@ def aggregate_update(context, aggregate_id, values):
                                      models.Aggregate,
                                      models.Aggregate.id,
                                      aggregate_id,
-                                     session=session).
-                                     options(joinedload('_metadata')).first())
+                                     session=session).first())
 
     if aggregate:
         if "availability_zone" in values:
