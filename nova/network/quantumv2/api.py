@@ -33,6 +33,8 @@ from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
+import quantumclient.common.exceptions
+
 quantum_opts = [
     cfg.StrOpt('quantum_url',
                default='http://127.0.0.1:9696',
@@ -719,7 +721,7 @@ class API(base.Base):
                                            port_id=port)
         # If a quantum plugin does not implement the L3 API a 404 from
         # list_floatingips will be raised.
-        except quantumv2.exceptions.QuantumClientException as e:
+        except quantumclient.common.exceptions.QuantumClientException as e:
             if e.status_code == 404:
                 return []
             raise
