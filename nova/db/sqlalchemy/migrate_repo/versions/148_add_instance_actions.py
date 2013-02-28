@@ -68,14 +68,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    try:
-        instance_actions.create()
-        instance_actions_events.create()
-    except Exception:
-        LOG.exception("Exception while creating table 'instance_actions' or "
-                      "'instance_actions_events'")
-        meta.drop_all(tables=[instance_actions, instance_actions_events])
-        raise
+    instance_actions.create()
+    instance_actions_events.create()
 
     Index('instance_uuid_idx',
           instance_actions.c.instance_uuid).create(migrate_engine)
@@ -87,15 +81,9 @@ def downgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
 
-    try:
-        instance_actions = Table('instance_actions', meta, autoload=True)
-        instance_actions.drop()
-    except Exception:
-        LOG.exception("Exception dropping table 'instance_actions'")
+    instance_actions_events = Table('instance_actions_events', meta,
+                                    autoload=True)
+    instance_actions_events.drop()
 
-    try:
-        instance_actions_events = Table('instance_actions_events', meta,
-                                        autoload=True)
-        instance_actions_events.drop()
-    except Exception:
-        LOG.exception("Exception dropping table 'instance_actions_events")
+    instance_actions = Table('instance_actions', meta, autoload=True)
+    instance_actions.drop()
