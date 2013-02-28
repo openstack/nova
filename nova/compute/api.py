@@ -2987,21 +2987,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.trigger_handler('instance_remove_security_group',
                 context, instance, security_group_name)
 
-    def rule_exists(self, security_group, new_rule):
-        """Indicates whether the specified rule is already
-           defined in the given security group.
-        """
-        for rule in security_group['rules']:
-            is_duplicate = True
-            keys = ('group_id', 'cidr', 'from_port', 'to_port', 'protocol')
-            for key in keys:
-                if rule.get(key) != new_rule.get(key):
-                    is_duplicate = False
-                    break
-            if is_duplicate:
-                return rule.get('id') or True
-        return False
-
     def get_rule(self, context, id):
         self.ensure_default(context)
         try:
@@ -3093,15 +3078,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         except ValueError:
             msg = _("Security group id should be integer")
             self.raise_invalid_property(msg)
-
-    def create_security_group_rule(self, context, security_group, new_rule):
-        if self.rule_exists(security_group, new_rule):
-            msg = (_('This rule already exists in group %s') %
-                   new_rule['parent_group_id'])
-            self.raise_group_already_exists(msg)
-        return self.add_rules(context, new_rule['parent_group_id'],
-                             security_group['name'],
-                             [new_rule])[0]
 
     def trigger_handler(self, event, *args):
         handle = getattr(self.sgh, 'trigger_%s_refresh' % event)

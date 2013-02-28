@@ -237,6 +237,7 @@ class TestQuantumSecurityGroupRulesTestCase(TestQuantumSecurityGroupsTestCase):
         id2 = '22222222-2222-2222-2222-222222222222'
         sg_template2 = test_security_groups.security_group_template(
             security_group_rules=[], id=id2)
+        self.controller_sg = security_groups.SecurityGroupController()
         quantum = get_client()
         quantum._fake_security_groups[id1] = sg_template1
         quantum._fake_security_groups[id2] = sg_template2
@@ -252,12 +253,26 @@ class TestQuantumSecurityGroupRules(
         TestQuantumSecurityGroupRulesTestCase):
 
     def test_create_add_existing_rules_by_cidr(self):
-        # Enforced by quantum
-        pass
+        sg = test_security_groups.security_group_template()
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
+        self.controller_sg.create(req, {'security_group': sg})
+        rule = test_security_groups.security_group_rule_template(
+            cidr='15.0.0.0/8', parent_group_id=self.sg2['id'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.controller.create(req, {'security_group_rule': rule})
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
 
     def test_create_add_existing_rules_by_group_id(self):
-        # Enforced by quantum
-        pass
+        sg = test_security_groups.security_group_template()
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
+        self.controller_sg.create(req, {'security_group': sg})
+        rule = test_security_groups.security_group_rule_template(
+            group=self.sg1['id'], parent_group_id=self.sg2['id'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.controller.create(req, {'security_group_rule': rule})
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
 
     def test_delete(self):
         rule = test_security_groups.security_group_rule_template(
@@ -528,11 +543,15 @@ class MockClient(object):
 
     def show_security_group(self, security_group, **_params):
         try:
-            return {'security_group':
-                    self._fake_security_groups[security_group]}
+            sg = self._fake_security_groups[security_group]
         except KeyError:
             msg = 'Security Group %s not found' % security_group
             raise q_exc.QuantumClientException(message=msg, status_code=404)
+        for security_group_rule in self._fake_security_group_rules.values():
+            if security_group_rule['security_group_id'] == sg['id']:
+                sg['security_group_rules'].append(security_group_rule)
+
+        return {'security_group': sg}
 
     def show_security_group_rule(self, security_group_rule, **_params):
         try:

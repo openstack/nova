@@ -215,10 +215,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             new_rules.append(new_rule)
         return {'security_group_rules': new_rules}
 
-    def create_security_group_rule(self, context, security_group, new_rule):
-        return self.add_rules(context, new_rule['parent_group_id'],
-                              security_group['name'], [new_rule])[0]
-
     def remove_rules(self, context, security_group, rule_ids):
         quantum = quantumv2.get_client(context)
         rule_ids = set(rule_ids)
@@ -395,10 +391,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                    {'security_group_name': security_group_name,
                     'instance': instance['uuid']})
             self.raise_not_found(msg)
-
-    def rule_exists(self, security_group, new_rule):
-        # Handled by quantum
-        pass
 
     def populate_security_groups(self, instance, security_groups):
         # Setting to emply list since we do not want to populate this field
