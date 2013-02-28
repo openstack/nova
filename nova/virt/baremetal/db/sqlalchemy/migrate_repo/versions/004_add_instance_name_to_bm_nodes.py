@@ -32,6 +32,4 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     t = Table('bm_nodes', meta, autoload=True)
-    name_col = Column('instance_name', String(length=255))
-
-    t.drop_column(name_col)
+    t.drop_column('instance_name')
