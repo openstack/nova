@@ -41,9 +41,12 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
+from nova.network import quantumv2
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests.api.openstack.compute.contrib import (
+    test_quantum_security_groups as test_quantum)
 from nova.tests import fake_network
 from nova.tests.image import fake
 from nova.tests import matchers
@@ -2226,3 +2229,66 @@ class CloudTestCase(test.TestCase):
         test_dia_iisb('stop', image_id='ami-4')
         test_dia_iisb('stop', image_id='ami-5')
         test_dia_iisb('stop', image_id='ami-6')
+
+
+class CloudTestCaseQuantumProxy(test.TestCase):
+    def setUp(self):
+        cfg.CONF.set_override('security_group_api', 'quantum')
+        self.cloud = cloud.CloudController()
+        self.original_client = quantumv2.get_client
+        quantumv2.get_client = test_quantum.get_client
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id,
+                                              is_admin=True)
+        super(CloudTestCaseQuantumProxy, self).setUp()
+
+    def tearDown(self):
+        quantumv2.get_client = self.original_client
+        test_quantum.get_client()._reset()
+        super(CloudTestCaseQuantumProxy, self).tearDown()
+
+    def test_describe_security_groups(self):
+        # Makes sure describe_security_groups works and filters results.
+        group_name = 'test'
+        description = 'test'
+        self.cloud.create_security_group(self.context, group_name,
+                                         description)
+        result = self.cloud.describe_security_groups(self.context)
+        # NOTE(vish): should have the default group as well
+        self.assertEqual(len(result['securityGroupInfo']), 2)
+        result = self.cloud.describe_security_groups(self.context,
+                      group_name=[group_name])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(result['securityGroupInfo'][0]['groupName'],
+                         group_name)
+        self.cloud.delete_security_group(self.context, group_name)
+
+    def test_describe_security_groups_by_id(self):
+        group_name = 'test'
+        description = 'test'
+        self.cloud.create_security_group(self.context, group_name,
+                                         description)
+        quantum = test_quantum.get_client()
+        # Get id from quantum since cloud.create_security_group
+        # does not expose it.
+        search_opts = {'name': group_name}
+        groups = quantum.list_security_groups(
+            **search_opts)['security_groups']
+        result = self.cloud.describe_security_groups(self.context,
+                      group_id=[groups[0]['id']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                group_name)
+        self.cloud.delete_security_group(self.context, group_name)
+
+    def test_create_delete_security_group(self):
+        descript = 'test description'
+        create = self.cloud.create_security_group
+        result = create(self.context, 'testgrp', descript)
+        group_descript = result['securityGroupSet'][0]['groupDescription']
+        self.assertEqual(descript, group_descript)
+        delete = self.cloud.delete_security_group
+        self.assertTrue(delete(self.context, 'testgrp'))
