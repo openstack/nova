@@ -58,8 +58,12 @@ def upgrade(migrate_engine):
                         })
         # add host to zone
         agg_hosts = Table('aggregate_hosts', meta, autoload=True)
-        row = agg_hosts.insert()
-        row.execute({'host': rec['host'], 'aggregate_id': agg_id})
+        num_hosts = agg_hosts.count().where(
+            agg_hosts.c.host == rec['host']).where(
+            agg_hosts.c.aggregate_id == agg_id).execute().scalar()
+        if num_hosts == 0:
+            agg_hosts.insert().execute({'host': rec['host'],
+                                        'aggregate_id': agg_id})
 
     services.drop_column('availability_zone')
 
