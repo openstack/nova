@@ -2120,15 +2120,27 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_security_group_enabled(self):
         self.ext_mgr.extensions = {'os-security-groups': 'fake'}
         group = 'foo'
-        params = {'security_groups': [{'name': group}]}
         old_create = compute_api.API.create
+
+        def sec_group_get(ctx, proj, name):
+            if name == group:
+                return True
+            else:
+                raise exception.SecurityGroupNotFoundForProject(
+                    project_id=proj, security_group_id=name)
 
         def create(*args, **kwargs):
             self.assertEqual(kwargs['security_group'], [group])
             return old_create(*args, **kwargs)
 
+        self.stubs.Set(db, 'security_group_get_by_name', sec_group_get)
+        # negative test
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra,
+                          {'security_groups': [{'name': 'bogus'}]})
+        # positive test - extra assert in create path
         self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
+        self._test_create_extra({'security_groups': [{'name': group}]})
 
     def test_create_instance_with_security_group_disabled(self):
         group = 'foo'
