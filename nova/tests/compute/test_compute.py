@@ -7225,6 +7225,41 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
             self.compute._reschedule_or_reraise(self.context, self.instance,
                     exc_info, None, None, None, False, None, {})
 
+    def test_no_reschedule_on_delete_during_spawn(self):
+        # instance should not be rescheduled if instance is deleted
+        # during the build
+        self.mox.StubOutWithMock(self.compute, '_spawn')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_reraise')
+
+        exc = exception.UnexpectedTaskStateError(expected=task_states.SPAWNING,
+                actual=task_states.DELETING)
+        self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exc)
+
+        self.mox.ReplayAll()
+        # test succeeds if mocked method '_reschedule_or_reraise' is not
+        # called.
+        self.compute._run_instance(self.context, None, {}, None, None, None,
+                False, None, self.instance)
+
+    def test_no_reschedule_on_unexpected_task_state(self):
+        # instance shouldn't be rescheduled if unexpected task state arises.
+        # the exception should get reraised.
+        self.mox.StubOutWithMock(self.compute, '_spawn')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_reraise')
+
+        exc = exception.UnexpectedTaskStateError(expected=task_states.SPAWNING,
+                actual=task_states.SCHEDULING)
+        self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exc)
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.UnexpectedTaskStateError,
+                self.compute._run_instance, self.context, None, {}, None, None,
+                None, False, None, self.instance)
+
 
 class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
     """Test logic and exception handling around rescheduling prep resize
