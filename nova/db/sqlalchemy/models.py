@@ -164,12 +164,6 @@ class Instance(BASE, NovaBase):
     ramdisk_id = Column(String(255))
     hostname = Column(String(255))
 
-#    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
-#    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-#    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-#    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
-#    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
-
     launch_index = Column(Integer)
     key_name = Column(String(255))
     key_data = Column(Text)
