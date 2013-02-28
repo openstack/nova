@@ -31,11 +31,12 @@ LOG = logging.getLogger(__name__)
 
 class Connection(object):
 
-    def __init__(self, host, username, password, port=22):
+    def __init__(self, host, username, password, port=22, keyfile=None):
         self.host = host
         self.username = username
         self.password = password
         self.port = port
+        self.keyfile = keyfile
 
 
 def ssh_connect(connection):
@@ -51,7 +52,8 @@ def ssh_connect(connection):
         ssh.connect(connection.host,
                     username=connection.username,
                     password=connection.password,
-                    port=connection.port)
+                    port=connection.port,
+                    key_filename=connection.keyfile)
         return ssh
     except Exception:
         LOG.exception(_('Connection error connecting PowerVM manager'))

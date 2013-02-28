@@ -31,8 +31,11 @@ opts = [
     cfg.StrOpt('virtual_power_ssh_host',
                default='',
                help='ip or name to virtual power host'),
+    cfg.StrOpt('virtual_power_ssh_port',
+               default='22',
+               help='Port to use for ssh to virtual power host'),
     cfg.StrOpt('virtual_power_type',
-               default='vbox',
+               default='virsh',
                help='base command to use for virtual power(vbox,virsh)'),
     cfg.StrOpt('virtual_power_host_user',
                default='',
@@ -40,6 +43,10 @@ opts = [
     cfg.StrOpt('virtual_power_host_pass',
                default='',
                help='password for virtual power host_user'),
+    cfg.StrOpt('virtual_power_host_key',
+               default=None,
+               help='ssh key for virtual power host_user'),
+
 ]
 
 baremetal_vp = cfg.OptGroup(name='baremetal',
@@ -101,13 +108,17 @@ class VirtualPowerManager(base.PowerManager):
                 _('virtual_power_host_user not defined. Can not Start'))
 
         if not CONF.baremetal.virtual_power_host_pass:
-            raise exception.NovaException(
-                _('virtual_power_host_pass not defined. Can not Start'))
+            # it is ok to not have a password if you have a keyfile
+            if CONF.baremetal.virtual_power_host_key is None:
+                raise exception.NovaException(
+                    _('virtual_power_host_pass/key not set. Can not Start'))
 
         _conn = connection.Connection(
             CONF.baremetal.virtual_power_ssh_host,
             CONF.baremetal.virtual_power_host_user,
-            CONF.baremetal.virtual_power_host_pass)
+            CONF.baremetal.virtual_power_host_pass,
+            CONF.baremetal.virtual_power_ssh_port,
+            CONF.baremetal.virtual_power_host_key)
         return _conn
 
     def _set_connection(self):
