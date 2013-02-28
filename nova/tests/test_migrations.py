@@ -377,7 +377,7 @@ class BaseMigrationTestCase(test.TestCase):
             # upgrade -> downgrade -> upgrade
             self._migrate_up(engine, version, with_data=True)
             if snake_walk:
-                self._migrate_down(engine, version - 1)
+                self._migrate_down(engine, version - 1, with_data=True)
                 self._migrate_up(engine, version)
 
         if downgrade:
@@ -392,7 +392,7 @@ class BaseMigrationTestCase(test.TestCase):
                     self._migrate_up(engine, version)
                     self._migrate_down(engine, version - 1)
 
-    def _migrate_down(self, engine, version):
+    def _migrate_down(self, engine, version, with_data=False):
         self.migration_api.downgrade(engine,
                                 self.REPOSITORY,
                                 version)
@@ -403,10 +403,11 @@ class BaseMigrationTestCase(test.TestCase):
         # NOTE(sirp): `version` is what we're downgrading to (i.e. the 'target'
         # version). So if we have any downgrade checks, they need to be run for
         # the previous (higher numbered) migration.
-        post_downgrade = getattr(
-                self, "_post_downgrade_%03d" % (version + 1), None)
-        if post_downgrade:
-            post_downgrade(engine)
+        if with_data:
+            post_downgrade = getattr(
+                    self, "_post_downgrade_%03d" % (version + 1), None)
+            if post_downgrade:
+                post_downgrade(engine)
 
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.
@@ -425,14 +426,10 @@ class BaseMigrationTestCase(test.TestCase):
                 if pre_upgrade:
                     data = pre_upgrade(engine)
 
-                self.migration_api.upgrade(engine,
-                                      self.REPOSITORY,
-                                      version)
-                self.assertEqual(
-                    version,
-                    self.migration_api.db_version(engine,
-                                             self.REPOSITORY))
-
+            self.migration_api.upgrade(engine, self.REPOSITORY, version)
+            self.assertEqual(version,
+                             self.migration_api.db_version(engine,
+                                                           self.REPOSITORY))
             if with_data:
                 check = getattr(self, "_check_%03d" % version, None)
                 if check:
