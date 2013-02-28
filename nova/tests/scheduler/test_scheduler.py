@@ -403,6 +403,7 @@ class SchedulerTestCase(test.TestCase):
                 'vm_state': '',
                 'task_state': '',
                 'instance_type': {'memory_mb': 1024},
+                'instance_type_id': 1,
                 'image_ref': 'fake-image-ref'}
 
     def test_live_migration_basic(self):
@@ -736,6 +737,7 @@ class SchedulerTestCase(test.TestCase):
     def test_live_migration_dest_check_auto_set_host(self):
         # Confirm dest is picked by scheduler if not set.
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
+        self.mox.StubOutWithMock(db, 'instance_type_get')
 
         instance = self._live_migration_instance()
         request_spec = {'instance_properties': instance,
@@ -747,6 +749,8 @@ class SchedulerTestCase(test.TestCase):
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
+        db.instance_type_get(self.context, 1).AndReturn(
+            instance['instance_type'])
         self.driver.select_hosts(self.context, request_spec,
                                  filter_properties).AndReturn(['fake_host2'])
 
@@ -757,6 +761,7 @@ class SchedulerTestCase(test.TestCase):
 
     def test_live_migration_auto_set_dest(self):
         # Confirm scheduler picks target host if none given.
+        self.mox.StubOutWithMock(db, 'instance_type_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
@@ -775,6 +780,9 @@ class SchedulerTestCase(test.TestCase):
                         }
 
         self.driver._live_migration_src_check(self.context, instance)
+
+        db.instance_type_get(self.context, 1).MultipleTimes().AndReturn(
+            instance['instance_type'])
 
         # First selected host raises exception.InvalidHypervisorType
         self.driver.select_hosts(self.context, request_spec,

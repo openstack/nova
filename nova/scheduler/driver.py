@@ -256,9 +256,11 @@ class Scheduler(object):
 
         # If dest is not specified, have scheduler pick one.
         if dest is None:
+            instance_type = db.instance_type_get(
+                context, instance_ref['instance_type_id'])
             image = self.image_service.show(context, instance_ref['image_ref'])
             request_spec = {'instance_properties': instance_ref,
-                            'instance_type': instance_ref['instance_type'],
+                            'instance_type': instance_type,
                             'instance_uuids': [instance_ref['uuid']],
                             'image': image}
             filter_properties = {'ignore_hosts': ignore_hosts}
