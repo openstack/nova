@@ -1308,11 +1308,14 @@ class API(base.Base):
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
         # NOTE(ameade): we still need to support integer ids for ec2
-        if uuidutils.is_uuid_like(instance_id):
-            instance = self.db.instance_get_by_uuid(context, instance_id)
-        elif utils.is_int_like(instance_id):
-            instance = self.db.instance_get(context, instance_id)
-        else:
+        try:
+            if uuidutils.is_uuid_like(instance_id):
+                instance = self.db.instance_get_by_uuid(context, instance_id)
+            elif utils.is_int_like(instance_id):
+                instance = self.db.instance_get(context, instance_id)
+            else:
+                raise exception.InstanceNotFound(instance_id=instance_id)
+        except exception.InvalidID:
             raise exception.InstanceNotFound(instance_id=instance_id)
 
         check_policy(context, 'get', instance)
