@@ -2572,6 +2572,49 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
             instance=jsonutils.to_primitive(inst_ref))
 
+    def _test_cleanup_stored_instance_types(self, old, new, revert=False):
+        migration = dict(old_instance_type_id=old,
+                         new_instance_type_id=new)
+        instance = dict(system_metadata=list())
+        instance['system_metadata'].append(dict(key='instance_type_id',
+                                                value=old))
+        sys_meta = dict(instance_type_id=old)
+        self.mox.StubOutWithMock(instance_types, 'extract_instance_type')
+        self.mox.StubOutWithMock(instance_types, 'delete_instance_type_info')
+        self.mox.StubOutWithMock(instance_types, 'save_instance_type_info')
+        if revert and old != new:
+            instance_types.extract_instance_type(instance, 'old_').AndReturn(
+                {'instance_type_id': old})
+            instance_types.save_instance_type_info(
+                sys_meta, {'instance_type_id': old}).AndReturn(sys_meta)
+        else:
+            instance_types.extract_instance_type(instance).AndReturn(
+                {'instance_type_id': new})
+        if old != new:
+            instance_types.delete_instance_type_info(
+                sys_meta, 'old_').AndReturn(sys_meta)
+        instance_types.delete_instance_type_info(
+            sys_meta, 'new_').AndReturn(sys_meta)
+
+        self.mox.ReplayAll()
+        res = self.compute._cleanup_stored_instance_types(migration, instance,
+                                                          revert)
+        self.assertEqual(res,
+                         (sys_meta,
+                          {'instance_type_id': revert and old or new}))
+
+    def test_cleanup_stored_instance_types_for_resize(self):
+        self._test_cleanup_stored_instance_types('1', '2')
+
+    def test_cleanup_stored_instance_types_for_resize_with_update(self):
+        self._test_cleanup_stored_instance_types('1', '2', True)
+
+    def test_cleanup_stored_instance_types_for_migration(self):
+        self._test_cleanup_stored_instance_types('1', '1')
+
+    def test_cleanup_stored_instance_types_for_migration_with_update(self):
+        self._test_cleanup_stored_instance_types('1', '1', True)
+
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
         self.assertEqual(type['name'], 'm1.tiny')
