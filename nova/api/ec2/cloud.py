@@ -1174,6 +1174,10 @@ class CloudController(object):
             i['ipAddress'] = floating_ip or fixed_ip
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
+            i['tagSet'] = []
+            for k, v in self.compute_api.get_instance_metadata(
+                    context, instance).iteritems():
+                i['tagSet'].append({'key': k, 'value': v})
 
             if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
@@ -1676,6 +1680,137 @@ class CloudController(object):
             self.compute_api.start(context, instance)
 
         return {'imageId': ec2_id}
+
+    def create_tags(self, context, **kwargs):
+        """Add tags to a resource
+
+        Returns True on success, error on failure.
+
+        :param context: context under which the method is called
+        """
+        resources = kwargs.get('resource_id', None)
+        tags = kwargs.get('tag', None)
+        if resources is None or tags is None:
+            raise exception.EC2APIError(_('resource_id and tag are required'))
+
+        if not isinstance(resources, (tuple, list, set)):
+            raise exception.EC2APIError(_('Expecting a list of resources'))
+
+        for r in resources:
+            if ec2utils.resource_type_from_id(context, r) != 'instance':
+                raise exception.EC2APIError(_('Only instances implemented'))
+
+        if not isinstance(tags, (tuple, list, set)):
+            raise exception.EC2APIError(_('Expecting a list of tagSets'))
+
+        metadata = {}
+        for tag in tags:
+            if not isinstance(tag, dict):
+                raise exception.EC2APIError(_
+                        ('Expecting tagSet to be key/value pairs'))
+
+            key = tag.get('key', None)
+            val = tag.get('value', None)
+
+            if key is None or val is None:
+                raise exception.EC2APIError(_
+                        ('Expecting both key and value to be set'))
+
+            metadata[key] = val
+
+        for ec2_id in resources:
+            instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+            instance = self.compute_api.get(context, instance_uuid)
+            self.compute_api.update_instance_metadata(context,
+                instance, metadata)
+
+        return True
+
+    def delete_tags(self, context, **kwargs):
+        """Delete tags
+
+        Returns True on success, error on failure.
+
+        :param context: context under which the method is called
+        """
+        resources = kwargs.get('resource_id', None)
+        tags = kwargs.get('tag', None)
+        if resources is None or tags is None:
+            raise exception.EC2APIError(_('resource_id and tag are required'))
+
+        if not isinstance(resources, (tuple, list, set)):
+            raise exception.EC2APIError(_('Expecting a list of resources'))
+
+        for r in resources:
+            if ec2utils.resource_type_from_id(context, r) != 'instance':
+                raise exception.EC2APIError(_('Only instances implemented'))
+
+        if not isinstance(tags, (tuple, list, set)):
+            raise exception.EC2APIError(_('Expecting a list of tagSets'))
+
+        for ec2_id in resources:
+            instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
+            instance = self.compute_api.get(context, instance_uuid)
+            for tag in tags:
+                if not isinstance(tag, dict):
+                    raise exception.EC2APIError(_
+                            ('Expecting tagSet to be key/value pairs'))
+
+                key = tag.get('key', None)
+                if key is None:
+                    raise exception.EC2APIError(_('Expecting key to be set'))
+
+                self.compute_api.delete_instance_metadata(context,
+                        instance, key)
+
+        return True
+
+    def describe_tags(self, context, **kwargs):
+        """List tags
+
+        Returns a dict with a single key 'tagSet' on success, error on failure.
+
+        :param context: context under which the method is called
+        """
+        filters = kwargs.get('filter', None)
+
+        search_filts = []
+        if filters:
+            for filter_block in filters:
+                key_name = filter_block.get('name', None)
+                val = filter_block.get('value', None)
+                if val:
+                    if isinstance(val, dict):
+                        val = val.values()
+                    if not isinstance(val, (tuple, list, set)):
+                        val = (val,)
+                if key_name:
+                    search_block = {}
+                    if key_name == 'resource_id':
+                        search_block['resource_id'] = []
+                        for res_id in val:
+                            search_block['resource_id'].append(
+                                ec2utils.ec2_inst_id_to_uuid(context, res_id))
+                    elif key_name in ['key', 'value']:
+                        search_block[key_name] = val
+                    elif key_name == 'resource_type':
+                        for res_type in val:
+                            if res_type != 'instance':
+                                raise exception.EC2APIError(_
+                                        ('Only instances implemented'))
+                            search_block[key_name] = 'instance'
+                    if len(search_block.keys()) > 0:
+                        search_filts.append(search_block)
+        ts = []
+        for tag in self.compute_api.get_all_instance_metadata(context,
+                                                              search_filts):
+            ts.append({
+                'resource_id': ec2utils.id_to_ec2_inst_id(tag['instance_id']),
+                'resource_type': 'instance',
+                'key': tag['key'],
+                'value': tag['value']
+            })
+        return {"tagSet": ts}
 
 
 class EC2SecurityGroupExceptions(object):

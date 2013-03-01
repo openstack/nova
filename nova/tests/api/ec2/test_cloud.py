@@ -35,6 +35,7 @@ from nova.api.metadata import password
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
@@ -806,6 +807,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
+        self.assertEqual(instance['tagSet'], [])
         self.assertEqual(instance['privateDnsName'], 'server-4321')
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertEqual(instance['dnsNameV6'],
@@ -2218,6 +2220,255 @@ class CloudTestCase(test.TestCase):
         test_dia_iisb('stop', image_id='ami-4')
         test_dia_iisb('stop', image_id='ami-5')
         test_dia_iisb('stop', image_id='ami-6')
+
+    def test_create_delete_tags(self):
+
+        # We need to stub network calls
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        # We need to stub out the MQ call - it won't succeed.  We do want
+        # to check that the method is called, though
+        meta_changes = [None]
+
+        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
+                                          instance_uuid=None):
+            meta_changes[0] = diff
+
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
+
+        # Create a test image
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        inst1_kwargs = {
+                'reservation_id': 'a',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'vm_state': 'active',
+                'hostname': 'server-1111',
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1)
+        }
+
+        inst1 = db.instance_create(self.context, inst1_kwargs)
+        ec2_id = ec2utils.id_to_ec2_inst_id(inst1['uuid'])
+
+        # Create some tags
+        md = {'key': 'foo', 'value': 'bar'}
+        md_result = {'foo': 'bar'}
+        self.cloud.create_tags(self.context, resource_id=[ec2_id],
+                tag=[md])
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst1)
+        self.assertEqual(metadata, md_result)
+        self.assertEqual(meta_changes, [{'foo': ['+', 'bar']}])
+
+        # Delete them
+        self.cloud.delete_tags(self.context, resource_id=[ec2_id],
+                tag=[{'key': 'foo', 'value': 'bar'}])
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst1)
+        self.assertEqual(metadata, {})
+        self.assertEqual(meta_changes, [{'foo': ['-']}])
+
+    def test_describe_tags(self):
+        # We need to stub network calls
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        # We need to stub out the MQ call - it won't succeed.  We do want
+        # to check that the method is called, though
+        meta_changes = [None]
+
+        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
+                                          instance_uuid=None):
+            meta_changes[0] = diff
+
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
+
+        # Create some test images
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        inst1_kwargs = {
+                'reservation_id': 'a',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'vm_state': 'active',
+                'hostname': 'server-1111',
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1)
+        }
+
+        inst2_kwargs = {
+                'reservation_id': 'b',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'vm_state': 'active',
+                'hostname': 'server-1112',
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2)
+        }
+
+        inst1 = db.instance_create(self.context, inst1_kwargs)
+        ec2_id1 = ec2utils.id_to_ec2_inst_id(inst1['uuid'])
+
+        inst2 = db.instance_create(self.context, inst2_kwargs)
+        ec2_id2 = ec2utils.id_to_ec2_inst_id(inst2['uuid'])
+
+        # Create some tags
+        # We get one overlapping pair, and each has a different key value pair
+        # inst1 : {'foo': 'bar', 'bax': 'wibble'}
+        # inst1 : {'foo': 'bar', 'baz': 'quux'}
+
+        md = {'key': 'foo', 'value': 'bar'}
+        md_result = {'foo': 'bar'}
+        self.cloud.create_tags(self.context, resource_id=[ec2_id1, ec2_id2],
+                tag=[md])
+
+        self.assertEqual(meta_changes, [{'foo': ['+', 'bar']}])
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst1)
+        self.assertEqual(metadata, md_result)
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst2)
+        self.assertEqual(metadata, md_result)
+
+        md2 = {'key': 'baz', 'value': 'quux'}
+        md2_result = {'baz': 'quux'}
+        md2_result.update(md_result)
+        self.cloud.create_tags(self.context, resource_id=[ec2_id2],
+                tag=[md2])
+
+        self.assertEqual(meta_changes, [{'baz': ['+', 'quux']}])
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst2)
+        self.assertEqual(metadata, md2_result)
+
+        md3 = {'key': 'bax', 'value': 'wibble'}
+        md3_result = {'bax': 'wibble'}
+        md3_result.update(md_result)
+        self.cloud.create_tags(self.context, resource_id=[ec2_id1],
+                tag=[md3])
+
+        self.assertEqual(meta_changes, [{'bax': ['+', 'wibble']}])
+
+        metadata = self.cloud.compute_api.get_instance_metadata(self.context,
+                inst1)
+        self.assertEqual(metadata, md3_result)
+
+        inst1_key_foo = {'key': u'foo', 'resource_id': 'i-00000001',
+                         'resource_type': 'instance', 'value': u'bar'}
+        inst1_key_bax = {'key': u'bax', 'resource_id': 'i-00000001',
+                         'resource_type': 'instance', 'value': u'wibble'}
+        inst2_key_foo = {'key': u'foo', 'resource_id': 'i-00000002',
+                         'resource_type': 'instance', 'value': u'bar'}
+        inst2_key_baz = {'key': u'baz', 'resource_id': 'i-00000002',
+                         'resource_type': 'instance', 'value': u'quux'}
+
+        # We should be able to search by:
+        # No filter
+        tags = self.cloud.describe_tags(self.context)['tagSet']
+        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo,
+                                inst2_key_baz, inst1_key_bax])
+
+        # Resource ID
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'resource_id',
+                         'value': [ec2_id1]}])['tagSet']
+        self.assertEqual(tags, [inst1_key_foo, inst1_key_bax])
+
+        # Resource Type
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'resource_type',
+                         'value': ['instance']}])['tagSet']
+        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo,
+                                inst2_key_baz, inst1_key_bax])
+
+        # Key, either bare or with wildcards
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['foo']}])['tagSet']
+        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo])
+
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['baz']}])['tagSet']
+        self.assertEqual(tags, [inst2_key_baz])
+
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['ba?']}])['tagSet']
+        self.assertEqual(tags, [])
+
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['b*']}])['tagSet']
+        self.assertEqual(tags, [])
+
+        # Value, either bare or with wildcards
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'value',
+                         'value': ['bar']}])['tagSet']
+        self.assertEqual(tags, [inst1_key_foo, inst2_key_foo])
+
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'value',
+                         'value': ['wi*']}])['tagSet']
+        self.assertEqual(tags, [])
+
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'value',
+                         'value': ['quu?']}])['tagSet']
+        self.assertEqual(tags, [])
+
+        # Multiple values
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['baz', 'bax']}])['tagSet']
+        self.assertEqual(tags, [inst2_key_baz, inst1_key_bax])
+
+        # Multiple filters
+        tags = self.cloud.describe_tags(self.context,
+                filter=[{'name': 'key',
+                         'value': ['baz']},
+                        {'name': 'value',
+                         'value': ['wibble']}])['tagSet']
+        self.assertEqual(tags, [inst2_key_baz, inst1_key_bax])
+
+        # And we should fail on supported resource types
+        self.assertRaises(exception.EC2APIError,
+                          self.cloud.describe_tags,
+                          self.context,
+                          filter=[{'name': 'resource_type',
+                                   'value': ['instance', 'volume']}])
+
+    def test_resource_type_from_id(self):
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'i-12345'),
+                'instance')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'r-12345'),
+                'reservation')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'vol-12345'),
+                'volume')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'snap-12345'),
+                'snapshot')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'ami-12345'),
+                'image')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'ari-12345'),
+                'image')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'aki-12345'),
+                'image')
+        self.assertEqual(
+                ec2utils.resource_type_from_id(self.context, 'x-12345'),
+                None)
 
 
 class CloudTestCaseQuantumProxy(test.TestCase):

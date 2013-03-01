@@ -72,6 +72,31 @@ def image_type(image_type):
     return image_type
 
 
+def resource_type_from_id(context, resource_id):
+    """Get resource type by ID
+
+    Returns a string representation of the Amazon resource type, if known.
+    Returns None on failure.
+
+    :param context: context under which the method is called
+    :param resource_id: resource_id to evaluate
+    """
+
+    known_types = {
+        'i': 'instance',
+        'r': 'reservation',
+        'vol': 'volume',
+        'snap': 'snapshot',
+        'ami': 'image',
+        'aki': 'image',
+        'ari': 'image'
+    }
+
+    type_marker = resource_id.split('-')[0]
+
+    return known_types.get(type_marker)
+
+
 @memoize
 def id_to_glance_id(context, image_id):
     """Convert an internal (db) id to a glance id."""

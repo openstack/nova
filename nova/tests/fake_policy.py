@@ -31,6 +31,7 @@ policy_data = """
     "compute:update": "",
 
     "compute:get_instance_metadata": "",
+    "compute:get_all_instance_metadata": "",
     "compute:update_instance_metadata": "",
     "compute:delete_instance_metadata": "",
 

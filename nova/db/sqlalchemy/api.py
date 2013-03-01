@@ -3725,6 +3725,55 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
                     filter_by(instance_uuid=instance_uuid)
 
 
+def _instance_metadata_get_all_query(context, session=None,
+                                     read_deleted='no', search_filts=[]):
+
+    or_query = None
+    query = model_query(context, models.InstanceMetadata, session=session,
+                        read_deleted=read_deleted)
+
+    # We want to incrementally build an OR query out of the search filters.
+    # So:
+    # {'filter':
+    #     [{'resource_id': 'i-0000001'}],
+    #     [{'key': 'foo', 'value': 'bar'}]}
+    # Should produce:
+    # AND ((instance_metadata.uuid IN ('1')) OR
+    # (instance_metadata.key IN ('foo')) OR
+    # (instance_metadata.value IN ('bar')))
+
+    def make_tuple(item):
+        if isinstance(item, dict):
+            item = item.values()
+        if not isinstance(item, (tuple, list, set)):
+            item = (item,)
+        return item
+
+    for search_filt in search_filts:
+        subq = None
+
+        if search_filt.get('resource_id'):
+            uuid = make_tuple(search_filt['resource_id'])
+            subq = models.InstanceMetadata.instance_uuid.in_(uuid)
+        elif search_filt.get('key'):
+            key = make_tuple(search_filt['key'])
+            subq = models.InstanceMetadata.key.in_(key)
+        elif search_filt.get('value'):
+            value = make_tuple(search_filt['value'])
+            subq = models.InstanceMetadata.value.in_(value)
+
+        if subq is not None:
+            if or_query is None:
+                or_query = subq
+            else:
+                or_query = or_(or_query, subq)
+
+    if or_query is not None:
+        query = query.filter(or_query)
+
+    return query
+
+
 @require_context
 def instance_metadata_get(context, instance_uuid, session=None):
     rows = _instance_metadata_get_query(context, instance_uuid,
@@ -3735,6 +3784,18 @@ def instance_metadata_get(context, instance_uuid, session=None):
         result[row['key']] = row['value']
 
     return result
+
+
+@require_context
+def instance_metadata_get_all(context, search_filts=[], read_deleted="no"):
+    rows = _instance_metadata_get_all_query(context,
+                                       read_deleted=read_deleted,
+                                       search_filts=search_filts).all()
+
+    return [{'key': row['key'],
+             'value': row['value'],
+             'instance_id': row['instance_uuid']}
+             for row in rows]
 
 
 @require_context

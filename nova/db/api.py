@@ -1341,6 +1341,11 @@ def cell_get_all(context):
 ####################
 
 
+def instance_metadata_get_all(context, search_filts):
+    """Get all metadata for an instance."""
+    return IMPL.instance_metadata_get_all(context, search_filts)
+
+
 def instance_metadata_get(context, instance_uuid):
     """Get all metadata for an instance."""
     return IMPL.instance_metadata_get(context, instance_uuid)
