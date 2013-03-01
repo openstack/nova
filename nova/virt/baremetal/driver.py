@@ -410,9 +410,13 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def get_available_resource(self, nodename):
         context = nova_context.get_admin_context()
-        node = db.bm_node_get_by_node_uuid(context, nodename)
-        dic = self._node_resource(node)
-        return dic
+        resource = {}
+        try:
+            node = db.bm_node_get_by_node_uuid(context, nodename)
+            resource = self._node_resource(node)
+        except exception.NodeNotFoundByUUID:
+            pass
+        return resource
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         self.firewall_driver.setup_basic_filtering(instance_ref, network_info)

@@ -536,6 +536,17 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
     return compute_ref
 
 
+@require_admin_context
+def compute_node_delete(context, compute_id):
+    """Delete a ComputeNode record."""
+    result = model_query(context, models.ComputeNode).\
+             filter_by(id=compute_id).\
+             soft_delete()
+
+    if not result:
+        raise exception.ComputeHostNotFound(host=compute_id)
+
+
 def compute_node_get_by_host(context, host):
     """Get all capacity entries for the given host."""
     result = model_query(context, models.ComputeNode, read_deleted="no").\

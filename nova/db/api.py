@@ -195,9 +195,17 @@ def compute_node_create(context, values):
 def compute_node_update(context, compute_id, values, prune_stats=False):
     """Set the given properties on a computeNode and update it.
 
-    Raises NotFound if computeNode does not exist.
+    Raises ComputeHostNotFound if computeNode does not exist.
     """
     return IMPL.compute_node_update(context, compute_id, values, prune_stats)
+
+
+def compute_node_delete(context, compute_id):
+    """Delete a computeNode from the database.
+
+    Raises ComputeHostNotFound if computeNode does not exist.
+    """
+    return IMPL.compute_node_delete(context, compute_id)
 
 
 def compute_node_get_by_host(context, host):

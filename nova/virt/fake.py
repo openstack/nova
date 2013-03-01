@@ -321,7 +321,7 @@ class FakeDriver(driver.ComputeDriver):
            disk and ram.
         """
         if nodename not in _FAKE_NODES:
-            raise exception.NovaException("node %s is not found" % nodename)
+            return {}
 
         dic = {'vcpus': 1,
                'memory_mb': 8192,

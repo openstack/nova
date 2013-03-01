@@ -226,7 +226,7 @@ class ResourceTracker(object):
         return self.compute_node is None
 
     @lockutils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, 'nova-')
-    def update_available_resource(self, context):
+    def update_available_resource(self, context, delete=False):
         """Override in-memory calculations of compute node resource usage based
         on data audited from the hypervisor layer.
 
@@ -237,11 +237,15 @@ class ResourceTracker(object):
         LOG.audit(_("Auditing locally available compute resources"))
         resources = self.driver.get_available_resource(self.nodename)
         if not resources:
-            # The virt driver does not support this function
-            LOG.audit(_("Virt driver does not support "
-                "'get_available_resource'  Compute tracking is disabled."))
-            self.compute_node = None
-            return
+            if delete:
+                self._delete_compute_node(context)
+                return
+            else:
+                # The virt driver does not support this function
+                LOG.audit(_("Virt driver does not support "
+                    "'get_available_resource'  Compute tracking is disabled."))
+                self.compute_node = None
+                return
 
         self._verify_resources(resources)
 
@@ -269,6 +273,13 @@ class ResourceTracker(object):
         self._report_final_resource_view(resources)
 
         self._sync_compute_node(context, resources)
+
+    def _delete_compute_node(self, context):
+        """Delete a compute node DB record."""
+        if self.compute_node:
+            LOG.audit(_("Deleting compute node %s") % self.compute_node['id'])
+            self.compute_node = self.conductor_api.compute_node_delete(
+                    context, self.compute_node)
 
     def _sync_compute_node(self, context, resources):
         """Create or update the compute node DB record."""
