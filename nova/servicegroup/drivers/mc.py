@@ -2,8 +2,7 @@
 # Copyright (c) 2013 Akira Yoshiyama <akirayoshiyama at gmail dot com>
 #
 # This is derived from nova/servicegroup/drivers/db.py.
-# Copyright (c) IBM 2012 Pavel Kravchenco <kpavel at il dot ibm dot com>
-#                        Alexey Roytman <roytman at il dot ibm dot com>
+# Copyright 2012 IBM Corp.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
