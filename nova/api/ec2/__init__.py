@@ -32,12 +32,12 @@ from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
-from nova.common import memorycache
 from nova import context
 from nova import exception
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import memorycache
 from nova.openstack.common import timeutils
 from nova import utils
 from nova import wsgi

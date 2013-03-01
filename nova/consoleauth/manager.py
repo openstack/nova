@@ -22,12 +22,12 @@ import time
 
 from oslo.config import cfg
 
-from nova.common import memorycache
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import api as conductor_api
 from nova import manager
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import memorycache
 
 
 LOG = logging.getLogger(__name__)

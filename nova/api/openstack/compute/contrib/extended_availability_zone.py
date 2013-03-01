@@ -21,8 +21,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
-from nova.common import memorycache
 from nova.openstack.common import log as logging
+from nova.openstack.common import memorycache
 
 LOG = logging.getLogger(__name__)
 # NOTE(vish): azs don't change that often, so cache them for an hour to
