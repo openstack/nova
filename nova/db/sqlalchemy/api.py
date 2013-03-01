@@ -30,6 +30,7 @@ import uuid
 from oslo.config import cfg
 from sqlalchemy import and_
 from sqlalchemy import Boolean
+from sqlalchemy.exc import DataError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
@@ -1497,14 +1498,19 @@ def _instance_get_by_uuid(context, uuid, session=None):
 
 @require_context
 def instance_get(context, instance_id):
-    result = _build_instance_get(context).\
-                filter_by(id=instance_id).\
-                first()
+    try:
+        result = _build_instance_get(context).filter_by(id=instance_id).first()
 
-    if not result:
-        raise exception.InstanceNotFound(instance_id=instance_id)
+        if not result:
+            raise exception.InstanceNotFound(instance_id=instance_id)
 
-    return result
+        return result
+    except DataError:
+        # NOTE(sdague): catch all in case the db engine chokes on the
+        # id because it's too long of an int to store.
+        msg = _("Invalid instance id %s in request") % instance_id
+        LOG.warn(msg)
+        raise exception.InvalidID(id=instance_id)
 
 
 @require_context

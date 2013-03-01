@@ -423,6 +423,10 @@ class InvalidUUID(Invalid):
     message = _("Expected a uuid but received %(uuid)s.")
 
 
+class InvalidID(Invalid):
+    message = _("Invalid ID received %(id)s.")
+
+
 class InvalidPeriodicTaskArg(Invalid):
     message = _("Unexpected argument for periodic task creation: %(arg)s.")
 
