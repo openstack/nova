@@ -277,7 +277,7 @@ class LibvirtVifTestCase(test.TestCase):
             return fakelibvirt.Connection("qemu:///session",
                                           False)
         d = vif.LibvirtGenericVIFDriver(get_connection)
-        image_meta = {'properties': {'vif_model': 'e1000'}}
+        image_meta = {'properties': {'hw_vif_model': 'e1000'}}
         xml = self._get_instance_xml(d,
                                      self.net_bridge,
                                      self.mapping_bridge,
@@ -301,7 +301,7 @@ class LibvirtVifTestCase(test.TestCase):
             return fakelibvirt.Connection("qemu:///session",
                                           False)
         d = vif.LibvirtGenericVIFDriver(get_connection)
-        image_meta = {'properties': {'vif_model': 'acme'}}
+        image_meta = {'properties': {'hw_vif_model': 'acme'}}
         self.assertRaises(exception.UnsupportedHardware,
                           self._get_instance_xml,
                           d,
