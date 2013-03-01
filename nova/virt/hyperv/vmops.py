@@ -241,7 +241,7 @@ class VMOps(object):
                                           create_dir=False,
                                           remove_dir=True)
 
-    def destroy(self, instance, network_info=None, cleanup=True,
+    def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):
         instance_name = instance['name']
         LOG.info(_("Got request to destroy instance: %s"), instance_name)

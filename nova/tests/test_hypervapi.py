@@ -516,7 +516,7 @@ class HyperVAPITestCase(test.TestCase):
         self._setup_destroy_mocks()
 
         self._mox.ReplayAll()
-        self._conn.destroy(self._instance_data)
+        self._conn.destroy(self._instance_data, None)
         self._mox.VerifyAll()
 
     def test_live_migration(self):
