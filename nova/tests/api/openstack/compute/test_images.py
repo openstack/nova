@@ -665,6 +665,18 @@ class ImagesControllerTest(test.TestCase):
         response = self.controller.delete(request, '124')
         self.assertEqual(response.status_int, 204)
 
+    def test_delete_deleted_image(self):
+        """If you try to delete a deleted image, you get back 403 Forbidden."""
+
+        deleted_image_id = 128
+        # see nova.tests.api.openstack.fakes:_make_image_fixtures
+
+        request = fakes.HTTPRequest.blank(
+              '/v2/fake/images/%s' % deleted_image_id)
+        request.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
+             request, '%s' % deleted_image_id)
+
     def test_delete_image_not_found(self):
         request = fakes.HTTPRequest.blank('/v2/fake/images/300')
         request.method = 'DELETE'

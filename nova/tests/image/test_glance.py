@@ -363,8 +363,16 @@ class TestGlanceImageService(test.TestCase):
         self.assertEquals(2, num_images)
 
         self.service.delete(self.context, ids[0])
+        # When you delete an image from glance, it sets the status to DELETED
+        # and doesn't actually remove the image.
 
+        # Check the image is still there.
         num_images = len(self.service.detail(self.context))
+        self.assertEquals(2, num_images)
+
+        # Check the image is marked as deleted.
+        num_images = reduce(lambda x, y: x + (0 if y['deleted'] else 1),
+                            self.service.detail(self.context), 0)
         self.assertEquals(1, num_images)
 
     def test_show_passes_through_to_client(self):
