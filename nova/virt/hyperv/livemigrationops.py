@@ -76,6 +76,18 @@ class LiveMigrationOps(object):
         LOG.debug(_("post_live_migration_at_destination called"),
                   instance=instance_ref)
 
-    def compare_cpu(self, cpu_info):
-        LOG.debug(_("compare_cpu called %s"), cpu_info)
-        return True
+    def check_can_live_migrate_destination(self, ctxt, instance_ref,
+                                           src_compute_info, dst_compute_info,
+                                           block_migration=False,
+                                           disk_over_commit=False):
+        LOG.debug(_("check_can_live_migrate_destination called"), instance_ref)
+        return {}
+
+    def check_can_live_migrate_destination_cleanup(self, ctxt,
+                                                   dest_check_data):
+        LOG.debug(_("check_can_live_migrate_destination_cleanup called"))
+
+    def check_can_live_migrate_source(self, ctxt, instance_ref,
+                                      dest_check_data):
+        LOG.debug(_("check_can_live_migrate_source called"), instance_ref)
+        return dest_check_data
