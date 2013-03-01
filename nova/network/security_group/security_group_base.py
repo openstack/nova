@@ -194,3 +194,27 @@ class SecurityGroupBase(object):
 
     def rule_exists(self, security_group, new_rule):
         raise NotImplementedError()
+
+    @staticmethod
+    def raise_invalid_property(msg):
+        raise NotImplementedError()
+
+    @staticmethod
+    def raise_group_already_exists(msg):
+        raise NotImplementedError()
+
+    @staticmethod
+    def raise_invalid_group(msg):
+        raise NotImplementedError()
+
+    @staticmethod
+    def raise_invalid_cidr(cidr, decoding_exception=None):
+        raise NotImplementedError()
+
+    @staticmethod
+    def raise_over_quota(msg):
+        raise NotImplementedError()
+
+    @staticmethod
+    def raise_not_found(msg):
+        raise NotImplementedError()

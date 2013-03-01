@@ -622,11 +622,11 @@ class NativeSecurityGroupExceptions(object):
         raise exc.HTTPNotFound(explanation=msg)
 
 
-class NativeNovaSecurityGroupAPI(compute_api.SecurityGroupAPI,
-                                 NativeSecurityGroupExceptions):
+class NativeNovaSecurityGroupAPI(NativeSecurityGroupExceptions,
+                                 compute_api.SecurityGroupAPI):
     pass
 
 
-class NativeQuantumSecurityGroupAPI(quantum_driver.SecurityGroupAPI,
-                                    NativeSecurityGroupExceptions):
+class NativeQuantumSecurityGroupAPI(NativeSecurityGroupExceptions,
+                                    quantum_driver.SecurityGroupAPI):
     pass
