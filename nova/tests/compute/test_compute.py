@@ -850,6 +850,29 @@ class ComputeTestCase(BaseTestCase):
         self.assert_(instance['launched_at'] < terminate)
         self.assert_(instance['deleted_at'] > terminate)
 
+    def test_run_terminate_deallocate_net_failure_sets_error_state(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        self.compute.run_instance(self.context, instance=instance)
+
+        instances = db.instance_get_all(self.context)
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        def _fake_deallocate_network(*args, **kwargs):
+            raise Exception()
+
+        self.stubs.Set(self.compute, '_deallocate_network',
+                _fake_deallocate_network)
+
+        try:
+            self.compute.terminate_instance(self.context, instance=instance)
+        except Exception:
+            pass
+
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.ERROR)
+
     def test_stop(self):
         # Ensure instance can be stopped.
         instance = jsonutils.to_primitive(self._create_fake_instance())
