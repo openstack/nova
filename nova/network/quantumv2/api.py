@@ -279,8 +279,15 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
 
-        return self.get_instance_nw_info(context, instance, networks=nets,
-                conductor_api=kwargs.get('conductor_api'))
+        nw_info = self.get_instance_nw_info(context, instance, networks=nets,
+                      conductor_api=kwargs.get('conductor_api'))
+        # NOTE(danms): Only return info about ports we created in this run.
+        # In the initial allocation case, this will be everything we created,
+        # and in later runs will only be what was created that time. Thus,
+        # this only affects the attach case, not the original use for this
+        # method.
+        return network_model.NetworkInfo([port for port in nw_info
+                                          if port['id'] in created_port_ids])
 
     def _refresh_quantum_extensions_cache(self):
         if (not self.last_quantum_extension_sync or
