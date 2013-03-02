@@ -2425,7 +2425,7 @@ class API(base.Base):
             bdms = self.get_instance_bdms(context, instance)
 
         for bdm in bdms:
-            if (block_device.strip_dev(bdm.device_name) ==
+            if (block_device.strip_dev(bdm['device_name']) ==
                 block_device.strip_dev(instance['root_device_name'])):
                 return True
         else:
