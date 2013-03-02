@@ -176,8 +176,18 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             ex_keys = sorted(expected.keys())
             res_keys = sorted(result.keys())
             if ex_keys != res_keys:
-                raise NoMatch(_('Key mismatch:\n'
-                        '%(ex_keys)s\n%(res_keys)s') % locals())
+                ex_delta = []
+                res_delta = []
+                for key in ex_keys:
+                    if key not in res_keys:
+                        ex_delta.append(key)
+                for key in res_keys:
+                    if key not in ex_keys:
+                        res_delta.append(key)
+                raise NoMatch(_('Dictionary key mismatch:\n'
+                             'Extra key(s) in template:\n%(ex_delta)s\n'
+                             'Extra key(s) in response:\n%(res_delta)s\n')
+                             % locals())
             for key in ex_keys:
                 res = self._compare_result(subs, expected[key], result[key])
                 matched_value = res or matched_value
@@ -202,11 +212,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             error = []
             if expected:
-                error.append(_('Extra items in expected:'))
+                error.append(_('Extra list items in template:'))
                 error.extend([repr(o) for o in expected])
 
             if extra:
-                error.append(_('Extra items in result:'))
+                error.append(_('Extra list items in response:'))
                 error.extend([repr(o) for o in extra])
 
             if error:
@@ -226,7 +236,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             match = re.match(expected, result)
             if not match:
                 raise NoMatch(_('Values do not match:\n'
-                        '%(expected)s\n%(result)s') % locals())
+                              'Template: %(expected)s\nResponse: %(result)s')
+                              % locals())
             try:
                 matched_value = match.group('id')
             except IndexError:
@@ -239,7 +250,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 result = result.strip()
             if expected != result:
                 raise NoMatch(_('Values do not match:\n'
-                        '%(expected)s\n%(result)s') % locals())
+                              'Template: %(expected)s\nResponse: %(result)s')
+                              % locals())
         return matched_value
 
     def _verify_something(self, subs, expected, data):
