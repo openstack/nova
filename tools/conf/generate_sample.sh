@@ -19,7 +19,13 @@
 
 FILES=$(find nova -type f -name "*.py" ! -path "nova/tests/*" -exec \
     grep -l "Opt(" {} \; | sort -u)
+BINS=$(echo bin/nova-*)
 
 PYTHONPATH=./:${PYTHONPATH} \
-    python $(dirname "$0")/extract_opts.py ${FILES} > \
+    python $(dirname "$0")/extract_opts.py ${FILES} ${BINS} > \
     etc/nova/nova.conf.sample
+
+# Remove compiled files created by imp.import_source()
+for bin in ${BINS}; do
+    [ -f ${bin}c ] && rm ${bin}c
+done

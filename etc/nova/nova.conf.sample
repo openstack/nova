@@ -577,12 +577,14 @@
 # a raw disk image instead (string value)
 #null_kernel=nokernel
 
-# The full class name of the security group handler class
-# (string value)
-#security_group_handler=nova.network.sg.NullSecurityGroupHandler
-
-# The full class name of the security API class (string value)
-#security_group_api=nova.compute.api.SecurityGroupAPI
+# When creating multiple instances with a single request using
+# the os-multiple-create API extension, this template will be
+# used to build the display name for each instance. The
+# benefit is that the instances end up with different
+# hostnames. To restore legacy behavior of every instance
+# having the same name, set this option to "%(name)s".  Valid
+# keys for the template are: name, uuid, count. (string value)
+#multi_instance_display_name_template=%(name)s-%(uuid)s
 
 
 #
@@ -781,9 +783,6 @@
 # Options defined in nova.db.api
 #
 
-# The backend to use for db (string value)
-#db_backend=sqlalchemy
-
 # Services to be added to the available pool on create
 # (boolean value)
 #enable_new_services=true
@@ -970,7 +969,7 @@
 # Options defined in nova.network.linux_net
 #
 
-# location of flagfile(s) for dhcpbridge (multi valued)
+# location of flagfiles for dhcpbridge (multi valued)
 #dhcpbridge_flagfile=/etc/nova/nova-dhcpbridge.conf
 
 # Location to keep network config files (string value)
@@ -991,11 +990,21 @@
 # Lifetime of a DHCP lease in seconds (integer value)
 #dhcp_lease_time=120
 
-# if set, uses specific dns server for dnsmasq (string value)
-#dns_server=<None>
+# if set, uses specific dns server for dnsmasq. Canbe
+# specified multiple times. (multi valued)
+#dns_server=
+
+# if set, uses the dns1 and dns2 from the network ref.as dns
+# servers. (boolean value)
+#use_network_dns_servers=false
 
 # A list of dmz range that should be accepted (list value)
 #dmz_cidr=
+
+# Traffic to this range will always be snatted to the fallback
+# ip, even if it would normally be bridged out of the node.
+# Can be specified multiple times. (multi valued)
+#force_snat_range=
 
 # Override the default dnsmasq settings with this file (string
 # value)
@@ -1028,6 +1037,14 @@
 
 # the port for the metadata api port (integer value)
 #metadata_port=8775
+
+# Regular expression to match iptables rule that shouldalways
+# be on the top. (string value)
+#iptables_top_regex=
+
+# Regular expression to match iptables rule that shouldalways
+# be on the bottom. (string value)
+#iptables_bottom_regex=
 
 
 #
@@ -1157,6 +1174,9 @@
 # value)
 #quantum_admin_auth_url=http://localhost:5000/v2.0
 
+# if set, ignore any SSL validation issues (boolean value)
+#quantum_api_insecure=false
+
 # auth strategy for connecting to quantum in admin context
 # (string value)
 #quantum_auth_strategy=keystone
@@ -1164,6 +1184,10 @@
 # Name of Integration Bridge used by Open vSwitch (string
 # value)
 #quantum_ovs_bridge=br-int
+
+# Number of seconds before querying quantum for extensions
+# (integer value)
+#quantum_extension_sync_interval=600
 
 
 #
@@ -1177,6 +1201,63 @@
 # rpc network calls will be sent directly to host. (boolean
 # value)
 #multi_host=false
+
+
+#
+# Options defined in nova.network.security_group.openstack_driver
+#
+
+# The full class name of the security API class (string value)
+#security_group_api=nova
+
+# The full class name of the security group handler class
+# (string value)
+#security_group_handler=nova.network.sg.NullSecurityGroupHandler
+
+
+#
+# Options defined in bin.nova-clear-rabbit-queues
+#
+
+# Queues to delete (multi valued)
+#queues=
+
+# delete nova exchange too. (boolean value)
+#delete_exchange=false
+
+
+#
+# Options defined in bin.nova-novncproxy
+#
+
+# Record sessions to FILE.[session_number] (boolean value)
+#record=false
+
+# Become a daemon (background process) (boolean value)
+#daemon=false
+
+# Disallow non-encrypted connections (boolean value)
+#ssl_only=false
+
+# Source is ipv6 (boolean value)
+#source_is_ipv6=false
+
+# SSL certificate file (string value)
+#cert=self.pem
+
+# SSL key file (if separate from cert) (string value)
+#key=<None>
+
+# Run webserver on same port. Serve files from DIR. (string
+# value)
+#web=/usr/share/novnc
+
+# Host on which to listen for incoming requests (string value)
+#novncproxy_host=0.0.0.0
+
+# Port on which to listen for incoming requests (integer
+# value)
+#novncproxy_port=6080
 
 
 #
@@ -1194,12 +1275,24 @@
 
 
 #
+# Options defined in nova.openstack.common.db.api
+#
+
+# The backend to use for db (string value)
+#db_backend=sqlalchemy
+
+# Enable the experimental use of thread pooling for all DB API
+# calls (boolean value)
+#dbapi_use_tpool=false
+
+
+#
 # Options defined in nova.openstack.common.db.sqlalchemy.session
 #
 
 # The SQLAlchemy connection string used to connect to the
 # database (string value)
-#sql_connection=sqlite:////home/markmc/git/openstack/nova/nova/openstack/common/db/$sqlite_db
+#sql_connection=sqlite:////nova/openstack/common/db/$sqlite_db
 
 # the filename to use with sqlite (string value)
 #sqlite_db=nova.sqlite
@@ -1239,10 +1332,6 @@
 # value)
 #sql_connection_trace=false
 
-# enable the use of eventlet's db_pool for MySQL (boolean
-# value)
-#sql_dbpool_enable=false
-
 
 #
 # Options defined in nova.openstack.common.eventlet_backdoor
@@ -1259,8 +1348,9 @@
 # Whether to disable inter-process locks (boolean value)
 #disable_process_locking=false
 
-# Directory to use for lock files (string value)
-#lock_path=/usr/lib/python/site-packages/nova/openstack
+# Directory to use for lock files. Default to a temp directory
+# (string value)
+#lock_path=<None>
 
 
 #
@@ -1352,6 +1442,7 @@
 
 # Driver or drivers to handle sending notifications (multi
 # valued)
+#notification_driver=
 
 # Default notification level for outgoing notifications
 # (string value)
@@ -1402,6 +1493,15 @@
 # AMQP exchange to connect to if using RabbitMQ or Qpid
 # (string value)
 #control_exchange=openstack
+
+
+#
+# Options defined in nova.openstack.common.rpc.amqp
+#
+
+# Enable a fast single reply queue if using AMQP based RPC
+# like RabbitMQ or Qpid. (boolean value)
+#amqp_rpc_single_reply_queue=false
 
 
 #
@@ -1519,6 +1619,10 @@
 # Number of ZeroMQ contexts, defaults to 1 (integer value)
 #rpc_zmq_contexts=1
 
+# Maximum number of ingress messages to locally buffer per
+# topic. Default is unlimited. (integer value)
+#rpc_zmq_topic_backlog=<None>
+
 # Directory for holding IPC sockets (string value)
 #rpc_zmq_ipc_dir=/var/run/openstack
 
@@ -1546,6 +1650,19 @@
 # Maximum number of attempts to schedule an instance (integer
 # value)
 #scheduler_max_attempts=3
+
+
+#
+# Options defined in nova.scheduler.filter_scheduler
+#
+
+# New instances will be scheduled on a host chosen randomly
+# from a subset of the N best hosts. This property defines the
+# subset size that a host is chosen from. A value of 1 chooses
+# the first host returned by the weighing functions. This
+# value must be at least 1. Any value less than 1 will be
+# ignored, and 1 will be used instead (integer value)
+#scheduler_host_subset_size=1
 
 
 #
@@ -1751,6 +1868,11 @@
 # with on creation. (string value)
 #default_ephemeral_format=<None>
 
+# VM image preallocation mode: "none" => no storage
+# provisioning is done up front, "space" => storage is fully
+# allocated at instance start (string value)
+#preallocate_images=none
+
 # Whether to use cow images (boolean value)
 #use_cow_images=true
 
@@ -1850,9 +1972,9 @@
 # Inject the ssh public key at boot time (boolean value)
 #libvirt_inject_key=true
 
-# The partition to inject to : -1 => inspect (libguestfs
-# only), 0 => not partitioned, >0 => partition number (integer
-# value)
+# The partition to inject to : -2 => disable, -1 => inspect
+# (libguestfs only), 0 => not partitioned, >0 => partition
+# number (integer value)
 #libvirt_inject_partition=1
 
 # Sync virtual and real mouse cursors in Windows VMs (boolean
@@ -1881,7 +2003,7 @@
 #libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtGenericVIFDriver
 
 # Libvirt handlers for remote volumes. (list value)
-#libvirt_volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver
+#libvirt_volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver,aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver,glusterfs=nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver,fibre_channel=nova.virt.libvirt.volume.LibvirtFibreChannelVolumeDriver,scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver
 
 # Override the default disk prefix for the devices attached to
 # a server, which is dependent on libvirt_type. (valid options
@@ -1919,6 +2041,10 @@
 # Location where the Xen hvmloader is kept (string value)
 #xen_hvmloader_path=/usr/lib/xen/boot/hvmloader
 
+# Specific cachemodes to use for different disk types e.g:
+# ["file=directsync","block=none"] (list value)
+#disk_cachemodes=
+
 
 #
 # Options defined in nova.virt.libvirt.imagebackend
@@ -1937,6 +2063,10 @@
 # flag is set to True. (boolean value)
 #libvirt_sparse_logical_volumes=false
 
+# The amount of storage (in megabytes) to allocate for LVM
+# snapshot copy-on-write blocks. (integer value)
+#libvirt_lvm_snapshot_size=1000
+
 
 #
 # Options defined in nova.virt.libvirt.imagecache
@@ -1953,6 +2083,12 @@
 
 # Should unused base images be removed? (boolean value)
 #remove_unused_base_images=true
+
+# Should unused kernel images be removed? This is only safe to
+# enable if all compute nodes have been updated to support
+# this option. This will enabled by default in future.
+# (boolean value)
+#remove_unused_kernels=false
 
 # Unused resized base images younger than this will not be
 # removed (integer value)
@@ -2015,6 +2151,24 @@
 # nfs man page for details (string value)
 #nfs_mount_options=<None>
 
+# number of times to rediscover AoE target to find volume
+# (integer value)
+#num_aoe_discover_tries=3
+
+# Dir where the glusterfs volume is mounted on the compute
+# node (string value)
+#glusterfs_mount_point_base=$state_path/mnt
+
+# use multipath connection of the iSCSI volume (boolean value)
+#libvirt_iscsi_use_multipath=false
+
+# Path or URL to Scality SOFS configuration file (string
+# value)
+#scality_sofs_config=<None>
+
+# Base dir where Scality SOFS shall be mounted (string value)
+#scality_sofs_mount_point=$state_path/scality
+
 
 #
 # Options defined in nova.virt.powervm.driver
@@ -2032,11 +2186,14 @@
 # PowerVM manager user password (string value)
 #powervm_mgr_passwd=<None>
 
-# PowerVM image remote path (string value)
-#powervm_img_remote_path=<None>
+# PowerVM image remote path where images will be moved. Make
+# sure this path can fit your biggest image in glance (string
+# value)
+#powervm_img_remote_path=/home/padmin
 
-# Local directory to download glance images to (string value)
-#powervm_img_local_path=<None>
+# Local directory to download glance images to. Make sure this
+# path can fit your biggest image in glance (string value)
+#powervm_img_local_path=/tmp
 
 
 #
@@ -2371,6 +2528,24 @@
 # value)
 #cinder_api_insecure=false
 
+# Allow attach between instance and volume in different
+# availability zones. (boolean value)
+#cinder_cross_az_attach=true
+
+
+[HYPERV]
+
+#
+# Options defined in nova.virt.hyperv.pathutils
+#
+
+# The name of a Windows share name mapped to the
+# "instances_path" dir and used by the resize feature to copy
+# files to the target host. If left blank, an administrative
+# share will be used, looking for the same "instances_path"
+# used locally (string value)
+#instances_path_share=
+
 
 [conductor]
 
@@ -2474,6 +2649,28 @@
 #db_check_interval=60
 
 
+[zookeeper]
+
+#
+# Options defined in nova.servicegroup.drivers.zk
+#
+
+# The ZooKeeper addresses for servicegroup service in the
+# format of host1:port,host2:port,host3:port (string value)
+#address=<None>
+
+# recv_timeout parameter for the zk session (integer value)
+#recv_timeout=4000
+
+# The prefix used in ZooKeeper to store ephemeral nodes
+# (string value)
+#sg_prefix=/servicegroups
+
+# Number of seconds to wait until retrying to join the session
+# (integer value)
+#sg_retry_interval=5
+
+
 [baremetal]
 
 #
@@ -2567,6 +2764,28 @@
 # Template file for PXE configuration (string value)
 #pxe_config_template=$pybasedir/nova/virt/baremetal/pxe_config.template
 
+# Timeout for PXE deployments. Default: 0 (unlimited) (integer
+# value)
+#pxe_deploy_timeout=0
+
+
+#
+# Options defined in nova.virt.baremetal.virtual_power_driver
+#
+
+# ip or name to virtual power host (string value)
+#virtual_power_ssh_host=
+
+# base command to use for virtual power(vbox,virsh) (string
+# value)
+#virtual_power_type=vbox
+
+# user to execute virtual power commands as (string value)
+#virtual_power_host_user=
+
+# password for virtual power host_user (string value)
+#virtual_power_host_pass=
+
 
 #
 # Options defined in nova.virt.baremetal.volume_driver
@@ -2656,4 +2875,4 @@
 #keymap=en-us
 
 
-# Total option count: 543
+# Total option count: 584
