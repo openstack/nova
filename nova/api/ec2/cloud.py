@@ -1700,13 +1700,13 @@ class EC2SecurityGroupExceptions(object):
         pass
 
 
-class CloudSecurityGroupNovaAPI(compute_api.SecurityGroupAPI,
-                                EC2SecurityGroupExceptions):
+class CloudSecurityGroupNovaAPI(EC2SecurityGroupExceptions,
+                                compute_api.SecurityGroupAPI):
     pass
 
 
-class CloudSecurityGroupQuantumAPI(quantum_driver.SecurityGroupAPI,
-                                   EC2SecurityGroupExceptions):
+class CloudSecurityGroupQuantumAPI(EC2SecurityGroupExceptions,
+                                   quantum_driver.SecurityGroupAPI):
     pass
 
 
