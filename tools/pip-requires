@@ -10,7 +10,7 @@ lxml>=2.3
 routes>=1.12.3
 WebOb==1.2.3
 greenlet>=0.3.1
-PasteDeploy==1.5.0
+PasteDeploy>=1.5.0
 paste
 sqlalchemy-migrate>=0.7.2
 netaddr
