@@ -214,12 +214,22 @@ class VMOps(object):
         name_label = self._get_orig_vm_name_label(instance)
         vm_ref = vm_utils.lookup(self._session, name_label)
 
-        # Remove the '-orig' suffix (which was added in case the resized VM
-        # ends up on the source host, common during testing)
-        name_label = instance['name']
-        vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
-
-        self._attach_mapped_block_devices(instance, block_device_info)
+        # NOTE(danms): if we're reverting migration in the failure case,
+        # make sure we don't have a conflicting vm still running here,
+        # as might be the case in a failed migrate-to-same-host situation
+        new_ref = vm_utils.lookup(self._session, instance['name'])
+        if vm_ref is not None:
+            if new_ref is not None:
+                self._destroy(instance, new_ref)
+            # Remove the '-orig' suffix (which was added in case the
+            # resized VM ends up on the source host, common during
+            # testing)
+            name_label = instance['name']
+            vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
+            self._attach_mapped_block_devices(instance, block_device_info)
+        elif new_ref is not None:
+            # We crashed before the -orig backup was made
+            vm_ref = new_ref
 
         self._start(instance, vm_ref)
 

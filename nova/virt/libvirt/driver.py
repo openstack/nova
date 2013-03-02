@@ -3505,6 +3505,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                                instance)
         timer.start(interval=0.5).wait()
 
+    def _cleanup_failed_migration(self, inst_base):
+        """Make sure that a failed migrate doesn't prevent us from rolling
+        back in a revert."""
+        shutil.rmtree(inst_base)
+
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None):
         LOG.debug(_("Starting finish_revert_migration"),
@@ -3512,7 +3517,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
-        utils.execute('mv', inst_base_resize, inst_base)
+
+        # NOTE(danms): if we're recovering from a failed migration,
+        # make sure we don't have a left-over same-host base directory
+        # that would conflict. Also, don't fail on the rename if the
+        # failure happened early.
+        if os.path.exists(inst_base_resize):
+            if os.path.exists(inst_base):
+                self._cleanup_failed_migration(inst_base)
+            utils.execute('mv', inst_base_resize, inst_base)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,

@@ -4842,6 +4842,53 @@ class LibvirtDriverTestCase(test.TestCase):
 
             self.libvirtconnection.finish_revert_migration(ins_ref, None)
 
+    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
+        class FakeLoopingCall:
+            def start(self, *a, **k):
+                return self
+
+            def wait(self):
+                return None
+
+        self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(shutil, 'rmtree')
+        self.mox.StubOutWithMock(utils, 'execute')
+
+        self.stubs.Set(blockinfo, 'get_disk_info', lambda *a: None)
+        self.stubs.Set(self.libvirtconnection, 'to_xml', lambda *a, **k: None)
+        self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
+                       lambda *a: None)
+        self.stubs.Set(utils, 'FixedIntervalLoopingCall',
+                       lambda *a, **k: FakeLoopingCall())
+
+        libvirt_utils.get_instance_path({}).AndReturn('/fake/foo')
+        os.path.exists('/fake/foo_resize').AndReturn(backup_made)
+        if backup_made:
+            os.path.exists('/fake/foo').AndReturn(new_made)
+            if new_made:
+                shutil.rmtree('/fake/foo')
+            utils.execute('mv', '/fake/foo_resize', '/fake/foo')
+
+        self.mox.ReplayAll()
+
+        self.libvirtconnection.finish_revert_migration({}, [])
+
+    def test_finish_revert_migration_after_crash(self):
+        self._test_finish_revert_migration_after_crash(True, True)
+
+    def test_finish_revert_migration_after_crash_before_new(self):
+        self._test_finish_revert_migration_after_crash(True, False)
+
+    def test_finish_revert_migration_after_crash_before_backup(self):
+        self._test_finish_revert_migration_after_crash(False, False)
+
+    def test_cleanup_failed_migration(self):
+        self.mox.StubOutWithMock(shutil, 'rmtree')
+        shutil.rmtree('/fake/inst')
+        self.mox.ReplayAll()
+        self.libvirtconnection._cleanup_failed_migration('/fake/inst')
+
     def test_confirm_migration(self):
         ins_ref = self._create_instance()
 

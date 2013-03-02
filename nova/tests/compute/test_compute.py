@@ -3607,6 +3607,7 @@ class ComputeTestCase(BaseTestCase):
             'info_cache': None,
             'power_state': power_state.RUNNING,
             'vm_state': vm_states.ACTIVE,
+            'task_state': None,
         }
         self.flags(resume_guests_state_on_host_boot=True)
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
@@ -3629,6 +3630,38 @@ class ComputeTestCase(BaseTestCase):
                 instance['uuid'])
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
+
+    def test_init_instance_reverts_crashed_migrations(self):
+        instance = {
+            'uuid': 'foo',
+            'vm_state': vm_states.ERROR,
+            'task_state': task_states.RESIZE_MIGRATING,
+            'power_state': power_state.SHUTDOWN,
+            }
+        fixed = dict(instance, task_state=None)
+        self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
+        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'finish_revert_migration')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(self.compute.driver, 'get_info')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+
+        compute_utils.get_nw_info_for_instance(instance).AndReturn(
+            network_model.NetworkInfo())
+        self.compute.driver.plug_vifs(instance, [])
+        self.compute._get_instance_volume_block_device_info(
+            self.context, instance).AndReturn([])
+        self.compute.driver.finish_revert_migration(instance, [], [])
+        self.compute._instance_update(self.context, instance['uuid'],
+                                      task_state=None).AndReturn(fixed)
+        self.compute.driver.get_info(fixed).AndReturn(
+            {'state': power_state.SHUTDOWN})
+
+        self.mox.ReplayAll()
+
+        self.compute._init_instance(self.context, instance)
 
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()

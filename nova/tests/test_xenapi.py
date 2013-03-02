@@ -3114,6 +3114,42 @@ class VMOpsTestCase(test.TestCase):
             'VDI.resize',
             ops.check_resize_func_name())
 
+    def _test_finish_revert_migration_after_crash(self, backup_made, new_made):
+        instance = {'name': 'foo',
+                    'task_state': task_states.RESIZE_MIGRATING}
+        session = self._get_mock_session(None, None)
+        ops = vmops.VMOps(session, fake.FakeVirtAPI())
+
+        self.mox.StubOutWithMock(vm_utils, 'lookup')
+        self.mox.StubOutWithMock(ops, '_destroy')
+        self.mox.StubOutWithMock(vm_utils, 'set_vm_name_label')
+        self.mox.StubOutWithMock(ops, '_attach_mapped_block_devices')
+        self.mox.StubOutWithMock(ops, '_start')
+
+        vm_utils.lookup(session, 'foo-orig').AndReturn(
+            backup_made and 'foo' or None)
+        vm_utils.lookup(session, 'foo').AndReturn(
+            (not backup_made or new_made) and 'foo' or None)
+        if backup_made:
+            if new_made:
+                ops._destroy(instance, 'foo')
+            vm_utils.set_vm_name_label(session, 'foo', 'foo')
+            ops._attach_mapped_block_devices(instance, [])
+        ops._start(instance, 'foo')
+
+        self.mox.ReplayAll()
+
+        ops.finish_revert_migration(instance, [])
+
+    def test_finish_revert_migration_after_crash(self):
+        self._test_finish_revert_migration_after_crash(True, True)
+
+    def test_finish_revert_migration_after_crash_before_new(self):
+        self._test_finish_revert_migration_after_crash(True, False)
+
+    def test_finish_revert_migration_after_crash_before_backup(self):
+        self._test_finish_revert_migration_after_crash(False, False)
+
 
 class XenAPISessionTestCase(test.TestCase):
     def _get_mock_xapisession(self, software_version):

@@ -298,7 +298,13 @@ class PowerVMDriver(driver.ComputeDriver):
                                 block_device_info=None):
         """Finish reverting a resize, powering back on the instance."""
 
-        # undo instance rename and start
         new_name = self._get_resize_name(instance['name'])
-        self._powervm._operator.rename_lpar(new_name, instance['name'])
+
+        # Make sure we don't have a failed same-host migration still
+        # hanging around
+        if self.instance_exists(new_name):
+            if self.instance_exists(instance['name']):
+                self._powervm.destroy(instance['name'])
+            # undo instance rename and start
+            self._powervm._operator.rename_lpar(new_name, instance['name'])
         self._powervm.power_on(instance['name'])
