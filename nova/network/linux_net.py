@@ -276,6 +276,14 @@ class IptablesTable(object):
                      {'chain': chain, 'rule': rule,
                       'top': top, 'wrap': wrap})
 
+    def remove_rules_regex(self, regex):
+        """Remove all rules matching regex."""
+        if isinstance(regex, basestring):
+            regex = re.compile(regex)
+        num_rules = len(self.rules)
+        self.rules = filter(lambda r: not regex.match(str(r)), self.rules)
+        return num_rules - len(self.rules)
+
     def empty_chain(self, chain, wrap=True):
         """Remove all rules from a chain."""
         chained_rules = [rule for rule in self.rules
@@ -711,6 +719,12 @@ def ensure_vpn_forward(public_ip, port, private_ip):
 
 def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     """Ensure floating ip forwarding rule."""
+    # NOTE(vish): Make sure we never have duplicate rules for the same ip
+    regex = '.*\s+%s(/32|\s+|$)' % floating_ip
+    num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
+    if num_rules:
+        msg = _('Removed %(num)d duplicate rules for floating ip %(float)s')
+        LOG.warn(msg % {'num': num_rules, 'float': floating_ip})
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()

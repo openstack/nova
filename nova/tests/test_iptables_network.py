@@ -68,19 +68,19 @@ class IptablesManagerTestCase(test.TestCase):
                   ':OUTPUT ACCEPT [63491:4191863]',
                   ':POSTROUTING ACCEPT [63112:4108641]',
                   ':%s-OUTPUT - [0:0]' % (binary_name),
-                  ':%s-float-snat - [0:0]' % (binary_name),
                   ':%s-snat - [0:0]' % (binary_name),
                   ':%s-PREROUTING - [0:0]' % (binary_name),
+                  ':%s-float-snat - [0:0]' % (binary_name),
                   ':%s-POSTROUTING - [0:0]' % (binary_name),
                   ':nova-postrouting-bottom - [0:0]',
                   '[0:0] -A PREROUTING -j %s-PREROUTING' % (binary_name),
                   '[0:0] -A OUTPUT -j %s-OUTPUT' % (binary_name),
                   '[0:0] -A POSTROUTING -j %s-POSTROUTING' % (binary_name),
-                  '[0:0] -A POSTROUTING -j nova-postrouting-bottom',
                   '[0:0] -A nova-postrouting-bottom '
-                  '-j %s-SNATTING' % (binary_name),
-                  '[0:0] -A %s-SNATTING '
-                  '-j %s-floating-ip-snat' % (binary_name, binary_name),
+                  '-j %s-snat' % (binary_name),
+                  '[0:0] -A %s-snat '
+                  '-j %s-float-snat' % (binary_name, binary_name),
+                  '[0:0] -A POSTROUTING -j nova-postrouting-bottom',
                   'COMMIT',
                   '# Completed on Fri Feb 18 15:17:05 2011']
 
@@ -102,6 +102,33 @@ class IptablesManagerTestCase(test.TestCase):
         self.assertTrue('[0:0] -A %s-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' % self.binary_name
                         not in new_lines)
+
+    def test_remove_rules_regex(self):
+        current_lines = self.sample_nat
+        table = self.manager.ipv4['nat']
+        table.add_rule('float-snat', '-s 10.0.0.1 -j SNAT --to 10.10.10.10'
+                       ' -d 10.0.0.1')
+        table.add_rule('float-snat', '-s 10.0.0.1 -j SNAT --to 10.10.10.10'
+                       ' -o eth0')
+        table.add_rule('PREROUTING', '-d 10.10.10.10 -j DNAT --to 10.0.0.1')
+        table.add_rule('OUTPUT', '-d 10.10.10.10 -j DNAT --to 10.0.0.1')
+        table.add_rule('float-snat', '-s 10.0.0.10 -j SNAT --to 10.10.10.11'
+                       ' -d 10.0.0.10')
+        table.add_rule('float-snat', '-s 10.0.0.10 -j SNAT --to 10.10.10.11'
+                       ' -o eth0')
+        table.add_rule('PREROUTING', '-d 10.10.10.11 -j DNAT --to 10.0.0.10')
+        table.add_rule('OUTPUT', '-d 10.10.10.11 -j DNAT --to 10.0.0.10')
+        new_lines = self.manager._modify_rules(current_lines, table)
+        self.assertEqual(len(new_lines) - len(current_lines), 8)
+        regex = '.*\s+%s(/32|\s+|$)'
+        num_removed = table.remove_rules_regex(regex % '10.10.10.10')
+        self.assertEqual(num_removed, 4)
+        new_lines = self.manager._modify_rules(current_lines, table)
+        self.assertEqual(len(new_lines) - len(current_lines), 4)
+        num_removed = table.remove_rules_regex(regex % '10.10.10.11')
+        self.assertEqual(num_removed, 4)
+        new_lines = self.manager._modify_rules(current_lines, table)
+        self.assertEqual(new_lines, current_lines)
 
     def test_nat_rules(self):
         current_lines = self.sample_nat

@@ -730,6 +730,19 @@ class LinuxNetworkTestCase(test.TestCase):
         ]
         self._test_initialize_gateway(existing, expected)
 
+    def test_ensure_floating_no_duplicate_forwards(self):
+        ln = linux_net
+        self.stubs.Set(ln.iptables_manager, 'apply', lambda: None)
+        self.stubs.Set(ln, 'ensure_ebtables_rules', lambda *a, **kw: None)
+        net = {'bridge': 'br100', 'cidr': '10.0.0.0/24'}
+        ln.ensure_floating_forward('10.10.10.10', '10.0.0.1', 'eth0', net)
+        one_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
+        ln.ensure_floating_forward('10.10.10.11', '10.0.0.10', 'eth0', net)
+        two_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
+        ln.ensure_floating_forward('10.10.10.10', '10.0.0.3', 'eth0', net)
+        dup_forward_rules = len(linux_net.iptables_manager.ipv4['nat'].rules)
+        self.assertEqual(two_forward_rules, dup_forward_rules)
+
     def test_apply_ran(self):
         manager = linux_net.IptablesManager()
         manager.iptables_apply_deferred = False
