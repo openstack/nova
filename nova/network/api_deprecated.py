@@ -97,8 +97,8 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        return self.network_rpcapi.get_floating_ips_by_fixed_address(context,
-                fixed_address)
+        args = (context, fixed_address)
+        return self.network_rpcapi.get_floating_ips_by_fixed_address(*args)
 
     @wrap_check_policy
     def get_backdoor_port(self, context, host):
@@ -108,12 +108,12 @@ class API(base.Base):
     def get_instance_id_by_floating_address(self, context, address):
         # NOTE(tr3buchet): i hate this
         return self.network_rpcapi.get_instance_id_by_floating_address(context,
-                address)
+                                                                       address)
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
         return self.network_rpcapi.get_vifs_by_instance(context,
-                instance['id'])
+                                                        instance['id'])
 
     @wrap_check_policy
     def get_vif_by_mac_address(self, context, mac_address):
@@ -127,14 +127,16 @@ class API(base.Base):
         #             will probably need to move into a network supervisor
         #             at some point.
         return self.network_rpcapi.allocate_floating_ip(context,
-                context.project_id, pool, False)
+                                                        context.project_id,
+                                                        pool,
+                                                        False)
 
     @wrap_check_policy
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Removes (deallocates) a floating ip with address from a project."""
-        return self.network_rpcapi.deallocate_floating_ip(context, address,
-                affect_auto_assigned)
+        args = (context, address, affect_auto_assigned)
+        return self.network_rpcapi.deallocate_floating_ip(*args)
 
     @wrap_check_policy
     @refresh_cache
@@ -145,8 +147,8 @@ class API(base.Base):
 
         ensures floating ip is allocated to the project in context
         """
-        orig_instance_uuid = self.network_rpcapi.associate_floating_ip(context,
-                floating_address, fixed_address, affect_auto_assigned)
+        args = (context, floating_address, fixed_address, affect_auto_assigned)
+        orig_instance_uuid = self.network_rpcapi.associate_floating_ip(*args)
 
         if orig_instance_uuid:
             msg_dict = dict(address=floating_address,
@@ -165,7 +167,7 @@ class API(base.Base):
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from fixed ip it is associated with."""
         self.network_rpcapi.disassociate_floating_ip(context, address,
-                affect_auto_assigned)
+                                                     affect_auto_assigned)
 
     @wrap_check_policy
     @refresh_cache
@@ -231,7 +233,7 @@ class API(base.Base):
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
         self.network_rpcapi.add_network_to_project(context, project_id,
-                network_uuid)
+                                                   network_uuid)
 
     @wrap_check_policy
     def associate(self, context, network_uuid, host=_sentinel,
@@ -340,7 +342,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def setup_networks_on_host(self, context, instance, host=None,
-                                                        teardown=False):
+                               teardown=False):
         """Setup or teardown the network structures on hosts related to
            instance"""
         host = host or instance['host']
@@ -364,8 +366,8 @@ class API(base.Base):
         return network['multi_host']
 
     def _get_floating_ip_addresses(self, context, instance):
-        floating_ips = self.db.instance_floating_address_get_all(context,
-                                                            instance['uuid'])
+        args = (context, instance['uuid'])
+        floating_ips = self.db.instance_floating_address_get_all(*args)
         return [floating_ip['address'] for floating_ip in floating_ips]
 
     @wrap_check_policy
