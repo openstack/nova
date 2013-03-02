@@ -132,6 +132,30 @@ class SecurityGroupBase(object):
 
         return values
 
+    def create_security_group_rule(self, context, security_group, new_rule):
+        if self.rule_exists(security_group, new_rule):
+            msg = (_('This rule already exists in group %s') %
+                   new_rule['parent_group_id'])
+            self.raise_group_already_exists(msg)
+        return self.add_rules(context, new_rule['parent_group_id'],
+                             security_group['name'],
+                             [new_rule])[0]
+
+    def rule_exists(self, security_group, new_rule):
+        """Indicates whether the specified rule is already
+           defined in the given security group.
+        """
+        for rule in security_group['rules']:
+            is_duplicate = True
+            keys = ('group_id', 'cidr', 'from_port', 'to_port', 'protocol')
+            for key in keys:
+                if rule.get(key) != new_rule.get(key):
+                    is_duplicate = False
+                    break
+            if is_duplicate:
+                return rule.get('id') or True
+        return False
+
     def validate_property(self, value, property, allowed):
         pass
 
@@ -174,9 +198,6 @@ class SecurityGroupBase(object):
     def add_rules(self, context, id, name, vals):
         raise NotImplementedError()
 
-    def create_security_group_rule(self, context, security_group, new_rule):
-        raise NotImplementedError()
-
     def remove_rules(self, context, security_group, rule_ids):
         raise NotImplementedError()
 
@@ -190,9 +211,6 @@ class SecurityGroupBase(object):
         raise NotImplementedError()
 
     def remove_from_instance(self, context, instance, security_group_name):
-        raise NotImplementedError()
-
-    def rule_exists(self, security_group, new_rule):
         raise NotImplementedError()
 
     @staticmethod
