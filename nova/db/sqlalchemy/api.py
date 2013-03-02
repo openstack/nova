@@ -1813,18 +1813,6 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     with session.begin():
         instance_ref = _instance_get_by_uuid(context, instance_uuid,
                                              session=session)
-        # TODO(deva): remove extra_specs from here after it is included
-        #             in system_metadata. Until then, the baremetal driver
-        #             needs extra_specs added to instance[]
-        inst_type_ref = _instance_type_get_query(context, session=session).\
-                            filter_by(id=instance_ref['instance_type_id']).\
-                            first()
-        if inst_type_ref:
-            instance_ref['extra_specs'] = \
-                _dict_with_extra_specs(inst_type_ref).get('extra_specs', {})
-        else:
-            instance_ref['extra_specs'] = {}
-
         if "expected_task_state" in values:
             # it is not a db column so always pop out
             expected = values.pop("expected_task_state")

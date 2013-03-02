@@ -122,7 +122,7 @@ class BareMetalDriver(driver.ComputeDriver):
         super(BareMetalDriver, self).__init__(virtapi)
 
         self.driver = importutils.import_object(
-                CONF.baremetal.driver)
+                CONF.baremetal.driver, virtapi)
         self.vif_driver = importutils.import_object(
                 CONF.baremetal.vif_driver)
         self.firewall_driver = firewall.load_driver(
