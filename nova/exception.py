@@ -1064,6 +1064,11 @@ class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
 
+class InstanceInfoCacheNotFound(NotFound):
+    message = _("Info cache for instance %(instance_uuid)s could not be "
+                "found.")
+
+
 class NodeNotFound(NotFound):
     message = _("Node %(node_id)s could not be found.")
 

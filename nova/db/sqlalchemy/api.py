@@ -1903,15 +1903,15 @@ def instance_info_cache_update(context, instance_uuid, values):
                                  session=session).\
                          filter_by(instance_uuid=instance_uuid).\
                          first()
-
-        if info_cache and not info_cache['deleted']:
-            # NOTE(tr3buchet): let's leave it alone if it's already deleted
-            info_cache.update(values)
-        else:
+        if info_cache and info_cache['deleted']:
+            raise exception.InstanceInfoCacheNotFound(
+                    instance_uuid=instance_uuid)
+        elif not info_cache:
             # NOTE(tr3buchet): just in case someone blows away an instance's
-            #                  cache entry
+            #                  cache entry, re-create it.
             info_cache = models.InstanceInfoCache()
-            info_cache.update({'instance_uuid': instance_uuid})
+            values['instance_uuid'] = instance_uuid
+        info_cache.update(values)
 
     return info_cache
 
