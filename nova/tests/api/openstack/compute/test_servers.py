@@ -71,16 +71,7 @@ def fake_gen_uuid():
     return FAKE_UUID
 
 
-def return_servers_by_reservation(context, reservation_id=""):
-    return [fakes.stub_instance(i + 1,
-            reservation_id=reservation_id) for i in xrange(5)]
-
-
 def return_servers_empty(context, *args, **kwargs):
-    return []
-
-
-def return_servers_by_reservation_empty(context, reservation_id=""):
     return []
 
 
@@ -539,9 +530,6 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(0, num_servers)
 
     def test_get_server_list_with_reservation_id(self):
-        self.stubs.Set(db, 'instance_get_all_by_reservation',
-                       return_servers_by_reservation)
-
         req = fakes.HTTPRequest.blank('/v2/fake/servers?reservation_id=foo')
         res_dict = self.controller.index(req)
 
@@ -551,9 +539,6 @@ class ServersControllerTest(test.TestCase):
             i += 1
 
     def test_get_server_list_with_reservation_id_empty(self):
-        self.stubs.Set(db, 'instance_get_all_by_reservation',
-                       return_servers_by_reservation_empty)
-
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
         res_dict = self.controller.detail(req)
@@ -564,9 +549,6 @@ class ServersControllerTest(test.TestCase):
             i += 1
 
     def test_get_server_list_with_reservation_id_details(self):
-        self.stubs.Set(db, 'instance_get_all_by_reservation',
-                       return_servers_by_reservation)
-
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
         res_dict = self.controller.detail(req)
