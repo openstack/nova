@@ -44,22 +44,26 @@ hyperv_opts = [
     cfg.BoolOpt('limit_cpu_features',
                 default=False,
                 help='Required for live migration among '
-                     'hosts with different CPU features'),
+                     'hosts with different CPU features',
+                deprecated_group='DEFAULT'),
     cfg.BoolOpt('config_drive_inject_password',
                 default=False,
-                help='Sets the admin password in the config drive image'),
+                help='Sets the admin password in the config drive image',
+                deprecated_group='DEFAULT'),
     cfg.StrOpt('qemu_img_cmd',
                default="qemu-img.exe",
                help='qemu-img is used to convert between '
-                    'different image types'),
+                    'different image types',
+               deprecated_group='DEFAULT'),
     cfg.BoolOpt('config_drive_cdrom',
                 default=False,
                 help='Attaches the Config Drive image as a cdrom drive '
-                     'instead of a disk drive')
+                     'instead of a disk drive',
+                deprecated_group='DEFAULT')
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(hyperv_opts)
+CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('network_api_class', 'nova.network')
 
@@ -160,7 +164,7 @@ class VMOps(object):
         self._vmutils.create_vm(instance_name,
                                 instance['memory_mb'],
                                 instance['vcpus'],
-                                CONF.limit_cpu_features)
+                                CONF.hyperv.limit_cpu_features)
 
         if boot_vhd_path:
             self._vmutils.attach_ide_drive(instance_name,
@@ -190,7 +194,7 @@ class VMOps(object):
         LOG.info(_('Using config drive for instance: %s'), instance=instance)
 
         extra_md = {}
-        if admin_password and CONF.config_drive_inject_password:
+        if admin_password and CONF.hyperv.config_drive_inject_password:
             extra_md['admin_pass'] = admin_password
 
         inst_md = instance_metadata.InstanceMetadata(instance,
@@ -211,11 +215,11 @@ class VMOps(object):
                     LOG.error(_('Creating config drive failed with error: %s'),
                               e, instance=instance)
 
-        if not CONF.config_drive_cdrom:
+        if not CONF.hyperv.config_drive_cdrom:
             drive_type = constants.IDE_DISK
             configdrive_path = os.path.join(instance_path,
                                             'configdrive.vhd')
-            utils.execute(CONF.qemu_img_cmd,
+            utils.execute(CONF.hyperv.qemu_img_cmd,
                           'convert',
                           '-f',
                           'raw',
@@ -238,8 +242,8 @@ class VMOps(object):
 
     def _delete_disk_files(self, instance_name):
         self._pathutils.get_instance_dir(instance_name,
-                                          create_dir=False,
-                                          remove_dir=True)
+                                         create_dir=False,
+                                         remove_dir=True)
 
     def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):

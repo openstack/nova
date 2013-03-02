@@ -29,11 +29,12 @@ hyperv_opts = [
                default=None,
                help='External virtual switch Name, '
                     'if not provided, the first external virtual '
-                    'switch is used'),
+                    'switch is used',
+               deprecated_group='DEFAULT'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(hyperv_opts)
+CONF.register_opts(hyperv_opts, 'hyperv')
 
 LOG = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
 
     def plug(self, instance, vif):
         vswitch_path = self._netutils.get_external_vswitch(
-            CONF.vswitch_name)
+            CONF.hyperv.vswitch_name)
 
         vm_name = instance['name']
         LOG.debug(_('Creating vswitch port for instance: %s') % vm_name)

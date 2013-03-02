@@ -56,8 +56,10 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
         target = self._conn_storage.MSFT_iSCSITarget
         target.Connect(NodeAddress=target_iqn,
                        IsPersistent=True)
-        #Waiting the disk to be mounted. Research this
-        time.sleep(CONF.hyperv_wait_between_attach_retry)
+        #Waiting the disk to be mounted.
+        #TODO(pnavarro): Check for the operation to end instead of
+        #relying on a timeout
+        time.sleep(CONF.hyperv.volume_attach_retry_interval)
 
     def logout_storage_target(self, target_iqn):
         """Logs out storage target through its session id."""

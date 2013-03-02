@@ -56,7 +56,7 @@ from nova.virt.hyperv import volumeutilsv2
 from nova.virt import images
 
 CONF = cfg.CONF
-CONF.import_opt('vswitch_name', 'nova.virt.hyperv.vif')
+CONF.import_opt('vswitch_name', 'nova.virt.hyperv.vif', 'hyperv')
 
 
 class HyperVAPITestCase(test.TestCase):
@@ -86,9 +86,11 @@ class HyperVAPITestCase(test.TestCase):
         self._setup_stubs()
 
         self.flags(instances_path=r'C:\Hyper-V\test\instances',
-                   vswitch_name='external',
-                   network_api_class='nova.network.quantumv2.api.API',
-                   force_volumeutils_v1=True)
+                   network_api_class='nova.network.quantumv2.api.API')
+
+        self.flags(vswitch_name='external',
+                   force_volumeutils_v1=True,
+                   group='hyperv')
 
         self._conn = driver_hyperv.HyperVDriver(None)
 
@@ -331,7 +333,7 @@ class HyperVAPITestCase(test.TestCase):
         cdb.__exit__(None, None, None).AndReturn(None)
 
         if not use_cdrom:
-            utils.execute(CONF.qemu_img_cmd,
+            utils.execute(CONF.hyperv.qemu_img_cmd,
                           'convert',
                           '-f',
                           'raw',
@@ -351,7 +353,7 @@ class HyperVAPITestCase(test.TestCase):
 
     def _test_spawn_config_drive(self, use_cdrom):
         self.flags(force_config_drive=True)
-        self.flags(config_drive_cdrom=use_cdrom)
+        self.flags(config_drive_cdrom=use_cdrom, group='hyperv')
         self.flags(mkisofs_cmd='mkisofs.exe')
 
         self._setup_spawn_config_drive_mocks(use_cdrom)
@@ -391,7 +393,7 @@ class HyperVAPITestCase(test.TestCase):
             fake_vswitch_port = 'fake port'
 
             m = networkutils.NetworkUtils.get_external_vswitch(
-                CONF.vswitch_name)
+                CONF.hyperv.vswitch_name)
             m.AndReturn(fake_vswitch_path)
 
             m = networkutils.NetworkUtils.create_vswitch_port(
@@ -410,7 +412,7 @@ class HyperVAPITestCase(test.TestCase):
 
         def setup_vif_mocks():
             m = networkutils.NetworkUtils.get_external_vswitch(
-                CONF.vswitch_name)
+                CONF.hyperv.vswitch_name)
             m.AndRaise(vmutils.HyperVException(_('fake vswitch not found')))
 
         self.assertRaises(vmutils.HyperVException, self._test_spawn_instance,
