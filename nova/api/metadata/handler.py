@@ -26,10 +26,10 @@ import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
-from nova.common import memorycache
 from nova import conductor
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import memorycache
 from nova import wsgi
 
 CACHE_EXPIRATION = 15  # in seconds

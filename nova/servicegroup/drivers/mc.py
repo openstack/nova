@@ -19,10 +19,10 @@
 
 from oslo.config import cfg
 
-from nova.common import memorycache
 from nova import conductor
 from nova import context
 from nova.openstack.common import log as logging
+from nova.openstack.common import memorycache
 from nova.openstack.common import timeutils
 from nova.servicegroup import api
 from nova import utils
@@ -30,7 +30,7 @@ from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('service_down_time', 'nova.service')
-CONF.import_opt('memcached_servers', 'nova.common.memorycache')
+CONF.import_opt('memcached_servers', 'nova.openstack.common.memorycache')
 
 
 LOG = logging.getLogger(__name__)
