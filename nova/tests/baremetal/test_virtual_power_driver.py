@@ -49,6 +49,7 @@ BAREMETAL_FLAGS = dict(
     virtual_power_type='vbox',
     virtual_power_host_user=None,
     virtual_power_host_pass=None,
+    virtual_power_host_key=None,
     group='baremetal',
 )
 
@@ -128,7 +129,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.flags(virtual_power_host_user='user', group="baremetal")
         self.flags(virtual_power_host_pass='password', group="baremetal")
 
-    def test_get_conn_success(self):
+    def test_get_conn_success_pass(self):
         self._create_node()
         self._create_pm()
         self._conn = self.pm._get_conn()
@@ -139,6 +140,24 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.assertEqual(self.pm.connection_data.host, '127.0.0.1')
         self.assertEqual(self.pm.connection_data.username, 'user')
         self.assertEqual(self.pm.connection_data.password, 'password')
+        self.assertEqual(self.pm.connection_data.keyfile, None)
+        self.mox.VerifyAll()
+
+    def test_get_conn_success_key(self):
+        self.flags(virtual_power_host_pass='', group="baremetal")
+        self.flags(virtual_power_host_key='/id_rsa_file.txt',
+            group="baremetal")
+        self._create_node()
+        self._create_pm()
+        self._conn = self.pm._get_conn()
+        self.mox.StubOutWithMock(connection, 'ssh_connect')
+        connection.ssh_connect(mox.IsA(self._conn)).AndReturn(True)
+        self.mox.ReplayAll()
+        self.pm._set_connection()
+        self.assertEqual(self.pm.connection_data.host, '127.0.0.1')
+        self.assertEqual(self.pm.connection_data.username, 'user')
+        self.assertEqual(self.pm.connection_data.password, '')
+        self.assertEqual(self.pm.connection_data.keyfile, '/id_rsa_file.txt')
         self.mox.VerifyAll()
 
     def test_get_full_node_list(self):
