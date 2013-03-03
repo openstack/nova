@@ -6403,8 +6403,14 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_service_is_up(*args, **kwargs):
             return False
 
+        def fake_rebuild_instance(*args, **kwargs):
+            db.instance_update(self.context, instance_uuid,
+                               {'host': kwargs['host']})
+
         self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
                 fake_service_is_up)
+        self.stubs.Set(self.compute_api.compute_rpcapi, 'rebuild_instance',
+                fake_rebuild_instance)
         self.compute_api.evacuate(self.context.elevated(),
                                   instance,
                                   host='fake_dest_host',
@@ -6413,6 +6419,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.REBUILDING)
+        self.assertEqual(instance['host'], 'fake_dest_host')
 
         db.instance_destroy(self.context, instance['uuid'])
 
