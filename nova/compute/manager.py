@@ -1181,8 +1181,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.NetworkNotFound:
             network_info = network_model.NetworkInfo()
 
-        # tear down allocated network structure
-        self._deallocate_network(context, instance)
+        try:
+            # tear down allocated network structure
+            self._deallocate_network(context, instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Failed to deallocate network for instance.'),
+                          instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = self._get_volume_bdms(bdms)
