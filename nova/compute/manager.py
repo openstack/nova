@@ -3739,22 +3739,20 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _running_deleted_instances(self, context):
         """Returns a list of instances nova thinks is deleted,
-        but the hypervisor thinks is still running. This method
-        should be pushed down to the virt layer for efficiency.
+        but the hypervisor thinks is still running.
         """
+        timeout = CONF.running_deleted_instance_timeout
+
         def deleted_instance(instance):
-            timeout = CONF.running_deleted_instance_timeout
-            present = instance['name'] in present_name_labels
-            erroneously_running = instance['deleted'] and present
+            erroneously_running = instance['deleted']
             old_enough = (not instance['deleted_at'] or
                           timeutils.is_older_than(instance['deleted_at'],
                                                   timeout))
             if erroneously_running and old_enough:
                 return True
             return False
-        present_name_labels = set(self.driver.list_instances())
-        instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                self.host)
+
+        instances = self._get_instances_on_driver(context)
         return [i for i in instances if deleted_instance(i)]
 
     @contextlib.contextmanager

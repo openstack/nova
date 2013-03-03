@@ -3132,15 +3132,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.host = instance['host']
 
-        self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
-        self.compute.driver.list_instances().AndReturn([instance['name']])
+        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
+        self.compute._get_instances_on_driver(admin_context).AndReturn(
+                [instance])
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action='reap')
-
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 "instance_get_all_by_host")
-        self.compute.conductor_api.instance_get_all_by_host(
-            admin_context, self.compute.host).AndReturn([instance])
 
         bdms = []
 
@@ -3158,32 +3154,28 @@ class ComputeTestCase(BaseTestCase):
         self.compute._cleanup_running_deleted_instances(admin_context)
 
     def test_running_deleted_instances(self):
-        self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
-        self.compute.driver.list_instances().AndReturn(['herp', 'derp'])
+        admin_context = context.get_admin_context()
+
         self.compute.host = 'host'
 
         instance1 = {}
-        instance1['name'] = 'herp'
         instance1['deleted'] = True
         instance1['deleted_at'] = "sometimeago"
 
         instance2 = {}
-        instance2['name'] = 'derp'
         instance2['deleted'] = False
         instance2['deleted_at'] = None
+
+        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
+        self.compute._get_instances_on_driver(admin_context).AndReturn(
+                [instance1, instance2])
 
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
         timeutils.is_older_than('sometimeago',
                     CONF.running_deleted_instance_timeout).AndReturn(True)
 
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 "instance_get_all_by_host")
-        self.compute.conductor_api.instance_get_all_by_host('context',
-                                                            'host').AndReturn(
-                                                                [instance1,
-                                                                 instance2])
         self.mox.ReplayAll()
-        val = self.compute._running_deleted_instances('context')
+        val = self.compute._running_deleted_instances(admin_context)
         self.assertEqual(val, [instance1])
 
     def test_get_instance_nw_info(self):
