@@ -388,21 +388,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Return a list of instance records that match the instances found
         on the hypervisor.
         """
-        local_instances = []
         try:
-            # Try to find all local instances by uuid.
-            # FIXME(comstud): Would be nice to consolidate this into
-            # a single query to nova-conductor.
-            for uuid in self.driver.list_instance_uuids():
-                try:
-                    instance = self.conductor_api.instance_get_by_uuid(
-                            context, uuid)
-                    local_instances.append(instance)
-                except exception.InstanceNotFound as e:
-                    LOG.error(_('Instance %(uuid)s found in the '
-                            'hypervisor, but not in the database'),
-                         locals())
-                continue
+            driver_uuids = self.driver.list_instance_uuids()
+            local_instances = self.conductor_api.instance_get_all_by_filters(
+                    context, {'uuid': driver_uuids})
+            local_instance_uuids = [inst['uuid'] for inst in local_instances]
+            for uuid in set(driver_uuids) - set(local_instance_uuids):
+                LOG.error(_('Instance %(uuid)s found in the hypervisor, but '
+                            'not in the database'), locals())
             return local_instances
         except NotImplementedError:
             pass
@@ -410,9 +403,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        all_instances = self.conductor_api.instance_get_all(context)
-        name_map = dict([(instance['name'], instance)
-                         for instance in all_instances])
+        instances = self.conductor_api.instance_get_all_by_host(context,
+                                                                self.host)
+        name_map = dict((instance['name'], instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
             instance = name_map.get(driver_instance)
