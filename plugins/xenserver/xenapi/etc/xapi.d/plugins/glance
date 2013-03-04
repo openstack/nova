@@ -126,14 +126,18 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     url = '%s://%s:%s/v1/images/%s' % (scheme, glance_host, glance_port,
                                        image_id)
     logging.info("Writing image data to %s" % url)
-    if glance_use_ssl:
-        conn = httplib.HTTPSConnection(glance_host, glance_port)
-    else:
-        conn = httplib.HTTPConnection(glance_host, glance_port)
 
-    # NOTE(sirp): httplib under python2.4 won't accept a file-like object
-    # to request
-    conn.putrequest('PUT', '/v1/images/%s' % image_id)
+    try:
+        if glance_use_ssl:
+            conn = httplib.HTTPSConnection(glance_host, glance_port)
+        else:
+            conn = httplib.HTTPConnection(glance_host, glance_port)
+
+        # NOTE(sirp): httplib under python2.4 won't accept a file-like object
+        # to request
+        conn.putrequest('PUT', '/v1/images/%s' % image_id)
+    except Exception, error:
+        raise RetryableError(error)
 
     # NOTE(sirp): There is some confusion around OVF. Here's a summary of
     # where we currently stand:
@@ -172,12 +176,18 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     def send_chunked_transfer_encoded(chunk):
         chunk_len = len(chunk)
         callback_data['bytes_written'] += chunk_len
-        conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
+        try:
+            conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
+        except Exception, error:
+            raise RetryableError(error)
 
     utils.create_tarball(
             None, staging_path, callback=send_chunked_transfer_encoded)
 
-    conn.send("0\r\n\r\n")  # Chunked-Transfer terminator
+    try:
+        conn.send("0\r\n\r\n")  # Chunked-Transfer terminator
+    except Exception, error:
+        raise RetryableError(error)
 
     bytes_written = callback_data['bytes_written']
     logging.info("Wrote %d bytes to %s" % (bytes_written, url))
@@ -187,9 +197,11 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
         logging.error("Unexpected response while writing image data to %s: "
                       "Response Status: %i, Response body: %s"
                       % (url, resp.status, resp.read()))
-        raise Exception("Unexpected response [%i] while uploading image [%s] "
+        raise RetryableError("Unexpected response [%i] while uploading "
+                        "image [%s] "
                         "to glance host [%s:%s]"
                         % (resp.status, image_id, glance_host, glance_port))
+
     conn.close()
 
 
