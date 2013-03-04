@@ -38,13 +38,9 @@ import functools
 import inspect
 import itertools
 import json
-import logging
 import xmlrpclib
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
-
-LOG = logging.getLogger(__name__)
 
 
 def to_primitive(value, convert_instances=False, convert_datetime=True,
@@ -85,8 +81,6 @@ def to_primitive(value, convert_instances=False, convert_datetime=True,
         return 'mock'
 
     if level > max_depth:
-        LOG.error(_('Max serialization depth exceeded on object: %d %s'),
-                  level, value)
         return '?'
 
     # The try block may not be necessary after the class check above,
