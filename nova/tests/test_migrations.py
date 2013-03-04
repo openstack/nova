@@ -1285,6 +1285,36 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         self.assertFalse('availability_zone' in rows[0])
 
+    def _pre_upgrade_177(self, engine):
+        floating_ips = get_table(engine, 'floating_ips')
+        data = [
+            {'address': '128.128.128.128', 'deleted': 0},
+            {'address': '128.128.128.128', 'deleted': 0},
+            {'address': '128.128.128.129', 'deleted': 0},
+        ]
+
+        for item in data:
+            floating_ips.insert().values(item).execute()
+        return data
+
+    def _check_177(self, engine, data):
+        floating_ips = get_table(engine, 'floating_ips')
+
+        def get_(address, deleted):
+            deleted_value = 0 if not deleted else floating_ips.c.id
+            return floating_ips.select().\
+                        where(floating_ips.c.address == address).\
+                        where(floating_ips.c.deleted == deleted_value).\
+                        execute().\
+                        fetchall()
+
+        self.assertEqual(1, len(get_('128.128.128.128', False)))
+        self.assertEqual(1, len(get_('128.128.128.128', True)))
+        self.assertEqual(1, len(get_('128.128.128.129', False)))
+        self.assertRaises(sqlalchemy.exc.IntegrityError,
+                          floating_ips.insert().execute,
+                          dict(address='128.128.128.129', deleted=0))
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

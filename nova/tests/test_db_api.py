@@ -2989,6 +2989,15 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                'deleted', 'fixed_ip_id',
                                                'fixed_ip'])
 
+    def test_floating_ip_update_to_duplicate(self):
+        float_ip1 = self._create_floating_ip({'address': '1.1.1.1'})
+        float_ip2 = self._create_floating_ip({'address': '1.1.1.2'})
+
+        self.assertRaises(exception.FloatingIpExists,
+                          db.floating_ip_update,
+                          self.ctxt, float_ip2['address'],
+                          {'address': float_ip1['address']})
+
 
 class InstanceDestroyConstraints(test.TestCase):
 
