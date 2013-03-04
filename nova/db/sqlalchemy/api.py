@@ -31,7 +31,6 @@ from oslo.config import cfg
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import DataError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -2313,29 +2312,6 @@ def network_update(context, network_id, values):
 ###################
 
 
-@require_admin_context
-def iscsi_target_count_by_host(context, host):
-    return model_query(context, models.IscsiTarget).\
-                   filter_by(host=host).\
-                   count()
-
-
-@require_admin_context
-def iscsi_target_create_safe(context, values):
-    iscsi_target_ref = models.IscsiTarget()
-
-    for (key, value) in values.iteritems():
-        iscsi_target_ref[key] = value
-    try:
-        iscsi_target_ref.save()
-        return iscsi_target_ref
-    except IntegrityError:
-        return None
-
-
-###################
-
-
 @require_context
 def quota_get(context, project_id, resource):
     result = model_query(context, models.Quota, read_deleted="no").\
@@ -2529,16 +2505,6 @@ def reservation_create(context, uuid, usage, project_id, resource, delta,
     reservation_ref.expire = expire
     reservation_ref.save(session=session)
     return reservation_ref
-
-
-@require_admin_context
-def reservation_destroy(context, uuid):
-    result = model_query(context, models.Reservation, read_deleted="no").\
-                     filter_by(uuid=uuid).\
-                     delete()
-
-    if not result:
-        raise exception.ReservationNotFound(uuid=uuid)
 
 
 ###################
@@ -2786,18 +2752,6 @@ def _ec2_volume_get_query(context, session=None):
 def _ec2_snapshot_get_query(context, session=None):
     return model_query(context, models.SnapshotIdMapping,
                        session=session, read_deleted='yes')
-
-
-@require_admin_context
-def volume_get_iscsi_target_num(context, volume_id):
-    result = model_query(context, models.IscsiTarget, read_deleted="yes").\
-                     filter_by(volume_id=volume_id).\
-                     first()
-
-    if not result:
-        raise exception.ISCSITargetNotFoundForVolume(volume_id=volume_id)
-
-    return result.target_num
 
 
 @require_context

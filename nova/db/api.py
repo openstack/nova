@@ -875,25 +875,6 @@ def network_update(context, network_id, values):
     return IMPL.network_update(context, network_id, values)
 
 
-###################
-
-
-def iscsi_target_count_by_host(context, host):
-    """Return count of export devices."""
-    return IMPL.iscsi_target_count_by_host(context, host)
-
-
-def iscsi_target_create_safe(context, values):
-    """Create an iscsi_target from the values dictionary.
-
-    The device is not returned. If the create violates the unique
-    constraints because the iscsi_target and host already exist,
-    no exception is raised.
-
-    """
-    return IMPL.iscsi_target_create_safe(context, values)
-
-
 ###############
 
 
@@ -973,11 +954,6 @@ def reservation_get(context, uuid):
     return IMPL.reservation_get(context, uuid)
 
 
-def reservation_destroy(context, uuid):
-    """Destroy the reservation or raise if it does not exist."""
-    return IMPL.reservation_destroy(context, uuid)
-
-
 ###################
 
 
@@ -1011,11 +987,6 @@ def reservation_expire(context):
 
 
 ###################
-
-
-def volume_get_iscsi_target_num(context, volume_id):
-    """Get the target num (tid) allocated to the volume."""
-    return IMPL.volume_get_iscsi_target_num(context, volume_id)
 
 
 def get_ec2_volume_id_by_uuid(context, volume_id):
