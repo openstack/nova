@@ -791,21 +791,18 @@ class API(base.Base):
     def _populate_instance_for_bdm(self, context, instance, instance_type,
             image, block_device_mapping):
         """Populate instance block device mapping information."""
-        # FIXME(comstud): Why do the block_device_mapping DB calls
-        # require elevated context?
-        elevated = context.elevated()
         instance_uuid = instance['uuid']
         image_properties = image.get('properties', {})
         mappings = image_properties.get('mappings', [])
         if mappings:
-            self._update_image_block_device_mapping(elevated,
+            self._update_image_block_device_mapping(context,
                     instance_type, instance_uuid, mappings)
 
         image_bdm = image_properties.get('block_device_mapping', [])
         for mapping in (image_bdm, block_device_mapping):
             if not mapping:
                 continue
-            self._update_block_device_mapping(elevated,
+            self._update_block_device_mapping(context,
                     instance_type, instance_uuid, mapping)
 
     def _populate_instance_shutdown_terminate(self, instance, image,
@@ -1772,7 +1769,7 @@ class API(base.Base):
             """
             Remove old image properties that we're storing as instance
             system metadata.  These properties start with 'image_'.
-            Then add the properites for the new image.
+            Then add the properties for the new image.
             """
 
             # FIXME(comstud): There's a race condition here in that
