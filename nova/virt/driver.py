@@ -36,7 +36,7 @@ driver_opts = [
                help='Driver to use for controlling virtualization. Options '
                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
-                   'vmwareapi.VMWareESXDriver'),
+                   'vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver'),
     cfg.StrOpt('default_ephemeral_format',
                default=None,
                help='The default format an ephemeral_volume will be '
