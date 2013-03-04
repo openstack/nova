@@ -1371,17 +1371,19 @@ def _validate_unique_server_name(context, session, name):
     if not CONF.osapi_compute_unique_server_name_scope:
         return
 
-    search_opts = {'deleted': False}
+    lowername = name.lower()
+    base_query = model_query(context, models.Instance, session=session,
+                             read_deleted=False).\
+            filter(func.lower(models.Instance.hostname) == lowername)
+
     if CONF.osapi_compute_unique_server_name_scope == 'project':
-        search_opts['project_id'] = context.project_id
-        instance_list = instance_get_all_by_filters(context, search_opts,
-                                                    'created_at', 'desc',
-                                                    session=session)
+        instance_with_same_name = base_query.\
+                        filter_by(project_id=context.project_id).\
+                        count()
+
     elif CONF.osapi_compute_unique_server_name_scope == 'global':
-        instance_list = instance_get_all_by_filters(context.elevated(),
-                                                    search_opts,
-                                                    'created_at', 'desc',
-                                                    session=session)
+        instance_with_same_name = base_query.count()
+
     else:
         msg = _('Unknown osapi_compute_unique_server_name_scope value: %s'
                 ' Flag must be empty, "global" or'
@@ -1389,10 +1391,8 @@ def _validate_unique_server_name(context, session, name):
         LOG.warn(msg)
         return
 
-    lowername = name.lower()
-    for instance in instance_list:
-        if instance['hostname'].lower() == lowername:
-            raise exception.InstanceExists(name=instance['hostname'])
+    if instance_with_same_name > 0:
+        raise exception.InstanceExists(name=lowername)
 
 
 @require_context
