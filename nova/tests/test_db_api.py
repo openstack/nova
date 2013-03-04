@@ -699,7 +699,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual('schedule', events[0]['event'])
         self.assertEqual(start_time, events[0]['start_time'])
 
-    def test_instance_action_event_finish(self):
+    def test_instance_action_event_finish_success(self):
         """Finish an instance action event."""
         ctxt = context.get_admin_context()
         uuid = str(stdlib_uuid.uuid4())
@@ -723,15 +723,55 @@ class DbApiTestCase(test.TestCase):
         event_finish_values = {'event': 'schedule',
                                 'request_id': ctxt.request_id,
                                 'instance_uuid': uuid,
-                                'finish_time': finish_time}
+                                'finish_time': finish_time,
+                                'result': 'Success'}
         db.action_event_finish(ctxt, event_finish_values)
 
         # Retrieve the event to ensure it was successfully added
         events = db.action_events_get(ctxt, action['id'])
+        action = db.action_get_by_request_id(ctxt, uuid, ctxt.request_id)
         self.assertEqual(1, len(events))
         self.assertEqual('schedule', events[0]['event'])
         self.assertEqual(start_time, events[0]['start_time'])
         self.assertEqual(finish_time, events[0]['finish_time'])
+        self.assertNotEqual(action['message'], 'Error')
+
+    def test_instance_action_event_finish_error(self):
+        """Finish an instance action event with an error."""
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+
+        start_time = timeutils.utcnow()
+        action_values = {'action': 'run_instance',
+                         'instance_uuid': uuid,
+                         'request_id': ctxt.request_id,
+                         'user_id': ctxt.user_id,
+                         'project_id': ctxt.project_id,
+                         'start_time': start_time}
+        action = db.action_start(ctxt, action_values)
+
+        event_values = {'event': 'schedule',
+                        'request_id': ctxt.request_id,
+                        'instance_uuid': uuid,
+                        'start_time': start_time}
+        db.action_event_start(ctxt, event_values)
+
+        finish_time = timeutils.utcnow() + datetime.timedelta(seconds=5)
+        event_finish_values = {'event': 'schedule',
+                                'request_id': ctxt.request_id,
+                                'instance_uuid': uuid,
+                                'finish_time': finish_time,
+                                'result': 'Error'}
+        db.action_event_finish(ctxt, event_finish_values)
+
+        # Retrieve the event to ensure it was successfully added
+        events = db.action_events_get(ctxt, action['id'])
+        action = db.action_get_by_request_id(ctxt, uuid, ctxt.request_id)
+        self.assertEqual(1, len(events))
+        self.assertEqual('schedule', events[0]['event'])
+        self.assertEqual(start_time, events[0]['start_time'])
+        self.assertEqual(finish_time, events[0]['finish_time'])
+        self.assertEqual(action['message'], 'Error')
 
     def test_instance_action_and_event_start_string_time(self):
         """Create an instance action and event with a string start_time."""

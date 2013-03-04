@@ -4551,6 +4551,10 @@ def action_event_finish(context, values):
             raise exception.InstanceActionEventNotFound(action_id=action['id'],
                                                         event=values['event'])
         event_ref.update(values)
+
+        if values['result'].lower() == 'error':
+            action.update({'message': 'Error'})
+
     return event_ref
 
 
