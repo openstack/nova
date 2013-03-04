@@ -19,7 +19,6 @@
 from oslo.config import cfg
 
 from nova import context
-from nova import exception
 from nova.openstack.common import importutils
 from nova import test
 from nova.virt import fake
@@ -72,8 +71,8 @@ class FakeDriverMultiNodeTestCase(BaseTestCase):
         res_b = self.driver.get_available_resource('bbb')
         self.assertEqual(res_b['hypervisor_hostname'], 'bbb')
 
-        self.assertRaises(exception.NovaException,
-                          self.driver.get_available_resource, 'xxx')
+        res_x = self.driver.get_available_resource('xxx')
+        self.assertEqual(res_x, {})
 
 
 class MultiNodeComputeTestCase(BaseTestCase):
@@ -101,3 +100,22 @@ class MultiNodeComputeTestCase(BaseTestCase):
         self.compute.update_available_resource(ctx)
         self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                          ['A', 'B', 'C'])
+
+    def test_compute_manager_removes_deleted_node(self):
+        ctx = context.get_admin_context()
+        fake.set_nodes(['A', 'B'])
+        self.compute.update_available_resource(ctx)
+
+        rt_A = self.compute._resource_tracker_dict['A']
+        rt_B = self.compute._resource_tracker_dict['B']
+        self.mox.StubOutWithMock(rt_A, 'update_available_resource')
+        self.mox.StubOutWithMock(rt_B, 'update_available_resource')
+        rt_A.update_available_resource(ctx)
+        rt_B.update_available_resource(ctx, delete=True)
+        self.mox.ReplayAll()
+
+        fake.set_nodes(['A'])
+        self.compute.update_available_resource(ctx)
+        self.mox.VerifyAll()
+        self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
+                        ['A'])

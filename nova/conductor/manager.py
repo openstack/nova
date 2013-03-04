@@ -49,7 +49,7 @@ datetime_fields = ['launched_at', 'terminated_at']
 class ConductorManager(manager.SchedulerDependentManager):
     """Mission: TBD."""
 
-    RPC_API_VERSION = '1.43'
+    RPC_API_VERSION = '1.44'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -350,6 +350,10 @@ class ConductorManager(manager.SchedulerDependentManager):
     def compute_node_update(self, context, node, values, prune_stats=False):
         result = self.db.compute_node_update(context, node['id'], values,
                                              prune_stats)
+        return jsonutils.to_primitive(result)
+
+    def compute_node_delete(self, context, node):
+        result = self.db.compute_node_delete(context, node['id'])
         return jsonutils.to_primitive(result)
 
     @rpc_common.client_exceptions(exception.ServiceNotFound)

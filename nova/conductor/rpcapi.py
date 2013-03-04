@@ -81,6 +81,7 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                  quota_rollback
     1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
     1.43 - Added compute_stop
+    1.44 - Added compute_node_delete
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -345,6 +346,11 @@ class ConductorAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         msg = self.make_msg('compute_node_update', node=node_p, values=values,
                             prune_stats=prune_stats)
         return self.call(context, msg, version='1.33')
+
+    def compute_node_delete(self, context, node):
+        node_p = jsonutils.to_primitive(node)
+        msg = self.make_msg('compute_node_delete', node=node_p)
+        return self.call(context, msg, version='1.44')
 
     def service_update(self, context, service, values):
         service_p = jsonutils.to_primitive(service)

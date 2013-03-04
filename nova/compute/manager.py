@@ -3676,11 +3676,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         """
         new_resource_tracker_dict = {}
-        nodenames = self.driver.get_available_nodes()
+        nodenames = set(self.driver.get_available_nodes())
         for nodename in nodenames:
             rt = self._get_resource_tracker(nodename)
             rt.update_available_resource(context)
             new_resource_tracker_dict[nodename] = rt
+
+        # delete nodes that the driver no longer reports
+        known_nodes = set(self._resource_tracker_dict.keys())
+        for nodename in known_nodes - nodenames:
+            rt = self._get_resource_tracker(nodename)
+            rt.update_available_resource(context, delete=True)
+
         self._resource_tracker_dict = new_resource_tracker_dict
 
     @manager.periodic_task(spacing=CONF.running_deleted_instance_poll_interval)

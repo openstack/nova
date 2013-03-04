@@ -429,6 +429,14 @@ class _BaseTestCase(object):
                                                     'fake-values', False)
         self.assertEqual(result, 'fake-result')
 
+    def test_compute_node_delete(self):
+        node = {'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'compute_node_delete')
+        db.compute_node_delete(self.context, node['id']).AndReturn(None)
+        self.mox.ReplayAll()
+        result = self.conductor.compute_node_delete(self.context, node)
+        self.assertEqual(result, None)
+
     def test_instance_fault_create(self):
         self.mox.StubOutWithMock(db, 'instance_fault_create')
         db.instance_fault_create(self.context, 'fake-values').AndReturn(
