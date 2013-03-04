@@ -121,6 +121,7 @@ def dd(src, dst):
                   'if=%s' % src,
                   'of=%s' % dst,
                   'bs=1M',
+                  'oflag=direct',
                   run_as_root=True,
                   check_exit_code=[0])
 
