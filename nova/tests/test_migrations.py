@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010-2011 OpenStack Foundation
+# Copyright 2012-2013 IBM Corp.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -44,18 +45,19 @@ import collections
 import commands
 import ConfigParser
 import datetime
-import netaddr
 import os
-import sqlalchemy
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects import sqlite
-import sqlalchemy.exc
 import urlparse
 import uuid
 
 from migrate.versioning import repository
+import netaddr
+import sqlalchemy
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import sqlite
+import sqlalchemy.exc
 
 import nova.db.sqlalchemy.migrate_repo
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
@@ -246,12 +248,36 @@ class BaseMigrationTestCase(test.TestCase):
         self._reset_databases()
         super(BaseMigrationTestCase, self).tearDown()
 
+    def execute_cmd(self, cmd=None):
+        status, output = commands.getstatusoutput(cmd)
+        LOG.debug(output)
+        self.assertEqual(0, status,
+                         "Failed to run: %s\n%s" % (cmd, output))
+
+    @lockutils.synchronized('pgadmin', 'nova-', external=True)
+    def _reset_pg(self, conn_pieces):
+        (user, password, database, host) = \
+            get_pgsql_connection_info(conn_pieces)
+        os.environ['PGPASSWORD'] = password
+        os.environ['PGUSER'] = user
+        # note(boris-42): We must create and drop database, we can't
+        # drop database which we have connected to, so for such
+        # operations there is a special database template1.
+        sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
+                  " '%(sql)s' -d template1")
+
+        sql = ("drop database if exists %(database)s;") % locals()
+        droptable = sqlcmd % locals()
+        self.execute_cmd(droptable)
+
+        sql = ("create database %(database)s;") % locals()
+        createtable = sqlcmd % locals()
+        self.execute_cmd(createtable)
+
+        os.unsetenv('PGPASSWORD')
+        os.unsetenv('PGUSER')
+
     def _reset_databases(self):
-        def execute_cmd(cmd=None):
-            status, output = commands.getstatusoutput(cmd)
-            LOG.debug(output)
-            self.assertEqual(0, status,
-                             "Failed to run: %s\n%s" % (cmd, output))
         for key, engine in self.engines.items():
             conn_string = self.test_databases[key]
             conn_pieces = urlparse.urlparse(conn_string)
@@ -274,29 +300,9 @@ class BaseMigrationTestCase(test.TestCase):
                         "create database %(database)s;") % locals()
                 cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
                        "-e \"%(sql)s\"") % locals()
-                execute_cmd(cmd)
+                self.execute_cmd(cmd)
             elif conn_string.startswith('postgresql'):
-                # note(krtaylor): File creation problems with tests in
-                # venv using .pgpass authentication, changed to
-                # PGPASSWORD environment variable which is no longer
-                # planned to be deprecated
-                (user, password, database, host) = \
-                        get_pgsql_connection_info(conn_pieces)
-                os.environ['PGPASSWORD'] = password
-                os.environ['PGUSER'] = user
-                # note(boris-42): We must create and drop database, we can't
-                # drop database which we have connected to, so for such
-                # operations there is a special database template1.
-                sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
-                                     " '%(sql)s' -d template1")
-                sql = ("drop database if exists %(database)s;") % locals()
-                droptable = sqlcmd % locals()
-                execute_cmd(droptable)
-                sql = ("create database %(database)s;") % locals()
-                createtable = sqlcmd % locals()
-                execute_cmd(createtable)
-                os.unsetenv('PGPASSWORD')
-                os.unsetenv('PGUSER')
+                self._reset_pg(conn_pieces)
 
     def _test_mysql_opportunistically(self):
         # Test that table creation on mysql only builds InnoDB tables
