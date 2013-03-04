@@ -1694,8 +1694,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.RESCUED, vm_states.PAUSED,
-                                    vm_states.SUSPENDED],
+                                    vm_states.PAUSED, vm_states.SUSPENDED],
                           task_state=[None, task_states.REBOOTING,
                                       task_states.REBOOTING_HARD,
                                       task_states.RESUMING,
