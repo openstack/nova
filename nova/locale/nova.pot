@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova jenkins.nova.propose.translation.update.175\n"
+"Project-Id-Version: nova jenkins.nova.propose.translation.update.176\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-03-03 00:03+0000\n"
+"POT-Creation-Date: 2013-03-04 00:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3548,8 +3548,8 @@ msgstr ""
 #: nova/compute/api.py:2461
 #, python-format
 msgid ""
-"Instance compute service state on %(host)s expected to be down, but it "
-"was up."
+"Instance compute service state on %(inst_host)s expected to be down, but "
+"it was up."
 msgstr ""
 
 #: nova/compute/api.py:2681
@@ -3736,577 +3736,581 @@ msgstr ""
 msgid "Instance has been destroyed from under us while trying to set it to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:402
+#: nova/compute/manager.py:397
 #, python-format
 msgid "Instance %(uuid)s found in the hypervisor, but not in the database"
 msgstr ""
 
-#: nova/compute/manager.py:420
+#: nova/compute/manager.py:413
 #, python-format
 msgid ""
 "Instance %(driver_instance)s found in the hypervisor, but not in the "
 "database"
 msgstr ""
 
-#: nova/compute/manager.py:441
+#: nova/compute/manager.py:434
 #, python-format
 msgid ""
 "Deleting instance as its host (%(instance_host)s) is not equal to our "
 "host (%(our_host)s)."
 msgstr ""
 
-#: nova/compute/manager.py:478
+#: nova/compute/manager.py:471
 msgid "Failed to revert crashed migration"
 msgstr ""
 
-#: nova/compute/manager.py:481
+#: nova/compute/manager.py:474
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr ""
 
-#: nova/compute/manager.py:492
+#: nova/compute/manager.py:485
 #, python-format
 msgid "Current state is %(drv_state)s, state in DB is %(db_state)s."
 msgstr ""
 
-#: nova/compute/manager.py:497
+#: nova/compute/manager.py:490
 msgid "Rebooting instance after nova-compute restart."
 msgstr ""
 
-#: nova/compute/manager.py:511
+#: nova/compute/manager.py:504
 msgid "Hypervisor driver does not support resume guests"
 msgstr ""
 
-#: nova/compute/manager.py:516
+#: nova/compute/manager.py:509
 msgid "Failed to resume instance"
 msgstr ""
 
-#: nova/compute/manager.py:526
+#: nova/compute/manager.py:519
 msgid "Hypervisor driver does not support firewall rules"
 msgstr ""
 
-#: nova/compute/manager.py:530
+#: nova/compute/manager.py:523
 #, python-format
 msgid "Lifecycle event %(state)d on VM %(uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:546
+#: nova/compute/manager.py:539
 #, python-format
 msgid "Unexpected power state %d"
 msgstr ""
 
-#: nova/compute/manager.py:558
+#: nova/compute/manager.py:551
 #, python-format
 msgid "Ignoring event %s"
 msgstr ""
 
-#: nova/compute/manager.py:596
+#: nova/compute/manager.py:589
 msgid "Checking state"
 msgstr ""
 
-#: nova/compute/manager.py:676
+#: nova/compute/manager.py:669
 #, python-format
 msgid "Setting up bdm %s"
 msgstr ""
 
-#: nova/compute/manager.py:758 nova/compute/manager.py:2105
+#: nova/compute/manager.py:751 nova/compute/manager.py:2104
 #, python-format
 msgid "No node specified, defaulting to %(node)s"
 msgstr ""
 
-#: nova/compute/manager.py:801
+#: nova/compute/manager.py:794
 msgid "Failed to dealloc network for deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:807
+#: nova/compute/manager.py:800
 msgid "Instance was deleted during spawn."
 msgstr ""
 
-#: nova/compute/manager.py:833
+#: nova/compute/manager.py:826
 #, python-format
 msgid "Error: %s"
 msgstr ""
 
-#: nova/compute/manager.py:868 nova/compute/manager.py:2159
+#: nova/compute/manager.py:861 nova/compute/manager.py:2158
 msgid "Error trying to reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:886
+#: nova/compute/manager.py:879
 msgid "Retry info not present, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:891
+#: nova/compute/manager.py:884
 msgid "No request spec, will not reschedule"
 msgstr ""
 
-#: nova/compute/manager.py:897
+#: nova/compute/manager.py:890
 #, python-format
 msgid "Re-scheduling %(method)s: attempt %(num)d"
 msgstr ""
 
-#: nova/compute/manager.py:925
+#: nova/compute/manager.py:918
 msgid "Instance build timed out. Set to error state."
 msgstr ""
 
-#: nova/compute/manager.py:1001
+#: nova/compute/manager.py:994
 #, python-format
 msgid ""
 "image_id=%(image_id)s, image_size_bytes=%(size_bytes)d, "
 "allowed_size_bytes=%(allowed_size_bytes)d"
 msgstr ""
 
-#: nova/compute/manager.py:1007
+#: nova/compute/manager.py:1000
 #, python-format
 msgid ""
 "Image '%(image_id)s' size %(size_bytes)d exceeded instance_type allowed "
 "size %(allowed_size_bytes)d"
 msgstr ""
 
-#: nova/compute/manager.py:1017
+#: nova/compute/manager.py:1010
 msgid "Starting instance..."
 msgstr ""
 
-#: nova/compute/manager.py:1042
+#: nova/compute/manager.py:1035
 msgid "Instance failed network setup"
 msgstr ""
 
-#: nova/compute/manager.py:1046
+#: nova/compute/manager.py:1039
 #, python-format
 msgid "Instance network_info: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:1056
+#: nova/compute/manager.py:1049
 msgid "Instance failed block device setup"
 msgstr ""
 
-#: nova/compute/manager.py:1073
+#: nova/compute/manager.py:1066
 msgid "Instance failed to spawn"
 msgstr ""
 
-#: nova/compute/manager.py:1097
+#: nova/compute/manager.py:1090
 msgid "Deallocating network for instance"
 msgstr ""
 
-#: nova/compute/manager.py:1173
+#: nova/compute/manager.py:1166
 #, python-format
 msgid "%(action_str)s instance"
 msgstr ""
 
-#: nova/compute/manager.py:1204
+#: nova/compute/manager.py:1182
+msgid "Failed to deallocate network for instance."
+msgstr ""
+
+#: nova/compute/manager.py:1203
 #, python-format
 msgid "Ignoring DiskNotFound: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1207
+#: nova/compute/manager.py:1206
 #, python-format
 msgid "Ignoring VolumeNotFound: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1214
+#: nova/compute/manager.py:1213
 #, python-format
 msgid "terminating bdm %s"
 msgstr ""
 
-#: nova/compute/manager.py:1239
+#: nova/compute/manager.py:1238
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr ""
 
-#: nova/compute/manager.py:1282 nova/compute/manager.py:2334
-#: nova/compute/manager.py:3769
+#: nova/compute/manager.py:1281 nova/compute/manager.py:2333
+#: nova/compute/manager.py:3768
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:1422
+#: nova/compute/manager.py:1421
 msgid "Rebuilding instance"
 msgstr ""
 
-#: nova/compute/manager.py:1435
+#: nova/compute/manager.py:1434
 msgid "Invalid state of instance files on shared storage"
 msgstr ""
 
-#: nova/compute/manager.py:1439
+#: nova/compute/manager.py:1438
 msgid "disk on shared storage, recreating using existing disk"
 msgstr ""
 
-#: nova/compute/manager.py:1443
+#: nova/compute/manager.py:1442
 #, python-format
 msgid "disk not on shared storagerebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1527
+#: nova/compute/manager.py:1526
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:1551
+#: nova/compute/manager.py:1550
 msgid "Rebooting instance"
 msgstr ""
 
-#: nova/compute/manager.py:1570
+#: nova/compute/manager.py:1569
 #, python-format
 msgid ""
 "trying to reboot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1580
+#: nova/compute/manager.py:1579
 #, python-format
 msgid "Cannot reboot instance: %(exc)s"
 msgstr ""
 
-#: nova/compute/manager.py:1616
+#: nova/compute/manager.py:1615
 msgid "instance snapshotting"
 msgstr ""
 
-#: nova/compute/manager.py:1622
+#: nova/compute/manager.py:1621
 #, python-format
 msgid ""
 "trying to snapshot a non-running instance: (state: %(state)s expected: "
 "%(running)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1683
+#: nova/compute/manager.py:1682
 #, python-format
 msgid "Found %(num_images)d images (rotation: %(rotation)d)"
 msgstr ""
 
-#: nova/compute/manager.py:1690
+#: nova/compute/manager.py:1689
 #, python-format
 msgid "Rotating out %d backups"
 msgstr ""
 
-#: nova/compute/manager.py:1695
+#: nova/compute/manager.py:1694
 #, python-format
 msgid "Deleting image %s"
 msgstr ""
 
-#: nova/compute/manager.py:1723
+#: nova/compute/manager.py:1722
 #, python-format
 msgid "Failed to set admin password. Instance %s is not running"
 msgstr ""
 
-#: nova/compute/manager.py:1730
+#: nova/compute/manager.py:1729
 msgid "Root password set"
 msgstr ""
 
-#: nova/compute/manager.py:1737
+#: nova/compute/manager.py:1736
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
 
-#: nova/compute/manager.py:1752
+#: nova/compute/manager.py:1751
 #, python-format
 msgid "set_admin_password failed: %s"
 msgstr ""
 
-#: nova/compute/manager.py:1759
+#: nova/compute/manager.py:1758
 msgid "error setting admin password"
 msgstr ""
 
-#: nova/compute/manager.py:1772
+#: nova/compute/manager.py:1771
 #, python-format
 msgid ""
 "trying to inject a file into a non-running (state: "
 "%(current_power_state)s expected: %(expected_state)s)"
 msgstr ""
 
-#: nova/compute/manager.py:1776
+#: nova/compute/manager.py:1775
 #, python-format
 msgid "injecting file to %(path)s"
 msgstr ""
 
-#: nova/compute/manager.py:1796
+#: nova/compute/manager.py:1795
 msgid ""
 "Unable to find a different image to use for rescue VM, using instance's "
 "current image"
 msgstr ""
 
-#: nova/compute/manager.py:1810
+#: nova/compute/manager.py:1809
 msgid "Rescuing"
 msgstr ""
 
-#: nova/compute/manager.py:1845
+#: nova/compute/manager.py:1844
 msgid "Unrescuing"
 msgstr ""
 
-#: nova/compute/manager.py:1866
+#: nova/compute/manager.py:1865
 #, python-format
 msgid "Changing instance metadata according to %(diff)r"
 msgstr ""
 
-#: nova/compute/manager.py:2063
+#: nova/compute/manager.py:2062
 msgid "Instance has no source host"
 msgstr ""
 
-#: nova/compute/manager.py:2069
+#: nova/compute/manager.py:2068
 msgid "destination same as source!"
 msgstr ""
 
-#: nova/compute/manager.py:2086
+#: nova/compute/manager.py:2085
 msgid "Migrating"
 msgstr ""
 
-#: nova/compute/manager.py:2331
+#: nova/compute/manager.py:2330
 #, python-format
 msgid "Failed to rollback quota for failed finish_resize: %(qr_error)s"
 msgstr ""
 
-#: nova/compute/manager.py:2386
+#: nova/compute/manager.py:2385
 msgid "Pausing"
 msgstr ""
 
-#: nova/compute/manager.py:2404
+#: nova/compute/manager.py:2403
 msgid "Unpausing"
 msgstr ""
 
-#: nova/compute/manager.py:2442
+#: nova/compute/manager.py:2441
 msgid "Retrieving diagnostics"
 msgstr ""
 
-#: nova/compute/manager.py:2473
+#: nova/compute/manager.py:2472
 msgid "Resuming"
 msgstr ""
 
-#: nova/compute/manager.py:2493
+#: nova/compute/manager.py:2492
 msgid "Reset network"
 msgstr ""
 
-#: nova/compute/manager.py:2498
+#: nova/compute/manager.py:2497
 msgid "Inject network info"
 msgstr ""
 
-#: nova/compute/manager.py:2501
+#: nova/compute/manager.py:2500
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr ""
 
-#: nova/compute/manager.py:2518
+#: nova/compute/manager.py:2517
 msgid "Get console output"
 msgstr ""
 
-#: nova/compute/manager.py:2543
+#: nova/compute/manager.py:2542
 msgid "Getting vnc console"
 msgstr ""
 
-#: nova/compute/manager.py:2571
+#: nova/compute/manager.py:2570
 msgid "Getting spice console"
 msgstr ""
 
-#: nova/compute/manager.py:2611
+#: nova/compute/manager.py:2610
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2662
+#: nova/compute/manager.py:2661
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2671
+#: nova/compute/manager.py:2670
 #, python-format
 msgid ""
 "Failed to connect to volume %(volume_id)s while attaching at "
 "%(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2686
+#: nova/compute/manager.py:2685
 #, python-format
 msgid "Failed to attach volume %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:2716
+#: nova/compute/manager.py:2715
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr ""
 
-#: nova/compute/manager.py:2726
+#: nova/compute/manager.py:2725
 msgid "Detaching volume from unknown instance"
 msgstr ""
 
-#: nova/compute/manager.py:2733
+#: nova/compute/manager.py:2732
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr ""
 
-#: nova/compute/manager.py:2757
+#: nova/compute/manager.py:2756
 msgid "Updating volume usage cache with totals"
 msgstr ""
 
-#: nova/compute/manager.py:2795
+#: nova/compute/manager.py:2794
 #, python-format
 msgid "allocate_port_for_instance returned %(port)s ports"
 msgstr ""
 
-#: nova/compute/manager.py:2815
+#: nova/compute/manager.py:2814
 #, python-format
 msgid "Port %(port_id)s is not attached"
 msgstr ""
 
-#: nova/compute/manager.py:2829
+#: nova/compute/manager.py:2828
 #, python-format
 msgid "Host %(host)s not found"
 msgstr ""
 
-#: nova/compute/manager.py:2958
+#: nova/compute/manager.py:2957
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr ""
 
-#: nova/compute/manager.py:2986
+#: nova/compute/manager.py:2985
 msgid "_post_live_migration() is started.."
 msgstr ""
 
-#: nova/compute/manager.py:3041
+#: nova/compute/manager.py:3040
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:3043
+#: nova/compute/manager.py:3042
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 msgstr ""
 
-#: nova/compute/manager.py:3057
+#: nova/compute/manager.py:3056
 msgid "Post operation of migration started"
 msgstr ""
 
-#: nova/compute/manager.py:3197
+#: nova/compute/manager.py:3196
 msgid "Updated the info_cache for instance"
 msgstr ""
 
-#: nova/compute/manager.py:3242
+#: nova/compute/manager.py:3241
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr ""
 
-#: nova/compute/manager.py:3248
+#: nova/compute/manager.py:3247
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr ""
 
-#: nova/compute/manager.py:3257
+#: nova/compute/manager.py:3256
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr ""
 
-#: nova/compute/manager.py:3264
+#: nova/compute/manager.py:3263
 #, python-format
 msgid "Instance %(instance_uuid)s not found"
 msgstr ""
 
-#: nova/compute/manager.py:3268
+#: nova/compute/manager.py:3267
 msgid "In ERROR state"
 msgstr ""
 
-#: nova/compute/manager.py:3275
+#: nova/compute/manager.py:3274
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr ""
 
-#: nova/compute/manager.py:3283
+#: nova/compute/manager.py:3282
 #, python-format
 msgid "Error auto-confirming resize: %(e)s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:3300
+#: nova/compute/manager.py:3299
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 msgstr ""
 
-#: nova/compute/manager.py:3319
+#: nova/compute/manager.py:3318
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:3343
+#: nova/compute/manager.py:3342
 msgid "Updating bandwidth usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3461
+#: nova/compute/manager.py:3460
 msgid "Updating volume usage cache"
 msgstr ""
 
-#: nova/compute/manager.py:3479
+#: nova/compute/manager.py:3478
 msgid "Updating host status"
 msgstr ""
 
-#: nova/compute/manager.py:3505
+#: nova/compute/manager.py:3504
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:3510 nova/compute/manager.py:3559
+#: nova/compute/manager.py:3509 nova/compute/manager.py:3558
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr ""
 
-#: nova/compute/manager.py:3546
+#: nova/compute/manager.py:3545
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:3584
+#: nova/compute/manager.py:3583
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3596 nova/compute/manager.py:3605
-#: nova/compute/manager.py:3635
+#: nova/compute/manager.py:3595 nova/compute/manager.py:3604
+#: nova/compute/manager.py:3634
 msgid "error during stop() in sync_power_state."
 msgstr ""
 
-#: nova/compute/manager.py:3600
+#: nova/compute/manager.py:3599
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3616
+#: nova/compute/manager.py:3615
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3622
+#: nova/compute/manager.py:3621
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr ""
 
-#: nova/compute/manager.py:3628
+#: nova/compute/manager.py:3627
 msgid "Instance is not stopped. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:3644
+#: nova/compute/manager.py:3643
 msgid "Instance is not (soft-)deleted."
 msgstr ""
 
-#: nova/compute/manager.py:3652
+#: nova/compute/manager.py:3651
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr ""
 
-#: nova/compute/manager.py:3667
+#: nova/compute/manager.py:3666
 msgid "Reclaiming deleted instance"
 msgstr ""
 
-#: nova/compute/manager.py:3722
+#: nova/compute/manager.py:3721
 #, python-format
 msgid ""
 "Detected instance with name label '%(name)s' which is marked as DELETED "
 "but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3729
+#: nova/compute/manager.py:3728
 #, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:3736
+#: nova/compute/manager.py:3735
 #, python-format
 msgid "Unrecognized value '%(action)s' for CONF.running_deleted_instance_action"
 msgstr ""
@@ -6208,7 +6212,8 @@ msgstr ""
 #: nova/tests/compute/test_compute.py:735
 #: nova/tests/compute/test_compute.py:786
 #: nova/tests/compute/test_compute.py:813
-#: nova/tests/compute/test_compute.py:2979
+#: nova/tests/compute/test_compute.py:859
+#: nova/tests/compute/test_compute.py:3002
 #, python-format
 msgid "Running instances: %s"
 msgstr ""
@@ -6221,16 +6226,16 @@ msgstr ""
 msgid "After terminating instances: %s"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:1264
+#: nova/tests/compute/test_compute.py:1287
 msgid "Internal error"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:2990
+#: nova/tests/compute/test_compute.py:3013
 #, python-format
 msgid "After force-killing instances: %s"
 msgstr ""
 
-#: nova/tests/compute/test_compute.py:3488
+#: nova/tests/compute/test_compute.py:3511
 msgid "wrong host/node"
 msgstr ""
 
