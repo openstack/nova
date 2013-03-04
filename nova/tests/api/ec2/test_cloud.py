@@ -849,6 +849,189 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context, **filters)
         self.assertEqual(result, {'reservationSet': []})
 
+    def test_describe_instances_with_tag_filters(self):
+        # Makes sure describe_instances works and filters tag results.
+
+        # We need to stub network calls
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        # We need to stub out the MQ call - it won't succeed.  We do want
+        # to check that the method is called, though
+        meta_changes = [None]
+
+        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
+                                          instance_uuid=None):
+            meta_changes[0] = diff
+
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
+
+        # Create some test images
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        inst1_kwargs = {
+                'reservation_id': 'a',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'host': 'host1',
+                'vm_state': 'active',
+                'hostname': 'server-1111',
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 1),
+                'system_metadata': sys_meta
+        }
+
+        inst2_kwargs = {
+                'reservation_id': 'b',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'host': 'host2',
+                'vm_state': 'active',
+                'hostname': 'server-1112',
+                'created_at': datetime.datetime(2012, 5, 1, 1, 1, 2),
+                'system_metadata': sys_meta
+        }
+
+        inst1 = db.instance_create(self.context, inst1_kwargs)
+        ec2_id1 = ec2utils.id_to_ec2_inst_id(inst1['uuid'])
+
+        inst2 = db.instance_create(self.context, inst2_kwargs)
+        ec2_id2 = ec2utils.id_to_ec2_inst_id(inst2['uuid'])
+
+        # Create some tags
+        # We get one overlapping pair, one overlapping key, and a
+        # disparate pair
+        # inst1 : {'foo': 'bar', 'baz': 'wibble', 'bax': 'wobble'}
+        # inst2 : {'foo': 'bar', 'baz': 'quux', 'zog': 'bobble'}
+
+        md = {'key': 'foo', 'value': 'bar'}
+        self.cloud.create_tags(self.context, resource_id=[ec2_id1, ec2_id2],
+                tag=[md])
+
+        md2 = {'key': 'baz', 'value': 'wibble'}
+        md3 = {'key': 'bax', 'value': 'wobble'}
+        self.cloud.create_tags(self.context, resource_id=[ec2_id1],
+                tag=[md2, md3])
+
+        md4 = {'key': 'baz', 'value': 'quux'}
+        md5 = {'key': 'zog', 'value': 'bobble'}
+        self.cloud.create_tags(self.context, resource_id=[ec2_id2],
+                tag=[md4, md5])
+        # We should be able to search by:
+
+        inst1_ret = {
+            'groupSet': None,
+            'instancesSet': [{'amiLaunchIndex': None,
+                              'dnsName': '1.2.3.4',
+                              'dnsNameV6': 'fe80:b33f::a8bb:ccff:fedd:eeff',
+                              'imageId': 'ami-00000001',
+                              'instanceId': 'i-00000001',
+                              'instanceState': {'code': 16,
+                                                'name': 'running'},
+                              'instanceType': u'm1.medium',
+                              'ipAddress': '1.2.3.4',
+                              'keyName': 'None (None, host1)',
+                              'launchTime':
+                                  datetime.datetime(2012, 5, 1, 1, 1, 1),
+                              'placement': {
+                                  'availabilityZone': 'nova'},
+                              'privateDnsName': u'server-1111',
+                              'privateIpAddress': '192.168.0.3',
+                              'productCodesSet': None,
+                              'publicDnsName': '1.2.3.4',
+                              'rootDeviceName': '/dev/sda1',
+                              'rootDeviceType': 'instance-store',
+                              'tagSet': [{'key': u'foo',
+                                          'value': u'bar'},
+                                         {'key': u'baz',
+                                          'value': u'wibble'},
+                                         {'key': u'bax',
+                                          'value': u'wobble'}]}],
+            'ownerId': None,
+            'reservationId': u'a'}
+
+        inst2_ret = {
+             'groupSet': None,
+             'instancesSet': [{'amiLaunchIndex': None,
+                               'dnsName': '1.2.3.4',
+                               'dnsNameV6': 'fe80:b33f::a8bb:ccff:fedd:eeff',
+                               'imageId': 'ami-00000001',
+                               'instanceId': 'i-00000002',
+                               'instanceState': {'code': 16,
+                                                 'name': 'running'},
+                               'instanceType': u'm1.medium',
+                               'ipAddress': '1.2.3.4',
+                               'keyName': u'None (None, host2)',
+                               'launchTime':
+                                   datetime.datetime(2012, 5, 1, 1, 1, 2),
+                               'placement': {
+                                   'availabilityZone': 'nova'},
+                               'privateDnsName': u'server-1112',
+                               'privateIpAddress': '192.168.0.3',
+                               'productCodesSet': None,
+                               'publicDnsName': '1.2.3.4',
+                               'rootDeviceName': '/dev/sda1',
+                               'rootDeviceType': 'instance-store',
+                               'tagSet': [{'key': u'foo',
+                                           'value': u'bar'},
+                                          {'key': u'baz',
+                                           'value': u'quux'},
+                                          {'key': u'zog',
+                                           'value': u'bobble'}]}],
+             'ownerId': None,
+             'reservationId': u'b'}
+
+        # No filter
+        result = self.cloud.describe_instances(self.context)
+        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # Key search
+        # Both should have tags with key 'foo' and value 'bar'
+        filters = {'filter': [{'name': 'tag:foo',
+                               'value': ['bar']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # Both should have tags with key 'foo'
+        filters = {'filter': [{'name': 'tag-key',
+                               'value': ['foo']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # Value search
+        # Only inst2 should have tags with key 'baz' and value 'quux'
+        filters = {'filter': [{'name': 'tag:baz',
+                               'value': ['quux']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+
+        # Only inst2 should have tags with value 'quux'
+        filters = {'filter': [{'name': 'tag-value',
+                               'value': ['quux']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+
+        # Multiple values
+        # Both should have tags with key 'baz' and values in the set
+        # ['quux', 'wibble']
+        filters = {'filter': [{'name': 'tag:baz',
+                               'value': ['quux', 'wibble']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # Both should have tags with key 'baz' or tags with value 'bar'
+        filters = {'filter': [{'name': 'tag-key',
+                               'value': ['baz']},
+                              {'name': 'tag-value',
+                               'value': ['bar']}]}
+        result = self.cloud.describe_instances(self.context, **filters)
+        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+
+        # destroy the test instances
+        db.instance_destroy(self.context, inst1['uuid'])
+        db.instance_destroy(self.context, inst2['uuid'])
+
     def test_describe_instances_sorting(self):
         # Makes sure describe_instances works and is sorted as expected.
         self.flags(use_ipv6=True)
