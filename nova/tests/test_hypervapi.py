@@ -154,6 +154,8 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'merge_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_parent_path')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_info')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils, 'resize_vhd')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils, 'validate_vhd')
 
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_cpus_info')
         self._mox.StubOutWithMock(hostutils.HostUtils,
@@ -567,6 +569,8 @@ class HyperVAPITestCase(test.TestCase):
         self.flags(use_cow_images=cow)
 
         instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, instance_data)
+        instance['system_metadata'] = {}
 
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
@@ -579,10 +583,14 @@ class HyperVAPITestCase(test.TestCase):
                                                                   None)
             m.AndReturn(False)
 
-            vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
+            m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
+            m.AndReturn({'MaxInternalSize': 1024})
+
+            fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
         self._mox.ReplayAll()
-        self._conn.pre_live_migration(self._context, instance_data,
+        self._conn.pre_live_migration(self._context, instance,
                                       None, network_info)
         self._mox.VerifyAll()
 
@@ -697,6 +705,7 @@ class HyperVAPITestCase(test.TestCase):
 
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
+        instance['system_metadata'] = {}
 
         image = db_fakes.get_fake_image_data(self._project_id, self._user_id)
 
@@ -763,12 +772,16 @@ class HyperVAPITestCase(test.TestCase):
         m.AndReturn(boot_from_volume)
 
         if not boot_from_volume:
-            vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
+            m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
+            m.AndReturn({'MaxInternalSize': 1024})
 
             if cow:
-                vhdutils.VHDUtils.create_differencing_vhd(
-                    mox.IsA(str), mox.Func(self._check_img_path))
+                fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+                vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
+                                                          mox.IsA(str))
             else:
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
 
         self._setup_create_instance_mocks(setup_vif_mocks_func,
@@ -1009,6 +1022,7 @@ class HyperVAPITestCase(test.TestCase):
     def test_finish_migration(self):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
+        instance['system_metadata'] = {}
         network_info = fake_network.fake_get_instance_nw_info(
             self.stubs, spectacular=True)
 
@@ -1031,6 +1045,12 @@ class HyperVAPITestCase(test.TestCase):
         m.AndReturn(True)
 
         vhdutils.VHDUtils.reconnect_parent_vhd(mox.IsA(str), mox.IsA(str))
+
+        m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
+        m.AndReturn({'MaxInternalSize': 1024})
+
+        m = fake.PathUtils.exists(mox.IsA(str))
+        m.AndReturn(True)
 
         self._set_vm_name(instance['name'])
         self._setup_create_instance_mocks(None, False)

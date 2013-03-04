@@ -111,19 +111,39 @@ class VMOps(object):
                 'num_cpu': info['NumberOfProcessors'],
                 'cpu_time': info['UpTime']}
 
-    def _create_boot_vhd(self, context, instance):
+    def _create_root_vhd(self, context, instance):
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
-        boot_vhd_path = self._pathutils.get_vhd_path(instance['name'])
+        root_vhd_path = self._pathutils.get_vhd_path(instance['name'])
 
-        if CONF.use_cow_images:
-            LOG.debug(_("Creating differencing VHD. Parent: "
-                        "%(base_vhd_path)s, Target: %(boot_vhd_path)s")
-                      % locals())
-            self._vhdutils.create_differencing_vhd(boot_vhd_path,
-                                                   base_vhd_path)
-        else:
-            self._pathutils.copyfile(base_vhd_path, boot_vhd_path)
-        return boot_vhd_path
+        try:
+            if CONF.use_cow_images:
+                LOG.debug(_("Creating differencing VHD. Parent: "
+                            "%(base_vhd_path)s, Target: %(root_vhd_path)s")
+                          % locals())
+                self._vhdutils.create_differencing_vhd(root_vhd_path,
+                                                       base_vhd_path)
+            else:
+                LOG.debug(_("Copying VHD image %(base_vhd_path)s to target: "
+                            "%(root_vhd_path)s") % locals())
+                self._pathutils.copyfile(base_vhd_path, root_vhd_path)
+
+                base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
+                base_vhd_size = base_vhd_info['MaxInternalSize']
+                root_vhd_size = instance['root_gb'] * 1024 ** 3
+
+                if root_vhd_size < base_vhd_size:
+                    raise vmutils.HyperVException(_("Cannot resize a VHD to a "
+                                                    "smaller size"))
+                elif root_vhd_size > base_vhd_size:
+                    LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
+                                "size %(root_vhd_size)s") % locals())
+                    self._vhdutils.resize_vhd(root_vhd_path, root_vhd_size)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                if self._pathutils.exists(root_vhd_path):
+                    self._pathutils.remove(root_vhd_path)
+
+        return root_vhd_path
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -135,13 +155,13 @@ class VMOps(object):
             raise exception.InstanceExists(name=instance_name)
 
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            boot_vhd_path = None
+            root_vhd_path = None
         else:
-            boot_vhd_path = self._create_boot_vhd(context, instance)
+            root_vhd_path = self._create_root_vhd(context, instance)
 
         try:
             self.create_instance(instance, network_info, block_device_info,
-                                 boot_vhd_path)
+                                 root_vhd_path)
 
             if configdrive.required_by(instance):
                 self._create_config_drive(instance, injected_files,
@@ -154,7 +174,7 @@ class VMOps(object):
             raise vmutils.HyperVException(_('Spawn instance failed'))
 
     def create_instance(self, instance, network_info,
-                        block_device_info, boot_vhd_path):
+                        block_device_info, root_vhd_path):
         instance_name = instance['name']
 
         self._vmutils.create_vm(instance_name,
@@ -162,9 +182,9 @@ class VMOps(object):
                                 instance['vcpus'],
                                 CONF.limit_cpu_features)
 
-        if boot_vhd_path:
+        if root_vhd_path:
             self._vmutils.attach_ide_drive(instance_name,
-                                           boot_vhd_path,
+                                           root_vhd_path,
                                            0,
                                            0,
                                            constants.IDE_DISK)
@@ -173,7 +193,7 @@ class VMOps(object):
 
         self._volumeops.attach_volumes(block_device_info,
                                        instance_name,
-                                       boot_vhd_path is None)
+                                       root_vhd_path is None)
 
         for vif in network_info:
             LOG.debug(_('Creating nic for instance: %s'), instance_name)
@@ -238,8 +258,8 @@ class VMOps(object):
 
     def _delete_disk_files(self, instance_name):
         self._pathutils.get_instance_dir(instance_name,
-                                          create_dir=False,
-                                          remove_dir=True)
+                                         create_dir=False,
+                                         remove_dir=True)
 
     def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):

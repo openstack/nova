@@ -137,16 +137,15 @@ class MigrationOps(object):
         self._revert_migration_files(instance_name)
 
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            boot_vhd_path = None
+            root_vhd_path = None
         else:
-            boot_vhd_path = self._pathutils.get_vhd_path(instance_name)
+            root_vhd_path = self._pathutils.get_vhd_path(instance_name)
         self._vmops.create_instance(instance, network_info, block_device_info,
-                                    boot_vhd_path)
+                                    root_vhd_path)
 
         self._vmops.power_on(instance)
 
     def _merge_base_vhd(self, diff_vhd_path, base_vhd_path):
-
         base_vhd_copy_path = os.path.join(os.path.dirname(diff_vhd_path),
                                           os.path.basename(base_vhd_path))
         try:
@@ -183,10 +182,6 @@ class MigrationOps(object):
 
     def _check_base_disk(self, context, instance, diff_vhd_path,
                          src_base_disk_path):
-        base_disk_file_name = os.path.basename(src_base_disk_path)
-        if os.path.splitext(base_disk_file_name)[0] != instance["image_ref"]:
-            raise vmutils.HyperVException(_("Unexpected base VHD path"))
-
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
 
         # If the location of the base host differs between source
@@ -206,28 +201,28 @@ class MigrationOps(object):
         instance_name = instance['name']
 
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
-            boot_vhd_path = None
+            root_vhd_path = None
         else:
-            boot_vhd_path = self._pathutils.get_vhd_path(instance_name)
-            if not self._pathutils.exists(boot_vhd_path):
+            root_vhd_path = self._pathutils.get_vhd_path(instance_name)
+            if not self._pathutils.exists(root_vhd_path):
                 raise vmutils.HyperVException(_("Cannot find boot VHD "
-                                                "file: %s") % boot_vhd_path)
+                                                "file: %s") % root_vhd_path)
 
-            vhd_info = self._vhdutils.get_vhd_info(boot_vhd_path)
+            vhd_info = self._vhdutils.get_vhd_info(root_vhd_path)
             src_base_disk_path = vhd_info.get("ParentPath")
             if src_base_disk_path:
-                self._check_base_disk(context, instance, boot_vhd_path,
+                self._check_base_disk(context, instance, root_vhd_path,
                                       src_base_disk_path)
 
             if resize_instance:
                 curr_size = vhd_info['MaxInternalSize']
-                new_size = instance['root_gb'] * 1024 * 1024 * 1024
+                new_size = instance['root_gb'] * 1024 ** 3
                 if new_size < curr_size:
                     raise vmutils.HyperVException(_("Cannot resize a VHD to a "
                                                     "smaller size"))
                 elif new_size > curr_size:
-                    self._resize_vhd(boot_vhd_path, new_size)
+                    self._resize_vhd(root_vhd_path, new_size)
 
         self._vmops.create_instance(instance, network_info, block_device_info,
-                                    boot_vhd_path)
+                                    root_vhd_path)
         self._vmops.power_on(instance)
