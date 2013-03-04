@@ -719,6 +719,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                    quota_cores=20,
                    quota_ram=50 * 1024,
                    quota_floating_ips=10,
+                   quota_fixed_ips=10,
                    quota_metadata_items=128,
                    quota_injected_files=5,
                    quota_injected_file_content_bytes=10 * 1024,
@@ -745,6 +746,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 cores=20,
                 ram=50 * 1024,
                 floating_ips=10,
+                fixed_ips=10,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -778,6 +780,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 cores=20,
                 ram=25 * 1024,
                 floating_ips=10,
+                fixed_ips=10,
                 metadata_items=64,
                 injected_files=5,
                 injected_file_content_bytes=5 * 1024,
@@ -830,6 +833,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_quota_class_get_all_by_name()
 
     def test_get_project_quotas(self):
+        self.maxDiff = None
         self._stub_get_by_project()
         result = self.driver.get_project_quotas(
             FakeContext('test_project', 'test_class'),
@@ -859,6 +863,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                floating_ips=dict(
                     limit=10,
                     in_use=2,
+                    reserved=0,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
                     reserved=0,
                     ),
                 metadata_items=dict(
@@ -899,6 +908,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ))
 
     def test_get_project_quotas_alt_context_no_class(self):
+        self.maxDiff = None
         self._stub_get_by_project()
         result = self.driver.get_project_quotas(
             FakeContext('other_project', 'other_class'),
@@ -927,6 +937,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                floating_ips=dict(
                     limit=10,
                     in_use=2,
+                    reserved=0,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
                     reserved=0,
                     ),
                 metadata_items=dict(
@@ -967,6 +982,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ))
 
     def test_get_project_quotas_alt_context_with_class(self):
+        self.maxDiff = None
         self._stub_get_by_project()
         result = self.driver.get_project_quotas(
             FakeContext('other_project', 'other_class'),
@@ -996,6 +1012,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
+                    reserved=0,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
                     reserved=0,
                     ),
                 metadata_items=dict(
@@ -1085,6 +1106,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=25 * 1024,
                     ),
                 floating_ips=dict(
+                    limit=10,
+                    ),
+                fixed_ips=dict(
                     limit=10,
                     ),
                 metadata_items=dict(

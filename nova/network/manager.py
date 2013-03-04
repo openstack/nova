@@ -69,10 +69,13 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import quota
 from nova import servicegroup
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+
+QUOTAS = quota.QUOTAS
 
 
 network_opts = [
@@ -823,47 +826,69 @@ class NetworkManager(manager.Manager):
         #             network_get_by_compute_host
         address = None
 
-        if network['cidr']:
-            address = kwargs.get('address', None)
-            if address:
-                address = self.db.fixed_ip_associate(context,
-                                                     address,
-                                                     instance_id,
-                                                     network['id'])
-            else:
-                address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                          network['id'],
-                                                          instance_id)
-            self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   instance_id)
-            self._do_trigger_security_group_handler(
-                'instance_add_security_group', instance_id)
-            get_vif = self.db.virtual_interface_get_by_instance_and_network
-            vif = get_vif(context, instance_id, network['id'])
-            values = {'allocated': True,
-                      'virtual_interface_id': vif['id']}
-            self.db.fixed_ip_update(context, address, values)
+        # Check the quota; can't put this in the API because we get
+        # called into from other places
+        try:
+            reservations = QUOTAS.reserve(context, fixed_ips=1)
+        except exception.OverQuota:
+            pid = context.project_id
+            LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
+                       "fixed IP") % locals())
+            raise exception.FixedIpLimitExceeded()
 
-        # NOTE(vish) This db query could be removed if we pass az and name
-        #            (or the whole instance object).
-        instance = self.db.instance_get_by_uuid(context, instance_id)
-        name = instance['display_name']
+        try:
+            if network['cidr']:
+                address = kwargs.get('address', None)
+                if address:
+                    address = self.db.fixed_ip_associate(context,
+                                                         address,
+                                                         instance_id,
+                                                         network['id'])
+                else:
+                    address = self.db.fixed_ip_associate_pool(
+                        context.elevated(), network['id'], instance_id)
+                self._do_trigger_security_group_members_refresh_for_instance(
+                    instance_id)
+                self._do_trigger_security_group_handler(
+                    'instance_add_security_group', instance_id)
+                get_vif = self.db.virtual_interface_get_by_instance_and_network
+                vif = get_vif(context, instance_id, network['id'])
+                values = {'allocated': True,
+                          'virtual_interface_id': vif['id']}
+                self.db.fixed_ip_update(context, address, values)
 
-        if self._validate_instance_zone_for_dns_domain(context, instance):
-            self.instance_dns_manager.create_entry(name, address,
-                                                   "A",
-                                                   self.instance_dns_domain)
-            self.instance_dns_manager.create_entry(instance_id, address,
-                                                   "A",
-                                                   self.instance_dns_domain)
-        self._setup_network_on_host(context, network)
-        return address
+            # NOTE(vish) This db query could be removed if we pass az and name
+            #            (or the whole instance object).
+            instance = self.db.instance_get_by_uuid(context, instance_id)
+            name = instance['display_name']
+
+            if self._validate_instance_zone_for_dns_domain(context, instance):
+                self.instance_dns_manager.create_entry(
+                    name, address, "A", self.instance_dns_domain)
+                self.instance_dns_manager.create_entry(
+                    instance_id, address, "A", self.instance_dns_domain)
+            self._setup_network_on_host(context, network)
+
+            QUOTAS.commit(context, reservations)
+            return address
+
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
         """Returns a fixed ip to the pool."""
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_uuid = fixed_ip_ref['instance_uuid']
         vif_id = fixed_ip_ref['virtual_interface_id']
+
+        try:
+            reservations = QUOTAS.reserve(context, fixed_ips=-1)
+        except Exception:
+            reservations = None
+            LOG.exception(_("Failed to update usages deallocating "
+                            "fixed IP"))
+
         self._do_trigger_security_group_members_refresh_for_instance(
             instance_uuid)
         self._do_trigger_security_group_handler(
@@ -911,6 +936,10 @@ class NetworkManager(manager.Manager):
                 self.driver.release_dhcp(dev, address, vif['address'])
 
             self._teardown_network_on_host(context, network)
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""

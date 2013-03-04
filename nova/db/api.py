@@ -510,6 +510,12 @@ def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
 
+
+def fixed_ip_count_by_project(context, project_id, session=None):
+    """Count fixed ips used by project."""
+    return IMPL.fixed_ip_count_by_project(context, project_id,
+                                          session=session)
+
 ####################
 
 

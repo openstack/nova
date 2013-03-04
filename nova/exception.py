@@ -1008,6 +1008,10 @@ class FloatingIpLimitExceeded(QuotaError):
     message = _("Maximum number of floating ips exceeded")
 
 
+class FixedIpLimitExceeded(QuotaError):
+    message = _("Maximum number of fixed ips exceeded")
+
+
 class MetadataLimitExceeded(QuotaError):
     message = _("Maximum number of metadata items exceeds %(allowed)d")
 

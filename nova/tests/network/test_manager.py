@@ -34,6 +34,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
+from nova import quota
 from nova import test
 from nova.tests import fake_ldap
 from nova.tests import fake_network
@@ -286,6 +287,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
@@ -306,6 +308,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
+
         db.instance_get_by_uuid(self.context,
                         mox.IgnoreArg()).AndReturn({'display_name': HOST})
 
@@ -327,6 +333,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
@@ -347,6 +354,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
+
         db.instance_get_by_uuid(self.context,
                         mox.IgnoreArg()).AndReturn({'display_name': HOST})
 
@@ -414,6 +425,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
@@ -432,6 +444,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
+
         db.instance_get_by_uuid(self.context,
                         mox.IgnoreArg()).AndReturn({'display_name': HOST})
 
@@ -531,6 +547,7 @@ class VlanNetworkTestCase(test.TestCase):
         db.instance_get_by_uuid(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.1')
