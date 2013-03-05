@@ -22,6 +22,7 @@ from nova import context
 from nova import db
 from nova import test
 
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.network import model as network_model
@@ -150,13 +151,17 @@ class PowerVMDriverTestCase(test.TestCase):
 
     def _create_instance(self):
         fake.stub_out_image_service(self.stubs)
-        return db.instance_create(context.get_admin_context(),
+        ctxt = context.get_admin_context()
+        instance_type = db.instance_type_get(ctxt, 1)
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        return db.instance_create(ctxt,
                         {'user_id': 'fake',
                         'project_id': 'fake',
                         'instance_type_id': 1,
                         'memory_mb': 1024,
+                        'vcpus': 2,
                         'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                        'vcpus': 2})
+                        'system_metadata': sys_meta})
 
     def test_list_instances(self):
         instances = self.powervm_connection.list_instances()
