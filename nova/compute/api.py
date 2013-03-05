@@ -872,8 +872,8 @@ class API(base.Base):
             base_image_ref = base_options['image_ref']
 
         instance['system_metadata']['image_base_image_ref'] = base_image_ref
-        instance['security_groups'] = security_groups
-
+        self.security_group_api.populate_security_groups(instance,
+                                                         security_groups)
         return instance
 
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
@@ -3151,3 +3151,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         groups = instance.get('security_groups')
         if groups:
             return [{'name': group['name']} for group in groups]
+
+    def populate_security_groups(self, instance, security_groups):
+        instance['security_groups'] = security_groups
