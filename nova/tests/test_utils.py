@@ -515,6 +515,8 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertTrue(utils.is_valid_ipv4('127.0.0.1'))
         self.assertFalse(utils.is_valid_ipv4('::1'))
         self.assertFalse(utils.is_valid_ipv4('bacon'))
+        self.assertFalse(utils.is_valid_ipv4(""))
+        self.assertFalse(utils.is_valid_ipv4(10))
 
     def test_is_valid_ipv6(self):
         self.assertTrue(utils.is_valid_ipv6("::1"))
@@ -524,6 +526,8 @@ class GenericUtilsTestCase(test.TestCase):
                                     "0000:0000:0000:0000:0000:0000:0000:0001"))
         self.assertFalse(utils.is_valid_ipv6("foo"))
         self.assertFalse(utils.is_valid_ipv6("127.0.0.1"))
+        self.assertFalse(utils.is_valid_ipv6(""))
+        self.assertFalse(utils.is_valid_ipv6(10))
 
     def test_is_valid_ipv6_cidr(self):
         self.assertTrue(utils.is_valid_ipv6_cidr("2600::/64"))

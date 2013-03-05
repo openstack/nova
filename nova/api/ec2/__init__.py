@@ -442,7 +442,7 @@ class Validator(wsgi.Middleware):
         'image_id': validator.validate_ec2_id,
         'attribute': validator.validate_str(),
         'image_location': validator.validate_image_path,
-        'public_ip': validator.validate_ipv4,
+        'public_ip': utils.is_valid_ipv4,
         'region_name': validator.validate_str(),
         'group_name': validator.validate_str(max_length=255),
         'group_description': validator.validate_str(max_length=255),

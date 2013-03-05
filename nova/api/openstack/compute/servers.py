@@ -17,7 +17,6 @@
 import base64
 import os
 import re
-import socket
 
 from oslo.config import cfg
 import webob
@@ -704,16 +703,12 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=expl)
 
     def _validate_access_ipv4(self, address):
-        try:
-            socket.inet_aton(address)
-        except socket.error:
+        if not utils.is_valid_ipv4(address):
             expl = _('accessIPv4 is not proper IPv4 format')
             raise exc.HTTPBadRequest(explanation=expl)
 
     def _validate_access_ipv6(self, address):
-        try:
-            socket.inet_pton(socket.AF_INET6, address)
-        except socket.error:
+        if not utils.is_valid_ipv6(address):
             expl = _('accessIPv6 is not proper IPv6 format')
             raise exc.HTTPBadRequest(explanation=expl)
 

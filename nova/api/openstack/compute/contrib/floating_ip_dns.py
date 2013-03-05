@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-import socket
 import urllib
 
 import webob
@@ -25,6 +24,7 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova import network
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -210,15 +210,8 @@ class FloatingIPDNSEntryController(object):
 
         floating_ip = None
         # Check whether id is a valid ipv4/ipv6 address.
-        try:
-            socket.inet_pton(socket.AF_INET, id)
+        if utils.is_valid_ipv4(id) or utils.is_valid_ipv6(id):
             floating_ip = id
-        except socket.error:
-            try:
-                socket.inet_pton(socket.AF_INET6, id)
-                floating_ip = id
-            except socket.error:
-                pass
 
         if floating_ip:
             entries = self.network_api.get_dns_entries_by_address(context,
