@@ -596,7 +596,7 @@ def once_git_check_commit_title():
     nova HACKING recommends not referencing a bug or blueprint in first line,
     it should provide an accurate description of the change
     N801
-    N802 Title limited to 50 chars
+    N802 Title limited to 72 chars
     """
     #Get title of most recent commit
 
@@ -621,6 +621,8 @@ def once_git_check_commit_title():
                "description of the change, not just a reference to a bug "
                "or blueprint" % title.strip())
         error = True
+    # HACKING.rst recommends commit titles 50 chars or less, but enforces
+    # a 72 character limit
     if len(title.decode('utf-8')) > 72:
         print ("N802: git commit title ('%s') should be under 50 chars"
                 % title.strip())
