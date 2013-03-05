@@ -1646,7 +1646,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             if network and cidr and subnet_v4:
                 self._create_fixed_ips(context, network['id'], fixed_cidr)
-        return networks
+        return jsonutils.to_primitive(networks)
 
     @wrap_check_policy
     def delete_network(self, context, fixed_range, uuid,
