@@ -3756,6 +3756,30 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._instance_usage_audit(self.context)
 
+    def test_add_remove_fixed_ip_updates_instance_updated_at(self):
+        def _noop(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.network_api,
+                       'add_fixed_ip_to_instance', _noop)
+        self.stubs.Set(self.compute.network_api,
+                       'remove_fixed_ip_from_instance', _noop)
+
+        instance = self._create_fake_instance()
+        updated_at_1 = instance['updated_at']
+
+        self.compute.add_fixed_ip_to_instance(self.context, 'fake', instance)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        updated_at_2 = instance['updated_at']
+
+        self.compute.remove_fixed_ip_from_instance(self.context, 'fake',
+                                                   instance)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        updated_at_3 = instance['updated_at']
+
+        updated_ats = (updated_at_1, updated_at_2, updated_at_3)
+        self.assertEqual(len(updated_ats), len(set(updated_ats)))
+
 
 class ComputeAPITestCase(BaseTestCase):
 

@@ -39,11 +39,11 @@ allowed_updates = ['task_state', 'vm_state', 'expected_task_state',
                    'instance_type_id', 'root_device_name', 'launched_on',
                    'progress', 'vm_mode', 'default_ephemeral_device',
                    'default_swap_device', 'root_device_name',
-                   'system_metadata',
+                   'system_metadata', 'updated_at'
                    ]
 
 # Fields that we want to convert back into a datetime object.
-datetime_fields = ['launched_at', 'terminated_at']
+datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 
 
 class ConductorManager(manager.SchedulerDependentManager):

@@ -2351,6 +2351,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._inject_network_info(context, instance=instance)
         self.reset_network(context, instance)
 
+        # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
+        self._instance_update(context, instance['uuid'],
+                updated_at=timeutils.utcnow())
+
         self._notify_about_instance_usage(
             context, instance, "create_ip.end", network_info=network_info)
 
@@ -2371,6 +2375,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._inject_network_info(context,
                                                  instance=instance)
         self.reset_network(context, instance)
+
+        # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
+        self._instance_update(context, instance['uuid'],
+                updated_at=timeutils.utcnow())
 
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
