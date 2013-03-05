@@ -26,6 +26,7 @@ from nova import db
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
+from nova.openstack.common import excutils
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
@@ -225,10 +226,14 @@ def bandwidth_usage(instance_ref, audit_start,
             nw_info = network.API().get_instance_nw_info(admin_context,
                     instance_ref)
         except Exception:
-            LOG.exception(_('Failed to get nw_info'), instance=instance_ref)
-            if ignore_missing_network_data:
-                return
-            raise
+            try:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_('Failed to get nw_info'),
+                                  instance=instance_ref)
+            except Exception:
+                if ignore_missing_network_data:
+                    return
+                raise
 
     macs = [vif['address'] for vif in nw_info]
     uuids = [instance_ref["uuid"]]

@@ -27,6 +27,7 @@ from nova import context
 from nova import exception
 from nova.network import quantumv2
 from nova.network.security_group import security_group_base
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
@@ -332,8 +333,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                           'port_id': port['id']})
                 quantum.update_port(port['id'], {'port': updated_port})
             except Exception:
-                LOG.exception(_("Quantum Error:"))
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_("Quantum Error:"))
 
     @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):

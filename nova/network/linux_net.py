@@ -29,6 +29,7 @@ from oslo.config import cfg
 
 from nova import db
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -1405,9 +1406,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 utils.execute('ip', 'link', 'delete', vlan_interface,
                               run_as_root=True, check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
-                LOG.error(_("Failed unplugging VLAN interface '%s'"),
-                          vlan_interface)
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Failed unplugging VLAN interface '%s'"),
+                              vlan_interface)
             LOG.debug(_("Unplugged VLAN interface '%s'"), vlan_interface)
 
     @classmethod
@@ -1511,8 +1512,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 utils.execute('ip', 'link', 'delete', bridge, run_as_root=True,
                               check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
-                LOG.error(_("Failed unplugging bridge interface '%s'"), bridge)
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Failed unplugging bridge interface '%s'"),
+                              bridge)
 
         LOG.debug(_("Unplugged bridge interface '%s'"), bridge)
 
@@ -1710,8 +1712,9 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
                               check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
-                LOG.error(_("Failed unplugging gateway interface '%s'"), dev)
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Failed unplugging gateway interface '%s'"),
+                              dev)
             LOG.debug(_("Unplugged gateway interface '%s'"), dev)
             return dev
 

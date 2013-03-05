@@ -714,10 +714,10 @@ class LibvirtDriver(driver.ComputeDriver):
                         is_okay = True
 
                 if not is_okay:
-                    LOG.error(_("Error from libvirt during destroy. "
-                                  "Code=%(errcode)s Error=%(e)s") %
-                                locals(), instance=instance)
-                    raise
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_("Error from libvirt during destroy. "
+                                      "Code=%(errcode)s Error=%(e)s") %
+                                    locals(), instance=instance)
 
         def _wait_for_destroy(expected_domid):
             """Called at an interval until the VM is gone."""
@@ -787,11 +787,11 @@ class LibvirtDriver(driver.ComputeDriver):
                         pass
                     virt_dom.undefine()
             except libvirt.libvirtError as e:
-                errcode = e.get_error_code()
-                LOG.error(_("Error from libvirt during undefine. "
-                              "Code=%(errcode)s Error=%(e)s") %
-                            locals(), instance=instance)
-                raise
+                with excutils.save_and_reraise_exception():
+                    errcode = e.get_error_code()
+                    LOG.error(_("Error from libvirt during undefine. "
+                                  "Code=%(errcode)s Error=%(e)s") %
+                                locals(), instance=instance)
 
     def _cleanup(self, instance, network_info, block_device_info,
                  destroy_disks):
@@ -1667,13 +1667,14 @@ class LibvirtDriver(driver.ComputeDriver):
                             "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
                 hasDirectIO = False
             else:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Error on '%(path)s' while checking "
+                                "direct I/O: '%(ex)s'") %
+                                {'path': dirpath, 'ex': str(e)})
+        except Exception, e:
+            with excutils.save_and_reraise_exception():
                 LOG.error(_("Error on '%(path)s' while checking direct I/O: "
                             "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
-                raise
-        except Exception, e:
-            LOG.error(_("Error on '%(path)s' while checking direct I/O: "
-                        "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
-            raise
         finally:
             try:
                 os.unlink(testfile)
@@ -1850,9 +1851,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 try:
                     cdb.make_drive(configdrive_path)
                 except exception.ProcessExecutionError, e:
-                    LOG.error(_('Creating config drive failed with error: %s'),
-                              e, instance=instance)
-                    raise
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_('Creating config drive failed '
+                                  'with error: %s'),
+                                  e, instance=instance)
 
         # File injection
         elif CONF.libvirt_inject_partition != -2:
@@ -1892,10 +1894,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                      use_cow=CONF.use_cow_images,
                                      mandatory=('files',))
                 except Exception as e:
-                    LOG.error(_('Error injecting data into image '
-                                '%(img_id)s (%(e)s)') % locals(),
-                              instance=instance)
-                    raise
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_('Error injecting data into image '
+                                    '%(img_id)s (%(e)s)') % locals(),
+                                  instance=instance)
 
         if CONF.libvirt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
@@ -2950,9 +2952,9 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             ret = self._conn.compareCPU(cpu.to_xml(), 0)
         except libvirt.libvirtError, e:
-            ret = e.message
-            LOG.error(m % locals())
-            raise
+            with excutils.save_and_reraise_exception():
+                ret = e.message
+                LOG.error(m % locals())
 
         if ret <= 0:
             LOG.error(m % locals())

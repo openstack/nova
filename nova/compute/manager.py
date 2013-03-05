@@ -192,11 +192,11 @@ def reverts_task_state(function):
         try:
             return function(self, context, *args, **kwargs)
         except exception.UnexpectedTaskStateError:
-            LOG.exception(_("Possibly task preempted."))
             # Note(maoy): unexpected task state means the current
             # task is preempted. Do not clear task state in this
             # case.
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_("Possibly task preempted."))
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
@@ -788,12 +788,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            injected_files, admin_password)
             except exception.InstanceNotFound:
                 # the instance got deleted during the spawn
-                try:
-                    self._deallocate_network(context, instance)
-                except Exception:
-                    msg = _('Failed to dealloc network for deleted instance')
-                    LOG.exception(msg, instance=instance)
-                raise
+                with excutils.save_and_reraise_exception():
+                    try:
+                        self._deallocate_network(context, instance)
+                    except Exception:
+                        msg = _('Failed to dealloc network '
+                                'for deleted instance')
+                        LOG.exception(msg, instance=instance)
             except exception.UnexpectedTaskStateError as e:
                 actual_task_state = e.kwargs.get('actual', None)
                 if actual_task_state == 'deleting':
@@ -843,8 +844,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._deallocate_network(context, instance)
         except Exception:
             # do not attempt retry if network de-allocation failed:
-            self._log_original_error(exc_info, instance_uuid)
-            raise
+            with excutils.save_and_reraise_exception():
+                self._log_original_error(exc_info, instance_uuid)
 
         try:
             method_args = (request_spec, admin_password, injected_files,
@@ -1032,9 +1033,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 conductor_api=self.conductor_api,
                                 security_groups=security_groups)
         except Exception:
-            LOG.exception(_('Instance failed network setup'),
-                          instance=instance)
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Instance failed network setup'),
+                              instance=instance)
 
         LOG.debug(_('Instance network_info: |%s|'), network_info,
                   instance=instance)
@@ -1046,9 +1047,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             return self._setup_block_device_mapping(context, instance, bdms)
         except Exception:
-            LOG.exception(_('Instance failed block device setup'),
-                          instance=instance)
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Instance failed block device setup'),
+                              instance=instance)
 
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password):
@@ -1063,8 +1064,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                               self._legacy_nw_info(network_info),
                               block_device_info)
         except Exception:
-            LOG.exception(_('Instance failed to spawn'), instance=instance)
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Instance failed to spawn'), instance=instance)
 
         current_power_state = self._get_power_state(context, instance)
         return self._instance_update(context, instance['uuid'],

@@ -34,6 +34,7 @@ import webob.dec
 import webob.exc
 
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 
 wsgi_opts = [
@@ -175,9 +176,9 @@ class Server(object):
                                     CONF.tcp_keepidle)
 
             except Exception:
-                LOG.error(_("Failed to start %(name)s on %(host)s"
-                            ":%(port)s with SSL support") % self.__dict__)
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("Failed to start %(name)s on %(host)s"
+                                ":%(port)s with SSL support") % self.__dict__)
 
         wsgi_kwargs = {
             'func': eventlet.wsgi.server,
