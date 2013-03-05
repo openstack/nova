@@ -1080,6 +1080,10 @@ class API(base.Base):
                                                         migration_ref)
                     downsize_reservations = self._reserve_quota_delta(context,
                                                                       deltas)
+
+                    self._record_action_start(context, instance,
+                                              instance_actions.CONFIRM_RESIZE)
+
                     self.compute_rpcapi.confirm_resize(context,
                             instance, migration_ref,
                             host=src_host, cast=False,
