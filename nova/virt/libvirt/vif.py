@@ -92,7 +92,8 @@ class LibvirtBaseVIFDriver(object):
             return mapping['vif_devname']
         return ("nic" + mapping['vif_uuid'])[:network_model.NIC_NAME_LEN]
 
-    def get_config(self, instance, network, mapping, image_meta):
+    def get_config(self, instance, network, mapping, image_meta,
+                   inst_type=None):
         conf = vconfig.LibvirtConfigGuestInterface()
         # Default to letting libvirt / the hypervisor choose the model
         model = None
@@ -159,13 +160,15 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return True
         return False
 
-    def get_config_bridge(self, instance, network, mapping, image_meta):
+    def get_config_bridge(self, instance, network, mapping, image_meta,
+                            inst_type=None):
         """Get VIF configurations for bridge type."""
         conf = super(LibvirtGenericVIFDriver,
                      self).get_config(instance,
                                       network,
                                       mapping,
-                                      image_meta)
+                                      image_meta,
+                                      inst_type)
 
         designer.set_vif_host_backend_bridge_config(
             conf, self.get_bridge_name(network),
@@ -175,7 +178,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         name = "nova-instance-" + instance['name'] + "-" + mac_id
         if self.get_firewall_required():
             conf.filtername = name
-        designer.set_vif_bandwidth_config(conf, instance)
+        if inst_type and inst_type.get('extra_specs') is not None:
+            designer.set_vif_bandwidth_config(conf, inst_type['extra_specs'])
 
         return conf
 
@@ -258,7 +262,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
-    def get_config(self, instance, network, mapping, image_meta):
+    def get_config(self, instance, network, mapping, image_meta,
+                   inst_type=None):
         vif_type = mapping.get('vif_type')
 
         LOG.debug(_("vif_type=%(vif_type)s instance=%(instance)s "
@@ -273,7 +278,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         if vif_type == network_model.VIF_TYPE_BRIDGE:
             return self.get_config_bridge(instance,
                                           network, mapping,
-                                          image_meta)
+                                          image_meta,
+                                          inst_type)
         elif vif_type == network_model.VIF_TYPE_OVS:
             return self.get_config_ovs(instance,
                                        network, mapping,
