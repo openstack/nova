@@ -66,6 +66,7 @@ variables / types used
 """
 
 from nova import block_device
+from nova.compute import instance_types
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.virt import configdrive
@@ -296,7 +297,7 @@ def get_disk_mapping(virt_type, instance,
 
        Returns the guest disk mapping for the devices."""
 
-    inst_type = instance['instance_type']
+    inst_type = instance_types.extract_instance_type(instance)
 
     mapping = {}
 

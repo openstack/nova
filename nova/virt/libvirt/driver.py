@@ -63,6 +63,7 @@ from xml.dom import minidom
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -1773,7 +1774,7 @@ class LibvirtDriver(driver.ComputeDriver):
         root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
         size = instance['root_gb'] * 1024 * 1024 * 1024
 
-        inst_type = instance['instance_type']
+        inst_type = instance_types.extract_instance_type(instance)
         if size == 0 or suffix == '.rescue':
             size = None
 
