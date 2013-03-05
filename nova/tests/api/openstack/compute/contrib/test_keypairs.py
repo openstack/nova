@@ -236,6 +236,11 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 202)
 
+    def test_keypair_get_keypair_not_found(self):
+        req = webob.Request.blank('/v2/fake/os-keypairs/DOESNOTEXIST')
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 404)
+
     def test_keypair_delete_not_found(self):
 
         def db_key_pair_get_not_found(context, user_id, name):
