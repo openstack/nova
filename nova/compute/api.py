@@ -1592,17 +1592,10 @@ class API(base.Base):
 
         mapping = []
         for bdm in bdms:
-            if bdm.no_device:
+            if bdm['no_device']:
                 continue
-            m = {}
-            for attr in ('device_name', 'snapshot_id', 'volume_id',
-                         'volume_size', 'delete_on_termination', 'no_device',
-                         'virtual_name'):
-                val = getattr(bdm, attr)
-                if val is not None:
-                    m[attr] = val
 
-            volume_id = m.get('volume_id')
+            volume_id = bdm.get('volume_id')
             if volume_id:
                 # create snapshot based on volume_id
                 volume = self.volume_api.get(context, volume_id)
@@ -1612,11 +1605,10 @@ class API(base.Base):
                 name = _('snapshot for %s') % image_meta['name']
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume, name, volume['display_description'])
-                m['snapshot_id'] = snapshot['id']
-                del m['volume_id']
+                bdm['snapshot_id'] = snapshot['id']
+                del bdm['volume_id']
 
-            if m:
-                mapping.append(m)
+            mapping.append(bdm)
 
         for m in block_device.mappings_prepend_dev(properties.get('mappings',
                                                                   [])):

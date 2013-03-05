@@ -784,32 +784,13 @@ class ServerActionsControllerTest(test.TestCase):
         image_service.create(None, original_image)
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
-            class BDM(object):
-                def __init__(self):
-                    self.no_device = None
-                    self.values = dict(volume_id=_fake_id('a'),
-                                       virtual_name=None,
-                                       volume_size=1,
-                                       device_name='vda',
-                                       snapshot_id=1,
-                                       delete_on_termination=False)
-
-                def __getattr__(self, name):
-                    """Properly delegate dotted lookups."""
-                    if name in self.__dict__['values']:
-                        return self.values.get(name)
-                    try:
-                        return self.__dict__[name]
-                    except KeyError:
-                        raise AttributeError
-
-                def __getitem__(self, key):
-                    return self.values.get(key)
-
-                def iteritems(self):
-                    return self.values.iteritems()
-
-            return [BDM()]
+            return [dict(volume_id=_fake_id('a'),
+                         virtual_name=None,
+                         volume_size=1,
+                         device_name='vda',
+                         snapshot_id=1,
+                         delete_on_termination=False,
+                         no_device=None)]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
