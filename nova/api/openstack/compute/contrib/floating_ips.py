@@ -294,7 +294,9 @@ class FloatingIPActionController(wsgi.Controller):
             disassociate_floating_ip(self, context, instance, address)
             return webob.Response(status_int=202)
         else:
-            return webob.Response(status_int=404)
+            msg = _("Floating ip %(address)s is not associated with instance "
+                    "%(id)s.") % locals()
+            raise webob.exc.HTTPUnprocessableEntity(explanation=msg)
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
