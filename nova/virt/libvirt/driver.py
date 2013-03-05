@@ -2136,8 +2136,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
         for key, value in inst_type['extra_specs'].iteritems():
-            if key in quota_items:
-                setattr(guest, key, value)
+            scope = key.split(':')
+            if len(scope) > 1 and scope[0] == 'quota':
+                if scope[1] in quota_items:
+                    setattr(guest, scope[1], value)
 
         guest.cpu = self.get_guest_cpu_config()
 
