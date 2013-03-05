@@ -33,27 +33,25 @@ from nova import utils
 
 LOG = log.getLogger(__name__)
 
-notify_state_opt = cfg.StrOpt('notify_on_state_change', default=None,
-    help='If set, send compute.instance.update notifications on instance '
-         'state changes.  Valid values are None for no notifications, '
-         '"vm_state" for notifications on VM state changes, or '
-         '"vm_and_task_state" for notifications on VM and task state '
-         'changes.')
-
-notify_any_opt = cfg.BoolOpt('notify_on_any_change', default=False,
-    help='If set, send compute.instance.update notifications on instance '
-         'state changes.  Valid values are False for no notifications, '
-         'True for notifications on any instance changes.')
-
-notify_api_faults = cfg.BoolOpt('notify_api_faults', default=False,
-    help='If set, send api.fault notifications on caught exceptions '
-         'in the API service.')
+notify_opts = [
+    cfg.StrOpt('notify_on_state_change', default=None,
+        help='If set, send compute.instance.update notifications on instance '
+             'state changes.  Valid values are None for no notifications, '
+             '"vm_state" for notifications on VM state changes, or '
+             '"vm_and_task_state" for notifications on VM and task state '
+             'changes.'),
+    cfg.BoolOpt('notify_on_any_change', default=False,
+        help='If set, send compute.instance.update notifications on instance '
+             'state changes.  Valid values are False for no notifications, '
+             'True for notifications on any instance changes.'),
+    cfg.BoolOpt('notify_api_faults', default=False,
+        help='If set, send api.fault notifications on caught exceptions '
+             'in the API service.'),
+]
 
 
 CONF = cfg.CONF
-CONF.register_opt(notify_state_opt)
-CONF.register_opt(notify_any_opt)
-CONF.register_opt(notify_api_faults)
+CONF.register_opts(notify_opts)
 
 
 def send_api_fault(url, status, exception):
