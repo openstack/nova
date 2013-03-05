@@ -790,12 +790,15 @@ class DbCommands(object):
 
     @args('--max_rows', dest='max_rows', metavar='<number>',
             help='Maximum number of deleted rows to archive')
-    def archive_deleted_rows(self, max_rows=None):
+    def archive_deleted_rows(self, max_rows):
         """Move up to max_rows deleted rows from production tables to shadow
         tables.
         """
         if max_rows is not None:
             max_rows = int(max_rows)
+            if max_rows < 0:
+                print _("Must supply a positive value for max_rows")
+                sys.exit(1)
         admin_context = context.get_admin_context()
         db.archive_deleted_rows(admin_context, max_rows)
 

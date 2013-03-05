@@ -372,3 +372,13 @@ class ProjectCommandsTestCase(test.TestCase):
         self.assertRaises(SystemExit,
                           self.commands.quota, 'admin', 'volumes1', '10'
                           )
+
+
+class DBCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(DBCommandsTestCase, self).setUp()
+        self.commands = nova_manage.DbCommands()
+
+    def test_archive_deleted_rows_negative(self):
+        self.assertRaises(SystemExit,
+                          self.commands.archive_deleted_rows, -1)
