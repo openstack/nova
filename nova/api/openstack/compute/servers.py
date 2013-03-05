@@ -830,7 +830,7 @@ class Controller(wsgi.Controller):
             max_count = server_dict.get('max_count', min_count)
 
         try:
-            min_count = int(min_count)
+            min_count = int(str(min_count))
         except ValueError:
             msg = _('min_count must be an integer value')
             raise exc.HTTPBadRequest(explanation=msg)
@@ -839,7 +839,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            max_count = int(max_count)
+            max_count = int(str(max_count))
         except ValueError:
             msg = _('max_count must be an integer value')
             raise exc.HTTPBadRequest(explanation=msg)
