@@ -1234,7 +1234,7 @@ class API(base.Base):
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         # Reserve quotas
-        instance_type = instance['instance_type']
+        instance_type = instance_types.extract_instance_type(instance)
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, 1, 1)
 
@@ -1650,7 +1650,8 @@ class API(base.Base):
 
         #disk format of vhd is non-shrinkable
         if orig_image.get('disk_format') == 'vhd':
-            min_disk = instance['instance_type']['root_gb']
+            instance_type = instance_types.extract_instance_type(instance)
+            min_disk = instance_type['root_gb']
         else:
             #set new image values to the original image values
             min_disk = orig_image.get('min_disk')
@@ -1741,7 +1742,7 @@ class API(base.Base):
         metadata = kwargs.get('metadata', {})
         self._check_metadata_properties_quota(context, metadata)
 
-        instance_type = instance['instance_type']
+        instance_type = instance_types.extract_instance_type(instance)
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
             raise exception.InstanceTypeMemoryTooSmall()
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
@@ -1952,7 +1953,7 @@ class API(base.Base):
         the original flavor_id. If flavor_id is not None, the instance should
         be migrated to a new host and resized to the new flavor_id.
         """
-        current_instance_type = instance['instance_type']
+        current_instance_type = instance_types.extract_instance_type(instance)
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
@@ -1978,7 +1979,7 @@ class API(base.Base):
 
         # NOTE(sirp): We don't want to force a customer to change their flavor
         # when Ops is migrating off of a failed host.
-        if new_instance_type['disabled'] and not same_instance_type:
+        if not same_instance_type and new_instance_type['disabled']:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         # NOTE(markwash): look up the image early to avoid auth problems later

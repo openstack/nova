@@ -45,6 +45,7 @@ from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
+from nova import utils
 from nova import wsgi
 
 
@@ -434,6 +435,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         metadata = []
 
     inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
+    sys_meta = instance_types.save_instance_type_info({}, inst_type)
 
     if host is not None:
         host = str(host)
@@ -497,7 +499,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "shutdown_terminate": True,
         "disable_terminate": False,
         "security_groups": security_groups,
-        "root_device_name": root_device_name}
+        "root_device_name": root_device_name,
+        "system_metadata": utils.dict_to_metadata(sys_meta)}
 
     instance.update(info_cache)
 

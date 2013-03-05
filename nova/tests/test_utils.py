@@ -916,6 +916,16 @@ class MetadataToDictTestCase(test.TestCase):
     def test_metadata_to_dict_empty(self):
         self.assertEqual(utils.metadata_to_dict([]), {})
 
+    def test_dict_to_metadata(self):
+        expected = [{'key': 'foo1', 'value': 'bar1'},
+                    {'key': 'foo2', 'value': 'bar2'}]
+        self.assertEqual(utils.dict_to_metadata(dict(foo1='bar1',
+                                                     foo2='bar2')),
+                         expected)
+
+    def test_dict_to_metadata_empty(self):
+        self.assertEqual(utils.dict_to_metadata({}), [])
+
 
 class WrappedCodeTestCase(test.TestCase):
     """Test the get_wrapped_function utility method."""
