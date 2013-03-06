@@ -31,6 +31,13 @@ class VHDUtils(object):
         if sys.platform == 'win32':
             self._conn = wmi.WMI(moniker='//./root/virtualization')
 
+    def validate_vhd(self, vhd_path):
+        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+
+        (job_path, ret_val) = image_man_svc.ValidateVirtualHardDisk(
+            Path=vhd_path)
+        self._vmutils.check_ret_val(ret_val, job_path)
+
     def create_differencing_vhd(self, path, parent_path):
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
 

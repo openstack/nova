@@ -41,7 +41,7 @@ def get_fake_instance_data(name, project_id, user_id):
             {'name': 'm1.tiny',
              'memory_mb': 512,
              'vcpus': 1,
-             'root_gb': 0,
+             'root_gb': 1024,
              'flavorid': 1,
              'rxtx_factor': 1}
             }
@@ -69,8 +69,6 @@ def get_fake_volume_info_data(target_portal, volume_id):
             'target_portal': target_portal,
             'target_lun': 1,
             'auth_method': 'CHAP',
-            'auth_method': 'fake',
-            'auth_method': 'fake',
         }
     }
 
@@ -120,6 +118,9 @@ def stub_out_db_instance_api(stubs):
 
         def __getitem__(self, key):
             return self.get(key)
+
+        def __setitem__(self, key, value):
+            self.values[key] = value
 
         def __str__(self):
             return str(self.values)
