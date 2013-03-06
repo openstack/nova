@@ -849,7 +849,6 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         meta.reflect(engine)
         table_names = set(meta.tables.keys())
         for table_name in table_names:
-            print table_name
             if table_name.startswith("shadow_"):
                 shadow_name = table_name
                 base_name = table_name.replace("shadow_", "")
@@ -984,6 +983,54 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         if dialect not in [postgresql.dialect, sqlite.dialect]:
             console_pools = get_table(engine, 'console_pools')
             self.assertEqual(console_pools.columns['address'].type.length, 43)
+
+    # migration 160, fix system_metadata NULL deleted entries to be 0
+    def _pre_upgrade_160(self, engine):
+        fake_instances = [
+            dict(uuid='m160-uuid1'),
+            dict(uuid='m160-uuid2'),
+            dict(uuid='m160-uuid3'),
+            ]
+        fake_sys_meta = [
+            dict(instance_uuid='m160-uuid1', key='foo', value='bar'),
+            dict(instance_uuid='m160-uuid2', key='foo2', value='bar2'),
+            dict(instance_uuid='m160-uuid3', key='foo3', value='bar3')]
+
+        instances = get_table(engine, 'instances')
+        sys_meta = get_table(engine, 'instance_system_metadata')
+        engine.execute(instances.insert(), fake_instances)
+
+        # Create the metadata entries
+        data = {}
+        for sm in fake_sys_meta:
+            result = sys_meta.insert().values(sm).execute()
+            sm['id'] = result.inserted_primary_key[0]
+            data[sm['id']] = sm
+
+        # Make sure the entries in the DB for 'deleted' are None.
+        our_ids = data.keys()
+        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
+                                          execute()
+        results = list(results)
+        self.assertEqual(len(our_ids), len(results))
+        for result in results:
+            self.assertEqual(result['deleted'], None)
+        return data
+
+    def _check_160(self, engine, data):
+        our_ids = data.keys()
+        sys_meta = get_table(engine, 'instance_system_metadata')
+        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
+                                    execute()
+        results = list(results)
+        self.assertEqual(len(our_ids), len(results))
+        for result in results:
+            the_id = result['id']
+            # Make sure this is now 0.
+            self.assertEqual(result['deleted'], 0)
+            # Make sure nothing else changed.
+            for key, value in data[the_id].items():
+                self.assertEqual(value, result[key])
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
