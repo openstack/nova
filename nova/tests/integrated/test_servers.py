@@ -185,7 +185,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_deferred_delete_restore(self):
         # Creates, deletes and restores a server.
-        self.flags(reclaim_instance_interval=1)
+        self.flags(reclaim_instance_interval=3600)
         fake_network.set_stub_network_methods(self.stubs)
 
         # Create server
@@ -218,7 +218,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
     def test_deferred_delete_force(self):
         # Creates, deletes and force deletes a server.
-        self.flags(reclaim_instance_interval=1)
+        self.flags(reclaim_instance_interval=3600)
         fake_network.set_stub_network_methods(self.stubs)
 
         # Create server
