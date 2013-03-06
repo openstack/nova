@@ -119,7 +119,10 @@ class KeypairController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        keypair = self.api.get_key_pair(context, context.user_id, id)
+        try:
+            keypair = self.api.get_key_pair(context, context.user_id, id)
+        except exception.KeypairNotFound:
+            raise webob.exc.HTTPNotFound()
         return {'keypair': keypair}
 
     @wsgi.serializers(xml=KeypairsTemplate)
