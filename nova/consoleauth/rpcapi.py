@@ -49,14 +49,20 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 default_version=self.BASE_RPC_API_VERSION)
 
     def authorize_console(self, ctxt, token, console_type, host, port,
-                          internal_access_path):
+                          internal_access_path, instance_uuid=None):
         # The remote side doesn't return anything, but we want to block
         # until it completes.
         return self.call(ctxt,
                 self.make_msg('authorize_console',
                               token=token, console_type=console_type,
                               host=host, port=port,
-                              internal_access_path=internal_access_path))
+                              internal_access_path=internal_access_path,
+                              instance_uuid=instance_uuid))
 
     def check_token(self, ctxt, token):
         return self.call(ctxt, self.make_msg('check_token', token=token))
+
+    def delete_tokens_for_instance(self, ctxt, instance_uuid):
+        return self.call(ctxt,
+                self.make_msg('delete_tokens_for_instance',
+                              instance_uuid=instance_uuid))

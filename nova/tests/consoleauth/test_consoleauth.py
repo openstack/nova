@@ -45,8 +45,73 @@ class ConsoleauthTestCase(test.TestCase):
         """Test that tokens expire correctly."""
         token = 'mytok'
         self.flags(console_token_ttl=1)
+
+        def fake_validate_token(*args, **kwargs):
+            return True
+        self.stubs.Set(self.manager,
+                       "_validate_token",
+                       fake_validate_token)
+
         self.manager.authorize_console(self.context, token, 'novnc',
-                                       '127.0.0.1', 'host', '')
+                                       '127.0.0.1', '8080', 'host', "1234")
         self.assertTrue(self.manager.check_token(self.context, token))
         time.sleep(1.1)
         self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_multiple_tokens_for_instance(self):
+        tokens = ["token" + str(i) for i in xrange(10)]
+        instance = "12345"
+
+        def fake_validate_token(*args, **kwargs):
+            return True
+
+        self.stubs.Set(self.manager, "_validate_token",
+                       fake_validate_token)
+        for token in tokens:
+            self.manager.authorize_console(self.context, token, 'novnc',
+                                          '127.0.0.1', '8080', 'host',
+                                          instance)
+
+        for token in tokens:
+            self.assertTrue(self.manager.check_token(self.context, token))
+
+    def test_delete_tokens_for_instance(self):
+        instance = "12345"
+        tokens = ["token" + str(i) for i in xrange(10)]
+
+        def fake_validate_token(*args, **kwargs):
+            return True
+        self.stubs.Set(self.manager, "_validate_token",
+                       fake_validate_token)
+
+        for token in tokens:
+            self.manager.authorize_console(self.context, token, 'novnc',
+                                          '127.0.0.1', '8080', 'host',
+                                          instance)
+        self.manager.delete_tokens_for_instance(self.context, instance)
+        stored_tokens = self.manager._get_tokens_for_instance(instance)
+
+        self.assertEqual(len(stored_tokens), 0)
+
+        for token in tokens:
+            self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_wrong_token_has_port(self):
+        token = 'mytok'
+
+        def fake_validate_token(*args, **kwargs):
+            return False
+
+        self.stubs.Set(self.manager, "_validate_token",
+                       fake_validate_token)
+
+        self.manager.authorize_console(self.context, token, 'novnc',
+                                        '127.0.0.1', '8080', 'host',
+                                        instance_uuid='instance')
+        self.assertFalse(self.manager.check_token(self.context, token))
+
+    def test_console_no_instance_uuid(self):
+        self.manager.authorize_console(self.context, "token", 'novnc',
+                                        '127.0.0.1', '8080', 'host',
+                                        instance_uuid=None)
+        self.assertFalse(self.manager.check_token(self.context, "token"))

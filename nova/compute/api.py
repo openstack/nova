@@ -1853,7 +1853,8 @@ class API(base.Base):
 
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
-                connect_info['port'], connect_info['internal_access_path'])
+                connect_info['port'], connect_info['internal_access_path'],
+                instance["uuid"])
 
         return {'url': connect_info['access_url']}
 

@@ -62,3 +62,8 @@ class Client(object):
         new_value = int(value) + delta
         self.cache[key] = (self.cache[key][0], str(new_value))
         return new_value
+
+    def delete(self, key, time=0):
+        """Deletes the value associated with a key."""
+        if key in self.cache:
+            del self.cache[key]

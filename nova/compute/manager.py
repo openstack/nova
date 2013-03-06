@@ -52,6 +52,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import consoleauth
 import nova.context
 from nova import exception
 from nova import flags
@@ -235,6 +236,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -925,6 +927,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
+
+        if FLAGS.vnc_enabled:
+            self.consoleauth_rpcapi.delete_tokens_for_instance(context,
+                                                        instance["uuid"])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
@@ -1987,6 +1993,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                 connector)
         self.volume_api.attach(context, volume, instance_uuid, mountpoint)
         return connection_info
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
+    def validate_console_port(self, ctxt, instance, port, console_type):
+        console_info = self.driver.get_vnc_console(instance)
+        return console_info['port'] == port
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
