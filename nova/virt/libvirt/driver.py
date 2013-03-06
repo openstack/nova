@@ -1279,7 +1279,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                        out_path, image_format)
 
     def reboot(self, context, instance, network_info, reboot_type='SOFT',
-               block_device_info=None):
+               block_device_info=None, bad_volumes_callback=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.

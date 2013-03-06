@@ -1150,14 +1150,19 @@ class ComputeTestCase(BaseTestCase):
         # this is called with the wrong args, so we have to hack
         # around it.
         reboot_call_info = {}
-        expected_call_info = {'args': (econtext, updated_instance1,
-                                       expected_nw_info, reboot_type,
-                                       fake_block_dev_info),
-                              'kwargs': {}}
+        expected_call_info = {
+            'args': (econtext, updated_instance1, expected_nw_info,
+                     reboot_type),
+            'kwargs': {'block_device_info': fake_block_dev_info}}
 
         def fake_reboot(*args, **kwargs):
             reboot_call_info['args'] = args
             reboot_call_info['kwargs'] = kwargs
+
+            # NOTE(sirp): Since `bad_volumes_callback` is a function defined
+            # within `reboot_instance`, we don't have access to its value and
+            # can't stub it out, thus we skip that comparison.
+            kwargs.pop('bad_volumes_callback')
 
         self.stubs.Set(self.compute.driver, 'reboot', fake_reboot)
 

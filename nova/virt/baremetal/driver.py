@@ -275,7 +275,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 _update_state(context, node, None, baremetal_states.DELETED)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None):
+               block_device_info=None, bad_volumes_callback=None):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         ctx = nova_context.get_admin_context()
         pm = get_power_manager(node=node, instance=instance)

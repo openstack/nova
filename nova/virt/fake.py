@@ -131,7 +131,7 @@ class FakeDriver(driver.ComputeDriver):
         update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None):
+               block_device_info=None, bad_volumes_callback=None):
         pass
 
     @staticmethod

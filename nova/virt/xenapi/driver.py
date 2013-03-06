@@ -194,9 +194,10 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None):
+               block_device_info=None, bad_volumes_callback=None):
         """Reboot VM instance."""
-        self._vmops.reboot(instance, reboot_type)
+        self._vmops.reboot(instance, reboot_type,
+                           bad_volumes_callback=bad_volumes_callback)
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance."""
