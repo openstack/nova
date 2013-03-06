@@ -66,8 +66,10 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
         self.execute('iscsicli.exe ' + 'LisTargets')
         #Sending login
         self.execute('iscsicli.exe ' + 'qlogintarget ' + target_iqn)
-        #Waiting the disk to be mounted. Research this to avoid sleep
-        time.sleep(CONF.hyperv_wait_between_attach_retry)
+        #Waiting the disk to be mounted.
+        #TODO(pnavarro): Check for the operation to end instead of
+        #relying on a timeout
+        time.sleep(CONF.hyperv.volume_attach_retry_interval)
 
     def logout_storage_target(self, target_iqn):
         """Logs out storage target through its session id."""

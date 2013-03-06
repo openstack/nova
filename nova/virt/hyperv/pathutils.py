@@ -35,7 +35,7 @@ hyperv_opts = [
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(hyperv_opts, 'HYPERV')
+CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 
@@ -77,8 +77,8 @@ class PathUtils(object):
         local_instance_path = os.path.normpath(CONF.instances_path)
 
         if remote_server:
-            if CONF.HYPERV.instances_path_share:
-                path = CONF.HYPERV.instances_path_share
+            if CONF.hyperv.instances_path_share:
+                path = CONF.hyperv.instances_path_share
             else:
                 # Use an administrative share
                 path = local_instance_path.replace(':', '$')

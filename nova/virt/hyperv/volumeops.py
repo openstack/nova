@@ -33,20 +33,24 @@ from nova.virt.hyperv import volumeutilsv2
 LOG = logging.getLogger(__name__)
 
 hyper_volumeops_opts = [
-    cfg.IntOpt('hyperv_attaching_volume_retry_count',
+    cfg.IntOpt('volume_attach_retry_count',
                default=10,
-               help='The number of times we retry on attaching volume '),
-    cfg.IntOpt('hyperv_wait_between_attach_retry',
+               help='The number of times to retry to attach a volume',
+               deprecated_name='hyperv_attaching_volume_retry_count',
+               deprecated_group='DEFAULT'),
+    cfg.IntOpt('volume_attach_retry_interval',
                default=5,
-               help='The seconds to wait between an volume '
-               'attachment attempt'),
+               help='Interval between volume attachment attempts, in seconds',
+               deprecated_name='hyperv_wait_between_attach_retry',
+               deprecated_group='DEFAULT'),
     cfg.BoolOpt('force_volumeutils_v1',
                 default=False,
-                help='Force volumeutils v1'),
+                help='Force volumeutils v1',
+                deprecated_group='DEFAULT'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(hyper_volumeops_opts)
+CONF.register_opts(hyper_volumeops_opts, 'hyperv')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 
@@ -63,7 +67,7 @@ class VolumeOps(object):
         self._default_root_device = 'vda'
 
     def _get_volume_utils(self):
-        if(not CONF.force_volumeutils_v1 and
+        if(not CONF.hyperv.force_volumeutils_v1 and
            self._hostutils.get_windows_version() >= 6.2):
             return volumeutilsv2.VolumeUtilsV2()
         else:
@@ -171,12 +175,12 @@ class VolumeOps(object):
         LOG.debug(_('Device number: %(device_number)s, '
                     'target lun: %(target_lun)s') % locals())
         #Finding Mounted disk drive
-        for i in range(1, CONF.hyperv_attaching_volume_retry_count):
+        for i in range(1, CONF.hyperv.volume_attach_retry_count):
             mounted_disk_path = self._vmutils.get_mounted_disk_by_drive_number(
                 device_number)
             if mounted_disk_path:
                 break
-            time.sleep(CONF.hyperv_wait_between_attach_retry)
+            time.sleep(CONF.hyperv.volume_attach_retry_interval)
 
         if not mounted_disk_path:
             raise vmutils.HyperVException(_('Unable to find a mounted disk '
