@@ -122,6 +122,20 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['swap'], 0)
         self.assertEqual(inst_type['rxtx_factor'], 1.0)
 
+    def test_instance_type_create_with_empty_flavorid(self):
+        # Ensure that auto-generated uuid is assigned.
+        name = 'Empty String ID Flavor'
+        flavorid = ''
+        inst_type = instance_types.create(name, 256, 1, 120, 100, flavorid)
+        self.assertEqual(len(inst_type['flavorid']), 36)
+        self.assertEqual(inst_type['name'], name)
+        self.assertEqual(inst_type['memory_mb'], 256)
+        self.assertEqual(inst_type['vcpus'], 1)
+        self.assertEqual(inst_type['root_gb'], 120)
+        self.assertEqual(inst_type['ephemeral_gb'], 100)
+        self.assertEqual(inst_type['swap'], 0)
+        self.assertEqual(inst_type['rxtx_factor'], 1.0)
+
     def test_instance_type_create_with_custom_rxtx_factor(self):
         name = 'Custom RXTX Factor'
         inst_type = instance_types.create(name, 256, 1, 120, 100,
