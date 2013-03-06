@@ -1956,7 +1956,7 @@ class ServicesJsonTest(ApiSampleTestBase):
     def setUp(self):
         super(ServicesJsonTest, self).setUp()
         self.stubs.Set(db, "service_get_all",
-                       test_services.fake_service_get_all)
+                       test_services.fake_db_api_service_get_all)
         self.stubs.Set(timeutils, "utcnow", test_services.fake_utcnow)
         self.stubs.Set(db, "service_get_by_args",
                        test_services.fake_service_get_by_host_binary)

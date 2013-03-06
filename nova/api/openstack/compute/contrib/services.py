@@ -20,7 +20,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import availability_zones
+from nova import compute
 from nova import db
 from nova import exception
 from nova.openstack.common import log as logging
@@ -58,6 +58,10 @@ class ServicesUpdateTemplate(xmlutil.TemplateBuilder):
 
 
 class ServiceController(object):
+
+    def __init__(self):
+        self.host_api = compute.HostAPI()
+
     @wsgi.serializers(xml=ServicesIndexTemplate)
     def index(self, req):
         """
@@ -66,8 +70,8 @@ class ServiceController(object):
         context = req.environ['nova.context']
         authorize(context)
         now = timeutils.utcnow()
-        services = db.service_get_all(context)
-        services = availability_zones.set_availability_zones(context, services)
+        services = self.host_api.service_get_all(
+            context, set_zones=True)
 
         host = ''
         if 'host' in req.GET:
