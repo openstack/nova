@@ -23,9 +23,11 @@ from nova import db
 from nova import test
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.tests import fake_network_cache_model
+from nova.tests.image import fake
 from nova.virt import images
 from nova.virt.powervm import blockdev as powervm_blockdev
 from nova.virt.powervm import common
@@ -58,7 +60,7 @@ class FakeIVMOperator(object):
     def start_lpar(self, instance_name):
         pass
 
-    def stop_lpar(self, instance_name):
+    def stop_lpar(self, instance_name, time_out=30):
         pass
 
     def remove_lpar(self, instance_name):
@@ -115,9 +117,19 @@ class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
         pass
 
     def _copy_image_file(self, sourcePath, remotePath, decompress=False):
-        finalPath = '/home/images/rhel62.raw.7e358754160433febd6f3318b7c9e335'
+        finalPath = '/tmp/rhel62.raw.7e358754160433febd6f3318b7c9e335'
         size = 4294967296
         return finalPath, size
+
+    def _copy_device_to_file(self, device_name, file_path):
+        pass
+
+    def _copy_image_file_from_host(self, remote_source_path, local_dest_dir,
+                                   compress=False):
+        snapshot_file = '/tmp/rhel62.raw.7e358754160433febd6f3318b7c9e335'
+        snap_ref = open(snapshot_file, 'w+')
+        snap_ref.close()
+        return snapshot_file
 
 
 def fake_get_powervm_operator():
@@ -137,12 +149,14 @@ class PowerVMDriverTestCase(test.TestCase):
         self.instance = self._create_instance()
 
     def _create_instance(self):
+        fake.stub_out_image_service(self.stubs)
         return db.instance_create(context.get_admin_context(),
-                                  {'user_id': 'fake',
-                                   'project_id': 'fake',
-                                   'instance_type_id': 1,
-                                   'memory_mb': 1024,
-                                   'vcpus': 2})
+                        {'user_id': 'fake',
+                        'project_id': 'fake',
+                        'instance_type_id': 1,
+                        'memory_mb': 1024,
+                        'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                        'vcpus': 2})
 
     def test_list_instances(self):
         instances = self.powervm_connection.list_instances()
@@ -191,6 +205,27 @@ class PowerVMDriverTestCase(test.TestCase):
                           context.get_admin_context(),
                           self.instance,
                           {'id': 'ANY_ID'}, [], 's3cr3t', fake_net_info)
+
+    def test_snapshot(self):
+
+        def update_task_state(task_state, expected_state=None):
+            self._loc_task_state = task_state
+            self._loc_expected_task_state = expected_state
+
+        loc_context = context.get_admin_context()
+        properties = {'instance_id': self.instance['id'],
+                      'user_id': str(loc_context.user_id)}
+        sent_meta = {'name': 'fake_snap', 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        image_service = fake.FakeImageService()
+        recv_meta = image_service.create(loc_context, sent_meta)
+
+        self.powervm_connection.snapshot(loc_context,
+                                      self.instance, recv_meta['id'],
+                                      update_task_state)
+
+        self.assertTrue(self._loc_task_state == task_states.IMAGE_UPLOADING and
+            self._loc_expected_task_state == task_states.IMAGE_PENDING_UPLOAD)
 
     def test_destroy(self):
         self.powervm_connection.destroy(self.instance, None)

@@ -251,13 +251,16 @@ class PowerVMOperator(object):
             LOG.warn(_("During destroy, LPAR instance '%s' was not found on "
                        "PowerVM system.") % instance_name)
 
-    def capture_image(self, context, instance, image_id, image_meta):
+    def capture_image(self, context, instance, image_id, image_meta,
+                      update_task_state):
         """Capture the root disk for a snapshot
 
         :param context: nova context for this operation
         :param instance: instance information to capture the image from
         :param image_id: uuid of pre-created snapshot image
         :param image_meta: metadata to upload with captured image
+        :param update_task_state: Function reference that allows for updates
+                                  to the instance task state.
         """
         lpar = self._operator.get_lpar(instance['name'])
         previous_state = lpar['state']
@@ -275,7 +278,7 @@ class PowerVMOperator(object):
 
         # do capture and upload
         self._disk_adapter.create_image_from_volume(
-                disk_name, context, image_id, image_meta)
+                disk_name, context, image_id, image_meta, update_task_state)
 
         # restart instance if it was running before
         if previous_state == 'Running':

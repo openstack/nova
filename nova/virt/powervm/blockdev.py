@@ -20,6 +20,7 @@ import re
 
 from oslo.config import cfg
 
+from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
@@ -69,13 +70,15 @@ class PowerVMDiskAdapter(object):
         pass
 
     def create_image_from_volume(self, device_name, context,
-                                 image_id, image_meta):
+                                 image_id, image_meta, update_task_state):
         """Capture the contents of a volume and upload to glance
 
         :param device_name: device in /dev/ to capture
         :param context: nova context for operation
         :param image_id: image reference to pre-created image in glance
         :param image_meta: metadata for new image
+        :param update_task_state: Function reference that allows for updates
+                                  to the instance task state
         """
         pass
 
@@ -196,14 +199,18 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         return {'device_name': disk_name}
 
     def create_image_from_volume(self, device_name, context,
-                                 image_id, image_meta):
+                                 image_id, image_meta, update_task_state):
         """Capture the contents of a volume and upload to glance
 
         :param device_name: device in /dev/ to capture
         :param context: nova context for operation
         :param image_id: image reference to pre-created image in glance
         :param image_meta: metadata for new image
+        :param update_task_state: Function reference that allows for updates
+                                  to the instance task state.
         """
+        # Updating instance task state before capturing instance as a file
+        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
         # do the disk copy
         dest_file_path = common.aix_path_join(CONF.powervm_img_remote_path,
@@ -218,6 +225,12 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         # get glance service
         glance_service, image_id = glance.get_remote_image_service(
                 context, image_id)
+
+        # Updating instance task state before uploading image
+        # Snapshot will complete but instance state will not change
+        # to none in compute manager if expected state is not correct
+        update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                     expected_state=task_states.IMAGE_PENDING_UPLOAD)
 
         # upload snapshot file to glance
         with open(snapshot_file_path, 'r') as img_file:
