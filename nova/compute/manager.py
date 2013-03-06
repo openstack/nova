@@ -68,6 +68,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import quota
+from nova import safe_utils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
@@ -247,7 +248,7 @@ def wrap_instance_event(function):
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
         wrapped_func = utils.get_wrapped_function(function)
-        keyed_args = utils.getcallargs(wrapped_func, context, *args,
+        keyed_args = safe_utils.getcallargs(wrapped_func, context, *args,
                                        **kwargs)
         instance_uuid = keyed_args['instance']['uuid']
 

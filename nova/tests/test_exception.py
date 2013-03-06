@@ -133,3 +133,10 @@ class NovaExceptionTestCase(test.TestCase):
 
         exc = FakeNovaException(code=404)
         self.assertEquals(exc.kwargs['code'], 404)
+
+    def test_cleanse_dict(self):
+        kwargs = {'foo': 1, 'blah_pass': 2, 'zoo_password': 3, '_pass': 4}
+        self.assertEquals(exception._cleanse_dict(kwargs), {'foo': 1})
+
+        kwargs = {}
+        self.assertEquals(exception._cleanse_dict(kwargs), {})
