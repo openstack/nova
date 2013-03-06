@@ -27,6 +27,7 @@ from eventlet.green import subprocess
 from oslo.config import cfg
 
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import vmutils
 
@@ -55,9 +56,9 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
 
     def login_storage_target(self, target_lun, target_iqn, target_portal):
         """Add target portal, list targets and logins to the target."""
-        separator = target_portal.find(':')
-        target_address = target_portal[:separator]
-        target_port = target_portal[separator + 1:]
+        (target_address,
+         target_port) = utils.parse_server_string(target_portal)
+
         #Adding target portal to iscsi initiator. Sending targets
         self.execute('iscsicli.exe ' + 'AddTargetPortal ' +
                      target_address + ' ' + target_port +
