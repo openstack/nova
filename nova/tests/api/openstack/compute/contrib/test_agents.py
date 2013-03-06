@@ -98,9 +98,6 @@ class AgentsTest(test.TestCase):
         self.context = context.get_admin_context()
         self.controller = agents.AgentController()
 
-    def tearDown(self):
-        super(AgentsTest, self).tearDown()
-
     def test_agents_create(self):
         req = FakeRequest()
         body = {'agent': {'hypervisor': 'kvm',

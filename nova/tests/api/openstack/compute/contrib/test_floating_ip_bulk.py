@@ -32,9 +32,6 @@ class FloatingIPBulk(test.TestCase):
         self.context = context.get_admin_context()
         self.controller = floating_ips_bulk.FloatingIPBulkController()
 
-    def tearDown(self):
-        super(FloatingIPBulk, self).tearDown()
-
     def _setup_floating_ips(self, ip_range):
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')

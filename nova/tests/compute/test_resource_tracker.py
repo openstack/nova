@@ -877,10 +877,6 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
 
 class OrphanTestCase(BaseTrackerTestCase):
-
-    def setUp(self):
-        super(OrphanTestCase, self).setUp()
-
     def _driver(self):
         class OrphanVirtDriver(FakeVirtDriver):
             def get_per_instance_usage(self):

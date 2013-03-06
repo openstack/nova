@@ -171,9 +171,6 @@ class CacheConcurrencyTestCase(test.TestCase):
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
 
-    def tearDown(self):
-        super(CacheConcurrencyTestCase, self).tearDown()
-
     def test_same_fname_concurrency(self):
         # Ensures that the same fname cache runs at a sequentially.
         uuid = uuidutils.generate_uuid()

@@ -121,9 +121,6 @@ class ServicesTest(test.TestCase):
         self.context = context.get_admin_context()
         self.controller = services.ServiceController()
 
-    def tearDown(self):
-        super(ServicesTest, self).tearDown()
-
     def test_services_list(self):
         req = FakeRequest()
         res_dict = self.controller.index(req)

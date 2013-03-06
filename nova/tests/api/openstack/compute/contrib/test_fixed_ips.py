@@ -106,9 +106,6 @@ class FixedIpTest(test.TestCase):
         self.context = context.get_admin_context()
         self.controller = fixed_ips.FixedIPController()
 
-    def tearDown(self):
-        super(FixedIpTest, self).tearDown()
-
     def test_fixed_ips_get(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-fixed-ips/192.168.1.1')
         res_dict = self.controller.show(req, '192.168.1.1')
