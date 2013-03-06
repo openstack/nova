@@ -532,8 +532,8 @@ class MockClient(object):
         # does not handle bulk case so just picks rule[0]
         r = body.get('security_group_rules')[0]
         fields = ['direction', 'protocol', 'port_range_min', 'port_range_max',
-                  'ethertype', 'source_ip_prefix', 'tenant_id',
-                  'security_group_id', 'source_group_id']
+                  'ethertype', 'remote_ip_prefix', 'tenant_id',
+                  'security_group_id', 'remote_group_id']
         ret = {}
         for field in fields:
             ret[field] = r.get(field)
