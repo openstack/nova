@@ -26,6 +26,7 @@ from oslo.config import cfg
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import paths
 from nova import utils
@@ -119,8 +120,8 @@ class XVPConsoleProxy(object):
             with open(CONF.console_xvp_conf, 'w') as cfile:
                 cfile.write(config)
         except IOError:
-            LOG.exception(_("Failed to write configuration file"))
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_("Failed to write configuration file"))
 
     def _xvp_stop(self):
         LOG.debug(_('Stopping xvp'))
