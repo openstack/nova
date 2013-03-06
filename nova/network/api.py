@@ -258,13 +258,14 @@ class API(base.Base):
         #             this is called from compute.manager which shouldn't
         #             have db access so we do it on the other side of the
         #             rpc.
+        instance_type = instance_types.extract_instance_type(instance)
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
         args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
-        args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
+        args['rxtx_factor'] = instance_type['rxtx_factor']
         args['macs'] = macs
         nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
@@ -307,8 +308,9 @@ class API(base.Base):
     def add_fixed_ip_to_instance(self, context, instance, network_id,
                                  conductor_api=None):
         """Adds a fixed ip to instance from specified network."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
-                'rxtx_factor': instance['instance_type']['rxtx_factor'],
+                'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
                 'network_id': network_id}
         self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
@@ -319,8 +321,9 @@ class API(base.Base):
                                       conductor_api=None):
         """Removes a fixed ip from instance from specified network."""
 
+        instance_type = instance_types.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
-                'rxtx_factor': instance['instance_type']['rxtx_factor'],
+                'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
                 'address': address}
         self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
@@ -480,9 +483,10 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
-            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            rxtx_factor=instance_type['rxtx_factor'],
             project_id=instance['project_id'],
             source_compute=migration['source_compute'],
             dest_compute=migration['dest_compute'],
@@ -499,9 +503,10 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
-            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            rxtx_factor=instance_type['rxtx_factor'],
             project_id=instance['project_id'],
             source_compute=migration['source_compute'],
             dest_compute=migration['dest_compute'],
