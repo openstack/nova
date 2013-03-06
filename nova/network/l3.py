@@ -79,7 +79,13 @@ class LinuxNetL3(L3Driver):
         if self.initialized:
             return
         LOG.debug("Initializing linux_net L3 driver")
-        linux_net.init_host()
+        fixed_range = kwargs.get('fixed_range', False)
+        networks = kwargs.get('networks', None)
+        if not fixed_range and networks is not None:
+            for network in networks:
+                self.initialize_network(network['cidr'])
+        else:
+            linux_net.init_host()
         linux_net.ensure_metadata_ip()
         linux_net.metadata_forward()
         self.initialized = True
@@ -88,7 +94,7 @@ class LinuxNetL3(L3Driver):
         return self.initialized
 
     def initialize_network(self, cidr):
-        linux_net.add_snat_rule(cidr)
+        linux_net.init_host(cidr)
 
     def initialize_gateway(self, network_ref):
         mac_address = utils.generate_mac_address()
