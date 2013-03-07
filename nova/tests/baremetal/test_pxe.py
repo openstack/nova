@@ -202,8 +202,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
 
     def test_get_instance_deploy_ids(self):
         self.instance['extra_specs'] = {
-                'deploy_kernel_id': 'aaaa',
-                'deploy_ramdisk_id': 'bbbb',
+                'baremetal:deploy_kernel_id': 'aaaa',
+                'baremetal:deploy_ramdisk_id': 'bbbb',
                 }
         self.flags(deploy_kernel="fail", group='baremetal')
         self.flags(deploy_ramdisk="fail", group='baremetal')
@@ -289,8 +289,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         # Note that it is passed on the 'instance' object, despite being
         # inherited from the instance_types_extra_specs table.
         extra_specs = {
-                'deploy_kernel_id': 'eeee',
-                'deploy_ramdisk_id': 'ffff',
+                'baremetal:deploy_kernel_id': 'eeee',
+                'baremetal:deploy_ramdisk_id': 'ffff',
             }
         instance_type['extra_specs'] = extra_specs
         res = pxe.get_tftp_image_info(self.instance, instance_type)
@@ -300,8 +300,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         # However, if invalid values are passed on the image extra_specs,
         # this should still raise an exception.
         extra_specs = {
-                'deploy_kernel_id': '',
-                'deploy_ramdisk_id': '',
+                'baremetal:deploy_kernel_id': '',
+                'baremetal:deploy_ramdisk_id': '',
             }
         instance_type['extra_specs'] = extra_specs
         self.assertRaises(exception.NovaException,
@@ -324,8 +324,8 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         self.instance['ramdisk_id'] = 'bbbb'
         instance_type = utils.get_test_instance_type()
         extra_specs = {
-                'deploy_kernel_id': 'cccc',
-                'deploy_ramdisk_id': 'dddd',
+                'baremetal:deploy_kernel_id': 'cccc',
+                'baremetal:deploy_ramdisk_id': 'dddd',
             }
         instance_type['extra_specs'] = extra_specs
         image_info = pxe.get_tftp_image_info(self.instance, instance_type)
@@ -477,8 +477,8 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self._create_node()
         instance_type = {
             'extra_specs': {
-                'deploy_kernel_id': 'eeee',
-                'deploy_ramdisk_id': 'ffff',
+                'baremetal:deploy_kernel_id': 'eeee',
+                'baremetal:deploy_ramdisk_id': 'ffff',
                 }
             }
         self.instance['uuid'] = 'fake-uuid'
@@ -540,8 +540,9 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(self.driver, '_collect_mac_addresses')
 
-        extra_specs = dict(extra_specs=dict(deploy_ramdisk_id='ignore',
-                                            deploy_kernel_id='ignore'))
+        extra_specs = dict(extra_specs={
+            'baremetal:deploy_ramdisk_id': 'ignore',
+            'baremetal:deploy_kernel_id': 'ignore'})
         pxe.get_tftp_image_info(self.instance, extra_specs).\
                 AndRaise(exception.NovaException)
         bm_utils.unlink_without_raise(pxe_path)

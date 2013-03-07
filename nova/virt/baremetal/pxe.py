@@ -150,12 +150,12 @@ def build_network_config(network_info):
 
 def get_deploy_aki_id(instance_type):
     return instance_type.get('extra_specs', {}).\
-                get('deploy_kernel_id', CONF.baremetal.deploy_kernel)
+            get('baremetal:deploy_kernel_id', CONF.baremetal.deploy_kernel)
 
 
 def get_deploy_ari_id(instance_type):
     return instance_type.get('extra_specs', {}).\
-                get('deploy_ramdisk_id', CONF.baremetal.deploy_ramdisk)
+            get('baremetal:deploy_ramdisk_id', CONF.baremetal.deploy_ramdisk)
 
 
 def get_image_dir_path(instance):
@@ -423,8 +423,9 @@ class PXE(base.NodeDriver):
         # NOTE(danms): the instance_type extra_specs do not need to be
         # present/correct at deactivate time, so pass something empty
         # to avoid an extra lookup
-        instance_type = dict(extra_specs=dict(deploy_ramdisk_id='ignore',
-                                              deploy_kernel_id='ignore'))
+        instance_type = dict(extra_specs={
+            'baremetal:deploy_ramdisk_id': 'ignore',
+            'baremetal:deploy_kernel_id': 'ignore'})
         try:
             image_info = get_tftp_image_info(instance, instance_type)
         except exception.NovaException:
