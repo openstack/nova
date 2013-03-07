@@ -192,9 +192,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = fake_image.FakeImageService()
 
-    def tearDown(self):
-        super(_VirtDriverTestCase, self).tearDown()
-
     def _get_running_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()

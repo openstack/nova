@@ -1605,9 +1605,6 @@ class CloudPipeUpdateJsonTest(ApiSampleTestBase):
             'nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe')
         return f
 
-    def setUp(self):
-        super(CloudPipeUpdateJsonTest, self).setUp()
-
     def test_cloud_pipe_update(self):
         subs = {'vpn_ip': '192.168.1.1',
                 'vpn_port': 2000}
@@ -1881,9 +1878,6 @@ class AggregatesSampleXmlTest(AggregatesSampleJsonTest):
 class CertificatesSamplesJsonTest(ApiSampleTestBase):
     extension_name = ("nova.api.openstack.compute.contrib.certificates."
                       "Certificates")
-
-    def setUp(self):
-        super(CertificatesSamplesJsonTest, self).setUp()
 
     def test_create_certificates(self):
         response = self._do_post('os-certificates',

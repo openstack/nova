@@ -30,9 +30,6 @@ class TestGlanceStore(test.TestCase):
         self.store = glance.GlanceStore()
         self.mox = mox.Mox()
 
-    def tearDown(self):
-        super(TestGlanceStore, self).tearDown()
-
     def test_upload_image(self):
         glance_host = '0.1.2.3'
         glance_port = 8143

@@ -148,10 +148,6 @@ class VirtDiskVFSLocalFSTestPaths(test.TestCase):
 
 
 class VirtDiskVFSLocalFSTest(test.TestCase):
-
-    def setUp(self):
-        super(VirtDiskVFSLocalFSTest, self).setUp()
-
     def test_makepath(self):
         global dirs, commands
         dirs = []
