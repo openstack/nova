@@ -158,6 +158,9 @@ class VMOps(object):
         if self._vmutils.vm_exists(instance_name):
             raise exception.InstanceExists(name=instance_name)
 
+        # Make sure we're starting with a clean slate.
+        self._delete_disk_files(instance_name)
+
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
             root_vhd_path = None
         else:

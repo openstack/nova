@@ -84,6 +84,7 @@ class HyperVAPITestCase(test.TestCase):
         self._instance_ide_dvds = []
         self._instance_volume_disks = []
         self._test_vm_name = None
+        self._test_instance_dir = 'C:\\FakeInstancesPath\\instance-0000001'
 
         self._setup_stubs()
 
@@ -134,6 +135,7 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(fake.PathUtils, 'makedirs')
         self._mox.StubOutWithMock(fake.PathUtils,
                                   'get_instance_migr_revert_dir')
+        self._mox.StubOutWithMock(fake.PathUtils, 'get_instance_dir')
 
         self._mox.StubOutWithMock(vmutils.VMUtils, 'vm_exists')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'create_vm')
@@ -336,6 +338,9 @@ class HyperVAPITestCase(test.TestCase):
                                                 content=mox.IsA(list),
                                                 extra_md=mox.IsA(dict))
 
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
+
         cdb = self._mox.CreateMockAnything()
         m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
         m.AndReturn(cdb)
@@ -368,8 +373,6 @@ class HyperVAPITestCase(test.TestCase):
         self.flags(config_drive_cdrom=use_cdrom, group='hyperv')
         self.flags(mkisofs_cmd='mkisofs.exe')
 
-        self._setup_spawn_config_drive_mocks(use_cdrom)
-
         if use_cdrom:
             expected_ide_disks = 1
             expected_ide_dvds = 1
@@ -378,7 +381,9 @@ class HyperVAPITestCase(test.TestCase):
             expected_ide_dvds = 0
 
         self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
-                                  expected_ide_dvds=expected_ide_dvds)
+                                  expected_ide_dvds=expected_ide_dvds,
+                                  config_drive=True,
+                                  use_cdrom=use_cdrom)
 
     def test_spawn_config_drive(self):
         self._test_spawn_config_drive(False)
@@ -512,7 +517,7 @@ class HyperVAPITestCase(test.TestCase):
                           None)
         self._mox.VerifyAll()
 
-    def _setup_destroy_mocks(self):
+    def _setup_destroy_mocks(self, destroy_disks=True):
         m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
         m.AndReturn(True)
 
@@ -523,6 +528,12 @@ class HyperVAPITestCase(test.TestCase):
         m.AndReturn(([], []))
 
         vmutils.VMUtils.destroy_vm(func)
+
+        if destroy_disks:
+            m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                                create_dir=False,
+                                                remove_dir=True)
+            m.AndReturn(self._test_instance_dir)
 
     def test_destroy(self):
         self._instance_data = self._get_instance_data()
@@ -691,6 +702,9 @@ class HyperVAPITestCase(test.TestCase):
         m = vmutils.VMUtils.take_vm_snapshot(func)
         m.AndReturn(fake_hv_snapshot_path)
 
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
+
         m = vhdutils.VHDUtils.get_vhd_parent_path(mox.IsA(str))
         m.AndReturn(fake_parent_vhd_path)
 
@@ -831,9 +845,16 @@ class HyperVAPITestCase(test.TestCase):
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
                                     with_exception=False,
                                     block_device_info=None,
-                                    boot_from_volume=False):
+                                    boot_from_volume=False,
+                                    config_drive=False,
+                                    use_cdrom=False):
         m = vmutils.VMUtils.vm_exists(mox.IsA(str))
         m.WithSideEffects(self._set_vm_name).AndReturn(False)
+
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                            create_dir=False,
+                                            remove_dir=True)
+        m.AndReturn(self._test_instance_dir)
 
         m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(
             mox.IsA(str), block_device_info)
@@ -856,6 +877,9 @@ class HyperVAPITestCase(test.TestCase):
                                           boot_from_volume,
                                           block_device_info)
 
+        if config_drive:
+            self._setup_spawn_config_drive_mocks(use_cdrom)
+
         # TODO(alexpilotti) Based on where the exception is thrown
         # some of the above mock calls need to be skipped
         if with_exception:
@@ -871,9 +895,17 @@ class HyperVAPITestCase(test.TestCase):
                              expected_ide_disks=1,
                              expected_ide_dvds=0,
                              setup_vif_mocks_func=None,
-                             with_exception=False):
-        self._setup_spawn_instance_mocks(cow, setup_vif_mocks_func,
-                                         with_exception)
+                             with_exception=False,
+                             config_drive=False,
+                             use_cdrom=False):
+        self._setup_spawn_instance_mocks(cow,
+                                         setup_vif_mocks_func,
+                                         with_exception,
+                                         config_drive=config_drive,
+                                         use_cdrom=use_cdrom)
+
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
 
         self._mox.ReplayAll()
         self._spawn_instance(cow)
@@ -882,7 +914,7 @@ class HyperVAPITestCase(test.TestCase):
         self.assertEquals(len(self._instance_ide_disks), expected_ide_disks)
         self.assertEquals(len(self._instance_ide_dvds), expected_ide_dvds)
 
-        vhd_path = pathutils.PathUtils().get_vhd_path(self._test_vm_name)
+        vhd_path = os.path.join(self._test_instance_dir, 'root.vhd')
         self.assertEquals(vhd_path, self._instance_ide_disks[0])
 
     def _mock_get_mounted_disk_from_lun(self, target_iqn, target_lun,
@@ -1028,8 +1060,7 @@ class HyperVAPITestCase(test.TestCase):
             fake_dest_ip = '10.0.0.2'
 
         fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
-        fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
-                            instance['name'])
+        fake_revert_path = os.path.join(self._test_instance_dir, '_revert')
 
         func = mox.Func(self._check_instance_name)
         vmutils.VMUtils.set_vm_state(func, constants.HYPERV_VM_STATE_DISABLED)
@@ -1039,6 +1070,9 @@ class HyperVAPITestCase(test.TestCase):
 
         m = hostutils.HostUtils.get_local_ips()
         m.AndReturn([fake_local_ip])
+
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
 
         m = pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'],
                                                              remove_dir=True)
@@ -1050,12 +1084,24 @@ class HyperVAPITestCase(test.TestCase):
         m = fake.PathUtils.copy(fake_root_vhd_path, mox.IsA(str))
         if with_exception:
             m.AndRaise(shutil.Error('Simulated copy error'))
+            m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                                mox.IsA(str),
+                                                remove_dir=True)
+            m.AndReturn(self._test_instance_dir)
         else:
             fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+            destroy_disks = True
             if same_host:
                 fake.PathUtils.rename(mox.IsA(str), mox.IsA(str))
+                destroy_disks = False
 
-            self._setup_destroy_mocks()
+            self._setup_destroy_mocks(False)
+
+            if destroy_disks:
+                m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                                    mox.IsA(str),
+                                                    remove_dir=True)
+                m.AndReturn(self._test_instance_dir)
 
         return (instance, fake_dest_ip, network_info)
 
@@ -1102,6 +1148,9 @@ class HyperVAPITestCase(test.TestCase):
         m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
                                                               None)
         m.AndReturn(False)
+
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
 
         self._mox.StubOutWithMock(fake.PathUtils, 'exists')
         m = fake.PathUtils.exists(mox.IsA(str))
@@ -1161,9 +1210,17 @@ class HyperVAPITestCase(test.TestCase):
                                                               None)
         m.AndReturn(False)
 
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str),
+                                            create_dir=False,
+                                            remove_dir=True)
+        m.AndReturn(self._test_instance_dir)
+
         m = pathutils.PathUtils.get_instance_migr_revert_dir(instance['name'])
         m.AndReturn(fake_revert_path)
         fake.PathUtils.rename(fake_revert_path, mox.IsA(str))
+
+        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
+        m.AndReturn(self._test_instance_dir)
 
         self._set_vm_name(instance['name'])
         self._setup_create_instance_mocks(None, False)
