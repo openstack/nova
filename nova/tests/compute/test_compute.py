@@ -605,6 +605,18 @@ class ComputeTestCase(BaseTestCase):
         fake_network.unset_stub_network_methods(self.stubs)
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
+        orig_update = self.compute._instance_update
+
+        # Make sure the access_ip_* updates happen in the same DB
+        # update as the set to ACTIVE.
+        def _instance_update(ctxt, instance_uuid, **kwargs):
+            if kwargs.get('vm_state', None) == vm_states.ACTIVE:
+                self.assertEqual(kwargs['access_ip_v4'], '192.168.1.100')
+                self.assertEqual(kwargs['access_ip_v6'], '2001:db8:0:1::1')
+            return orig_update(ctxt, instance_uuid, **kwargs)
+
+        self.stubs.Set(self.compute, '_instance_update', _instance_update)
+
         try:
             self.compute.run_instance(self.context, instance=instance,
                     is_first_time=True)
@@ -7355,7 +7367,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
                 actual=task_states.DELETING)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(exc)
+                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
 
         self.mox.ReplayAll()
         # test succeeds if mocked method '_reschedule_or_reraise' is not
@@ -7373,7 +7385,7 @@ class ComputeRescheduleOrReraiseTestCase(BaseTestCase):
                 actual=task_states.SCHEDULING)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(exc)
+                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,

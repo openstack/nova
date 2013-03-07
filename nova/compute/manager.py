@@ -784,9 +784,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                     block_device_info = self._prep_block_device(
                             context, instance, bdms)
 
+                    set_access_ip = (is_first_time and
+                                     not instance['access_ip_v4'] and
+                                     not instance['access_ip_v6'])
+
                     instance = self._spawn(context, instance, image_meta,
                                            network_info, block_device_info,
-                                           injected_files, admin_password)
+                                           injected_files, admin_password,
+                                           set_access_ip=set_access_ip)
             except exception.InstanceNotFound:
                 # the instance got deleted during the spawn
                 with excutils.save_and_reraise_exception():
@@ -811,11 +816,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                         is_first_time, request_spec, filter_properties)
             else:
                 # Spawn success:
-                if (is_first_time and not instance['access_ip_v4']
-                                  and not instance['access_ip_v6']):
-                    instance = self._update_access_ip(context, instance,
-                                                      network_info)
-
                 self._notify_about_instance_usage(context, instance,
                         "create.end", network_info=network_info,
                         extra_usage_info=extra_usage_info)
@@ -919,32 +919,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._set_instance_error_state(context, instance['uuid'])
                 LOG.warn(_("Instance build timed out. Set to error state."),
                          instance=instance)
-
-    def _update_access_ip(self, context, instance, nw_info):
-        """Update the access ip values for a given instance.
-
-        If CONF.default_access_ip_network_name is set, this method will
-        grab the corresponding network and set the access ip values
-        accordingly. Note that when there are multiple ips to choose from,
-        an arbitrary one will be chosen.
-        """
-
-        network_name = CONF.default_access_ip_network_name
-        if not network_name:
-            return instance
-
-        update_info = {}
-        for vif in nw_info:
-            if vif['network']['label'] == network_name:
-                for ip in vif.fixed_ips():
-                    if ip['version'] == 4:
-                        update_info['access_ip_v4'] = ip['address']
-                    if ip['version'] == 6:
-                        update_info['access_ip_v6'] = ip['address']
-        if update_info:
-            instance = self._instance_update(context, instance['uuid'],
-                                             **update_info)
-        return instance
 
     def _check_instance_exists(self, context, instance):
         """Ensure an instance with the same name is not already present."""
@@ -1053,7 +1027,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance=instance)
 
     def _spawn(self, context, instance, image_meta, network_info,
-               block_device_info, injected_files, admin_password):
+               block_device_info, injected_files, admin_password,
+               set_access_ip=False):
         """Spawn an instance with error logging and update its power state."""
         instance = self._instance_update(context, instance['uuid'],
                 vm_state=vm_states.BUILDING,
@@ -1069,12 +1044,40 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
 
         current_power_state = self._get_power_state(context, instance)
+
+        update_data = dict(power_state=current_power_state,
+                           vm_state=vm_states.ACTIVE,
+                           task_state=None,
+                           expected_task_state=task_states.SPAWNING,
+                           launched_at=timeutils.utcnow())
+
+        def _set_access_ip_values():
+            """Add access ip values for a given instance.
+
+            If CONF.default_access_ip_network_name is set, this method will
+            grab the corresponding network and set the access ip values
+            accordingly. Note that when there are multiple ips to choose
+            from, an arbitrary one will be chosen.
+            """
+
+            network_name = CONF.default_access_ip_network_name
+            if not network_name:
+                return
+
+            for vif in network_info:
+                if vif['network']['label'] == network_name:
+                    for ip in vif.fixed_ips():
+                        if ip['version'] == 4:
+                            update_data['access_ip_v4'] = ip['address']
+                        if ip['version'] == 6:
+                            update_data['access_ip_v6'] = ip['address']
+                    return
+
+        if set_access_ip:
+            _set_access_ip_values()
+
         return self._instance_update(context, instance['uuid'],
-                                     power_state=current_power_state,
-                                     vm_state=vm_states.ACTIVE,
-                                     task_state=None,
-                                     expected_task_state=task_states.SPAWNING,
-                                     launched_at=timeutils.utcnow())
+                                     **update_data)
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
