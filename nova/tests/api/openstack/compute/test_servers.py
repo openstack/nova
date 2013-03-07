@@ -2522,6 +2522,22 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
+    def test_create_instance_with_networks_disabled_quantumv2(self):
+        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        requested_networks = [{'uuid': net_uuid}]
+        params = {'networks': requested_networks}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            result = [('76fa36fc-c930-4bf3-8c8a-ea2a2420deb6', None,
+                       None)]
+            self.assertEqual(kwargs['requested_networks'], result)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_networks_disabled(self):
         self.ext_mgr.extensions = {}
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
