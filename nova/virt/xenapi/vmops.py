@@ -29,6 +29,7 @@ from oslo.config import cfg
 
 from nova import block_device
 from nova.compute import api as compute
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -521,7 +522,7 @@ class VMOps(object):
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type, admin_password=None, files=None):
         ctx = nova_context.get_admin_context()
-        instance_type = instance['instance_type']
+        instance_type = instance_types.extract_instance_type(instance)
 
         # Attach (required) root disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
@@ -648,7 +649,8 @@ class VMOps(object):
             agent.resetnetwork()
 
         # Set VCPU weight
-        vcpu_weight = instance['instance_type']['vcpu_weight']
+        instance_type = instance_types.extract_instance_type(instance)
+        vcpu_weight = instance_type['vcpu_weight']
         if vcpu_weight is not None:
             LOG.debug(_("Setting VCPU weight"), instance=instance)
             self._session.call_xenapi('VM.add_to_VCPUs_params', vm_ref,

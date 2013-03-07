@@ -176,6 +176,15 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
     return decorated_function
 
 
+def create_instance_with_system_metadata(context, instance_values):
+    instance_type = db.instance_type_get(context,
+                                         instance_values['instance_type_id'])
+    sys_meta = instance_types.save_instance_type_info({},
+                                                      instance_type)
+    instance_values['system_metadata'] = sys_meta
+    return db.instance_create(context, instance_values)
+
+
 class XenAPIVolumeTestCase(stubs.XenAPITestBase):
     """Unit tests for Volume operations."""
     def setUp(self):
@@ -635,7 +644,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                       'os_type': os_type,
                       'hostname': hostname,
                       'architecture': architecture}
-            instance = db.instance_create(self.context, instance_values)
+            instance = create_instance_with_system_metadata(self.context,
+                                                            instance_values)
         else:
             instance = db.instance_get(self.context, instance_id)
 
@@ -1093,7 +1103,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             'os_type': 'linux',
             'vm_mode': 'hvm',
             'architecture': 'x86-64'}
-        instance = db.instance_create(self.context, instance_values)
+
+        instance = create_instance_with_system_metadata(self.context,
+                                                        instance_values)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         image_meta = {'id': IMAGE_VHD,
@@ -1252,7 +1264,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           '127.0.0.1', instance_type, None)
 
     def test_revert_migrate(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
         self.fake_finish_revert_migration_called = False
@@ -1293,7 +1306,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.assertEqual(self.fake_finish_revert_migration_called, True)
 
     def test_finish_migrate(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        self.instance_values)
         self.called = False
         self.fake_vm_start_called = False
 
@@ -1325,7 +1339,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         tiny_type_id = tiny_type['id']
         self.instance_values.update({'instance_type_id': tiny_type_id,
                                      'root_gb': 0})
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -1341,7 +1356,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               network_info, image_meta, resize_instance=True)
 
     def test_finish_migrate_no_resize_vdi(self):
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -1616,7 +1632,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
                                             fake.FakeVirtAPI())
 
         disk_image_type = vm_utils.ImageType.DISK_VHD
-        instance = db.instance_create(self.context, self.instance_values)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        self.instance_values)
         vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
         vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
 
@@ -1716,14 +1733,9 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
 
     def test_generate_swap(self):
         # Test swap disk generation.
-        instance = db.instance_create(self.context, self.instance_values)
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'instance_type_id': 5})
-
-        # NOTE(danms): because we're stubbing out the instance_types from
-        # the database, our instance['instance_type'] doesn't get properly
-        # filled out here, so put what we need into it
-        instance['instance_type']['swap'] = 1024
+        instance_values = dict(self.instance_values, instance_type_id=5)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        instance_values)
 
         def fake_generate_swap(*args, **kwargs):
             self.called = True
@@ -1733,14 +1745,9 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
 
     def test_generate_ephemeral(self):
         # Test ephemeral disk generation.
-        instance = db.instance_create(self.context, self.instance_values)
-        instance = db.instance_update(self.context, instance['uuid'],
-                                      {'instance_type_id': 4})
-
-        # NOTE(danms): because we're stubbing out the instance_types from
-        # the database, our instance['instance_type'] doesn't get properly
-        # filled out here, so put what we need into it
-        instance['instance_type']['ephemeral_gb'] = 160
+        instance_values = dict(self.instance_values, instance_type_id=4)
+        instance = create_instance_with_system_metadata(self.context,
+                                                        instance_values)
 
         def fake_generate_ephemeral(*args):
             self.called = True
