@@ -84,14 +84,15 @@ class ConsoleAuthManager(manager.Manager):
 
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
 
-    def _validate_console(self, token):
+    def _validate_console(self, context, token):
         console_valid = False
         token_dict = self.tokens[token]
         try:
             console_valid = self.compute_api.validate_vnc_console(context,
-                                                token_dict['instance_uuid'],
+                                                token_dict['instance_id'],
                                                 token_dict['host'],
-                                                token_dict['port'])
+                                                token_dict['port'],
+                                                token_dict['console_type'])
         except exception.InstanceNotFound:
             pass
         return console_valid
@@ -99,7 +100,7 @@ class ConsoleAuthManager(manager.Manager):
     def check_token(self, context, token):
         token_valid = token in self.tokens
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
-        if token_valid and self._validate_console(token):
+        if token_valid and self._validate_console(context, token):
             return self.tokens[token]
 
     def delete_tokens_for_instance(self, context, instance_id):

@@ -767,7 +767,8 @@ class ComputeTestCase(BaseTestCase):
         console_valid = self.compute_api.validate_vnc_console(self.context,
                                                instance['uuid'],
                                                'myhost',
-                                               '5900')
+                                               '5900',
+                                               'novnc')
         self.assertTrue(console_valid)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -783,7 +784,8 @@ class ComputeTestCase(BaseTestCase):
         console_valid = self.compute_api.validate_vnc_console(self.context,
                                                instance['uuid'],
                                                'myhost',
-                                               '5900')
+                                               '5900',
+                                               'novnc')
         self.assertFalse(console_valid)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -793,7 +795,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
         self.assertRaises(exception.InstanceNotFound,
                             self.compute_api.validate_vnc_console,
-                            self.context, 5555, 'myhost', '5900')
+                            self.context, 5555, 'myhost', '5900', 'novnc')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_xvpvnc_vnc_console(self):
