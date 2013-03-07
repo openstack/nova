@@ -57,6 +57,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "OS-EXT-VIF-NET",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedVIFNet",
+            "namespace": "http://docs.openstack.org/compute/ext/extended-virtual-interfaces-net/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-FLV-DISABLED",
             "description": "%(text)s",
             "links": [],

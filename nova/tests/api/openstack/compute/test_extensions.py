@@ -168,6 +168,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "DiskConfig",
             "ExtendedAvailabilityZone",
             "ExtendedIps",
+            "ExtendedVIFNet",
             "Evacuate",
             "ExtendedStatus",
             "ExtendedServerAttributes",

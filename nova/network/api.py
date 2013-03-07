@@ -3,6 +3,7 @@
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -185,13 +186,24 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
-        return self.db.virtual_interface_get_by_instance(context,
+        vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance['uuid'])
+        for vif in vifs:
+            if vif.get('network_id') is not None:
+                network = self.db.network_get(context, vif['network_id'],
+                                              project_only="allow_none")
+                vif['net_uuid'] = network['uuid']
+        return vifs
 
     @wrap_check_policy
     def get_vif_by_mac_address(self, context, mac_address):
-        return self.db.virtual_interface_get_by_address(context,
-                                                        mac_address)
+        vif = self.db.virtual_interface_get_by_address(context,
+                                                       mac_address)
+        if vif.get('network_id') is not None:
+            network = self.db.network_get(context, vif['network_id'],
+                                          project_only="allow_none")
+            vif['net_uuid'] = network['uuid']
+        return vif
 
     @wrap_check_policy
     def allocate_floating_ip(self, context, pool=None):
