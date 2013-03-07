@@ -878,9 +878,6 @@ class Resource(wsgi.Application):
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
 
-        LOG.info("%(method)s %(url)s" % {"method": request.method,
-                                         "url": request.url})
-
         # Identify the action, its arguments, and the requested
         # content type
         action_args = self.get_action_args(request.environ)
@@ -923,7 +920,7 @@ class Resource(wsgi.Application):
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         if body:
-            LOG.info(_("Action: '%(action)s', body: %(body)s") % locals())
+            LOG.debug(_("Action: '%(action)s', body: %(body)s") % locals())
         LOG.debug(_("Calling method %s") % meth)
 
         # Now, deserialize the request body...
@@ -987,15 +984,6 @@ class Resource(wsgi.Application):
             if resp_obj and not response:
                 response = resp_obj.serialize(request, accept,
                                               self.default_serializers)
-
-        try:
-            msg_dict = dict(url=request.url, status=response.status_int)
-            msg = _("%(url)s returned with HTTP %(status)d") % msg_dict
-        except AttributeError, e:
-            msg_dict = dict(url=request.url, e=e)
-            msg = _("%(url)s returned a fault: %(e)s") % msg_dict
-
-        LOG.info(msg)
 
         return response
 
