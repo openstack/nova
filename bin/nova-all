@@ -50,6 +50,8 @@ from nova.vnc import xvp_proxy
 
 
 CONF = cfg.CONF
+CONF.import_opt('manager', 'nova.conductor.api', group='conductor')
+CONF.import_opt('topic', 'nova.conductor.api', group='conductor')
 CONF.import_opt('enabled_apis', 'nova.service')
 LOG = logging.getLogger('nova.all')
 
@@ -74,9 +76,25 @@ if __name__ == '__main__':
             LOG.exception(_('Failed to load %s') % mod.__name__)
 
     for binary in ['nova-compute', 'nova-network', 'nova-scheduler',
-                   'nova-cert']:
+                   'nova-cert', 'nova-conductor']:
+
+        # FIXME(sirp): Most service configs are defined in nova/service.py, but
+        # conductor has set a new precedent of storing these configs
+        # nova/<service>/api.py.
+        #
+        # We should update the existing services to use this new approach so we
+        # don't have to treat conductor differently here.
+        if binary == 'nova-conductor':
+            topic = CONF.conductor.topic
+            manager = CONF.conductor.manager
+        else:
+            topic = None
+            manager = None
+
         try:
-            launcher.launch_server(service.Service.create(binary=binary))
+            launcher.launch_server(service.Service.create(binary=binary,
+                                                          topic=topic,
+                                                          manager=manager))
         except (Exception, SystemExit):
             LOG.exception(_('Failed to load %s'), binary)
     launcher.wait()
