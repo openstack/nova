@@ -951,18 +951,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
-    def test_rescue_no_image(self):
-        params = {'image_ref': ''}
-        instance = self._create_fake_instance(params)
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.RESCUING})
-        self.compute.rescue_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context, instance=instance)
-
     def test_power_on(self):
         # Ensure instance can be powered on.
 
@@ -4788,6 +4776,43 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
+
+    def test_rescue_volume_backed(self):
+        # Instance started without an image
+        volume_backed_inst_1 = jsonutils.to_primitive(
+            self._create_fake_instance({'image_ref': ''}))
+
+        # Instance started with a placeholder image (for metadata)
+        volume_backed_inst_2 = jsonutils.to_primitive(
+            self._create_fake_instance(
+                {'image_ref': 'my_placeholder_img',
+                 'root_device_name': '/dev/vda'})
+            )
+        volume_backed_uuid_1 = volume_backed_inst_1['uuid']
+        volume_backed_uuid_2 = volume_backed_inst_2['uuid']
+
+        def fake_get_instance_bdms(*args, **kwargs):
+            return [{'device_name': '/dev/vda'}]
+
+        self.stubs.Set(self.compute_api, 'get_instance_bdms',
+                       fake_get_instance_bdms)
+
+        self.compute.run_instance(self.context,
+                                  instance=volume_backed_inst_1)
+        self.compute.run_instance(self.context,
+                                  instance=volume_backed_inst_2)
+
+        self.assertRaises(exception.InstanceNotRescuable,
+                          self.compute_api.rescue, self.context,
+                          volume_backed_inst_1)
+        self.assertRaises(exception.InstanceNotRescuable,
+                          self.compute_api.rescue, self.context,
+                          volume_backed_inst_2)
+
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(volume_backed_inst_1))
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(volume_backed_inst_2))
 
     def test_snapshot(self):
         # Ensure a snapshot of an instance can be created.

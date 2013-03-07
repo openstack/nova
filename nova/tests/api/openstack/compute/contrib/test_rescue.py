@@ -113,3 +113,18 @@ class RescueTest(test.TestCase):
 
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 409)
+
+    def test_rescue_raises_unrescuable(self):
+        body = dict(rescue=None)
+
+        def fake_rescue(*args, **kwargs):
+            raise exception.InstanceNotRescuable('fake message')
+
+        self.stubs.Set(compute.api.API, "rescue", fake_rescue)
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 400)

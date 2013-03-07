@@ -315,6 +315,10 @@ class InstanceNotInRescueMode(Invalid):
     message = _("Instance %(instance_id)s is not in rescue mode")
 
 
+class InstanceNotRescuable(Invalid):
+    message = _("Instance %(instance_id)s cannot be rescued: %(reason)s")
+
+
 class InstanceNotReady(Invalid):
     message = _("Instance %(instance_id)s is not ready")
 
