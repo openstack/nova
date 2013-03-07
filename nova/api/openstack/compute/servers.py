@@ -134,6 +134,13 @@ class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
 
 
+class ServerMultipleCreateTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        root.set('reservation_id')
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
+
+
 def FullServerTemplate():
     master = ServerTemplate()
     master.attach(ServerAdminPassTemplate())
@@ -917,14 +924,9 @@ class Controller(wsgi.Controller):
         # Let the caller deal with unhandled exceptions.
 
         # If the caller wanted a reservation_id, return it
-
-        # NOTE(treinish): XML serialization will not work without a root
-        # selector of 'server' however JSON return is not expecting a server
-        # field/object
-        if ret_resv_id and (req.get_content_type() == 'application/xml'):
-            return {'server': {'reservation_id': resv_id}}
-        elif ret_resv_id:
-            return {'reservation_id': resv_id}
+        if ret_resv_id:
+            return wsgi.ResponseObject({'reservation_id': resv_id},
+                                       xml=ServerMultipleCreateTemplate)
 
         req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
