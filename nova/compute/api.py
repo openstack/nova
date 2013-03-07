@@ -2480,31 +2480,33 @@ class HostAPI(base.Base):
 
     def _assert_host_exists(self, context, host_name):
         """Raise HostNotFound if compute host doesn't exist."""
-        if not self.db.service_get_by_host_and_topic(context, host_name,
-                                                     CONF.compute_topic):
+        service = self.db.service_get_by_host_and_topic(context, host_name,
+                CONF.compute_topic)
+        if not service:
             raise exception.HostNotFound(host=host_name)
+        return service['host']
 
     def set_host_enabled(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances."""
-        self._assert_host_exists(context, host_name)
+        host_name = self._assert_host_exists(context, host_name)
         return self.rpcapi.set_host_enabled(context, enabled=enabled,
                 host=host_name)
 
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
-        self._assert_host_exists(context, host_name)
+        host_name = self._assert_host_exists(context, host_name)
         return self.rpcapi.get_host_uptime(context, host=host_name)
 
     def host_power_action(self, context, host_name, action):
         """Reboots, shuts down or powers up the host."""
-        self._assert_host_exists(context, host_name)
+        host_name = self._assert_host_exists(context, host_name)
         return self.rpcapi.host_power_action(context, action=action,
                 host=host_name)
 
     def set_host_maintenance(self, context, host_name, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation."""
-        self._assert_host_exists(context, host_name)
+        host_name = self._assert_host_exists(context, host_name)
         return self.rpcapi.host_maintenance_mode(context,
                 host_param=host_name, mode=mode, host=host_name)
 

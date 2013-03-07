@@ -38,8 +38,10 @@ class ComputeHostAPITestCase(test.TestCase):
         """Sets it so that the host API always thinks that 'fake_host'
         exists.
         """
-        self.mox.StubOutWithMock(self.host_api, '_assert_host_exists')
-        self.host_api._assert_host_exists(self.ctxt, 'fake_host')
+        def fake_assert_host_exists(context, host_name):
+            return 'fake_host'
+        self.stubs.Set(self.host_api, '_assert_host_exists',
+                                    fake_assert_host_exists)
 
     def test_set_host_enabled(self):
         self._mock_assert_host_exists()
@@ -50,6 +52,18 @@ class ComputeHostAPITestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
+                                                'fake_enabled')
+        self.assertEqual('fake-result', result)
+
+    def test_host_name_from_assert_hosts_exists(self):
+        self._mock_assert_host_exists()
+        self._mock_rpc_call(
+                {'method': 'set_host_enabled',
+                 'args': {'enabled': 'fake_enabled'},
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
+
+        self.mox.ReplayAll()
+        result = self.host_api.set_host_enabled(self.ctxt, 'fake_hosT',
                                                 'fake_enabled')
         self.assertEqual('fake-result', result)
 
