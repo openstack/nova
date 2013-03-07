@@ -29,7 +29,7 @@ choose what sort of VM to boot.
 
 from nova import exception
 
-HVM = "hvm"  # Fully virtualizated
+HVM = "hvm"  # Fully virtualized
 XEN = "xen"  # Xen 3.0 paravirtualized
 UML = "uml"  # User Mode Linux paravirtualized
 EXE = "exe"  # Executables in containers
