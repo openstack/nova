@@ -26,6 +26,7 @@ from oslo.config import cfg
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
+from nova.compute import instance_types
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -383,14 +384,18 @@ class CinderCloudTestCase(test.TestCase):
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
-                                   'root_device_name': '/dev/sdb1'})
+                                   'root_device_name': '/dev/sdb1',
+                                   'system_metadata': sys_meta})
         inst2 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
-                                   'root_device_name': '/dev/sdc1'})
+                                   'root_device_name': '/dev/sdc1',
+                                   'system_metadata': sys_meta})
 
         instance_uuid = inst1['uuid']
         mappings0 = [

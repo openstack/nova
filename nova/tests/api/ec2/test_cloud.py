@@ -33,6 +33,7 @@ from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api.metadata import password
 from nova.compute import api as compute_api
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -759,18 +760,22 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
                                                   'host': 'host1',
                                                   'hostname': 'server-1234',
-                                                  'vm_state': 'active'})
+                                                  'vm_state': 'active',
+                                                  'system_metadata': sys_meta})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
                                                   'host': 'host2',
                                                   'hostname': 'server-4321',
-                                                  'vm_state': 'active'})
+                                                  'vm_state': 'active',
+                                                  'system_metadata': sys_meta})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'topic': "compute"})
         agg = db.aggregate_create(self.context,
@@ -849,11 +854,14 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         inst_base = {
                 'reservation_id': 'a',
                 'image_ref': image_uuid,
                 'instance_type_id': 1,
-                'vm_state': 'active'
+                'vm_state': 'active',
+                'system_metadata': sys_meta,
         }
 
         inst1_kwargs = {}
@@ -901,9 +909,12 @@ class CloudTestCase(test.TestCase):
         def test_instance_state(expected_code, expected_name,
                                 power_state_, vm_state_, values=None):
             image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+            sys_meta = instance_types.save_instance_type_info(
+                {}, instance_types.get_instance_type(1))
             values = values or {}
             values.update({'image_ref': image_uuid, 'instance_type_id': 1,
-                           'power_state': power_state_, 'vm_state': vm_state_})
+                           'power_state': power_state_, 'vm_state': vm_state_,
+                           'system_metadata': sys_meta})
             inst = db.instance_create(self.context, values)
 
             instance_id = ec2utils.id_to_ec2_inst_id(inst['uuid'])
@@ -933,11 +944,14 @@ class CloudTestCase(test.TestCase):
         self._stub_instance_get_with_fixed_ips('get')
 
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
                                                   'hostname': 'server-1234',
-                                                  'vm_state': 'active'})
+                                                  'vm_state': 'active',
+                                                  'system_metadata': sys_meta})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'topic': "compute"})
         result = self.cloud.describe_instances(self.context)
@@ -957,17 +971,21 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_deleted(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
                  'host': 'host1',
-                 'vm_state': 'active'}
+                 'vm_state': 'active',
+                 'system_metadata': sys_meta}
         inst1 = db.instance_create(self.context, args1)
         args2 = {'reservation_id': 'b',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
                  'host': 'host1',
-                 'vm_state': 'active'}
+                 'vm_state': 'active',
+                 'system_metadata': sys_meta}
         inst2 = db.instance_create(self.context, args2)
         db.instance_destroy(self.context, inst1['uuid'])
         result = self.cloud.describe_instances(self.context)
@@ -978,17 +996,21 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_instances_with_image_deleted(self):
         image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type(1))
         args1 = {'reservation_id': 'a',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
                  'host': 'host1',
-                 'vm_state': 'active'}
+                 'vm_state': 'active',
+                 'system_metadata': sys_meta}
         inst1 = db.instance_create(self.context, args1)
         args2 = {'reservation_id': 'b',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
                  'host': 'host1',
-                 'vm_state': 'active'}
+                 'vm_state': 'active',
+                 'system_metadata': sys_meta}
         inst2 = db.instance_create(self.context, args2)
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
@@ -2048,18 +2070,22 @@ class CloudTestCase(test.TestCase):
                        self._fake_bdm_get)
 
         def fake_get(ctxt, instance_id):
+            inst_type = instance_types.get_default_instance_type()
+            inst_type['name'] = 'fake_type'
+            sys_meta = instance_types.save_instance_type_info({}, inst_type)
+            sys_meta = utils.dict_to_metadata(sys_meta)
             return {
                 'id': 0,
                 'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
                 'vm_state': vm_states.STOPPED,
-                'instance_type': {'name': 'fake_type'},
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'ramdisk_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'user_data': 'fake-user data',
                 'shutdown_terminate': False,
                 'disable_terminate': False,
+                'system_metadata': sys_meta,
                 }
         self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
 
