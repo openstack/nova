@@ -1507,13 +1507,14 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(instance, network_info,
                           disk_info, image_meta,
                           block_device_info=block_device_info)
-        if image_meta:
-            self._create_image(context, instance, xml,
-                               disk_info['mapping'],
-                               network_info=network_info,
-                               block_device_info=block_device_info,
-                               files=injected_files,
-                               admin_pass=admin_password)
+
+        self._create_image(context, instance, xml,
+                           disk_info['mapping'],
+                           network_info=network_info,
+                           block_device_info=block_device_info,
+                           files=injected_files,
+                           admin_pass=admin_password)
+
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info)
         LOG.debug(_("Instance is running"), instance=instance)
@@ -1725,6 +1726,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if not suffix:
             suffix = ''
 
+        booted_from_volume = (
+            (not bool(instance.get('image_ref')))
+            or 'disk' not in disk_mapping
+        )
+
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(libvirt_utils.get_instance_path(instance),
@@ -1772,14 +1778,18 @@ class LibvirtDriver(driver.ComputeDriver):
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
 
-        root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
-        size = instance['root_gb'] * 1024 * 1024 * 1024
-
         inst_type = instance_types.extract_instance_type(instance)
-        if size == 0 or suffix == '.rescue':
-            size = None
 
-        if 'disk' in disk_mapping:
+        # NOTE(ndipanov): Even if disk_mapping was passed in, which
+        # currently happens only on rescue - we still don't want to
+        # create a base image.
+        if not booted_from_volume:
+            root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
+            size = instance['root_gb'] * 1024 * 1024 * 1024
+
+            if size == 0 or suffix == '.rescue':
+                size = None
+
             image('disk').cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
                                 filename=root_fname,
