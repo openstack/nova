@@ -19,7 +19,7 @@
 SQLAlchemy models for baremetal data.
 """
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Boolean, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, Text
 
@@ -34,6 +34,7 @@ class BareMetalNode(BASE, models.NovaBase):
 
     __tablename__ = 'bm_nodes'
     id = Column(Integer, primary_key=True)
+    deleted = Column(Boolean, default=False)
     uuid = Column(String(36))
     service_host = Column(String(255))
     instance_uuid = Column(String(36), nullable=True)
@@ -59,6 +60,7 @@ class BareMetalNode(BASE, models.NovaBase):
 class BareMetalPxeIp(BASE, models.NovaBase):
     __tablename__ = 'bm_pxe_ips'
     id = Column(Integer, primary_key=True)
+    deleted = Column(Boolean, default=False)
     address = Column(String(255), unique=True)
     server_address = Column(String(255), unique=True)
     bm_node_id = Column(Integer, ForeignKey('bm_nodes.id'), nullable=True)
@@ -67,6 +69,7 @@ class BareMetalPxeIp(BASE, models.NovaBase):
 class BareMetalInterface(BASE, models.NovaBase):
     __tablename__ = 'bm_interfaces'
     id = Column(Integer, primary_key=True)
+    deleted = Column(Boolean, default=False)
     bm_node_id = Column(Integer, ForeignKey('bm_nodes.id'), nullable=True)
     address = Column(String(255), unique=True)
     datapath_id = Column(String(255))
