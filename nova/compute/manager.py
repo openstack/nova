@@ -460,6 +460,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         # We're calling plug_vifs to ensure bridge and iptables
         # rules exist. This needs to be called for each instance.
         legacy_net_info = self._legacy_nw_info(net_info)
+
+        # Keep compatibility with folsom, update networkinfo and
+        # add vif type to instance_info_cache.
+        if legacy_net_info and legacy_net_info[0][1].get('vif_type') is None:
+            # Call to network API to get instance info, this will
+            # force an update to the instance's info_cache
+            net_info = self._get_instance_nw_info(context, instance)
+            legacy_net_info = self._legacy_nw_info(net_info)
         self.driver.plug_vifs(instance, legacy_net_info)
 
         if instance['task_state'] == task_states.RESIZE_MIGRATING:

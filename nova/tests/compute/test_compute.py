@@ -3964,6 +3964,37 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._init_instance(self.context, instance)
 
+    def test_init_instance_update_nw_info_cache(self):
+        cached_nw_info = fake_network_cache_model.new_vif()
+        cached_nw_info = network_model.NetworkInfo([cached_nw_info])
+        old_cached_nw_info = copy.deepcopy(cached_nw_info)
+        # Folsom has no 'type' in network cache info.
+        del old_cached_nw_info[0]['type']
+        fake_info_cache = {'network_info': old_cached_nw_info.json()}
+        instance = {
+            'uuid': 'a-foo-uuid',
+            'vm_state': vm_states.ACTIVE,
+            'task_state': None,
+            'power_state': power_state.RUNNING,
+            'info_cache': fake_info_cache,
+            }
+
+        self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
+
+        self.compute._get_power_state(mox.IgnoreArg(),
+                instance).AndReturn(power_state.RUNNING)
+        # Call network API to get instance network info, and force
+        # an update to instance's info_cache.
+        self.compute._get_instance_nw_info(self.context,
+            instance).AndReturn(cached_nw_info)
+        self.compute.driver.plug_vifs(instance, cached_nw_info.legacy())
+
+        self.mox.ReplayAll()
+
+        self.compute._init_instance(self.context, instance)
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 
