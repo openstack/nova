@@ -260,14 +260,16 @@ class UsageInfoTestCase(test.TestCase):
 
     def _create_instance(self, params={}):
         """Create a test instance."""
+        instance_type = instance_types.get_instance_type_by_name('m1.tiny')
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
-        inst['instance_type_id'] = type_id
+        inst['instance_type_id'] = instance_type['id']
+        inst['system_metadata'] = sys_meta
         inst['ami_launch_index'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0

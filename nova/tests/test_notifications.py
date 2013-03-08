@@ -71,18 +71,20 @@ class NotificationsTestCase(test.TestCase):
         self.instance = self._wrapped_create()
 
     def _wrapped_create(self, params=None):
+        instance_type = instance_types.get_instance_type_by_name('m1.tiny')
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
         inst = {}
         inst['image_ref'] = 1
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
-        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
-        inst['instance_type_id'] = type_id
+        inst['instance_type_id'] = instance_type['id']
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
         inst['access_ip_v4'] = '1.2.3.4'
         inst['access_ip_v6'] = 'feed:5eed'
         inst['display_name'] = 'test_instance'
         inst['hostname'] = 'test_instance_hostname'
+        inst['system_metadata'] = sys_meta
         if params:
             inst.update(params)
         return db.instance_create(self.context, inst)
