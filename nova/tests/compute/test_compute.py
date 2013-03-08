@@ -4846,7 +4846,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           {'extra_param': 'value1'})
 
         self.assertEqual(image['name'], 'snap1')
-        instance_type = instance['instance_type']
+        instance_type = instance_types.extract_instance_type(instance)
         self.assertEqual(image['min_ram'], self.fake_image['min_ram'])
         self.assertEqual(image['min_disk'], instance_type['root_gb'])
         properties = image['properties']
@@ -5242,7 +5242,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance(dict(host='host2'))
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         instance = jsonutils.to_primitive(instance)
-        orig_instance_type = instance['instance_type']
+        orig_instance_type = instance_types.extract_instance_type(instance)
         self.compute.run_instance(self.context, instance=instance)
         # We need to set the host to something 'known'.  Unfortunately,
         # the compute manager is using a cached copy of CONF.host,
@@ -7077,33 +7077,6 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertRaises(exception.InstanceTypeNotFound,
             self.compute_api.create, self.context, self.inst_type, None)
 
-    def test_can_rebuild_instance_from_visible_instance_type(self):
-        instance = self._create_fake_instance()
-        image_href = 'fake-image-id'
-        admin_password = 'blah'
-
-        instance['instance_type']['disabled'] = True
-
-        # Assert no errors were raised
-        self.compute_api.rebuild(self.context, instance, image_href,
-                                 admin_password)
-
-    def test_can_rebuild_instance_from_disabled_instance_type(self):
-        """
-        A rebuild or a restore should only change the 'image',
-        not the 'instance_type'. Therefore, should be allowed even
-        when the slice is on disabled type already.
-        """
-        instance = self._create_fake_instance()
-        image_href = 'fake-image-id'
-        admin_password = 'blah'
-
-        instance['instance_type']['disabled'] = True
-
-        # Assert no errors were raised
-        self.compute_api.rebuild(self.context, instance, image_href,
-                                 admin_password)
-
     def test_can_resize_to_visible_instance_type(self):
         instance = self._create_fake_instance()
         orig_get_instance_type_by_flavor_id =\
@@ -7146,28 +7119,6 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         # InstanceTypeNotFound for consistency.
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.resize, self.context, instance, '4')
-
-    def test_can_migrate_to_visible_instance_type(self):
-        instance = self._create_fake_instance()
-        instance['instance_type']['disabled'] = False
-
-        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
-        # InstanceTypeNotFound; we should eventually make it raise
-        # InstanceTypeNotFound for consistency.
-        self.compute_api.resize(self.context, instance, None)
-
-    def test_can_migrate_to_disabled_instance_type(self):
-        """
-        We don't want to require a customers instance-type to change when ops
-        is migrating a failed server.
-        """
-        instance = self._create_fake_instance()
-        instance['instance_type']['disabled'] = True
-
-        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
-        # InstanceTypeNotFound; we should eventually make it raise
-        # InstanceTypeNotFound for consistency.
-        self.compute_api.resize(self.context, instance, None)
 
 
 class ComputeReschedulingTestCase(BaseTestCase):

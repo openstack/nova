@@ -1362,6 +1362,13 @@ def metadata_to_dict(metadata):
     return result
 
 
+def dict_to_metadata(metadata):
+    result = []
+    for key, value in metadata.iteritems():
+        result.append(dict(key=key, value=value))
+    return result
+
+
 def get_wrapped_function(function):
     """Get the method at the bottom of a stack of decorators."""
     if not hasattr(function, 'func_closure') or not function.func_closure:
