@@ -53,6 +53,7 @@ class Controller(wsgi.Controller):
             on_shared_storage = utils.bool_from_str(
                                             evacuate_body["onSharedStorage"])
 
+            password = None
             if 'adminPass' in evacuate_body:
                 # check that if requested to evacuate server on shared storage
                 # password not specified
