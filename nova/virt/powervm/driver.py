@@ -278,7 +278,7 @@ class PowerVMDriver(driver.ComputeDriver):
                            defines the image from which this instance
                            was created
         """
-        lpar_obj = self._powervm._create_lpar_instance(instance)
+        lpar_obj = self._powervm._create_lpar_instance(instance, network_info)
 
         instance_type = instance_types.extract_instance_type(instance)
         new_lv_size = instance_type['root_gb']

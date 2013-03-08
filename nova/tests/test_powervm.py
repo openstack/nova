@@ -18,6 +18,8 @@
 Test suite for PowerVMDriver.
 """
 
+import contextlib
+
 from nova import context
 from nova import db
 from nova import test
@@ -106,6 +108,9 @@ class FakeIVMOperator(object):
 class FakeBlockAdapter(powervm_blockdev.PowerVMLocalVolumeAdapter):
 
     def __init__(self):
+        self.connection_data = common.Connection(host='fake_compute_1',
+                                                  username='fake_user',
+                                                  password='fake_pass')
         pass
 
     def _create_logical_volume(self, size):
@@ -306,3 +311,85 @@ class PowerVMDriverTestCase(test.TestCase):
 
     def test_finish_revert_migration_after_crash_before_backup(self):
         self._test_finish_revert_migration_after_crash(False, False)
+
+    def test_migrate_volume_use_instance_name(self):
+        inst_name = 'instance-00000000'
+        lv_name = 'logical-vol-name'
+        src_host = 'compute_host_1'
+        dest = 'compute_host_1'
+        image_path = 'some/image/path'
+        fake_noop = lambda *args, **kwargs: None
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       '_copy_device_to_file', fake_noop)
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       'run_vios_command_as_root', fake_noop)
+        blockdev_op = self.powervm_connection._powervm._disk_adapter
+        file_path = blockdev_op.migrate_volume(lv_name, src_host, dest,
+                                               image_path, inst_name)
+        expected_path = 'some/image/path/instance-00000000_rsz.gz'
+        self.assertEqual(file_path, expected_path)
+
+    def test_migrate_volume_use_lv_name(self):
+        lv_name = 'logical-vol-name'
+        src_host = 'compute_host_1'
+        dest = 'compute_host_1'
+        image_path = 'some/image/path'
+        fake_noop = lambda *args, **kwargs: None
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       '_copy_device_to_file', fake_noop)
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       'run_vios_command_as_root', fake_noop)
+        blockdev_op = self.powervm_connection._powervm._disk_adapter
+        file_path = blockdev_op.migrate_volume(lv_name, src_host, dest,
+                                               image_path)
+        expected_path = 'some/image/path/logical-vol-name_rsz.gz'
+        self.assertEqual(file_path, expected_path)
+
+    def test_migrate_build_scp_command(self):
+        lv_name = 'logical-vol-name'
+        src_host = 'compute_host_1'
+        dest = 'compute_host_2'
+        image_path = 'some/image/path'
+        fake_noop = lambda *args, **kwargs: None
+
+        @contextlib.contextmanager
+        def fake_vios_to_vios_auth(*args, **kwargs):
+            key_name = 'some_key'
+            yield key_name
+        self.stubs.Set(common, 'vios_to_vios_auth',
+                       fake_vios_to_vios_auth)
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       'run_vios_command_as_root', fake_noop)
+
+        def fake_run_vios_command(*args, **kwargs):
+            cmd = args[0]
+            exp_cmd = ' '.join(['scp -o "StrictHostKeyChecking no" -i',
+                                'some_key',
+                                'some/image/path/logical-vol-name_rsz.gz',
+                                'fake_user@compute_host_2:some/image/path'])
+            self.assertEqual(exp_cmd, cmd)
+
+        self.stubs.Set(self.powervm_connection._powervm._disk_adapter,
+                       'run_vios_command',
+                       fake_run_vios_command)
+
+        blockdev_op = self.powervm_connection._powervm._disk_adapter
+        file_path = blockdev_op.migrate_volume(lv_name, src_host, dest,
+                                               image_path)
+
+    def test_get_resize_name(self):
+        inst_name = 'instance-00000001'
+        expected_name = 'rsz_instance-00000001'
+        result = self.powervm_connection._get_resize_name(inst_name)
+        self.assertEqual(expected_name, result)
+
+    def test_get_long_resize_name(self):
+        inst_name = 'some_really_long_instance_name_00000001'
+        expected_name = 'rsz__really_long_instance_name_00000001'
+        result = self.powervm_connection._get_resize_name(inst_name)
+        self.assertEqual(expected_name, result)

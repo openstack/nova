@@ -273,7 +273,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             with common.vios_to_vios_auth(self.connection_data.host,
                                           dest,
                                           self.connection_data) as key_name:
-                cmd = ''.join(['scp -o "StrictHostKeyChecking no"',
+                cmd = ' '.join(['scp -o "StrictHostKeyChecking no"',
                                 ('-i %s' % key_name),
                                 file_path,
                                 '%s@%s:%s' % (self.connection_data.username,
