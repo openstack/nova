@@ -175,6 +175,8 @@ CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
+CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('enabled', 'nova.spice', group='spice')
 
 QUOTAS = quota.QUOTAS
 
