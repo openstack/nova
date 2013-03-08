@@ -187,9 +187,10 @@ class Mount(object):
         LOG.debug(_("Mount %(dev)s on %(dir)s") %
                   {'dev': self.mapped_device, 'dir': self.mount_dir})
         _out, err = utils.trycmd('mount', self.mapped_device, self.mount_dir,
-                                 run_as_root=True)
+                                 discard_warnings=True, run_as_root=True)
         if err:
             self.error = _('Failed to mount filesystem: %s') % err
+            LOG.debug(self.error)
             return False
 
         self.mounted = True
