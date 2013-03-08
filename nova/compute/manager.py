@@ -1875,6 +1875,35 @@ class ComputeManager(manager.SchedulerDependentManager):
                   locals(), instance=instance)
         self.driver.change_instance_metadata(context, instance, diff)
 
+    def _cleanup_stored_instance_types(self, migration, instance,
+                                       restore_old=False):
+        """Clean up "old" and "new" instance_type information stored in
+        instance's system_metadata. Optionally update the "current"
+        instance_type to the saved old one first.
+
+        Returns the updated system_metadata as a dict, as well as the
+        post-cleanup current instance type.
+        """
+        same_type = (migration['old_instance_type_id'] ==
+                     migration['new_instance_type_id'])
+
+        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        if restore_old and not same_type:
+            instance_type = instance_types.extract_instance_type(instance,
+                                                                 'old_')
+            sys_meta = instance_types.save_instance_type_info(sys_meta,
+                                                              instance_type)
+        else:
+            instance_type = instance_types.extract_instance_type(instance)
+
+        if not same_type:
+            instance_types.delete_instance_type_info(sys_meta, 'old_')
+
+        # NOTE(danms): new instance type is always stored in prep_resize
+        instance_types.delete_instance_type_info(sys_meta, 'new_')
+
+        return sys_meta, instance_type
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
     @wrap_instance_fault
@@ -1890,8 +1919,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         with self._error_out_instance_on_exception(context, instance['uuid'],
                                                    reservations):
             # NOTE(danms): delete stashed old/new instance_type information
-            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-            instance_types.delete_instance_type_info(sys_meta, 'old_', 'new_')
+            sys_meta, instance_type = self._cleanup_stored_instance_types(
+                migration, instance)
             self._instance_update(context, instance['uuid'],
                                   system_metadata=sys_meta)
 
@@ -2002,11 +2031,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
-            instance_type = instance_types.extract_instance_type(instance,
-                                                                 prefix='old_')
-            sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-            instance_types.save_instance_type_info(sys_meta, instance_type)
-            instance_types.delete_instance_type_info(sys_meta, 'new_', 'old_')
+            sys_meta, instance_type = self._cleanup_stored_instance_types(
+                migration, instance, True)
 
             instance = self._instance_update(context,
                                   instance['uuid'],
