@@ -20,6 +20,7 @@ import time
 
 from oslo.config import cfg
 
+from nova.compute import instance_types
 from nova import conductor
 from nova import context
 from nova.db import base
@@ -303,7 +304,8 @@ class API(base.Base):
     def _populate_quantum_extension_values(self, instance, port_req_body):
         self._refresh_quantum_extensions_cache()
         if 'nvp-qos' in self.extensions:
-            rxtx_factor = instance['instance_type'].get('rxtx_factor')
+            instance_type = instance_types.extract_instance_type(instance)
+            rxtx_factor = instance_type.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
 
     def deallocate_for_instance(self, context, instance, **kwargs):

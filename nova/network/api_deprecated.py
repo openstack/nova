@@ -22,6 +22,7 @@ This version of the api is deprecated in Grizzly and will be removed.
 It is provided just in case a third party manager is in use.
 """
 
+from nova.compute import instance_types
 from nova.db import base
 from nova import exception
 from nova.network import api as shiny_api
@@ -185,13 +186,14 @@ class API(base.Base):
             NB: macs is ignored by nova-network.
         :returns: network info as from get_instance_nw_info() below
         """
+        instance_type = instance_types.extract_instance_type(instance)
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
         args['instance_id'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
-        args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
+        args['rxtx_factor'] = instance_type['rxtx_factor']
         nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
         return network_model.NetworkInfo.hydrate(nw_info)
@@ -257,8 +259,9 @@ class API(base.Base):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = {'instance_id': instance['uuid'],
-                'rxtx_factor': instance['instance_type']['rxtx_factor'],
+                'rxtx_factor': instance_type['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}
         nw_info = self.network_rpcapi.get_instance_nw_info(context, **args)
@@ -373,9 +376,10 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
-            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            rxtx_factor=instance_type['rxtx_factor'],
             project_id=instance['project_id'],
             source_compute=migration['source_compute'],
             dest_compute=migration['dest_compute'],
@@ -392,9 +396,10 @@ class API(base.Base):
     @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
+        instance_type = instance_types.extract_instance_type(instance)
         args = dict(
             instance_uuid=instance['uuid'],
-            rxtx_factor=instance['instance_type']['rxtx_factor'],
+            rxtx_factor=instance_type['rxtx_factor'],
             project_id=instance['project_id'],
             source_compute=migration['source_compute'],
             dest_compute=migration['dest_compute'],

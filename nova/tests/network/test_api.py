@@ -22,6 +22,7 @@ import random
 
 import mox
 
+from nova.compute import instance_types
 from nova import context
 from nova import exception
 from nova import network
@@ -30,7 +31,7 @@ from nova.network import floating_ips
 from nova.network import rpcapi as network_rpcapi
 from nova import policy
 from nova import test
-
+from nova import utils
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
@@ -80,8 +81,11 @@ class ApiTestCase(test.TestCase):
         self.network_api.network_rpcapi.allocate_for_instance(
             mox.IgnoreArg(), **kwargs).AndReturn([])
         self.mox.ReplayAll()
+        inst_type = instance_types.get_default_instance_type()
+        inst_type['rxtx_factor'] = 0
+        sys_meta = instance_types.save_instance_type_info({}, inst_type)
         instance = dict(id='id', uuid='uuid', project_id='project_id',
-            host='host', instance_type={'rxtx_factor': 0})
+            host='host', system_metadata=utils.dict_to_metadata(sys_meta))
         self.network_api.allocate_for_instance(
             self.context, instance, 'vpn', 'requested_networks', macs=macs)
 
@@ -136,10 +140,14 @@ class ApiTestCase(test.TestCase):
         self._do_test_associate_floating_ip(None)
 
     def _stub_migrate_instance_calls(self, method, multi_host, info):
-        fake_instance_type = {'rxtx_factor': 'fake_factor'}
+        fake_instance_type = instance_types.get_default_instance_type()
+        fake_instance_type['rxtx_factor'] = 1.21
+        sys_meta = utils.dict_to_metadata(
+            instance_types.save_instance_type_info({}, fake_instance_type))
         fake_instance = {'uuid': 'fake_uuid',
-                         'instance_type': fake_instance_type,
-                         'project_id': 'fake_project_id'}
+                         'instance_type_id': fake_instance_type['id'],
+                         'project_id': 'fake_project_id',
+                         'system_metadata': sys_meta}
         fake_migration = {'source_compute': 'fake_compute_source',
                           'dest_compute': 'fake_compute_dest'}
 
@@ -162,7 +170,7 @@ class ApiTestCase(test.TestCase):
         expected = {'instance_uuid': 'fake_uuid',
                     'source_compute': 'fake_compute_source',
                     'dest_compute': 'fake_compute_dest',
-                    'rxtx_factor': 'fake_factor',
+                    'rxtx_factor': 1.21,
                     'project_id': 'fake_project_id',
                     'floating_addresses': None}
         if multi_host:
