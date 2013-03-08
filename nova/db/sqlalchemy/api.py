@@ -4708,15 +4708,13 @@ def _get_default_deleted_value(table):
 
 
 @require_admin_context
-def archive_deleted_rows_for_table(context, tablename, max_rows=None):
+def archive_deleted_rows_for_table(context, tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
     :returns: number of rows archived
     """
     # The context argument is only used for the decorator.
-    if max_rows is None:
-        max_rows = 5000
     engine = get_engine()
     conn = engine.connect()
     metadata = MetaData()
@@ -4767,8 +4765,6 @@ def archive_deleted_rows(context, max_rows=None):
     :returns: Number of rows archived.
     """
     # The context argument is only used for the decorator.
-    if max_rows is None:
-        max_rows = 5000
     tablenames = []
     for model_class in models.__dict__.itervalues():
         if hasattr(model_class, "__tablename__"):
