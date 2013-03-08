@@ -19,6 +19,7 @@ import time
 
 from oslo.config import cfg
 
+from nova.compute import instance_types
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.virt import driver
@@ -276,7 +277,8 @@ class PowerVMDriver(driver.ComputeDriver):
         """
         lpar_obj = self._powervm._create_lpar_instance(instance)
 
-        new_lv_size = instance['instance_type']['root_gb']
+        instance_type = instance_types.extract_instance_type(instance)
+        new_lv_size = instance_type['root_gb']
         old_lv_size = disk_info['old_lv_size']
         if 'root_disk_file' in disk_info:
             disk_size = max(int(new_lv_size), int(old_lv_size))

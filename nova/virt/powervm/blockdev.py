@@ -20,6 +20,7 @@ import re
 
 from oslo.config import cfg
 
+from nova.compute import instance_types
 from nova.compute import task_states
 from nova.image import glance
 from nova.openstack.common import excutils
@@ -174,8 +175,8 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         # calculate root device size in bytes
         # we respect the minimum root device size in constants
-        size_gb = max(instance['instance_type']['root_gb'],
-                      constants.POWERVM_MIN_ROOT_GB)
+        instance_type = instance_types.extract_instance_type(instance)
+        size_gb = max(instance_type['root_gb'], constants.POWERVM_MIN_ROOT_GB)
         size = size_gb * 1024 * 1024 * 1024
 
         try:
