@@ -238,7 +238,8 @@ class XMLDeserializer(TextDeserializer):
         else:
             result = dict()
             for attr in node.attributes.keys():
-                result[attr] = node.attributes[attr].nodeValue
+                if not attr.startswith("xmlns"):
+                    result[attr] = node.attributes[attr].nodeValue
             for child in node.childNodes:
                 if child.nodeType != node.TEXT_NODE:
                     result[child.nodeName] = self._from_xml_node(child,
