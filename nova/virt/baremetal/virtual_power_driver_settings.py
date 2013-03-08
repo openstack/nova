@@ -52,7 +52,7 @@ class virsh(object):
         self.reboot_cmd = 'reset {_NodeName_}'
         self.list_cmd = "list --all | tail -n +2 | awk -F\" \" '{print $2}'"
         self.list_running_cmd = \
-            "list --all|grep running|awk -F\" \" '{print $2}'"
+            "list --all|grep running|awk -F\" \" '{print \"$2\"}'"
         self.get_node_macs = ("dumpxml {_NodeName_} | grep "
             '"mac address" | awk -F'
             '"'

@@ -145,7 +145,7 @@ class VirtualPowerManager(base.PowerManager):
 
             for mac in mac_address_list:
                 if self._mac_address.lower() in mac.lower():
-                    self._matched_name = node
+                    self._matched_name = ('"%s"' % node)
                     break
             if self._matched_name:
                 break
