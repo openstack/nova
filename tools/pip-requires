@@ -22,7 +22,7 @@ iso8601>=0.1.4
 httplib2
 setuptools_git>=0.4
 python-cinderclient>=1.0.1
-python-quantumclient>=2.1.2
+python-quantumclient>=2.2.0,<3.0.0
 python-glanceclient>=0.5.0,<2
 python-keystoneclient>=0.2.0
 stevedore>=0.7
