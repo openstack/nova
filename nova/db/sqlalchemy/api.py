@@ -1438,9 +1438,6 @@ def instance_create(context, values):
         instance_ref.security_groups = _get_sec_group_models(session,
                 security_groups)
         instance_ref.save(session=session)
-        # NOTE(comstud): This forces instance_type to be loaded so it
-        # exists in the ref when we return.  Fixes lazy loading issues.
-        instance_ref.instance_type
 
     # create the instance uuid to ec2_id mapping entry for instance
     db.ec2_instance_create(context, instance_ref['uuid'])
@@ -1530,7 +1527,6 @@ def _build_instance_get(context, session=None):
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache')).\
             options(joinedload('metadata')).\
-            options(joinedload('instance_type')).\
             options(joinedload('system_metadata'))
 
 
@@ -1538,7 +1534,7 @@ def _build_instance_get(context, session=None):
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups', 'metadata',
-                           'instance_type', 'system_metadata']
+                           'system_metadata']
     query = model_query(context, models.Instance)
     for column in columns_to_join:
         query = query.options(joinedload(column))
@@ -1568,7 +1564,6 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
             options(joinedload('security_groups')).\
             options(joinedload('system_metadata')).\
             options(joinedload('metadata')).\
-            options(joinedload('instance_type')).\
             order_by(sort_fn[sort_dir](getattr(models.Instance, sort_key)))
 
     # Make a copy of the filters dictionary to use going forward, as we'll
@@ -1667,7 +1662,6 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     query = query.options(joinedload('info_cache')).\
                   options(joinedload('security_groups')).\
                   options(joinedload('metadata')).\
-                  options(joinedload('instance_type')).\
                   options(joinedload('system_metadata')).\
                   filter(or_(models.Instance.terminated_at == None,
                              models.Instance.terminated_at > begin))
@@ -1687,7 +1681,6 @@ def _instance_get_all_query(context, project_only=False):
                    options(joinedload('info_cache')).\
                    options(joinedload('security_groups')).\
                    options(joinedload('metadata')).\
-                   options(joinedload('instance_type')).\
                    options(joinedload('system_metadata'))
 
 
@@ -1856,13 +1849,6 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False):
 
         instance_ref.update(values)
         instance_ref.save(session=session)
-        if 'instance_type_id' in values:
-            # NOTE(comstud): It appears that sqlalchemy doesn't refresh
-            # the instance_type model after you update the ID.  You end
-            # up with an instance_type model that only has 'id' updated,
-            # but the rest of the model has the data from the old
-            # instance_type.
-            session.refresh(instance_ref['instance_type'])
 
     return (old_instance_ref, instance_ref)
 

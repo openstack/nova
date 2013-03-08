@@ -351,24 +351,6 @@ class InstanceTypeTestCase(test.TestCase):
                 "test1", read_deleted="no")
         self.assertEqual("instance_type1_redo", instance_type["name"])
 
-    def test_will_list_deleted_type_for_active_instance(self):
-        # Ensure deleted instance types with active instances can be read.
-        ctxt = context.get_admin_context()
-        inst_type = instance_types.create("test", 256, 1, 120, 100, "test1")
-
-        instance_params = {"instance_type_id": inst_type["id"]}
-        instance = db.instance_create(ctxt, instance_params)
-
-        # NOTE(jk0): Delete the instance type and reload the instance from the
-        # DB. The instance_type object will still be available to the active
-        # instance, otherwise being None.
-        instance_types.destroy(inst_type["name"])
-        instance = db.instance_get_by_uuid(ctxt, instance["uuid"])
-
-        self.assertRaises(exception.InstanceTypeNotFound,
-                instance_types.get_instance_type, inst_type["name"])
-        self.assertTrue(instance["instance_type"])
-
 
 class InstanceTypeToolsTest(test.TestCase):
     def _dict_to_metadata(self, data):
