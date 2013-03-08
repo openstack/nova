@@ -46,14 +46,13 @@ allowed_updates = ['task_state', 'vm_state', 'expected_task_state',
 datetime_fields = ['launched_at', 'terminated_at', 'updated_at']
 
 
-class ConductorManager(manager.SchedulerDependentManager):
+class ConductorManager(manager.Manager):
     """Mission: TBD."""
 
     RPC_API_VERSION = '1.44'
 
     def __init__(self, *args, **kwargs):
-        super(ConductorManager, self).__init__(service_name='conductor',
-                                               *args, **kwargs)
+        super(ConductorManager, self).__init__(*args, **kwargs)
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
         self._network_api = None
