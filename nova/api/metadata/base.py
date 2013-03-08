@@ -28,6 +28,7 @@ from oslo.config import cfg
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
 from nova import block_device
+from nova.compute import instance_types
 from nova import conductor
 from nova import context
 from nova import network
@@ -210,7 +211,8 @@ class InstanceMetadata():
             meta_data['product-codes'] = []
 
         if self._check_version('2007-08-29', version):
-            meta_data['instance-type'] = self.instance['instance_type']['name']
+            instance_type = instance_types.extract_instance_type(self.instance)
+            meta_data['instance-type'] = instance_type['name']
 
         if False and self._check_version('2007-10-10', version):
             # TODO(vish): store ancestor ids

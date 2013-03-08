@@ -1084,10 +1084,8 @@ class CloudController(object):
 
     @staticmethod
     def _format_instance_type(instance, result):
-        if instance['instance_type']:
-            result['instanceType'] = instance['instance_type'].get('name')
-        else:
-            result['instanceType'] = None
+        instance_type = instance_types.extract_instance_type(instance)
+        result['instanceType'] = instance_type['name']
 
     @staticmethod
     def _format_group_set(instance, result):

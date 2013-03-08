@@ -32,6 +32,7 @@ from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova.api.metadata import password
 from nova import block_device
+from nova.compute import instance_types
 from nova.conductor import api as conductor_api
 from nova import db
 from nova.db.sqlalchemy import api
@@ -39,6 +40,7 @@ from nova import exception
 from nova.network import api as network_api
 from nova import test
 from nova.tests import fake_network
+from nova import utils
 
 CONF = cfg.CONF
 
@@ -66,6 +68,12 @@ INSTANCES = (
      'display_name': 'my_displayname',
     },
 )
+
+
+def get_default_sys_meta():
+    return utils.dict_to_metadata(
+        instance_types.save_instance_type_info(
+            {}, instance_types.get_default_instance_type()))
 
 
 def return_non_existing_address(*args, **kwarg):
@@ -119,6 +127,7 @@ class MetadataTestCase(test.TestCase):
     def setUp(self):
         super(MetadataTestCase, self).setUp()
         self.instance = INSTANCES[0]
+        self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
@@ -250,6 +259,7 @@ class OpenStackMetadataTestCase(test.TestCase):
     def setUp(self):
         super(OpenStackMetadataTestCase, self).setUp()
         self.instance = INSTANCES[0]
+        self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
@@ -386,6 +396,7 @@ class MetadataHandlerTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
         self.instance = INSTANCES[0]
+        self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
@@ -552,6 +563,7 @@ class MetadataPasswordTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
         self.instance = copy.copy(INSTANCES[0])
+        self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
