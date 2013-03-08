@@ -357,6 +357,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                          filter_properties['retry']['hosts'])
 
     def test_live_migration_dest_check_service_memory_overcommit(self):
+        instance = self._live_migration_instance()
+
         # Live-migration should work since default is to overcommit memory.
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
@@ -369,7 +371,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         dest = 'fake_host2'
         block_migration = False
         disk_over_commit = False
-        instance = self._live_migration_instance()
 
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_by_compute_host(self.context,
