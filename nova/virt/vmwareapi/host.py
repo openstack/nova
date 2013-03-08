@@ -1,5 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -135,6 +135,8 @@ class HostState(object):
         data["hypervisor_type"] = summary.config.product.name
         data["hypervisor_version"] = summary.config.product.version
         data["hypervisor_hostname"] = self._host_name
+        data["supported_instances"] = [('i686', 'vmware', 'hvm'),
+                                       ('x86_64', 'vmware', 'hvm')]
 
         self._stats = data
         return data
