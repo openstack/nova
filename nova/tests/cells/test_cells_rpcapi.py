@@ -19,6 +19,7 @@ Tests For Cells RPCAPI
 from oslo.config import cfg
 
 from nova.cells import rpcapi as cells_rpcapi
+from nova import exception
 from nova.openstack.common import rpc
 from nova import test
 
@@ -305,3 +306,57 @@ class CellsAPITestCase(test.TestCase):
         self._check_result(call_info, 'compute_node_get',
                            expected_args, version='1.4')
         self.assertEqual(result, 'fake_response')
+
+    def test_actions_get(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.actions_get(self.fake_context,
+                                               fake_instance)
+        expected_args = {'cell_name': 'region!child',
+                         'instance_uuid': fake_instance['uuid']}
+        self._check_result(call_info, 'actions_get', expected_args,
+                           version='1.5')
+        self.assertEqual(result, 'fake_response')
+
+    def test_actions_get_no_cell(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        self.assertRaises(exception.InstanceUnknownCell,
+                          self.cells_rpcapi.actions_get, self.fake_context,
+                          fake_instance)
+
+    def test_action_get_by_request_id(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.action_get_by_request_id(self.fake_context,
+                                                            fake_instance,
+                                                            'req-fake')
+        expected_args = {'cell_name': 'region!child',
+                         'instance_uuid': fake_instance['uuid'],
+                         'request_id': 'req-fake'}
+        self._check_result(call_info, 'action_get_by_request_id',
+                           expected_args, version='1.5')
+        self.assertEqual(result, 'fake_response')
+
+    def test_action_get_by_request_id_no_cell(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        self.assertRaises(exception.InstanceUnknownCell,
+                          self.cells_rpcapi.action_get_by_request_id,
+                          self.fake_context, fake_instance, 'req-fake')
+
+    def test_action_events_get(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        call_info = self._stub_rpc_method('call', 'fake_response')
+        result = self.cells_rpcapi.action_events_get(self.fake_context,
+                                                     fake_instance,
+                                                     'fake-action')
+        expected_args = {'cell_name': 'region!child',
+                         'action_id': 'fake-action'}
+        self._check_result(call_info, 'action_events_get', expected_args,
+                           version='1.5')
+        self.assertEqual(result, 'fake_response')
+
+    def test_action_events_get_no_cell(self):
+        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        self.assertRaises(exception.InstanceUnknownCell,
+                          self.cells_rpcapi.action_events_get,
+                          self.fake_context, fake_instance, 'fake-action')

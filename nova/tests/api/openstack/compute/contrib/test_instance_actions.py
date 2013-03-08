@@ -20,6 +20,7 @@ from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.contrib import instance_actions
+from nova.compute import api as compute_api
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -92,9 +93,13 @@ class InstanceActionsTest(test.TestCase):
         self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)
         self.fake_events = copy.deepcopy(fake_instance_actions.FAKE_EVENTS)
 
+        def fake_get(self, context, instance_uuid):
+            return {'uuid': instance_uuid}
+
         def fake_instance_get_by_uuid(context, instance_id):
             return {'name': 'fake', 'project_id': context.project_id}
 
+        self.stubs.Set(compute_api.API, 'get', fake_get)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
 
     def test_list_actions(self):

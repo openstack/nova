@@ -25,6 +25,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.cells import fakes
+from nova.tests import fake_instance_actions
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
@@ -824,6 +825,52 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 self.tgt_cell_name, compute_id)
         result = response.value_or_raise()
         self.assertEqual('fake_result', result)
+
+    def test_actions_get(self):
+        fake_uuid = fake_instance_actions.FAKE_UUID
+        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
+        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'actions_get')
+        self.tgt_db_inst.actions_get(self.ctxt,
+                                     'fake-uuid').AndReturn([fake_act])
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.actions_get(self.ctxt,
+                                                   self.tgt_cell_name,
+                                                   'fake-uuid')
+        result = response.value_or_raise()
+        self.assertEqual([fake_act], result)
+
+    def test_action_get_by_request_id(self):
+        fake_uuid = fake_instance_actions.FAKE_UUID
+        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
+        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'action_get_by_request_id')
+        self.tgt_db_inst.action_get_by_request_id(self.ctxt,
+                'fake-uuid', 'req-fake').AndReturn(fake_act)
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
+                self.tgt_cell_name, 'fake-uuid', 'req-fake')
+        result = response.value_or_raise()
+        self.assertEqual(fake_act, result)
+
+    def test_action_events_get(self):
+        fake_action_id = fake_instance_actions.FAKE_ACTION_ID1
+        fake_events = fake_instance_actions.FAKE_EVENTS[fake_action_id]
+
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'action_events_get')
+        self.tgt_db_inst.action_events_get(self.ctxt,
+                                     'fake-action').AndReturn(fake_events)
+        self.mox.ReplayAll()
+
+        response = self.src_msg_runner.action_events_get(self.ctxt,
+                                                         self.tgt_cell_name,
+                                                         'fake-action')
+        result = response.value_or_raise()
+        self.assertEqual(fake_events, result)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):

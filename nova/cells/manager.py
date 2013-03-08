@@ -66,7 +66,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.4'
+    RPC_API_VERSION = '1.5'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -332,3 +332,19 @@ class CellsManager(manager.Manager):
                 totals.setdefault(key, 0)
                 totals[key] += val
         return totals
+
+    def actions_get(self, ctxt, cell_name, instance_uuid):
+        response = self.msg_runner.actions_get(ctxt, cell_name, instance_uuid)
+        return response.value_or_raise()
+
+    def action_get_by_request_id(self, ctxt, cell_name, instance_uuid,
+                                 request_id):
+        response = self.msg_runner.action_get_by_request_id(ctxt, cell_name,
+                                                            instance_uuid,
+                                                            request_id)
+        return response.value_or_raise()
+
+    def action_events_get(self, ctxt, cell_name, action_id):
+        response = self.msg_runner.action_events_get(ctxt, cell_name,
+                                                     action_id)
+        return response.value_or_raise()
