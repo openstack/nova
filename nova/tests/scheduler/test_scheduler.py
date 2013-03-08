@@ -22,6 +22,7 @@ Tests For Scheduler
 import mox
 
 from nova.compute import api as compute_api
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -43,6 +44,7 @@ from nova.tests import fake_instance_actions
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
+from nova import utils
 
 
 class SchedulerManagerTestCase(test.TestCase):
@@ -392,6 +394,11 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual(result, ['host2'])
 
     def _live_migration_instance(self):
+        inst_type = instance_types.get_instance_type(1)
+        # NOTE(danms): we have _got_ to stop doing this!
+        inst_type['memory_mb'] = 1024
+        sys_meta = utils.dict_to_metadata(
+            instance_types.save_instance_type_info({}, inst_type))
         return {'id': 31337,
                 'uuid': 'fake_uuid',
                 'name': 'fake-instance',
@@ -402,9 +409,9 @@ class SchedulerTestCase(test.TestCase):
                 'ephemeral_gb': 0,
                 'vm_state': '',
                 'task_state': '',
-                'instance_type': {'memory_mb': 1024},
-                'instance_type_id': 1,
-                'image_ref': 'fake-image-ref'}
+                'instance_type_id': inst_type['id'],
+                'image_ref': 'fake-image-ref',
+                'system_metadata': sys_meta}
 
     def test_live_migration_basic(self):
         # Test basic schedule_live_migration functionality.
@@ -735,13 +742,15 @@ class SchedulerTestCase(test.TestCase):
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_dest_check_auto_set_host(self):
+        instance = self._live_migration_instance()
+
         # Confirm dest is picked by scheduler if not set.
         self.mox.StubOutWithMock(self.driver, 'select_hosts')
         self.mox.StubOutWithMock(db, 'instance_type_get')
 
-        instance = self._live_migration_instance()
+        instance_type = instance_types.extract_instance_type(instance)
         request_spec = {'instance_properties': instance,
-                        'instance_type': instance['instance_type'],
+                        'instance_type': instance_type,
                         'instance_uuids': [instance['uuid']],
                         'image': self.image_service.show(self.context,
                                                          instance['image_ref'])
@@ -749,8 +758,8 @@ class SchedulerTestCase(test.TestCase):
         ignore_hosts = [instance['host']]
         filter_properties = {'ignore_hosts': ignore_hosts}
 
-        db.instance_type_get(self.context, 1).AndReturn(
-            instance['instance_type'])
+        db.instance_type_get(self.context, instance_type['id']).AndReturn(
+            instance_type)
         self.driver.select_hosts(self.context, request_spec,
                                  filter_properties).AndReturn(['fake_host2'])
 
@@ -760,6 +769,8 @@ class SchedulerTestCase(test.TestCase):
         self.assertEqual('fake_host2', result)
 
     def test_live_migration_auto_set_dest(self):
+        instance = self._live_migration_instance()
+
         # Confirm scheduler picks target host if none given.
         self.mox.StubOutWithMock(db, 'instance_type_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
@@ -771,9 +782,9 @@ class SchedulerTestCase(test.TestCase):
         dest = None
         block_migration = False
         disk_over_commit = False
-        instance = self._live_migration_instance()
+        instance_type = instance_types.extract_instance_type(instance)
         request_spec = {'instance_properties': instance,
-                        'instance_type': instance['instance_type'],
+                        'instance_type': instance_type,
                         'instance_uuids': [instance['uuid']],
                         'image': self.image_service.show(self.context,
                                                          instance['image_ref'])
@@ -781,8 +792,9 @@ class SchedulerTestCase(test.TestCase):
 
         self.driver._live_migration_src_check(self.context, instance)
 
-        db.instance_type_get(self.context, 1).MultipleTimes().AndReturn(
-            instance['instance_type'])
+        db.instance_type_get(self.context,
+                             instance_type['id']).MultipleTimes().AndReturn(
+                                instance_type)
 
         # First selected host raises exception.InvalidHypervisorType
         self.driver.select_hosts(self.context, request_spec,
