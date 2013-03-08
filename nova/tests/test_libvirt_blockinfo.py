@@ -16,6 +16,7 @@
 #    under the License.
 
 from nova import block_device
+from nova.compute import instance_types
 from nova import context
 from nova import db
 from nova import exception
@@ -32,6 +33,8 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
+        instance_type = db.instance_type_get(self.context, 2)
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
                 'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
@@ -44,7 +47,8 @@ class LibvirtBlockInfoTest(test.TestCase):
                 'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                 'root_gb': 10,
                 'ephemeral_gb': 20,
-                'instance_type_id': '5'}  # m1.small
+                'instance_type_id': 2,  # m1.tiny
+                'system_metadata': sys_meta}
 
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
@@ -216,8 +220,8 @@ class LibvirtBlockInfoTest(test.TestCase):
         # A simple disk mapping setup, but with a swap device added
 
         user_context = context.RequestContext(self.user_id, self.project_id)
+        self.test_instance['system_metadata']['instance_type_swap'] = 5
         instance_ref = db.instance_create(user_context, self.test_instance)
-        instance_ref['instance_type']['swap'] = 5
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -252,8 +256,8 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_ephemeral(self):
         # A disk mapping with ephemeral devices
         user_context = context.RequestContext(self.user_id, self.project_id)
+        self.test_instance['system_metadata']['instance_type_swap'] = 5
         instance_ref = db.instance_create(user_context, self.test_instance)
-        instance_ref['instance_type']['swap'] = 5
 
         block_device_info = {
             'ephemerals': [

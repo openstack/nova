@@ -300,6 +300,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
+        instance_type = db.instance_type_get(self.context, 5)
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
                 'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
@@ -313,7 +316,8 @@ class LibvirtConnTestCase(test.TestCase):
                 'root_gb': 10,
                 'ephemeral_gb': 20,
                 'instance_type_id': '5',  # m1.small
-                'extra_specs': {}}
+                'extra_specs': {},
+                'system_metadata': sys_meta}
 
     def tearDown(self):
         nova.tests.image.fake.FakeImageService_reset()
@@ -2514,6 +2518,10 @@ class LibvirtConnTestCase(test.TestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
+        instance_type = db.instance_type_get(self.context,
+                                             instance_ref['instance_type_id'])
+        sys_meta = instance_types.save_instance_type_info({}, instance_type)
+        instance_ref['system_metadata'] = sys_meta
         instance = db.instance_create(self.context, instance_ref)
 
         # Mock out the get_info method of the LibvirtDriver so that the polling
@@ -2672,10 +2680,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
-        instance = db.instance_create(self.context, instance_ref)
-
         # Turn on some swap to exercise that codepath in _create_image
-        instance['instance_type']['swap'] = 500
+        instance_ref['system_metadata']['instance_type_swap'] = 500
+        instance = db.instance_create(self.context, instance_ref)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'to_xml', fake_none)
@@ -4595,6 +4602,9 @@ class LibvirtDriverTestCase(test.TestCase):
         if not params:
             params = {}
 
+        sys_meta = instance_types.save_instance_type_info(
+            {}, instance_types.get_instance_type_by_name('m1.tiny'))
+
         inst = {}
         inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
@@ -4612,6 +4622,7 @@ class LibvirtDriverTestCase(test.TestCase):
         inst['ramdisk_id'] = 3
         inst['config_drive_id'] = 1
         inst['key_data'] = 'ABCDEFG'
+        inst['system_metadata'] = sys_meta
 
         inst.update(params)
         return db.instance_create(context.get_admin_context(), inst)
