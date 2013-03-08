@@ -16,13 +16,16 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
-from sqlalchemy import Integer, BigInteger, DateTime, String
+from sqlalchemy import Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column
+from sqlalchemy.exc import SAWarning
 from sqlalchemy.sql import select
+from sqlalchemy.types import UserDefinedType
 
 from nova.db.sqlalchemy import utils
 from nova import exception
 from nova.tests import test_migrations
+import warnings
 
 
 class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
@@ -71,6 +74,12 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             test_table.drop()
 
     def test_util_drop_unique_constraint_with_not_supported_sqlite_type(self):
+
+        class CustomType(UserDefinedType):
+            """Dummy column type for testing unsupported types."""
+            def get_col_spec(self):
+                return "CustomType"
+
         table_name = "__test_tmp_table__"
         uc_name = 'uniq_foo'
         values = [
@@ -86,15 +95,16 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                                Column('id', Integer, primary_key=True,
                                       nullable=False),
                                Column('a', Integer),
-                               Column('foo', BigInteger, default=0),
+                               Column('foo', CustomType, default=0),
                                UniqueConstraint('a', name='uniq_a'),
                                UniqueConstraint('foo', name=uc_name))
             test_table.create()
 
             engine.execute(test_table.insert(), values)
             if key == "sqlite":
+                warnings.simplefilter("ignore", SAWarning)
                 # NOTE(boris-42): Missing info about column `foo` that has
-                #                 unsupported type BigInteger.
+                #                 unsupported type CustomType.
                 self.assertRaises(exception.NovaException,
                                   utils.drop_unique_constraint,
                                   engine, table_name, uc_name, 'foo')
@@ -106,7 +116,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                                   engine, table_name, uc_name, 'foo',
                                   foo=Integer())
 
-            foo = Column('foo', BigInteger, default=0)
+            foo = Column('foo', CustomType, default=0)
             utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
                                          foo=foo)
 
