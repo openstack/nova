@@ -2749,9 +2749,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 pass
             elif vm_state == vm_states.ACTIVE:
                 # The only rational power state should be RUNNING
-                if vm_power_state in (power_state.NOSTATE,
-                                       power_state.SHUTDOWN,
-                                       power_state.CRASHED):
+                if vm_power_state in (power_state.SHUTDOWN,
+                                      power_state.CRASHED):
                     LOG.warn(_("Instance shutdown by itself. Calling "
                                "the stop API."), instance=db_instance)
                     try:
@@ -2785,6 +2784,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # the VM state will go back to running after the external
                     # instrumentation is done. See bug 1097806 for details.
                     LOG.warn(_("Instance is paused unexpectedly. Ignore."),
+                             instance=db_instance)
+                elif vm_power_state == power_state.NOSTATE:
+                    # Occasionally, depending on the status of the hypervisor,
+                    # which could be restarting for example, an instance may
+                    # not be found.  Therefore just log the condidtion.
+                    LOG.warn(_("Instance is unexpectedly not found. Ignore."),
                              instance=db_instance)
             elif vm_state == vm_states.STOPPED:
                 if vm_power_state not in (power_state.NOSTATE,

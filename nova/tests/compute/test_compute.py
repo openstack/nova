@@ -2331,7 +2331,7 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(ctxt)
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(task_states.STOPPING, instances[0]['task_state'])
+        self.assertEqual(instances[0]['task_state'], None)
 
     def test_add_instance_fault(self):
         exc_info = None
