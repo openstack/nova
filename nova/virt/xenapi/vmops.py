@@ -635,6 +635,9 @@ class VMOps(object):
             # instance, but skip the admin password configuration
             no_agent = version is None
 
+            # Inject ssh key.
+            agent.inject_ssh_key()
+
             # Inject files, if necessary
             if injected_files:
                 # Inject any files, if specified

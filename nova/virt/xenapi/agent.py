@@ -224,6 +224,25 @@ class XenAPIBasedAgent(object):
 
         return resp['message']
 
+    def inject_ssh_key(self):
+        sshkey = self.instance.get('key_data')
+        if not sshkey:
+            return
+        if self.instance['os_type'] == 'windows':
+            LOG.warning(_("Skipping setting of ssh key for Windows."),
+                        instance=self.instance)
+            return
+        sshkey = str(sshkey)
+        keyfile = '/root/.ssh/authorized_keys'
+        key_data = ''.join([
+            '\n',
+            '# The following ssh key was injected by Nova',
+            '\n',
+            sshkey.strip(),
+            '\n',
+        ])
+        return self.inject_file(keyfile, key_data)
+
     def inject_file(self, path, contents):
         LOG.debug(_('Injecting file path: %r'), path, instance=self.instance)
 

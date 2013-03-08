@@ -622,7 +622,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                     create_record=True, empty_dns=False,
                     image_meta={'id': IMAGE_VHD,
                                 'disk_format': 'vhd'},
-                    block_device_info=None):
+                    block_device_info=None,
+                    key_data=None):
         if injected_files is None:
             injected_files = []
 
@@ -634,16 +635,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         if create_record:
             instance_values = {'id': instance_id,
-                      'project_id': self.project_id,
-                      'user_id': self.user_id,
-                      'image_ref': image_ref,
-                      'kernel_id': kernel_id,
-                      'ramdisk_id': ramdisk_id,
-                      'root_gb': 20,
-                      'instance_type_id': instance_type_id,
-                      'os_type': os_type,
-                      'hostname': hostname,
-                      'architecture': architecture}
+                               'project_id': self.project_id,
+                               'user_id': self.user_id,
+                               'image_ref': image_ref,
+                               'kernel_id': kernel_id,
+                               'ramdisk_id': ramdisk_id,
+                               'root_gb': 20,
+                               'instance_type_id': instance_type_id,
+                               'os_type': os_type,
+                               'hostname': hostname,
+                               'key_data': key_data,
+                               'architecture': architecture}
             instance = create_instance_with_system_metadata(self.context,
                                                             instance_values)
         else:
@@ -884,6 +886,34 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
             self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
                               str(3 * 10 * 1024))
+
+    def test_spawn_ssh_key_injection(self):
+        # Test spawning with key_data on an instance.  Should use
+        # agent file injection.
+        actual_injected_files = []
+
+        def fake_inject_file(self, method, args):
+            path = base64.b64decode(args['b64_path'])
+            contents = base64.b64decode(args['b64_contents'])
+            actual_injected_files.append((path, contents))
+            return jsonutils.dumps({'returncode': '0', 'message': 'success'})
+
+        def noop(*args, **kwargs):
+            pass
+
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file', fake_inject_file)
+        self.stubs.Set(agent.XenAPIBasedAgent,
+                       'set_admin_password', noop)
+
+        expected_data = ('\n# The following ssh key was injected by '
+                         'Nova\nfake_keydata\n')
+
+        injected_files = [('/root/.ssh/authorized_keys', expected_data)]
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64",
+                         key_data='fake_keydata')
+        self.assertEquals(actual_injected_files, injected_files)
 
     def test_spawn_injected_files(self):
         # Test spawning with injected_files.
