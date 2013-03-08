@@ -507,7 +507,7 @@ class LinuxNetworkTestCase(test.TestCase):
           '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
           '--listen-address=%s' % network_ref['dhcp_server'],
           '--except-interface=lo',
-          "--dhcp-range=set:'%s',%s,static,%ss" % (network_ref['label'],
+          "--dhcp-range=set:%s,%s,static,%ss" % (network_ref['label'],
                                                    network_ref['dhcp_start'],
                                                    CONF.dhcp_lease_time),
           '--dhcp-lease-max=256',
