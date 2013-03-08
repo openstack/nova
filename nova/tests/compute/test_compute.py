@@ -5982,9 +5982,55 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InvalidDevicePath,
                 self.compute_api.attach_volume,
                 self.context,
-                {'locked': False},
+                {'locked': False, 'vm_state': vm_states.ACTIVE},
                 None,
                 '/invalid')
+
+    def test_no_attach_volume_in_rescue_state(self):
+        def fake(*args, **kwargs):
+            pass
+
+        def fake_volume_get(self, context, volume_id):
+            return {'id': volume_id}
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', fake)
+        self.stubs.Set(cinder.API, 'reserve_volume', fake)
+
+        self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.attach_volume,
+                self.context,
+                {'uuid': 'fake_uuid', 'locked': False,
+                'vm_state': vm_states.RESCUED},
+                None,
+                '/dev/vdb')
+
+    def test_no_detach_volume_in_rescue_state(self):
+        # Ensure volume can be detached from instance
+
+        params = {'vm_state': vm_states.RESCUED}
+        instance = self._create_fake_instance(params=params)
+
+        def fake(*args, **kwargs):
+            pass
+
+        def fake_volume_get(self, context, volume_id):
+            pass
+            return {'id': volume_id, 'attach_status': 'in-use',
+                    'instance_uuid': instance['uuid']}
+
+        def fake_rpc_detach_volume(self, context, **kwargs):
+            pass
+
+        self.stubs.Set(cinder.API, 'get', fake_volume_get)
+        self.stubs.Set(cinder.API, 'check_detach', fake)
+        self.stubs.Set(cinder.API, 'begin_detaching', fake)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'detach_volume',
+                       fake_rpc_detach_volume)
+
+        self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.detach_volume,
+                self.context, 1)
 
     def test_vnc_console(self):
         # Make sure we can a vnc console for an instance.
