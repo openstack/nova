@@ -154,3 +154,29 @@ class EvacuateTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
+
+    def test_evacuate_shared(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        uuid = self.UUID
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'my_host',
+                'onSharedStorage': 'True',
+            }
+        })
+        req.content_type = 'application/json'
+
+        def fake_update(inst, context, instance,
+                        task_state, expected_task_state):
+            return None
+
+        self.stubs.Set(compute_api.API, 'update', fake_update)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 200)
