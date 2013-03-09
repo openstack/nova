@@ -1988,7 +1988,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = self.controller.create(req, body)
 
-        reservation_id = res.get('reservation_id')
+        reservation_id = res.obj.get('reservation_id')
         self.assertNotEqual(reservation_id, "")
         self.assertNotEqual(reservation_id, None)
         self.assertTrue(len(reservation_id) > 1)
