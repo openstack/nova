@@ -155,24 +155,24 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return cls._get_sample_path(name, dirname, suffix='.tpl')
 
     def _read_template(self, name):
-
         template = self._get_template(name)
-        if self.generate_samples and not os.path.exists(template):
-            with open(template, 'w'):
-                pass
         with open(template) as inf:
             return inf.read().strip()
+
+    def _write_template(self, name, data):
+        with open(self._get_template(name), 'w') as outf:
+            outf.write(data)
 
     def _write_sample(self, name, data):
         with open(self._get_sample(name), 'w') as outf:
             outf.write(data)
 
-    def _compare_result(self, subs, expected, result):
+    def _compare_result(self, subs, expected, result, result_str):
         matched_value = None
         if isinstance(expected, dict):
             if not isinstance(result, dict):
-                raise NoMatch(
-                        _('Result: %(result)s is not a dict.') % locals())
+                raise NoMatch(_('%(result_str)s: %(result)s is not a dict.')
+                              % locals())
             ex_keys = sorted(expected.keys())
             res_keys = sorted(result.keys())
             if ex_keys != res_keys:
@@ -184,17 +184,19 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 for key in res_keys:
                     if key not in ex_keys:
                         res_delta.append(key)
-                raise NoMatch(_('Dictionary key mismatch:\n'
-                             'Extra key(s) in template:\n%(ex_delta)s\n'
-                             'Extra key(s) in response:\n%(res_delta)s\n')
-                             % locals())
+                raise NoMatch(
+                        _('Dictionary key mismatch:\n'
+                        'Extra key(s) in template:\n%(ex_delta)s\n'
+                        'Extra key(s) in %(result_str)s:\n%(res_delta)s\n')
+                        % locals())
             for key in ex_keys:
-                res = self._compare_result(subs, expected[key], result[key])
+                res = self._compare_result(subs, expected[key], result[key],
+                                           result_str)
                 matched_value = res or matched_value
         elif isinstance(expected, list):
             if not isinstance(result, list):
                 raise NoMatch(
-                        _('Result: %(result)s is not a list.') % locals())
+                     _('%(result_str)s: %(result)s is not a list.') % locals())
 
             expected = expected[:]
             extra = []
@@ -202,7 +204,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 for i, ex_obj in enumerate(expected):
                     try:
                         matched_value = self._compare_result(subs, ex_obj,
-                                                             res_obj)
+                                                             res_obj,
+                                                             result_str)
                         del expected[i]
                         break
                     except NoMatch:
@@ -216,7 +219,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 error.extend([repr(o) for o in expected])
 
             if extra:
-                error.append(_('Extra list items in response:'))
+                error.append(_('Extra list items in %(result_str)s:')
+                             % locals())
                 error.extend([repr(o) for o in extra])
 
             if error:
@@ -235,9 +239,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             expected = '^%s$' % expected
             match = re.match(expected, result)
             if not match:
-                raise NoMatch(_('Values do not match:\n'
-                              'Template: %(expected)s\nResponse: %(result)s')
-                              % locals())
+                raise NoMatch(
+                    _('Values do not match:\n'
+                    'Template: %(expected)s\n%(result_str)s: %(result)s')
+                    % locals())
             try:
                 matched_value = match.group('id')
             except IndexError:
@@ -249,15 +254,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 expected = expected.strip()
                 result = result.strip()
             if expected != result:
-                raise NoMatch(_('Values do not match:\n'
-                              'Template: %(expected)s\nResponse: %(result)s')
-                              % locals())
+                raise NoMatch(
+                        _('Values do not match:\n'
+                        'Template: %(expected)s\n%(result_str)s: %(result)s')
+                        % locals())
         return matched_value
-
-    def _verify_something(self, subs, expected, data):
-        result = self._pretty_data(data)
-        result = self._objectify(result)
-        return self._compare_result(subs, expected, result)
 
     def generalize_subs(self, subs, vanilla_regexes):
         """Give the test a chance to modify subs after the server response
@@ -271,20 +272,27 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return subs
 
     def _verify_response(self, name, subs, response):
-        expected = self._read_template(name)
-        expected = self._objectify(expected)
         response_data = response.read()
-        try:
+        response_data = self._pretty_data(response_data)
+        if not os.path.exists(self._get_template(name)):
+            self._write_template(name, response_data)
+            template_data = response_data
+        else:
+            template_data = self._read_template(name)
+
+        if (self.generate_samples and
+            not os.path.exists(self._get_sample(name))):
+            self._write_sample(name, response_data)
+            sample_data = response_data
+        else:
             with file(self._get_sample(name)) as sample:
                 sample_data = sample.read()
-        except IOError:
-            if self.ctype == 'json':
-                sample_data = "{}"
-            else:
-                sample_data = None
+
         try:
-            response_result = self._verify_something(subs, expected,
-                                                     response_data)
+            template_data = self._objectify(template_data)
+            response_data = self._objectify(response_data)
+            response_result = self._compare_result(subs, template_data,
+                                                   response_data, "Response")
             # NOTE(danms): replace some of the subs with patterns for the
             # doc/api_samples check, which won't have things like the
             # correct compute host name. Also let the test do some of its
@@ -293,11 +301,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             subs['compute_host'] = vanilla_regexes['host_name']
             subs['id'] = vanilla_regexes['id']
             subs = self.generalize_subs(subs, vanilla_regexes)
-            self._verify_something(subs, expected, sample_data)
+            sample_data = self._objectify(sample_data)
+            self._compare_result(subs, template_data, sample_data, "Sample")
             return response_result
         except NoMatch:
-            if self.generate_samples:
-                self._write_sample(name, self._pretty_data(response_data))
             raise
 
     def _get_host(self):
