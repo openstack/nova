@@ -1020,7 +1020,7 @@ def restart_dhcp(context, dev, network_ref):
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
            '--listen-address=%s' % network_ref['dhcp_server'],
            '--except-interface=lo',
-           '--dhcp-range=set:\'%s\',%s,static,%ss' %
+           '--dhcp-range=set:%s,%s,static,%ss' %
                          (network_ref['label'],
                           network_ref['dhcp_start'],
                           CONF.dhcp_lease_time),
