@@ -188,7 +188,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
 
         self.mox.ReplayAll()
         name = self.pm._check_for_node()
-        self.assertEqual(name, 'testNode')
+        self.assertEqual(name, '"testNode"')
         self.mox.VerifyAll()
 
     def test_check_for_node_not_found(self):
@@ -214,7 +214,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn("testNode")
+        self.pm._check_for_node().AndReturn('"testNode"')
         self.pm._run_command(self.pm._vp_cmd.start_cmd).AndReturn("Started")
         self.pm.is_power_on().AndReturn(True)
         self.mox.ReplayAll()
@@ -229,7 +229,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn("testNode")
+        self.pm._check_for_node().AndReturn('"testNode"')
         self.pm._run_command(self.pm._vp_cmd.start_cmd).AndReturn("Started")
         self.pm.is_power_on().AndReturn(False)
         self.mox.ReplayAll()
@@ -244,7 +244,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn("testNode")
+        self.pm._check_for_node().AndReturn('"testNode"')
         self.pm.is_power_on().AndReturn(True)
         self.pm._run_command(self.pm._vp_cmd.stop_cmd).AndReturn("Stopped")
         self.pm.is_power_on().AndReturn(False)
@@ -260,7 +260,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn("testNode")
+        self.pm._check_for_node().AndReturn('"testNode"')
         self.pm.is_power_on().AndReturn(True)
         self.pm._run_command(self.pm._vp_cmd.stop_cmd).AndReturn("Stopped")
         self.pm.is_power_on().AndReturn(True)
@@ -276,7 +276,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn(["testNode"])
+        self.pm._check_for_node().AndReturn(['"testNode"'])
         self.pm._run_command(self.pm._vp_cmd.reboot_cmd).AndReturn("Restarted")
         self.pm.is_power_on().AndReturn(True)
         self.mox.ReplayAll()
@@ -291,7 +291,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
         self.mox.StubOutWithMock(self.pm, 'is_power_on')
-        self.pm._check_for_node().AndReturn(["testNode"])
+        self.pm._check_for_node().AndReturn(['"testNode"'])
         self.pm._run_command(self.pm._vp_cmd.reboot_cmd).AndReturn("Restarted")
         self.pm.is_power_on().AndReturn(False)
         self.mox.ReplayAll()
@@ -305,9 +305,9 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
 
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
-        self.pm._check_for_node().AndReturn(["testNode"])
+        self.pm._check_for_node().AndReturn(['"testNode"'])
         self.pm._run_command(self.pm._vp_cmd.list_running_cmd).\
-                AndReturn(["testNode"])
+                AndReturn(['"testNode"'])
         self.pm._matched_name = 'testNode'
         self.mox.ReplayAll()
         state = self.pm.is_power_on()
@@ -320,10 +320,25 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
 
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(self.pm, '_run_command')
-        self.pm._check_for_node().AndReturn(["NotFoundNode"])
+        self.pm._check_for_node().AndReturn(['"NotFoundNode"'])
         self.pm._run_command(self.pm._vp_cmd.list_running_cmd).\
-                AndReturn(["NotFoundNode"])
+                AndReturn(['"NotFoundNode"'])
         self.pm._matched_name = 'testNode'
+        self.mox.ReplayAll()
+        state = self.pm.is_power_on()
+        self.assertEqual(state, False)
+        self.mox.VerifyAll()
+
+    def test_is_power_on_match_subname(self):
+        self._create_node()
+        self._create_pm()
+
+        self.mox.StubOutWithMock(self.pm, '_check_for_node')
+        self.mox.StubOutWithMock(self.pm, '_run_command')
+        self.pm._check_for_node().AndReturn(['"testNode"'])
+        self.pm._run_command(self.pm._vp_cmd.list_running_cmd).\
+                AndReturn(['"testNode01"'])
+        self.pm._matched_name = '"testNode"'
         self.mox.ReplayAll()
         state = self.pm.is_power_on()
         self.assertEqual(state, False)
@@ -368,8 +383,8 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.mox.StubOutWithMock(self.pm, '_check_for_node')
         self.mox.StubOutWithMock(nutils, 'ssh_execute')
 
-        self.pm._check_for_node().AndReturn(["testNode"])
-        self.pm._check_for_node().AndReturn(["testNode"])
+        self.pm._check_for_node().AndReturn(['"testNode"'])
+        self.pm._check_for_node().AndReturn(['"testNode"'])
         nutils.ssh_execute('test', '/usr/bin/VBoxManage startvm ',
                 check_exit_code=True).\
                 AndRaise(exception.ProcessExecutionError)
