@@ -1465,7 +1465,10 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == 'inet':
-                    params = fields[1:-1]
+                    if fields[-2] == 'secondary':
+                        params = fields[1:-2]
+                    else:
+                        params = fields[1:-1]
                     _execute(*_ip_bridge_cmd('del', params, fields[-1]),
                              run_as_root=True, check_exit_code=[0, 2, 254])
                     _execute(*_ip_bridge_cmd('add', params, bridge),
