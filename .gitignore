@@ -15,6 +15,7 @@
 .ropeproject
 .testrepository/
 .tox
+.idea
 .venv
 AUTHORS
 Authors
