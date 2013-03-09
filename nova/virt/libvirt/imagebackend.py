@@ -141,6 +141,9 @@ class Image(object):
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
+            elif CONF.libvirt_images_type == "lvm" and \
+                    'ephemeral_size' in kwargs:
+                fetch_func(target=target, *args, **kwargs)
 
         base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
         if not os.path.exists(base_dir):

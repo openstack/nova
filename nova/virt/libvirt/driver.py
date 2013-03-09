@@ -1692,8 +1692,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if not fs_format:
             fs_format = CONF.default_ephemeral_format
 
-        libvirt_utils.create_image('raw', target,
-                                   '%d%c' % (local_size, unit))
+        if not CONF.libvirt_images_type == "lvm":
+            libvirt_utils.create_image('raw', target,
+                                       '%d%c' % (local_size, unit))
         if fs_format:
             utils.mkfs(fs_format, target, label)
 

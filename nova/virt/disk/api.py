@@ -94,7 +94,7 @@ def mkfs(os_type, fs_label, target):
     mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
                     '') % locals()
     if mkfs_command:
-        utils.execute(*mkfs_command.split())
+        utils.execute(*mkfs_command.split(), run_as_root=True)
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):
