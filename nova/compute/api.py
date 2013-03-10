@@ -445,7 +445,7 @@ class API(base.Base):
         try:
             new_name = (CONF.multi_instance_display_name_template %
                         params)
-        except KeyError, TypeError:
+        except (KeyError, TypeError):
             LOG.exception(_('Failed to set instance name using '
                             'multi_instance_display_name_template.'))
             new_name = instance['display_name']
