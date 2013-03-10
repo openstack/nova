@@ -66,11 +66,11 @@ CONF.import_opt('debug', 'nova.openstack.common.log')
 
 
 if __name__ == '__main__':
-    if CONF.ssl_only and not os.path.exists(CONF.cert):
-        parser.error("SSL only and %s not found" % CONF.cert)
-
     # Setup flags
     config.parse_args(sys.argv)
+
+    if CONF.ssl_only and not os.path.exists(CONF.cert):
+        parser.error("SSL only and %s not found" % CONF.cert)
 
     # Check to see if spice html/js/css files are present
     if not os.path.exists(CONF.web):
