@@ -3844,6 +3844,69 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         self.assertEquals(request['body'], expected)
 
 
+class TestServerActionRequestXMLDeserializer(test.TestCase):
+
+    def setUp(self):
+        super(TestServerActionRequestXMLDeserializer, self).setUp()
+        self.deserializer = servers.ActionDeserializer()
+
+    def test_rebuild_request(self):
+        serial_request = """
+<rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
+   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
+   OS-DCF:diskConfig="MANUAL" imageRef="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "rebuild": {
+                "imageRef": "1",
+                "OS-DCF:diskConfig": "MANUAL",
+                },
+            }
+        self.assertEquals(request['body'], expected)
+
+    def test_rebuild_request_auto_disk_config_compat(self):
+        serial_request = """
+<rebuild xmlns="http://docs.openstack.org/compute/api/v1.1"
+   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
+   auto_disk_config="MANUAL" imageRef="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "rebuild": {
+                "imageRef": "1",
+                "OS-DCF:diskConfig": "MANUAL",
+                },
+            }
+        self.assertEquals(request['body'], expected)
+
+    def test_resize_request(self):
+        serial_request = """
+<resize xmlns="http://docs.openstack.org/compute/api/v1.1"
+   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
+   OS-DCF:diskConfig="MANUAL" flavorRef="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "resize": {
+                "flavorRef": "1",
+                "OS-DCF:diskConfig": "MANUAL",
+                },
+            }
+        self.assertEquals(request['body'], expected)
+
+    def test_resize_request_auto_disk_config_compat(self):
+        serial_request = """
+<resize xmlns="http://docs.openstack.org/compute/api/v1.1"
+   xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
+   auto_disk_config="MANUAL" flavorRef="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {
+            "resize": {
+                "flavorRef": "1",
+                "OS-DCF:diskConfig": "MANUAL",
+                },
+            }
+        self.assertEquals(request['body'], expected)
+
+
 class TestAddressesXMLSerialization(test.TestCase):
 
     index_serializer = ips.AddressesTemplate()
