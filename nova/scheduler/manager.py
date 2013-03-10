@@ -95,7 +95,10 @@ class SchedulerManager(manager.Manager):
             return self.driver.schedule_live_migration(
                 context, instance, dest,
                 block_migration, disk_over_commit)
-        except exception.ComputeServiceUnavailable as ex:
+        except (exception.ComputeServiceUnavailable,
+                exception.InvalidHypervisorType,
+                exception.UnableToMigrateToSelf,
+                exception.DestinationHypervisorTooOld) as ex:
             request_spec = {'instance_properties': {
                 'uuid': instance['uuid'], },
             }

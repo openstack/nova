@@ -211,6 +211,120 @@ class AdminActionsTest(test.TestCase):
             unicode(exception.ComputeServiceUnavailable(host='host')),
             res.body)
 
+    def test_migrate_live_invalid_hypervisor_type(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'os-migrateLive': {
+                'host': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False,
+            }
+        })
+        req.content_type = 'application/json'
+
+        def fake_update(inst, context, instance,
+                        task_state, expected_task_state):
+            return None
+
+        def fake_scheduler_api_live_migration(context, dest,
+                                        block_migration=False,
+                                        disk_over_commit=False, instance=None,
+                                        instance_id=None, topic=None):
+            raise exception.InvalidHypervisorType()
+
+        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
+                       'live_migration',
+                       fake_scheduler_api_live_migration)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
+        self.assertIn(
+            unicode(exception.InvalidHypervisorType()),
+            res.body)
+
+    def test_migrate_live_unable_to_migrate_to_self(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'os-migrateLive': {
+                'host': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False,
+            }
+        })
+        req.content_type = 'application/json'
+
+        def fake_update(inst, context, instance,
+                        task_state, expected_task_state):
+            return None
+
+        def fake_scheduler_api_live_migration(context, dest,
+                                        block_migration=False,
+                                        disk_over_commit=False, instance=None,
+                                        instance_id=None, topic=None):
+            raise exception.UnableToMigrateToSelf(self.UUID, host='host')
+
+        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
+                       'live_migration',
+                       fake_scheduler_api_live_migration)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
+        self.assertIn(
+            unicode(exception.UnableToMigrateToSelf(self.UUID, host='host')),
+            res.body)
+
+    def test_migrate_live_destination_hypervisor_too_old(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt, init_only=('servers',))
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'os-migrateLive': {
+                'host': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False,
+            }
+        })
+        req.content_type = 'application/json'
+
+        def fake_update(inst, context, instance,
+                        task_state, expected_task_state):
+            return None
+
+        def fake_scheduler_api_live_migration(context, dest,
+                                        block_migration=False,
+                                        disk_over_commit=False, instance=None,
+                                        instance_id=None, topic=None):
+            raise exception.DestinationHypervisorTooOld()
+
+        self.stubs.Set(compute_api.API, 'update', fake_update)
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
+                       'live_migration',
+                       fake_scheduler_api_live_migration)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
+        self.assertIn(
+            unicode(exception.DestinationHypervisorTooOld()),
+            res.body)
+
 
 class CreateBackupTests(test.TestCase):
 
