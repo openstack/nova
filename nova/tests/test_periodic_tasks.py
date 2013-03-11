@@ -15,11 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
+import datetime
 
 from testtools import matchers
 
 from nova import manager
+from nova.openstack.common import timeutils
 from nova import test
 
 
@@ -79,17 +80,74 @@ class Manager(test.TestCase):
         self.assertAlmostEqual(60, idle, 1)
 
     def test_periodic_tasks_idle_calculation(self):
+        fake_time = datetime.datetime(3000, 1, 1)
+        timeutils.set_time_override(fake_time)
+
         class Manager(manager.Manager):
             @manager.periodic_task(spacing=10)
-            def bar(self):
+            def bar(self, context):
                 return 'bar'
 
         m = Manager()
+
+        # Ensure initial values are correct
+        self.assertEqual(1, len(m._periodic_tasks))
+        task_name, task = m._periodic_tasks[0]
+
+        # Test task values
+        self.assertEqual('bar', task_name)
+        self.assertEqual(10, task._periodic_spacing)
+        self.assertEqual(True, task._periodic_enabled)
+        self.assertEqual(False, task._periodic_external_ok)
+        self.assertEqual(False, task._periodic_immediate)
+        self.assertNotEqual(None, task._periodic_last_run)
+
+        # Test the manager's representation of those values
+        self.assertEqual(10, m._periodic_spacing[task_name])
+        self.assertNotEqual(None, m._periodic_last_run[task_name])
+
+        timeutils.advance_time_delta(datetime.timedelta(seconds=5))
         m.periodic_tasks(None)
-        time.sleep(0.1)
+
+        timeutils.advance_time_delta(datetime.timedelta(seconds=5))
         idle = m.periodic_tasks(None)
-        self.assertThat(idle, matchers.GreaterThan(9.7))
-        self.assertThat(idle, matchers.LessThan(9.9))
+        self.assertAlmostEqual(10, idle, 1)
+
+    def test_periodic_tasks_immediate_runs_now(self):
+        fake_time = datetime.datetime(3000, 1, 1)
+        timeutils.set_time_override(fake_time)
+
+        class Manager(manager.Manager):
+            @manager.periodic_task(spacing=10, run_immediately=True)
+            def bar(self, context):
+                return 'bar'
+
+        m = Manager()
+
+        # Ensure initial values are correct
+        self.assertEqual(1, len(m._periodic_tasks))
+        task_name, task = m._periodic_tasks[0]
+
+        # Test task values
+        self.assertEqual('bar', task_name)
+        self.assertEqual(10, task._periodic_spacing)
+        self.assertEqual(True, task._periodic_enabled)
+        self.assertEqual(False, task._periodic_external_ok)
+        self.assertEqual(True, task._periodic_immediate)
+        self.assertEqual(None, task._periodic_last_run)
+
+        # Test the manager's representation of those values
+        self.assertEqual(10, m._periodic_spacing[task_name])
+        self.assertEqual(None, m._periodic_last_run[task_name])
+
+        idle = m.periodic_tasks(None)
+        self.assertEqual(datetime.datetime(3000, 1, 1, 0, 0),
+                         m._periodic_last_run[task_name])
+        self.assertAlmostEqual(10, idle, 1)
+
+        timeutils.advance_time_delta(datetime.timedelta(seconds=5))
+        idle = m.periodic_tasks(None)
+        self.assertAlmostEqual(5, idle, 1)
 
     def test_periodic_tasks_disabled(self):
         class Manager(manager.Manager):

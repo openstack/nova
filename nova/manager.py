@@ -53,8 +53,7 @@ This module provides Manager, a base class for managers.
 
 """
 
-import time
-
+import datetime
 import eventlet
 from oslo.config import cfg
 
@@ -63,6 +62,7 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common.plugin import pluginmanager
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
+from nova.openstack.common import timeutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 
 
@@ -114,10 +114,11 @@ def periodic_task(*args, **kwargs):
 
         # Control frequency
         f._periodic_spacing = kwargs.pop('spacing', 0)
-        if kwargs.pop('run_immediately', False):
+        f._periodic_immediate = kwargs.pop('run_immediately', False)
+        if f._periodic_immediate:
             f._periodic_last_run = None
         else:
-            f._periodic_last_run = time.time()
+            f._periodic_last_run = timeutils.utcnow()
         return f
 
     # NOTE(sirp): The `if` is necessary to allow the decorator to be used with
@@ -220,22 +221,22 @@ class Manager(base.Base):
         for task_name, task in self._periodic_tasks:
             full_task_name = '.'.join([self.__class__.__name__, task_name])
 
+            now = timeutils.utcnow()
+            spacing = self._periodic_spacing[task_name]
+            last_run = self._periodic_last_run[task_name]
+
             # If a periodic task is _nearly_ due, then we'll run it early
-            if self._periodic_spacing[task_name] is None:
-                wait = 0
-            elif self._periodic_last_run[task_name] is None:
-                wait = 0
-            else:
-                due = (self._periodic_last_run[task_name] +
-                       self._periodic_spacing[task_name])
-                wait = max(0, due - time.time())
-                if wait > 0.2:
-                    if wait < idle_for:
-                        idle_for = wait
+            if spacing is not None and last_run is not None:
+                due = last_run + datetime.timedelta(seconds=spacing)
+                if not timeutils.is_soon(due, 0.2):
+                    idle_for = min(idle_for, timeutils.delta_seconds(now, due))
                     continue
 
+            if spacing is not None:
+                idle_for = min(idle_for, spacing)
+
             LOG.debug(_("Running periodic task %(full_task_name)s"), locals())
-            self._periodic_last_run[task_name] = time.time()
+            self._periodic_last_run[task_name] = timeutils.utcnow()
 
             try:
                 task(self, context)
@@ -244,10 +245,6 @@ class Manager(base.Base):
                     raise
                 LOG.exception(_("Error during %(full_task_name)s: %(e)s"),
                               locals())
-
-            if (not self._periodic_spacing[task_name] is None and
-                self._periodic_spacing[task_name] < idle_for):
-                idle_for = self._periodic_spacing[task_name]
             eventlet.sleep(0)
 
         return idle_for
