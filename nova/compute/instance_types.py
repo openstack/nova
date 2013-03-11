@@ -69,7 +69,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=None, flavorid=None,
            swap=None, rxtx_factor=None, is_public=True):
     """Creates instance types."""
 
-    if flavorid is None:
+    if flavorid is None or flavorid == '':
         flavorid = uuid.uuid4()
     if swap is None:
         swap = 0
