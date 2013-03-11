@@ -65,13 +65,13 @@ class VFSGuestFS(vfs.VFS):
         roots = self.handle.inspect_os()
 
         if len(roots) == 0:
-            raise exception.NovaException(_("No operating system found in %s"),
-                                          self.imgfile)
+            raise exception.NovaException(_("No operating system found in %s")
+                                          % self.imgfile)
 
         if len(roots) != 1:
             LOG.debug(_("Multi-boot OS %(roots)s") % {'roots': str(roots)})
             raise exception.NovaException(
-                _("Multi-boot operating system found in %s"),
+                _("Multi-boot operating system found in %s") %
                 self.imgfile)
 
         self.setup_os_root(roots[0])
