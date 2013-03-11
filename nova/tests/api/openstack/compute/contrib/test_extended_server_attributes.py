@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
-from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -30,18 +29,15 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID3, host="host-fake")
+    return fakes.stub_instance(1, uuid=UUID3, host="host-fake",
+                               node="node-fake")
 
 
 def fake_compute_get_all(*args, **kwargs):
     return [
-        fakes.stub_instance(1, uuid=UUID1, host="host-1"),
-        fakes.stub_instance(2, uuid=UUID2, host="host-2")
+        fakes.stub_instance(1, uuid=UUID1, host="host-1", node="node-1"),
+        fakes.stub_instance(2, uuid=UUID2, host="host-2", node="node-2")
     ]
-
-
-def fake_cn_get(context, host):
-    return {"hypervisor_hostname": host}
 
 
 class ExtendedServerAttributesTest(test.TestCase):
@@ -53,7 +49,6 @@ class ExtendedServerAttributesTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(db, 'compute_node_get_by_host', fake_cn_get)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -71,12 +66,12 @@ class ExtendedServerAttributesTest(test.TestCase):
     def _get_servers(self, body):
         return jsonutils.loads(body).get('servers')
 
-    def assertServerAttributes(self, server, host, instance_name):
+    def assertServerAttributes(self, server, host, node, instance_name):
         self.assertEqual(server.get('%shost' % self.prefix), host)
         self.assertEqual(server.get('%sinstance_name' % self.prefix),
                          instance_name)
         self.assertEqual(server.get('%shypervisor_hostname' % self.prefix),
-                         host)
+                         node)
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3
@@ -85,6 +80,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertServerAttributes(self._get_server(res.body),
                                 host='host-fake',
+                                node='node-fake',
                                 instance_name='instance-1')
 
     def test_detail(self):
@@ -95,6 +91,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         for i, server in enumerate(self._get_servers(res.body)):
             self.assertServerAttributes(server,
                                     host='host-%s' % (i + 1),
+                                    node='node-%s' % (i + 1),
                                     instance_name='instance-%s' % (i + 1))
 
     def test_no_instance_passthrough_404(self):

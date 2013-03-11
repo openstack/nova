@@ -208,10 +208,6 @@ def compute_node_delete(context, compute_id):
     return IMPL.compute_node_delete(context, compute_id)
 
 
-def compute_node_get_by_host(context, host):
-    return IMPL.compute_node_get_by_host(context, host)
-
-
 def compute_node_statistics(context):
     return IMPL.compute_node_statistics(context)
 
