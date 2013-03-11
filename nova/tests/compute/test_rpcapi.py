@@ -221,7 +221,9 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_soft_delete_instance(self):
         self._test_compute_api('soft_delete_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance,
+                reservations=['uuid1', 'uuid2'],
+                version='2.27')
 
     def test_restore_instance(self):
         self._test_compute_api('restore_instance', 'cast',
@@ -368,7 +370,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance, bdms=[],
-                version='2.4')
+                reservations=['uuid1', 'uuid2'],
+                version='2.27')
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',

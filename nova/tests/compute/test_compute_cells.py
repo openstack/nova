@@ -18,10 +18,12 @@ Tests For Compute w/ Cells
 """
 import functools
 
+from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova import db
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import quota
 from nova.tests.compute import test_compute
 
 
@@ -40,7 +42,16 @@ def stub_call_to_cells(context, instance, method, *args, **kwargs):
                 dict(vm_state=instance['vm_state'],
                      task_state=instance['task_state']))
 
-    return fn(context, instance, *args, **kwargs)
+    # Use NoopQuotaDriver in child cells.
+    saved_quotas = quota.QUOTAS
+    quota.QUOTAS = quota.QuotaEngine(
+            quota_driver_class=quota.NoopQuotaDriver())
+    compute_api.QUOTAS = quota.QUOTAS
+    try:
+        return fn(context, instance, *args, **kwargs)
+    finally:
+        quota.QUOTAS = saved_quotas
+        compute_api.QUOTAS = saved_quotas
 
 
 def stub_cast_to_cells(context, instance, method, *args, **kwargs):
@@ -52,7 +63,17 @@ def stub_cast_to_cells(context, instance, method, *args, **kwargs):
         db.instance_update(context, instance['uuid'],
                 dict(vm_state=instance['vm_state'],
                      task_state=instance['task_state']))
-    fn(context, instance, *args, **kwargs)
+
+    # Use NoopQuotaDriver in child cells.
+    saved_quotas = quota.QUOTAS
+    quota.QUOTAS = quota.QuotaEngine(
+            quota_driver_class=quota.NoopQuotaDriver())
+    compute_api.QUOTAS = quota.QUOTAS
+    try:
+        fn(context, instance, *args, **kwargs)
+    finally:
+        quota.QUOTAS = saved_quotas
+        compute_api.QUOTAS = saved_quotas
 
 
 def deploy_stubs(stubs, api, original_instance=None):

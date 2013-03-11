@@ -1031,15 +1031,13 @@ class API(base.Base):
                                         instance,
                                         **attrs)
 
-            # Avoid double-counting the quota usage reduction
-            # where delete is already in progress
-            if (old['vm_state'] != vm_states.SOFT_DELETED and
-                old['task_state'] not in (task_states.DELETING,
-                                          task_states.SOFT_DELETING)):
-                reservations = self._create_reservations(context,
-                                                         old,
-                                                         updated,
-                                                         project_id)
+            # NOTE(comstud): If we delete the instance locally, we'll
+            # commit the reservations here.  Otherwise, the manager side
+            # will commit or rollback the reservations based on success.
+            reservations = self._create_reservations(context,
+                                                     old,
+                                                     updated,
+                                                     project_id)
 
             if not host:
                 # Just update database, nothing else we can do
@@ -1099,17 +1097,18 @@ class API(base.Base):
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
 
-                    cb(context, instance, bdms)
+                    cb(context, instance, bdms, reservations=reservations)
             except exception.ComputeHostNotFound:
                 pass
 
             if not is_up:
                 # If compute node isn't up, just delete from DB
                 self._local_delete(context, instance, bdms)
-            if reservations:
-                QUOTAS.commit(context,
-                              reservations,
-                              project_id=project_id)
+                if reservations:
+                    QUOTAS.commit(context,
+                                  reservations,
+                                  project_id=project_id)
+                    reservations = None
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
             if reservations:
@@ -1210,16 +1209,18 @@ class API(base.Base):
         LOG.debug(_('Going to try to soft delete instance'),
                   instance=instance)
 
-        def soft_delete(context, instance, bdms):
-            self.compute_rpcapi.soft_delete_instance(context, instance)
+        def soft_delete(context, instance, bdms, reservations=None):
+            self.compute_rpcapi.soft_delete_instance(context, instance,
+                    reservations=reservations)
 
         self._delete(context, instance, soft_delete,
                      task_state=task_states.SOFT_DELETING,
                      deleted_at=timeutils.utcnow())
 
     def _delete_instance(self, context, instance):
-        def terminate(context, instance, bdms):
-            self.compute_rpcapi.terminate_instance(context, instance, bdms)
+        def terminate(context, instance, bdms, reservations=None):
+            self.compute_rpcapi.terminate_instance(context, instance, bdms,
+                    reservations=reservations)
 
         self._delete(context, instance, terminate,
                      task_state=task_states.DELETING)

@@ -1828,7 +1828,8 @@ class ComputeTestCase(BaseTestCase):
         """
         instance = self._create_fake_instance()
 
-        def fake_delete_instance(context, instance, bdms):
+        def fake_delete_instance(context, instance, bdms,
+                                 reservations=None):
             raise exception.InstanceTerminationFailure(reason='')
 
         self.stubs.Set(self.compute, '_delete_instance',
@@ -1989,6 +1990,59 @@ class ComputeTestCase(BaseTestCase):
         nova.quota.QUOTAS.rollback(mox.IgnoreArg(), reservations)
         self.mox.ReplayAll()
         return reservations
+
+    def test_quotas_succesful_delete(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        resvs = self._ensure_quota_reservations_committed()
+        self.compute.terminate_instance(self.context, instance,
+                                        bdms=None, reservations=resvs)
+
+    def test_quotas_failed_delete(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+
+        def fake_shutdown_instance(*args, **kwargs):
+            raise test.TestingException()
+
+        self.stubs.Set(self.compute, '_shutdown_instance',
+                       fake_shutdown_instance)
+
+        resvs = self._ensure_quota_reservations_rolledback()
+        self.assertRaises(test.TestingException,
+                          self.compute.terminate_instance,
+                          self.context, instance,
+                          bdms=None, reservations=resvs)
+
+    def test_quotas_succesful_soft_delete(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+            params=dict(task_state=task_states.SOFT_DELETING)))
+        resvs = self._ensure_quota_reservations_committed()
+        self.compute.soft_delete_instance(self.context, instance,
+                                          reservations=resvs)
+
+    def test_quotas_failed_soft_delete(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+            params=dict(task_state=task_states.SOFT_DELETING)))
+
+        def fake_soft_delete(*args, **kwargs):
+            raise test.TestingException()
+
+        self.stubs.Set(self.compute.driver, 'soft_delete',
+                       fake_soft_delete)
+
+        resvs = self._ensure_quota_reservations_rolledback()
+        self.assertRaises(test.TestingException,
+                          self.compute.soft_delete_instance,
+                          self.context, instance,
+                          reservations=resvs)
+
+    def test_quotas_destroy_of_soft_deleted_instance(self):
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+            params=dict(vm_state=vm_states.SOFT_DELETED)))
+        # Termination should be successful, but quota reservations
+        # rolled back because the instance was in SOFT_DELETED state.
+        resvs = self._ensure_quota_reservations_rolledback()
+        self.compute.terminate_instance(self.context, instance,
+                                        bdms=None, reservations=resvs)
 
     def test_finish_resize(self):
         # Contrived test to ensure finish_resize doesn't raise anything.
@@ -4302,33 +4356,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['task_state'], None)
         self.assertTrue(instance['deleted'])
 
-    def test_repeated_delete_quota(self):
-        in_use = {'instances': 1}
-
-        def fake_reserve(context, expire=None, project_id=None, **deltas):
-            return dict(deltas.iteritems())
-
-        self.stubs.Set(QUOTAS, 'reserve', fake_reserve)
-
-        def fake_commit(context, deltas, project_id=None):
-            for k, v in deltas.iteritems():
-                in_use[k] = in_use.get(k, 0) + v
-
-        self.stubs.Set(QUOTAS, 'commit', fake_commit)
-
-        instance, instance_uuid = self._run_instance(params={
-                'host': CONF.host})
-
-        self.compute_api.delete(self.context, instance)
-        self.compute_api.delete(self.context, instance)
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.DELETING)
-
-        self.assertEquals(in_use['instances'], 0)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
     def test_delete_fast_if_host_not_set(self):
         instance = self._create_fake_instance({'host': None})
         self.compute_api.delete(self.context, instance)
@@ -4363,9 +4390,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance, instance_uuid = self._run_instance(params={
                 'host': CONF.host})
 
+        # Make sure this is not called on the API side.
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
-        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg(),
-                                 project_id=mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute_api.soft_delete(self.context, instance)
@@ -4521,9 +4547,6 @@ class ComputeAPITestCase(BaseTestCase):
         # Ensure quotas are committed
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
-        if self.__class__.__name__ == 'CellsComputeAPITestCase':
-            # Called a 2nd time (for the child cell) when testing cells
-            nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute_api.restore(self.context, instance)
