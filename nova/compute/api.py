@@ -1848,11 +1848,12 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
-    def confirm_resize(self, context, instance):
+    def confirm_resize(self, context, instance, migration_ref=None):
         """Confirms a migration/resize and deletes the 'old' instance."""
         elevated = context.elevated()
-        migration_ref = self.db.migration_get_by_instance_and_status(elevated,
-                instance['uuid'], 'finished')
+        if migration_ref is None:
+            migration_ref = self.db.migration_get_by_instance_and_status(
+                elevated, instance['uuid'], 'finished')
 
         # reserve quota only for any decrease in resource usage
         deltas = self._downsize_quota_delta(context, migration_ref)

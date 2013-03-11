@@ -3322,7 +3322,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                             instance=instance)
                     continue
                 try:
-                    self.compute_api.confirm_resize(context, instance)
+                    self.compute_api.confirm_resize(context, instance,
+                                                    migration_ref=migration)
                 except Exception, e:
                     msg = _("Error auto-confirming resize: %(e)s. "
                             "Will retry later.")
