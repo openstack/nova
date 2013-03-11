@@ -83,7 +83,13 @@ class StubGlanceClient(object):
     def delete(self, image_id):
         for i, image in enumerate(self._images):
             if image.id == image_id:
-                del self._images[i]
+                # When you delete an image from glance, it sets the status to
+                # DELETED. If you try to delete a DELETED image, it raises
+                # HTTPForbidden.
+                image_data = self._images[i]
+                if image_data.deleted:
+                    raise glanceclient.exc.HTTPForbidden()
+                image_data.deleted = True
                 return
         raise glanceclient.exc.NotFound(image_id)
 

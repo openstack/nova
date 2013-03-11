@@ -159,6 +159,11 @@ class Controller(wsgi.Controller):
         except exception.ImageNotFound:
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
+        except exception.ImageNotAuthorized:
+            # The image service raises this exception on delete if glanceclient
+            # raises HTTPForbidden.
+            explanation = _("You are not allowed to delete the image.")
+            raise webob.exc.HTTPForbidden(explanation=explanation)
         return webob.exc.HTTPNoContent()
 
     @wsgi.serializers(xml=MinimalImagesTemplate)

@@ -217,12 +217,10 @@ def _make_image_fixtures():
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
 
     image_id = 123
-    base_attrs = {'deleted': False}
 
     fixtures = []
 
     def add_fixture(**kwargs):
-        kwargs.update(base_attrs)
         fixtures.append(kwargs)
 
     # Public image
@@ -237,9 +235,11 @@ def _make_image_fixtures():
     snapshot_properties = {'instance_uuid': uuid, 'user_id': 'fake'}
     for status in ('queued', 'saving', 'active', 'killed',
                    'deleted', 'pending_delete'):
+        deleted = False if status != 'deleted' else True
         add_fixture(id=image_id, name='%s snapshot' % status,
                     is_public=False, status=status,
-                    properties=snapshot_properties, size='25165824')
+                    properties=snapshot_properties, size='25165824',
+                    deleted=deleted)
         image_id += 1
 
     # Image without a name
