@@ -80,7 +80,7 @@ from nova import volume
 
 compute_opts = [
     cfg.StrOpt('console_host',
-               default=socket.getfqdn(),
+               default=socket.gethostname(),
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
     cfg.StrOpt('default_access_ip_network_name',
