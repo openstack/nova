@@ -16,6 +16,7 @@
 
 import sys
 
+from nova import exception
 from nova import test
 
 from nova.tests import fakeguestfs
@@ -50,6 +51,32 @@ class VirtDiskVFSGuestFSTest(test.TestCase):
         self.assertEqual(handle.running, False)
         self.assertEqual(handle.closed, True)
         self.assertEqual(len(handle.mounts), 0)
+
+    def test_appliance_setup_inspect_no_root_raises(self):
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
+                                 imgfmt="qcow2",
+                                 partition=-1)
+        # call setup to init the handle so we can stub it
+        vfs.setup()
+
+        def fake_inspect_os():
+            return []
+
+        self.stubs.Set(vfs.handle, 'inspect_os', fake_inspect_os)
+        self.assertRaises(exception.NovaException, vfs.setup_os_inspect)
+
+    def test_appliance_setup_inspect_multi_boots_raises(self):
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
+                                 imgfmt="qcow2",
+                                 partition=-1)
+        # call setup to init the handle so we can stub it
+        vfs.setup()
+
+        def fake_inspect_os():
+            return ['fake1', 'fake2']
+
+        self.stubs.Set(vfs.handle, 'inspect_os', fake_inspect_os)
+        self.assertRaises(exception.NovaException, vfs.setup_os_inspect)
 
     def test_appliance_setup_static_nopart(self):
         vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
