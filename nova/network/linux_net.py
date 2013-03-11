@@ -1246,12 +1246,7 @@ def _create_veth_pair(dev1_name, dev2_name):
     deleting any previous devices with those names.
     """
     for dev in [dev1_name, dev2_name]:
-        if device_exists(dev):
-            try:
-                utils.execute('ip', 'link', 'delete', dev1_name,
-                              run_as_root=True, check_exit_code=[0, 2, 254])
-            except exception.ProcessExecutionError:
-                LOG.exception(_("Error clearing stale veth %s") % dev)
+        delete_net_dev(dev)
 
     utils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
                   'name', dev2_name, run_as_root=True)
@@ -1275,8 +1270,7 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
 def delete_ovs_vif_port(bridge, dev):
     utils.execute('ovs-vsctl', 'del-port', bridge, dev,
                   run_as_root=True)
-    utils.execute('ip', 'link', 'delete', dev,
-                  run_as_root=True)
+    delete_net_dev(dev)
 
 
 def create_tap_dev(dev, mac_address=None):
@@ -1293,6 +1287,18 @@ def create_tap_dev(dev, mac_address=None):
                           run_as_root=True, check_exit_code=[0, 2, 254])
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
                       check_exit_code=[0, 2, 254])
+
+
+def delete_net_dev(dev):
+    """Delete a network device only if it exists."""
+    if device_exists(dev):
+        try:
+            utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
+                          check_exit_code=[0, 2, 254])
+            LOG.debug(_("Net device removed: '%s'"), dev)
+        except exception.ProcessExecutionError:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_("Failed removing net device: '%s'"), dev)
 
 
 # Similar to compute virt layers, the Linux network node
@@ -1434,17 +1440,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def remove_vlan(cls, vlan_num):
         """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
-        if not device_exists(vlan_interface):
-            return
-        else:
-            try:
-                utils.execute('ip', 'link', 'delete', vlan_interface,
-                              run_as_root=True, check_exit_code=[0, 2, 254])
-            except exception.ProcessExecutionError:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_("Failed unplugging VLAN interface '%s'"),
-                              vlan_interface)
-            LOG.debug(_("Unplugged VLAN interface '%s'"), vlan_interface)
+        delete_net_dev(vlan_interface)
 
     @classmethod
     @lockutils.synchronized('lock_bridge', 'nova-', external=True)
@@ -1546,15 +1542,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                     '--in-interface %s -j DROP' % bridge)
                     ipv4_filter.remove_rule('FORWARD',
                                     '--out-interface %s -j DROP' % bridge)
-            try:
-                utils.execute('ip', 'link', 'delete', bridge, run_as_root=True,
-                              check_exit_code=[0, 2, 254])
-            except exception.ProcessExecutionError:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_("Failed unplugging bridge interface '%s'"),
-                              bridge)
-
-        LOG.debug(_("Unplugged bridge interface '%s'"), bridge)
+            delete_net_dev(bridge)
 
 
 @lockutils.synchronized('ebtables', 'nova-', external=True)
@@ -1742,18 +1730,10 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def unplug(self, network):
         dev = self.get_dev(network)
-
         if not device_exists(dev):
             return None
         else:
-            try:
-                utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
-                              check_exit_code=[0, 2, 254])
-            except exception.ProcessExecutionError:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_("Failed unplugging gateway interface '%s'"),
-                              dev)
-            LOG.debug(_("Unplugged gateway interface '%s'"), dev)
+            delete_net_dev(dev)
             return dev
 
     def get_dev(self, network):
