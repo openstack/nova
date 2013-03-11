@@ -2470,6 +2470,9 @@ class API(base.Base):
 
         instance = self.update(context, instance, expected_task_state=None,
                                task_state=task_states.REBUILDING)
+
+        self._record_action_start(context, instance, instance_actions.EVACUATE)
+
         return self.compute_rpcapi.rebuild_instance(context,
                                         instance=instance,
                                         new_pass=admin_password,

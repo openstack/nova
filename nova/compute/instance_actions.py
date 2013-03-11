@@ -27,6 +27,7 @@ they are used.
 
 CREATE = 'create'
 DELETE = 'delete'
+EVACUATE = 'evacuate'
 RESTORE = 'restore'
 STOP = 'stop'
 START = 'start'
