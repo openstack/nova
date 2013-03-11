@@ -40,6 +40,7 @@ LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
+CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
 #CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_state_manager_opts, group='cells')
 
@@ -196,6 +197,7 @@ class CellStateManager(base.Base):
         available per instance_type.
         """
 
+        reserve_level = CONF.cells.reserve_percent / 100.0
         compute_hosts = {}
 
         def _get_compute_hosts():
@@ -207,7 +209,9 @@ class CellStateManager(base.Base):
                 host = service['host']
                 compute_hosts[host] = {
                         'free_ram_mb': compute['free_ram_mb'],
-                        'free_disk_mb': compute['free_disk_gb'] * 1024}
+                        'free_disk_mb': compute['free_disk_gb'] * 1024,
+                        'total_ram_mb': compute['memory_mb'],
+                        'total_disk_mb': compute['local_gb'] * 1024}
 
         _get_compute_hosts()
         if not compute_hosts:
@@ -219,9 +223,11 @@ class CellStateManager(base.Base):
         total_ram_mb_free = 0
         total_disk_mb_free = 0
 
-        def _free_units(tot, per_inst):
+        def _free_units(total, free, per_inst):
             if per_inst:
-                return max(0, int(tot / per_inst))
+                min_free = total * reserve_level
+                free = max(0, free - min_free)
+                return int(free / per_inst)
             else:
                 return 0
 
@@ -231,10 +237,10 @@ class CellStateManager(base.Base):
                     instance_type['ephemeral_gb']) * 1024
             ram_mb_free_units.setdefault(str(memory_mb), 0)
             disk_mb_free_units.setdefault(str(disk_mb), 0)
-            ram_free_units = _free_units(compute_values['free_ram_mb'],
-                    memory_mb)
-            disk_free_units = _free_units(compute_values['free_disk_mb'],
-                    disk_mb)
+            ram_free_units = _free_units(compute_values['total_ram_mb'],
+                    compute_values['free_ram_mb'], memory_mb)
+            disk_free_units = _free_units(compute_values['total_disk_mb'],
+                    compute_values['free_disk_mb'], disk_mb)
             ram_mb_free_units[str(memory_mb)] += ram_free_units
             disk_mb_free_units[str(disk_mb)] += disk_free_units
 

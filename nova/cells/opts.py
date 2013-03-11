@@ -39,6 +39,10 @@ cells_opts = [
     cfg.IntOpt('call_timeout',
                 default=60,
                 help='Seconds to wait for response from a call to a cell.'),
+    cfg.FloatOpt('reserve_percent',
+                default=10.0,
+                help='Percentage of cell capacity to hold in reserve. '
+                     'Affects both memory and disk utilization'),
 ]
 
 cfg.CONF.register_opts(cells_opts, group='cells')
