@@ -45,9 +45,9 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
-class DbApiTestCase(test.TestCase):
+class DbTestCase(test.TestCase):
     def setUp(self):
-        super(DbApiTestCase, self).setUp()
+        super(DbTestCase, self).setUp()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -63,6 +63,8 @@ class DbApiTestCase(test.TestCase):
         args.update(kwargs)
         return db.instance_create(ctxt, args)
 
+
+class DbApiTestCase(DbTestCase):
     def test_create_instance_unique_hostname(self):
         otherprojectcontext = context.RequestContext(self.user_id,
                                           "%s2" % self.project_id)
@@ -122,19 +124,6 @@ class DbApiTestCase(test.TestCase):
                                                 {'display_name': 't.*st.'})
         self.assertEqual(2, len(result))
 
-    def test_instance_get_all_by_filters_regex_unsupported_db(self):
-        # Ensure that the 'LIKE' operator is used for unsupported dbs.
-        self.flags(sql_connection="notdb://")
-        self.create_instances_with_args(display_name='test1')
-        self.create_instances_with_args(display_name='test.*')
-        self.create_instances_with_args(display_name='diff')
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': 'test.*'})
-        self.assertEqual(1, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'})
-        self.assertEqual(2, len(result))
-
     def test_instance_get_all_by_filters_metadata(self):
         self.create_instances_with_args(metadata={'foo': 'bar'})
         self.create_instances_with_args()
@@ -160,37 +149,6 @@ class DbApiTestCase(test.TestCase):
             self.assertTrue(result[0]['deleted'])
         else:
             self.assertTrue(result[1]['deleted'])
-
-    def test_instance_get_all_by_filters_paginate(self):
-        self.flags(sql_connection="notdb://")
-        test1 = self.create_instances_with_args(display_name='test1')
-        test2 = self.create_instances_with_args(display_name='test2')
-        test3 = self.create_instances_with_args(display_name='test3')
-
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'},
-                                                marker=None)
-        self.assertEqual(3, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'},
-                                                sort_dir="asc",
-                                                marker=test1['uuid'])
-        self.assertEqual(2, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'},
-                                                sort_dir="asc",
-                                                marker=test2['uuid'])
-        self.assertEqual(1, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'},
-                                                sort_dir="asc",
-                                                marker=test3['uuid'])
-        self.assertEqual(0, len(result))
-
-        self.assertRaises(exception.MarkerNotFound,
-                          db.instance_get_all_by_filters,
-                          self.context, {'display_name': '%test%'},
-                          marker=str(stdlib_uuid.uuid4()))
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
@@ -1097,6 +1055,54 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
     for host in hosts:
         db.aggregate_host_add(context, result['id'], host)
     return result
+
+
+class NotDbApiTestCase(DbTestCase):
+    def setUp(self):
+        super(NotDbApiTestCase, self).setUp()
+        self.flags(sql_connection="notdb://")
+
+    def test_instance_get_all_by_filters_regex_unsupported_db(self):
+        # Ensure that the 'LIKE' operator is used for unsupported dbs.
+        self.create_instances_with_args(display_name='test1')
+        self.create_instances_with_args(display_name='test.*')
+        self.create_instances_with_args(display_name='diff')
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': 'test.*'})
+        self.assertEqual(1, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'})
+        self.assertEqual(2, len(result))
+
+    def test_instance_get_all_by_filters_paginate(self):
+        test1 = self.create_instances_with_args(display_name='test1')
+        test2 = self.create_instances_with_args(display_name='test2')
+        test3 = self.create_instances_with_args(display_name='test3')
+
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                marker=None)
+        self.assertEqual(3, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test1['uuid'])
+        self.assertEqual(2, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test2['uuid'])
+        self.assertEqual(1, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': '%test%'},
+                                                sort_dir="asc",
+                                                marker=test3['uuid'])
+        self.assertEqual(0, len(result))
+
+        self.assertRaises(exception.MarkerNotFound,
+                          db.instance_get_all_by_filters,
+                          self.context, {'display_name': '%test%'},
+                          marker=str(stdlib_uuid.uuid4()))
 
 
 class AggregateDBApiTestCase(test.TestCase):
