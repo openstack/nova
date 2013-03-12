@@ -167,7 +167,8 @@ class AggregateController(object):
         authorize(context)
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
-        except (exception.AggregateNotFound, exception.AggregateHostNotFound):
+        except (exception.AggregateNotFound, exception.AggregateHostNotFound,
+                exception.ComputeHostNotFound):
             LOG.info(_("Cannot remove host %(host)s in aggregate "
                             "%(id)s") % locals())
             raise exc.HTTPNotFound
