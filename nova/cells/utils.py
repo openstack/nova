@@ -56,12 +56,18 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
 
 def cell_with_item(cell_name, item):
     """Turn cell_name and item into <cell_name>@<item>."""
+    if cell_name is None:
+        return item
     return cell_name + _CELL_ITEM_SEP + str(item)
 
 
 def split_cell_and_item(cell_and_item):
     """Split a combined cell@item and return them."""
-    return cell_and_item.rsplit(_CELL_ITEM_SEP, 1)
+    result = cell_and_item.rsplit(_CELL_ITEM_SEP, 1)
+    if len(result) == 1:
+        return (None, cell_and_item)
+    else:
+        return result
 
 
 def _add_cell_to_service(service, cell_name):

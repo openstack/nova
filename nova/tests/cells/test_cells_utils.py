@@ -80,3 +80,26 @@ class CellsUtilsTestCase(test.TestCase):
                 {'changes-since': 'fake-updated-since',
                  'project_id': 'fake-project'})
         self.assertEqual(call_info['shuffle'], 2)
+
+    def test_split_cell_and_item(self):
+        path = 'australia', 'queensland', 'gold_coast'
+        cell = cells_utils._PATH_CELL_SEP.join(path)
+        item = 'host_5'
+        together = cells_utils.cell_with_item(cell, item)
+        self.assertEqual(cells_utils._CELL_ITEM_SEP.join([cell, item]),
+                         together)
+
+        # Test normal usage
+        result_cell, result_item = cells_utils.split_cell_and_item(together)
+        self.assertEqual(cell, result_cell)
+        self.assertEqual(item, result_item)
+
+        # Test with no cell
+        cell = None
+        together = cells_utils.cell_with_item(cell, item)
+        self.assertEqual(item, together)
+        print together
+        result_cell, result_item = cells_utils.split_cell_and_item(together)
+        print result_cell, result_item
+        self.assertEqual(cell, result_cell)
+        self.assertEqual(item, result_item)
