@@ -2563,7 +2563,11 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 dom = self._conn.lookupByID(dom_id)
                 vcpus = dom.vcpus()
-                total += len(vcpus[1])
+                if vcpus is None:
+                    LOG.debug(_("couldn't obtain the vpu count from domain id:"
+                                " %s") % dom_id)
+                else:
+                    total += len(vcpus[1])
             except libvirt.libvirtError as err:
                 if err.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
                     LOG.debug(_("List of domains returned by libVirt: %s")
