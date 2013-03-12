@@ -22,6 +22,7 @@ from oslo.config import cfg
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import rpc
 from nova import paths
+from nova import version
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('$sqlite_db')
 
@@ -32,4 +33,5 @@ def parse_args(argv, default_config_files=None):
     rpc.set_defaults(control_exchange='nova')
     cfg.CONF(argv[1:],
              project='nova',
+             version=version.version_string(),
              default_config_files=default_config_files)
