@@ -327,26 +327,6 @@ class DbApiTestCase(DbTestCase):
         system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('baz', system_meta['original_image_ref'])
 
-    def test_instance_update_of_instance_type_id(self):
-        ctxt = context.get_admin_context()
-
-        inst_type1 = db.instance_type_get_by_name(ctxt, 'm1.tiny')
-        inst_type2 = db.instance_type_get_by_name(ctxt, 'm1.small')
-
-        values = {'instance_type_id': inst_type1['id']}
-        instance = db.instance_create(ctxt, values)
-
-        self.assertEqual(instance['instance_type']['id'], inst_type1['id'])
-        self.assertEqual(instance['instance_type']['name'],
-                inst_type1['name'])
-
-        values = {'instance_type_id': inst_type2['id']}
-        instance = db.instance_update(ctxt, instance['uuid'], values)
-
-        self.assertEqual(instance['instance_type']['id'], inst_type2['id'])
-        self.assertEqual(instance['instance_type']['name'],
-                inst_type2['name'])
-
     def test_instance_update_unique_name(self):
         otherprojectcontext = context.RequestContext(self.user_id,
                                           "%s2" % self.project_id)

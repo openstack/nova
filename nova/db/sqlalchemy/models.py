@@ -273,13 +273,6 @@ class InstanceTypes(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
     is_public = Column(Boolean, default=True)
 
-    instances = relationship(Instance,
-                           backref=backref('instance_type', uselist=False),
-                           foreign_keys=id,
-                           primaryjoin='and_('
-                               'Instance.instance_type_id == '
-                               'InstanceTypes.id)')
-
 
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a VM."""

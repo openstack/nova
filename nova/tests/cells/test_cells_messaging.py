@@ -938,7 +938,6 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         fake_instance = {'id': 2,
                          'uuid': 'fake_uuid',
                          'security_groups': 'fake',
-                         'instance_type': 'fake',
                          'volumes': 'fake',
                          'cell_name': 'fake',
                          'name': 'fake',
