@@ -2830,19 +2830,14 @@ def _block_device_mapping_get_query(context, session=None):
 def block_device_mapping_create(context, values):
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
-
-    session = get_session()
-    with session.begin():
-        bdm_ref.save(session=session)
+    bdm_ref.save()
 
 
 @require_context
 def block_device_mapping_update(context, bdm_id, values):
-    session = get_session()
-    with session.begin():
-        _block_device_mapping_get_query(context, session=session).\
-                filter_by(id=bdm_id).\
-                update(values)
+    _block_device_mapping_get_query(context).\
+            filter_by(id=bdm_id).\
+            update(values)
 
 
 @require_context
@@ -2865,7 +2860,8 @@ def block_device_mapping_update_or_create(context, values):
         virtual_name = values['virtual_name']
         if (virtual_name is not None and
             block_device.is_swap_or_ephemeral(virtual_name)):
-            session.query(models.BlockDeviceMapping).\
+
+            _block_device_mapping_get_query(context, session=session).\
                 filter_by(instance_uuid=values['instance_uuid']).\
                 filter_by(virtual_name=virtual_name).\
                 filter(models.BlockDeviceMapping.device_name !=
@@ -2882,19 +2878,15 @@ def block_device_mapping_get_all_by_instance(context, instance_uuid):
 
 @require_context
 def block_device_mapping_destroy(context, bdm_id):
-    session = get_session()
-    with session.begin():
-        session.query(models.BlockDeviceMapping).\
-                filter_by(id=bdm_id).\
-                soft_delete()
+    _block_device_mapping_get_query(context).\
+            filter_by(id=bdm_id).\
+            soft_delete()
 
 
 @require_context
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
-    session = get_session()
-    with session.begin():
-        _block_device_mapping_get_query(context, session=session).\
+    _block_device_mapping_get_query(context).\
             filter_by(instance_uuid=instance_uuid).\
             filter_by(volume_id=volume_id).\
             soft_delete()
@@ -2903,9 +2895,7 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
 @require_context
 def block_device_mapping_destroy_by_instance_and_device(context, instance_uuid,
                                                         device_name):
-    session = get_session()
-    with session.begin():
-        _block_device_mapping_get_query(context, session=session).\
+    _block_device_mapping_get_query(context).\
             filter_by(instance_uuid=instance_uuid).\
             filter_by(device_name=device_name).\
             soft_delete()
