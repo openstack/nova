@@ -30,6 +30,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 import nova.policy
+from nova import quota
 from nova import test
 from nova.tests import fake_network
 from nova import utils
@@ -278,6 +279,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -291,6 +293,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
+
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -310,6 +316,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -323,6 +330,10 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
+
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -376,6 +387,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -389,6 +401,9 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+
+        quota.QUOTAS.reserve(mox.IgnoreArg(),
+                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),

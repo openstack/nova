@@ -25,10 +25,11 @@ from nova.tests.api.openstack import fakes
 def quota_set(class_name):
     return {'quota_class_set': {'id': class_name, 'metadata_items': 128,
             'volumes': 10, 'gigabytes': 1000, 'ram': 51200,
-            'floating_ips': 10, 'instances': 10, 'injected_files': 5,
-            'cores': 20, 'injected_file_content_bytes': 10240,
-            'security_groups': 10, 'security_group_rules': 20,
-            'key_pairs': 100, 'injected_file_path_bytes': 255}}
+            'floating_ips': 10, 'fixed_ips': 10, 'instances': 10,
+            'injected_files': 5, 'cores': 20,
+            'injected_file_content_bytes': 10240, 'security_groups': 10,
+            'security_group_rules': 20, 'key_pairs': 100,
+            'injected_file_path_bytes': 255}}
 
 
 class QuotaClassSetsTest(test.TestCase):
@@ -44,6 +45,7 @@ class QuotaClassSetsTest(test.TestCase):
             'ram': 51200,
             'volumes': 10,
             'floating_ips': 10,
+            'fixed_ips': 10,
             'metadata_items': 128,
             'gigabytes': 1000,
             'injected_files': 5,
@@ -91,7 +93,8 @@ class QuotaClassSetsTest(test.TestCase):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'volumes': 10,
                                     'gigabytes': 1000, 'floating_ips': 10,
-                                    'metadata_items': 128, 'injected_files': 5,
+                                    'fixed_ips': 10, 'metadata_items': 128,
+                                    'injected_files': 5,
                                     'injected_file_content_bytes': 10240,
                                     'injected_file_path_bytes': 255,
                                     'security_groups': 10,
@@ -139,6 +142,7 @@ class QuotaTemplateXMLSerializerTest(test.TestCase):
                 gigabytes=40,
                 ram=50,
                 floating_ips=60,
+                fixed_ips=10,
                 instances=70,
                 injected_files=80,
                 security_groups=10,

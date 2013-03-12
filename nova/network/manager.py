@@ -1294,37 +1294,53 @@ class NetworkManager(manager.SchedulerDependentManager):
         address = None
         instance_ref = self.db.instance_get(context, instance_id)
 
-        if network['cidr']:
-            address = kwargs.get('address', None)
-            if address:
-                address = self.db.fixed_ip_associate(context,
-                                                     address,
-                                                     instance_ref['uuid'],
-                                                     network['id'])
-            else:
-                address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                          network['id'],
-                                                          instance_ref['uuid'])
-            self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   instance_id)
-            get_vif = self.db.virtual_interface_get_by_instance_and_network
-            vif = get_vif(context, instance_ref['uuid'], network['id'])
-            values = {'allocated': True,
-                      'virtual_interface_id': vif['id']}
-            self.db.fixed_ip_update(context, address, values)
+        # Check the quota; can't put this in the API because we get
+        # called into from other places
+        try:
+            reservations = QUOTAS.reserve(context, fixed_ips=1)
+        except exception.OverQuota:
+            pid = context.project_id
+            LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
+                       "fixed IP") % locals())
+            raise exception.FixedIpLimitExceeded()
 
-        name = instance_ref['display_name']
+        try:
+            if network['cidr']:
+                address = kwargs.get('address', None)
+                if address:
+                    address = self.db.fixed_ip_associate(context,
+                                                         address,
+                                                         instance_ref['uuid'],
+                                                         network['id'])
+                else:
+                    address = self.db.fixed_ip_associate_pool(
+                        context.elevated(), network['id'],
+                        instance_ref['uuid'])
+                self._do_trigger_security_group_members_refresh_for_instance(
+                    instance_id)
+                get_vif = self.db.virtual_interface_get_by_instance_and_network
+                vif = get_vif(context, instance_ref['uuid'], network['id'])
+                values = {'allocated': True,
+                          'virtual_interface_id': vif['id']}
+                self.db.fixed_ip_update(context, address, values)
 
-        if self._validate_instance_zone_for_dns_domain(context, instance_ref):
-            uuid = instance_ref['uuid']
-            self.instance_dns_manager.create_entry(name, address,
-                                                   "A",
-                                                   self.instance_dns_domain)
-            self.instance_dns_manager.create_entry(uuid, address,
-                                                   "A",
-                                                   self.instance_dns_domain)
-        self._setup_network_on_host(context, network)
-        return address
+            name = instance_ref['display_name']
+
+            if self._validate_instance_zone_for_dns_domain(context,
+                                                           instance_ref):
+                uuid = instance_ref['uuid']
+                self.instance_dns_manager.create_entry(
+                    name, address, "A", self.instance_dns_domain)
+                self.instance_dns_manager.create_entry(
+                    uuid, address, "A", self.instance_dns_domain)
+            self._setup_network_on_host(context, network)
+
+            QUOTAS.commit(context, reservations)
+            return address
+
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
         """Returns a fixed ip to the pool."""
@@ -1333,6 +1349,13 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance = self.db.instance_get_by_uuid(
                 context.elevated(read_deleted='yes'),
                 fixed_ip_ref['instance_uuid'])
+
+        try:
+            reservations = QUOTAS.reserve(context, fixed_ips=-1)
+        except Exception:
+            reservations = None
+            LOG.exception(_("Failed to update usages deallocating "
+                            "fixed IP"))
 
         self._do_trigger_security_group_members_refresh_for_instance(
             instance['uuid'])
@@ -1372,6 +1395,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
                 self.driver.release_dhcp(dev, address, vif['address'])
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""

@@ -50,6 +50,10 @@ quota_opts = [
     cfg.IntOpt('quota_floating_ips',
                default=10,
                help='number of floating ips allowed per project'),
+    cfg.IntOpt('quota_fixed_ips',
+               default=10,
+               help=('number of fixed ips allowed per project (this should be '
+                     'at least the number of instances allowed)')),
     cfg.IntOpt('quota_metadata_items',
                default=128,
                help='number of metadata items allowed per instance'),
@@ -778,6 +782,11 @@ def _sync_floating_ips(context, project_id, session):
             context, project_id, session=session))
 
 
+def _sync_fixed_ips(context, project_id, session):
+    return dict(fixed_ips=db.fixed_ip_count_by_project(
+            context, project_id, session=session))
+
+
 def _sync_security_groups(context, project_id, session):
     return dict(security_groups=db.security_group_count_by_project(
             context, project_id, session=session))
@@ -794,6 +803,7 @@ resources = [
     ReservableResource('gigabytes', _sync_volumes, 'quota_gigabytes'),
     ReservableResource('floating_ips', _sync_floating_ips,
                        'quota_floating_ips'),
+    ReservableResource('fixed_ips', _sync_fixed_ips, 'quota_fixed_ips'),
     AbsoluteResource('metadata_items', 'quota_metadata_items'),
     AbsoluteResource('injected_files', 'quota_injected_files'),
     AbsoluteResource('injected_file_content_bytes',
