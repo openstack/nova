@@ -129,7 +129,7 @@ function run_tests {
   if [ $coverage -eq 1 ]; then
     TESTRTESTS="$TESTRTESTS --coverage"
   else
-    TESTRTESTS="$TESTRTESTS --slowest"
+    TESTRTESTS="$TESTRTESTS"
   fi
 
   # Just run the test suites in current environment
@@ -137,7 +137,7 @@ function run_tests {
   testrargs=`echo "$testrargs" | sed -e's/^\s*\(.*\)\s*$/\1/'`
   TESTRTESTS="$TESTRTESTS --testr-args='--subunit $testropts $testrargs'"
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  bash -c "${wrapper} $TESTRTESTS | ${wrapper} subunit2pyunit"
+  bash -c "${wrapper} $TESTRTESTS | ${wrapper} tools/colorizer.py"
   RESULT=$?
   set -e
 
