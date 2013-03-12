@@ -67,7 +67,6 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import paths
-from nova import quota
 from nova import safe_utils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
@@ -177,8 +176,6 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('vnc_enabled', 'nova.vnc')
 CONF.import_opt('enabled', 'nova.spice', group='spice')
-
-QUOTAS = quota.QUOTAS
 
 LOG = logging.getLogger(__name__)
 
@@ -325,7 +322,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.26'
+    RPC_API_VERSION = '2.27'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1225,35 +1222,63 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(vish): bdms will be deleted on instance destroy
 
     @hooks.add_hook("delete_instance")
-    def _delete_instance(self, context, instance, bdms):
-        """Delete an instance on this host."""
+    def _delete_instance(self, context, instance, bdms,
+                         reservations=None):
+        """Delete an instance on this host.  Commit or rollback quotas
+        as necessary.
+        """
         instance_uuid = instance['uuid']
-        self.conductor_api.instance_info_cache_delete(context, instance)
-        self._notify_about_instance_usage(context, instance, "delete.start")
-        self._shutdown_instance(context, instance, bdms)
-        # NOTE(vish): We have already deleted the instance, so we have
-        #             to ignore problems cleaning up the volumes. It would
-        #             be nice to let the user know somehow that the volume
-        #             deletion failed, but it is not acceptable to have an
-        #             instance that can not be deleted. Perhaps this could
-        #             be reworked in the future to set an instance fault
-        #             the first time and to only ignore the failure if the
-        #             instance is already in ERROR.
-        try:
-            self._cleanup_volumes(context, instance_uuid, bdms)
-        except Exception as exc:
-            LOG.warn(_("Ignoring volume cleanup failure due to %s") % exc,
-                     instance_uuid=instance_uuid)
-        # if a delete task succeed, always update vm state and task state
-        # without expecting task state to be DELETING
-        instance = self._instance_update(context,
-                                         instance_uuid,
-                                         vm_state=vm_states.DELETED,
-                                         task_state=None,
-                                         terminated_at=timeutils.utcnow())
-        system_meta = utils.metadata_to_dict(instance['system_metadata'])
-        self.conductor_api.instance_destroy(context, instance)
 
+        if context.is_admin and context.project_id != instance['project_id']:
+            project_id = instance['project_id']
+        else:
+            project_id = context.project_id
+
+        was_soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
+        if was_soft_deleted:
+            # Instances in SOFT_DELETED vm_state have already had quotas
+            # decremented.
+            try:
+                self._quota_rollback(context, reservations,
+                                     project_id=project_id)
+            except Exception:
+                pass
+            reservations = None
+
+        try:
+            self.conductor_api.instance_info_cache_delete(context, instance)
+            self._notify_about_instance_usage(context, instance,
+                                              "delete.start")
+            self._shutdown_instance(context, instance, bdms)
+            # NOTE(vish): We have already deleted the instance, so we have
+            #             to ignore problems cleaning up the volumes. It
+            #             would be nice to let the user know somehow that
+            #             the volume deletion failed, but it is not
+            #             acceptable to have an instance that can not be
+            #             deleted. Perhaps this could be reworked in the
+            #             future to set an instance fault the first time
+            #             and to only ignore the failure if the instance
+            #             is already in ERROR.
+            try:
+                self._cleanup_volumes(context, instance_uuid, bdms)
+            except Exception as exc:
+                err_str = _("Ignoring volume cleanup failure due to %s")
+                LOG.warn(err_str % exc, instance=instance)
+            # if a delete task succeed, always update vm state and task
+            # state without expecting task state to be DELETING
+            instance = self._instance_update(context,
+                                             instance_uuid,
+                                             vm_state=vm_states.DELETED,
+                                             task_state=None,
+                                             terminated_at=timeutils.utcnow())
+            system_meta = utils.metadata_to_dict(instance['system_metadata'])
+            self.conductor_api.instance_destroy(context, instance)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._quota_rollback(context, reservations,
+                                     project_id=project_id)
+
+        self._quota_commit(context, reservations, project_id=project_id)
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
 
@@ -1267,7 +1292,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_event
     @wrap_instance_fault
-    def terminate_instance(self, context, instance, bdms=None):
+    def terminate_instance(self, context, instance, bdms=None,
+                           reservations=None):
         """Terminate an instance on this host."""
         # Note(eglynn): we do not decorate this action with reverts_task_state
         # because a failure during termination should leave the task state as
@@ -1275,7 +1301,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         # attempt should not result in a further decrement of the quota_usages
         # in_use count (see bug 1046236).
 
-        elevated = context.elevated()
         # NOTE(danms): remove this compatibility in the future
         if not bdms:
             bdms = self._get_instance_volume_bdms(context, instance)
@@ -1283,7 +1308,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         @lockutils.synchronized(instance['uuid'], 'nova-')
         def do_terminate_instance(instance, bdms):
             try:
-                self._delete_instance(context, instance, bdms)
+                self._delete_instance(context, instance, bdms,
+                                      reservations=reservations)
             except exception.InstanceTerminationFailure as error:
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error, instance=instance)
@@ -1337,22 +1363,34 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def soft_delete_instance(self, context, instance):
+    def soft_delete_instance(self, context, instance, reservations=None):
         """Soft delete an instance on this host."""
-        self._notify_about_instance_usage(context, instance,
-                                          "soft_delete.start")
+
+        if context.is_admin and context.project_id != instance['project_id']:
+            project_id = instance['project_id']
+        else:
+            project_id = context.project_id
+
         try:
-            self.driver.soft_delete(instance)
-        except NotImplementedError:
-            # Fallback to just powering off the instance if the hypervisor
-            # doesn't implement the soft_delete method
-            self.driver.power_off(instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state,
-                vm_state=vm_states.SOFT_DELETED,
-                expected_task_state=task_states.SOFT_DELETING,
-                task_state=None)
+            self._notify_about_instance_usage(context, instance,
+                                              "soft_delete.start")
+            try:
+                self.driver.soft_delete(instance)
+            except NotImplementedError:
+                # Fallback to just powering off the instance if the
+                # hypervisor doesn't implement the soft_delete method
+                self.driver.power_off(instance)
+            current_power_state = self._get_power_state(context, instance)
+            instance = self._instance_update(context, instance['uuid'],
+                    power_state=current_power_state,
+                    vm_state=vm_states.SOFT_DELETED,
+                    expected_task_state=task_states.SOFT_DELETING,
+                    task_state=None)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._quota_rollback(context, reservations,
+                                     project_id=project_id)
+        self._quota_commit(context, reservations, project_id=project_id)
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2080,13 +2118,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._quota_commit(context, reservations)
 
-    def _quota_commit(self, context, reservations):
+    def _quota_commit(self, context, reservations, project_id=None):
         if reservations:
-            self.conductor_api.quota_commit(context, reservations)
+            self.conductor_api.quota_commit(context, reservations,
+                                            project_id=project_id)
 
-    def _quota_rollback(self, context, reservations):
+    def _quota_rollback(self, context, reservations, project_id=None):
         if reservations:
-            self.conductor_api.quota_rollback(context, reservations)
+            self.conductor_api.quota_rollback(context, reservations,
+                                              project_id=project_id)
 
     def _prep_resize(self, context, image, instance, instance_type,
             reservations, request_spec, filter_properties, node):
@@ -3710,6 +3750,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 bdms = capi.block_device_mapping_get_all_by_instance(
                     context, instance)
                 LOG.info(_('Reclaiming deleted instance'), instance=instance)
+                # NOTE(comstud): Quotas were already accounted for when
+                # the instance was soft deleted, so there's no need to
+                # pass reservations here.
                 self._delete_instance(context, instance, bdms)
 
     @manager.periodic_task

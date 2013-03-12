@@ -990,6 +990,40 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.security_groups_trigger_handler(self.context,
                                                        'event', 'arg')
 
+    def test_quota_commit_with_project_id(self):
+        diff_proj_id = 'diff_fake_proj_id'
+        self.assertNotEqual(self.context.project_id, diff_proj_id)
+        call_info = {}
+
+        def mgr_quota_commit(ctxt, reservations):
+            call_info['resvs'] = reservations
+            call_info['project_id'] = ctxt.project_id
+
+        self.stubs.Set(self.conductor_manager, 'quota_commit',
+                       mgr_quota_commit)
+
+        self.conductor.quota_commit(self.context, 'fake_resvs',
+                                    project_id=diff_proj_id)
+        self.assertEqual(diff_proj_id, call_info['project_id'])
+        self.assertEqual('fake_resvs', call_info['resvs'])
+
+    def test_quota_rollback_with_project_id(self):
+        diff_proj_id = 'diff_fake_proj_id'
+        self.assertNotEqual(self.context.project_id, diff_proj_id)
+        call_info = {}
+
+        def mgr_quota_rollback(ctxt, reservations):
+            call_info['resvs'] = reservations
+            call_info['project_id'] = ctxt.project_id
+
+        self.stubs.Set(self.conductor_manager, 'quota_rollback',
+                       mgr_quota_rollback)
+
+        self.conductor.quota_rollback(self.context, 'fake_resvs',
+                                      project_id=diff_proj_id)
+        self.assertEqual(diff_proj_id, call_info['project_id'])
+        self.assertEqual('fake_resvs', call_info['resvs'])
+
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):
     """Conductor LocalAPI Tests."""

@@ -163,6 +163,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.25 - Add attach_interface() and detach_interface()
         2.26 - Add validate_console_token to ensure the service connects to
                vnc on the correct port
+        2.27 - Adds 'reservations' to terminate_instance() and
+               soft_delete_instance()
     '''
 
     #
@@ -588,13 +590,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def terminate_instance(self, ctxt, instance, bdms):
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         self.cast(ctxt, self.make_msg('terminate_instance',
-                instance=instance_p, bdms=bdms_p),
+                instance=instance_p, bdms=bdms_p,
+                reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
-                version='2.4')
+                version='2.27')
 
     def unpause_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
@@ -615,11 +618,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def publish_service_capabilities(self, ctxt):
         self.fanout_cast(ctxt, self.make_msg('publish_service_capabilities'))
 
-    def soft_delete_instance(self, ctxt, instance):
+    def soft_delete_instance(self, ctxt, instance, reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('soft_delete_instance',
-                instance=instance_p),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, reservations=reservations),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='2.27')
 
     def restore_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)

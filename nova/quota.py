@@ -508,7 +508,7 @@ class NoopQuotaDriver(object):
             quotas[resource.name] = -1
         return quotas
 
-    def limit_check(self, context, resources, values):
+    def limit_check(self, context, resources, values, project_id=None):
         """Check simple quota limits.
 
         For limits--those quotas for which there is no usage
@@ -528,10 +528,14 @@ class NoopQuotaDriver(object):
         :param resources: A dictionary of the registered resources.
         :param values: A dictionary of the values to check against the
                        quota.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
         pass
 
-    def reserve(self, context, resources, deltas, expire=None):
+    def reserve(self, context, resources, deltas, expire=None,
+                project_id=None):
         """Check quotas and reserve resources.
 
         For counting quotas--those quotas for which there is a usage
@@ -561,24 +565,33 @@ class NoopQuotaDriver(object):
                        default expiration time set by
                        --default-reservation-expire will be used (this
                        value will be treated as a number of seconds).
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
         return []
 
-    def commit(self, context, reservations):
+    def commit(self, context, reservations, project_id=None):
         """Commit reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
         pass
 
-    def rollback(self, context, reservations):
+    def rollback(self, context, reservations, project_id=None):
         """Roll back reservations.
 
         :param context: The request context, for access checks.
         :param reservations: A list of the reservation UUIDs, as
                              returned by the reserve() method.
+        :param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
         """
         pass
 

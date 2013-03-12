@@ -323,11 +323,23 @@ class LocalAPI(object):
                                                              instance,
                                                              migration)
 
-    def quota_commit(self, context, reservations):
-        return self._manager.quota_commit(context, reservations)
+    def quota_commit(self, context, reservations, project_id=None):
+        # FIXME(comstud): bug 1153795: Conductor manager should accept
+        # a project_id kwarg to be able to pass to the quota commit call.
+        if project_id is None:
+            project_id = context.project_id
+        with utils.temporary_mutation(context, project_id=project_id):
+            return self._manager.quota_commit(context,
+                                              reservations=reservations)
 
-    def quota_rollback(self, context, reservations):
-        return self._manager.quota_rollback(context, reservations)
+    def quota_rollback(self, context, reservations, project_id=None):
+        # FIXME(comstud): bug 1153795: Conductor manager should accept
+        # a project_id kwarg to be able to pass to the quota rollback call.
+        if project_id is None:
+            project_id = context.project_id
+        with utils.temporary_mutation(context, project_id=project_id):
+            return self._manager.quota_rollback(context,
+                                                reservations=reservations)
 
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
@@ -656,11 +668,21 @@ class API(object):
                                                                      instance,
                                                                      migration)
 
-    def quota_commit(self, context, reservations):
-        return self.conductor_rpcapi.quota_commit(context, reservations)
+    def quota_commit(self, context, reservations, project_id=None):
+        # FIXME(comstud): bug 1153795: Conductor manager should accept
+        # a project_id kwarg to be able to pass to the quota commit call.
+        if project_id is None:
+            project_id = context.project_id
+        with utils.temporary_mutation(context, project_id=project_id):
+            return self.conductor_rpcapi.quota_commit(context, reservations)
 
-    def quota_rollback(self, context, reservations):
-        return self.conductor_rpcapi.quota_rollback(context, reservations)
+    def quota_rollback(self, context, reservations, project_id=None):
+        # FIXME(comstud): bug 1153795: Conductor manager should accept
+        # a project_id kwarg to be able to pass to the quota rollback call.
+        if project_id is None:
+            project_id = context.project_id
+        with utils.temporary_mutation(context, project_id=project_id):
+            return self.conductor_rpcapi.quota_rollback(context, reservations)
 
     def get_ec2_ids(self, context, instance):
         return self.conductor_rpcapi.get_ec2_ids(context, instance)
