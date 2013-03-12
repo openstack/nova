@@ -172,6 +172,12 @@ class BaseTestCase(test.TestCase):
         fake.restore_nodes()
         super(BaseTestCase, self).tearDown()
 
+    def stub_out_client_exceptions(self):
+        def passthru(exceptions, func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        self.stubs.Set(rpc_common, 'catch_client_exception', passthru)
+
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         """Create a test instance."""
         if not params:
@@ -1529,9 +1535,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        self.assertRaises(rpc_common.ClientException,
+                          self.compute.get_vnc_console,
+                          self.context, 'invalid', instance=instance)
+
+        self.stub_out_client_exceptions()
+
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
                           self.context, 'invalid', instance=instance)
+
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_missing_vnc_console_type(self):
@@ -1542,9 +1555,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        self.assertRaises(rpc_common.ClientException,
+                          self.compute.get_vnc_console,
+                          self.context, None, instance=instance)
+
+        self.stub_out_client_exceptions()
+
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
+
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_spicehtml5_spice_console(self):
@@ -1570,9 +1590,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        self.assertRaises(rpc_common.ClientException,
+                          self.compute.get_spice_console,
+                          self.context, 'invalid', instance=instance)
+
+        self.stub_out_client_exceptions()
+
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
                           self.context, 'invalid', instance=instance)
+
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_missing_spice_console_type(self):
@@ -1583,9 +1610,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
 
+        self.assertRaises(rpc_common.ClientException,
+                          self.compute.get_spice_console,
+                          self.context, None, instance=instance)
+
+        self.stub_out_client_exceptions()
+
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
                           self.context, None, instance=instance)
+
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_diagnostics(self):
