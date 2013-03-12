@@ -1582,6 +1582,32 @@ class ComputeManager(manager.SchedulerDependentManager):
                     network_info=network_info,
                     extra_usage_info=extra_usage_info)
 
+    def _handle_bad_volumes_detached(self, context, instance, bad_devices,
+                                     block_device_info):
+        """Handle cases where the virt-layer had to detach non-working volumes
+        in order to complete an operation.
+        """
+        for bdm in block_device_info['block_device_mapping']:
+            if bdm.get('mount_device') in bad_devices:
+                try:
+                    volume_id = bdm['connection_info']['data']['volume_id']
+                except KeyError:
+                    continue
+
+                # NOTE(sirp): ideally we'd just call
+                # `compute_api.detach_volume` here but since that hits the
+                # DB directly, that's off limits from within the
+                # compute-manager.
+                #
+                # API-detach
+                LOG.info(_("Detaching from volume api: %s") % volume_id)
+                volume = self.volume_api.get(context, volume_id)
+                self.volume_api.check_detach(context, volume)
+                self.volume_api.begin_detaching(context, volume)
+
+                # Manager-detach
+                self.detach_volume(context, volume_id, instance)
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_event
@@ -1616,10 +1642,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                      'expected: %(running)s)') % locals(),
                      context=context, instance=instance)
 
+        def bad_volumes_callback(bad_devices):
+            self._handle_bad_volumes_detached(
+                    context, instance, bad_devices, block_device_info)
+
         try:
             self.driver.reboot(context, instance,
                                self._legacy_nw_info(network_info),
-                               reboot_type, block_device_info)
+                               reboot_type,
+                               block_device_info=block_device_info,
+                               bad_volumes_callback=bad_volumes_callback)
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
                       context=context, instance=instance)

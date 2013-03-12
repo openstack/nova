@@ -272,13 +272,30 @@ class VMOps(object):
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-    def _start(self, instance, vm_ref=None):
+    def _start(self, instance, vm_ref=None, bad_volumes_callback=None):
         """Power on a VM instance."""
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Starting instance"), instance=instance)
+
+        # Attached volumes that have become non-responsive will prevent a VM
+        # from starting, so scan for these before attempting to start
+        #
+        # In order to make sure this detach is consistent (virt, BDM, cinder),
+        # we only detach in the virt-layer if a callback is provided.
+        if bad_volumes_callback:
+            bad_devices = self._volumeops.find_bad_volumes(vm_ref)
+            for device_name in bad_devices:
+                self._volumeops.detach_volume(
+                        None, instance['name'], device_name)
+
         self._session.call_xenapi('VM.start_on', vm_ref,
                                   self._session.get_xenapi_host(),
                                   False, False)
+
+        # Allow higher-layers a chance to detach bad-volumes as well (in order
+        # to cleanup BDM entries and detach in Cinder)
+        if bad_volumes_callback and bad_devices:
+            bad_volumes_callback(bad_devices)
 
     def _create_disks(self, context, instance, name_label, disk_image_type,
                       image_meta, block_device_info=None):
@@ -930,7 +947,7 @@ class VMOps(object):
 
         return 'VDI.resize'
 
-    def reboot(self, instance, reboot_type):
+    def reboot(self, instance, reboot_type, bad_volumes_callback=None):
         """Reboot VM instance."""
         # Note (salvatore-orlando): security group rules are not re-enforced
         # upon reboot, since this action on the XenAPI drivers does not
@@ -948,9 +965,18 @@ class VMOps(object):
                     details[-1] == 'halted'):
                 LOG.info(_("Starting halted instance found during reboot"),
                     instance=instance)
-                self._session.call_xenapi('VM.start', vm_ref, False, False)
+                self._start(instance, vm_ref=vm_ref,
+                            bad_volumes_callback=bad_volumes_callback)
                 return
-            raise
+            elif details[0] == 'SR_BACKEND_FAILURE_46':
+                LOG.warn(_("Reboot failed due to bad volumes, detaching bad"
+                           " volumes and starting halted instance"),
+                         instance=instance)
+                self._start(instance, vm_ref=vm_ref,
+                            bad_volumes_callback=bad_volumes_callback)
+                return
+            else:
+                raise
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance."""

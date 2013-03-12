@@ -181,7 +181,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._vmops.snapshot(context, instance, name, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None):
+               block_device_info=None, bad_volumes_callback=None):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info)
 
