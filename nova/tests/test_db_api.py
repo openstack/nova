@@ -796,6 +796,51 @@ class DbApiTestCase(DbTestCase):
         self.assertEqual('schedule', event['event'])
         self.assertEqual(start_time, event['start_time'])
 
+    def test_add_key_pair(self, name=None):
+        """Check if keypair creation work as expected."""
+        keypair = {
+            'user_id': self.user_id,
+            'name': name or 'test-keypair',
+            'fingerprint': '15:b0:f8:b3:f9:48:63:71:cf:7b:5b:38:6d:44:2d:4a',
+            'private_key': 'private_key_value',
+            'public_key': 'public_key_value'
+        }
+        result_key = db.key_pair_create(context.get_admin_context(), keypair)
+        for label in keypair:
+            self.assertEqual(keypair[label], result_key[label])
+
+    def test_key_pair_destroy(self):
+        """Check if key pair deletion works as expected."""
+        keypair_name = 'test-delete-keypair'
+        self.test_add_key_pair(name=keypair_name)
+        db.key_pair_destroy(context.get_admin_context(), self.user_id,
+                            keypair_name)
+        self.assertRaises(exception.KeypairNotFound, db.key_pair_get,
+                          context.get_admin_context(), self.user_id,
+                          keypair_name)
+
+    def test_key_pair_get(self):
+        """Test if a previously created keypair can be found."""
+        keypair_name = 'test-get-keypair'
+        self.test_add_key_pair(name=keypair_name)
+        result = db.key_pair_get(context.get_admin_context(), self.user_id,
+                                 keypair_name)
+        self.assertEqual(result.name, keypair_name)
+
+    def test_key_pair_get_all_by_user(self):
+        self.assertTrue(isinstance(db.key_pair_get_all_by_user(
+                context.get_admin_context(), self.user_id), list))
+
+    def test_delete_non_existent_key_pair(self):
+        self.assertRaises(exception.KeypairNotFound, db.key_pair_destroy,
+                          context.get_admin_context(), self.user_id,
+                          'non-existent-keypair')
+
+    def test_get_non_existent_key_pair(self):
+        self.assertRaises(exception.KeypairNotFound, db.key_pair_get,
+                          context.get_admin_context(), self.user_id,
+                          'invalid-key')
+
     def test_dns_registration(self):
         domain1 = 'test.domain.one'
         domain2 = 'test.domain.two'
