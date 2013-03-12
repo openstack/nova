@@ -52,7 +52,7 @@ _ephemeral = re.compile('^ephemeral(\d|[1-9]\d+)$')
 
 
 def is_ephemeral(device_name):
-    return _ephemeral.match(device_name)
+    return _ephemeral.match(device_name) is not None
 
 
 def ephemeral_num(ephemeral_name):
