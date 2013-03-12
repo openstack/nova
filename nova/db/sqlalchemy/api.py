@@ -530,6 +530,11 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
     with session.begin():
         _update_stats(context, stats, compute_id, session, prune_stats)
         compute_ref = _compute_node_get(context, compute_id, session=session)
+        # Always update this, even if there's going to be no other
+        # changes in data.  This ensures that we invalidate the
+        # scheduler cache of compute node data in case of races.
+        if 'updated_at' not in values:
+            values['updated_at'] = timeutils.utcnow()
         convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
         compute_ref.update(values)
     return compute_ref

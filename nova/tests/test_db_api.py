@@ -1497,6 +1497,12 @@ class CapacityTestCase(test.TestCase):
         self.assertEqual(2, int(stats['num_proj_12345']))
         self.assertEqual(1, int(stats['num_tribbles']))
 
+    def test_compute_node_update_always_updates_updated_at(self):
+        item = self._create_helper('host1')
+        item_updated = db.compute_node_update(self.ctxt,
+                item['id'], {})
+        self.assertNotEqual(item['updated_at'], item_updated['updated_at'])
+
     def test_compute_node_stat_prune(self):
         item = self._create_helper('host1')
         for stat in item['stats']:
