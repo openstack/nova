@@ -20,6 +20,7 @@ import functools
 
 from nova.compute import cells_api as compute_cells_api
 from nova import db
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.tests.compute import test_compute
@@ -170,6 +171,36 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
     def test_evacuate(self):
         self.skipTest("Test is incompatible with cells.")
+
+    def test_delete_instance_no_cell(self):
+        cells_rpcapi = self.compute_api.cells_rpcapi
+        self.mox.StubOutWithMock(cells_rpcapi,
+                                 'instance_delete_everywhere')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_cast_to_cells')
+        inst = self._create_fake_instance()
+        exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
+        self.compute_api._cast_to_cells(self.context, inst,
+                                        'delete').AndRaise(exc)
+        cells_rpcapi.instance_delete_everywhere(self.context,
+                inst, 'hard')
+        self.mox.ReplayAll()
+        self.compute_api.delete(self.context, inst)
+
+    def test_soft_delete_instance_no_cell(self):
+        cells_rpcapi = self.compute_api.cells_rpcapi
+        self.mox.StubOutWithMock(cells_rpcapi,
+                                 'instance_delete_everywhere')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_cast_to_cells')
+        inst = self._create_fake_instance()
+        exc = exception.InstanceUnknownCell(instance_uuid=inst['uuid'])
+        self.compute_api._cast_to_cells(self.context, inst,
+                                        'soft_delete').AndRaise(exc)
+        cells_rpcapi.instance_delete_everywhere(self.context,
+                inst, 'soft')
+        self.mox.ReplayAll()
+        self.compute_api.soft_delete(self.context, inst)
 
 
 class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):

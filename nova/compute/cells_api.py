@@ -255,9 +255,9 @@ class ComputeCellsAPI(compute_api.API):
             # broadcast a message down to all cells and hope this ends
             # up resolving itself...  Worse case.. the instance will
             # show back up again here.
-            delete_type = method == 'soft_delete' and 'soft' or 'hard'
+            delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
-                    instance['uuid'], delete_type)
+                    instance, delete_type)
 
     @validate_cell
     def restore(self, context, instance):
