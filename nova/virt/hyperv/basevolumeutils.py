@@ -28,15 +28,11 @@ if sys.platform == 'win32':
     import _winreg
     import wmi
 
-from oslo.config import cfg
-
 from nova import block_device
 from nova.openstack.common import log as logging
 from nova.virt import driver
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class BaseVolumeUtils(object):
@@ -76,10 +72,7 @@ class BaseVolumeUtils(object):
                        "Choosing the default one"))
             computer_system = self._conn_cimv2.Win32_ComputerSystem()[0]
             initiator_name = "iqn.1991-05.com.microsoft:" + hostname.lower()
-        return {
-            'ip': CONF.my_ip,
-            'initiator': initiator_name,
-        }
+        return initiator_name
 
     def volume_in_mapping(self, mount_device, block_device_info):
         block_device_list = [block_device.strip_dev(vol['mount_device'])
