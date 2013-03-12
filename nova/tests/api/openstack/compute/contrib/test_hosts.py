@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+import testtools
 import webob.exc
 
 from nova.api.openstack.compute.contrib import hosts as os_hosts
@@ -21,6 +22,7 @@ from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
 from nova import db
+from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import fake_hosts
@@ -50,6 +52,9 @@ def stub_set_host_enabled(context, host_name, enabled):
     if host_name == "notimplemented":
         # The vm driver for this host doesn't support this feature
         raise NotImplementedError()
+    elif host_name == "dummydest":
+        # The host does not exist
+        raise exception.ComputeHostNotFound(host=host_name)
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not enabled]
@@ -66,6 +71,9 @@ def stub_set_host_maintenance(context, host_name, mode):
     if host_name == "notimplemented":
         # The vm driver for this host doesn't support this feature
         raise NotImplementedError()
+    elif host_name == "dummydest":
+        # The host does not exist
+        raise exception.ComputeHostNotFound(host=host_name)
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not mode]
@@ -77,6 +85,9 @@ def stub_set_host_maintenance(context, host_name, mode):
 def stub_host_power_action(context, host_name, action):
     if host_name == "notimplemented":
         raise NotImplementedError()
+    elif host_name == "dummydest":
+        # The host does not exist
+        raise exception.ComputeHostNotFound(host=host_name)
     return action
 
 
@@ -219,6 +230,31 @@ class HostTestCase(test.TestCase):
     def test_host_reboot_notimpl(self):
         self._test_host_power_action_notimpl(self.controller.reboot)
 
+    def test_host_status_bad_host(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'dummydest'
+        with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         ".*%s.*" % dest):
+            self.controller.update(self.req, dest, body={'status': 'enable'})
+
+    def test_host_maintenance_bad_host(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'dummydest'
+        with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         ".*%s.*" % dest):
+            self.controller.update(self.req, dest,
+                                   body={'maintenance_mode': 'enable'})
+
+    def test_host_power_action_bad_host(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'dummydest'
+        with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         ".*%s.*" % dest):
+            self.controller.reboot(self.req, dest)
+
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
@@ -232,12 +268,12 @@ class HostTestCase(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                 self.req, "host_c1", bad_body)
 
-    def test_bad_update_key_and_correct_udpate_key(self):
+    def test_bad_update_key_and_correct_update_key(self):
         bad_body = {"status": "disable", "crazy": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                 self.req, "host_c1", bad_body)
 
-    def test_good_udpate_keys(self):
+    def test_good_update_keys(self):
         body = {"status": "disable", "maintenance_mode": "enable"}
         result = self.controller.update(self.req, 'host_c1', body)
         self.assertEqual(result["host"], "host_c1")
@@ -253,12 +289,12 @@ class HostTestCase(test.TestCase):
         self.req.environ["nova.context"].is_admin = True
 
     def test_show_host_not_exist(self):
-        # A host given as an argument does not exists.
+        # A host given as an argument does not exist.
         self.req.environ["nova.context"].is_admin = True
         dest = 'dummydest'
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show,
-                          self.req, dest)
+        with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         ".*%s.*" % dest):
+            self.controller.show(self.req, dest)
 
     def _create_compute_service(self):
         """Create compute-manager(ComputeNode and Service record)."""

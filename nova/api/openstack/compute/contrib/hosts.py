@@ -200,7 +200,7 @@ class HostController(object):
             msg = _("Virt driver does not implement host maintenance mode.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.message)
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
         if result not in ("on_maintenance", "off_maintenance"):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return result
@@ -220,7 +220,7 @@ class HostController(object):
             msg = _("Virt driver does not implement host disabled status.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.message)
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
         if result not in ("enabled", "disabled"):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return result
@@ -236,7 +236,7 @@ class HostController(object):
             msg = _("Virt driver does not implement host power management.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.message)
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
         return {"host": host_name, "power_action": result}
 
     @wsgi.serializers(xml=HostActionTemplate)
@@ -317,7 +317,7 @@ class HostController(object):
         try:
             service = self.api.service_get_by_compute_host(context, host_name)
         except exception.NotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.message)
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
         except exception.AdminRequired:
             msg = _("Describe-resource is admin only functionality")
             raise webob.exc.HTTPForbidden(explanation=msg)
