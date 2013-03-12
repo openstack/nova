@@ -155,6 +155,13 @@ class BaseRequestHandler(object):
     def set_status(self, status_code):
         self.response.status = status_code
 
+    def set_404(self):
+        self.render_xml({"Error": {
+            "Code": "NoSuchKey",
+            "Message": "The resource you requested does not exist"
+            }})
+        self.set_status(404)
+
     def finish(self, body=''):
         self.response.body = utils.utf8(body)
 
@@ -233,7 +240,7 @@ class BucketHandler(BaseRequestHandler):
         terse = int(self.get_argument("terse", 0))
         if (not path.startswith(self.application.directory) or
             not os.path.isdir(path)):
-            self.set_status(404)
+            self.set_404()
             return
         object_names = []
         for root, dirs, files in os.walk(path):
@@ -294,7 +301,7 @@ class BucketHandler(BaseRequestHandler):
             self.application.directory, bucket_name))
         if (not path.startswith(self.application.directory) or
             not os.path.isdir(path)):
-            self.set_status(404)
+            self.set_404()
             return
         if len(os.listdir(path)) > 0:
             self.set_status(403)
@@ -310,7 +317,7 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if (not path.startswith(self.application.directory) or
             not os.path.isfile(path)):
-            self.set_status(404)
+            self.set_404()
             return
         info = os.stat(path)
         self.set_header("Content-Type", "application/unknown")
@@ -328,7 +335,7 @@ class ObjectHandler(BaseRequestHandler):
             self.application.directory, bucket))
         if (not bucket_dir.startswith(self.application.directory) or
             not os.path.isdir(bucket_dir)):
-            self.set_status(404)
+            self.set_404()
             return
         path = self._object_path(bucket, object_name)
         if not path.startswith(bucket_dir) or os.path.isdir(path):
@@ -348,7 +355,7 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if (not path.startswith(self.application.directory) or
             not os.path.isfile(path)):
-            self.set_status(404)
+            self.set_404()
             return
         os.unlink(path)
         self.set_status(204)
